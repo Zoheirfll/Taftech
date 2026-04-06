@@ -8,9 +8,9 @@ services:
     environment:
       POSTGRES_DB: taftech_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root  # À changer en production !
+      POSTGRES_PASSWORD: root
     ports:
-      - "5432:5432"
+      - "5433:5432"  # <-- C'EST ICI QU'ON CHANGE ! (5433 sur ton PC vers 5432 dans le conteneur)
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

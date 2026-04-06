@@ -5,4 +5,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # On connecte le module accounts à l'URL de base /api/accounts/
     path('api/accounts/', include('accounts.urls')),
+    path('api/jobs/', include('jobs.urls')),
 ]

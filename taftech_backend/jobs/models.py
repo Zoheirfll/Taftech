@@ -60,3 +60,45 @@ class OffreEmploi(models.Model):
 
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
+    
+class Candidature(models.Model):
+    """
+    Représente la candidature d'un utilisateur à une offre.
+    """
+    offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='candidatures')
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidatures')
+    
+    date_postulation = models.DateTimeField(auto_now_add=True)
+    lettre_motivation = models.TextField(blank=True, null=True, verbose_name="Lettre de motivation (Optionnelle)")
+    
+    # Pour que le recruteur puisse trier les CVs
+    STATUTS = (
+        ('EN_ATTENTE', 'En attente d\'examen'),
+        ('EXAMINEE', 'Candidature examinée'),
+        ('ACCEPTEE', 'Retenu pour entretien'),
+        ('REFUSEE', 'Candidature refusée'),
+    )
+    statut = models.CharField(max_length=20, choices=STATUTS, default='EN_ATTENTE')
+
+    class Meta:
+        # Un candidat ne peut postuler qu'une seule fois à la même offre
+        unique_together = ('offre', 'candidat')
+
+    def __str__(self):
+        return f"{self.candidat.username} -> {self.offre.titre}"
+
+class ProfilCandidat(models.Model):
+    """
+    Profil étendu pour un candidat, contenant son CV.
+    """
+    # Relie le profil à l'utilisateur (Un utilisateur = Un profil)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_candidat')
+    
+    # Ex: "Développeur Fullstack", "Comptable"...
+    titre_professionnel = models.CharField(max_length=150, blank=True, null=True)
+    
+    # Le fameux champ pour le fichier ! Django le rangera dans media/cvs/
+    cv_pdf = models.FileField(upload_to='cvs/', blank=True, null=True)
+
+    def __str__(self):
+        return f"Profil de {self.user.username}"

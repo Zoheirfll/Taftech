@@ -6,44 +6,53 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import OffreEmploi
 from .serializers import OffreEmploiSerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .services import EntrepriseService
 from .serializers import ProfilEntrepriseCreateDTO
 from rest_framework.permissions import IsAuthenticated
 from .models import Candidature, ProfilCandidat
-from .serializers import PostulerDTO
-from .serializers import OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO
+from .serializers import PostulerDTO, EntrepriseDashboardDetailSerializer
+from .serializers import OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO, CandidatRegisterSerializer
 from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.pagination import PageNumberPagination
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import MyTokenObtainPairSerializer
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 class JobListAPIView(APIView):
-    """
-    Endpoint pour lister toutes les offres d'emploi actives.
-    URL : /api/jobs/
-    """
     def get(self, request):
-        # 1. On récupère les filtres envoyés dans l'URL (ex: ?search=dev&wilaya=oran)
+        # 1. Tes filtres restent exactement pareils
         mot_cle = request.query_params.get('search', '')
         wilaya = request.query_params.get('wilaya', '')
 
-        # 2. On prend toutes les offres actives de base
         offres = OffreEmploi.objects.filter(est_active=True)
 
-        # 3. S'il y a un mot clé, on cherche dans le titre OU dans les missions
         if mot_cle:
             offres = offres.filter(
                 Q(titre__icontains=mot_cle) | Q(missions__icontains=mot_cle)
             )
         
-        # 4. S'il y a une wilaya, on filtre par wilaya
         if wilaya:
             offres = offres.filter(wilaya__icontains=wilaya)
 
-        # 5. On trie du plus récent au plus ancien et on renvoie
         offres = offres.order_by('-date_publication')
-        serializer = OffreEmploiSerializer(offres, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
+        # --- NOUVEAU : Le découpage manuel en pages ---
+        paginator = PageNumberPagination()
+        paginator.page_size = 5 # On force 5 éléments par page
+        
+        # On découpe notre liste d'offres
+        page = paginator.paginate_queryset(offres, request)
+        
+        # On traduit uniquement les offres de la page actuelle
+        serializer = OffreEmploiSerializer(page, many=True)
+        
+        # On renvoie le bon format officiel (avec count, next, previous, results)
+        return paginator.get_paginated_response(serializer.data)
 class ProfilEntrepriseCreateAPIView(APIView):
     """
     Endpoint pour qu'un utilisateur enregistré devienne Recruteur.
@@ -97,58 +106,49 @@ class PostulerAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class JobCreateAPIView(APIView):
-    """
-    Endpoint pour publier une nouvelle offre d'emploi.
-    URL : /api/jobs/creer/
-    """
-    permission_classes = [IsAuthenticated] # Sécurité
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # 1. Le Vigile vérifie : Cet utilisateur a-t-il une entreprise ?
         if not hasattr(request.user, 'profil_entreprise'):
             return Response(
-                {"error": "Vous devez d'abord créer un profil entreprise pour publier une offre."}, 
+                {"error": "Vous devez créer un profil entreprise d'abord."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        if not request.user.profil_entreprise.est_approuvee:
+            return Response(
+                {"error": "Votre entreprise est en cours de vérification. Patience !"}, 
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # 2. On lit les données envoyées par React
+        # LA SEULE LIGNE QUI CHANGE EST CELLE-CI :
         serializer = OffreEmploiCreateDTO(data=request.data)
         
-        # 3. Si tout est valide, on sauvegarde !
         if serializer.is_valid():
-            # LA MAGIE EST ICI : On force l'entreprise à être celle de l'utilisateur connecté
             serializer.save(entreprise=request.user.profil_entreprise)
-            return Response(
-                {"message": "Offre d'emploi publiée avec succès !"}, 
-                status=status.HTTP_201_CREATED
-            )
-            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DashboardRecruteurAPIView(APIView):
-    """
-    Endpoint pour le tableau de bord du recruteur.
-    Retourne ses offres et les candidatures associées.
-    URL : /api/jobs/dashboard/
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # On vérifie s'il a bien une entreprise
         if not hasattr(request.user, 'profil_entreprise'):
-            return Response(
-                {"error": "Vous n'avez pas de profil entreprise."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        # On récupère uniquement les offres de SON entreprise
-        offres = OffreEmploi.objects.filter(
-            entreprise=request.user.profil_entreprise
-        ).order_by('-date_publication')
+        entreprise = request.user.profil_entreprise
+        offres = OffreEmploi.objects.filter(entreprise=entreprise).order_by('-date_publication')
         
-        serializer = OffreDashboardDTO(offres, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        # On utilise le nouveau serializer qui contient first_name, email, etc.
+        entreprise_serializer = EntrepriseDashboardDetailSerializer(entreprise)
+        offres_serializer = OffreDashboardDTO(offres, many=True)
+        
+        data = {
+            "entreprise": entreprise_serializer.data, # Contient maintenant TOUTES les infos
+            "offres": offres_serializer.data
+        }
+        
+        return Response(data, status=status.HTTP_200_OK)
 class UpdateCandidatureStatusAPIView(APIView):
     """
     Endpoint pour qu'un recruteur modifie le statut d'une candidature.
@@ -183,32 +183,143 @@ class UpdateCandidatureStatusAPIView(APIView):
 # N'oublie pas d'importer ProfilCandidat et ProfilCandidatDTO en haut !
 
 class ProfilCandidatAPIView(APIView):
-    """
-    Endpoint pour que le candidat consulte et mette à jour son profil (et son CV).
-    URL : /api/jobs/profil/
-    """
     permission_classes = [IsAuthenticated]
-    # NOUVEAU : On dit à cette vue d'accepter les fichiers
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get(self, request):
-        # On récupère le profil du candidat connecté (ou on le crée s'il n'existe pas encore)
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
         serializer = ProfilCandidatDTO(profil)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
+        # On récupère les deux objets à mettre à jour
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
+        user = request.user
+
+        # --- LOGIQUE DE SAUVEGARDE MANUELLE DES INFOS USER ---
+        # On intercepte le NIN et le Téléphone envoyés par React
+        nin = request.data.get('nin')
+        telephone = request.data.get('telephone')
+
+        if nin is not None:
+            user.nin = nin
+        if telephone is not None:
+            user.telephone = telephone
         
-        # On met à jour avec les données reçues (qui peuvent contenir un fichier 'cv_pdf')
-        # partial=True permet de ne mettre à jour que certains champs sans obligation de tout renseigner
+        # On sauvegarde les changements dans la table CustomUser
+        user.save()
+        # ----------------------------------------------------
+
+        # On procède à la mise à jour du reste (diplôme, compétences, CV...)
         serializer = ProfilCandidatDTO(profil, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
             return Response({
-                "message": "Profil mis à jour avec succès !", 
+                "message": "Profil et identité mis à jour avec succès !", 
                 "profil": serializer.data
             }, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Ajoute AllowAny en haut si ce n'est pas déjà fait : from rest_framework.permissions import IsAuthenticated, AllowAny
+
+class JobDetailAPIView(APIView):
+    """
+    Endpoint pour afficher les détails d'une seule offre.
+    URL : /api/jobs/<id_offre>/
+    """
+    # On laisse la page visible même sans être connecté
+    permission_classes = [AllowAny] 
+
+    def get(self, request, offre_id):
+        try:
+            # On cherche l'offre avec cet ID, et on s'assure qu'elle est active
+            offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
+            serializer = OffreEmploiSerializer(offre)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except OffreEmploi.DoesNotExist:
+            return Response(
+                {"error": "Cette offre n'existe pas ou n'est plus disponible."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class CandidatRegisterAPIView(APIView):
+    """ API pour l'inscription d'un Candidat (US 1.1) """
+    permission_classes = [AllowAny] # Ouvert à tous
+
+    def post(self, request):
+        serializer = CandidatRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Compte candidat créé avec succès !"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class MesCandidaturesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # On cherche toutes les candidatures où le candidat est l'utilisateur connecté
+        candidatures = Candidature.objects.filter(candidat=request.user).order_by('-date_postulation')
+        
+        # On utilise notre nouveau DTO (import local pour être sûr)
+        from .serializers import MesCandidaturesDTO
+        serializer = MesCandidaturesDTO(candidatures, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UpdateProfilEntrepriseAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        if not hasattr(request.user, 'profil_entreprise'):
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        
+        profil = request.user.profil_entreprise
+        data = request.data
+
+        # ON NE PREND QUE LES CHAMPS AUTORISÉS À LA MODIFICATION
+        # Le nom et le RC ne sont jamais récupérés ici
+        if 'secteur_activite' in data:
+            profil.secteur_activite = data['secteur_activite']
+        if 'wilaya_siege' in data:
+            profil.wilaya_siege = data['wilaya_siege']
+        if 'description' in data:
+            profil.description = data['description']
+
+        profil.save()
+        
+        return Response({
+            "message": "Informations mises à jour avec succès.",
+            "description": profil.description,
+            "wilaya_siege": profil.wilaya_siege,
+            "secteur_activite": profil.secteur_activite
+        }, status=status.HTTP_200_OK)
+
+class UpdateFullProfilRecruteurAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        # On vérifie si l'entreprise existe
+        if not hasattr(user, 'profil_entreprise'):
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        
+        profil = user.profil_entreprise
+        data = request.data
+
+        # --- PARTIE 1 : L'UTILISATEUR (RESPONSABLE) ---
+        if 'first_name' in data: user.first_name = data['first_name']
+        if 'last_name' in data: user.last_name = data['last_name']
+        if 'email' in data: user.email = data['email']
+        if 'telephone' in data: user.telephone = data['telephone']
+        user.save()
+
+        # --- PARTIE 2 : L'ENTREPRISE ---
+        # On ignore volontairement 'nom_entreprise' et 'registre_commerce'
+        if 'secteur_activite' in data: profil.secteur_activite = data['secteur_activite']
+        if 'wilaya_siege' in data: profil.wilaya_siege = data['wilaya_siege']
+        if 'description' in data: profil.description = data['description']
+        profil.save()
+
+        return Response({"message": "Toutes les informations ont été mises à jour !"}, status=status.HTTP_200_OK)

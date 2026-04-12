@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 
 class ProfilEntreprise(models.Model):
     """
@@ -10,6 +11,8 @@ class ProfilEntreprise(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_entreprise')
     
     nom_entreprise = models.CharField(max_length=150, verbose_name="Nom de l'entreprise")
+    # NOUVEAU : Le statut de modération (Faux par défaut)
+    est_approuvee = models.BooleanField(default=False, verbose_name="Entreprise approuvée")
     secteur_activite = models.CharField(max_length=100, help_text="Ex: Énergie / Hydrocarbures, Informatique, Commerce...")
     registre_commerce = models.CharField(max_length=50, unique=True, verbose_name="Numéro de Registre de Commerce (RC)")
     wilaya_siege = models.CharField(max_length=50, verbose_name="Wilaya du siège social")
@@ -24,7 +27,6 @@ class OffreEmploi(models.Model):
     """
     Représente une offre d'emploi structurée comme sur Emploitic.
     """
-    # Options spécifiques au marché algérien
     TYPES_CONTRAT = (
         ('CDI', 'CDI'),
         ('CDD', 'CDD'),
@@ -40,20 +42,19 @@ class OffreEmploi(models.Model):
         ('SENIOR', 'Senior (5 ans et plus)'),
     )
 
-    # L'offre est obligatoirement rattachée à une entreprise
-    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='offres')
+    entreprise = models.ForeignKey('ProfilEntreprise', on_delete=models.CASCADE, related_name='offres')
     
     titre = models.CharField(max_length=200, verbose_name="Titre du poste")
     wilaya = models.CharField(max_length=50, verbose_name="Lieu de travail (Wilaya)")
     
-    # La séparation classique d'Emploitic pour plus de clarté
-    missions = models.TextField(verbose_name="Missions du poste")
-    profil_recherche = models.TextField(verbose_name="Profil recherché (Exigences)")
+    # On rassemble les champs textes ici proprement (1 seule fois !)
+    description = models.TextField(blank=True, null=True, verbose_name="Description générale")
+    missions = models.TextField(blank=True, null=True, verbose_name="Missions du poste")
+    profil_recherche = models.TextField(blank=True, null=True, verbose_name="Profil recherché (Exigences)")
     
     type_contrat = models.CharField(max_length=20, choices=TYPES_CONTRAT, default='CDI')
     experience_requise = models.CharField(max_length=20, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
-    
-    salaire_propose = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 68 000 DA Net, ou 'À négocier'")
+    salaire_propose = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 68 000 DA Net")
     
     date_publication = models.DateTimeField(auto_now_add=True)
     est_active = models.BooleanField(default=True, verbose_name="Offre visible")
@@ -93,12 +94,22 @@ class ProfilCandidat(models.Model):
     """
     # Relie le profil à l'utilisateur (Un utilisateur = Un profil)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_candidat')
-    
+    date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
     # Ex: "Développeur Fullstack", "Comptable"...
     titre_professionnel = models.CharField(max_length=150, blank=True, null=True)
     
     # Le fameux champ pour le fichier ! Django le rangera dans media/cvs/
-    cv_pdf = models.FileField(upload_to='cvs/', blank=True, null=True)
+    cv_pdf = models.FileField(
+        upload_to='cvs/', 
+        blank=True, 
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])]
+    )
 
+    diplome = models.CharField(max_length=200, blank=True, null=True, verbose_name="Diplôme")
+    specialite = models.CharField(max_length=200, blank=True, null=True, verbose_name="Spécialité")
+    experiences = models.TextField(blank=True, null=True, verbose_name="Expériences")
+    competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
+    langues = models.CharField(max_length=255, blank=True, null=True, verbose_name="Langues")
     def __str__(self):
         return f"Profil de {self.user.username}"

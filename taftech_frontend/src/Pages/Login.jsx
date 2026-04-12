@@ -1,27 +1,26 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../Services/authService";
+import { authService } from "../Services/authService"; // Attention à la majuscule de Services selon ton dossier
 
 const Login = () => {
-  // On stocke ce que l'utilisateur tape
+  // On garde "username" dans le state car c'est ce que Django attend techniquement
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
   });
   const [error, setError] = useState("");
-  const navigate = useNavigate(); // Outil de React Router pour changer de page
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // On efface les anciennes erreurs
+    setError("");
 
     try {
       await authService.login(credentials.username, credentials.password);
-      // Si on arrive ici, la connexion a réussi !
-      navigate("/"); // On le renvoie vers la page d'accueil
-      window.location.reload(); // Petite astuce pour forcer la navbar à se mettre à jour
+      navigate("/");
+      window.location.reload();
     } catch (err) {
-      setError("Nom d'utilisateur ou mot de passe incorrect.", err);
+      setError("Adresse email ou mot de passe incorrect.", err);
     }
   };
 
@@ -43,8 +42,8 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="text"
-            placeholder="Nom d'utilisateur"
+            type="email" /* CHANGÉ ICI : Force le clavier email sur mobile */
+            placeholder="Adresse Email" /* CHANGÉ ICI */
             required
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
             onChange={(e) =>

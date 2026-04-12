@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { jobsService } from "../Services/jobsService";
 import { authService } from "../Services/authService";
+import { Link } from "react-router-dom";
 
 const JobCard = ({ job }) => {
   const isLogged = authService.isAuthenticated();
@@ -26,7 +27,12 @@ const JobCard = ({ job }) => {
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300 border-l-4 border-blue-600">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-xl font-bold text-gray-800">{job.titre}</h3>
+          {/* AJOUT 1 : Le titre est maintenant un lien cliquable */}
+          <Link to={`/offre/${job.id}`}>
+            <h3 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+              {job.titre}
+            </h3>
+          </Link>
           <p className="text-blue-600 font-semibold uppercase text-sm mt-1">
             {job.entreprise.nom_entreprise}
           </p>
@@ -65,19 +71,29 @@ const JobCard = ({ job }) => {
             </span>
           )}
 
-          {/* Affichage conditionnel du bouton */}
-          {isLogged ? (
-            <button
-              onClick={handlePostuler}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200"
+          {/* AJOUT 2 : On aligne le lien "Voir les détails" avec le bouton "Postuler" */}
+          <div className="flex items-center gap-4">
+            <Link
+              to={`/offre/${job.id}`}
+              className="text-blue-600 font-bold hover:underline text-sm"
             >
-              Postuler
-            </button>
-          ) : (
-            <span className="text-sm text-gray-500 italic border px-3 py-1 rounded">
-              Connectez-vous pour postuler
-            </span>
-          )}
+              Voir les détails
+            </Link>
+
+            {/* Affichage conditionnel du bouton (INCHANGÉ) */}
+            {isLogged ? (
+              <button
+                onClick={handlePostuler}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200"
+              >
+                Postuler
+              </button>
+            ) : (
+              <span className="text-sm text-gray-500 italic border px-3 py-1 rounded">
+                Connectez-vous pour postuler
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

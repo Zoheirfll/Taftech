@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import JobListAPIView
-from .views import ProfilEntrepriseCreateAPIView
-from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView
+from .views import ProfilEntrepriseCreateAPIView, UpdateProfilEntrepriseAPIView
+from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, CandidatRegisterAPIView, MesCandidaturesAPIView
 
 
 
@@ -20,4 +20,9 @@ urlpatterns = [
     path('candidatures/<int:candidature_id>/statut/', UpdateCandidatureStatusAPIView.as_view(), name='update-statut'),
     # URL pour le profil candidat
     path('profil/', ProfilCandidatAPIView.as_view(), name='profil-candidat'),
+    # URL pour voir une seule offre en détail
+    path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
+    path('candidat/register/', CandidatRegisterAPIView.as_view(), name='candidat-register'),
+    path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
+    path('entreprise/modifier/', UpdateProfilEntrepriseAPIView.as_view(), name='modifier-entreprise'),
 ]

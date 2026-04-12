@@ -3,25 +3,21 @@ from django.db import transaction
 from .models import CustomUser
 
 class UserService:
-    """
-    Couche Service gérant la logique métier des utilisateurs.
-    Toute manipulation complexe de la base de données doit se faire ici.
-    """
-    
     @staticmethod
-    @transaction.atomic  # Assure que si une erreur survient, rien n'est sauvegardé à moitié
+    @transaction.atomic
     def create_candidat(validated_data: Dict[str, Any]) -> CustomUser:
-        # On extrait le mot de passe pour le traiter séparément
+        # On extrait le password
         password = validated_data.pop('password')
         
-        # On instancie l'utilisateur en forçant le rôle CANDIDAT
-        user = CustomUser(
+        # CORRECTIF : On utilise le manager .objects.create_user
+        # C'est la méthode qui a fonctionné dans ton Shell.
+        # Elle gère proprement l'injection du NIN, du Téléphone et le hashage du password.
+        user = CustomUser.objects.create_user(
             role='CANDIDAT',
             **validated_data
         )
         
-        # Cette méthode native de Django est cruciale : elle crypte le mot de passe
-        user.set_password(password)
-        user.save()
+        # Note: create_user gère déjà le set_password, 
+        # donc pas besoin de le refaire manuellement.
         
         return user

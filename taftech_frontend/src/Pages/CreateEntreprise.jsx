@@ -18,22 +18,28 @@ const CreateEntreprise = () => {
     setStatus({ type: "", message: "" });
 
     try {
-      await entrepriseService.creerProfil(formData);
+      // CORRECTION ICI : On utilise le bon nom de fonction !
+      await entrepriseService.creerEntreprise(formData);
+
       setStatus({
         type: "success",
         message: "Entreprise enregistrée ! Vous êtes maintenant Recruteur.",
       });
 
-      // On le renvoie vers l'accueil après 2 secondes
+      // On le renvoie vers le dashboard recruteur
       setTimeout(() => {
-        navigate("/");
+        navigate("/"); // Pense à changer ça vers ton dashboard si besoin !
       }, 2000);
     } catch (error) {
+      // SÉCURITÉ : On affiche la vraie erreur dans la console F12
+      console.error("VRAIE ERREUR :", error);
+
       setStatus({
         type: "error",
         message:
           error.response?.data?.error ||
-          "Vérifiez vos informations. Le Registre de Commerce est peut-être déjà utilisé.",
+          error.response?.data?.registre_commerce?.[0] || // Si le RC existe déjà
+          "Erreur lors de la création de l'entreprise.",
       });
     }
   };

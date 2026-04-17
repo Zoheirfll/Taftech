@@ -13,10 +13,13 @@ class OffreEmploiAdmin(admin.ModelAdmin):
     search_fields = ('titre', 'entreprise__nom_entreprise')
     list_filter = ('est_active', 'type_contrat', 'experience_requise', 'wilaya')
     
-    # Organise visuellement le formulaire de création d'offre pour l'admin
+    # ON AJOUTE LES NOUVELLES CASES ICI 👇
     fieldsets = (
         ('Informations Principales', {
-            'fields': ('entreprise', 'titre', 'wilaya', 'est_active')
+            'fields': ('entreprise', 'titre', 'wilaya', 'commune', 'est_active') # Ajout de commune
+        }),
+        ('Ciblage du Profil (Nouveau)', {
+            'fields': ('diplome', 'specialite') # Ajout de diplome et specialite
         }),
         ('Détails du Poste', {
             'fields': ('missions', 'profil_recherche')
@@ -25,3 +28,4 @@ class OffreEmploiAdmin(admin.ModelAdmin):
             'fields': ('type_contrat', 'experience_requise', 'salaire_propose')
         }),
     )
+    

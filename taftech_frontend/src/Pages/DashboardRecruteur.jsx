@@ -5,14 +5,12 @@ import { jobsService } from "../Services/jobsService";
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
 
-  // --- ÉTATS PRINCIPAUX ---
   const [activeTab, setActiveTab] = useState("offres");
   const [entreprise, setEntreprise] = useState(null);
   const [offres, setOffres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // --- ÉTATS POUR L'ÉDITION ---
   const [isEditing, setIsEditing] = useState(false);
   const [tempEntreprise, setTempEntreprise] = useState({});
 
@@ -23,7 +21,6 @@ const DashboardRecruteur = () => {
         setEntreprise(data.entreprise);
         setOffres(data.offres);
       } catch (err) {
-        console.error("Erreur Dashboard:", err);
         if (
           err.response &&
           (err.response.status === 404 || err.response.status === 403)
@@ -39,22 +36,18 @@ const DashboardRecruteur = () => {
     fetchDashboard();
   }, [navigate]);
 
-  // --- LOGIQUE DE MODIFICATION DU PROFIL ---
   const handleEditClick = () => {
-    // On pré-remplit les champs avec les données actuelles (User + Entreprise)
     setTempEntreprise({ ...entreprise });
     setIsEditing(true);
   };
 
   const handleSaveProfile = async () => {
     try {
-      // Filtrage : On envoie tout sauf le Nom de l'entreprise et le RC
       const {
         nom_entreprise: _nom,
         registre_commerce: _rc,
         ...dataToSend
       } = tempEntreprise;
-
       await jobsService.updateProfilEntreprise(dataToSend);
       setEntreprise({ ...entreprise, ...dataToSend });
       setIsEditing(false);
@@ -64,7 +57,6 @@ const DashboardRecruteur = () => {
     }
   };
 
-  // --- GESTION DES CANDIDATURES ---
   const changerStatut = async (offreId, candidatureId, nouveauStatut) => {
     try {
       await jobsService.updateStatutCandidature(candidatureId, nouveauStatut);
@@ -95,12 +87,22 @@ const DashboardRecruteur = () => {
     return styles[statut] || styles.EN_ATTENTE;
   };
 
+  // --- PETITE FONCTION SÉCURISÉE POUR LE CV ---
+  const getCvUrl = (cvPath) => {
+    if (!cvPath) return "#";
+    // Si Django renvoie déjà "http://...", on l'utilise direct. Sinon on l'ajoute.
+    return cvPath.startsWith("http")
+      ? cvPath
+      : `http://127.0.0.1:8000${cvPath}`;
+  };
+
   if (loading)
     return (
       <div className="text-center p-20 font-bold text-blue-600 animate-pulse">
         Chargement de votre espace...
       </div>
     );
+
   if (error)
     return (
       <div className="max-w-4xl mx-auto mt-10 p-6 bg-red-50 text-red-700 rounded-xl text-center font-bold">
@@ -183,12 +185,14 @@ const DashboardRecruteur = () => {
                     )}
                   </span>
                 </div>
-                <div className="p-6">
-                  <table className="w-full">
+                <div className="p-6 overflow-x-auto">
+                  <table className="w-full min-w-[700px]">
                     <thead>
                       <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b">
-                        <th className="pb-4 text-left">Candidat</th>
-                        <th className="pb-4 text-center">Dossier</th>
+                        <th className="pb-4 text-left w-1/3">Candidat</th>
+                        <th className="pb-4 text-left w-1/3">
+                          Dossier & Lettre
+                        </th>
                         <th className="pb-4 text-left">Statut</th>
                         <th className="pb-4 text-right">Décision</th>
                       </tr>
@@ -199,39 +203,79 @@ const DashboardRecruteur = () => {
                           key={cand.id}
                           className="hover:bg-blue-50/30 transition"
                         >
-                          <td className="py-4">
-                            <p className="font-bold text-gray-900">
-                              {cand.candidat.username}
+                          {/* COLONNE 1 : IDENTITÉ (Nom complet + Contact) */}
+                          <td className="py-4 align-top">
+                            <p className="font-black text-gray-900 text-sm uppercase">
+                              {cand.candidat.last_name || "Nom inconnu"}{" "}
+                              {cand.candidat.first_name || ""}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {cand.candidat.email}
-                            </p>
+                            <div className="mt-1 space-y-1">
+                              <p className="text-xs text-gray-500 font-medium">
+                                📞 {cand.candidat.telephone || "Non renseigné"}
+                              </p>
+                              <p className="text-xs text-gray-500 font-medium">
+                                ✉️ {cand.candidat.email}
+                              </p>
+                              {cand.candidat.diplome && (
+                                <p className="text-xs text-purple-700 bg-purple-50 inline-block px-2 py-0.5 rounded border border-purple-100 mt-1 font-bold">
+                                  🎓 {cand.candidat.diplome}
+                                </p>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-4 text-center">
-                            <a
-                              href={`http://127.0.0.1:8000${cand.candidat.cv_pdf}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-2 text-blue-600 font-bold text-xs bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition"
-                            >
-                              📄 VOIR LE CV
-                            </a>
+
+                          {/* COLONNE 2 : DOSSIER & LETTRE */}
+                          <td className="py-4 align-top">
+                            {cand.candidat.cv_pdf ? (
+                              <a
+                                href={getCvUrl(cand.candidat.cv_pdf)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 text-blue-600 font-bold text-xs bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition"
+                              >
+                                📄 TÉLÉCHARGER LE CV
+                              </a>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">
+                                Aucun CV fourni
+                              </span>
+                            )}
+
+                            {/* Affichage déroulant de la lettre de motivation */}
+                            {cand.lettre_motivation && (
+                              <details className="mt-3 group">
+                                <summary className="text-xs font-bold text-indigo-600 cursor-pointer hover:underline list-none flex items-center gap-1">
+                                  <span>Voir la lettre de motivation</span>
+                                  <span className="transition group-open:rotate-180">
+                                    ▼
+                                  </span>
+                                </summary>
+                                <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 max-w-sm whitespace-pre-line leading-relaxed">
+                                  {cand.lettre_motivation}
+                                </div>
+                              </details>
+                            )}
                           </td>
-                          <td className="py-4">
+
+                          {/* COLONNE 3 : STATUT */}
+                          <td className="py-4 align-top pt-5">
                             <span
                               className={`text-[10px] font-black px-3 py-1 rounded-full border ${getBadgeStyle(cand.statut)}`}
                             >
                               {cand.statut.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="py-4 text-right">
+
+                          {/* COLONNE 4 : ACTIONS */}
+                          <td className="py-4 text-right align-top pt-4">
                             {cand.statut === "EN_ATTENTE" && (
                               <div className="flex justify-end gap-2">
                                 <button
                                   onClick={() =>
                                     changerStatut(offre.id, cand.id, "ACCEPTEE")
                                   }
-                                  className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-md shadow-green-100 transition"
+                                  className="p-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 shadow-sm transition"
+                                  title="Accepter"
                                 >
                                   ✓
                                 </button>
@@ -239,7 +283,8 @@ const DashboardRecruteur = () => {
                                   onClick={() =>
                                     changerStatut(offre.id, cand.id, "REFUSEE")
                                   }
-                                  className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-md shadow-red-100 transition"
+                                  className="p-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow-sm transition"
+                                  title="Refuser"
                                 >
                                   ✕
                                 </button>
@@ -258,8 +303,10 @@ const DashboardRecruteur = () => {
       )}
 
       {/* --- ONGLET PROFIL COMPLET (MODIFIABLE) --- */}
+      {/* ... (LE RESTE DE TON CODE RESTE EXACTEMENT LE MÊME, JE NE L'AI PAS MODIFIÉ) ... */}
       {activeTab === "profil" && entreprise && (
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 animate-fadeIn">
+          {/* ... TON CODE DE PROFIL ... */}
           <div className="flex justify-between items-center mb-10">
             <h2 className="text-2xl font-black text-gray-900 tracking-tight">
               Configuration du Compte
@@ -290,7 +337,6 @@ const DashboardRecruteur = () => {
           </div>
 
           <div className="space-y-12">
-            {/* 1. INFOS DU RESPONSABLE (USER) */}
             <section>
               <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-6 bg-blue-50 inline-block px-3 py-1 rounded-md">
                 Identité du Responsable
@@ -335,14 +381,11 @@ const DashboardRecruteur = () => {
                 ))}
               </div>
             </section>
-
-            {/* 2. INFOS DE L'ENTREPRISE */}
             <section className="pt-8 border-t border-gray-100">
               <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-6 bg-blue-50 inline-block px-3 py-1 rounded-md">
                 Informations de l'Entreprise
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* CHAMPS FIXES (SÉCURITÉ) */}
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
                     Dénomination Sociale (Verrouillé)
@@ -359,8 +402,6 @@ const DashboardRecruteur = () => {
                     {entreprise.registre_commerce}
                   </p>
                 </div>
-
-                {/* CHAMPS MODIFIABLES */}
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
                     Secteur d'activité
@@ -409,7 +450,6 @@ const DashboardRecruteur = () => {
                     />
                   )}
                 </div>
-
                 <div className="md:col-span-2">
                   <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
                     Description de votre établissement

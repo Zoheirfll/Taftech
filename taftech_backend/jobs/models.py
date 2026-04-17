@@ -41,11 +41,17 @@ class OffreEmploi(models.Model):
         ('CONFIRME', 'Confirmé (3 - 5 ans)'),
         ('SENIOR', 'Senior (5 ans et plus)'),
     )
-
+    STATUTS_MODERATION = (
+        ('EN_ATTENTE', 'En attente de validation'),
+        ('APPROUVEE', 'Approuvée et en ligne'),
+        ('REJETEE', 'Rejetée (à corriger)'), )
     entreprise = models.ForeignKey('ProfilEntreprise', on_delete=models.CASCADE, related_name='offres')
     
     titre = models.CharField(max_length=200, verbose_name="Titre du poste")
     wilaya = models.CharField(max_length=50, verbose_name="Lieu de travail (Wilaya)")
+    commune = models.CharField(max_length=100, blank=True, null=True, verbose_name="Commune")
+    diplome = models.CharField(max_length=150, blank=True, null=True, verbose_name="Diplôme requis")
+    specialite = models.CharField(max_length=150, blank=True, null=True, verbose_name="Spécialité")
     
     # On rassemble les champs textes ici proprement (1 seule fois !)
     description = models.TextField(blank=True, null=True, verbose_name="Description générale")
@@ -58,6 +64,9 @@ class OffreEmploi(models.Model):
     
     date_publication = models.DateTimeField(auto_now_add=True)
     est_active = models.BooleanField(default=True, verbose_name="Offre visible")
+    statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
+    motif_rejet = models.TextField(blank=True, null=True) # Pour expliquer au recruteur pourquoi c'est refusé
+    
 
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"

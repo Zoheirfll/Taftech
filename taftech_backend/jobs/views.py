@@ -10,48 +10,63 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .services import EntrepriseService
 from .serializers import ProfilEntrepriseCreateDTO
 from rest_framework.permissions import IsAuthenticated
-from .models import Candidature, ProfilCandidat
+from .models import Candidature, ProfilCandidat, ProfilEntreprise
 from .serializers import PostulerDTO, EntrepriseDashboardDetailSerializer
 from .serializers import OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO, CandidatRegisterSerializer
 from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import MyTokenObtainPairSerializer
+from .serializers import MyTokenObtainPairSerializer, EntrepriseDashboardDetailSerializer, AdminUserSerializer
+from rest_framework.permissions import IsAdminUser
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 class JobListAPIView(APIView):
     def get(self, request):
-        # 1. Tes filtres restent exactement pareils
+        # 1. On récupère TOUS les filtres envoyés par ton nouveau React
         mot_cle = request.query_params.get('search', '')
         wilaya = request.query_params.get('wilaya', '')
+        commune = request.query_params.get('commune', '')
+        diplome = request.query_params.get('diplome', '')
+        specialite = request.query_params.get('specialite', '')
+        experience = request.query_params.get('experience', '')
+        contrat = request.query_params.get('contrat', '')
 
-        offres = OffreEmploi.objects.filter(est_active=True)
+        # 2. On prend toutes les offres actives
+        offres = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE')
 
+        # 3. On applique chaque filtre (seulement si l'utilisateur a écrit quelque chose)
         if mot_cle:
             offres = offres.filter(
                 Q(titre__icontains=mot_cle) | Q(missions__icontains=mot_cle)
             )
-        
         if wilaya:
             offres = offres.filter(wilaya__icontains=wilaya)
+        if commune:
+            offres = offres.filter(commune__icontains=commune)
+        if diplome:
+            offres = offres.filter(diplome__icontains=diplome)
+        if specialite:
+            offres = offres.filter(specialite__icontains=specialite)
+        if experience:
+            # Recherche exacte pour les menus déroulants
+            offres = offres.filter(experience_requise=experience) 
+        if contrat:
+            offres = offres.filter(type_contrat=contrat)
 
+        # 4. Le tri et la pagination (inchangés, ton code était bon)
         offres = offres.order_by('-date_publication')
-
-        # --- NOUVEAU : Le découpage manuel en pages ---
+        
         paginator = PageNumberPagination()
-        paginator.page_size = 5 # On force 5 éléments par page
+        paginator.page_size = 5 
         
-        # On découpe notre liste d'offres
         page = paginator.paginate_queryset(offres, request)
-        
-        # On traduit uniquement les offres de la page actuelle
         serializer = OffreEmploiSerializer(page, many=True)
-        
-        # On renvoie le bon format officiel (avec count, next, previous, results)
         return paginator.get_paginated_response(serializer.data)
 class ProfilEntrepriseCreateAPIView(APIView):
     """
@@ -323,3 +338,103 @@ class UpdateFullProfilRecruteurAPIView(APIView):
         profil.save()
 
         return Response({"message": "Toutes les informations ont été mises à jour !"}, status=status.HTTP_200_OK)
+
+class AdminOffresListAPIView(APIView):
+    """ Récupère TOUTES les offres pour le tableau de bord Admin """
+    permission_classes = [IsAdminUser] # Sécurité : Seul le super-admin y a accès
+
+    def get(self, request):
+        # L'admin voit tout, trié par les plus récentes
+        offres = OffreEmploi.objects.all().order_by('-date_publication')
+        serializer = OffreEmploiSerializer(offres, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminOffreModerateAPIView(APIView):
+    """ Permet à l'Admin d'approuver, rejeter ou corriger une offre """
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, offre_id):
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        # On utilise partial=True pour permettre à l'admin de ne modifier que quelques champs (ex: juste le statut, ou juste corriger une faute dans le titre)
+        serializer = OffreEmploiSerializer(offre, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Offre modifiée et modérée avec succès !", 
+                "offre": serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminEntreprisesListAPIView(APIView):
+    """ Récupère TOUTES les entreprises pour l'Admin """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        entreprises = ProfilEntreprise.objects.all()
+        serializer = EntrepriseDashboardDetailSerializer(entreprises, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AdminEntrepriseModerateAPIView(APIView):
+    """ Permet d'approuver ou de suspendre une entreprise """
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, entreprise_id):
+        try:
+            entreprise = ProfilEntreprise.objects.get(id=entreprise_id)
+        except ProfilEntreprise.DoesNotExist:
+            return Response({"error": "Entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        # On modifie juste le champ 'est_approuvee'
+        serializer = EntrepriseDashboardDetailSerializer(entreprise, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Statut de l'entreprise mis à jour !"}, status=status.HTTP_200_OK)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminStatsAPIView(APIView):
+    """ Renvoie les statistiques globales de la plateforme """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        stats = {
+            "total_offres": OffreEmploi.objects.count(),
+            "offres_attente": OffreEmploi.objects.filter(statut_moderation='EN_ATTENTE').count(),
+            "total_entreprises": ProfilEntreprise.objects.count(),
+            "entreprises_attente": ProfilEntreprise.objects.filter(est_approuvee=False).count(),
+            "total_candidats": User.objects.filter(role='CANDIDAT').count(),
+            "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
+        }
+        return Response(stats, status=status.HTTP_200_OK)
+
+class AdminUsersListAPIView(APIView):
+    """ Liste de tous les utilisateurs inscrits """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # On exclut le super-admin lui-même pour éviter qu'il ne se bloque par erreur
+        users = User.objects.exclude(is_superuser=True).order_by('-date_joined')
+        serializer = AdminUserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AdminUserModerateAPIView(APIView):
+    """ Permet de bloquer (is_active=False) ou débloquer un utilisateur """
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            # On inverse son statut d'activité
+            user.is_active = not user.is_active
+            user.save()
+            statut = "débloqué" if user.is_active else "bloqué"
+            return Response({"message": f"Utilisateur {statut} avec succès !"}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)

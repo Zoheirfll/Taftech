@@ -11,6 +11,12 @@ import ProfilCandidat from "./Pages/ProfilCandidat";
 import JobDetail from "./Pages/JobDetail";
 import RegisterRecruteur from "./Pages/RegisterRecruteur";
 import MesCandidatures from "./Pages/MesCandidatures";
+import ReviewCandidature from "./Pages/ReviewCandidature";
+import AdminLayout from "./Pages/Admin/AdminLayout";
+import AdminEntreprises from "./Pages/Admin/AdminEntreprises";
+import AdminOffres from "./Pages/Admin/AdminOffres";
+import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
+import AdminUsers from "./Pages/Admin/AdminUsers";
 
 function App() {
   return (
@@ -27,9 +33,21 @@ function App() {
           <Route path="/creer-offre" element={<CreateJob />} />
           <Route path="/dashboard" element={<DashboardRecruteur />} />
           <Route path="/profil" element={<ProfilCandidat />} />
-          <Route path="/offre/:id" element={<JobDetail />} />
+          <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/register-entreprise" element={<RegisterRecruteur />} />
           <Route path="/mes-candidatures" element={<MesCandidatures />} />
+          <Route path="/jobs/:id/postuler" element={<ReviewCandidature />} />
+          {/* --- LA ZONE ADMINISTRATION --- */}
+          <Route path="/admin-taftech" element={<AdminLayout />}>
+            {/* Si on tape juste /admin-taftech, on redirige vers les entreprises par défaut */}
+            <Route index element={<AdminEntreprises />} />
+
+            {/* Les sous-pages */}
+            <Route path="entreprises" element={<AdminEntreprises />} />
+            <Route path="offres" element={<AdminOffres />} />
+            <Route path="dashboard" element={<AdminStatistiques />} />
+            <Route path="utilisateurs" element={<AdminUsers />} />
+          </Route>
         </Routes>
       </div>
     </Router>

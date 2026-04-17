@@ -83,6 +83,16 @@ const Navbar = () => {
                 </>
               )}
 
+              {/* 🔥 MENU SUPER ADMIN (LA PORTE SECRÈTE) 🔥 */}
+              {role === "ADMIN" && (
+                <Link
+                  to="/admin-taftech"
+                  className="bg-gray-900 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-800 transition shadow-md flex items-center gap-2"
+                >
+                  <span>⚙️</span> Tour de Contrôle
+                </Link>
+              )}
+
               {/* BOUTON DÉCONNEXION */}
               <button
                 onClick={() => authService.logout()}

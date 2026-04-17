@@ -14,6 +14,7 @@ class EntrepriseSimpleSerializer(serializers.ModelSerializer):
         fields = ('nom_entreprise', 'wilaya_siege')
 # 2 Offre Emploi Serializer
 class OffreEmploiSerializer(serializers.ModelSerializer):
+    entreprise = EntrepriseSimpleSerializer(read_only=True)
     class Meta:
         model = OffreEmploi
         fields = '__all__'
@@ -47,21 +48,32 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = (
-            'titre', 'wilaya', 'missions', 'profil_recherche', 
+            'titre', 'wilaya', 'commune', 'diplome', 'specialite', 'missions', 'profil_recherche', 
             'type_contrat', 'experience_requise', 'salaire_propose'
         )
 
 # 1. Vigile pour les infos basiques du candidat
 class CandidatInfoDTO(serializers.ModelSerializer):
     cv_pdf = serializers.SerializerMethodField()
+    # On ajoute explicitement le prénom, nom et téléphone
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    telephone = serializers.CharField(read_only=True)
+    diplome = serializers.SerializerMethodField() # Petit bonus pour le recruteur
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'cv_pdf')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'telephone', 'cv_pdf', 'diplome')
         
     def get_cv_pdf(self, obj):
-        # On va chercher le CV dans le profil lié au candidat
         if hasattr(obj, 'profil_candidat') and obj.profil_candidat.cv_pdf:
-            return obj.profil_candidat.cv_pdf.url
+            # CORRECTION DU BUG CV : On force l'URL complète vers Django
+            return f"http://127.0.0.1:8000{obj.profil_candidat.cv_pdf.url}"
+        return None
+
+    def get_diplome(self, obj):
+        if hasattr(obj, 'profil_candidat'):
+            return obj.profil_candidat.diplome
         return None
 
 # 2. Vigile pour la candidature
@@ -125,13 +137,13 @@ class CandidatRegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # On retire le consentement avant de créer l'user (car pas de champ en BDD)
-        validated_data.pop('consentement_loi_18_07')
-        
+        # 1. On récupère TOUTES les valeurs (sans les jeter à la poubelle)
+        consentement = validated_data.pop('consentement_loi_18_07')
         date_naiss = validated_data.pop('date_naissance')
         nin = validated_data.pop('nin')
         telephone = validated_data.pop('telephone')
         
+        # 2. On injecte toutes les valeurs dans la base de données
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -139,14 +151,18 @@ class CandidatRegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             nin=nin,
-            telephone=telephone
+            telephone=telephone,
+            consentement_loi_18_07=consentement, # <--- LA CORRECTION EST ICI !
+            role='CANDIDAT' # On s'assure que le rôle est bien fixé
         )
         
-        from .models import ProfilCandidat
+        # 3. On crée le profil associé
+        from jobs.models import ProfilCandidat
         ProfilCandidat.objects.create(
             user=user,
             date_naissance=date_naiss
         )
+        
         return user
 
 class MesCandidaturesDTO(serializers.ModelSerializer):
@@ -174,7 +190,25 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilEntreprise
         fields = (
-            'nom_entreprise', 'secteur_activite', 'registre_commerce', 
+            'id','nom_entreprise', 'secteur_activite', 'registre_commerce', 
             'wilaya_siege', 'description', 'est_approuvee',
             'first_name', 'last_name', 'email', 'telephone'
+        )
+
+# Un petit serializer pour extraire le CV et les compétences du candidat
+class ProfilCandidatAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfilCandidat
+        fields = '__all__'
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    # On imbrique le profil pour que React reçoive tout le dossier !
+    profil_candidat = ProfilCandidatAdminSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'username', 'email', 'first_name', 'last_name', 'role', 
+            'is_active', 'date_joined', 'telephone', 'nin', 'date_naissance', 
+            'consentement_loi_18_07', 'profil_candidat'
         )

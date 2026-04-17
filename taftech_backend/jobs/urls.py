@@ -1,7 +1,11 @@
 from django.urls import path
 from .views import JobListAPIView
-from .views import ProfilEntrepriseCreateAPIView, UpdateProfilEntrepriseAPIView
+from .views import ProfilEntrepriseCreateAPIView
 from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, CandidatRegisterAPIView, MesCandidaturesAPIView
+from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView
+from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView
+
+
 
 
 
@@ -24,5 +28,11 @@ urlpatterns = [
     path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
     path('candidat/register/', CandidatRegisterAPIView.as_view(), name='candidat-register'),
     path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
-    path('entreprise/modifier/', UpdateProfilEntrepriseAPIView.as_view(), name='modifier-entreprise'),
+    path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres-list'),
+    path('admin/offres/<int:offre_id>/moderer/', AdminOffreModerateAPIView.as_view(), name='admin-offre-moderate'),
+    path('admin/entreprises/', AdminEntreprisesListAPIView.as_view(), name='admin-entreprises-list'),
+    path('admin/entreprises/<int:entreprise_id>/moderer/', AdminEntrepriseModerateAPIView.as_view(), name='admin-entreprise-moderate'),
+    path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
+    path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users-list'),
+    path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
 ]

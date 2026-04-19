@@ -1,32 +1,48 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
+import toast from "react-hot-toast";
 
 const AdminOffres = () => {
   const [offres, setOffres] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // --- ÉTATS POUR LA PAGINATION ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // --- ÉTATS POUR LES MODALS ---
   const [editingOffre, setEditingOffre] = useState(null);
   const [rejectingOffre, setRejectingOffre] = useState(null);
-  const [selectedOffre, setSelectedOffre] = useState(null); // <-- NOUVEAU
+  const [selectedOffre, setSelectedOffre] = useState(null);
   const [motifRejet, setMotifRejet] = useState("");
-  useEffect(() => {
-    chargerOffres();
-  }, []);
 
-  const chargerOffres = async () => {
+  // NOUVEAU : On utilise useCallback pour mémoriser la fonction et satisfaire ESLint
+  const chargerOffres = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminOffres();
-      setOffres(data);
+      const data = await jobsService.getAdminOffres(currentPage);
+
+      // Adaptation automatique : si Django envoie des pages (results) ou un tableau simple
+      if (data.results) {
+        setOffres(data.results);
+        setTotalPages(Math.ceil(data.count / 10)); // On suppose 10 offres par page
+      } else {
+        setOffres(data);
+      }
     } catch (err) {
-      alert(
-        "Erreur d'accès. Êtes-vous sûr d'être connecté en tant qu'Admin ?",
+      toast.error(
+        "Erreur d'accès aux offres. Êtes-vous sûr d'être connecté en tant qu'Admin ?",
         err,
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage]); // Se recharge uniquement si currentPage change
+
+  // Le useEffect est maintenant propre et sans erreurs !
+  useEffect(() => {
+    chargerOffres();
+  }, [chargerOffres]);
 
   const handleApprouver = async (id) => {
     if (window.confirm("Publier cette offre en ligne ?")) {
@@ -36,8 +52,9 @@ const AdminOffres = () => {
           motif_rejet: "",
         });
         chargerOffres();
+        toast.success("Offre approuvée et en ligne !");
       } catch (err) {
-        alert("Erreur lors de l'approbation.", err);
+        toast.error("Erreur lors de l'approbation.", err);
       }
     }
   };
@@ -51,8 +68,9 @@ const AdminOffres = () => {
       setRejectingOffre(null);
       setMotifRejet("");
       chargerOffres();
+      toast.success("L'offre a été rejetée et le recruteur sera notifié.");
     } catch (err) {
-      alert("Erreur lors du rejet.", err);
+      toast.error("Erreur lors du rejet de l'offre.", err);
     }
   };
 
@@ -65,9 +83,9 @@ const AdminOffres = () => {
       });
       setEditingOffre(null);
       chargerOffres();
-      alert("Offre corrigée avec succès !");
+      toast.success("Offre corrigée avec succès !");
     } catch (err) {
-      alert("Erreur lors de la modification.", err);
+      toast.error("Erreur lors de la modification.", err);
     }
   };
 
@@ -91,7 +109,7 @@ const AdminOffres = () => {
     );
   };
 
-  if (loading)
+  if (loading && offres.length === 0)
     return (
       <div className="text-center p-20 font-bold animate-pulse text-blue-600">
         Chargement des offres...
@@ -133,15 +151,13 @@ const AdminOffres = () => {
                 </td>
                 <td className="p-6">{getBadge(offre.statut_moderation)}</td>
                 <td className="p-6 text-right space-x-2">
-                  {/* BOUTON VOIR AJOUTÉ ICI */}
                   <button
                     onClick={() => setSelectedOffre(offre)}
                     className="bg-blue-50 text-blue-600 hover:bg-blue-100 p-2 rounded-lg"
-                    title="Voir les détails complets"
+                    title="Voir les détails"
                   >
                     👁️
                   </button>
-
                   <button
                     onClick={() => setEditingOffre(offre)}
                     className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg"
@@ -174,7 +190,32 @@ const AdminOffres = () => {
         </table>
       </div>
 
-      {/* --- MODAL POUR VOIR TOUTE L'OFFRE (NOUVEAU) --- */}
+      {/* --- LA BARRE DE PAGINATION EST ICI --- */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 font-bold text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            ← Précédent
+          </button>
+          <span className="text-sm font-black text-gray-600">
+            Page {currentPage} sur {totalPages}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 font-bold text-sm rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            Suivant →
+          </button>
+        </div>
+      )}
+
+      {/* --- MODAL POUR VOIR TOUTE L'OFFRE --- */}
       {selectedOffre && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -195,7 +236,6 @@ const AdminOffres = () => {
                 ✕
               </button>
             </div>
-
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-gray-50 p-3 rounded-xl border text-center">
                 <p className="text-xs text-gray-500 font-bold uppercase">
@@ -222,7 +262,6 @@ const AdminOffres = () => {
                 </p>
               </div>
             </div>
-
             <div className="space-y-6">
               <div>
                 <h3 className="font-black text-gray-800 uppercase text-sm mb-2">
@@ -277,7 +316,7 @@ const AdminOffres = () => {
                   onChange={(e) =>
                     setEditingOffre({ ...editingOffre, titre: e.target.value })
                   }
-                  className="w-full p-3 border rounded-xl bg-gray-50 mt-1 font-bold"
+                  className="w-full p-3 border rounded-xl bg-gray-50 mt-1 font-bold outline-none focus:border-blue-600"
                 />
               </div>
               <div>
@@ -293,7 +332,7 @@ const AdminOffres = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full p-3 border rounded-xl bg-gray-50 mt-1"
+                  className="w-full p-3 border rounded-xl bg-gray-50 mt-1 outline-none focus:border-blue-600"
                 ></textarea>
               </div>
               <div className="flex justify-end gap-3 mt-6">
@@ -332,7 +371,7 @@ const AdminOffres = () => {
               value={motifRejet}
               onChange={(e) => setMotifRejet(e.target.value)}
               placeholder="Ex: Veuillez préciser le salaire..."
-              className="w-full p-4 border rounded-xl bg-gray-50 mb-6 font-medium"
+              className="w-full p-4 border rounded-xl bg-gray-50 mb-6 font-medium outline-none focus:border-red-500"
             ></textarea>
             <div className="flex justify-end gap-3">
               <button

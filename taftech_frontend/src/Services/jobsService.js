@@ -1,10 +1,8 @@
 import api from "../api/axiosConfig";
 
-// Note : On utilise 'api' partout car ton axiosConfig gère déjà l'URL de base
 export const jobsService = {
-  // 1. Récupérer toutes les offres (Candidat/Visiteur) - MISE À JOUR POUR US 2.1
+  // 1. Récupérer toutes les offres
   getAllJobs: async (filters = {}, page = 1) => {
-    // On emballe proprement tous les filtres pour Django
     const queryParams = new URLSearchParams({
       search: filters.search || "",
       wilaya: filters.wilaya || "",
@@ -20,154 +18,104 @@ export const jobsService = {
     return response.data;
   },
 
-  // 2. Récupérer une offre par son ID
+  // 2. Récupérer une offre
   getJobById: async (id) => {
     const response = await api.get(`jobs/${id}/`);
     return response.data;
   },
 
-  // 3. Postuler (Candidat)
+  // 3. Postuler
   postuler: async (offreId, candidatureData = {}) => {
-    const token = localStorage.getItem("accessToken");
+    // Plus besoin d'ajouter le header, api.js s'en occupe !
     const response = await api.post(
       `jobs/${offreId}/postuler/`,
-      candidatureData, // On envoie les données ici au lieu de {}
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
+      candidatureData,
     );
     return response.data;
   },
 
-  // 4. Publier une offre (Recruteur)
+  // 4. Publier une offre
   creerOffre: async (offreData) => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.post("jobs/creer/", offreData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.post("jobs/creer/", offreData);
     return response.data;
   },
 
   // 5. Dashboard (Recruteur)
   getDashboard: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/dashboard/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get("jobs/dashboard/");
     return response.data;
   },
 
-  // 6. Mettre à jour le statut (Recruteur)
+  // 6. Mettre à jour le statut
   updateStatutCandidature: async (candidatureId, nouveauStatut) => {
-    const token = localStorage.getItem("accessToken");
     const response = await api.patch(
       `jobs/candidatures/${candidatureId}/statut/`,
       { statut: nouveauStatut },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
     );
     return response.data;
   },
 
-  // 7. Consulter ses propres candidatures (Candidat)
+  // 7. Consulter ses propres candidatures
   getMesCandidatures: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/mes-candidatures/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get("jobs/mes-candidatures/");
     return response.data;
   },
+
+  // 8. Profil candidat
   getProfilCandidat: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/profil/", {
-      // Assure-toi que c'est la bonne URL de ton API
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("jobs/profil/");
     return response.data;
   },
+
   // --- PARTIE ADMINISTRATEUR ---
 
-  // ... tes autres fonctions au-dessus (getJobById, postuler, etc.) ...
-
-  // 9. Récupérer toutes les offres pour l'Admin
-  getAdminOffres: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/admin/offres/", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  // 9. Récupérer toutes les offres pour l'Admin (AVEC PAGINATION)
+  getAdminOffres: async (page = 1) => {
+    const response = await api.get(`jobs/admin/offres/?page=${page}`);
     return response.data;
-  }, // <-- VIRGULE TRÈS IMPORTANTE ICI
+  },
 
   // 10. Modérer une offre
   moderateOffre: async (offreId, dataModifiee) => {
-    const token = localStorage.getItem("accessToken");
     const response = await api.patch(
       `jobs/admin/offres/${offreId}/moderer/`,
       dataModifiee,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
     );
     return response.data;
-  }, // <-- VIRGULE TRÈS IMPORTANTE ICI
+  },
 
   // 11. Récupérer toutes les entreprises (Admin)
   getAdminEntreprises: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/admin/entreprises/", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("jobs/admin/entreprises/");
     return response.data;
-  }, // <-- VIRGULE TRÈS IMPORTANTE ICI
+  },
 
-  // 12. Approuver ou suspendre une entreprise (Admin)
+  // 12. Approuver ou suspendre une entreprise
   moderateEntreprise: async (entrepriseId, dataModifiee) => {
-    const token = localStorage.getItem("accessToken");
     const response = await api.patch(
       `jobs/admin/entreprises/${entrepriseId}/moderer/`,
       dataModifiee,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
     );
     return response.data;
-  }, // <-- Pas besoin de virgule sur le tout dernier
+  },
+
   // 13. Récupérer les statistiques
   getAdminStats: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/admin/statistiques/", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("jobs/admin/statistiques/");
     return response.data;
   },
 
   // 14. Récupérer les utilisateurs
   getAdminUsers: async () => {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.get("jobs/admin/utilisateurs/", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get("jobs/admin/utilisateurs/");
     return response.data;
   },
 
   // 15. Bloquer/Débloquer un utilisateur
   moderateUser: async (userId) => {
-    const token = localStorage.getItem("accessToken");
     const response = await api.patch(
       `jobs/admin/utilisateurs/${userId}/moderer/`,
       {},
-      { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
   },

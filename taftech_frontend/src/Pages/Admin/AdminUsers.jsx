@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
+import toast from "react-hot-toast"; // <-- IMPORT DU TOAST
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState(null); // <-- NOUVEAU
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     chargerUsers();
@@ -16,7 +17,7 @@ const AdminUsers = () => {
       const data = await jobsService.getAdminUsers();
       setUsers(data);
     } catch (err) {
-      alert("Erreur de chargement des utilisateurs.", err);
+      toast.error("Erreur de chargement des utilisateurs.", err); // <-- TOAST ERROR
     } finally {
       setLoading(false);
     }
@@ -28,8 +29,16 @@ const AdminUsers = () => {
       try {
         await jobsService.moderateUser(id);
         chargerUsers();
+        toast.success(
+          isActif
+            ? "Utilisateur bloqué."
+            : "Utilisateur débloqué avec succès !",
+        ); // <-- TOAST SUCCESS
       } catch (err) {
-        alert("Erreur lors de la modification.", err);
+        toast.error(
+          "Erreur lors de la modification du statut de l'utilisateur.",
+          err,
+        ); // <-- TOAST ERROR
       }
     }
   };

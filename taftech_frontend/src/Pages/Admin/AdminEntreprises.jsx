@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
+import toast from "react-hot-toast"; // <-- IMPORT DU TOAST
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEntreprise, setSelectedEntreprise] = useState(null); // <-- NOUVEAU
+  const [selectedEntreprise, setSelectedEntreprise] = useState(null);
 
   useEffect(() => {
     chargerEntreprises();
@@ -16,7 +17,7 @@ const AdminEntreprises = () => {
       const data = await jobsService.getAdminEntreprises();
       setEntreprises(data);
     } catch (err) {
-      alert(err.message || err);
+      toast.error(err.message || "Erreur de chargement des entreprises."); // <-- TOAST ERROR
     } finally {
       setLoading(false);
     }
@@ -30,8 +31,11 @@ const AdminEntreprises = () => {
           est_approuvee: !statutActuel,
         });
         chargerEntreprises();
+        toast.success(
+          `L'entreprise a été ${statutActuel ? "suspendue" : "approuvée"} avec succès !`,
+        ); // <-- TOAST SUCCESS
       } catch (err) {
-        alert("Erreur lors de la modification du statut.", err);
+        toast.error("Erreur lors de la modification du statut.", err); // <-- TOAST ERROR
       }
     }
   };
@@ -93,7 +97,6 @@ const AdminEntreprises = () => {
                   )}
                 </td>
                 <td className="p-6 text-right space-x-2">
-                  {/* BOUTON VOIR AJOUTÉ ICI */}
                   <button
                     onClick={() => setSelectedEntreprise(ent)}
                     className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-xs transition"

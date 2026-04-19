@@ -1,31 +1,21 @@
-import axios from "axios";
-
-// Ajuste le port si ton backend tourne sur un autre port que 8000
-const API_URL = "http://127.0.0.1:8000/api/";
+// Importe ton instance Axios configurée (qui contient withCredentials: true et l'URL localhost)
+// Assure-toi que le chemin "../api/axiosConfig" correspond bien à ton dossier !
+import api from "../api/axiosConfig";
 
 export const profilService = {
   // 1. Récupérer le profil
   getProfil: async () => {
-    // On récupère le badge (token) du candidat connecté
-    const token = localStorage.getItem("accessToken");
-
-    const response = await axios.get(`${API_URL}jobs/profil/`, {
-      // On montre le badge à Django dans les headers
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    // La magie des cookies : plus besoin de gérer le token manuellement.
+    // L'instance 'api' envoie le cookie automatiquement au serveur !
+    const response = await api.get("jobs/profil/");
     return response.data;
   },
 
   // 2. Mettre à jour le profil (avec le CV)
   updateProfil: async (formData) => {
-    const token = localStorage.getItem("accessToken");
-
-    const response = await axios.put(`${API_URL}jobs/profil/`, formData, {
+    const response = await api.put("jobs/profil/", formData, {
       headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data", // OBLIGATOIRE pour envoyer le fichier PDF
+        "Content-Type": "multipart/form-data", // Toujours OBLIGATOIRE pour envoyer le fichier PDF ou l'image
       },
     });
     return response.data;

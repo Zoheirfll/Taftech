@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
+import toast from "react-hot-toast"; // <-- IMPORT
 
 const RegisterCandidat = () => {
   const navigate = useNavigate();
 
-  // --- TEXTE LÉGAL LOI 18-07 ---
   const TEXTE_LOI_1807 = {
     titre: "Protection des données à caractère personnel (Loi 18-07)",
     contenu: `Conformément à la loi n° 18-07 du 10 juin 2018 relative à la protection des personnes physiques dans le traitement des données à caractère personnel, TafTech s'engage à :
@@ -28,9 +28,8 @@ const RegisterCandidat = () => {
     consentement_loi_18_07: false,
   });
 
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false); // État pour la fenêtre Loi 18-07
+  const [showModal, setShowModal] = useState(false);
 
   const handleChange = (e) => {
     const value =
@@ -41,14 +40,13 @@ const RegisterCandidat = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.consentement_loi_18_07) {
-      setError("Vous devez accepter la Loi 18-07 pour vous inscrire.");
+      toast.error("Vous devez accepter la Loi 18-07 pour vous inscrire."); // <-- TOAST ERROR
       return;
     }
     setLoading(true);
-    setError("");
+    const toastId = toast.loading("Création de votre compte...");
 
     try {
-      // Génération automatique du username
       const usernameGenere =
         formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
 
@@ -58,14 +56,17 @@ const RegisterCandidat = () => {
       };
 
       await authService.registerCandidat(dataToSend);
-      alert("Compte créé avec succès ! Connectez-vous maintenant.");
+      toast.success("Compte créé avec succès ! Vous pouvez vous connecter.", {
+        id: toastId,
+      }); // <-- TOAST SUCCESS
       navigate("/login");
     } catch (err) {
-      setError(
+      toast.error(
         err.response?.data?.email?.[0] ||
           err.response?.data?.nin?.[0] ||
           "Une erreur est survenue lors de l'inscription.",
-      );
+        { id: toastId },
+      ); // <-- TOAST ERROR
     } finally {
       setLoading(false);
     }
@@ -79,12 +80,6 @@ const RegisterCandidat = () => {
       <p className="text-center text-gray-500 mb-8">
         Créez votre profil candidat en quelques secondes.
       </p>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl mb-6 text-sm font-bold border border-red-100">
-          ⚠️ {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex gap-4">
@@ -184,7 +179,6 @@ const RegisterCandidat = () => {
           />
         </div>
 
-        {/* --- SECTION LOI 18-07 --- */}
         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
           <input
             type="checkbox"
@@ -224,7 +218,6 @@ const RegisterCandidat = () => {
         </button>
       </form>
 
-      {/* --- FENÊTRE MODALE LOI 18-07 --- */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200] p-6">
           <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl">

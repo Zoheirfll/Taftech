@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import toast from "react-hot-toast"; // <-- IMPORT
 
 const ReviewCandidature = () => {
   const { id } = useParams();
@@ -20,7 +21,7 @@ const ReviewCandidature = () => {
         setJob(jobData);
         setProfil(profilData);
       } catch (err) {
-        console.error("Erreur de chargement", err);
+        toast.error("Erreur de chargement du profil.", err); // <-- TOAST ERROR
       } finally {
         setLoading(false);
       }
@@ -32,15 +33,16 @@ const ReviewCandidature = () => {
     setSubmitting(true);
     try {
       await jobsService.postuler(id, {});
-      alert("Candidature envoyée avec succès !");
+      toast.success("Candidature envoyée avec succès !"); // <-- TOAST SUCCESS
       navigate("/mes-candidatures");
     } catch (err) {
-      alert("Erreur ou candidature déjà envoyée.", err);
+      toast.error(
+        err.response?.data?.message || "Erreur ou candidature déjà envoyée.",
+      ); // <-- TOAST ERROR
       setSubmitting(false);
     }
   };
 
-  // Petite fonction pour gérer l'URL du CV sans erreur
   const getCvUrl = (cvPath) => {
     if (!cvPath) return "#";
     return cvPath.startsWith("http")
@@ -48,7 +50,6 @@ const ReviewCandidature = () => {
       : `http://127.0.0.1:8000${cvPath}`;
   };
 
-  // Fonction pour transformer une chaîne "Python, React" en badges (ou gérer si c'est déjà un tableau)
   const renderBadges = (data) => {
     if (!data)
       return <p className="text-gray-400 italic text-sm">Non renseigné</p>;
@@ -80,7 +81,6 @@ const ReviewCandidature = () => {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8 mb-20">
-      {/* EN-TÊTE DYNAMIQUE */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-black text-gray-900">
           {job.titre} chez{" "}
@@ -258,7 +258,6 @@ const ReviewCandidature = () => {
         </div>
       </div>
 
-      {/* BARRE DE VALIDATION EN BAS */}
       <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 flex justify-between items-center px-4 md:px-20 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <Link
           to={`/jobs/${id}`}

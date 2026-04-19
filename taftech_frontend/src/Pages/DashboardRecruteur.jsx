@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import toast from "react-hot-toast"; // <-- IMPORT
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -51,9 +52,9 @@ const DashboardRecruteur = () => {
       await jobsService.updateProfilEntreprise(dataToSend);
       setEntreprise({ ...entreprise, ...dataToSend });
       setIsEditing(false);
-      alert("Profil et informations personnelles mis à jour !");
+      toast.success("Profil mis à jour !"); // <-- TOAST SUCCESS
     } catch (err) {
-      alert("Erreur lors de la sauvegarde.", err);
+      toast.error("Erreur lors de la sauvegarde.", err); // <-- TOAST ERROR
     }
   };
 
@@ -73,8 +74,9 @@ const DashboardRecruteur = () => {
           return offre;
         }),
       );
+      toast.success("Statut de la candidature modifié."); // <-- TOAST SUCCESS
     } catch (err) {
-      alert("Erreur de mise à jour du statut.", err);
+      toast.error("Erreur de mise à jour du statut.", err); // <-- TOAST ERROR
     }
   };
 
@@ -87,10 +89,8 @@ const DashboardRecruteur = () => {
     return styles[statut] || styles.EN_ATTENTE;
   };
 
-  // --- PETITE FONCTION SÉCURISÉE POUR LE CV ---
   const getCvUrl = (cvPath) => {
     if (!cvPath) return "#";
-    // Si Django renvoie déjà "http://...", on l'utilise direct. Sinon on l'ajoute.
     return cvPath.startsWith("http")
       ? cvPath
       : `http://127.0.0.1:8000${cvPath}`;
@@ -112,7 +112,6 @@ const DashboardRecruteur = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
-      {/* HEADER DYNAMIQUE */}
       <div className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-black text-gray-900">
@@ -138,7 +137,6 @@ const DashboardRecruteur = () => {
         </button>
       </div>
 
-      {/* SYSTÈME D'ONGLETS */}
       <div className="flex border-b border-gray-200 mb-8">
         {["offres", "profil"].map((tab) => (
           <button
@@ -160,7 +158,6 @@ const DashboardRecruteur = () => {
         ))}
       </div>
 
-      {/* --- ONGLET OFFRES --- */}
       {activeTab === "offres" && (
         <div className="space-y-6">
           {offres.length === 0 ? (
@@ -203,7 +200,6 @@ const DashboardRecruteur = () => {
                           key={cand.id}
                           className="hover:bg-blue-50/30 transition"
                         >
-                          {/* COLONNE 1 : IDENTITÉ (Nom complet + Contact) */}
                           <td className="py-4 align-top">
                             <p className="font-black text-gray-900 text-sm uppercase">
                               {cand.candidat.last_name || "Nom inconnu"}{" "}
@@ -223,8 +219,6 @@ const DashboardRecruteur = () => {
                               )}
                             </div>
                           </td>
-
-                          {/* COLONNE 2 : DOSSIER & LETTRE */}
                           <td className="py-4 align-top">
                             {cand.candidat.cv_pdf ? (
                               <a
@@ -240,8 +234,6 @@ const DashboardRecruteur = () => {
                                 Aucun CV fourni
                               </span>
                             )}
-
-                            {/* Affichage déroulant de la lettre de motivation */}
                             {cand.lettre_motivation && (
                               <details className="mt-3 group">
                                 <summary className="text-xs font-bold text-indigo-600 cursor-pointer hover:underline list-none flex items-center gap-1">
@@ -256,8 +248,6 @@ const DashboardRecruteur = () => {
                               </details>
                             )}
                           </td>
-
-                          {/* COLONNE 3 : STATUT */}
                           <td className="py-4 align-top pt-5">
                             <span
                               className={`text-[10px] font-black px-3 py-1 rounded-full border ${getBadgeStyle(cand.statut)}`}
@@ -265,8 +255,6 @@ const DashboardRecruteur = () => {
                               {cand.statut.replace("_", " ")}
                             </span>
                           </td>
-
-                          {/* COLONNE 4 : ACTIONS */}
                           <td className="py-4 text-right align-top pt-4">
                             {cand.statut === "EN_ATTENTE" && (
                               <div className="flex justify-end gap-2">
@@ -302,11 +290,8 @@ const DashboardRecruteur = () => {
         </div>
       )}
 
-      {/* --- ONGLET PROFIL COMPLET (MODIFIABLE) --- */}
-      {/* ... (LE RESTE DE TON CODE RESTE EXACTEMENT LE MÊME, JE NE L'AI PAS MODIFIÉ) ... */}
       {activeTab === "profil" && entreprise && (
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 animate-fadeIn">
-          {/* ... TON CODE DE PROFIL ... */}
           <div className="flex justify-between items-center mb-10">
             <h2 className="text-2xl font-black text-gray-900 tracking-tight">
               Configuration du Compte

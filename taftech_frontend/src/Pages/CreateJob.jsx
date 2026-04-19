@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// Assure-toi d'avoir un service pour gérer les requêtes des offres
 import { jobsService } from "../Services/jobsService";
+import toast from "react-hot-toast"; // <-- IMPORT
 
 const CreateJob = () => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
 
-  // L'état qui correspond exactement à ton OffreEmploiCreateDTO (US 2.1)
   const [formData, setFormData] = useState({
     titre: "",
     type_contrat: "CDI",
@@ -29,33 +27,32 @@ const CreateJob = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setStatus({ type: "info", message: "Publication de l'offre en cours..." });
+    const toastId = toast.loading("Publication de l'offre en cours..."); // Toast de chargement
 
     try {
       await jobsService.creerOffre(formData);
-      setStatus({
-        type: "success",
-        message:
-          "🚀 Offre publiée avec succès ! Les candidats peuvent maintenant postuler.",
-      });
+      toast.success(
+        "🚀 Offre publiée avec succès ! Les candidats peuvent maintenant postuler.",
+        { id: toastId },
+      );
 
-      // Redirection vers le dashboard après 2 secondes
       setTimeout(() => {
         navigate("/dashboard");
       }, 2000);
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: "Erreur lors de la publication. Vérifiez vos informations.",
+      toast.error(
+        "Erreur lors de la publication. Vérifiez vos informations.",
+        {
+          id: toastId,
+        },
         error,
-      });
+      );
       setLoading(false);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-10 bg-gray-50 min-h-screen font-sans">
-      {/* EN-TÊTE */}
       <div className="mb-10 text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase">
           Créer une{" "}
@@ -72,15 +69,6 @@ const CreateJob = () => {
         onSubmit={handleSubmit}
         className="space-y-8 pb-32 max-w-5xl mx-auto"
       >
-        {status.message && (
-          <div
-            className={`p-6 rounded-3xl font-black shadow-2xl flex items-center gap-4 animate-slideDown ${status.type === "success" ? "bg-green-500 text-white" : status.type === "error" ? "bg-red-500 text-white" : "bg-blue-600 text-white animate-pulse"}`}
-          >
-            <span>{status.type === "success" ? "✅" : "ℹ️"}</span>{" "}
-            {status.message}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* COLONNE GAUCHE (Infos Principales & Localisation) */}
           <div className="lg:col-span-7 space-y-8">
@@ -178,7 +166,7 @@ const CreateJob = () => {
 
           {/* COLONNE DROITE (Ciblage & Description) */}
           <div className="lg:col-span-5 space-y-8">
-            {/* SECTION 3 : CRITÈRES DE CIBLAGE (Le cœur de l'US 2.1) */}
+            {/* SECTION 3 : CRITÈRES DE CIBLAGE */}
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-xl border-4 border-blue-50 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-4 py-1 rounded-bl-xl tracking-widest uppercase">
                 Ciblage Précis
@@ -232,7 +220,7 @@ const CreateJob = () => {
             </div>
           </div>
 
-          {/* DESCRIPTION LONGUE (Prend toute la largeur en bas) */}
+          {/* DESCRIPTION LONGUE */}
           <div className="lg:col-span-12 space-y-8">
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-gray-100">
               <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-widest mb-8 flex items-center gap-3">
@@ -272,7 +260,6 @@ const CreateJob = () => {
           </div>
         </div>
 
-        {/* BOUTON FLOTTANT */}
         <div className="fixed bottom-10 right-10 z-[100]">
           <button
             type="submit"

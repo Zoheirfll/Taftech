@@ -1,26 +1,33 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../Services/authService"; // Attention à la majuscule de Services selon ton dossier
+import { authService } from "../Services/authService";
+import toast from "react-hot-toast"; // <-- IMPORT
 
 const Login = () => {
-  // On garde "username" dans le state car c'est ce que Django attend techniquement
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
   });
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    const toastId = toast.loading("Connexion en cours...");
 
     try {
+      // Appelle le nouveau authService qui utilise les cookies
       await authService.login(credentials.username, credentials.password);
+
+      toast.success("Connexion réussie !", { id: toastId });
+
+      // On redirige vers la page d'accueil ou le dashboard
       navigate("/");
+
+      // Crucial : On recharge pour que la Navbar détecte le 'userRole' mis dans le localStorage
       window.location.reload();
     } catch (err) {
-      setError("Adresse email ou mot de passe incorrect.", err);
+      toast.error("Email ou mot de passe incorrect.", { id: toastId });
+      console.error("Erreur login:", err);
     }
   };
 
@@ -34,16 +41,10 @@ const Login = () => {
           Accédez à votre espace TafTech
         </p>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-sm font-medium">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="email" /* CHANGÉ ICI : Force le clavier email sur mobile */
-            placeholder="Adresse Email" /* CHANGÉ ICI */
+            type="email"
+            placeholder="Adresse Email"
             required
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
             onChange={(e) =>

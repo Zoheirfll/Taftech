@@ -1,5 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast"; // <-- 1. LE NOUVEL IMPORT EST ICI
+
 import Navbar from "./Components/Navbar"; // Assure-toi que le chemin est correct
 import Home from "./Pages/Home";
 import RegisterCandidat from "./Pages/RegisterCandidat";
@@ -22,6 +24,19 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 font-sans">
+        {/* <-- 2. LE TOASTER EST PLACÉ ICI (Il gère les pop-ups globalement) --> */}
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
+          toastOptions={{
+            duration: 3000,
+            style: {
+              fontWeight: "bold",
+              borderRadius: "10px",
+            },
+          }}
+        />
+
         {/* LA BARRE DE NAVIGATION EST MAINTENANT DANS SON COMPOSANT DÉDIÉ */}
         <Navbar />
 
@@ -37,6 +52,7 @@ function App() {
           <Route path="/register-entreprise" element={<RegisterRecruteur />} />
           <Route path="/mes-candidatures" element={<MesCandidatures />} />
           <Route path="/jobs/:id/postuler" element={<ReviewCandidature />} />
+
           {/* --- LA ZONE ADMINISTRATION --- */}
           <Route path="/admin-taftech" element={<AdminLayout />}>
             {/* Si on tape juste /admin-taftech, on redirige vers les entreprises par défaut */}

@@ -61,21 +61,19 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
 
 class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        # On transforme l'email en username pour que SimpleJWT soit content
+        # On récupère l'email saisi (qui arrive dans le champ 'username' depuis React)
         email_saisi = attrs.get('username')
         user = User.objects.filter(email=email_saisi).first()
         
         if user:
+            # On donne le vrai username à SimpleJWT pour qu'il puisse authentifier
             attrs['username'] = user.username
             
-        # On récupère les tokens (access/refresh)
+        # Appel à la validation parente (hachage mot de passe + vérification)
         data = super().validate(attrs)
         
-        # ON RESTE PRO : On ajoute les infos dont React a besoin
-        data['role'] = self.user.role  # <-- CRUCIAL
-        data['username'] = self.user.username
-        data['full_name'] = f"{self.user.first_name} {self.user.last_name}"
-        
+        # On ajoute le rôle pour la vue
+        data['role'] = self.user.role
         return data
 
 class RecruteurRegisterSerializer(serializers.ModelSerializer):

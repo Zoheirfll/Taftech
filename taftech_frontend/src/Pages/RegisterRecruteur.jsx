@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
+import toast from "react-hot-toast"; // <-- 1. IMPORT DU TOAST
 
 const RegisterRecruteur = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const RegisterRecruteur = () => {
     secteur_activite: "",
     registre_commerce: "",
   });
-  const [error, setError] = useState("");
+  // Plus besoin de l'état "error", le toast s'en occupe !
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -24,7 +25,9 @@ const RegisterRecruteur = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+
+    // <-- 2. TOAST DE CHARGEMENT
+    const toastId = toast.loading("Création de votre compte entreprise...");
 
     try {
       // Username pro généré à partir de l'email
@@ -39,15 +42,25 @@ const RegisterRecruteur = () => {
       };
 
       const response = await authService.registerRecruteur(dataToSend);
-      alert(response.message); // Affiche le message de "mise en attente" du backend
+
+      // <-- 3. TOAST DE SUCCÈS (Remplace l'alert)
+      toast.success(
+        response.message ||
+          "Inscription réussie ! Votre compte est en attente de validation.",
+        { id: toastId, duration: 5000 },
+      );
+
       navigate("/login");
     } catch (err) {
       // On affiche l'erreur spécifique (ex: email déjà pris ou RC déjà existant)
       const serverError = err.response?.data;
-      setError(
+
+      // <-- 4. TOAST D'ERREUR
+      toast.error(
         serverError?.email?.[0] ||
           serverError?.registre_commerce?.[0] ||
           "Une erreur est survenue lors de l'inscription.",
+        { id: toastId },
       );
     } finally {
       setLoading(false);
@@ -78,12 +91,6 @@ const RegisterRecruteur = () => {
 
         {/* Colonne de droite : Formulaire */}
         <div className="md:w-2/3 p-8">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 text-sm">
-              {error}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-5">
             <h3 className="text-xl font-bold text-gray-800 mb-4">
               Créer un compte entreprise

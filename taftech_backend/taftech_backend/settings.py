@@ -132,15 +132,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+# settings.py
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        
+        # REMPLACE l'ancienne ligne par celle-ci :
+        'accounts.authenticate.CustomJWTAuthentication', 
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 5, # On affiche 5 offres par page pour le test
+    'PAGE_SIZE': 10,
 }
-
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -150,8 +152,13 @@ from datetime import timedelta
 
 # Configuration de la durée de vie des tokens JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1), # Le badge est valable 1 jour entier
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), # Le renouvellement est possible pendant 7 jours
+    # ...
+    'AUTH_COOKIE': 'accessToken',      # Nom du cookie
+    'AUTH_COOKIE_REFRESH': 'refreshToken',
+    'AUTH_COOKIE_SECURE': False,       # Mettre à True en production (HTTPS)
+    'AUTH_COOKIE_HTTP_ONLY': True,     # L'arme anti-XSS : JS ne peut pas lire le cookie
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'Lax',     # Protection contre CSRF
 }
 
 # Configuration pour les fichiers uploadés par les utilisateurs (CVs, images, etc.)

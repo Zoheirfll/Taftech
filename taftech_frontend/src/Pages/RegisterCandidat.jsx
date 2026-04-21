@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
-import toast from "react-hot-toast"; // <-- IMPORT
+import toast from "react-hot-toast";
 
 const RegisterCandidat = () => {
   const navigate = useNavigate();
@@ -40,25 +40,21 @@ const RegisterCandidat = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.consentement_loi_18_07) {
-      toast.error("Vous devez accepter la Loi 18-07 pour vous inscrire."); // <-- TOAST ERROR
+      toast.error("Vous devez accepter la Loi 18-07 pour vous inscrire.");
       return;
     }
     setLoading(true);
-    const toastId = toast.loading("Création de votre compte...");
+    const toastId = toast.loading("Création de votre profil Talent...");
 
     try {
       const usernameGenere =
         formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
-
-      const dataToSend = {
-        ...formData,
-        username: usernameGenere,
-      };
+      const dataToSend = { ...formData, username: usernameGenere };
 
       await authService.registerCandidat(dataToSend);
-      toast.success("Compte créé avec succès ! Vous pouvez vous connecter.", {
+      toast.success("Compte créé avec succès ! Bienvenue sur TafTech.", {
         id: toastId,
-      }); // <-- TOAST SUCCESS
+      });
       navigate("/login");
     } catch (err) {
       toast.error(
@@ -66,184 +62,249 @@ const RegisterCandidat = () => {
           err.response?.data?.nin?.[0] ||
           "Une erreur est survenue lors de l'inscription.",
         { id: toastId },
-      ); // <-- TOAST ERROR
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-xl border border-gray-100 mb-10">
-      <h2 className="text-3xl font-black text-center text-gray-900 mb-2">
-        Rejoindre <span className="text-blue-600">TafTech</span>
-      </h2>
-      <p className="text-center text-gray-500 mb-8">
-        Créez votre profil candidat en quelques secondes.
-      </p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
+      <div className="max-w-5xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-100">
+        {/* Colonne de gauche : Inspiration / Valeur ajoutée */}
+        <div className="md:w-5/12 bg-blue-600 p-12 text-white flex flex-col justify-between relative overflow-hidden">
+          {/* Cercles de décoration en fond */}
+          <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-500 rounded-full opacity-50 blur-3xl"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-indigo-500 rounded-full opacity-50 blur-3xl"></div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Nom *
-            </label>
-            <input
-              type="text"
-              name="last_name"
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={handleChange}
-            />
+          <div className="relative z-10">
+            <h2 className="text-4xl font-black mb-6 leading-tight">
+              Propulsez votre <br />{" "}
+              <span className="text-blue-200">Carrière</span>
+            </h2>
+            <p className="text-blue-100 font-medium leading-relaxed mb-10">
+              Rejoignez TafTech et accédez à des milliers d'opportunités à
+              travers toute l'Algérie. Créez votre profil en 2 minutes.
+            </p>
+
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-500/50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-blue-400/30">
+                  🚀
+                </div>
+                <div>
+                  <p className="font-black text-sm uppercase tracking-widest">
+                    Candidature Rapide
+                  </p>
+                  <p className="text-xs text-blue-200">
+                    Postulez en un clic avec votre profil
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-500/50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-blue-400/30">
+                  👁️
+                </div>
+                <div>
+                  <p className="font-black text-sm uppercase tracking-widest">
+                    Visibilité Maximale
+                  </p>
+                  <p className="text-xs text-blue-200">
+                    Soyez vu par les meilleurs recruteurs
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-500/50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-blue-400/30">
+                  🔒
+                </div>
+                <div>
+                  <p className="font-black text-sm uppercase tracking-widest">
+                    Données Sécurisées
+                  </p>
+                  <p className="text-xs text-blue-200">
+                    Conformité totale avec la loi 18-07
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Prénom *
-            </label>
-            <input
-              type="text"
-              name="first_name"
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={handleChange}
-            />
+
+          <div className="relative z-10 mt-12 pt-8 border-t border-blue-500/50">
+            <p className="text-sm font-medium text-blue-100">
+              Déjà membre ?{" "}
+              <Link
+                to="/login"
+                className="text-white font-black hover:underline ml-1"
+              >
+                Connectez-vous ici
+              </Link>
+            </p>
           </div>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Date de naissance *
-            </label>
-            <input
-              type="date"
-              name="date_naissance"
-              required
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={handleChange}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Téléphone *
-            </label>
-            <input
-              type="tel"
-              name="telephone"
-              required
-              placeholder="05/06/07..."
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
+        {/* Colonne de droite : Formulaire */}
+        <div className="md:w-7/12 p-10 md:p-14 bg-white relative z-20">
+          <h3 className="text-2xl font-black text-gray-900 mb-8">
+            Créer mon espace candidat
+          </h3>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            NIN (18 chiffres) *
-          </label>
-          <input
-            type="text"
-            name="nin"
-            required
-            maxLength="18"
-            placeholder="Numéro d'Identification National"
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-            onChange={handleChange}
-          />
-        </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Nom
+                </label>
+                <input
+                  type="text"
+                  name="last_name"
+                  required
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Prénom
+                </label>
+                <input
+                  type="text"
+                  name="first_name"
+                  required
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+            </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Email *
-          </label>
-          <input
-            type="email"
-            name="email"
-            required
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-            onChange={handleChange}
-          />
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Date de naissance
+                </label>
+                <input
+                  type="date"
+                  name="date_naissance"
+                  required
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  name="telephone"
+                  required
+                  placeholder="Ex: 0555..."
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+            </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Mot de passe *
-          </label>
-          <input
-            type="password"
-            name="password"
-            required
-            minLength="8"
-            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-            onChange={handleChange}
-          />
-        </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                NIN (Numéro d'Identification National)
+              </label>
+              <input
+                type="text"
+                name="nin"
+                required
+                maxLength="18"
+                placeholder="Les 18 chiffres de votre carte biométrique"
+                onChange={handleChange}
+                className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold tracking-widest text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+              />
+            </div>
 
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
-          <input
-            type="checkbox"
-            id="consentement"
-            name="consentement_loi_18_07"
-            required
-            className="mt-1 w-5 h-5 cursor-pointer accent-blue-600"
-            onChange={handleChange}
-          />
-          <label
-            htmlFor="consentement"
-            className="text-xs text-blue-900 leading-tight cursor-pointer"
-          >
-            J'autorise l'utilisation de mes données pour le recrutement
-            conformément à la
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  minLength="8"
+                  onChange={handleChange}
+                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex items-start gap-4 mt-8">
+              <input
+                type="checkbox"
+                id="consentement"
+                name="consentement_loi_18_07"
+                required
+                onChange={handleChange}
+                className="mt-1 w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-600 border-gray-300"
+              />
+              <label
+                htmlFor="consentement"
+                className="text-xs text-gray-600 font-medium leading-relaxed cursor-pointer"
+              >
+                J'autorise l'utilisation de mes données pour le recrutement
+                conformément à la
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  className="font-black text-blue-600 hover:text-blue-800 ml-1 underline decoration-2 underline-offset-2"
+                >
+                  Loi 18-07
+                </button>
+                . *
+              </label>
+            </div>
+
             <button
-              type="button"
-              onClick={() => setShowModal(true)}
-              className="font-black underline ml-1 hover:text-blue-700"
+              type="submit"
+              disabled={loading || !formData.consentement_loi_18_07}
+              className={`w-full py-4 rounded-2xl font-black text-sm tracking-widest uppercase transition-all shadow-xl ${loading || !formData.consentement_loi_18_07 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 shadow-blue-200"}`}
             >
-              Loi 18-07
+              {loading ? "Création en cours..." : "S'inscrire gratuitement"}
             </button>
-            . *
-          </label>
+          </form>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          disabled={loading || !formData.consentement_loi_18_07}
-          className={`w-full py-4 rounded-xl font-black transition shadow-lg ${
-            loading || !formData.consentement_loi_18_07
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700 transform hover:scale-[1.02]"
-          }`}
-        >
-          {loading ? "Traitement en cours..." : "CRÉER MON COMPTE"}
-        </button>
-      </form>
-
+      {/* Modal Loi 18-07 */}
       {showModal && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200] p-6">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl">
-            <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-blue-600 text-2xl">⚖️</span>{" "}
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl animate-slideUp">
+            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-start gap-3">
+              <span className="text-blue-600 text-2xl">⚖️</span>
               {TEXTE_LOI_1807.titre}
             </h3>
-            <div className="text-gray-600 text-sm leading-relaxed whitespace-pre-line overflow-y-auto max-h-80 pr-2 mb-8">
+            <div className="text-gray-600 text-sm leading-loose whitespace-pre-line overflow-y-auto max-h-64 pr-4 mb-8 font-medium">
               {TEXTE_LOI_1807.contenu}
             </div>
             <button
               onClick={() => setShowModal(false)}
-              className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl hover:bg-black transition"
+              className="w-full bg-gray-900 text-white font-black tracking-widest uppercase py-4 rounded-2xl hover:bg-black transition-colors shadow-lg"
             >
-              J'ai lu et j'accepte
+              J'ai compris
             </button>
           </div>
         </div>
       )}
-
-      <div className="text-center mt-8 text-sm">
-        Déjà membre ?{" "}
-        <Link to="/login" className="text-blue-600 font-bold hover:underline">
-          Se connecter
-        </Link>
-      </div>
     </div>
   );
 };

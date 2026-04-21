@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { jobsService } from "../Services/jobsService"; // Vérifie ton chemin d'import
+import { jobsService } from "../Services/jobsService";
+import Select from "react-select"; // <-- NOUVEL IMPORT MAGIQUE
 
 const Home = () => {
   // --- 1. LES ÉTATS ---
-  const [hasSearched, setHasSearched] = useState(false); // Permet de savoir si on a cliqué sur "Rechercher"
+  const [hasSearched, setHasSearched] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // L'état qui stocke tous nos filtres
+  // NOUVEL ÉTAT : Pour stocker les listes qui viennent de Django
+  const [constants, setConstants] = useState({
+    wilayas: [],
+    secteurs: [],
+    diplomes: [],
+    experiences: [],
+    contrats: [],
+  });
+
   const [filters, setFilters] = useState({
     search: "",
     wilaya: "",
@@ -20,11 +29,25 @@ const Home = () => {
   });
 
   // --- 2. LES FONCTIONS ---
+
+  // CHARGEMENT DES CONSTANTES AU DÉMARRAGE
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const data = await jobsService.getConstants();
+        setConstants(data);
+      } catch (error) {
+        console.error("Erreur de chargement des constantes", error);
+      }
+    };
+    fetchConstants();
+  }, []);
+
   const fetchJobs = async () => {
     setLoading(true);
     try {
       const data = await jobsService.getAllJobs(filters, 1);
-      setJobs(data.results || data); // Gère la pagination de Django
+      setJobs(data.results || data);
     } catch (error) {
       console.error("Erreur lors de la récupération des offres:", error);
     } finally {
@@ -32,25 +55,31 @@ const Home = () => {
     }
   };
 
-  // La fonction du gros bouton "Rechercher" de la page d'accueil
   const handleInitialSearch = (e) => {
     e.preventDefault();
-    setHasSearched(true); // On transforme la page !
-    fetchJobs(); // On lance la recherche
+    setHasSearched(true);
+    fetchJobs();
   };
 
-  // Cette fonction permet de chercher automatiquement quand on modifie un filtre (UNIQUEMENT APRÈS la recherche initiale)
   useEffect(() => {
-    if (!hasSearched) return; // Si on est sur l'écran d'accueil, on ne cherche pas automatiquement
-
+    if (!hasSearched) return;
     const delayDebounceFn = setTimeout(() => {
       fetchJobs();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [filters, hasSearched]);
 
+  // Pour les inputs textes normaux (Recherche par mot clé et commune)
   const handleChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+
+  // NOUVEAU : Pour les listes déroulantes React-Select
+  const handleSelectChange = (selectedOption, actionMeta) => {
+    setFilters({
+      ...filters,
+      [actionMeta.name]: selectedOption ? selectedOption.value : "",
+    });
   };
 
   const handleReset = () => {
@@ -67,7 +96,7 @@ const Home = () => {
 
   // --- 3. L'AFFICHAGE ---
 
-  // VUE 1 : L'ÉCRAN D'ACCUEIL (Avant la recherche)
+  // VUE 1 : L'ÉCRAN D'ACCUEIL
   if (!hasSearched) {
     return (
       <div className="min-h-[80vh] flex flex-col justify-center items-center bg-gray-50 px-4">
@@ -81,10 +110,9 @@ const Home = () => {
           </p>
         </div>
 
-        {/* La grande barre de recherche centrale */}
         <form
           onSubmit={handleInitialSearch}
-          className="w-full max-w-4xl bg-white p-4 md:p-3 rounded-full shadow-2xl flex flex-col md:flex-row gap-3 border border-gray-100"
+          className="w-full max-w-5xl bg-white p-4 md:p-3 rounded-full shadow-2xl flex flex-col md:flex-row gap-3 border border-gray-100"
         >
           <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-3 md:py-0 border border-transparent focus-within:border-blue-500 transition">
             <span className="text-xl mr-3">🔍</span>
@@ -97,20 +125,37 @@ const Home = () => {
               className="w-full bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
             />
           </div>
-          <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-3 md:py-0 border border-transparent focus-within:border-blue-500 transition">
-            <span className="text-xl mr-3">📍</span>
-            <input
-              type="text"
+
+          {/* REMPLACÉ PAR REACT-SELECT */}
+          <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-1 md:py-0 border border-transparent focus-within:border-blue-500 transition relative">
+            <span className="text-xl mr-3 z-10">📍</span>
+            <Select
               name="wilaya"
-              value={filters.wilaya}
-              onChange={handleChange}
-              placeholder="Wilaya (ex: Alger, Oran)"
-              className="w-full bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
+              options={constants.wilayas}
+              onChange={handleSelectChange}
+              value={
+                constants.wilayas.find((w) => w.value === filters.wilaya) ||
+                null
+              }
+              placeholder="Wilaya (ex: Alger...)"
+              isClearable
+              className="w-full font-bold text-gray-700"
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  border: 0,
+                  boxShadow: "none",
+                  backgroundColor: "transparent",
+                  cursor: "text",
+                }),
+                menu: (base) => ({ ...base, zIndex: 50 }), // Pour passer par-dessus les autres éléments
+              }}
             />
           </div>
+
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-10 py-4 rounded-full transition-transform hover:scale-105 shadow-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-10 py-4 rounded-full transition-transform hover:scale-105 shadow-lg z-10"
           >
             Rechercher
           </button>
@@ -150,78 +195,101 @@ const Home = () => {
                   className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
                 />
               </div>
+
+              {/* TOUS LES FILTRES PASSENT EN REACT-SELECT */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Expérience demandée
                 </label>
-                <select
+                <Select
                   name="experience"
-                  value={filters.experience}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm cursor-pointer"
-                >
-                  <option value="">Toutes les expériences</option>
-                  <option value="DEBUTANT">Débutant (0 - 1 an)</option>
-                  <option value="JUNIOR">Junior (1 - 3 ans)</option>
-                  <option value="CONFIRME">Confirmé (3 - 5 ans)</option>
-                  <option value="SENIOR">Senior (5 ans et plus)</option>
-                </select>
+                  options={constants.experiences}
+                  onChange={handleSelectChange}
+                  value={
+                    constants.experiences.find(
+                      (c) => c.value === filters.experience,
+                    ) || null
+                  }
+                  placeholder="Toutes les expériences"
+                  isClearable
+                  className="text-sm"
+                />
               </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Type de contrat
                 </label>
-                <select
+                <Select
                   name="contrat"
-                  value={filters.contrat}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm cursor-pointer"
-                >
-                  <option value="">Tous les contrats</option>
-                  <option value="CDI">CDI</option>
-                  <option value="CDD">CDD</option>
-                  <option value="ANEM">Contrat ANEM</option>
-                  <option value="STAGE">Stage</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Spécialité
-                </label>
-                <input
-                  type="text"
-                  name="specialite"
-                  value={filters.specialite}
-                  onChange={handleChange}
-                  placeholder="Ex: Finance, Informatique..."
-                  className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
+                  options={constants.contrats}
+                  onChange={handleSelectChange}
+                  value={
+                    constants.contrats.find(
+                      (c) => c.value === filters.contrat,
+                    ) || null
+                  }
+                  placeholder="Tous les contrats"
+                  isClearable
+                  className="text-sm"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2">
+                  Secteur d'activité
+                </label>
+                <Select
+                  name="specialite"
+                  options={constants.secteurs}
+                  onChange={handleSelectChange}
+                  value={
+                    constants.secteurs.find(
+                      (c) => c.value === filters.specialite,
+                    ) || null
+                  }
+                  placeholder="Ex: Finance, Informatique..."
+                  isClearable
+                  className="text-sm"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Diplôme attendu
                 </label>
-                <input
-                  type="text"
+                <Select
                   name="diplome"
-                  value={filters.diplome}
-                  onChange={handleChange}
+                  options={constants.diplomes}
+                  onChange={handleSelectChange}
+                  value={
+                    constants.diplomes.find(
+                      (c) => c.value === filters.diplome,
+                    ) || null
+                  }
                   placeholder="Ex: Master 2..."
-                  className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
+                  isClearable
+                  className="text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+
+              <div className="grid grid-cols-1 gap-5 mt-2">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">
                     Wilaya
                   </label>
-                  <input
-                    type="text"
+                  <Select
                     name="wilaya"
-                    value={filters.wilaya}
-                    onChange={handleChange}
+                    options={constants.wilayas}
+                    onChange={handleSelectChange}
+                    value={
+                      constants.wilayas.find(
+                        (c) => c.value === filters.wilaya,
+                      ) || null
+                    }
                     placeholder="Ex: Alger"
-                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
+                    isClearable
+                    className="text-sm"
                   />
                 </div>
                 <div>
@@ -242,8 +310,9 @@ const Home = () => {
           </div>
         </aside>
 
-        {/* COLONNE DROITE : LES RÉSULTATS */}
+        {/* COLONNE DROITE : LES RÉSULTATS (Intacte) */}
         <main className="w-full md:w-2/3 lg:w-3/4">
+          {/* ... TON CODE D'AFFICHAGE DES JOBS RESTE EXACTEMENT LE MÊME ... */}
           <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
             <h1 className="font-bold text-gray-800">
               {jobs.length} Offres d'emploi trouvées

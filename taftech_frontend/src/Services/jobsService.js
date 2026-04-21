@@ -17,6 +17,11 @@ export const jobsService = {
     const response = await api.get(`jobs/?${queryParams}`);
     return response.data;
   },
+  // 1.1 Récupérer les listes déroulantes (Wilayas, Secteurs, etc.)
+  getConstants: async () => {
+    const response = await api.get("jobs/constants/");
+    return response.data;
+  },
 
   // 2. Récupérer une offre
   getJobById: async (id) => {
@@ -39,7 +44,10 @@ export const jobsService = {
     const response = await api.post("jobs/creer/", offreData);
     return response.data;
   },
-
+  updateProfilEntreprise: async (dataModifiee) => {
+    const response = await api.put("jobs/entreprise/update/", dataModifiee);
+    return response.data;
+  },
   // 5. Dashboard (Recruteur)
   getDashboard: async () => {
     const response = await api.get("jobs/dashboard/");

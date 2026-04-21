@@ -4,6 +4,7 @@ from .models import Candidature
 from django.contrib.auth import get_user_model
 from .models import ProfilCandidat
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import ExperienceCandidat, FormationCandidat
 
 User = get_user_model()
 # 1 Entreprise Serializer
@@ -53,29 +54,99 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
         )
 
 # 1. Vigile pour les infos basiques du candidat
+# =======================================================
+# 2. LE DOSSIER COMPLET ENVOYÉ AU RECRUTEUR
+# =======================================================
 class CandidatInfoDTO(serializers.ModelSerializer):
-    cv_pdf = serializers.SerializerMethodField()
-    # On ajoute explicitement le prénom, nom et téléphone
+    """Ce que le recruteur voit quand il ouvre une candidature."""
     first_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
     telephone = serializers.CharField(read_only=True)
-    diplome = serializers.SerializerMethodField() # Petit bonus pour le recruteur
+    
+    # Champs de base et médias
+    titre_professionnel = serializers.SerializerMethodField()
+    cv_pdf = serializers.SerializerMethodField()
+    photo_profil = serializers.SerializerMethodField()
+    
+    # Listes dynamiques
+    experiences = serializers.SerializerMethodField()
+    formations = serializers.SerializerMethodField()
+    competences = serializers.SerializerMethodField()
+    langues = serializers.SerializerMethodField()
+
+    # Nouveaux champs : Administratif et Préférences
+    service_militaire = serializers.SerializerMethodField()
+    permis_conduire = serializers.SerializerMethodField()
+    vehicule_personnel = serializers.SerializerMethodField()
+    passeport_valide = serializers.SerializerMethodField()
+    secteur_souhaite = serializers.SerializerMethodField()
+    salaire_souhaite = serializers.SerializerMethodField()
+    mobilite = serializers.SerializerMethodField()
+    situation_actuelle = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'telephone', 'cv_pdf', 'diplome')
-        
+        fields = (
+            'id', 'username', 'email', 'first_name', 'last_name', 'telephone', 
+            'titre_professionnel', 'cv_pdf', 'photo_profil', 
+            'experiences', 'formations', 'competences', 'langues',
+            'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
+            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle'
+        )
+
+    def get_titre_professionnel(self, obj):
+        return obj.profil_candidat.titre_professionnel if hasattr(obj, 'profil_candidat') else None
+
     def get_cv_pdf(self, obj):
         if hasattr(obj, 'profil_candidat') and obj.profil_candidat.cv_pdf:
-            # CORRECTION DU BUG CV : On force l'URL complète vers Django
             return f"http://127.0.0.1:8000{obj.profil_candidat.cv_pdf.url}"
         return None
 
-    def get_diplome(self, obj):
-        if hasattr(obj, 'profil_candidat'):
-            return obj.profil_candidat.diplome
+    def get_photo_profil(self, obj):
+        if hasattr(obj, 'profil_candidat') and obj.profil_candidat.photo_profil:
+            return f"http://127.0.0.1:8000{obj.profil_candidat.photo_profil.url}"
         return None
 
+    def get_experiences(self, obj):
+        if hasattr(obj, 'profil_candidat'):
+            return ExperienceSerializer(obj.profil_candidat.experiences_detail.all(), many=True).data
+        return []
+
+    def get_formations(self, obj):
+        if hasattr(obj, 'profil_candidat'):
+            return FormationSerializer(obj.profil_candidat.formations_detail.all(), many=True).data
+        return []
+
+    def get_competences(self, obj):
+        return obj.profil_candidat.competences if hasattr(obj, 'profil_candidat') else ""
+
+    def get_langues(self, obj):
+        return obj.profil_candidat.langues if hasattr(obj, 'profil_candidat') else ""
+
+    # --- Méthodes pour les nouveaux champs administratifs et préférences ---
+    def get_service_militaire(self, obj):
+        return obj.profil_candidat.service_militaire if hasattr(obj, 'profil_candidat') else None
+
+    def get_permis_conduire(self, obj):
+        return obj.profil_candidat.permis_conduire if hasattr(obj, 'profil_candidat') else False
+
+    def get_vehicule_personnel(self, obj):
+        return obj.profil_candidat.vehicule_personnel if hasattr(obj, 'profil_candidat') else False
+
+    def get_passeport_valide(self, obj):
+        return obj.profil_candidat.passeport_valide if hasattr(obj, 'profil_candidat') else False
+
+    def get_secteur_souhaite(self, obj):
+        return obj.profil_candidat.secteur_souhaite if hasattr(obj, 'profil_candidat') else None
+
+    def get_salaire_souhaite(self, obj):
+        return obj.profil_candidat.salaire_souhaite if hasattr(obj, 'profil_candidat') else None
+
+    def get_mobilite(self, obj):
+        return obj.profil_candidat.mobilite if hasattr(obj, 'profil_candidat') else None
+
+    def get_situation_actuelle(self, obj):
+        return obj.profil_candidat.situation_actuelle if hasattr(obj, 'profil_candidat') else None
 # 2. Vigile pour la candidature
 class CandidatureRecruteurDTO(serializers.ModelSerializer):
     candidat = CandidatInfoDTO(read_only=True) # On imbrique les infos du candidat
@@ -91,20 +162,38 @@ class OffreDashboardDTO(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = ('id', 'titre', 'date_publication', 'est_active', 'candidatures')
+
+class ExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExperienceCandidat
+        # On liste les champs, mais on retire 'profil' ou on le rend invisible
+        fields = ['id', 'titre_poste', 'entreprise', 'date_debut', 'date_fin', 'description']
+
+class FormationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormationCandidat
+        fields = ['id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description']
+# =======================================================
+# 1. LE PROFIL COMPLET POUR LE CANDIDAT (ET POUR L'UPDATE)
+# =======================================================
 class ProfilCandidatDTO(serializers.ModelSerializer):
-    # On utilise MethodField pour forcer Django à aller chercher la data manuellement
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     telephone = serializers.SerializerMethodField()
     nin = serializers.SerializerMethodField()
+    
+    experiences_detail = ExperienceSerializer(many=True, read_only=True)
+    formations_detail = FormationSerializer(many=True, read_only=True)
 
     class Meta:
         model = ProfilCandidat
         fields = (
-            'titre_professionnel', 'cv_pdf', 'diplome', 'specialite', 
+            'titre_professionnel', 'cv_pdf', 'photo_profil', 'diplome', 'specialite', # <-- Ajout de photo_profil ici
             'experiences', 'competences', 'langues',
-            'first_name', 'last_name', 'email', 'telephone', 'nin'
+            'first_name', 'last_name', 'email', 'telephone', 'nin',
+            'experiences_detail', 'formations_detail', 'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
+            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle'
         )
 
     def get_first_name(self, obj): return obj.user.first_name
@@ -197,6 +286,8 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
 
 # Un petit serializer pour extraire le CV et les compétences du candidat
 class ProfilCandidatAdminSerializer(serializers.ModelSerializer):
+    experiences_detail = ExperienceSerializer(many=True, read_only=True)
+    formations_detail = FormationSerializer(many=True, read_only=True)
     class Meta:
         model = ProfilCandidat
         fields = '__all__'

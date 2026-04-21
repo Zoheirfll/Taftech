@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
+import toast from "react-hot-toast";
 
 const AdminStatistiques = () => {
   const [stats, setStats] = useState(null);
@@ -8,10 +9,13 @@ const AdminStatistiques = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Assure-toi d'avoir cette fonction dans ton jobsService.js :
+        // getAdminStats: async () => (await api.get("jobs/admin/statistiques/")).data
         const data = await jobsService.getAdminStats();
         setStats(data);
       } catch (err) {
-        alert("Erreur lors du chargement des statistiques.", err);
+        (toast.error("Erreur lors du chargement des statistiques."),
+          console.error(err));
       } finally {
         setLoading(false);
       }
@@ -19,67 +23,125 @@ const AdminStatistiques = () => {
     fetchStats();
   }, []);
 
-  if (loading || !stats)
+  if (loading) {
     return (
-      <div className="p-20 text-center font-bold animate-pulse text-blue-600">
-        Chargement des données...
+      <div className="text-center p-20 font-bold text-blue-600 animate-pulse">
+        Chargement de la vue d'ensemble...
       </div>
     );
+  }
+
+  if (!stats) return null;
 
   return (
-    <div>
-      <h2 className="text-3xl font-black text-gray-900 mb-8">
-        Vue d'ensemble TafTech
-      </h2>
+    <div className="space-y-8 font-sans">
+      <div>
+        <h1 className="text-3xl font-black text-gray-900">Vue d'ensemble</h1>
+        <p className="text-gray-500 font-bold mt-2">
+          Bienvenue dans le centre de contrôle TafTech.
+        </p>
+      </div>
 
-      {/* Grille des KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {/* Carte Offres */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-blue-600">
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-            Offres d'emploi
-          </p>
-          <div className="mt-4 flex items-end justify-between">
-            <h3 className="text-5xl font-black text-gray-900">
-              {stats.total_offres}
-            </h3>
-            {stats.offres_attente > 0 && (
-              <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full">
-                {stats.offres_attente} en attente
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Carte Entreprises */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-purple-600">
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-            Entreprises
-          </p>
-          <div className="mt-4 flex items-end justify-between">
-            <h3 className="text-5xl font-black text-gray-900">
-              {stats.total_entreprises}
-            </h3>
+      {/* ALERTES (Actions requises) */}
+      {(stats.offres_attente > 0 || stats.entreprises_attente > 0) && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-2xl shadow-sm">
+          <h2 className="text-red-800 font-black text-lg mb-2">
+            ⚠️ Actions requises
+          </h2>
+          <div className="flex gap-6">
             {stats.entreprises_attente > 0 && (
-              <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full">
-                {stats.entreprises_attente} à vérifier
-              </span>
+              <p className="text-sm font-bold text-red-600">
+                🏢{" "}
+                <span className="font-black text-lg">
+                  {stats.entreprises_attente}
+                </span>{" "}
+                entreprise(s) en attente de validation.
+              </p>
+            )}
+            {stats.offres_attente > 0 && (
+              <p className="text-sm font-bold text-red-600">
+                💼{" "}
+                <span className="font-black text-lg">
+                  {stats.offres_attente}
+                </span>{" "}
+                offre(s) en attente de modération.
+              </p>
             )}
           </div>
         </div>
+      )}
 
-        {/* Carte Candidats */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-green-600">
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-            Candidats Inscrits
-          </p>
-          <div className="mt-4 flex items-end justify-between">
-            <h3 className="text-5xl font-black text-gray-900">
+      {/* CARTES KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* KPI Utilisateurs */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 transition hover:shadow-md">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl">
+            👥
+          </div>
+          <div>
+            <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest mb-1">
+              Candidats
+            </p>
+            <p className="text-3xl font-black text-gray-900">
               {stats.total_candidats}
-            </h3>
-            <span className="text-sm font-bold text-gray-400">
-              En recherche
-            </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 transition hover:shadow-md">
+          <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-3xl">
+            👔
+          </div>
+          <div>
+            <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest mb-1">
+              Recruteurs
+            </p>
+            <p className="text-3xl font-black text-gray-900">
+              {stats.total_recruteurs}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 transition hover:shadow-md">
+          <div className="w-16 h-16 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-3xl">
+            🏢
+          </div>
+          <div>
+            <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest mb-1">
+              Entreprises Totales
+            </p>
+            <p className="text-3xl font-black text-gray-900">
+              {stats.total_entreprises}
+            </p>
+          </div>
+        </div>
+
+        {/* KPI Offres */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 transition hover:shadow-md">
+          <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl">
+            📊
+          </div>
+          <div>
+            <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest mb-1">
+              Offres publiées
+            </p>
+            <p className="text-3xl font-black text-gray-900">
+              {stats.total_offres}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 transition hover:shadow-md">
+          <div className="w-16 h-16 bg-yellow-50 text-yellow-600 rounded-2xl flex items-center justify-center text-3xl">
+            ⏳
+          </div>
+          <div>
+            <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest mb-1">
+              Offres en attente
+            </p>
+            <p className="text-3xl font-black text-gray-900">
+              {stats.offres_attente}
+            </p>
           </div>
         </div>
       </div>

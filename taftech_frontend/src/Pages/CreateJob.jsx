@@ -1,33 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
-import toast from "react-hot-toast"; // <-- IMPORT
+import toast from "react-hot-toast";
+import Select from "react-select"; // <-- NOUVEL IMPORT MAGIQUE
 
 const CreateJob = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  // NOUVEL ÉTAT : Pour les listes dynamiques depuis Django
+  const [constants, setConstants] = useState({
+    wilayas: [],
+    secteurs: [],
+    diplomes: [],
+    experiences: [],
+    contrats: [],
+  });
+
   const [formData, setFormData] = useState({
     titre: "",
-    type_contrat: "CDI",
+    type_contrat: "CDI", // Valeur par défaut
     salaire_propose: "",
     wilaya: "",
     commune: "",
     diplome: "",
     specialite: "",
-    experience_requise: "DEBUTANT",
+    experience_requise: "DEBUTANT", // Valeur par défaut
     missions: "",
     profil_recherche: "",
   });
+
+  // CHARGEMENT DES CONSTANTES AU DÉMARRAGE
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const data = await jobsService.getConstants();
+        setConstants(data);
+      } catch (error) {
+        console.error("Erreur de chargement des constantes", error);
+        toast.error("Erreur lors du chargement des listes déroulantes.");
+      }
+    };
+    fetchConstants();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // NOUVEAU : Gère les changements de React-Select
+  const handleSelectChange = (selectedOption, actionMeta) => {
+    setFormData({
+      ...formData,
+      [actionMeta.name]: selectedOption ? selectedOption.value : "",
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Petite vérification de sécurité avant d'envoyer
+    if (!formData.wilaya || !formData.specialite) {
+      toast.error(
+        "Veuillez sélectionner au moins une Wilaya et une Spécialité.",
+      );
+      return;
+    }
+
     setLoading(true);
-    const toastId = toast.loading("Publication de l'offre en cours..."); // Toast de chargement
+    const toastId = toast.loading("Publication de l'offre en cours...");
 
     try {
       await jobsService.creerOffre(formData);
@@ -96,21 +137,30 @@ const CreateJob = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
                       Type de contrat
                     </label>
-                    <select
+                    <Select
                       name="type_contrat"
-                      value={formData.type_contrat}
-                      onChange={handleChange}
-                      className="w-full p-5 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-blue-600 outline-none appearance-none cursor-pointer"
-                    >
-                      <option value="CDI">CDI</option>
-                      <option value="CDD">CDD</option>
-                      <option value="ANEM">Contrat ANEM (CTA / DAIP)</option>
-                      <option value="STAGE">Stage / PFE</option>
-                      <option value="FREELANCE">Freelance</option>
-                    </select>
+                      options={constants.contrats}
+                      onChange={handleSelectChange}
+                      value={
+                        constants.contrats.find(
+                          (c) => c.value === formData.type_contrat,
+                        ) || null
+                      }
+                      placeholder="Sélectionnez..."
+                      className="font-bold text-gray-700"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          padding: "0.6rem",
+                          borderRadius: "1rem",
+                          backgroundColor: "#f9fafb",
+                          borderColor: "transparent",
+                        }),
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
@@ -136,16 +186,30 @@ const CreateJob = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
                     Wilaya *
                   </label>
-                  <input
-                    required
+                  <Select
                     name="wilaya"
-                    value={formData.wilaya}
-                    onChange={handleChange}
-                    className="w-full p-5 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-600 outline-none"
-                    placeholder="Ex: Alger, Oran..."
+                    options={constants.wilayas}
+                    onChange={handleSelectChange}
+                    value={
+                      constants.wilayas.find(
+                        (w) => w.value === formData.wilaya,
+                      ) || null
+                    }
+                    placeholder="Sélectionner..."
+                    isClearable
+                    className="font-bold text-gray-700"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        padding: "0.6rem",
+                        borderRadius: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderColor: "transparent",
+                      }),
+                    }}
                   />
                 </div>
                 <div>
@@ -164,9 +228,8 @@ const CreateJob = () => {
             </div>
           </div>
 
-          {/* COLONNE DROITE (Ciblage & Description) */}
+          {/* COLONNE DROITE (Ciblage) */}
           <div className="lg:col-span-5 space-y-8">
-            {/* SECTION 3 : CRITÈRES DE CIBLAGE */}
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-xl border-4 border-blue-50 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-4 py-1 rounded-bl-xl tracking-widest uppercase">
                 Ciblage Précis
@@ -177,43 +240,83 @@ const CreateJob = () => {
 
               <div className="space-y-5">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
                     Expérience requise
                   </label>
-                  <select
+                  <Select
                     name="experience_requise"
-                    value={formData.experience_requise}
-                    onChange={handleChange}
-                    className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-blue-600 outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="DEBUTANT">Débutant (0 - 1 an)</option>
-                    <option value="JUNIOR">Junior (1 - 3 ans)</option>
-                    <option value="CONFIRME">Confirmé (3 - 5 ans)</option>
-                    <option value="SENIOR">Senior (5 ans et plus)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                    Diplôme attendu
-                  </label>
-                  <input
-                    name="diplome"
-                    value={formData.diplome}
-                    onChange={handleChange}
-                    className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-blue-600 outline-none"
-                    placeholder="Ex: Master 2, Licence..."
+                    options={constants.experiences}
+                    onChange={handleSelectChange}
+                    value={
+                      constants.experiences.find(
+                        (e) => e.value === formData.experience_requise,
+                      ) || null
+                    }
+                    placeholder="Sélectionner..."
+                    className="font-bold text-gray-700"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        padding: "0.4rem",
+                        borderRadius: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderColor: "transparent",
+                      }),
+                    }}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                    Spécialité
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                    Diplôme attendu
                   </label>
-                  <input
+                  <Select
+                    name="diplome"
+                    options={constants.diplomes}
+                    onChange={handleSelectChange}
+                    value={
+                      constants.diplomes.find(
+                        (d) => d.value === formData.diplome,
+                      ) || null
+                    }
+                    placeholder="Sélectionner..."
+                    isClearable
+                    className="font-bold text-gray-700"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        padding: "0.4rem",
+                        borderRadius: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderColor: "transparent",
+                      }),
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                    Spécialité (Secteur)
+                  </label>
+                  <Select
                     name="specialite"
-                    value={formData.specialite}
-                    onChange={handleChange}
-                    className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-blue-600 outline-none"
-                    placeholder="Ex: Informatique, Finance..."
+                    options={constants.secteurs}
+                    onChange={handleSelectChange}
+                    value={
+                      constants.secteurs.find(
+                        (s) => s.value === formData.specialite,
+                      ) || null
+                    }
+                    placeholder="Sélectionner..."
+                    isClearable
+                    className="font-bold text-gray-700"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        padding: "0.4rem",
+                        borderRadius: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderColor: "transparent",
+                      }),
+                    }}
                   />
                 </div>
               </div>

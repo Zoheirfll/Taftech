@@ -20,6 +20,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import MyTokenObtainPairSerializer, EntrepriseDashboardDetailSerializer, AdminUserSerializer
 from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
+from .models import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
+from .models import ExperienceCandidat, FormationCandidat
+from .serializers import ExperienceSerializer, FormationSerializer
 
 User = get_user_model()
 
@@ -438,3 +441,99 @@ class AdminUserModerateAPIView(APIView):
             return Response({"message": f"Utilisateur {statut} avec succès !"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+class ConstantsAPIView(APIView):
+    """
+    Renvoie toutes les listes standardisées pour alimenter les menus déroulants React.
+    """
+    permission_classes = [AllowAny] # Ouvert à tous, même sans être connecté
+
+    def get(self, request):
+        # On formate directement pour la bibliothèque "react-select"
+        # Elle a besoin d'un format exact : { "value": "ID", "label": "Texte affiché" }
+        data = {
+            "wilayas": [{"value": item[0], "label": item[1]} for item in WILAYAS_CHOICES],
+            "secteurs": [{"value": item[0], "label": item[1]} for item in SECTEURS_CHOICES],
+            "diplomes": [{"value": item[0], "label": item[1]} for item in DIPLOMES_CHOICES],
+            "experiences": [{"value": item[0], "label": item[1]} for item in NIVEAUX_EXPERIENCE],
+            "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+# ==========================================
+# GESTION DES EXPÉRIENCES (PROFIL CLONE EMPLOITIC)
+# ==========================================
+
+class ExperienceAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # On relie automatiquement l'expérience au profil du candidat connecté
+        profil = request.user.profil_candidat
+        serializer = ExperienceSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(profil=profil)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ExperienceDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        try:
+            # Sécurité : On s'assure que l'expérience appartient bien au candidat connecté !
+            experience = ExperienceCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
+        except ExperienceCandidat.DoesNotExist:
+            return Response({"error": "Expérience introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = ExperienceSerializer(experience, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            experience = ExperienceCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
+            experience.delete()
+            return Response({"message": "Expérience supprimée."}, status=status.HTTP_204_NO_CONTENT)
+        except ExperienceCandidat.DoesNotExist:
+            return Response({"error": "Expérience introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+# ==========================================
+# GESTION DES FORMATIONS (PROFIL CLONE EMPLOITIC)
+# ==========================================
+
+class FormationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profil = request.user.profil_candidat
+        serializer = FormationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(profil=profil)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class FormationDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        try:
+            formation = FormationCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
+        except FormationCandidat.DoesNotExist:
+            return Response({"error": "Formation introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = FormationSerializer(formation, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            formation = FormationCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
+            formation.delete()
+            return Response({"message": "Formation supprimée."}, status=status.HTTP_204_NO_CONTENT)
+        except FormationCandidat.DoesNotExist:
+            return Response({"error": "Formation introuvable."}, status=status.HTTP_404_NOT_FOUND)

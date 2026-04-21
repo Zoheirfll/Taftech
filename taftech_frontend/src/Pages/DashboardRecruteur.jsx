@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
-import toast from "react-hot-toast"; // <-- IMPORT
+import toast from "react-hot-toast";
+import Select from "react-select";
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -14,13 +15,26 @@ const DashboardRecruteur = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [tempEntreprise, setTempEntreprise] = useState({});
+  const [constants, setConstants] = useState({
+    wilayas: [],
+    secteurs: [],
+    diplomes: [],
+    experiences: [],
+    contrats: [],
+  });
+
+  const [selectedCandidature, setSelectedCandidature] = useState(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const data = await jobsService.getDashboard();
-        setEntreprise(data.entreprise);
-        setOffres(data.offres);
+        const [dashData, constData] = await Promise.all([
+          jobsService.getDashboard(),
+          jobsService.getConstants(),
+        ]);
+        setConstants(constData);
+        setEntreprise(dashData.entreprise);
+        setOffres(dashData.offres);
       } catch (err) {
         if (
           err.response &&
@@ -45,16 +59,16 @@ const DashboardRecruteur = () => {
   const handleSaveProfile = async () => {
     try {
       const {
-        nom_entreprise: _nom,
-        registre_commerce: _rc,
+        nom_entreprise: _n,
+        registre_commerce: _r,
         ...dataToSend
       } = tempEntreprise;
       await jobsService.updateProfilEntreprise(dataToSend);
       setEntreprise({ ...entreprise, ...dataToSend });
       setIsEditing(false);
-      toast.success("Profil mis à jour !"); // <-- TOAST SUCCESS
+      toast.success("Profil mis à jour !");
     } catch (err) {
-      toast.error("Erreur lors de la sauvegarde.", err); // <-- TOAST ERROR
+      (toast.error("Erreur lors de la sauvegarde."), console.log(err));
     }
   };
 
@@ -74,9 +88,16 @@ const DashboardRecruteur = () => {
           return offre;
         }),
       );
-      toast.success("Statut de la candidature modifié."); // <-- TOAST SUCCESS
+      toast.success("Statut de la candidature modifié.");
+
+      if (selectedCandidature && selectedCandidature.id === candidatureId) {
+        setSelectedCandidature({
+          ...selectedCandidature,
+          statut: nouveauStatut,
+        });
+      }
     } catch (err) {
-      toast.error("Erreur de mise à jour du statut.", err); // <-- TOAST ERROR
+      (toast.error("Erreur de mise à jour du statut."), console.log(err));
     }
   };
 
@@ -89,11 +110,39 @@ const DashboardRecruteur = () => {
     return styles[statut] || styles.EN_ATTENTE;
   };
 
-  const getCvUrl = (cvPath) => {
-    if (!cvPath) return "#";
-    return cvPath.startsWith("http")
-      ? cvPath
-      : `http://127.0.0.1:8000${cvPath}`;
+  const getMediaUrl = (path) => {
+    if (!path) return null;
+    return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
+  };
+
+  const formatText = (text) => {
+    if (!text) return "Non spécifié";
+    return text
+      .replace(/_/g, " ")
+      .replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
+      );
+  };
+
+  const renderTags = (data) => {
+    if (!data)
+      return (
+        <span className="text-gray-400 italic text-xs">
+          Aucun renseignement
+        </span>
+      );
+    return data
+      .split(",")
+      .filter((i) => i)
+      .map((item, idx) => (
+        <span
+          key={idx}
+          className="bg-gray-100 text-gray-700 text-[10px] font-black uppercase px-2 py-1 rounded-md border border-gray-200 mr-2 mb-2 inline-block"
+        >
+          {item.trim()}
+        </span>
+      ));
   };
 
   if (loading)
@@ -102,7 +151,6 @@ const DashboardRecruteur = () => {
         Chargement de votre espace...
       </div>
     );
-
   if (error)
     return (
       <div className="max-w-4xl mx-auto mt-10 p-6 bg-red-50 text-red-700 rounded-xl text-center font-bold">
@@ -111,7 +159,7 @@ const DashboardRecruteur = () => {
     );
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="max-w-6xl mx-auto p-8 font-sans">
       <div className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-black text-gray-900">
@@ -145,11 +193,7 @@ const DashboardRecruteur = () => {
               setActiveTab(tab);
               setIsEditing(false);
             }}
-            className={`py-4 px-8 font-bold text-sm uppercase tracking-widest border-b-4 transition-all ${
-              activeTab === tab
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+            className={`py-4 px-8 font-bold text-sm uppercase tracking-widest border-b-4 transition-all ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
           >
             {tab === "offres"
               ? `Mes Annonces (${offres.length})`
@@ -187,10 +231,10 @@ const DashboardRecruteur = () => {
                     <thead>
                       <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b">
                         <th className="pb-4 text-left w-1/3">Candidat</th>
-                        <th className="pb-4 text-left w-1/3">
-                          Dossier & Lettre
+                        <th className="pb-4 text-center w-1/3">
+                          Dossier Complet
                         </th>
-                        <th className="pb-4 text-left">Statut</th>
+                        <th className="pb-4 text-center">Statut</th>
                         <th className="pb-4 text-right">Décision</th>
                       </tr>
                     </thead>
@@ -200,62 +244,57 @@ const DashboardRecruteur = () => {
                           key={cand.id}
                           className="hover:bg-blue-50/30 transition"
                         >
-                          <td className="py-4 align-top">
-                            <p className="font-black text-gray-900 text-sm uppercase">
-                              {cand.candidat.last_name || "Nom inconnu"}{" "}
-                              {cand.candidat.first_name || ""}
-                            </p>
-                            <div className="mt-1 space-y-1">
-                              <p className="text-xs text-gray-500 font-medium">
-                                📞 {cand.candidat.telephone || "Non renseigné"}
-                              </p>
-                              <p className="text-xs text-gray-500 font-medium">
-                                ✉️ {cand.candidat.email}
-                              </p>
-                              {cand.candidat.diplome && (
-                                <p className="text-xs text-purple-700 bg-purple-50 inline-block px-2 py-0.5 rounded border border-purple-100 mt-1 font-bold">
-                                  🎓 {cand.candidat.diplome}
+                          <td className="py-4 align-middle">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 overflow-hidden shadow-sm">
+                                {cand.candidat.photo_profil ? (
+                                  <img
+                                    src={getMediaUrl(
+                                      cand.candidat.photo_profil,
+                                    )}
+                                    alt="Profil"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <>
+                                    {cand.candidat.first_name?.[0]}
+                                    {cand.candidat.last_name?.[0]}
+                                  </>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-black text-gray-900 text-sm uppercase">
+                                  {cand.candidat.last_name}{" "}
+                                  {cand.candidat.first_name}
                                 </p>
-                              )}
+                                <p className="text-xs text-blue-600 font-bold">
+                                  {cand.candidat.titre_professionnel ||
+                                    "Candidat"}
+                                </p>
+                              </div>
                             </div>
                           </td>
-                          <td className="py-4 align-top">
-                            {cand.candidat.cv_pdf ? (
-                              <a
-                                href={getCvUrl(cand.candidat.cv_pdf)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 text-blue-600 font-bold text-xs bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition"
-                              >
-                                📄 TÉLÉCHARGER LE CV
-                              </a>
-                            ) : (
-                              <span className="text-xs text-gray-400 italic">
-                                Aucun CV fourni
-                              </span>
-                            )}
-                            {cand.lettre_motivation && (
-                              <details className="mt-3 group">
-                                <summary className="text-xs font-bold text-indigo-600 cursor-pointer hover:underline list-none flex items-center gap-1">
-                                  <span>Voir la lettre de motivation</span>
-                                  <span className="transition group-open:rotate-180">
-                                    ▼
-                                  </span>
-                                </summary>
-                                <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 max-w-sm whitespace-pre-line leading-relaxed">
-                                  {cand.lettre_motivation}
-                                </div>
-                              </details>
-                            )}
+                          <td className="py-4 align-middle text-center">
+                            <button
+                              onClick={() =>
+                                setSelectedCandidature({
+                                  ...cand,
+                                  offreId: offre.id,
+                                })
+                              }
+                              className="inline-flex items-center gap-2 text-blue-600 font-bold text-xs bg-blue-50 border border-blue-100 px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm"
+                            >
+                              👁️ Voir le profil
+                            </button>
                           </td>
-                          <td className="py-4 align-top pt-5">
+                          <td className="py-4 align-middle text-center">
                             <span
-                              className={`text-[10px] font-black px-3 py-1 rounded-full border ${getBadgeStyle(cand.statut)}`}
+                              className={`text-[10px] font-black px-3 py-1 rounded-full border uppercase ${getBadgeStyle(cand.statut)}`}
                             >
                               {cand.statut.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="py-4 text-right align-top pt-4">
+                          <td className="py-4 text-right align-middle">
                             {cand.statut === "EN_ATTENTE" && (
                               <div className="flex justify-end gap-2">
                                 <button
@@ -366,6 +405,7 @@ const DashboardRecruteur = () => {
                 ))}
               </div>
             </section>
+
             <section className="pt-8 border-t border-gray-100">
               <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-6 bg-blue-50 inline-block px-3 py-1 rounded-md">
                 Informations de l'Entreprise
@@ -393,24 +433,35 @@ const DashboardRecruteur = () => {
                   </label>
                   {!isEditing ? (
                     <p className="text-lg font-bold text-gray-800 border-b-2 border-gray-50 pb-2">
-                      {entreprise.secteur_activite}
+                      {entreprise.secteur_activite || "Non renseigné"}
                     </p>
                   ) : (
-                    <select
-                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
-                      value={tempEntreprise.secteur_activite}
-                      onChange={(e) =>
+                    <Select
+                      name="secteur_activite"
+                      options={constants.secteurs}
+                      value={
+                        constants.secteurs.find(
+                          (s) => s.value === tempEntreprise.secteur_activite,
+                        ) || null
+                      }
+                      onChange={(selected) =>
                         setTempEntreprise({
                           ...tempEntreprise,
-                          secteur_activite: e.target.value,
+                          secteur_activite: selected ? selected.value : "",
                         })
                       }
-                    >
-                      <option value="Informatique">Informatique</option>
-                      <option value="Industrie">Industrie</option>
-                      <option value="Santé">Santé</option>
-                      <option value="BTP">BTP / Construction</option>
-                    </select>
+                      placeholder="Sélectionner..."
+                      className="font-bold text-gray-700"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          padding: "0.4rem",
+                          borderRadius: "0.75rem",
+                          backgroundColor: "#f9fafb",
+                          borderColor: "#e5e7eb",
+                        }),
+                      }}
+                    />
                   )}
                 </div>
                 <div>
@@ -422,33 +473,48 @@ const DashboardRecruteur = () => {
                       {entreprise.wilaya_siege || "Non renseigné"}
                     </p>
                   ) : (
-                    <input
-                      type="text"
-                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
-                      value={tempEntreprise.wilaya_siege || ""}
-                      onChange={(e) =>
+                    <Select
+                      name="wilaya_siege"
+                      options={constants.wilayas}
+                      value={
+                        constants.wilayas.find(
+                          (w) => w.value === tempEntreprise.wilaya_siege,
+                        ) || null
+                      }
+                      onChange={(selected) =>
                         setTempEntreprise({
                           ...tempEntreprise,
-                          wilaya_siege: e.target.value,
+                          wilaya_siege: selected ? selected.value : "",
                         })
                       }
+                      placeholder="Sélectionner..."
+                      className="font-bold text-gray-700"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          padding: "0.4rem",
+                          borderRadius: "0.75rem",
+                          backgroundColor: "#f9fafb",
+                          borderColor: "#e5e7eb",
+                        }),
+                      }}
                     />
                   )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
-                    Description de votre établissement
+                    Description de l'établissement
                   </label>
                   {!isEditing ? (
                     <div className="p-6 bg-gray-50 rounded-2xl text-gray-600 font-medium italic border border-gray-100 leading-relaxed">
                       {entreprise.description ||
-                        "Aucune présentation rédigée pour le moment. Cliquez sur modifier pour enrichir votre profil."}
+                        "Aucune présentation rédigée pour le moment."}
                     </div>
                   ) : (
                     <textarea
                       rows="5"
                       className="w-full p-6 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
-                      placeholder="Décrivez l'activité, les valeurs et les opportunités de votre entreprise..."
+                      placeholder="Décrivez l'entreprise..."
                       value={tempEntreprise.description || ""}
                       onChange={(e) =>
                         setTempEntreprise({
@@ -461,6 +527,276 @@ const DashboardRecruteur = () => {
                 </div>
               </div>
             </section>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL RECRUTEUR : PROFIL DU CANDIDAT --- */}
+      {selectedCandidature && (
+        <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp">
+            <div className="bg-gray-50 border-b border-gray-100 p-6 flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-black text-gray-900">
+                Dossier de candidature
+              </h2>
+              <button
+                onClick={() => setSelectedCandidature(null)}
+                className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition font-bold shadow-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-8 overflow-y-auto flex-1 space-y-8 bg-white">
+              {/* EN-TÊTE DU PROFIL */}
+              <div className="flex flex-col md:flex-row items-center gap-6 bg-blue-50/30 p-6 rounded-2xl border border-blue-50">
+                <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-gray-400 text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-100">
+                  {selectedCandidature.candidat.photo_profil ? (
+                    <img
+                      src={getMediaUrl(
+                        selectedCandidature.candidat.photo_profil,
+                      )}
+                      alt="Profil"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    "👤"
+                  )}
+                </div>
+                <div className="text-center md:text-left flex-1">
+                  <h3 className="font-black text-gray-900 text-2xl uppercase tracking-tight">
+                    {selectedCandidature.candidat.last_name}{" "}
+                    {selectedCandidature.candidat.first_name}
+                  </h3>
+                  <p className="text-blue-600 font-bold mb-2">
+                    {selectedCandidature.candidat.titre_professionnel ||
+                      "Candidat"}
+                  </p>
+                  <div className="flex flex-wrap gap-4 justify-center md:justify-start text-xs text-gray-600 font-bold mt-2">
+                    <span>📧 {selectedCandidature.candidat.email}</span>
+                    <span>
+                      📞{" "}
+                      {selectedCandidature.candidat.telephone ||
+                        "Non renseigné"}
+                    </span>
+                  </div>
+
+                  {/* ADMIN ET PREFS DANS L'ENTÊTE */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
+                      🛡️{" "}
+                      {formatText(
+                        selectedCandidature.candidat.service_militaire,
+                      )}
+                    </span>
+                    <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
+                      🚗{" "}
+                      {selectedCandidature.candidat.permis_conduire
+                        ? "Permis B"
+                        : "Sans permis"}
+                    </span>
+                    <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
+                      ✈️{" "}
+                      {selectedCandidature.candidat.passeport_valide
+                        ? "Passeport OK"
+                        : "Pas de passeport"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* BOUTONS D'ACTION */}
+                {selectedCandidature.statut === "EN_ATTENTE" && (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() =>
+                        changerStatut(
+                          selectedCandidature.offreId,
+                          selectedCandidature.id,
+                          "ACCEPTEE",
+                        )
+                      }
+                      className="px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 font-black shadow-lg shadow-green-100 transition"
+                    >
+                      ACCEPTER
+                    </button>
+                    <button
+                      onClick={() =>
+                        changerStatut(
+                          selectedCandidature.offreId,
+                          selectedCandidature.id,
+                          "REFUSEE",
+                        )
+                      }
+                      className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-black shadow-lg shadow-red-100 transition"
+                    >
+                      REFUSER
+                    </button>
+                  </div>
+                )}
+                {selectedCandidature.statut !== "EN_ATTENTE" && (
+                  <span
+                    className={`text-xs font-black px-4 py-2 rounded-full border ${getBadgeStyle(selectedCandidature.statut)}`}
+                  >
+                    STATUT : {selectedCandidature.statut.replace("_", " ")}
+                  </span>
+                )}
+              </div>
+
+              {/* PRÉFÉRENCES DE RECRUTEMENT */}
+              <div>
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                  Préférences du candidat
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                      Secteur
+                    </p>
+                    <p className="text-xs font-black text-gray-900">
+                      {formatText(
+                        selectedCandidature.candidat.secteur_souhaite,
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                      Prétentions
+                    </p>
+                    <p className="text-xs font-black text-blue-600">
+                      {selectedCandidature.candidat.salaire_souhaite ||
+                        "À discuter"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                      Mobilité
+                    </p>
+                    <p className="text-xs font-black text-gray-900">
+                      {formatText(selectedCandidature.candidat.mobilite)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
+                      Disponibilité
+                    </p>
+                    <p className="text-xs font-black text-gray-900">
+                      {formatText(
+                        selectedCandidature.candidat.situation_actuelle,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* LETTRE ET CV */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                    CV au format PDF
+                  </h4>
+                  {selectedCandidature.candidat.cv_pdf ? (
+                    <a
+                      href={getMediaUrl(selectedCandidature.candidat.cv_pdf)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-700 transition shadow-lg"
+                    >
+                      📄 OUVRIR LE CV
+                    </a>
+                  ) : (
+                    <p className="text-sm font-bold text-gray-400">
+                      Aucun CV joint
+                    </p>
+                  )}
+                </div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                    Lettre de motivation
+                  </h4>
+                  <p className="text-xs text-gray-600 font-medium whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto pr-2">
+                    {selectedCandidature.lettre_motivation ||
+                      "Aucune lettre fournie."}
+                  </p>
+                </div>
+              </div>
+
+              {/* EXPÉRIENCES */}
+              <div>
+                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
+                  Expériences Professionnelles
+                </h4>
+                {selectedCandidature.candidat.experiences &&
+                selectedCandidature.candidat.experiences.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedCandidature.candidat.experiences.map((exp) => (
+                      <div
+                        key={exp.id}
+                        className="pl-4 border-l-2 border-blue-200"
+                      >
+                        <p className="font-black text-gray-800 text-sm">
+                          {exp.titre_poste}{" "}
+                          <span className="text-blue-600">
+                            @ {exp.entreprise}
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-bold mt-1 mb-2 bg-white inline-block">
+                          📅 {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
+                        </p>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          {exp.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-gray-400">Non renseigné</p>
+                )}
+              </div>
+
+              {/* FORMATIONS */}
+              <div>
+                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
+                  Formations
+                </h4>
+                {selectedCandidature.candidat.formations &&
+                selectedCandidature.candidat.formations.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedCandidature.candidat.formations.map((form) => (
+                      <div
+                        key={form.id}
+                        className="pl-4 border-l-2 border-indigo-200"
+                      >
+                        <p className="font-black text-gray-800 text-sm">
+                          {form.diplome}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-bold mt-1 bg-white inline-block">
+                          🎓 {form.etablissement} | 📅 {form.date_debut} —{" "}
+                          {form.date_fin}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-gray-400">Non renseigné</p>
+                )}
+              </div>
+
+              {/* TAGS (Compétences & Langues) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                <div>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                    Compétences
+                  </h4>
+                  {renderTags(selectedCandidature.candidat.competences)}
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                    Langues
+                  </h4>
+                  {renderTags(selectedCandidature.candidat.langues)}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

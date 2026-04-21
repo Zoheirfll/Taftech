@@ -3,7 +3,9 @@ from .views import JobListAPIView
 from .views import ProfilEntrepriseCreateAPIView
 from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, CandidatRegisterAPIView, MesCandidaturesAPIView
 from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView
-from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView
+from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView
+from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView, UpdateProfilEntrepriseAPIView
+
 
 
 
@@ -35,4 +37,13 @@ urlpatterns = [
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users-list'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
+    path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
+    # Routes pour les Expériences
+    path('profil/experiences/', ExperienceAPIView.as_view(), name='profil-experiences'),
+    path('profil/experiences/<int:pk>/', ExperienceDetailAPIView.as_view(), name='profil-experience-detail'),
+    
+    # Routes pour les Formations
+    path('profil/formations/', FormationAPIView.as_view(), name='profil-formations'),
+    path('profil/formations/<int:pk>/', FormationDetailAPIView.as_view(), name='profil-formation-detail'),
+    path('entreprise/update/', UpdateProfilEntrepriseAPIView.as_view(), name='update-entreprise'),
 ]

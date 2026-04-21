@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // N'oublie pas useNavigate ici !
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import { authService } from "../Services/authService"; // <-- NOUVEL IMPORT MAGIQUE
 
 const JobDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate(); // Pour rediriger vers le login si besoin
+  const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [postulerStatus, setPostulerStatus] = useState("");
-  const [lettreMotivation, setLettreMotivation] = useState(""); // Nouvel état pour la lettre
+  const [lettreMotivation, setLettreMotivation] = useState("");
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -26,16 +27,17 @@ const JobDetail = () => {
   }, [id]);
 
   const handlePostuler = async () => {
-    // SÉCURITÉ : On vérifie que l'utilisateur est bien connecté
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
+    // NOUVELLE SÉCURITÉ : On vérifie via le service, pas avec le localStorage !
+    if (
+      !authService.isAuthenticated() ||
+      authService.getUserRole() !== "CANDIDAT"
+    ) {
       alert("Vous devez être connecté en tant que candidat pour postuler.");
       navigate("/login");
       return;
     }
 
     try {
-      // On envoie la lettre de motivation avec la candidature
       await jobsService.postuler(id, { lettre_motivation: lettreMotivation });
       setPostulerStatus("success");
     } catch (err) {
@@ -43,18 +45,18 @@ const JobDetail = () => {
     }
   };
 
-  // --- NOUVEAUTÉ AJOUTÉE : La fonction pour aller vers la page de vérification ---
   const handleReviewClick = () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
+    // MÊME CORRECTION ICI
+    if (
+      !authService.isAuthenticated() ||
+      authService.getUserRole() !== "CANDIDAT"
+    ) {
       alert("Vous devez être connecté en tant que candidat pour postuler.");
       navigate("/login");
       return;
     }
-    // On l'emmène sur l'écran de vérification Emploitic !
     navigate(`/jobs/${id}/postuler`);
   };
-  // -------------------------------------------------------------------------------
 
   if (loading)
     return (
@@ -90,11 +92,9 @@ const JobDetail = () => {
         {/* EN-TÊTE DE L'OFFRE */}
         <div className="bg-blue-600 p-8 md:p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
-
           <h1 className="text-3xl md:text-4xl font-black mb-4 relative z-10">
             {job.titre}
           </h1>
-
           <div className="flex flex-wrap gap-3 text-sm font-bold mt-4 relative z-10">
             <span className="bg-white text-blue-800 px-4 py-1.5 rounded-full shadow-sm">
               🏢 {job.entreprise?.nom_entreprise || "Entreprise Anonyme"}
@@ -110,7 +110,7 @@ const JobDetail = () => {
         </div>
 
         <div className="p-8 md:p-10 space-y-10">
-          {/* ENCADRÉ DES CRITÈRES (US 2.1) */}
+          {/* ENCADRÉ DES CRITÈRES */}
           <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 grid grid-cols-2 md:grid-cols-3 gap-6">
             {job.type_contrat && (
               <div>
@@ -162,7 +162,6 @@ const JobDetail = () => {
             )}
           </div>
 
-          {/* DÉTAILS TEXTUELS */}
           <section>
             <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
               <span className="w-2 h-6 bg-blue-600 rounded-full"></span>{" "}
@@ -193,7 +192,7 @@ const JobDetail = () => {
             </p>
           </section>
 
-          {/* ZONE DE POSTULATION AVEC LETTRE DE MOTIVATION (US 2.3) */}
+          {/* ZONE DE POSTULATION */}
           <div className="mt-12 bg-gray-50 p-8 rounded-3xl text-center border-2 border-gray-100 shadow-sm relative overflow-hidden">
             {postulerStatus === "success" ? (
               <div className="animate-slideDown">
@@ -244,17 +243,13 @@ const JobDetail = () => {
                   rows="4"
                 ></textarea>
 
-                {/* --- NOUVEAUTÉ AJOUTÉE : LES DEUX BOUTONS CÔTE À CÔTE --- */}
                 <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-                  {/* Bouton 1 : Ton bouton d'origine (Postulation rapide) */}
                   <button
                     onClick={handlePostuler}
                     className="bg-gray-900 hover:bg-black text-white font-black py-4 px-8 rounded-2xl transition duration-200 text-lg shadow-xl hover:-translate-y-1 hover:shadow-2xl active:scale-95 w-full md:w-auto"
                   >
                     Envoyer ma candidature
                   </button>
-
-                  {/* Bouton 2 : Le nouveau bouton vers l'Aperçu CV (Emploitic) */}
                   <button
                     onClick={handleReviewClick}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-8 rounded-2xl transition duration-200 text-lg shadow-xl hover:-translate-y-1 hover:shadow-2xl active:scale-95 w-full md:w-auto flex items-center justify-center gap-2"
@@ -262,7 +257,6 @@ const JobDetail = () => {
                     👁️ Vérifier mon profil complet
                   </button>
                 </div>
-                {/* -------------------------------------------------------- */}
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 
 import Navbar from "./Components/Navbar";
 import Home from "./Pages/Home";
+import JobsList from "./Pages/JobsList";
 import RegisterCandidat from "./Pages/RegisterCandidat";
 import Login from "./Pages/Login";
 import CreateEntreprise from "./Pages/CreateEntreprise";
@@ -15,8 +16,11 @@ import RegisterRecruteur from "./Pages/RegisterRecruteur";
 import MesCandidatures from "./Pages/MesCandidatures";
 import ReviewCandidature from "./Pages/ReviewCandidature";
 
+// --- NOUVELLE PAGE DE GESTION D'OFFRE ---
+import GestionOffre from "./Pages/GestionOffre";
+
 // L'ESPACE CANDIDAT
-import CandidatLayout from "./Pages/Candidat/CandidatLayout"; // <-- NOUVEL IMPORT
+import CandidatLayout from "./Pages/Candidat/CandidatLayout";
 
 // L'ADMINISTRATION
 import AdminLayout from "./Pages/Admin/AdminLayout";
@@ -47,30 +51,29 @@ function App() {
         <Routes>
           {/* ROUTES PUBLIQUES */}
           <Route path="/" element={<Home />} />
+          <Route path="/offres" element={<JobsList />} />
           <Route path="/register" element={<RegisterCandidat />} />
           <Route path="/register-entreprise" element={<RegisterRecruteur />} />
           <Route path="/login" element={<Login />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
 
-          {/* ROUTES RECRUTEUR (À protéger plus tard) */}
+          {/* ROUTES RECRUTEUR */}
           <Route path="/creer-entreprise" element={<CreateEntreprise />} />
           <Route path="/creer-offre" element={<CreateJob />} />
           <Route path="/dashboard" element={<DashboardRecruteur />} />
 
-          {/* --- NOUVEAU : ESPACE CANDIDAT (Avec Sidebar Emploitic) --- */}
+          {/* --- NOUVEAU : ROUTE POUR GÉRER UNE OFFRE SPÉCIFIQUE --- */}
+          <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+
+          {/* ESPACE CANDIDAT */}
           <Route element={<CandidatLayout />}>
             <Route path="/profil" element={<ProfilCandidat />} />
             <Route path="/mes-candidatures" element={<MesCandidatures />} />
             <Route path="/jobs/:id/postuler" element={<ReviewCandidature />} />
-            <Route path="/parametres" element={<Settings />} />{" "}
-            {/*
-            {/* Tu pourras ajouter ici :
-                <Route path="/alertes" element={<AlertesCandidat />} />
-                <Route path="/parametres" element={<SettingsCandidat />} /> 
-            */}
+            <Route path="/parametres" element={<Settings />} />
           </Route>
 
-          {/* --- ZONE ADMINISTRATION --- */}
+          {/* ZONE ADMINISTRATION */}
           <Route path="/admin-taftech" element={<AdminLayout />}>
             <Route index element={<AdminEntreprises />} />
             <Route path="entreprises" element={<AdminEntreprises />} />

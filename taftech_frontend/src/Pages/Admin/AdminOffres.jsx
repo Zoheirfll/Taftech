@@ -16,16 +16,14 @@ const AdminOffres = () => {
   const [selectedOffre, setSelectedOffre] = useState(null);
   const [motifRejet, setMotifRejet] = useState("");
 
-  // NOUVEAU : On utilise useCallback pour mémoriser la fonction et satisfaire ESLint
   const chargerOffres = useCallback(async () => {
     setLoading(true);
     try {
       const data = await jobsService.getAdminOffres(currentPage);
 
-      // Adaptation automatique : si Django envoie des pages (results) ou un tableau simple
       if (data.results) {
         setOffres(data.results);
-        setTotalPages(Math.ceil(data.count / 10)); // On suppose 10 offres par page
+        setTotalPages(Math.ceil(data.count / 10));
       } else {
         setOffres(data);
       }
@@ -37,9 +35,8 @@ const AdminOffres = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage]); // Se recharge uniquement si currentPage change
+  }, [currentPage]);
 
-  // Le useEffect est maintenant propre et sans erreurs !
   useEffect(() => {
     chargerOffres();
   }, [chargerOffres]);
@@ -89,14 +86,25 @@ const AdminOffres = () => {
     }
   };
 
-  const getBadge = (statut) => {
-    if (statut === "APPROUVEE")
+  // 🔴 LA FONCTION CORRIGÉE EST ICI 🔴
+  const getBadge = (offre) => {
+    // 1. Priorité au statut "Clôturée" par le recruteur
+    if (offre.est_cloturee) {
+      return (
+        <span className="bg-gray-800 text-white px-3 py-1 rounded-full text-xs font-black">
+          🔒 CLÔTURÉE
+        </span>
+      );
+    }
+
+    // 2. Sinon, on affiche l'état de la modération admin
+    if (offre.statut_moderation === "APPROUVEE")
       return (
         <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black">
           EN LIGNE
         </span>
       );
-    if (statut === "REJETEE")
+    if (offre.statut_moderation === "REJETEE")
       return (
         <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-black">
           REJETÉE
@@ -149,7 +157,10 @@ const AdminOffres = () => {
                 <td className="p-6 text-sm text-gray-500 font-medium">
                   {new Date(offre.date_publication).toLocaleDateString("fr-FR")}
                 </td>
-                <td className="p-6">{getBadge(offre.statut_moderation)}</td>
+
+                {/* 🔴 L'APPEL CORRIGÉ EST ICI 🔴 */}
+                <td className="p-6">{getBadge(offre)}</td>
+
                 <td className="p-6 text-right space-x-2">
                   <button
                     onClick={() => setSelectedOffre(offre)}
@@ -165,24 +176,26 @@ const AdminOffres = () => {
                   >
                     ✏️
                   </button>
-                  {offre.statut_moderation !== "APPROUVEE" && (
-                    <button
-                      onClick={() => handleApprouver(offre.id)}
-                      className="bg-green-100 hover:bg-green-200 text-green-700 p-2 rounded-lg"
-                      title="Approuver"
-                    >
-                      ✅
-                    </button>
-                  )}
-                  {offre.statut_moderation !== "REJETEE" && (
-                    <button
-                      onClick={() => setRejectingOffre(offre)}
-                      className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg"
-                      title="Refuser"
-                    >
-                      ❌
-                    </button>
-                  )}
+                  {offre.statut_moderation !== "APPROUVEE" &&
+                    !offre.est_cloturee && (
+                      <button
+                        onClick={() => handleApprouver(offre.id)}
+                        className="bg-green-100 hover:bg-green-200 text-green-700 p-2 rounded-lg"
+                        title="Approuver"
+                      >
+                        ✅
+                      </button>
+                    )}
+                  {offre.statut_moderation !== "REJETEE" &&
+                    !offre.est_cloturee && (
+                      <button
+                        onClick={() => setRejectingOffre(offre)}
+                        className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg"
+                        title="Refuser"
+                      >
+                        ❌
+                      </button>
+                    )}
                 </td>
               </tr>
             ))}

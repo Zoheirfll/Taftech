@@ -70,8 +70,14 @@ const MesCandidatures = () => {
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                     {cand.offre_titre}
+                    {/* LE BADGE APPARAÎT SI L'OFFRE EST CLÔTURÉE */}
+                    {cand.offre_est_cloturee && (
+                      <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded font-black tracking-wider uppercase">
+                        🔒 Clôturée
+                      </span>
+                    )}
                   </h2>
                   <p className="text-blue-600 font-semibold">
                     {cand.entreprise_nom}

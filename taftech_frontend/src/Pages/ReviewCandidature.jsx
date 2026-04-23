@@ -11,6 +11,11 @@ const ReviewCandidature = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // --- NOUVEAUX ÉTATS POUR LA LETTRE DE MOTIVATION ---
+  const [motivationMode, setMotivationMode] = useState("texte"); // "texte" ou "fichier"
+  const [lettreTexte, setLettreTexte] = useState("");
+  const [lettreFile, setLettreFile] = useState(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -32,12 +37,23 @@ const ReviewCandidature = () => {
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      await jobsService.postuler(id, {});
+      // On utilise FormData car on va peut-être envoyer un fichier !
+      const formData = new FormData();
+
+      if (motivationMode === "texte" && lettreTexte.trim() !== "") {
+        formData.append("lettre_motivation", lettreTexte);
+      } else if (motivationMode === "fichier" && lettreFile) {
+        formData.append("lettre_motivation_file", lettreFile);
+      }
+
+      await jobsService.postuler(id, formData);
       toast.success("Candidature envoyée avec succès !");
       navigate("/mes-candidatures");
     } catch (err) {
       toast.error(
-        err.response?.data?.message || "Erreur ou candidature déjà envoyée.",
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Erreur ou candidature déjà envoyée.",
       );
       setSubmitting(false);
     }
@@ -86,7 +102,7 @@ const ReviewCandidature = () => {
     return <div className="text-center p-20">Erreur de chargement.</div>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-8 mb-20 font-sans">
+    <div className="max-w-3xl mx-auto p-4 md:p-8 mb-24 font-sans">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-black text-gray-900">
           Postuler pour : <span className="text-blue-600">{job.titre}</span>
@@ -109,6 +125,71 @@ const ReviewCandidature = () => {
         </div>
       </div>
 
+      {/* --- NOUVEAU BLOC : LETTRE DE MOTIVATION --- */}
+      <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden mb-8">
+        <div className="p-8 border-b border-gray-50 bg-gray-50/50">
+          <h2 className="text-xl font-black text-gray-900">
+            Ma Lettre de Motivation{" "}
+            <span className="text-gray-400 font-medium text-sm ml-2">
+              (Optionnel)
+            </span>
+          </h2>
+        </div>
+
+        <div className="p-8">
+          {/* Les onglets de sélection */}
+          <div className="flex gap-4 mb-6 bg-gray-100 p-2 rounded-2xl w-fit">
+            <button
+              onClick={() => setMotivationMode("texte")}
+              className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${motivationMode === "texte" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+            >
+              📝 Saisir un texte
+            </button>
+            <button
+              onClick={() => setMotivationMode("fichier")}
+              className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${motivationMode === "fichier" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+            >
+              📁 Joindre un fichier
+            </button>
+          </div>
+
+          {/* Conditionnel : Texte OU Fichier */}
+          {motivationMode === "texte" ? (
+            <textarea
+              rows="6"
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl font-medium outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+              placeholder="Rédigez votre lettre de motivation ici..."
+              value={lettreTexte}
+              onChange={(e) => setLettreTexte(e.target.value)}
+            ></textarea>
+          ) : (
+            <div className="border-2 border-dashed border-gray-200 p-8 rounded-[2rem] text-center hover:border-blue-400 transition-all bg-blue-50/20 group relative cursor-pointer">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setLettreFile(e.target.files[0])}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform">
+                📁
+              </span>
+              <p className="text-sm font-black text-gray-700 group-hover:text-blue-600 transition-colors">
+                {lettreFile
+                  ? lettreFile.name
+                  : "Cliquez ou glissez votre Lettre (PDF/Word)"}
+              </p>
+              {lettreFile && (
+                <p className="text-xs text-green-600 font-bold mt-2">
+                  ✓ Fichier prêt à être envoyé
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* ------------------------------------------ */}
+
+      {/* --- RÉCAPITULATIF DU PROFIL --- */}
       <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden">
         <div className="flex justify-between items-center p-8 border-b border-gray-50 bg-gray-50/50">
           <h2 className="text-xl font-black text-gray-900">
@@ -147,7 +228,6 @@ const ReviewCandidature = () => {
                 <span>📧 {profil.email}</span>
                 <span>📞 {profil.telephone || "Non renseigné"}</span>
               </div>
-              {/* Le trio administratif ajouté ici */}
               <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-3 border-t border-gray-200">
                 <span
                   className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${profil.service_militaire === "DEGAGE" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}

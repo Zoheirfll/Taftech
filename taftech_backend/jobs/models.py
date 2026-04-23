@@ -143,7 +143,7 @@ class OffreEmploi(models.Model):
     est_active = models.BooleanField(default=True, verbose_name="Offre visible")
     statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
     motif_rejet = models.TextField(blank=True, null=True)
-
+    est_cloturee = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
 
@@ -163,6 +163,13 @@ class Candidature(models.Model):
     candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidatures')
     date_postulation = models.DateTimeField(auto_now_add=True)
     lettre_motivation = models.TextField(blank=True, null=True, verbose_name="Lettre de motivation (Optionnelle)")
+    lettre_motivation_file = models.FileField(
+        upload_to='lettres_motivation/', 
+        blank=True, 
+        null=True, 
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])],
+        verbose_name="Lettre de motivation (Fichier)"
+    )
     statut = models.CharField(max_length=20, choices=STATUTS, default='EN_ATTENTE')
 
     class Meta:

@@ -41,7 +41,7 @@ class JobListAPIView(APIView):
         contrat = request.query_params.get('contrat', '')
 
         # 2. On prend toutes les offres actives
-        offres = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE')
+        offres = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
 
         # 3. On applique chaque filtre (seulement si l'utilisateur a écrit quelque chose)
         if mot_cle:
@@ -99,6 +99,9 @@ class PostulerAPIView(APIView):
     URL : /api/jobs/<id_offre>/postuler/
     """
     permission_classes = [IsAuthenticated] # Il faut être connecté pour postuler
+    
+    # 🔴 CORRECTION 1 : Le "traducteur" pour lire les fichiers PDF
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def post(self, request, offre_id):
         # On vérifie si l'offre existe
@@ -107,7 +110,7 @@ class PostulerAPIView(APIView):
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
 
-        # On vérifie si le candidat a déjà postulé (grâce au unique_together du modèle, mais c'est plus propre de le faire ici)
+        # On vérifie si le candidat a déjà postulé
         if Candidature.objects.filter(offre=offre, candidat=request.user).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -117,7 +120,10 @@ class PostulerAPIView(APIView):
             Candidature.objects.create(
                 offre=offre,
                 candidat=request.user,
-                lettre_motivation=serializer.validated_data.get('lettre_motivation', '')
+                lettre_motivation=serializer.validated_data.get('lettre_motivation', ''),
+                
+                # 🔴 CORRECTION 2 : C'EST ICI QU'IL MANQUAIT LA LIGNE POUR SAUVER LE FICHIER !
+                lettre_motivation_file=serializer.validated_data.get('lettre_motivation_file', None)
             )
             return Response({"message": "Candidature envoyée avec succès !"}, status=status.HTTP_201_CREATED)
             
@@ -253,7 +259,7 @@ class JobDetailAPIView(APIView):
     def get(self, request, offre_id):
         try:
             # On cherche l'offre avec cet ID, et on s'assure qu'elle est active
-            offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
+            offre = OffreEmploi.objects.get(id=offre_id, est_active=True, est_cloturee=False)
             serializer = OffreEmploiSerializer(offre)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
@@ -537,3 +543,43 @@ class FormationDetailAPIView(APIView):
             return Response({"message": "Formation supprimée."}, status=status.HTTP_204_NO_CONTENT)
         except FormationCandidat.DoesNotExist:
             return Response({"error": "Formation introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+class CloturerOffreAPIView(APIView):
+    """ Permet au recruteur de clôturer son offre """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, offre_id):
+        try:
+            # On cherche l'offre
+            offre = OffreEmploi.objects.get(id=offre_id)
+            
+            # SÉCURITÉ : On vérifie que l'offre appartient bien au 'user' du 'ProfilEntreprise'
+            if offre.entreprise.user != request.user: 
+                return Response({"error": "Vous n'êtes pas autorisé à modifier cette offre."}, status=status.HTTP_403_FORBIDDEN)
+
+            # On la clôture et on sauvegarde
+            offre.est_cloturee = True
+            offre.save()
+            return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)
+            
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class DeleteCandidatureAPIView(APIView):
+    """ Permet au recruteur de supprimer définitivement une candidature refusée """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.get(id=candidature_id)
+            
+            # SÉCURITÉ : On vérifie que la candidature est liée à une offre du 'user'
+            if candidature.offre.entreprise.user != request.user:
+                return Response({"error": "Vous n'êtes pas autorisé à supprimer cette candidature."}, status=status.HTTP_403_FORBIDDEN)
+
+            candidature.delete()
+            return Response({"message": "Candidature supprimée avec succès."}, status=status.HTTP_204_NO_CONTENT)
+            
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)

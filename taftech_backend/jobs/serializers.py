@@ -39,7 +39,7 @@ class ProfilEntrepriseCreateDTO(serializers.ModelSerializer):
 class PostulerDTO(serializers.ModelSerializer):
     class Meta:
         model = Candidature
-        fields = ('lettre_motivation',) # L'offre et le candidat seront gérés par le serveur, pas par l'utilisateur
+        fields = ('lettre_motivation','lettre_motivation_file') # L'offre et le candidat seront gérés par le serveur, pas par l'utilisateur
 
 class OffreEmploiCreateDTO(serializers.ModelSerializer):
     """
@@ -149,19 +149,28 @@ class CandidatInfoDTO(serializers.ModelSerializer):
         return obj.profil_candidat.situation_actuelle if hasattr(obj, 'profil_candidat') else None
 # 2. Vigile pour la candidature
 class CandidatureRecruteurDTO(serializers.ModelSerializer):
-    candidat = CandidatInfoDTO(read_only=True) # On imbrique les infos du candidat
+    candidat = CandidatInfoDTO(read_only=True)
+    
+    # 1. On déclare le champ ici
+    lettre_motivation_file = serializers.SerializerMethodField()
     
     class Meta:
         model = Candidature
-        fields = ('id', 'candidat', 'date_postulation', 'lettre_motivation', 'statut')
+        # 2. VÉRIFIE BIEN CETTE LIGNE : le champ doit être dans la parenthèse !
+        fields = ('id', 'candidat', 'date_postulation', 'lettre_motivation', 'lettre_motivation_file', 'statut')
 
+    # 3. La fonction pour créer le lien du fichier
+    def get_lettre_motivation_file(self, obj):
+        if obj.lettre_motivation_file:
+            return f"http://127.0.0.1:8000{obj.lettre_motivation_file.url}"
+        return None
 # 3. Vigile pour l'offre (avec ses candidatures imbriquées)
 class OffreDashboardDTO(serializers.ModelSerializer):
     candidatures = CandidatureRecruteurDTO(many=True, read_only=True)
     
     class Meta:
         model = OffreEmploi
-        fields = ('id', 'titre', 'date_publication', 'est_active', 'candidatures')
+        fields = ('id', 'titre', 'date_publication', 'est_active', 'est_cloturee', 'candidatures')
 
 class ExperienceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -257,10 +266,10 @@ class CandidatRegisterSerializer(serializers.ModelSerializer):
 class MesCandidaturesDTO(serializers.ModelSerializer):
     offre_titre = serializers.CharField(source='offre.titre', read_only=True)
     entreprise_nom = serializers.CharField(source='offre.entreprise.nom_entreprise', read_only=True)
-
+    offre_est_cloturee = serializers.BooleanField(source='offre.est_cloturee', read_only=True)
     class Meta:
         model = Candidature
-        fields = ('id', 'offre_titre', 'entreprise_nom', 'date_postulation', 'statut')
+        fields = ('id', 'offre_titre', 'entreprise_nom', 'date_postulation', 'statut', 'offre_est_cloturee')
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

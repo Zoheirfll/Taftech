@@ -35,6 +35,9 @@ export const jobsService = {
     const response = await api.post(
       `jobs/${offreId}/postuler/`,
       candidatureData,
+      {
+        headers: { "Content-Type": "multipart/form-data" }, // <-- LE SECRET EST LÀ !
+      },
     );
     return response.data;
   },
@@ -59,6 +62,21 @@ export const jobsService = {
     const response = await api.patch(
       `jobs/candidatures/${candidatureId}/statut/`,
       { statut: nouveauStatut },
+    );
+    return response.data;
+  },
+  // Supprimer définitivement une candidature (Nettoyage)
+  deleteCandidature: async (candidatureId) => {
+    const response = await api.delete(
+      `jobs/candidatures/${candidatureId}/supprimer/`,
+    );
+    return response.data;
+  },
+
+  // Clôturer une offre
+  cloturerOffre: async (offreId) => {
+    const response = await api.patch(
+      `jobs/dashboard/offres/${offreId}/cloturer/`,
     );
     return response.data;
   },

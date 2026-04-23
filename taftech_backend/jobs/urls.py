@@ -2,9 +2,9 @@ from django.urls import path
 from .views import JobListAPIView
 from .views import ProfilEntrepriseCreateAPIView
 from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, CandidatRegisterAPIView, MesCandidaturesAPIView
-from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView
-from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView
-from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView, UpdateProfilEntrepriseAPIView
+from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView, UpdateProfilEntrepriseAPIView
+from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView, DeleteCandidatureAPIView, CloturerOffreAPIView
+from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView
 
 
 
@@ -46,4 +46,6 @@ urlpatterns = [
     path('profil/formations/', FormationAPIView.as_view(), name='profil-formations'),
     path('profil/formations/<int:pk>/', FormationDetailAPIView.as_view(), name='profil-formation-detail'),
     path('entreprise/update/', UpdateProfilEntrepriseAPIView.as_view(), name='update-entreprise'),
+    path('dashboard/offres/<int:offre_id>/cloturer/',CloturerOffreAPIView.as_view(), name='cloturer_offre'),
+    path('candidatures/<int:candidature_id>/supprimer/',DeleteCandidatureAPIView.as_view(), name='supprimer_candidature'),
 ]

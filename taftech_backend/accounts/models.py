@@ -22,7 +22,8 @@ class CustomUser(AbstractUser):
     consentement_loi_18_07 = models.BooleanField(default=False, verbose_name="Consentement RGPD Algérie (Loi 18-07)")
     telephone = models.CharField(max_length=15, null=True, blank=True)
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
-
+    email_verifie = models.BooleanField(default=False)
+    code_verification = models.CharField(max_length=6, blank=True, null=True)
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
     

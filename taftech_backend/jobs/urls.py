@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import JobListAPIView
 from .views import ProfilEntrepriseCreateAPIView
-from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, CandidatRegisterAPIView, MesCandidaturesAPIView
+from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, MesCandidaturesAPIView
 from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView, UpdateProfilEntrepriseAPIView
 from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView, DeleteCandidatureAPIView, CloturerOffreAPIView
 from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView
@@ -28,7 +28,6 @@ urlpatterns = [
     path('profil/', ProfilCandidatAPIView.as_view(), name='profil-candidat'),
     # URL pour voir une seule offre en détail
     path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
-    path('candidat/register/', CandidatRegisterAPIView.as_view(), name='candidat-register'),
     path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
     path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres-list'),
     path('admin/offres/<int:offre_id>/moderer/', AdminOffreModerateAPIView.as_view(), name='admin-offre-moderate'),

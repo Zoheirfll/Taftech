@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from .models import ProfilCandidat
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import ExperienceCandidat, FormationCandidat
+from rest_framework.exceptions import AuthenticationFailed
 
 User = get_user_model()
 # 1 Entreprise Serializer
@@ -273,9 +274,16 @@ class MesCandidaturesDTO(serializers.ModelSerializer):
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        # 1. Django vérifie si l'email et le mot de passe sont corrects
         data = super().validate(attrs)
-        # On ajoute le rôle à la réponse pour que React sache si c'est un CANDIDAT ou RECRUTEUR
+        
+        # 2. SÉCURITÉ : On vérifie si c'est un Candidat et si son email est validé
+        if self.user.role == 'CANDIDAT' and not self.user.email_verifie:
+            raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
+
+        # 3. Si tout est bon, on ajoute le rôle au token pour React
         data['role'] = self.user.role 
+        
         return data
 
 class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):

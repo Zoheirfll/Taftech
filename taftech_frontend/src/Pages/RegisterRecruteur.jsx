@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
-import { jobsService } from "../Services/jobsService"; // <-- Pour récupérer les listes
+import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
-import Select from "react-select"; // <-- Pour les beaux menus déroulants
+import Select from "react-select";
 
 const RegisterRecruteur = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // NOUVEAU : Gestion des étapes (1: Formulaire, 2: OTP, 3: Succès)
+  const [step, setStep] = useState(1);
+  const [otpCode, setOtpCode] = useState("");
+
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
 
   const [formData, setFormData] = useState({
@@ -19,17 +24,16 @@ const RegisterRecruteur = () => {
     nom_entreprise: "",
     secteur_activite: "",
     registre_commerce: "",
-    wilaya_siege: "", // <-- AJOUT DE LA WILAYA
+    wilaya_siege: "",
   });
 
-  // On charge les listes officielles depuis Django au démarrage
   useEffect(() => {
     const fetchConstants = async () => {
       try {
         const data = await jobsService.getConstants();
         setConstants(data);
       } catch (err) {
-        (console.error("Erreur chargement des constantes"), err);
+        console.error("Erreur chargement des constantes", err);
       }
     };
     fetchConstants();
@@ -39,10 +43,10 @@ const RegisterRecruteur = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- ÉTAPE 1 : SOUMISSION DU FORMULAIRE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Petite vérification avant envoi
     if (!formData.secteur_activite || !formData.wilaya_siege) {
       return toast.error("Veuillez sélectionner un secteur et une wilaya.");
     }
@@ -60,12 +64,12 @@ const RegisterRecruteur = () => {
       const response = await authService.registerRecruteur(dataToSend);
 
       toast.success(
-        response.message ||
-          "Inscription réussie ! Votre compte est en attente de validation.",
-        { id: toastId, duration: 5000 },
+        response.message || "Un code a été envoyé à votre adresse email.",
+        { id: toastId, duration: 3000 },
       );
 
-      navigate("/login");
+      // On passe à l'étape du code OTP au lieu de rediriger !
+      setStep(2);
     } catch (err) {
       const serverError = err.response?.data;
       toast.error(
@@ -79,10 +83,32 @@ const RegisterRecruteur = () => {
     }
   };
 
+  // --- ÉTAPE 2 : SOUMISSION DU CODE OTP ---
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (otpCode.length !== 6)
+      return toast.error("Le code doit contenir 6 chiffres.");
+
+    setLoading(true);
+    const toastId = toast.loading("Vérification en cours...");
+
+    try {
+      await authService.verifyEmail(formData.email, otpCode);
+      toast.success("Email vérifié avec succès !", { id: toastId });
+      setStep(3); // On passe au message de fin !
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Code incorrect.", {
+        id: toastId,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        {/* Colonne de gauche */}
+        {/* Colonne de gauche (Reste identique !) */}
         <div className="md:w-1/3 bg-gray-900 p-10 text-white flex flex-col justify-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-bl-full opacity-20"></div>
           <h2 className="text-3xl font-black mb-4 z-10">
@@ -116,178 +142,256 @@ const RegisterRecruteur = () => {
           </div>
         </div>
 
-        {/* Colonne de droite : Formulaire */}
-        <div className="md:w-2/3 p-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <h3 className="text-2xl font-black text-gray-900 mb-6">
-              Créer un compte entreprise
-            </h3>
+        {/* Colonne de droite : DYNAMIQUE SELON L'ÉTAPE */}
+        <div className="md:w-2/3 p-10 flex flex-col justify-center">
+          {/* ================= ÉTAPE 1 : LE FORMULAIRE ================= */}
+          {step === 1 && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <h3 className="text-2xl font-black text-gray-900 mb-6">
+                Créer un compte entreprise
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Nom
+                  </label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    required
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Prénom
+                  </label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    required
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Email Pro
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone"
+                    required
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Nom du responsable
+                  Nom de l'entreprise
                 </label>
                 <input
                   type="text"
-                  name="last_name"
+                  name="nom_entreprise"
                   required
                   onChange={handleChange}
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Prénom
-                </label>
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Secteur d'activité
+                  </label>
+                  <Select
+                    options={constants.secteurs}
+                    placeholder="Sélectionnez..."
+                    onChange={(opt) =>
+                      setFormData({ ...formData, secteur_activite: opt.value })
+                    }
+                    styles={{
+                      control: (b) => ({
+                        ...b,
+                        borderRadius: "0.75rem",
+                        padding: "0.15rem",
+                        borderColor: "#e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        fontSize: "0.875rem",
+                        fontWeight: "bold",
+                      }),
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Wilaya du siège
+                  </label>
+                  <Select
+                    options={constants.wilayas}
+                    placeholder="Sélectionnez..."
+                    onChange={(opt) =>
+                      setFormData({ ...formData, wilaya_siege: opt.value })
+                    }
+                    styles={{
+                      control: (b) => ({
+                        ...b,
+                        borderRadius: "0.75rem",
+                        padding: "0.15rem",
+                        borderColor: "#e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        fontSize: "0.875rem",
+                        fontWeight: "bold",
+                      }),
+                    }}
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Registre de Commerce
+                  </label>
+                  <input
+                    type="text"
+                    name="registre_commerce"
+                    required
+                    onChange={handleChange}
+                    placeholder="Ex: 1234567A89"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    minLength="8"
+                    required
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1 mt-4"
+              >
+                {loading
+                  ? "CRÉATION EN COURS..."
+                  : "S'INSCRIRE COMME EMPLOYEUR"}
+              </button>
+
+              <p className="text-center mt-6 text-sm text-gray-500 font-medium">
+                Déjà un compte ?{" "}
+                <Link
+                  to="/login"
+                  className="text-blue-600 font-black hover:underline"
+                >
+                  Se connecter
+                </Link>
+              </p>
+            </form>
+          )}
+
+          {/* ================= ÉTAPE 2 : CODE OTP ================= */}
+          {step === 2 && (
+            <div className="space-y-6 text-center animate-fade-in">
+              <h3 className="text-2xl font-black text-gray-900 mb-2">
+                Vérifiez votre Email
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Un code à 6 chiffres a été envoyé à <br />
+                <span className="font-bold text-gray-800">
+                  {formData.email}
+                </span>
+              </p>
+
+              <form onSubmit={handleOtpSubmit} className="space-y-6 mt-8">
+                <div>
+                  <input
+                    type="text"
+                    maxLength="6"
+                    value={otpCode}
+                    onChange={(e) =>
+                      setOtpCode(e.target.value.replace(/\D/g, ""))
+                    } // N'accepte que les chiffres
+                    placeholder="------"
+                    className="w-48 text-center text-3xl tracking-[0.5em] p-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-600 outline-none font-black text-gray-800 uppercase"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1"
+                >
+                  {loading ? "VÉRIFICATION..." : "VALIDER MON EMAIL"}
+                </button>
+              </form>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Email Pro
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-                />
+          {/* ================= ÉTAPE 3 : MESSAGE FINAL ADMIN ================= */}
+          {step === 3 && (
+            <div className="space-y-6 text-center animate-fade-in">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-green-500 text-4xl">✓</span>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  name="telephone"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-                />
+              <h3 className="text-2xl font-black text-gray-900 mb-2">
+                Compte Sécurisé !
+              </h3>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-left">
+                <p className="text-blue-900 text-sm leading-relaxed">
+                  <strong>Bravo {formData.first_name} !</strong> Votre email est
+                  validé. <br />
+                  <br />
+                  Pour garantir la qualité des entreprises sur TafTech, votre
+                  compte est actuellement{" "}
+                  <strong>en cours de vérification</strong> par nos
+                  administrateurs (Analyse du Registre de Commerce).
+                  <br />
+                  <br />
+                  Vous pourrez publier vos offres d'emploi dès que votre compte
+                  sera approuvé !
+                </p>
               </div>
+
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full border-2 border-blue-600 text-blue-600 font-black py-4 rounded-xl hover:bg-blue-50 transition-all mt-4"
+              >
+                ALLER À LA PAGE DE CONNEXION
+              </button>
             </div>
-
-            <hr className="border-gray-100" />
-
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                Nom de l'entreprise
-              </label>
-              <input
-                type="text"
-                name="nom_entreprise"
-                required
-                onChange={handleChange}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Secteur d'activité
-                </label>
-                <Select
-                  options={constants.secteurs}
-                  placeholder="Sélectionnez..."
-                  onChange={(opt) =>
-                    setFormData({ ...formData, secteur_activite: opt.value })
-                  }
-                  styles={{
-                    control: (b) => ({
-                      ...b,
-                      borderRadius: "0.75rem",
-                      padding: "0.15rem",
-                      borderColor: "#e5e7eb",
-                      backgroundColor: "#f9fafb",
-                      fontSize: "0.875rem",
-                      fontWeight: "bold",
-                    }),
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Wilaya du siège
-                </label>
-                <Select
-                  options={constants.wilayas}
-                  placeholder="Sélectionnez..."
-                  onChange={(opt) =>
-                    setFormData({ ...formData, wilaya_siege: opt.value })
-                  }
-                  styles={{
-                    control: (b) => ({
-                      ...b,
-                      borderRadius: "0.75rem",
-                      padding: "0.15rem",
-                      borderColor: "#e5e7eb",
-                      backgroundColor: "#f9fafb",
-                      fontSize: "0.875rem",
-                      fontWeight: "bold",
-                    }),
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Registre de Commerce
-                </label>
-                <input
-                  type="text"
-                  name="registre_commerce"
-                  required
-                  onChange={handleChange}
-                  placeholder="Ex: 1234567A89"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                  Mot de passe
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  minLength="8"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1 mt-4"
-            >
-              {loading ? "CRÉATION EN COURS..." : "S'INSCRIRE COMME EMPLOYEUR"}
-            </button>
-          </form>
-
-          <p className="text-center mt-6 text-sm text-gray-500 font-medium">
-            Déjà un compte ?{" "}
-            <Link
-              to="/login"
-              className="text-blue-600 font-black hover:underline"
-            >
-              Se connecter
-            </Link>
-          </p>
+          )}
         </div>
       </div>
     </div>

@@ -164,3 +164,13 @@ SIMPLE_JWT = {
 # Configuration pour les fichiers uploadés par les utilisateurs (CVs, images, etc.)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# ==========================================
+# CONFIGURATION DES EMAILS (GMAIL)
+# ==========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'taftech963@gmail.com' # Remplace par ton adresse Gmail
+EMAIL_HOST_PASSWORD = 'biojesdfiyakrvlv' # VOIR LA NOTE IMPORTANTE CI-DESSOUS

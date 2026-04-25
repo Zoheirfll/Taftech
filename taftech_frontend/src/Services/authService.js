@@ -43,7 +43,11 @@ export const authService = {
   // 4. AUTRES SERVICES : Ils utilisent tous 'api' sans headers manuels
   // --------------------------------------------------------
   registerCandidat: async (candidatData) => {
-    const response = await api.post("jobs/candidat/register/", candidatData);
+    // 👇 VOICI L'URL EXACTE 👇
+    const response = await api.post(
+      "accounts/register/candidat/",
+      candidatData,
+    );
     return response.data;
   },
 
@@ -64,6 +68,13 @@ export const authService = {
       "accounts/register/recruteur/",
       recruteurData,
     );
+    return response.data;
+  },
+  verifyEmail: async (email, code) => {
+    const response = await api.post("accounts/verifier-email/", {
+      email,
+      code,
+    });
     return response.data;
   },
 };

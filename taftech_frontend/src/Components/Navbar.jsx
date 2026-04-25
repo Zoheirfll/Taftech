@@ -1,20 +1,26 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { authService } from "../Services/authService";
+// 👇 ON IMPORTE TON NOUVEAU LOGO ICI 👇
+import logoTafTech from "../assets/logo-taftech.png";
 
 const Navbar = () => {
   const isLogged = authService.isAuthenticated();
   const role = authService.getUserRole();
 
   return (
-    <nav className="bg-white border-b shadow-sm p-4 sticky top-0 z-50 px-10">
+    <nav className="bg-white border-b shadow-sm p-3 sticky top-0 z-50 px-6 md:px-10">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        {/* LOGO */}
-        <Link
-          to="/"
-          className="text-2xl font-black text-blue-600 tracking-tighter"
-        >
-          TAFTECH
+        {/* LOGO AVEC IMAGE - CORRECTION ZOOM */}
+        <Link to="/" className="flex items-center group ml-[-10px]">
+          {/* On crée un conteneur rigide plus grand et on masque ce qui dépasse */}
+          <div className="overflow-hidden h-20 w-56 flex items-center justify-start">
+            <img
+              src={logoTafTech}
+              alt="TafTech Logo"
+              className="h-40 w-auto object-contain transform scale-100 translate-y-[-10px] origin-left transition-transform group-hover:scale-105"
+            />
+          </div>
         </Link>
 
         <div className="flex items-center gap-6 font-medium text-gray-700">
@@ -26,7 +32,7 @@ const Navbar = () => {
             <>
               <Link
                 to="/register-entreprise"
-                className="text-gray-900 font-bold border-r pr-6 border-gray-200"
+                className="hidden md:block text-gray-900 font-bold border-r pr-6 border-gray-200"
               >
                 Espace Recruteur
               </Link>
@@ -35,7 +41,7 @@ const Navbar = () => {
               </Link>
               <Link
                 to="/register"
-                className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition font-bold"
               >
                 Inscription
               </Link>
@@ -43,8 +49,9 @@ const Navbar = () => {
           ) : (
             <>
               {/* STATUS EN LIGNE */}
-              <span className="text-green-600 text-sm font-bold bg-green-100 px-3 py-1 rounded-full">
-                En ligne
+              <span className="hidden sm:flex items-center gap-1.5 text-green-600 text-xs font-black bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                EN LIGNE
               </span>
 
               {/* MENU CANDIDAT */}
@@ -76,14 +83,14 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to="/creer-offre"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold transition"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition"
                   >
                     + Publier une offre
                   </Link>
                 </>
               )}
 
-              {/* 🔥 MENU SUPER ADMIN (LA PORTE SECRÈTE) 🔥 */}
+              {/* MENU SUPER ADMIN */}
               {role === "ADMIN" && (
                 <Link
                   to="/admin-taftech"

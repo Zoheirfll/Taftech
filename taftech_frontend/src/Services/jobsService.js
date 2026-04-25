@@ -145,4 +145,12 @@ export const jobsService = {
     );
     return response.data;
   },
+  // Vérifier l'email avec le code OTP
+  verifyEmail: async (email, code) => {
+    const response = await api.post("accounts/verifier-email/", {
+      email,
+      code,
+    });
+    return response.data;
+  },
 };

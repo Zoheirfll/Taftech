@@ -23,6 +23,10 @@ from django.contrib.auth import get_user_model
 from .models import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
 from .models import ExperienceCandidat, FormationCandidat
 from .serializers import ExperienceSerializer, FormationSerializer
+import random
+from django.core.mail import send_mail
+from django.conf import settings
+
 
 User = get_user_model()
 
@@ -268,16 +272,33 @@ class JobDetailAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-class CandidatRegisterAPIView(APIView):
-    """ API pour l'inscription d'un Candidat (US 1.1) """
-    permission_classes = [AllowAny] # Ouvert à tous
+
+class VerifyEmailAPIView(APIView):
+    """ Endpoint pour vérifier le code reçu par email """
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = CandidatRegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Compte candidat créé avec succès !"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        email = request.data.get('email')
+        code = request.data.get('code')
+
+        try:
+            user = User.objects.get(email=email)
+            
+            # On vérifie si le compte est déjà validé
+            if user.email_verifie:
+                return Response({"message": "Ce compte est déjà vérifié."}, status=status.HTTP_200_OK)
+
+            # On compare les codes
+            if user.code_verification == str(code):
+                user.email_verifie = True
+                user.code_verification = None # On vide le code par sécurité
+                user.save()
+                return Response({"message": "Email vérifié avec succès ! Vous pouvez vous connecter."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Le code de vérification est incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except User.DoesNotExist:
+            return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
 class MesCandidaturesAPIView(APIView):
     permission_classes = [IsAuthenticated]

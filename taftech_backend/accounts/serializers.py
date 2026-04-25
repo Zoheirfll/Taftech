@@ -3,6 +3,7 @@ from .models import CustomUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from jobs.models import ProfilEntreprise
+from rest_framework.exceptions import AuthenticationFailed
 
 User = get_user_model()
 
@@ -46,7 +47,8 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
         # On crée l'utilisateur avec TOUTES les données (incluant le consentement)
         user = User.objects.create_user(
             **validated_data,
-            role='CANDIDAT' # On force le rôle ici aussi
+            role='CANDIDAT' ,# On force le rôle ici aussi
+            is_active=False
         )
         
         # On sécurise le mot de passe
@@ -61,18 +63,26 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
 
 class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        # On récupère l'email saisi (qui arrive dans le champ 'username' depuis React)
         email_saisi = attrs.get('username')
         user = User.objects.filter(email=email_saisi).first()
         
         if user:
-            # On donne le vrai username à SimpleJWT pour qu'il puisse authentifier
-            attrs['username'] = user.username
+            # 🚨 ON BLOQUE TOUT LE MONDE S'ILS NE SONT PAS ACTIFS !
+            if not user.is_active:
+                raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
             
-        # Appel à la validation parente (hachage mot de passe + vérification)
+            # (Optionnel) Si c'est un recruteur actif, mais que l'admin ne l'a pas encore validé
+            if user.role == 'RECRUTEUR' and hasattr(user, 'profilentreprise') and not user.profilentreprise.est_approuvee:
+                # Tu peux soit le laisser se connecter mais bloquer ses actions dans React,
+                # Soit le bloquer complètement ici. En général, on le laisse se connecter
+                # pour qu'il voie un message "Votre compte est en cours de validation par l'admin".
+                pass
+                
+            attrs['username'] = user.username
+        else:
+            raise AuthenticationFailed("Aucun compte trouvé avec cette adresse email.")
+            
         data = super().validate(attrs)
-        
-        # On ajoute le rôle pour la vue
         data['role'] = self.user.role
         return data
 
@@ -109,24 +119,41 @@ class RecruteurRegisterSerializer(serializers.ModelSerializer):
         secteur_activite = validated_data.pop('secteur_activite')
         registre_commerce = validated_data.pop('registre_commerce')
 
-        # 2. On crée le compte et on VERROUILLE le rôle
+        # 2. On crée le compte et on VERROUILLE le rôle ET L'ACTIVATION
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
-            telephone=validated_data.get('telephone', '')
+            telephone=validated_data.get('telephone', ''),
+            is_active=False # 👈 LE COUP DE MARTEAU EST LÀ !
         )
-        user.role = 'RECRUTEUR' # Rôle définitif
+        user.role = 'RECRUTEUR'
+        user.email_verifie = False # On s'assure que c'est faux
         user.save()
 
-        # 3. On génère le profil entreprise (est_approuvee=False par défaut dans ton modèle)
+        # 3. On génère le profil entreprise (est_approuvee=False par défaut)
+        from jobs.models import ProfilEntreprise # Assure-toi de l'importer si ce n'est pas fait
         ProfilEntreprise.objects.create(
             user=user,
             nom_entreprise=nom_entreprise,
             secteur_activite=secteur_activite,
             registre_commerce=registre_commerce,
-            wilaya_siege="Non renseignée" # Valeur par défaut obligatoire si tu l'as mise requise
+            wilaya_siege="Non renseignée" 
         )
         return user
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # 1. Django vérifie si l'email et le mot de passe sont corrects
+        data = super().validate(attrs)
+        
+        # 2. SÉCURITÉ : On vérifie si c'est un Candidat et si son email est validé
+        if self.user.role == 'CANDIDAT' and not self.user.email_verifie:
+            raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
+
+        # 3. Si tout est bon, on ajoute le rôle au token pour React
+        data['role'] = self.user.role 
+        
+        return data

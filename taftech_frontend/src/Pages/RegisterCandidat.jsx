@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
+import { jobsService } from "../Services/jobsService"; // <-- AJOUT POUR VÉRIFIER L'EMAIL
 import toast from "react-hot-toast";
 
 const RegisterCandidat = () => {
@@ -16,6 +17,14 @@ const RegisterCandidat = () => {
     
     En cochant la case de consentement, vous acceptez que vos informations professionnelles soient visibles par les entreprises enregistrées sur la plateforme.`,
   };
+
+  // --- ÉTATS ---
+  const [step, setStep] = useState(1); // Étape 1: Formulaire, Étape 2: Code OTP
+  const [registeredEmail, setRegisteredEmail] = useState(""); // Pour stocker l'email à vérifier
+
+  // États OTP (6 cases)
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const inputRefs = useRef([]); // Pour passer d'une case à l'autre automatiquement
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -37,6 +46,8 @@ const RegisterCandidat = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
+  // --- SOUMISSION ÉTAPE 1 (INSCRIPTION) ---
+  // --- SOUMISSION ÉTAPE 1 (INSCRIPTION) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.consentement_loi_18_07) {
@@ -51,11 +62,14 @@ const RegisterCandidat = () => {
         formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
       const dataToSend = { ...formData, username: usernameGenere };
 
+      // 👇 LA CORRECTION EST ICI : on enlève le "const response ="
       await authService.registerCandidat(dataToSend);
-      toast.success("Compte créé avec succès ! Bienvenue sur TafTech.", {
-        id: toastId,
-      });
-      navigate("/login");
+
+      toast.success("Code envoyé à votre adresse email !", { id: toastId });
+
+      // ON PASSE À L'ÉTAPE 2
+      setRegisteredEmail(formData.email);
+      setStep(2);
     } catch (err) {
       toast.error(
         err.response?.data?.email?.[0] ||
@@ -68,12 +82,69 @@ const RegisterCandidat = () => {
     }
   };
 
+  // --- LOGIQUE OTP (ÉTAPE 2) ---
+  const handleOtpChange = (index, e) => {
+    const value = e.target.value;
+    if (isNaN(value)) return; // Seulement des chiffres
+
+    const newOtp = [...otp];
+    newOtp[index] = value.substring(value.length - 1); // Garder le dernier caractère
+    setOtp(newOtp);
+
+    // Passer à la case suivante automatiquement
+    if (value && index < 5 && inputRefs.current[index + 1]) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    // Revenir à la case précédente si on appuie sur Effacer
+    if (
+      e.key === "Backspace" &&
+      !otp[index] &&
+      index > 0 &&
+      inputRefs.current[index - 1]
+    ) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    const codeSaisi = otp.join("");
+    if (codeSaisi.length !== 6) {
+      toast.error("Veuillez saisir les 6 chiffres du code.");
+      return;
+    }
+
+    setLoading(true);
+    const toastId = toast.loading("Vérification du code...");
+
+    try {
+      // ON APPELLE LE NOUVEAU ENDPOINT
+      await jobsService.verifyEmail(registeredEmail, codeSaisi);
+      toast.success("Email vérifié avec succès ! Vous pouvez vous connecter.", {
+        id: toastId,
+      });
+      navigate("/login"); // Succès : Direction Connexion !
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Le code est incorrect ou expiré.",
+        { id: toastId },
+      );
+      // On vide les cases pour réessayer
+      setOtp(["", "", "", "", "", ""]);
+      inputRefs.current[0].focus();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
       <div className="max-w-5xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-100">
-        {/* Colonne de gauche : Inspiration / Valeur ajoutée */}
+        {/* Colonne de gauche (Reste identique) */}
         <div className="md:w-5/12 bg-blue-600 p-12 text-white flex flex-col justify-between relative overflow-hidden">
-          {/* Cercles de décoration en fond */}
           <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-500 rounded-full opacity-50 blur-3xl"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-indigo-500 rounded-full opacity-50 blur-3xl"></div>
 
@@ -84,10 +155,10 @@ const RegisterCandidat = () => {
             </h2>
             <p className="text-blue-100 font-medium leading-relaxed mb-10">
               Rejoignez TafTech et accédez à des milliers d'opportunités à
-              travers toute l'Algérie. Créez votre profil en 2 minutes.
+              travers toute l'Algérie.
             </p>
-
             <div className="space-y-6">
+              {/* Tes 3 petites icones de valeur ajoutée (Candidature, Visibilité, Sécurité) */}
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-500/50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-blue-400/30">
                   🚀
@@ -96,9 +167,7 @@ const RegisterCandidat = () => {
                   <p className="font-black text-sm uppercase tracking-widest">
                     Candidature Rapide
                   </p>
-                  <p className="text-xs text-blue-200">
-                    Postulez en un clic avec votre profil
-                  </p>
+                  <p className="text-xs text-blue-200">Postulez en un clic</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -110,7 +179,7 @@ const RegisterCandidat = () => {
                     Visibilité Maximale
                   </p>
                   <p className="text-xs text-blue-200">
-                    Soyez vu par les meilleurs recruteurs
+                    Soyez vu par les recruteurs
                   </p>
                 </div>
               </div>
@@ -122,9 +191,7 @@ const RegisterCandidat = () => {
                   <p className="font-black text-sm uppercase tracking-widest">
                     Données Sécurisées
                   </p>
-                  <p className="text-xs text-blue-200">
-                    Conformité totale avec la loi 18-07
-                  </p>
+                  <p className="text-xs text-blue-200">Conforme Loi 18-07</p>
                 </div>
               </div>
             </div>
@@ -143,149 +210,201 @@ const RegisterCandidat = () => {
           </div>
         </div>
 
-        {/* Colonne de droite : Formulaire */}
-        <div className="md:w-7/12 p-10 md:p-14 bg-white relative z-20">
-          <h3 className="text-2xl font-black text-gray-900 mb-8">
-            Créer mon espace candidat
-          </h3>
+        {/* Colonne de droite : Formulaire OU Code OTP */}
+        <div className="md:w-7/12 p-10 md:p-14 bg-white relative z-20 flex flex-col justify-center">
+          {/* ÉTAPE 1 : LE FORMULAIRE CLASSIQUE */}
+          {step === 1 && (
+            <div className="animate-fadeIn">
+              <h3 className="text-2xl font-black text-gray-900 mb-8">
+                Créer mon espace candidat
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Nom
+                    </label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      required
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Prénom
+                    </label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      required
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Nom
-                </label>
-                <input
-                  type="text"
-                  name="last_name"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Prénom
-                </label>
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Date de naissance
+                    </label>
+                    <input
+                      type="date"
+                      name="date_naissance"
+                      required
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Téléphone
+                    </label>
+                    <input
+                      type="tel"
+                      name="telephone"
+                      required
+                      placeholder="Ex: 0555..."
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Date de naissance
-                </label>
-                <input
-                  type="date"
-                  name="date_naissance"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  name="telephone"
-                  required
-                  placeholder="Ex: 0555..."
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-            </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                    NIN (Numéro d'Identification National)
+                  </label>
+                  <input
+                    type="text"
+                    name="nin"
+                    required
+                    maxLength="18"
+                    placeholder="Les 18 chiffres de votre carte"
+                    onChange={handleChange}
+                    className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold tracking-widest text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                NIN (Numéro d'Identification National)
-              </label>
-              <input
-                type="text"
-                name="nin"
-                required
-                maxLength="18"
-                placeholder="Les 18 chiffres de votre carte biométrique"
-                onChange={handleChange}
-                className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold tracking-widest text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-              />
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      minLength="8"
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                  Mot de passe
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  minLength="8"
-                  onChange={handleChange}
-                  className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                />
-              </div>
-            </div>
+                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex items-start gap-4 mt-8">
+                  <input
+                    type="checkbox"
+                    id="consentement"
+                    name="consentement_loi_18_07"
+                    required
+                    onChange={handleChange}
+                    className="mt-1 w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-600 border-gray-300"
+                  />
+                  <label
+                    htmlFor="consentement"
+                    className="text-xs text-gray-600 font-medium leading-relaxed cursor-pointer"
+                  >
+                    J'autorise l'utilisation de mes données pour le recrutement
+                    conformément à la
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(true)}
+                      className="font-black text-blue-600 hover:text-blue-800 ml-1 underline decoration-2 underline-offset-2"
+                    >
+                      Loi 18-07
+                    </button>
+                    . *
+                  </label>
+                </div>
 
-            <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex items-start gap-4 mt-8">
-              <input
-                type="checkbox"
-                id="consentement"
-                name="consentement_loi_18_07"
-                required
-                onChange={handleChange}
-                className="mt-1 w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-600 border-gray-300"
-              />
-              <label
-                htmlFor="consentement"
-                className="text-xs text-gray-600 font-medium leading-relaxed cursor-pointer"
-              >
-                J'autorise l'utilisation de mes données pour le recrutement
-                conformément à la
                 <button
-                  type="button"
-                  onClick={() => setShowModal(true)}
-                  className="font-black text-blue-600 hover:text-blue-800 ml-1 underline decoration-2 underline-offset-2"
+                  type="submit"
+                  disabled={loading || !formData.consentement_loi_18_07}
+                  className={`w-full py-4 rounded-2xl font-black text-sm tracking-widest uppercase transition-all shadow-xl ${loading || !formData.consentement_loi_18_07 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 shadow-blue-200"}`}
                 >
-                  Loi 18-07
+                  {loading ? "Création en cours..." : "S'inscrire gratuitement"}
                 </button>
-                . *
-              </label>
+              </form>
             </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading || !formData.consentement_loi_18_07}
-              className={`w-full py-4 rounded-2xl font-black text-sm tracking-widest uppercase transition-all shadow-xl ${loading || !formData.consentement_loi_18_07 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 shadow-blue-200"}`}
-            >
-              {loading ? "Création en cours..." : "S'inscrire gratuitement"}
-            </button>
-          </form>
+          {/* ÉTAPE 2 : VÉRIFICATION OTP */}
+          {step === 2 && (
+            <div className="animate-fadeIn text-center flex flex-col justify-center h-full">
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">📧</span>
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2">
+                Vérifiez votre email
+              </h3>
+              <p className="text-sm text-gray-500 font-medium mb-10 leading-relaxed max-w-sm mx-auto">
+                Nous venons d'envoyer un code de sécurité à 6 chiffres à
+                l'adresse <br />
+                <span className="font-bold text-gray-900">
+                  {registeredEmail}
+                </span>
+              </p>
+
+              <form onSubmit={handleVerifyCode} className="space-y-10">
+                <div className="flex justify-center gap-3 md:gap-4">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      maxLength="1"
+                      ref={(el) => (inputRefs.current[index] = el)}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      className="w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-black text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.join("").length !== 6}
+                  className={`w-full py-4 rounded-2xl font-black text-sm tracking-widest uppercase transition-all shadow-xl ${loading || otp.join("").length !== 6 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-gray-900 text-white hover:bg-black hover:-translate-y-1 shadow-gray-300"}`}
+                >
+                  {loading ? "Vérification..." : "Confirmer mon compte"}
+                </button>
+              </form>
+
+              <p className="text-xs text-gray-400 mt-8 font-bold">
+                Vous n'avez rien reçu ? Vérifiez vos spams.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal Loi 18-07 */}
+      {/* Modal Loi 18-07 (Reste identique) */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl animate-slideUp">

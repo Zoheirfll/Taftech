@@ -1,38 +1,22 @@
 from django.shortcuts import render
-
+from django.db.models import Q
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 # Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import OffreEmploi
-from .serializers import OffreEmploiSerializer
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .services import EntrepriseService
-from .serializers import ProfilEntrepriseCreateDTO
-from rest_framework.permissions import IsAuthenticated
-from .models import Candidature, ProfilCandidat, ProfilEntreprise
-from .serializers import PostulerDTO, EntrepriseDashboardDetailSerializer
-from .serializers import OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO, CandidatRegisterSerializer
-from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import MyTokenObtainPairSerializer, EntrepriseDashboardDetailSerializer, AdminUserSerializer
-from rest_framework.permissions import IsAdminUser
-from django.contrib.auth import get_user_model
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from .models import OffreEmploi , Candidature, ProfilCandidat, ProfilEntreprise, ExperienceCandidat, FormationCandidat
 from .models import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
-from .models import ExperienceCandidat, FormationCandidat
+from .serializers import OffreEmploiSerializer, PostulerDTO, EntrepriseDashboardDetailSerializer, OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO
+from .serializers import  EntrepriseDashboardDetailSerializer, AdminUserSerializer
 from .serializers import ExperienceSerializer, FormationSerializer
-import random
-from django.core.mail import send_mail
-from django.conf import settings
-
-
+from .models import OffreSauvegardee, AlerteEmploi
+from .serializers import OffreSauvegardeeSerializer, AlerteEmploiSerializer, ParametresNotificationsSerializer
 User = get_user_model()
-
-class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
-
 class JobListAPIView(APIView):
     def get(self, request):
         # 1. On récupère TOUS les filtres envoyés par ton nouveau React
@@ -75,28 +59,6 @@ class JobListAPIView(APIView):
         page = paginator.paginate_queryset(offres, request)
         serializer = OffreEmploiSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
-class ProfilEntrepriseCreateAPIView(APIView):
-    """
-    Endpoint pour qu'un utilisateur enregistré devienne Recruteur.
-    URL : /api/jobs/entreprise/creer/
-    """
-    permission_classes = [IsAuthenticated] # Sécurité : il faut être connecté
-
-    def post(self, request):
-        serializer = ProfilEntrepriseCreateDTO(data=request.data)
-        if serializer.is_valid():
-            try:
-                profil = EntrepriseService.creer_profil(request.user, serializer.validated_data)
-                return Response(
-                    {"message": f"Entreprise {profil.nom_entreprise} enregistrée avec succès."},
-                    status=status.HTTP_201_CREATED
-                )
-            except Exception as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class PostulerAPIView(APIView):
     """
     Endpoint pour postuler à une offre.
@@ -132,7 +94,6 @@ class PostulerAPIView(APIView):
             return Response({"message": "Candidature envoyée avec succès !"}, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -156,7 +117,6 @@ class JobCreateAPIView(APIView):
             serializer.save(entreprise=request.user.profil_entreprise)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class DashboardRecruteurAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -207,9 +167,6 @@ class UpdateCandidatureStatusAPIView(APIView):
         candidature.save()
         
         return Response({"message": "Statut mis à jour avec succès !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
-
-# N'oublie pas d'importer ProfilCandidat et ProfilCandidatDTO en haut !
-
 class ProfilCandidatAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
@@ -249,9 +206,6 @@ class ProfilCandidatAPIView(APIView):
             }, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# Ajoute AllowAny en haut si ce n'est pas déjà fait : from rest_framework.permissions import IsAuthenticated, AllowAny
-
 class JobDetailAPIView(APIView):
     """
     Endpoint pour afficher les détails d'une seule offre.
@@ -271,35 +225,6 @@ class JobDetailAPIView(APIView):
                 {"error": "Cette offre n'existe pas ou n'est plus disponible."}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-
-
-class VerifyEmailAPIView(APIView):
-    """ Endpoint pour vérifier le code reçu par email """
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email')
-        code = request.data.get('code')
-
-        try:
-            user = User.objects.get(email=email)
-            
-            # On vérifie si le compte est déjà validé
-            if user.email_verifie:
-                return Response({"message": "Ce compte est déjà vérifié."}, status=status.HTTP_200_OK)
-
-            # On compare les codes
-            if user.code_verification == str(code):
-                user.email_verifie = True
-                user.code_verification = None # On vide le code par sécurité
-                user.save()
-                return Response({"message": "Email vérifié avec succès ! Vous pouvez vous connecter."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "Le code de vérification est incorrect."}, status=status.HTTP_400_BAD_REQUEST)
-                
-        except User.DoesNotExist:
-            return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
 class MesCandidaturesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -312,7 +237,6 @@ class MesCandidaturesAPIView(APIView):
         serializer = MesCandidaturesDTO(candidatures, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 class UpdateProfilEntrepriseAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -340,35 +264,6 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "wilaya_siege": profil.wilaya_siege,
             "secteur_activite": profil.secteur_activite
         }, status=status.HTTP_200_OK)
-
-class UpdateFullProfilRecruteurAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def put(self, request):
-        user = request.user
-        # On vérifie si l'entreprise existe
-        if not hasattr(user, 'profil_entreprise'):
-            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
-        
-        profil = user.profil_entreprise
-        data = request.data
-
-        # --- PARTIE 1 : L'UTILISATEUR (RESPONSABLE) ---
-        if 'first_name' in data: user.first_name = data['first_name']
-        if 'last_name' in data: user.last_name = data['last_name']
-        if 'email' in data: user.email = data['email']
-        if 'telephone' in data: user.telephone = data['telephone']
-        user.save()
-
-        # --- PARTIE 2 : L'ENTREPRISE ---
-        # On ignore volontairement 'nom_entreprise' et 'registre_commerce'
-        if 'secteur_activite' in data: profil.secteur_activite = data['secteur_activite']
-        if 'wilaya_siege' in data: profil.wilaya_siege = data['wilaya_siege']
-        if 'description' in data: profil.description = data['description']
-        profil.save()
-
-        return Response({"message": "Toutes les informations ont été mises à jour !"}, status=status.HTTP_200_OK)
-
 class AdminOffresListAPIView(APIView):
     """ Récupère TOUTES les offres pour le tableau de bord Admin """
     permission_classes = [IsAdminUser] # Sécurité : Seul le super-admin y a accès
@@ -378,8 +273,6 @@ class AdminOffresListAPIView(APIView):
         offres = OffreEmploi.objects.all().order_by('-date_publication')
         serializer = OffreEmploiSerializer(offres, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 class AdminOffreModerateAPIView(APIView):
     """ Permet à l'Admin d'approuver, rejeter ou corriger une offre """
     permission_classes = [IsAdminUser]
@@ -401,7 +294,6 @@ class AdminOffreModerateAPIView(APIView):
             }, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class AdminEntreprisesListAPIView(APIView):
     """ Récupère TOUTES les entreprises pour l'Admin """
     permission_classes = [IsAdminUser]
@@ -410,7 +302,6 @@ class AdminEntreprisesListAPIView(APIView):
         entreprises = ProfilEntreprise.objects.all()
         serializer = EntrepriseDashboardDetailSerializer(entreprises, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 class AdminEntrepriseModerateAPIView(APIView):
     """ Permet d'approuver ou de suspendre une entreprise """
     permission_classes = [IsAdminUser]
@@ -428,7 +319,6 @@ class AdminEntrepriseModerateAPIView(APIView):
             return Response({"message": "Statut de l'entreprise mis à jour !"}, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class AdminStatsAPIView(APIView):
     """ Renvoie les statistiques globales de la plateforme """
     permission_classes = [IsAdminUser]
@@ -443,7 +333,6 @@ class AdminStatsAPIView(APIView):
             "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
-
 class AdminUsersListAPIView(APIView):
     """ Liste de tous les utilisateurs inscrits """
     permission_classes = [IsAdminUser]
@@ -453,7 +342,6 @@ class AdminUsersListAPIView(APIView):
         users = User.objects.exclude(is_superuser=True).order_by('-date_joined')
         serializer = AdminUserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 class AdminUserModerateAPIView(APIView):
     """ Permet de bloquer (is_active=False) ou débloquer un utilisateur """
     permission_classes = [IsAdminUser]
@@ -468,7 +356,6 @@ class AdminUserModerateAPIView(APIView):
             return Response({"message": f"Utilisateur {statut} avec succès !"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
 class ConstantsAPIView(APIView):
     """
     Renvoie toutes les listes standardisées pour alimenter les menus déroulants React.
@@ -486,11 +373,6 @@ class ConstantsAPIView(APIView):
             "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
         }
         return Response(data, status=status.HTTP_200_OK)
-
-# ==========================================
-# GESTION DES EXPÉRIENCES (PROFIL CLONE EMPLOITIC)
-# ==========================================
-
 class ExperienceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -502,7 +384,6 @@ class ExperienceAPIView(APIView):
             serializer.save(profil=profil)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class ExperienceDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -526,11 +407,6 @@ class ExperienceDetailAPIView(APIView):
             return Response({"message": "Expérience supprimée."}, status=status.HTTP_204_NO_CONTENT)
         except ExperienceCandidat.DoesNotExist:
             return Response({"error": "Expérience introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
-# ==========================================
-# GESTION DES FORMATIONS (PROFIL CLONE EMPLOITIC)
-# ==========================================
-
 class FormationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -541,7 +417,6 @@ class FormationAPIView(APIView):
             serializer.save(profil=profil)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class FormationDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -564,7 +439,6 @@ class FormationDetailAPIView(APIView):
             return Response({"message": "Formation supprimée."}, status=status.HTTP_204_NO_CONTENT)
         except FormationCandidat.DoesNotExist:
             return Response({"error": "Formation introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
 class CloturerOffreAPIView(APIView):
     """ Permet au recruteur de clôturer son offre """
     permission_classes = [IsAuthenticated]
@@ -585,10 +459,8 @@ class CloturerOffreAPIView(APIView):
             
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
-
 class DeleteCandidatureAPIView(APIView):
-    """ Permet au recruteur de supprimer définitivement une candidature refusée """
+    """ Permet au recruteur de supprimer définitivement une can-didature refusée """
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, candidature_id):
@@ -604,3 +476,103 @@ class DeleteCandidatureAPIView(APIView):
             
         except Candidature.DoesNotExist:
             return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+class OffreSauvegardeeListCreateAPIView(APIView):
+    """ Gère la liste des favoris et l'ajout d'une offre aux favoris """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        favoris = OffreSauvegardee.objects.filter(candidat=request.user)
+        serializer = OffreSauvegardeeSerializer(favoris, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        offre_id = request.data.get('offre')
+        
+        # Vérification si l'offre existe
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Cette offre n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Vérification si déjà en favoris
+        if OffreSauvegardee.objects.filter(candidat=request.user, offre=offre).exists():
+            return Response({"error": "Cette offre est déjà dans vos favoris."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Création du favori
+        favori = OffreSauvegardee.objects.create(candidat=request.user, offre=offre)
+        serializer = OffreSauvegardeeSerializer(favori)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class OffreSauvegardeeDeleteAPIView(APIView):
+    """ Supprime une offre des favoris """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            favori = OffreSauvegardee.objects.get(id=pk, candidat=request.user)
+            favori.delete()
+            return Response({"message": "Offre retirée des favoris."}, status=status.HTTP_204_NO_CONTENT)
+        except OffreSauvegardee.DoesNotExist:
+            return Response({"error": "Favori introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AlerteEmploiListCreateAPIView(APIView):
+    """ Gère la liste des alertes et la création d'une nouvelle alerte """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        alertes = AlerteEmploi.objects.filter(candidat=request.user)
+        serializer = AlerteEmploiSerializer(alertes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = AlerteEmploiSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(candidat=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AlerteEmploiDetailAPIView(APIView):
+    """ Modifie (activer/désactiver) ou supprime une alerte """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        # On utilise patch pour pouvoir modifier juste 'est_active' sans envoyer tout le reste
+        try:
+            alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
+        except AlerteEmploi.DoesNotExist:
+            return Response({"error": "Alerte introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AlerteEmploiSerializer(alerte, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
+            alerte.delete()
+            return Response({"message": "Alerte supprimée."}, status=status.HTTP_204_NO_CONTENT)
+        except AlerteEmploi.DoesNotExist:
+            return Response({"error": "Alerte introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ParametresNotificationsAPIView(APIView):
+    """ Récupère et met à jour uniquement les 3 cases de notifications du profil """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profil = request.user.profil_candidat
+        serializer = ParametresNotificationsSerializer(profil)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        profil = request.user.profil_candidat
+        serializer = ParametresNotificationsSerializer(profil, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

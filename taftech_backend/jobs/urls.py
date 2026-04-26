@@ -1,34 +1,36 @@
 from django.urls import path
-from .views import JobListAPIView
-from .views import ProfilEntrepriseCreateAPIView
-from .views import JobListAPIView, ProfilEntrepriseCreateAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, MesCandidaturesAPIView
+from .views import JobListAPIView, PostulerAPIView, JobCreateAPIView, DashboardRecruteurAPIView, UpdateCandidatureStatusAPIView, ProfilCandidatAPIView, JobDetailAPIView, MesCandidaturesAPIView
 from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView, UpdateProfilEntrepriseAPIView
 from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView, DeleteCandidatureAPIView, CloturerOffreAPIView
 from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView
 
-
-
-
+# 👇 IMPORT DES 5 NOUVELLES VUES 👇
+from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView
 
 
 urlpatterns = [
     path('', JobListAPIView.as_view(), name='job-list'),
-    path('entreprise/creer/', ProfilEntrepriseCreateAPIView.as_view(), name='creer-entreprise'),
+    
     # La nouvelle route avec l'ID de l'offre (ex: /api/jobs/1/postuler/)
     path('<int:offre_id>/postuler/', PostulerAPIView.as_view(), name='postuler-offre'),
-    # La nouvelle route pour publier (Attention à l'ordre, elle doit être avant <int:offre_id> si on n'utilise pas de préfixe précis, mais ici c'est bon)
+    
+    # La nouvelle route pour publier 
     path('creer/', JobCreateAPIView.as_view(), name='creer-offre'),
-    # NOUVELLE ROUTE : Le tableau de bord
+    
+    # Le tableau de bord
     path('dashboard/', DashboardRecruteurAPIView.as_view(), name='dashboard-recruteur'),
     
-    path('<int:offre_id>/postuler/', PostulerAPIView.as_view(), name='postuler-offre'),
     # URL pour changer le statut d'une candidature
     path('candidatures/<int:candidature_id>/statut/', UpdateCandidatureStatusAPIView.as_view(), name='update-statut'),
+    
     # URL pour le profil candidat
     path('profil/', ProfilCandidatAPIView.as_view(), name='profil-candidat'),
+    
     # URL pour voir une seule offre en détail
     path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
     path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
+    
+    # --- ROUTES ADMIN ---
     path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres-list'),
     path('admin/offres/<int:offre_id>/moderer/', AdminOffreModerateAPIView.as_view(), name='admin-offre-moderate'),
     path('admin/entreprises/', AdminEntreprisesListAPIView.as_view(), name='admin-entreprises-list'),
@@ -36,15 +38,32 @@ urlpatterns = [
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users-list'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
+    
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
-    # Routes pour les Expériences
+    
+    # --- ROUTES POUR LE CV (Expériences / Formations) ---
     path('profil/experiences/', ExperienceAPIView.as_view(), name='profil-experiences'),
     path('profil/experiences/<int:pk>/', ExperienceDetailAPIView.as_view(), name='profil-experience-detail'),
-    
-    # Routes pour les Formations
     path('profil/formations/', FormationAPIView.as_view(), name='profil-formations'),
     path('profil/formations/<int:pk>/', FormationDetailAPIView.as_view(), name='profil-formation-detail'),
+    
+    # --- ROUTES DE GESTION RECRUTEUR ---
     path('entreprise/update/', UpdateProfilEntrepriseAPIView.as_view(), name='update-entreprise'),
-    path('dashboard/offres/<int:offre_id>/cloturer/',CloturerOffreAPIView.as_view(), name='cloturer_offre'),
-    path('candidatures/<int:candidature_id>/supprimer/',DeleteCandidatureAPIView.as_view(), name='supprimer_candidature'),
+    path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer_offre'),
+    path('candidatures/<int:candidature_id>/supprimer/', DeleteCandidatureAPIView.as_view(), name='supprimer_candidature'),
+
+    # ======================================================
+    # 👇 NOUVELLES ROUTES : FONCTIONNALITÉS AVANCÉES CANDIDAT 👇
+    # ======================================================
+    
+    # 1. Offres Sauvegardées (Favoris)
+    path('sauvegardes/', OffreSauvegardeeListCreateAPIView.as_view(), name='liste-ajout-sauvegardes'),
+    path('sauvegardes/<int:pk>/', OffreSauvegardeeDeleteAPIView.as_view(), name='supprimer-sauvegarde'),
+    
+    # 2. Alertes d'emploi
+    path('alertes/', AlerteEmploiListCreateAPIView.as_view(), name='liste-ajout-alertes'),
+    path('alertes/<int:pk>/', AlerteEmploiDetailAPIView.as_view(), name='modifier-supprimer-alerte'),
+    
+    # 3. Paramètres de notifications
+    path('parametres/notifications/', ParametresNotificationsAPIView.as_view(), name='parametres-notifications'),
 ]

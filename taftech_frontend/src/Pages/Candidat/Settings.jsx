@@ -1,16 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import api from "../../api/axiosConfig"; // Assure-toi que ce chemin est correct
 
 const Settings = () => {
+  // --- STATE POUR LES NOTIFICATIONS ---
+  const [notifications, setNotifications] = useState({
+    notif_offres_exclusives: false,
+    notif_newsletter: false,
+    notif_mise_a_jour: false,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // --- STATE POUR LE MOT DE PASSE ---
   const [passwords, setPasswords] = useState({ old: "", new: "", confirm: "" });
 
+  // --- 1. CHARGER LES PARAMÈTRES AU DÉMARRAGE ---
+  useEffect(() => {
+    const fetchParametres = async () => {
+      try {
+        const response = await api.get("jobs/parametres/notifications/");
+        setNotifications(response.data);
+      } catch (error) {
+        (toast.error("Erreur lors du chargement de vos paramètres."),
+          console.error(error));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchParametres();
+  }, []);
+
+  // --- 2. GÉRER LE CLIC SUR UN SWITCH ---
+  const handleToggle = async (field) => {
+    // Optimistic UI : on inverse tout de suite pour l'utilisateur
+    const updatedNotifications = {
+      ...notifications,
+      [field]: !notifications[field],
+    };
+    setNotifications(updatedNotifications);
+
+    try {
+      // On sauvegarde dans la base de données (Django)
+      await api.put("jobs/parametres/notifications/", updatedNotifications);
+      toast.success("Préférence enregistrée !");
+    } catch (error) {
+      setNotifications(notifications); // Rollback en cas d'erreur
+      (toast.error("Échec de la sauvegarde."), console.error(error));
+    }
+  };
+
+  // --- 3. GÉRER LE MOT DE PASSE (Simulé pour l'instant) ---
   const handleUpdatePassword = (e) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
       return toast.error("Les nouveaux mots de passe ne correspondent pas.");
     }
+    // Ici, il faudra connecter une route backend "accounts/change-password/"
     toast.success("Demande de changement envoyée (Backend à connecter)");
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-fadeIn">
@@ -24,42 +79,72 @@ const Settings = () => {
           Gérer mes notifications
         </h2>
         <div className="space-y-6">
-          {[
-            {
-              t: "Offres exclusives",
-              d: "Reçois des offres spéciales de nos partenaires.",
-            },
-            {
-              t: "Actualité et newsletter",
-              d: "Découvre les tendances du marché et astuces pro.",
-            },
-            {
-              t: "Emails de mise à jour",
-              d: "Nouveautés et améliorations de TafTech.",
-            },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0"
-            >
-              <div>
-                <p className="font-bold text-gray-800 text-sm">{item.t}</p>
-                <p className="text-xs text-gray-400 font-medium">{item.d}</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  defaultChecked={i === 0}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+          {/* Switch 1 */}
+          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
+            <div>
+              <p className="font-bold text-gray-800 text-sm">
+                Offres exclusives
+              </p>
+              <p className="text-xs text-gray-400 font-medium">
+                Reçois des offres spéciales de nos partenaires.
+              </p>
             </div>
-          ))}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={notifications.notif_offres_exclusives}
+                onChange={() => handleToggle("notif_offres_exclusives")}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {/* Switch 2 */}
+          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
+            <div>
+              <p className="font-bold text-gray-800 text-sm">
+                Actualité et newsletter
+              </p>
+              <p className="text-xs text-gray-400 font-medium">
+                Découvre les tendances du marché et astuces pro.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={notifications.notif_newsletter}
+                onChange={() => handleToggle("notif_newsletter")}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {/* Switch 3 */}
+          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
+            <div>
+              <p className="font-bold text-gray-800 text-sm">
+                Emails de mise à jour
+              </p>
+              <p className="text-xs text-gray-400 font-medium">
+                Nouveautés et améliorations de TafTech.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={notifications.notif_mise_a_jour}
+                onChange={() => handleToggle("notif_mise_a_jour")}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
       </section>
 
-      {/* BLOC MOT DE PASSE */}
+      {/* BLOC MOT DE PASSE (Ton code original) */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
         <h2 className="text-lg font-black text-gray-800 mb-6">
           Modifier mon mot de passe
@@ -93,7 +178,7 @@ const Settings = () => {
         </form>
       </section>
 
-      {/* BLOC SUPPRESSION */}
+      {/* BLOC SUPPRESSION (Ton code original) */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-red-50 flex justify-between items-center">
         <div>
           <h2 className="text-lg font-black text-red-600">Gérer mon compte</h2>

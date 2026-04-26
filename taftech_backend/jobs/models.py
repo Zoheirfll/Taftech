@@ -230,7 +230,19 @@ class ProfilCandidat(models.Model):
     experiences = models.TextField(blank=True, null=True, verbose_name="Expériences")
     competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
     langues = models.CharField(max_length=255, blank=True, null=True, verbose_name="Langues")
+    
+# --- NOUVEAU : PRÉFÉRENCES DE RECRUTEMENT ---
+    secteur_souhaite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True)
+    salaire_souhaite = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 80 000 DA")
+    mobilite = models.CharField(max_length=50, choices=MOBILITE_CHOICES, blank=True, null=True)
+    situation_actuelle = models.CharField(max_length=50, choices=SITUATION_ACTUELLE, blank=True, null=True)
 
+    # 👇 AJOUTE CE BLOC ICI 👇
+    # --- NOUVEAU : PARAMÈTRES ET NOTIFICATIONS (UX Emploitic) ---
+    notif_offres_exclusives = models.BooleanField(default=True, verbose_name="Offres exclusives et partenaires")
+    notif_newsletter = models.BooleanField(default=True, verbose_name="Actualités et newsletter")
+    notif_mise_a_jour = models.BooleanField(default=True, verbose_name="Emails de mise à jour")
+    # 👆 ---------------------- 👆
     def __str__(self):
         return f"Profil de {self.user.username}"
 
@@ -272,3 +284,48 @@ class FormationCandidat(models.Model):
 
     def __str__(self):
         return f"{self.diplome} - {self.etablissement}"
+
+# ==========================================
+# 3. FONCTIONNALITÉS AVANCÉES DU CANDIDAT
+# ==========================================
+
+class OffreSauvegardee(models.Model):
+    """
+    Table pour stocker les offres mises en favoris (sauvegardées) par le candidat.
+    """
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offres_sauvegardees')
+    offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='sauvegardee_par')
+    date_sauvegarde = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Un candidat ne peut pas sauvegarder la même offre deux fois
+        unique_together = ('candidat', 'offre')
+        ordering = ['-date_sauvegarde']
+
+    def __str__(self):
+        return f"{self.candidat.username} a sauvegardé l'offre : {self.offre.titre}"
+
+
+class AlerteEmploi(models.Model):
+    """
+    Table pour gérer les alertes (notifications envoyées par email selon des critères).
+    """
+    FREQUENCE_CHOICES = [
+        ('QUOTIDIENNE', 'Quotidienne'),
+        ('HEBDOMADAIRE', 'Hebdomadaire'),
+    ]
+
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='alertes')
+    mots_cles = models.CharField(max_length=255, verbose_name="Mots clés")
+    # On réutilise ta liste de wilayas
+    wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, blank=True, null=True, verbose_name="Région, Wilaya")
+    frequence = models.CharField(max_length=20, choices=FREQUENCE_CHOICES, default='QUOTIDIENNE')
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    est_active = models.BooleanField(default=True, verbose_name="Alerte activée")
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"Alerte de {self.candidat.username} - {self.mots_cles}"

@@ -1,23 +1,15 @@
+import random
+from django.contrib.auth import authenticate
+from django.core.mail import send_mail
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterCandidatDTO
-from rest_framework_simplejwt.views import TokenObtainPairView # NOUVEAI
-from .serializers import MyTokenObtainPairSerializer
-from .serializers import RegisterCandidatDTO, EmailTokenObtainSerializer # NOUVEAU
-from .services import UserService
-from .serializers import RecruteurRegisterSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.views import TokenRefreshView
-import random
-from django.core.mail import send_mail
-from django.conf import settings
- 
+from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, RegisterCandidatDTO, EmailTokenObtainSerializer, RecruteurRegisterSerializer
 from django.contrib.auth import get_user_model
 User = get_user_model()
-
 class CandidatRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -150,7 +142,6 @@ class RecruteurRegisterAPIView(APIView):
             )
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class CookieTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
 
@@ -184,8 +175,6 @@ class CookieTokenObtainView(TokenObtainPairView):
             secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
         )
         return response
-
-# Dans accounts/views.py
 class CookieTokenRefreshView(TokenRefreshView):
     serializer_class = MyTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):

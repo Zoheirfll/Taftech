@@ -8,7 +8,7 @@ const CandidatLayout = () => {
   const menuItems = [
     { name: "Mon profil", path: "/profil", icon: "👤" },
     { name: "Mes candidatures", path: "/mes-candidatures", icon: "💼" },
-    { name: "Offres sauvegardées", path: "/sauvegardes", icon: "🔖" },
+    { name: "Offres sauvegardées", path: "/offres-sauvegardees", icon: "🔖" },
     { name: "Alertes d'emploi", path: "/alertes", icon: "🔔" },
     { name: "Paramètres", path: "/parametres", icon: "⚙️" },
   ];

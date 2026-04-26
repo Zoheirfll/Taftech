@@ -2,13 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
+import toast from "react-hot-toast";
+import api from "../api/axiosConfig"; // N'oublie pas cet import pour les appels API des favoris
 
 const JobsList = () => {
-  // On récupère les paramètres tapés dans la page d'accueil !
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // --- NOUVEAU : State pour gérer les offres sauvegardées ---
+  const [favoris, setFavoris] = useState([]);
 
   const [constants, setConstants] = useState({
     wilayas: [],
@@ -18,7 +22,6 @@ const JobsList = () => {
     contrats: [],
   });
 
-  // Initialisation des filtres à partir de l'URL
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
@@ -29,19 +32,26 @@ const JobsList = () => {
     contrat: "",
   });
 
+  // 1. Initialisation : Charger les constantes ET les favoris de l'utilisateur
   useEffect(() => {
-    const fetchConstants = async () => {
+    const fetchData = async () => {
       try {
-        const data = await jobsService.getConstants();
-        setConstants(data);
+        const [constantsData, favorisData] = await Promise.all([
+          jobsService.getConstants(),
+          // On tente de récupérer les favoris (si l'utilisateur n'est pas connecté, l'API renverra une erreur, ce n'est pas grave on la gère silencieusement)
+          api.get("jobs/sauvegardes/").catch(() => ({ data: [] })),
+        ]);
+
+        setConstants(constantsData);
+        setFavoris(favorisData.data);
       } catch (error) {
-        console.error("Erreur de chargement des constantes", error);
+        console.error("Erreur d'initialisation", error);
       }
     };
-    fetchConstants();
+    fetchData();
   }, []);
 
-  // Déclenche la recherche à chaque modification des filtres
+  // 2. Recherche des offres
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
@@ -58,7 +68,6 @@ const JobsList = () => {
     const delayDebounceFn = setTimeout(() => {
       fetchJobs();
 
-      // On met l'URL à jour proprement (Optionnel mais pro)
       const params = new URLSearchParams();
       if (filters.search) params.append("search", filters.search);
       if (filters.wilaya) params.append("wilaya", filters.wilaya);
@@ -67,6 +76,43 @@ const JobsList = () => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [filters, setSearchParams]);
+
+  // --- NOUVEAU : Gérer le clic sur le bouton de sauvegarde ---
+  const handleToggleFavori = async (offreId) => {
+    // Vérifier si l'utilisateur est connecté (en regardant si on a réussi à charger des favoris, ou via ton authService si tu préfères)
+    if (!localStorage.getItem("userRole")) {
+      return toast.error("Veuillez vous connecter pour sauvegarder une offre.");
+    }
+
+    const isDejaSauvegarde = favoris.find((f) => f.offre === offreId);
+
+    if (isDejaSauvegarde) {
+      // 1. RETIRER DES FAVORIS
+      // Optimistic UI : on le retire direct de l'affichage
+      setFavoris(favoris.filter((f) => f.offre !== offreId));
+
+      try {
+        await api.delete(`jobs/sauvegardes/${isDejaSauvegarde.id}/`);
+        toast.success("Offre retirée des favoris.");
+      } catch (error) {
+        // En cas d'erreur, on remet l'état précédent
+        setFavoris([...favoris, isDejaSauvegarde]);
+        (toast.error("Erreur lors de la suppression."), console.error(error));
+      }
+    } else {
+      // 2. AJOUTER AUX FAVORIS
+      try {
+        const response = await api.post("jobs/sauvegardes/", {
+          offre: offreId,
+        });
+        setFavoris([...favoris, response.data]);
+        toast.success("Offre sauvegardée !");
+      } catch (error) {
+        (toast.error("Impossible de sauvegarder cette offre."),
+          console.error(error));
+      }
+    }
+  };
 
   const handleChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -89,13 +135,13 @@ const JobsList = () => {
       experience: "",
       contrat: "",
     });
-    setSearchParams({}); // Vide l'URL
+    setSearchParams({});
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row gap-6">
-        {/* COLONNE GAUCHE : LES FILTRES */}
+        {/* COLONNE GAUCHE : LES FILTRES (inchangée) */}
         <aside className="w-full md:w-1/3 lg:w-1/4">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-4">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
@@ -274,48 +320,88 @@ const JobsList = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col md:flex-row justify-between gap-4"
-                >
-                  <div>
-                    <Link
-                      to={`/jobs/${job.id}`}
-                      className="text-xl font-black text-blue-700 hover:underline mb-1 block"
-                    >
-                      {job.titre}
-                    </Link>
-                    <div className="text-sm font-bold text-gray-600 mb-4">
-                      {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs font-bold">
-                      <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
-                        📍 {job.wilaya} {job.commune ? `- ${job.commune}` : ""}
-                      </span>
-                      <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
-                        💼 {job.experience_requise}
-                      </span>
-                      <span className="bg-green-50 text-green-700 px-3 py-1 rounded-lg">
-                        📄 {job.type_contrat}
-                      </span>
-                      {job.specialite && (
-                        <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg">
-                          🎯 {job.specialite}
+              {jobs.map((job) => {
+                // --- ON DÉTERMINE SI L'OFFRE ACTUELLE EST DANS LES FAVORIS ---
+                const isSaved = favoris.some((f) => f.offre === job.id);
+
+                return (
+                  <div
+                    key={job.id}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col md:flex-row justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <Link
+                          to={`/jobs/${job.id}`}
+                          className="text-xl font-black text-blue-700 hover:underline"
+                        >
+                          {job.titre}
+                        </Link>
+                      </div>
+
+                      <div className="text-sm font-bold text-gray-600 mb-4">
+                        {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-xs font-bold">
+                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
+                          📍 {job.wilaya}{" "}
+                          {job.commune ? `- ${job.commune}` : ""}
                         </span>
-                      )}
+                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
+                          💼 {job.experience_requise}
+                        </span>
+                        <span className="bg-green-50 text-green-700 px-3 py-1 rounded-lg">
+                          📄 {job.type_contrat}
+                        </span>
+                        {job.specialite && (
+                          <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg">
+                            🎯 {job.specialite}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center md:items-start justify-end mt-4 md:mt-0 gap-3">
+                      {/* --- LE FAMEUX BOUTON DE SAUVEGARDE --- */}
+                      <button
+                        onClick={() => handleToggleFavori(job.id)}
+                        className={`p-3 rounded-xl transition-all border ${
+                          isSaved
+                            ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
+                            : "bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                        }`}
+                        title={
+                          isSaved
+                            ? "Retirer des favoris"
+                            : "Sauvegarder l'offre"
+                        }
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill={isSaved ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth={isSaved ? "0" : "2"}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                          ></path>
+                        </svg>
+                      </button>
+
+                      <Link
+                        to={`/jobs/${job.id}`}
+                        className="bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition"
+                      >
+                        Voir l'offre
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center md:items-start justify-end mt-4 md:mt-0">
-                    <Link
-                      to={`/jobs/${job.id}`}
-                      className="bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition"
-                    >
-                      Voir l'offre
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </main>

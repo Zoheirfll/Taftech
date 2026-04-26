@@ -4,7 +4,6 @@ import { Toaster } from "react-hot-toast";
 
 import Navbar from "./Components/Navbar";
 import Home from "./Pages/Home";
-import JobsList from "./Pages/JobsList";
 import RegisterCandidat from "./Pages/RegisterCandidat";
 import Login from "./Pages/Login";
 import CreateEntreprise from "./Pages/CreateEntreprise";
@@ -15,25 +14,29 @@ import JobDetail from "./Pages/JobDetail";
 import RegisterRecruteur from "./Pages/RegisterRecruteur";
 import MesCandidatures from "./Pages/MesCandidatures";
 import ReviewCandidature from "./Pages/ReviewCandidature";
-
-// --- NOUVELLE PAGE DE GESTION D'OFFRE ---
-import GestionOffre from "./Pages/GestionOffre";
-
+import JobsList from "./Pages/JobsList";
+import OffresParRegion from "./Pages/OffresParRegion";
+import OffresParSecteur from "./Pages/OffresParSecteur";
 // L'ESPACE CANDIDAT
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
-
+import Settings from "./Pages/Candidat/Settings";
+import AlertesEmploi from "./Pages/Candidat/AlertesEmploi";
+import OffresSauvegardees from "./Pages/Candidat/OffresSauvegardees";
 // L'ADMINISTRATION
 import AdminLayout from "./Pages/Admin/AdminLayout";
 import AdminEntreprises from "./Pages/Admin/AdminEntreprises";
 import AdminOffres from "./Pages/Admin/AdminOffres";
 import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
 import AdminUsers from "./Pages/Admin/AdminUsers";
-import Settings from "./Pages/Candidat/Settings";
+
+// TON FOOTER
+import Footer from "./Components/Footer";
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 font-sans">
+      {/* 👇 1. AJOUT DE 'flex flex-col' POUR ACTIVER LE COMPORTEMENT FLEXBOX 👇 */}
+      <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
         <Toaster
           position="top-center"
           reverseOrder={false}
@@ -48,40 +51,57 @@ function App() {
 
         <Navbar />
 
-        <Routes>
-          {/* ROUTES PUBLIQUES */}
-          <Route path="/" element={<Home />} />
-          <Route path="/offres" element={<JobsList />} />
-          <Route path="/register" element={<RegisterCandidat />} />
-          <Route path="/register-entreprise" element={<RegisterRecruteur />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/jobs/:id" element={<JobDetail />} />
+        {/* 👇 2. ON ENVELOPPE LES ROUTES AVEC <main> ET 'flex-grow' 👇 */}
+        {/* Ça repousse tout ce qui est en dessous (le footer) vers le bas */}
+        <main className="flex-grow">
+          <Routes>
+            {/* ROUTES PUBLIQUES */}
+            <Route path="/" element={<Home />} />
+            <Route path="/offres" element={<JobsList />} />
+            <Route path="/regions" element={<OffresParRegion />} />
+            <Route path="/secteurs" element={<OffresParSecteur />} />
+            <Route path="/register" element={<RegisterCandidat />} />
+            <Route
+              path="/register-entreprise"
+              element={<RegisterRecruteur />}
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
 
-          {/* ROUTES RECRUTEUR */}
-          <Route path="/creer-entreprise" element={<CreateEntreprise />} />
-          <Route path="/creer-offre" element={<CreateJob />} />
-          <Route path="/dashboard" element={<DashboardRecruteur />} />
+            {/* ROUTES RECRUTEUR */}
+            <Route path="/creer-entreprise" element={<CreateEntreprise />} />
+            <Route path="/creer-offre" element={<CreateJob />} />
+            <Route path="/dashboard" element={<DashboardRecruteur />} />
 
-          {/* --- NOUVEAU : ROUTE POUR GÉRER UNE OFFRE SPÉCIFIQUE --- */}
-          <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+            {/* ESPACE CANDIDAT */}
+            <Route element={<CandidatLayout />}>
+              <Route path="/profil" element={<ProfilCandidat />} />
+              <Route path="/mes-candidatures" element={<MesCandidatures />} />
+              <Route
+                path="/jobs/:id/postuler"
+                element={<ReviewCandidature />}
+              />
+              <Route path="/parametres" element={<Settings />} />
+              <Route path="/alertes" element={<AlertesEmploi />} />
+              <Route
+                path="/offres-sauvegardees"
+                element={<OffresSauvegardees />}
+              />
+            </Route>
 
-          {/* ESPACE CANDIDAT */}
-          <Route element={<CandidatLayout />}>
-            <Route path="/profil" element={<ProfilCandidat />} />
-            <Route path="/mes-candidatures" element={<MesCandidatures />} />
-            <Route path="/jobs/:id/postuler" element={<ReviewCandidature />} />
-            <Route path="/parametres" element={<Settings />} />
-          </Route>
+            {/* ZONE ADMINISTRATION */}
+            <Route path="/admin-taftech" element={<AdminLayout />}>
+              <Route index element={<AdminEntreprises />} />
+              <Route path="entreprises" element={<AdminEntreprises />} />
+              <Route path="offres" element={<AdminOffres />} />
+              <Route path="dashboard" element={<AdminStatistiques />} />
+              <Route path="utilisateurs" element={<AdminUsers />} />
+            </Route>
+          </Routes>
+        </main>
 
-          {/* ZONE ADMINISTRATION */}
-          <Route path="/admin-taftech" element={<AdminLayout />}>
-            <Route index element={<AdminEntreprises />} />
-            <Route path="entreprises" element={<AdminEntreprises />} />
-            <Route path="offres" element={<AdminOffres />} />
-            <Route path="dashboard" element={<AdminStatistiques />} />
-            <Route path="utilisateurs" element={<AdminUsers />} />
-          </Route>
-        </Routes>
+        {/* 👇 3. ON AFFICHE LE FOOTER TOUT EN BAS 👇 */}
+        <Footer />
       </div>
     </Router>
   );

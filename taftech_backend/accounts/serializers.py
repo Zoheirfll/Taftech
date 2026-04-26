@@ -2,11 +2,8 @@ from rest_framework import serializers
 from .models import CustomUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from jobs.models import ProfilEntreprise
 from rest_framework.exceptions import AuthenticationFailed
-
 User = get_user_model()
-
 class RegisterCandidatDTO(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -60,7 +57,6 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
         ProfilCandidat.objects.create(user=user)
         
         return user
-
 class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email_saisi = attrs.get('username')
@@ -85,7 +81,6 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['role'] = self.user.role
         return data
-
 class RecruteurRegisterSerializer(serializers.ModelSerializer):
     """
     DTO pour l'inscription stricte d'un Recruteur (US 1.5).
@@ -143,7 +138,6 @@ class RecruteurRegisterSerializer(serializers.ModelSerializer):
             wilaya_siege="Non renseignée" 
         )
         return user
-
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         # 1. Django vérifie si l'email et le mot de passe sont corrects

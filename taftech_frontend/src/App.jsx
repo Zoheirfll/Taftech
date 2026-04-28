@@ -17,7 +17,7 @@ import ReviewCandidature from "./Pages/ReviewCandidature";
 import JobsList from "./Pages/JobsList";
 import OffresParRegion from "./Pages/OffresParRegion";
 import OffresParSecteur from "./Pages/OffresParSecteur";
-// L'ESPACE CANDIDAT
+import GestionOffre from "./Pages/GestionOffre"; // L'ESPACE CANDIDAT
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
 import Settings from "./Pages/Candidat/Settings";
 import AlertesEmploi from "./Pages/Candidat/AlertesEmploi";
@@ -72,7 +72,7 @@ function App() {
             <Route path="/creer-entreprise" element={<CreateEntreprise />} />
             <Route path="/creer-offre" element={<CreateJob />} />
             <Route path="/dashboard" element={<DashboardRecruteur />} />
-
+            <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatLayout />}>
               <Route path="/profil" element={<ProfilCandidat />} />

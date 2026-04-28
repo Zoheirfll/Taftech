@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../Services/authService";
-import { profilService } from "../Services/profilService"; // On ajoute le service profil
+import { profilService } from "../Services/profilService";
 import logoTafTech from "../assets/logo-taftech.png";
 
 const Navbar = () => {
@@ -10,17 +10,15 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [userPhoto, setUserPhoto] = useState(null); // État pour la photo
+  const [userPhoto, setUserPhoto] = useState(null);
   const dropdownRef = useRef(null);
 
-  // 1. Charger la photo de profil si l'utilisateur est connecté
   useEffect(() => {
     if (isLogged) {
       const loadUserPhoto = async () => {
         try {
           const data = await profilService.getProfil();
           if (data.photo_profil) {
-            // On gère l'URL complète vers ton backend Django
             const fullUrl = data.photo_profil.startsWith("http")
               ? data.photo_profil
               : `http://127.0.0.1:8000${data.photo_profil}`;
@@ -131,7 +129,6 @@ const Navbar = () => {
 
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden group-hover:border-blue-500 transition-all shadow-sm">
-                    {/* 👇 CONDITION : SI PHOTO EXISTE ON L'AFFICHE, SINON ICÔNE PAR DÉFAUT 👇 */}
                     {userPhoto ? (
                       <img
                         src={userPhoto}
@@ -152,9 +149,10 @@ const Navbar = () => {
                 </div>
               </button>
 
-              {/* ... Reste du menu déroulant (Candidat, Recruteur, Admin) ... */}
+              {/* Le Menu Déroulant */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-4 w-64 bg-white rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.1)] border border-gray-100 py-2 z-50 transform origin-top-right transition-all">
+                  {/* --- MENU CANDIDAT --- */}
                   {role === "CANDIDAT" && (
                     <div className="flex flex-col">
                       <Link
@@ -265,6 +263,80 @@ const Navbar = () => {
                       </Link>
                     </div>
                   )}
+
+                  {/* --- MENU RECRUTEUR --- */}
+                  {role === "RECRUTEUR" && (
+                    <div className="flex flex-col">
+                      <Link
+                        onClick={closeDropdown}
+                        to="/dashboard"
+                        className="flex items-center gap-3 px-5 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                      >
+                        <svg
+                          className="w-5 h-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                          ></path>
+                        </svg>
+                        Tableau de bord
+                      </Link>
+                      <Link
+                        onClick={closeDropdown}
+                        to="/creer-offre"
+                        className="flex items-center gap-3 px-5 py-3 text-base font-bold text-green-600 hover:bg-green-50 transition-colors border-l-4 border-green-500 bg-green-50/50"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 4v16m8-8H4"
+                          ></path>
+                        </svg>
+                        Publier une offre
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* --- MENU ADMIN --- */}
+                  {role === "ADMIN" && (
+                    <div className="flex flex-col">
+                      <Link
+                        onClick={closeDropdown}
+                        to="/admin-taftech"
+                        className="flex items-center gap-3 px-5 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                      >
+                        <svg
+                          className="w-5 h-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          ></path>
+                        </svg>
+                        Tour de contrôle
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* --- BOUTON DÉCONNEXION --- */}
                   <div className="border-t border-gray-100 mt-2 pt-2">
                     <button
                       onClick={handleLogout}

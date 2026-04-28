@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 
-// L'intercepteur de requête devient très simple (plus besoin d'injecter le Bearer)
+// L'intercepteur de requête devient très simple
 api.interceptors.request.use((config) => {
   return config;
 });
@@ -21,21 +21,33 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si 401, on tente de rafraîchir via le cookie de refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Si on n'a pas de réponse du serveur (erreur réseau)
+    if (!error.response) return Promise.reject(error);
+
+    // CAS 1 : Si la requête de refresh échoue (cookie mort)
+    if (
+      error.response.status === 401 &&
+      originalRequest.url.includes("token/refresh/")
+    ) {
+      localStorage.removeItem("userRole"); // 👈 ON VIDE LE STORAGE
+      window.location.href = "/login"; // ET ENSUITE ON REDIRIGE
+      return Promise.reject(error);
+    }
+
+    // CAS 2 : Si 401 sur une requête normale, on tente de rafraîchir
+    if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        // Si ton baseURL est déjà "http://127.0.0.1:8000/api/",
-        // alors ici on ne met QUE "token/refresh/"
         await axios.post(
-          `${API_URL}token/refresh/`, // Vérifie que API_URL finit par /api/
+          `${API_URL}token/refresh/`,
           {},
           { withCredentials: true },
         );
         return api(originalRequest);
       } catch (refreshError) {
-        // Si même le refresh échoue, on déconnecte
-        window.location.href = "/login";
+        // Si le refresh échoue ici aussi, on déconnecte PROPREMENT
+        localStorage.removeItem("userRole"); // 👈 ON VIDE LE STORAGE
+        window.location.href = "/login"; // ET ENSUITE ON REDIRIGE
         return Promise.reject(refreshError);
       }
     }

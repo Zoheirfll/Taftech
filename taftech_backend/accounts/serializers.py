@@ -6,13 +6,15 @@ from rest_framework.exceptions import AuthenticationFailed
 User = get_user_model()
 class RegisterCandidatDTO(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    # 👇 AJOUT : On récupère la wilaya depuis React
+    wilaya = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = CustomUser
         fields = (
             'username', 'email', 'password', 'first_name', 
             'last_name', 'nin', 'telephone', 'date_naissance', 
-            'consentement_loi_18_07'
+            'consentement_loi_18_07', 'wilaya' # <-- Ajout de wilaya ici
         )
 
     # --- TES VALIDATIONS (Gardées car elles sont parfaites) ---
@@ -36,25 +38,25 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
                 raise serializers.ValidationError("Ce Numéro d'Identification National est déjà enregistré.")
         return value
 
-    # --- LE FIX CRUCIAL : LA MÉTHODE CREATE ---
+    # --- LA MÉTHODE CREATE MISE À JOUR ---
     def create(self, validated_data):
-        # On extrait le mot de passe pour le hacher correctement
+        # On extrait le mot de passe et la wilaya
         password = validated_data.pop('password')
+        wilaya_saisie = validated_data.pop('wilaya')
         
-        # On crée l'utilisateur avec TOUTES les données (incluant le consentement)
+        # On crée l'utilisateur
         user = User.objects.create_user(
             **validated_data,
-            role='CANDIDAT' ,# On force le rôle ici aussi
+            role='CANDIDAT',
             is_active=False
         )
         
-        # On sécurise le mot de passe
         user.set_password(password)
         user.save()
         
-        # On crée automatiquement son profil vide (pour éviter les erreurs 404 plus tard)
+        # 👇 On crée le profil candidat et on y insère directement la wilaya !
         from jobs.models import ProfilCandidat
-        ProfilCandidat.objects.create(user=user)
+        ProfilCandidat.objects.create(user=user, wilaya=wilaya_saisie)
         
         return user
 class EmailTokenObtainSerializer(TokenObtainPairSerializer):

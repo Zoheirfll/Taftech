@@ -4,14 +4,15 @@ from .models import Candidature
 from django.contrib.auth import get_user_model
 from .models import ProfilCandidat
 from .models import ExperienceCandidat, FormationCandidat
-from .models import OffreSauvegardee, AlerteEmploi
+from .models import OffreSauvegardee, AlerteEmploi, Notification
+
 User = get_user_model()
 # 1 Entreprise Serializer
 class EntrepriseSimpleSerializer(serializers.ModelSerializer):
     """Un petit DTO pour afficher juste le nom et la wilaya de l'entreprise dans l'offre."""
     class Meta:
         model = ProfilEntreprise
-        fields = ('nom_entreprise', 'wilaya_siege')
+        fields = ('id','nom_entreprise', 'wilaya_siege')
 # 2 Offre Emploi Serializer
 class OffreEmploiSerializer(serializers.ModelSerializer):
     entreprise = EntrepriseSimpleSerializer(read_only=True)
@@ -25,6 +26,10 @@ class PostulerDTO(serializers.ModelSerializer):
         model = Candidature
         fields = ('lettre_motivation','lettre_motivation_file') # L'offre et le candidat seront gérés par le serveur, pas par l'utilisateur
 
+class PostulerRapideDTO(serializers.ModelSerializer):
+    class Meta:
+        model = Candidature
+        fields = ('nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide', 'lettre_motivation')
 class OffreEmploiCreateDTO(serializers.ModelSerializer):
     """
     DTO pour la publication d'une nouvelle offre d'emploi.
@@ -58,7 +63,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     competences = serializers.SerializerMethodField()
     langues = serializers.SerializerMethodField()
 
-    # Nouveaux champs : Administratif et Préférences
+    # Administratif et Préférences
     service_militaire = serializers.SerializerMethodField()
     permis_conduire = serializers.SerializerMethodField()
     vehicule_personnel = serializers.SerializerMethodField()
@@ -68,6 +73,12 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     mobilite = serializers.SerializerMethodField()
     situation_actuelle = serializers.SerializerMethodField()
 
+    # 👇 LES 4 NOUVEAUX CHAMPS POUR L'IA 👇
+    wilaya = serializers.SerializerMethodField()
+    commune = serializers.SerializerMethodField()
+    diplome = serializers.SerializerMethodField()
+    specialite = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -75,7 +86,8 @@ class CandidatInfoDTO(serializers.ModelSerializer):
             'titre_professionnel', 'cv_pdf', 'photo_profil', 
             'experiences', 'formations', 'competences', 'langues',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
-            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle'
+            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
+            'wilaya', 'commune', 'diplome', 'specialite' # <-- AJOUTÉS ICI
         )
 
     def get_titre_professionnel(self, obj):
@@ -131,22 +143,42 @@ class CandidatInfoDTO(serializers.ModelSerializer):
 
     def get_situation_actuelle(self, obj):
         return obj.profil_candidat.situation_actuelle if hasattr(obj, 'profil_candidat') else None
+    
+    # 👇 LES 4 NOUVELLES FONCTIONS 👇
+    def get_wilaya(self, obj):
+        return obj.profil_candidat.wilaya if hasattr(obj, 'profil_candidat') else None
+
+    def get_commune(self, obj):
+        return obj.profil_candidat.commune if hasattr(obj, 'profil_candidat') else None
+
+    def get_diplome(self, obj):
+        return obj.profil_candidat.diplome if hasattr(obj, 'profil_candidat') else None
+
+    def get_specialite(self, obj):
+        return obj.profil_candidat.specialite if hasattr(obj, 'profil_candidat') else None
 # 2. Vigile pour la candidature
 class CandidatureRecruteurDTO(serializers.ModelSerializer):
+    # candidat peut être nul si c'est une postulation rapide
     candidat = CandidatInfoDTO(read_only=True)
     
-    # 1. On déclare le champ ici
     lettre_motivation_file = serializers.SerializerMethodField()
+    cv_rapide_url = serializers.SerializerMethodField() # <-- NOUVEAU
     
     class Meta:
         model = Candidature
-        # 2. VÉRIFIE BIEN CETTE LIGNE : le champ doit être dans la parenthèse !
-        fields = ('id', 'candidat', 'date_postulation', 'lettre_motivation', 'lettre_motivation_file', 'statut')
+        fields = (
+            'id', 'candidat', 'date_postulation', 'lettre_motivation', 'lettre_motivation_file', 'statut', 'score_matching', 'details_matching',
+            'est_rapide', 'nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien' # <-- NOUVEAUX CHAMPS
+        )
 
-    # 3. La fonction pour créer le lien du fichier
     def get_lettre_motivation_file(self, obj):
         if obj.lettre_motivation_file:
             return f"http://127.0.0.1:8000{obj.lettre_motivation_file.url}"
+        return None
+
+    def get_cv_rapide_url(self, obj):
+        if obj.cv_rapide:
+            return f"http://127.0.0.1:8000{obj.cv_rapide.url}"
         return None
 # 3. Vigile pour l'offre (avec ses candidatures imbriquées)
 class OffreDashboardDTO(serializers.ModelSerializer):
@@ -154,7 +186,12 @@ class OffreDashboardDTO(serializers.ModelSerializer):
     
     class Meta:
         model = OffreEmploi
-        fields = ('id', 'titre', 'date_publication', 'est_active', 'est_cloturee', 'candidatures')
+        fields = (
+            'id', 'titre', 'date_publication', 'est_active', 'est_cloturee', 
+            'wilaya', 'commune', 'diplome', 'specialite', 'type_contrat', 
+            'experience_requise', 'description', 'missions', 'profil_recherche', 'salaire_propose',
+            'candidatures'
+        )
 
 class ExperienceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -186,7 +223,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'experiences', 'competences', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin',
             'experiences_detail', 'formations_detail', 'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
-            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle'
+            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle', 'wilaya', 'commune'
         )
 
     def get_first_name(self, obj): return obj.user.first_name
@@ -200,7 +237,7 @@ class MesCandidaturesDTO(serializers.ModelSerializer):
     offre_est_cloturee = serializers.BooleanField(source='offre.est_cloturee', read_only=True)
     class Meta:
         model = Candidature
-        fields = ('id', 'offre_titre', 'entreprise_nom', 'date_postulation', 'statut', 'offre_est_cloturee')
+        fields = ('id', 'offre_titre', 'entreprise_nom', 'date_postulation', 'statut', 'offre_est_cloturee','date_entretien', 'message_entretien')
 
 
 class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
@@ -258,7 +295,6 @@ class AlerteEmploiSerializer(serializers.ModelSerializer):
         model = AlerteEmploi
         fields = ['id', 'mots_cles', 'wilaya', 'frequence', 'date_creation', 'est_active']
 
-
 class ParametresNotificationsSerializer(serializers.ModelSerializer):
     """
     Un petit Serializer dédié uniquement aux 3 cases à cocher des notifications.
@@ -266,3 +302,40 @@ class ParametresNotificationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilCandidat
         fields = ['notif_offres_exclusives', 'notif_newsletter', 'notif_mise_a_jour']
+
+# =======================================================
+# 👇 NOUVEAU : SÉRIALISEURS POUR LA PAGE ENTREPRISE PUBLIQUE 👇
+# =======================================================
+
+class OffreEmploiPublicSerializer(serializers.ModelSerializer):
+    """ DTO allégé pour lister les offres sur la page de l'entreprise """
+    class Meta:
+        model = OffreEmploi
+        fields = ('id', 'titre', 'wilaya', 'commune', 'type_contrat', 'experience_requise', 'date_publication')
+
+class EntreprisePublicSerializer(serializers.ModelSerializer):
+    """ DTO public de l'entreprise (Sans email ni téléphone privé du recruteur) """
+    offres_actives = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProfilEntreprise
+        fields = (
+            'id', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege', 
+            'description', 'logo_url', 'offres_actives'
+        )
+
+    def get_offres_actives(self, obj):
+        # On ne récupère que les offres en ligne, approuvées et non clôturées
+        offres = obj.offres.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False).order_by('-date_publication')
+        return OffreEmploiPublicSerializer(offres, many=True).data
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            return f"http://127.0.0.1:8000{obj.logo.url}"
+        return None
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'type_notif', 'titre', 'message', 'lue', 'date_creation']

@@ -3,10 +3,12 @@ from .views import JobListAPIView, PostulerAPIView, JobCreateAPIView, DashboardR
 from .views import AdminOffresListAPIView, AdminOffreModerateAPIView, AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView, UpdateProfilEntrepriseAPIView
 from .views import AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView, ConstantsAPIView, DeleteCandidatureAPIView, CloturerOffreAPIView
 from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView, FormationDetailAPIView
-
+from .views import PublicStatsAPIView
 # 👇 IMPORT DES 5 NOUVELLES VUES 👇
-from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView
-
+from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView, EntrepriseDetailAPIView
+from .views import PostulerRapideAPIView, NotificationListAPIView, MarkNotificationReadAPIView
+from .views import OffresRecommandeesAPIView # <-- Ajoute ça dans tes imports
+from .views import AdminBroadcastEmailAPIView
 
 urlpatterns = [
     path('', JobListAPIView.as_view(), name='job-list'),
@@ -29,7 +31,7 @@ urlpatterns = [
     # URL pour voir une seule offre en détail
     path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
     path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
-    
+    path('<int:offre_id>/postuler-rapide/', PostulerRapideAPIView.as_view(), name='postuler-rapide'),
     # --- ROUTES ADMIN ---
     path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres-list'),
     path('admin/offres/<int:offre_id>/moderer/', AdminOffreModerateAPIView.as_view(), name='admin-offre-moderate'),
@@ -38,8 +40,12 @@ urlpatterns = [
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users-list'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
+    path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast-email'),
+    # URL pour la page publique d'une entreprise
+    path('entreprises/<int:entreprise_id>/', EntrepriseDetailAPIView.as_view(), name='entreprise-detail-public'),
     
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
+    path('stats/public/', PublicStatsAPIView.as_view(), name='public-stats'),
     
     # --- ROUTES POUR LE CV (Expériences / Formations) ---
     path('profil/experiences/', ExperienceAPIView.as_view(), name='profil-experiences'),
@@ -66,4 +72,7 @@ urlpatterns = [
     
     # 3. Paramètres de notifications
     path('parametres/notifications/', ParametresNotificationsAPIView.as_view(), name='parametres-notifications'),
+    path('recommandations/', OffresRecommandeesAPIView.as_view(), name='offres-recommandees'),
+    path('notifications/', NotificationListAPIView.as_view(), name='notifications-list'),
+path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-read'),
 ]

@@ -38,6 +38,11 @@ const AdminLayout = () => {
           <NavLink to="/admin-taftech/utilisateurs" className={navLinkClass}>
             <span>👥</span> Utilisateurs
           </NavLink>
+
+          {/* 👇 NOUVEL ONGLET POUR LES EMAILS 👇 */}
+          <NavLink to="/admin-taftech/broadcast" className={navLinkClass}>
+            <span>📢</span> Diffusion
+          </NavLink>
         </nav>
 
         <div className="p-4 border-t border-gray-800">

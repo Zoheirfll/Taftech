@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
-import { jobsService } from "../Services/jobsService"; // <-- AJOUT POUR VÉRIFIER L'EMAIL
+import { jobsService } from "../Services/jobsService"; // <-- Pour récupérer les wilayas ET vérifier l'email
 import toast from "react-hot-toast";
+import Select from "react-select"; // <-- NOUVEAU: Pour la liste des régions
 
 const RegisterCandidat = () => {
   const navigate = useNavigate();
@@ -18,13 +19,14 @@ const RegisterCandidat = () => {
     En cochant la case de consentement, vous acceptez que vos informations professionnelles soient visibles par les entreprises enregistrées sur la plateforme.`,
   };
 
-  // --- ÉTATS ---
-  const [step, setStep] = useState(1); // Étape 1: Formulaire, Étape 2: Code OTP
-  const [registeredEmail, setRegisteredEmail] = useState(""); // Pour stocker l'email à vérifier
+  const [step, setStep] = useState(1);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
-  // États OTP (6 cases)
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const inputRefs = useRef([]); // Pour passer d'une case à l'autre automatiquement
+  const inputRefs = useRef([]);
+
+  // 👇 Liste des wilayas récupérée depuis Django
+  const [wilayasList, setWilayasList] = useState([]);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -32,6 +34,7 @@ const RegisterCandidat = () => {
     date_naissance: "",
     telephone: "",
     nin: "",
+    wilaya: "", // <-- NOUVEAU CHAMP DEMANDÉ PAR TON CAHIER DES CHARGES
     email: "",
     password: "",
     consentement_loi_18_07: false,
@@ -40,20 +43,44 @@ const RegisterCandidat = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  // Charger les Wilayas au démarrage
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const data = await jobsService.getConstants();
+        setWilayasList(data.wilayas);
+      } catch (error) {
+        console.error("Erreur de chargement des wilayas", error);
+      }
+    };
+    fetchConstants();
+  }, []);
+
   const handleChange = (e) => {
     const value =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  // --- SOUMISSION ÉTAPE 1 (INSCRIPTION) ---
-  // --- SOUMISSION ÉTAPE 1 (INSCRIPTION) ---
+  // Gestion du Select react-select
+  const handleSelectChange = (selectedOption, actionMeta) => {
+    setFormData({
+      ...formData,
+      [actionMeta.name]: selectedOption ? selectedOption.value : "",
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.consentement_loi_18_07) {
       toast.error("Vous devez accepter la Loi 18-07 pour vous inscrire.");
       return;
     }
+    if (!formData.wilaya) {
+      toast.error("Veuillez sélectionner votre région (Wilaya).");
+      return;
+    }
+
     setLoading(true);
     const toastId = toast.loading("Création de votre profil Talent...");
 
@@ -62,12 +89,9 @@ const RegisterCandidat = () => {
         formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
       const dataToSend = { ...formData, username: usernameGenere };
 
-      // 👇 LA CORRECTION EST ICI : on enlève le "const response ="
       await authService.registerCandidat(dataToSend);
 
       toast.success("Code envoyé à votre adresse email !", { id: toastId });
-
-      // ON PASSE À L'ÉTAPE 2
       setRegisteredEmail(formData.email);
       setStep(2);
     } catch (err) {
@@ -82,23 +106,20 @@ const RegisterCandidat = () => {
     }
   };
 
-  // --- LOGIQUE OTP (ÉTAPE 2) ---
   const handleOtpChange = (index, e) => {
     const value = e.target.value;
-    if (isNaN(value)) return; // Seulement des chiffres
+    if (isNaN(value)) return;
 
     const newOtp = [...otp];
-    newOtp[index] = value.substring(value.length - 1); // Garder le dernier caractère
+    newOtp[index] = value.substring(value.length - 1);
     setOtp(newOtp);
 
-    // Passer à la case suivante automatiquement
     if (value && index < 5 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1].focus();
     }
   };
 
   const handleOtpKeyDown = (index, e) => {
-    // Revenir à la case précédente si on appuie sur Effacer
     if (
       e.key === "Backspace" &&
       !otp[index] &&
@@ -121,18 +142,16 @@ const RegisterCandidat = () => {
     const toastId = toast.loading("Vérification du code...");
 
     try {
-      // ON APPELLE LE NOUVEAU ENDPOINT
       await jobsService.verifyEmail(registeredEmail, codeSaisi);
       toast.success("Email vérifié avec succès ! Vous pouvez vous connecter.", {
         id: toastId,
       });
-      navigate("/login"); // Succès : Direction Connexion !
+      navigate("/login");
     } catch (err) {
       toast.error(
         err.response?.data?.error || "Le code est incorrect ou expiré.",
         { id: toastId },
       );
-      // On vide les cases pour réessayer
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0].focus();
     } finally {
@@ -143,7 +162,7 @@ const RegisterCandidat = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
       <div className="max-w-5xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-100">
-        {/* Colonne de gauche (Reste identique) */}
+        {/* Colonne de gauche */}
         <div className="md:w-5/12 bg-blue-600 p-12 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-500 rounded-full opacity-50 blur-3xl"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-indigo-500 rounded-full opacity-50 blur-3xl"></div>
@@ -158,7 +177,6 @@ const RegisterCandidat = () => {
               travers toute l'Algérie.
             </p>
             <div className="space-y-6">
-              {/* Tes 3 petites icones de valeur ajoutée (Candidature, Visibilité, Sécurité) */}
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-500/50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-blue-400/30">
                   🚀
@@ -210,9 +228,8 @@ const RegisterCandidat = () => {
           </div>
         </div>
 
-        {/* Colonne de droite : Formulaire OU Code OTP */}
+        {/* Colonne de droite */}
         <div className="md:w-7/12 p-10 md:p-14 bg-white relative z-20 flex flex-col justify-center">
-          {/* ÉTAPE 1 : LE FORMULAIRE CLASSIQUE */}
           {step === 1 && (
             <div className="animate-fadeIn">
               <h3 className="text-2xl font-black text-gray-900 mb-8">
@@ -222,7 +239,7 @@ const RegisterCandidat = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Nom
+                      Nom *
                     </label>
                     <input
                       type="text"
@@ -234,7 +251,7 @@ const RegisterCandidat = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Prénom
+                      Prénom *
                     </label>
                     <input
                       type="text"
@@ -249,7 +266,7 @@ const RegisterCandidat = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Date de naissance
+                      Date de naissance *
                     </label>
                     <input
                       type="date"
@@ -259,9 +276,34 @@ const RegisterCandidat = () => {
                       className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
                     />
                   </div>
+                  {/* 👇 NOUVEAU CHAMP : WILAYA 👇 */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Téléphone
+                      Région (Wilaya) *
+                    </label>
+                    <Select
+                      name="wilaya"
+                      options={wilayasList}
+                      onChange={handleSelectChange}
+                      placeholder="Sélectionnez..."
+                      className="font-bold text-sm text-gray-700"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          padding: "0.4rem",
+                          borderRadius: "1rem",
+                          backgroundColor: "#f9fafb",
+                          border: "none",
+                        }),
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      Téléphone *
                     </label>
                     <input
                       type="tel"
@@ -272,27 +314,26 @@ const RegisterCandidat = () => {
                       className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                    NIN (Numéro d'Identification National)
-                  </label>
-                  <input
-                    type="text"
-                    name="nin"
-                    required
-                    maxLength="18"
-                    placeholder="Les 18 chiffres de votre carte"
-                    onChange={handleChange}
-                    className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold tracking-widest text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                      NIN (18 chiffres) *
+                    </label>
+                    <input
+                      type="text"
+                      name="nin"
+                      required
+                      maxLength="18"
+                      placeholder="Ex: 108..."
+                      onChange={handleChange}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold tracking-widest text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Email
+                      Email *
                     </label>
                     <input
                       type="email"
@@ -304,7 +345,7 @@ const RegisterCandidat = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                      Mot de passe
+                      Mot de passe *
                     </label>
                     <input
                       type="password"
@@ -395,7 +436,6 @@ const RegisterCandidat = () => {
                   {loading ? "Vérification..." : "Confirmer mon compte"}
                 </button>
               </form>
-
               <p className="text-xs text-gray-400 mt-8 font-bold">
                 Vous n'avez rien reçu ? Vérifiez vos spams.
               </p>
@@ -404,7 +444,7 @@ const RegisterCandidat = () => {
         </div>
       </div>
 
-      {/* Modal Loi 18-07 (Reste identique) */}
+      {/* Modal Loi 18-07 */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl animate-slideUp">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Ajout de useCallback
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 
@@ -7,22 +7,39 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  useEffect(() => {
-    chargerUsers();
-  }, []);
+  // --- NOUVEAUX ÉTATS POUR LA RECHERCHE ET PAGINATION ---
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const chargerUsers = async () => {
+  // Stabilisation de la fonction de chargement
+  const chargerUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminUsers();
-      setUsers(data);
+      // Appel au service avec la page et le terme de recherche
+      const data = await jobsService.getAdminUsers(currentPage, searchTerm);
+
+      if (data.results) {
+        setUsers(data.results);
+        setTotalPages(Math.ceil(data.count / 5)); // Calcul basé sur 10 par page
+      } else {
+        setUsers(data);
+      }
     } catch (err) {
-      (toast.error("Erreur de chargement des utilisateurs."),
-        console.error(err));
+      toast.error("Erreur de chargement des utilisateurs.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm]);
+
+  // Gestion du Debounce (300ms) pour la recherche
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      chargerUsers();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [chargerUsers]);
 
   const handleToggleBlock = async (id, isActif) => {
     const action = isActif ? "bloquer" : "débloquer";
@@ -35,15 +52,12 @@ const AdminUsers = () => {
             ? "Utilisateur bloqué."
             : "Utilisateur débloqué avec succès !",
         );
-        // Met à jour la modale si elle est ouverte
         if (selectedUser && selectedUser.id === id) {
           setSelectedUser({ ...selectedUser, is_active: !isActif });
         }
       } catch (err) {
-        (toast.error(
-          "Erreur lors de la modification du statut de l'utilisateur.",
-        ),
-          console.error(err));
+        toast.error("Erreur lors de la modification du statut.");
+        console.error(err);
       }
     }
   };
@@ -71,22 +85,41 @@ const AdminUsers = () => {
       ));
   };
 
-  if (loading)
-    return (
-      <div className="text-center p-20 font-bold animate-pulse text-blue-600">
-        Chargement...
-      </div>
-    );
-
   return (
-    <div>
-      <h2 className="text-3xl font-black text-gray-900 mb-8">
-        Utilisateurs Inscrits
-      </h2>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="space-y-6 animate-fadeIn">
+      {/* HEADER AVEC RECHERCHE */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+            Utilisateurs Inscrits
+          </h2>
+          <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mt-1">
+            Gestion de la communauté
+          </p>
+        </div>
+
+        <div className="relative group">
+          <input
+            type="text"
+            placeholder="Chercher un nom ou un email..."
+            className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset à la page 1 si on cherche
+            }}
+          />
+          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+            🔍
+          </span>
+        </div>
+      </div>
+
+      {/* TABLEAU */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-100">
-            <tr className="text-xs text-gray-400 uppercase tracking-widest">
+            <tr className="text-[10px] text-gray-400 uppercase tracking-widest font-black">
               <th className="p-6">Identité</th>
               <th className="p-6">Rôle</th>
               <th className="p-6">Inscription</th>
@@ -94,72 +127,116 @@ const AdminUsers = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {users.map((user) => (
-              <tr
-                key={user.id}
-                className={`hover:bg-gray-50 transition ${!user.is_active ? "bg-red-50/50" : ""}`}
-              >
-                <td className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 overflow-hidden shadow-sm">
-                      {user.profil_candidat?.photo_profil ? (
-                        <img
-                          src={getMediaUrl(user.profil_candidat.photo_profil)}
-                          alt="Profil"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <>
-                          {user.first_name?.[0]}
-                          {user.last_name?.[0]}
-                        </>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-black text-gray-900 uppercase">
-                        {user.last_name} {user.first_name}
-                      </p>
-                      <p className="text-xs text-gray-500 font-bold mt-1">
-                        ✉️ {user.email}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-6">
-                  <span
-                    className={`px-3 py-1 rounded-full text-[10px] font-black ${user.role === "CANDIDAT" ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700"}`}
-                  >
-                    {user.role}
-                  </span>
-                </td>
-                <td className="p-6 text-sm text-gray-500 font-medium">
-                  {new Date(user.date_joined).toLocaleDateString("fr-FR")}
-                </td>
-                <td className="p-6 text-right space-x-2">
-                  <button
-                    onClick={() => setSelectedUser(user)}
-                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition"
-                  >
-                    👁️ Inspecter
-                  </button>
-                  <button
-                    onClick={() => handleToggleBlock(user.id, user.is_active)}
-                    className={`px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition ${user.is_active ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-500 text-white"}`}
-                  >
-                    {user.is_active ? "Bloquer" : "Débloquer"}
-                  </button>
+            {loading && users.length === 0 ? (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="p-20 text-center font-black text-blue-600 animate-pulse uppercase text-xs"
+                >
+                  Synchronisation...
                 </td>
               </tr>
-            ))}
+            ) : users.length > 0 ? (
+              users.map((user) => (
+                <tr
+                  key={user.id}
+                  className={`hover:bg-gray-50/50 transition ${!user.is_active ? "bg-red-50/30" : ""}`}
+                >
+                  <td className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 overflow-hidden shadow-sm border border-white">
+                        {user.profil_candidat?.photo_profil ? (
+                          <img
+                            src={getMediaUrl(user.profil_candidat.photo_profil)}
+                            alt="Profil"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs uppercase">
+                            {user.first_name?.[0]}
+                            {user.last_name?.[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-black text-gray-900 uppercase text-sm">
+                          {user.last_name} {user.first_name}
+                        </p>
+                        <p className="text-[10px] text-blue-500 font-bold mt-1">
+                          ✉️ {user.email}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-6">
+                    <span
+                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${user.role === "CANDIDAT" ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700"}`}
+                    >
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="p-6 text-xs text-gray-500 font-bold">
+                    {new Date(user.date_joined).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="p-6 text-right space-x-2">
+                    <button
+                      onClick={() => setSelectedUser(user)}
+                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl font-black text-[10px] transition"
+                    >
+                      INSPECTER
+                    </button>
+                    <button
+                      onClick={() => handleToggleBlock(user.id, user.is_active)}
+                      className={`px-4 py-2 rounded-xl font-black text-[10px] transition ${user.is_active ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-600 text-white shadow-md hover:bg-green-700"}`}
+                    >
+                      {user.is_active ? "BLOQUER" : "DÉBLOQUER"}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="p-20 text-center text-gray-400 font-bold italic"
+                >
+                  Aucun utilisateur trouvé.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* FENÊTRE DE DÉTAILS COMPLETS DE L'UTILISATEUR (Mise à jour avec TOUTES les nouvelles données) */}
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 py-4">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1 || loading}
+            className="px-6 py-2 font-black text-xs rounded-xl bg-white border border-gray-200 text-gray-700 disabled:opacity-30 transition shadow-sm"
+          >
+            ← PRÉCÉDENT
+          </button>
+          <span className="text-xs font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-lg uppercase tracking-widest">
+            Page {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages || loading}
+            className="px-6 py-2 font-black text-xs rounded-xl bg-white border border-gray-200 text-gray-700 disabled:opacity-30 transition shadow-sm"
+          >
+            SUIVANT →
+          </button>
+        </div>
+      )}
+
+      {/* --- MODAL D'INSPECTION (TOUTE TA LOGIQUE ORIGINALE PRÉSERVÉE) --- */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2rem] p-8 max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
-            {/* Header de la Modale */}
+          <div className="bg-white rounded-[2.5rem] p-8 max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
             <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center font-bold text-gray-500 overflow-hidden shadow-sm border border-gray-200">
@@ -172,7 +249,7 @@ const AdminUsers = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    "👤"
+                    <span className="text-2xl">👤</span>
                   )}
                 </div>
                 <div>
@@ -199,7 +276,6 @@ const AdminUsers = () => {
               </button>
             </div>
 
-            {/* Infos Système & Légal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
@@ -211,9 +287,8 @@ const AdminUsers = () => {
                 <p className="font-bold text-sm text-gray-800 mt-1">
                   📞 {selectedUser.telephone || "Non renseigné"}
                 </p>
-                <p className="font-bold text-sm text-gray-800 mt-1">
-                  Rôle :{" "}
-                  <span className="text-blue-600">{selectedUser.role}</span>
+                <p className="font-bold text-sm text-blue-600 mt-1 uppercase text-xs">
+                  Rôle : {selectedUser.role}
                 </p>
               </div>
               <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
@@ -229,7 +304,7 @@ const AdminUsers = () => {
                 <p className="font-bold text-sm text-gray-800 mt-1">
                   Né(e) le : {selectedUser.date_naissance || "Non renseigné"}
                 </p>
-                <p className="text-xs mt-2 font-black text-green-700 bg-green-50 inline-block px-2 py-1 rounded">
+                <p className="text-[10px] mt-2 font-black text-green-700 bg-green-50 inline-block px-2 py-1 rounded uppercase tracking-tighter">
                   {selectedUser.consentement_loi_18_07
                     ? "✅ Loi 18-07 Acceptée"
                     : "❌ Loi 18-07 Non Acceptée"}
@@ -237,50 +312,54 @@ const AdminUsers = () => {
               </div>
             </div>
 
-            {/* Affichage conditionnel si c'est un CANDIDAT */}
             {selectedUser.role === "CANDIDAT" &&
               selectedUser.profil_candidat && (
                 <div className="space-y-8">
-                  <h3 className="font-black text-xl text-gray-900 border-b border-gray-100 pb-2">
+                  <h3 className="font-black text-xl text-gray-900 border-b border-gray-100 pb-2 uppercase tracking-tight">
                     Dossier Candidat Complet
                   </h3>
 
-                  {/* 1. Résumé & Administratif */}
                   <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-50 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">
                         Titre Professionnel
                       </p>
-                      <p className="font-black text-blue-700 text-lg">
+                      <p className="font-black text-blue-700 text-lg uppercase">
                         {selectedUser.profil_candidat.titre_professionnel ||
                           "Non défini"}
                       </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">
-                        Diplôme Principal
+                        Diplôme Principal & Localisation
                       </p>
-                      <p className="font-black text-blue-700 text-sm">
+                      <p className="font-black text-blue-700 text-sm uppercase">
                         {selectedUser.profil_candidat.diplome || "Non défini"}{" "}
                         {selectedUser.profil_candidat.specialite &&
                           `(${selectedUser.profil_candidat.specialite})`}
                       </p>
+                      <p className="text-xs text-blue-600 mt-1 font-bold uppercase">
+                        📍 {selectedUser.profil_candidat.wilaya || "Wilaya N/A"}{" "}
+                        {selectedUser.profil_candidat.commune
+                          ? `- ${selectedUser.profil_candidat.commune}`
+                          : ""}
+                      </p>
                     </div>
                     <div className="md:col-span-2 flex flex-wrap gap-3 pt-4 border-t border-blue-100">
-                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg">
+                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
                         🛡️ Militaire :{" "}
                         {selectedUser.profil_candidat.service_militaire?.replace(
                           /_/g,
                           " ",
                         ) || "N/A"}
                       </span>
-                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg">
+                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
                         🚗 Permis :{" "}
                         {selectedUser.profil_candidat.permis_conduire
                           ? "Oui"
                           : "Non"}
                       </span>
-                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg">
+                      <span className="bg-white border border-blue-100 text-gray-700 text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
                         ✈️ Passeport :{" "}
                         {selectedUser.profil_candidat.passeport_valide
                           ? "Valide"
@@ -289,7 +368,6 @@ const AdminUsers = () => {
                     </div>
                   </div>
 
-                  {/* 2. Préférences de recrutement */}
                   <div>
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                       Préférences de recherche
@@ -299,7 +377,7 @@ const AdminUsers = () => {
                         <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Secteur
                         </p>
-                        <p className="text-xs font-black text-gray-900">
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-tighter">
                           {selectedUser.profil_candidat.secteur_souhaite?.replace(
                             /_/g,
                             " ",
@@ -319,7 +397,7 @@ const AdminUsers = () => {
                         <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Mobilité
                         </p>
-                        <p className="text-xs font-black text-gray-900">
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-tighter">
                           {selectedUser.profil_candidat.mobilite?.replace(
                             /_/g,
                             " ",
@@ -330,7 +408,7 @@ const AdminUsers = () => {
                         <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Statut Actuel
                         </p>
-                        <p className="text-xs font-black text-gray-900">
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-tighter">
                           {selectedUser.profil_candidat.situation_actuelle?.replace(
                             /_/g,
                             " ",
@@ -340,7 +418,6 @@ const AdminUsers = () => {
                     </div>
                   </div>
 
-                  {/* 3. Expériences */}
                   <div>
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
                       Expériences Professionnelles
@@ -355,17 +432,17 @@ const AdminUsers = () => {
                               key={exp.id}
                               className="pl-4 border-l-2 border-blue-200"
                             >
-                              <p className="font-black text-gray-800 text-sm">
+                              <p className="font-black text-gray-800 text-sm uppercase">
                                 {exp.titre_poste}{" "}
                                 <span className="text-blue-600">
                                   @ {exp.entreprise}
                                 </span>
                               </p>
-                              <p className="text-[10px] text-gray-500 font-bold mt-1">
+                              <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-widest">
                                 📅 {exp.date_debut} —{" "}
                                 {exp.date_fin || "Aujourd'hui"}
                               </p>
-                              <p className="text-xs text-gray-600 mt-2">
+                              <p className="text-xs text-gray-600 mt-2 font-medium">
                                 {exp.description}
                               </p>
                             </div>
@@ -374,13 +451,11 @@ const AdminUsers = () => {
                       </div>
                     ) : (
                       <p className="text-xs italic text-gray-400">
-                        Aucune expérience structurée (Ancien format :{" "}
-                        {selectedUser.profil_candidat.experiences || "Vide"})
+                        Aucune expérience structurée.
                       </p>
                     )}
                   </div>
 
-                  {/* 4. Formations */}
                   <div>
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
                       Formations
@@ -395,10 +470,10 @@ const AdminUsers = () => {
                               key={form.id}
                               className="pl-4 border-l-2 border-indigo-200"
                             >
-                              <p className="font-black text-gray-800 text-sm">
+                              <p className="font-black text-gray-800 text-sm uppercase">
                                 {form.diplome}
                               </p>
-                              <p className="text-[10px] text-gray-500 font-bold mt-1">
+                              <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-widest">
                                 🎓 {form.etablissement} | 📅 {form.date_debut} —{" "}
                                 {form.date_fin}
                               </p>
@@ -413,7 +488,6 @@ const AdminUsers = () => {
                     )}
                   </div>
 
-                  {/* 5. Tags & CV */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                     <div>
                       <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
@@ -435,7 +509,7 @@ const AdminUsers = () => {
                         href={getMediaUrl(selectedUser.profil_candidat.cv_pdf)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-black transition shadow-xl hover:-translate-y-1"
+                        className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition shadow-xl shadow-gray-200 hover:-translate-y-1"
                       >
                         📄 TÉLÉCHARGER LE CV PDF
                       </a>

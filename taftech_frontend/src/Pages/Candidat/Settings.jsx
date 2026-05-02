@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import api from "../../api/axiosConfig"; // Assure-toi que ce chemin est correct
+import { jobsService } from "../../Services/jobsService"; // Utilisation de jobsService
 
 const Settings = () => {
   // --- STATE POUR LES NOTIFICATIONS ---
@@ -18,11 +18,11 @@ const Settings = () => {
   useEffect(() => {
     const fetchParametres = async () => {
       try {
-        const response = await api.get("jobs/parametres/notifications/");
-        setNotifications(response.data);
+        const data = await jobsService.getParametres();
+        setNotifications(data);
       } catch (error) {
-        (toast.error("Erreur lors du chargement de vos paramètres."),
-          console.error(error));
+        toast.error("Erreur lors du chargement de vos paramètres.");
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -40,12 +40,13 @@ const Settings = () => {
     setNotifications(updatedNotifications);
 
     try {
-      // On sauvegarde dans la base de données (Django)
-      await api.put("jobs/parametres/notifications/", updatedNotifications);
+      // On sauvegarde dans la base de données via jobsService
+      await jobsService.updateParametres(updatedNotifications);
       toast.success("Préférence enregistrée !");
     } catch (error) {
       setNotifications(notifications); // Rollback en cas d'erreur
-      (toast.error("Échec de la sauvegarde."), console.error(error));
+      toast.error("Échec de la sauvegarde.");
+      console.error(error);
     }
   };
 
@@ -121,14 +122,15 @@ const Settings = () => {
             </label>
           </div>
 
-          {/* Switch 3 */}
+          {/* Switch 3 - MODIFIÉ POUR CLARTÉ */}
           <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
             <div>
               <p className="font-bold text-gray-800 text-sm">
-                Emails de mise à jour
+                Rappels de mise à jour du profil
               </p>
               <p className="text-xs text-gray-400 font-medium">
-                Nouveautés et améliorations de TafTech.
+                Recevez un email amical si votre CV n'a pas été actualisé depuis
+                un certain temps. Un profil à jour attire plus de recruteurs !
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -144,7 +146,7 @@ const Settings = () => {
         </div>
       </section>
 
-      {/* BLOC MOT DE PASSE (Ton code original) */}
+      {/* BLOC MOT DE PASSE */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
         <h2 className="text-lg font-black text-gray-800 mb-6">
           Modifier mon mot de passe
@@ -178,7 +180,7 @@ const Settings = () => {
         </form>
       </section>
 
-      {/* BLOC SUPPRESSION (Ton code original) */}
+      {/* BLOC SUPPRESSION */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-red-50 flex justify-between items-center">
         <div>
           <h2 className="text-lg font-black text-red-600">Gérer mon compte</h2>
@@ -186,7 +188,10 @@ const Settings = () => {
             Attention, cette action est irréversible.
           </p>
         </div>
-        <button className="text-red-500 font-black text-sm hover:underline uppercase tracking-widest">
+        <button
+          className="text-red-500 font-black text-sm hover:underline uppercase tracking-widest"
+          onClick={() => toast.error("Action désactivée pour l'instant.")}
+        >
           Supprimer mon compte
         </button>
       </section>

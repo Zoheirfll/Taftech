@@ -3,7 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
-import api from "../api/axiosConfig"; // N'oublie pas cet import pour les appels API des favoris
+import api from "../api/axiosConfig";
+
+import communesAlgerie from "../data/communes.json";
 
 const JobsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -11,8 +13,9 @@ const JobsList = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // --- NOUVEAU : State pour gérer les offres sauvegardées ---
   const [favoris, setFavoris] = useState([]);
+  // 👇 NOUVEL ÉTAT POUR LES RECOMMANDATIONS IA 👇
+  const [recommandations, setRecommandations] = useState([]);
 
   const [constants, setConstants] = useState({
     wilayas: [],
@@ -32,18 +35,35 @@ const JobsList = () => {
     contrat: "",
   });
 
-  // 1. Initialisation : Charger les constantes ET les favoris de l'utilisateur
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [constantsData, favorisData] = await Promise.all([
-          jobsService.getConstants(),
-          // On tente de récupérer les favoris (si l'utilisateur n'est pas connecté, l'API renverra une erreur, ce n'est pas grave on la gère silencieusement)
-          api.get("jobs/sauvegardes/").catch(() => ({ data: [] })),
-        ]);
+        const isConnected = !!localStorage.getItem("userRole");
+        const isCandidat = localStorage.getItem("userRole") === "CANDIDAT";
+
+        const promises = [jobsService.getConstants()];
+
+        if (isConnected) {
+          promises.push(
+            api.get("jobs/sauvegardes/").catch(() => ({ data: [] })),
+          );
+        } else {
+          promises.push(Promise.resolve({ data: [] }));
+        }
+
+        // 👇 SI C'EST UN CANDIDAT, ON CHERCHE LES OFFRES RECOMMANDÉES PAR L'IA 👇
+        if (isCandidat) {
+          promises.push(jobsService.getOffresRecommandees().catch(() => []));
+        } else {
+          promises.push(Promise.resolve([]));
+        }
+
+        const [constantsData, favorisData, recommandationsData] =
+          await Promise.all(promises);
 
         setConstants(constantsData);
         setFavoris(favorisData.data);
+        setRecommandations(recommandationsData || []);
       } catch (error) {
         console.error("Erreur d'initialisation", error);
       }
@@ -51,7 +71,6 @@ const JobsList = () => {
     fetchData();
   }, []);
 
-  // 2. Recherche des offres
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
@@ -77,9 +96,7 @@ const JobsList = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [filters, setSearchParams]);
 
-  // --- NOUVEAU : Gérer le clic sur le bouton de sauvegarde ---
   const handleToggleFavori = async (offreId) => {
-    // Vérifier si l'utilisateur est connecté (en regardant si on a réussi à charger des favoris, ou via ton authService si tu préfères)
     if (!localStorage.getItem("userRole")) {
       return toast.error("Veuillez vous connecter pour sauvegarder une offre.");
     }
@@ -87,20 +104,15 @@ const JobsList = () => {
     const isDejaSauvegarde = favoris.find((f) => f.offre === offreId);
 
     if (isDejaSauvegarde) {
-      // 1. RETIRER DES FAVORIS
-      // Optimistic UI : on le retire direct de l'affichage
       setFavoris(favoris.filter((f) => f.offre !== offreId));
-
       try {
         await api.delete(`jobs/sauvegardes/${isDejaSauvegarde.id}/`);
         toast.success("Offre retirée des favoris.");
       } catch (error) {
-        // En cas d'erreur, on remet l'état précédent
         setFavoris([...favoris, isDejaSauvegarde]);
-        (toast.error("Erreur lors de la suppression."), console.error(error));
+        (toast.error("Erreur lors de la suppression."), console.log(error));
       }
     } else {
-      // 2. AJOUTER AUX FAVORIS
       try {
         const response = await api.post("jobs/sauvegardes/", {
           offre: offreId,
@@ -109,7 +121,7 @@ const JobsList = () => {
         toast.success("Offre sauvegardée !");
       } catch (error) {
         (toast.error("Impossible de sauvegarder cette offre."),
-          console.error(error));
+          console.log(error));
       }
     }
   };
@@ -123,6 +135,17 @@ const JobsList = () => {
       ...filters,
       [actionMeta.name]: selectedOption ? selectedOption.value : "",
     });
+  };
+
+  const getCommunesListOptions = (wilayaValue) => {
+    if (!wilayaValue) return [];
+    const wilayaCode = wilayaValue.split(" - ")[0];
+    return communesAlgerie
+      .filter((c) => c.wilaya_code === wilayaCode)
+      .map((c) => ({
+        value: c.commune_name_ascii,
+        label: c.commune_name_ascii,
+      }));
   };
 
   const handleReset = () => {
@@ -141,7 +164,7 @@ const JobsList = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row gap-6">
-        {/* COLONNE GAUCHE : LES FILTRES (inchangée) */}
+        {/* COLONNE GAUCHE : LES FILTRES */}
         <aside className="w-full md:w-1/3 lg:w-1/4">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-4">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
@@ -168,7 +191,6 @@ const JobsList = () => {
                   className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Expérience demandée
@@ -187,7 +209,6 @@ const JobsList = () => {
                   className="text-sm"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Type de contrat
@@ -206,7 +227,6 @@ const JobsList = () => {
                   className="text-sm"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Secteur d'activité
@@ -220,12 +240,11 @@ const JobsList = () => {
                       (c) => c.value === filters.specialite,
                     ) || null
                   }
-                  placeholder="Ex: Finance, Informatique..."
+                  placeholder="Ex: Finance..."
                   isClearable
                   className="text-sm"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">
                   Diplôme attendu
@@ -244,7 +263,6 @@ const JobsList = () => {
                   className="text-sm"
                 />
               </div>
-
               <div className="grid grid-cols-1 gap-5 mt-2">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">
@@ -253,7 +271,13 @@ const JobsList = () => {
                   <Select
                     name="wilaya"
                     options={constants.wilayas}
-                    onChange={handleSelectChange}
+                    onChange={(opt) => {
+                      setFilters({
+                        ...filters,
+                        wilaya: opt ? opt.value : "",
+                        commune: "",
+                      });
+                    }}
                     value={
                       constants.wilayas.find(
                         (c) => c.value === filters.wilaya,
@@ -268,13 +292,24 @@ const JobsList = () => {
                   <label className="block text-xs font-bold text-gray-700 mb-2">
                     Commune
                   </label>
-                  <input
-                    type="text"
+                  <Select
                     name="commune"
-                    value={filters.commune}
-                    onChange={handleChange}
-                    placeholder="Ex: Hydra"
-                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
+                    options={getCommunesListOptions(filters.wilaya)}
+                    isDisabled={
+                      !filters.wilaya ||
+                      getCommunesListOptions(filters.wilaya).length === 0
+                    }
+                    value={
+                      getCommunesListOptions(filters.wilaya).find(
+                        (c) => c.value === filters.commune,
+                      ) || null
+                    }
+                    onChange={handleSelectChange}
+                    placeholder={
+                      filters.wilaya ? "Toutes les communes" : "Wilaya d'abord"
+                    }
+                    isClearable
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -284,6 +319,60 @@ const JobsList = () => {
 
         {/* COLONNE DROITE : LES RÉSULTATS */}
         <main className="w-full md:w-2/3 lg:w-3/4">
+          {/* 👇 NOUVEAU : CARROUSEL DES RECOMMANDATIONS IA 👇 */}
+          {recommandations.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                🔥 Recommandées pour vous
+              </h2>
+              <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+                {recommandations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="min-w-[300px] md:min-w-[350px] bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-100 shadow-sm snap-start flex flex-col justify-between shrink-0 hover:shadow-md transition"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 bg-indigo-100 px-2 py-1 rounded-md">
+                          {rec.matching_score >= 80
+                            ? "⭐ Top Match"
+                            : "🎯 Recommandé"}
+                        </span>
+                        <span className="text-xs font-black text-blue-800 bg-white px-2 py-1 rounded-full border border-blue-200">
+                          {rec.matching_score}%
+                        </span>
+                      </div>
+                      <Link
+                        to={`/jobs/${rec.id}`}
+                        className="text-lg font-black text-gray-900 hover:text-blue-700 hover:underline line-clamp-1"
+                      >
+                        {rec.titre}
+                      </Link>
+                      <p className="text-xs font-bold text-gray-500 mt-1 mb-4">
+                        🏢{" "}
+                        {rec.entreprise?.nom_entreprise || "Entreprise Anonyme"}
+                      </p>
+                      <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+                        <span className="bg-white text-gray-600 px-2 py-1 rounded border border-gray-200">
+                          📍 {rec.wilaya.split(" - ")[0]}
+                        </span>
+                        <span className="bg-white text-gray-600 px-2 py-1 rounded border border-gray-200">
+                          💼 {rec.experience_requise}
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/jobs/${rec.id}`}
+                      className="mt-4 block text-center w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg transition-colors text-xs"
+                    >
+                      Voir l'offre
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
             <h1 className="font-bold text-gray-800">
               {jobs.length} Offres d'emploi trouvées
@@ -321,7 +410,6 @@ const JobsList = () => {
           ) : (
             <div className="space-y-4">
               {jobs.map((job) => {
-                // --- ON DÉTERMINE SI L'OFFRE ACTUELLE EST DANS LES FAVORIS ---
                 const isSaved = favoris.some((f) => f.offre === job.id);
 
                 return (
@@ -338,11 +426,19 @@ const JobsList = () => {
                           {job.titre}
                         </Link>
                       </div>
-
                       <div className="text-sm font-bold text-gray-600 mb-4">
-                        {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
+                        {job.entreprise ? (
+                          <Link
+                            to={`/entreprise/${job.entreprise.id}`}
+                            className="hover:text-blue-600 hover:underline transition-colors"
+                            title="Voir la page de cette entreprise"
+                          >
+                            🏢 {job.entreprise.nom_entreprise}
+                          </Link>
+                        ) : (
+                          <span>🏢 Entreprise anonyme</span>
+                        )}
                       </div>
-
                       <div className="flex flex-wrap gap-2 text-xs font-bold">
                         <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
                           📍 {job.wilaya}{" "}
@@ -363,14 +459,9 @@ const JobsList = () => {
                     </div>
 
                     <div className="flex items-center md:items-start justify-end mt-4 md:mt-0 gap-3">
-                      {/* --- LE FAMEUX BOUTON DE SAUVEGARDE --- */}
                       <button
                         onClick={() => handleToggleFavori(job.id)}
-                        className={`p-3 rounded-xl transition-all border ${
-                          isSaved
-                            ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
-                            : "bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
-                        }`}
+                        className={`p-3 rounded-xl transition-all border ${isSaved ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100" : "bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"}`}
                         title={
                           isSaved
                             ? "Retirer des favoris"
@@ -391,7 +482,6 @@ const JobsList = () => {
                           ></path>
                         </svg>
                       </button>
-
                       <Link
                         to={`/jobs/${job.id}`}
                         className="bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition"

@@ -2,6 +2,9 @@ from django.shortcuts import render
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
+from django.utils.dateparse import parse_datetime
+from django.conf import settings
+
 # Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,15 +12,19 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
-from .models import OffreEmploi , Candidature, ProfilCandidat, ProfilEntreprise, ExperienceCandidat, FormationCandidat
+from .models import OffreEmploi , Candidature, ProfilCandidat, ProfilEntreprise, ExperienceCandidat, FormationCandidat, Notification
 from .models import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
 from .serializers import OffreEmploiSerializer, PostulerDTO, EntrepriseDashboardDetailSerializer, OffreEmploiCreateDTO, OffreDashboardDTO, ProfilCandidatDTO
 from .serializers import  EntrepriseDashboardDetailSerializer, AdminUserSerializer
 from .serializers import ExperienceSerializer, FormationSerializer
 from .models import OffreSauvegardee, AlerteEmploi
 from .serializers import OffreSauvegardeeSerializer, AlerteEmploiSerializer, ParametresNotificationsSerializer
+from .serializers import EntreprisePublicSerializer
+from .serializers import PostulerRapideDTO,  NotificationSerializer
+from .matcher import calculer_score_matching
 User = get_user_model()
 class JobListAPIView(APIView):
+    permission_classes = [AllowAny]
     def get(self, request):
         # 1. On récupère TOUS les filtres envoyés par ton nouveau React
         mot_cle = request.query_params.get('search', '')
@@ -61,36 +68,62 @@ class JobListAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
 class PostulerAPIView(APIView):
     """
-    Endpoint pour postuler à une offre.
+    Endpoint pour postuler à une offre avec un compte.
     URL : /api/jobs/<id_offre>/postuler/
     """
-    permission_classes = [IsAuthenticated] # Il faut être connecté pour postuler
-    
-    # 🔴 CORRECTION 1 : Le "traducteur" pour lire les fichiers PDF
+    permission_classes = [IsAuthenticated] 
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def post(self, request, offre_id):
-        # On vérifie si l'offre existe
         try:
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
 
-        # On vérifie si le candidat a déjà postulé
         if Candidature.objects.filter(offre=offre, candidat=request.user).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # On enregistre la candidature
         serializer = PostulerDTO(data=request.data)
         if serializer.is_valid():
+            
+            # L'algo renvoie le score IA
+            resultat_matching = calculer_score_matching(request.user, offre)
+
             Candidature.objects.create(
                 offre=offre,
                 candidat=request.user,
                 lettre_motivation=serializer.validated_data.get('lettre_motivation', ''),
-                
-                # 🔴 CORRECTION 2 : C'EST ICI QU'IL MANQUAIT LA LIGNE POUR SAUVER LE FICHIER !
-                lettre_motivation_file=serializer.validated_data.get('lettre_motivation_file', None)
+                lettre_motivation_file=serializer.validated_data.get('lettre_motivation_file', None),
+                score_matching=resultat_matching["total"],
+                details_matching=resultat_matching["details"],
+                statut='RECUE' 
             )
+
+            # ==========================================
+            # 👇 NOUVEAU : ENVOI DE L'EMAIL AU RECRUTEUR 👇
+            # ==========================================
+            email_employeur = offre.entreprise.user.email
+            if email_employeur:
+                nom_candidat = f"{request.user.first_name} {request.user.last_name}"
+                sujet = f"Nouvelle candidature pour : {offre.titre}"
+                
+                message = f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
+                message += f"Un nouveau candidat ({nom_candidat}) vient de postuler à votre offre '{offre.titre}'.\n"
+                message += f"🤖 L'IA de TafTech a analysé son profil et lui a attribué un score de correspondance de {resultat_matching['total']}%.\n\n"
+                message += "Connectez-vous à votre tableau de bord TafTech pour examiner son dossier complet.\n\n"
+                message += "L'équipe TafTech."
+                
+                try:
+                    send_mail(
+                        subject=sujet, 
+                        message=message, 
+                        from_email=settings.EMAIL_HOST_USER, 
+                        recipient_list=[email_employeur], 
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print(f"Erreur envoi email employeur : {e}")
+
             return Response({"message": "Candidature envoyée avec succès !"}, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -98,15 +131,14 @@ class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # 1. Vérifie si le profil existe
         if not hasattr(request.user, 'profil_entreprise'):
-            return Response(
-                {"error": "Vous devez créer un profil entreprise d'abord."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "Profil entreprise inexistant."}, status=403)
             
+        # 2. Vérifie si l'entreprise est approuvée par l'admin
         if not request.user.profil_entreprise.est_approuvee:
             return Response(
-                {"error": "Votre entreprise est en cours de vérification. Patience !"}, 
+                {"error": "Votre entreprise doit être validée par TafTech avant de publier."}, 
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -138,10 +170,7 @@ class DashboardRecruteurAPIView(APIView):
         
         return Response(data, status=status.HTTP_200_OK)
 class UpdateCandidatureStatusAPIView(APIView):
-    """
-    Endpoint pour qu'un recruteur modifie le statut d'une candidature.
-    URL : /api/jobs/candidatures/<id_candidature>/statut/
-    """
+    """ Endpoint pour qu'un recruteur modifie le statut d'une candidature. """
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, candidature_id):
@@ -150,22 +179,88 @@ class UpdateCandidatureStatusAPIView(APIView):
         except Candidature.DoesNotExist:
             return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        # SÉCURITÉ : On vérifie que c'est bien LE recruteur de CETTE offre qui essaie de modifier
         if not hasattr(request.user, 'profil_entreprise') or candidature.offre.entreprise != request.user.profil_entreprise:
             return Response({"error": "Vous n'avez pas l'autorisation de modifier cette candidature."}, status=status.HTTP_403_FORBIDDEN)
 
-        # On récupère le nouveau statut envoyé par React
         nouveau_statut = request.data.get('statut')
-        
-        # On vérifie que le statut fait bien partie des choix autorisés
         statuts_valides = [choix[0] for choix in Candidature.STATUTS]
         if nouveau_statut not in statuts_valides:
             return Response({"error": "Statut invalide."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # On sauvegarde la modification
         candidature.statut = nouveau_statut
+        nom_entreprise = candidature.offre.entreprise.nom_entreprise
+
+        # ==========================================
+        # GESTION DE L'ENTRETIEN & EMAIL (3ème personne)
+        # ==========================================
+        if nouveau_statut == 'ENTRETIEN':
+            date_entretien_str = request.data.get('date_entretien')
+            message_custom = request.data.get('message_entretien', '')
+
+            if date_entretien_str:
+                candidature.date_entretien = parse_datetime(date_entretien_str)
+
+            email_destinataire = candidature.candidat.email if candidature.candidat else candidature.email_rapide
+            nom_candidat = candidature.candidat.first_name if candidature.candidat else candidature.prenom_rapide
+
+            if email_destinataire:
+                sujet = f"Convocation à un entretien - {nom_entreprise}"
+                corps_email = f"Bonjour {nom_candidat},\n\n"
+                corps_email += f"L'entreprise {nom_entreprise} a été vivement intéressée par votre profil concernant le poste de {candidature.offre.titre}.\n"
+                corps_email += f"Elle a le plaisir de vous convier à un entretien afin d'échanger plus en détail sur votre candidature.\n\n"
+                corps_email += f"Voici les informations concernant votre rendez-vous :\n"
+                if date_entretien_str:
+                    date_formattee = date_entretien_str.replace('T', ' à ')
+                    corps_email += f"📅 Date et heure : {date_formattee}\n"
+                if message_custom:
+                    corps_email += f"💬 Message de l'entreprise :\n{message_custom}\n"
+                corps_email += f"\nNous vous souhaitons une excellente préparation pour cet échange.\n\nCordialement,\nLe service recrutement de {nom_entreprise}\n(Via la plateforme TafTech)"
+
+                try:
+                    send_mail(subject=sujet, message=corps_email, from_email=settings.EMAIL_HOST_USER, recipient_list=[email_destinataire], fail_silently=True)
+                except Exception as e:
+                    print(f"Erreur envoi email : {e}")
+            
+            candidature.message_entretien = message_custom
+
         candidature.save()
-        
+
+        # ==========================================
+        # 👇 NOUVEAU : CRÉATION DE LA NOTIFICATION (INBOX) 👇
+        # ==========================================
+        if candidature.candidat: # On ne notifie que les candidats qui ont un compte
+            titre_notif = ""
+            message_notif = ""
+            type_n = 'INFO'
+
+            if nouveau_statut == 'ENTRETIEN':
+                type_n = 'ENTRETIEN'
+                titre_notif = f"Entretien programmé chez {nom_entreprise}"
+                message_notif = f"Vous avez été convié à un entretien pour le poste de {candidature.offre.titre}.\n"
+                if candidature.date_entretien:
+                    message_notif += f"📅 Prévu le : {candidature.date_entretien.strftime('%d/%m/%Y à %H:%M')}\n"
+                if candidature.message_entretien:
+                    message_notif += f"💬 Message : {candidature.message_entretien}"
+            elif nouveau_statut == 'RETENU':
+                type_n = 'RETENU'
+                titre_notif = f"🎉 Félicitations ! Vous êtes retenu chez {nom_entreprise}"
+                message_notif = f"L'entreprise {nom_entreprise} a validé votre profil pour le poste de {candidature.offre.titre}."
+            elif nouveau_statut == 'REFUSE':
+                type_n = 'REFUS'
+                titre_notif = f"Candidature non retenue - {nom_entreprise}"
+                message_notif = f"Malheureusement, {nom_entreprise} n'a pas retenu votre candidature pour le poste de {candidature.offre.titre}."
+            elif nouveau_statut == 'EN_COURS':
+                titre_notif = f"Candidature en cours d'étude - {nom_entreprise}"
+                message_notif = f"Votre candidature pour {candidature.offre.titre} est actuellement en cours d'examen."
+
+            if titre_notif:
+                Notification.objects.create(
+                    destinataire=candidature.candidat,
+                    type_notif=type_n,
+                    titre=titre_notif,
+                    message=message_notif
+                )
+
         return Response({"message": "Statut mis à jour avec succès !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
 class ProfilCandidatAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -264,15 +359,24 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "wilaya_siege": profil.wilaya_siege,
             "secteur_activite": profil.secteur_activite
         }, status=status.HTTP_200_OK)
-class AdminOffresListAPIView(APIView):
-    """ Récupère TOUTES les offres pour le tableau de bord Admin """
-    permission_classes = [IsAdminUser] # Sécurité : Seul le super-admin y a accès
 
+class AdminPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+class AdminOffresListAPIView(APIView):
+    permission_classes = [IsAdminUser]
     def get(self, request):
-        # L'admin voit tout, trié par les plus récentes
+        search = request.query_params.get('search', '')
         offres = OffreEmploi.objects.all().order_by('-date_publication')
-        serializer = OffreEmploiSerializer(offres, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if search:
+            offres = offres.filter(
+                Q(titre__icontains=search) | Q(entreprise__nom_entreprise__icontains=search)
+            )
+        paginator = AdminPagination()
+        result_page = paginator.paginate_queryset(offres, request)
+        serializer = OffreEmploiSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 class AdminOffreModerateAPIView(APIView):
     """ Permet à l'Admin d'approuver, rejeter ou corriger une offre """
     permission_classes = [IsAdminUser]
@@ -295,13 +399,18 @@ class AdminOffreModerateAPIView(APIView):
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class AdminEntreprisesListAPIView(APIView):
-    """ Récupère TOUTES les entreprises pour l'Admin """
     permission_classes = [IsAdminUser]
-
     def get(self, request):
-        entreprises = ProfilEntreprise.objects.all()
-        serializer = EntrepriseDashboardDetailSerializer(entreprises, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        search = request.query_params.get('search', '')
+        entreprises = ProfilEntreprise.objects.all().order_by('-id')
+        if search:
+            entreprises = entreprises.filter(
+                Q(nom_entreprise__icontains=search) | Q(registre_commerce__icontains=search)
+            )
+        paginator = AdminPagination()
+        result_page = paginator.paginate_queryset(entreprises, request)
+        serializer = EntrepriseDashboardDetailSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 class AdminEntrepriseModerateAPIView(APIView):
     """ Permet d'approuver ou de suspendre une entreprise """
     permission_classes = [IsAdminUser]
@@ -331,17 +440,22 @@ class AdminStatsAPIView(APIView):
             "entreprises_attente": ProfilEntreprise.objects.filter(est_approuvee=False).count(),
             "total_candidats": User.objects.filter(role='CANDIDAT').count(),
             "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
+            "total_recrutements": Candidature.objects.filter(statut='RETENU').count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
 class AdminUsersListAPIView(APIView):
-    """ Liste de tous les utilisateurs inscrits """
     permission_classes = [IsAdminUser]
-
     def get(self, request):
-        # On exclut le super-admin lui-même pour éviter qu'il ne se bloque par erreur
+        search = request.query_params.get('search', '')
         users = User.objects.exclude(is_superuser=True).order_by('-date_joined')
-        serializer = AdminUserSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if search:
+            users = users.filter(
+                Q(first_name__icontains=search) | Q(last_name__icontains=search) | Q(email__icontains=search)
+            )
+        paginator = AdminPagination()
+        result_page = paginator.paginate_queryset(users, request)
+        serializer = AdminUserSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 class AdminUserModerateAPIView(APIView):
     """ Permet de bloquer (is_active=False) ou débloquer un utilisateur """
     permission_classes = [IsAdminUser]
@@ -576,3 +690,205 @@ class ParametresNotificationsAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EntrepriseDetailAPIView(APIView):
+    """
+    Endpoint public pour consulter le profil d'une entreprise et ses offres.
+    URL : /api/jobs/entreprises/<id>/
+    """
+    permission_classes = [AllowAny] # Accessible à tous (visiteurs, candidats)
+
+    def get(self, request, entreprise_id):
+        try:
+            # On ne montre que les entreprises qui ont été approuvées par l'Admin
+            entreprise = ProfilEntreprise.objects.get(id=entreprise_id, est_approuvee=True)
+            serializer = EntreprisePublicSerializer(entreprise)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except ProfilEntreprise.DoesNotExist:
+            return Response(
+                {"error": "Entreprise introuvable ou en cours de validation."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class PublicStatsAPIView(APIView):
+    """ Renvoie les statistiques publiques pour la page d'accueil """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        stats = {
+            # On compte uniquement les offres en ligne et les entreprises approuvées
+            "total_offres": OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False).count(),
+            "total_entreprises": ProfilEntreprise.objects.filter(est_approuvee=True).count(),
+            "total_candidats": User.objects.filter(role='CANDIDAT', is_active=True).count(),
+            "total_recrutements": Candidature.objects.filter(statut='RETENU').count(),
+        }
+        return Response(stats, status=status.HTTP_200_OK)
+
+class PostulerRapideAPIView(APIView):
+    """
+    Endpoint pour la postulation rapide (sans compte).
+    URL : /api/jobs/<id_offre>/postuler-rapide/
+    """
+    permission_classes = [AllowAny] 
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, offre_id):
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
+
+        email = request.data.get('email_rapide')
+        if Candidature.objects.filter(offre=offre, email_rapide=email).exists():
+            return Response({"error": "Vous avez déjà postulé à cette offre avec cet email."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = PostulerRapideDTO(data=request.data)
+        if serializer.is_valid():
+            nom_rapide = serializer.validated_data.get('nom_rapide')
+            prenom_rapide = serializer.validated_data.get('prenom_rapide')
+
+            Candidature.objects.create(
+                offre=offre,
+                est_rapide=True,
+                nom_rapide=nom_rapide,
+                prenom_rapide=prenom_rapide,
+                email_rapide=serializer.validated_data.get('email_rapide'),
+                telephone_rapide=serializer.validated_data.get('telephone_rapide'),
+                cv_rapide=serializer.validated_data.get('cv_rapide'),
+                lettre_motivation=serializer.validated_data.get('lettre_motivation', ''),
+                score_matching=0, 
+                details_matching={"message": "Candidature rapide, pas d'analyse IA disponible."},
+                statut='RECUE' 
+            )
+
+            # ==========================================
+            # 👇 NOUVEAU : ENVOI DE L'EMAIL AU RECRUTEUR 👇
+            # ==========================================
+            email_employeur = offre.entreprise.user.email
+            if email_employeur:
+                sujet = f"Nouvelle Candidature Express pour : {offre.titre}"
+                
+                message = f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
+                message += f"Un candidat ({nom_rapide} {prenom_rapide}) vient de postuler via la fonction 'Postulation Rapide' à votre offre '{offre.titre}'.\n"
+                message += "S'agissant d'une candidature sans compte, l'analyse IA n'est pas disponible pour ce profil.\n\n"
+                message += "Connectez-vous à votre tableau de bord TafTech pour consulter son CV PDF.\n\n"
+                message += "L'équipe TafTech."
+                
+                try:
+                    send_mail(
+                        subject=sujet, 
+                        message=message, 
+                        from_email=settings.EMAIL_HOST_USER, 
+                        recipient_list=[email_employeur], 
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print(f"Erreur envoi email employeur : {e}")
+
+            return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class OffresRecommandeesAPIView(APIView):
+    """
+    Scanne toutes les offres actives et retourne les "Top Matchs" pour le candidat connecté.
+    URL: /api/jobs/recommandations/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not hasattr(request.user, 'profil_candidat'):
+            return Response([], status=status.HTTP_200_OK)
+            
+        # Prendre toutes les offres en ligne
+        offres_actives = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
+        
+        offres_scorees = []
+        for offre in offres_actives:
+            # On utilise le même algorithme que le recruteur !
+            resultat = calculer_score_matching(request.user, offre)
+            
+            # On ne garde que les offres "Intéressantes" (>= 60%)
+            if resultat['total'] >= 60:
+                offre_data = OffreEmploiSerializer(offre).data
+                offre_data['matching_score'] = resultat['total']  # On injecte le score
+                offres_scorees.append(offre_data)
+                
+        # On trie les offres de la meilleure à la moins bonne
+        offres_scorees.sort(key=lambda x: x['matching_score'], reverse=True)
+        
+        # On renvoie le Top 10 pour ne pas surcharger la page
+        return Response(offres_scorees[:10], status=status.HTTP_200_OK)
+
+class NotificationListAPIView(APIView):
+    """ Récupère la boîte de réception du candidat """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # On ne récupère que les notifs de l'utilisateur connecté
+        notifs = Notification.objects.filter(destinataire=request.user)
+        serializer = NotificationSerializer(notifs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class MarkNotificationReadAPIView(APIView):
+    """ Marque un message comme 'lu' """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, notif_id):
+        try:
+            notif = Notification.objects.get(id=notif_id, destinataire=request.user)
+            notif.lue = True
+            notif.save()
+            return Response({"message": "Message marqué comme lu."}, status=status.HTTP_200_OK)
+        except Notification.DoesNotExist:
+            return Response({"error": "Message introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+class AdminBroadcastEmailAPIView(APIView):
+    """
+    Permet à l'administrateur d'envoyer un email massif (Newsletter ou Offre Exclusive)
+    aux candidats ayant accepté ces notifications.
+    """
+    permission_classes = [IsAdminUser] # Sécurité absolue
+
+    def post(self, request):
+        sujet = request.data.get('sujet')
+        message = request.data.get('message')
+        type_envoi = request.data.get('type_envoi') # 'NEWSLETTER' ou 'EXCLUSIF'
+
+        if not sujet or not message or type_envoi not in ['NEWSLETTER', 'EXCLUSIF']:
+            return Response({"error": "Sujet, message et type d'envoi valides sont requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # On cible les candidats selon leur préférence
+        if type_envoi == 'NEWSLETTER':
+            profils = ProfilCandidat.objects.filter(notif_newsletter=True)
+        else:
+            profils = ProfilCandidat.objects.filter(notif_offres_exclusives=True)
+
+        liste_emails = [profil.user.email for profil in profils if profil.user.email]
+
+        if not liste_emails:
+            return Response({"message": "Aucun candidat n'est abonné à cette liste."}, status=status.HTTP_200_OK)
+
+        # On envoie l'email en masse
+        try:
+            # En Django, on peut utiliser recipient_list, mais pour éviter que les candidats
+            # voient les adresses des autres, on utilise send_mass_mail ou une boucle (bcc).
+            # On le fait proprement pour cacher les destinataires :
+            from django.core.mail import EmailMessage
+            
+            email = EmailMessage(
+                subject=sujet,
+                body=message,
+                from_email=settings.EMAIL_HOST_USER,
+                to=[settings.EMAIL_HOST_USER], # L'admin s'envoie l'email à lui-même...
+                bcc=liste_emails # ...et met tous les candidats en copie cachée
+            )
+            email.send(fail_silently=False)
+            
+            return Response({
+                "message": f"Succès : Email '{type_envoi}' envoyé en copie cachée à {len(liste_emails)} candidat(s) !"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({"error": f"Erreur lors de l'envoi : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

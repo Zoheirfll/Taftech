@@ -4,6 +4,9 @@ import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 
+// 👇 1. ON IMPORTE LE FICHIER DES COMMUNES ICI 👇
+import communesAlgerie from "../data/communes.json";
+
 const ProfilCandidat = () => {
   const [loading, setLoading] = useState(true);
   const [profil, setProfil] = useState(null);
@@ -13,14 +16,12 @@ const ProfilCandidat = () => {
     diplomes: [],
   });
 
-  // --- ÉTATS POUR TOUS LES MODALS ---
   const [showExpForm, setShowExpForm] = useState(false);
   const [showFormForm, setShowFormForm] = useState(false);
   const [showCVForm, setShowCVForm] = useState(false);
   const [showInfoForm, setShowInfoForm] = useState(false);
   const [showPrefForm, setShowPrefForm] = useState(false);
 
-  // --- ÉTATS POUR LES DONNÉES DES FORMULAIRES ---
   const [newExp, setNewExp] = useState({
     titre_poste: "",
     entreprise: "",
@@ -35,6 +36,7 @@ const ProfilCandidat = () => {
     date_fin: "",
     description: "",
   });
+
   const [editInfo, setEditInfo] = useState({});
   const [editPref, setEditPref] = useState({});
   const [editCV, setEditCV] = useState({ titre: "", file: null });
@@ -52,18 +54,19 @@ const ProfilCandidat = () => {
       setProfil(pData);
       setConstants(cData);
 
-      // Pré-remplissage des informations personnelles
       setEditInfo({
         first_name: pData.first_name,
         last_name: pData.last_name,
-        telephone: pData.telephone,
-        wilaya: pData.wilaya,
+        telephone: pData.telephone || "",
+        wilaya: pData.wilaya || "",
+        commune: pData.commune || "",
+        diplome: pData.diplome || "",
+        specialite: pData.specialite || "",
         service_militaire: pData.service_militaire || "",
         permis_conduire: pData.permis_conduire || false,
         passeport_valide: pData.passeport_valide || false,
       });
 
-      // Pré-remplissage des préférences de recrutement
       setEditPref({
         secteur_souhaite: pData.secteur_souhaite || "",
         salaire_souhaite: pData.salaire_souhaite || "",
@@ -71,19 +74,30 @@ const ProfilCandidat = () => {
         situation_actuelle: pData.situation_actuelle || "",
       });
 
-      // Pré-remplissage du CV
       setEditCV({ titre: pData.titre_professionnel || "", file: null });
     } catch (err) {
-      (toast.error("Erreur de synchronisation avec le serveur."),
-        console.log(err));
+      toast.error("Erreur de synchronisation avec le serveur.");
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- FONCTIONS DE MISE À JOUR ---
+  // 👇 2. LA FONCTION QUI FILTRE LES COMMUNES SELON LA WILAYA 👇
+  const getCommunesOptions = () => {
+    if (!editInfo.wilaya) return [];
+    // On extrait le "31" de "31 - Oran"
+    const wilayaCode = editInfo.wilaya.split(" - ")[0];
+    return communesAlgerie
+      .filter((c) => c.wilaya_code === wilayaCode)
+      .map((c) => ({
+        value: c.commune_name_ascii,
+        label: c.commune_name_ascii,
+      }));
+  };
+
   const handleUpdateGeneric = async (e, dataState, setModalState) => {
-    e.preventDefault(); // <-- AJOUT TRÈS IMPORTANT
+    e.preventDefault();
     try {
       const formData = new FormData();
       Object.keys(dataState).forEach((key) =>
@@ -94,7 +108,8 @@ const ProfilCandidat = () => {
       setModalState(false);
       fetchData();
     } catch (err) {
-      (toast.error("Erreur lors de la mise à jour"), console.log(err));
+      toast.error("Erreur lors de la mise à jour");
+      console.log(err);
     }
   };
 
@@ -109,7 +124,8 @@ const ProfilCandidat = () => {
       setShowCVForm(false);
       fetchData();
     } catch (err) {
-      (toast.error("Erreur lors de l'envoi du fichier"), console.log(err));
+      toast.error("Erreur lors de l'envoi du fichier");
+      console.log(err);
     }
   };
 
@@ -123,8 +139,8 @@ const ProfilCandidat = () => {
       toast.success("Photo de profil mise à jour !");
       fetchData();
     } catch (err) {
-      (toast.error("Erreur lors du téléchargement de la photo."),
-        console.log(err));
+      toast.error("Erreur lors du téléchargement de la photo.");
+      console.log(err);
     }
   };
 
@@ -143,7 +159,8 @@ const ProfilCandidat = () => {
       });
       fetchData();
     } catch (err) {
-      (toast.error("Vérifiez les données de l'expérience."), console.log(err));
+      toast.error("Vérifiez les données de l'expérience.");
+      console.log(err);
     }
   };
 
@@ -153,7 +170,8 @@ const ProfilCandidat = () => {
         await profilService.deleteExperience(id);
         fetchData();
       } catch (err) {
-        (toast.error("Erreur de suppression"), console.log(err));
+        toast.error("Erreur de suppression");
+        console.log(err);
       }
     }
   };
@@ -173,7 +191,8 @@ const ProfilCandidat = () => {
       });
       fetchData();
     } catch (err) {
-      (toast.error("Erreur lors de l'ajout de la formation"), console.log(err));
+      toast.error("Erreur lors de l'ajout de la formation");
+      console.log(err);
     }
   };
 
@@ -183,7 +202,8 @@ const ProfilCandidat = () => {
         await profilService.deleteFormation(id);
         fetchData();
       } catch (err) {
-        (toast.error("Erreur de suppression"), console.log(err));
+        toast.error("Erreur de suppression");
+        console.log(err);
       }
     }
   };
@@ -222,7 +242,6 @@ const ProfilCandidat = () => {
     fetchData();
   };
 
-  // --- HELPERS ---
   const getPhotoUrl = (path) => {
     if (!path) return null;
     return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
@@ -238,7 +257,6 @@ const ProfilCandidat = () => {
       );
   };
 
-  // --- AFFICHAGE DU CHARGEMENT ---
   if (loading)
     return (
       <div className="flex justify-center items-center h-64">
@@ -252,9 +270,6 @@ const ProfilCandidat = () => {
         Mon Profil Professionnel
       </h1>
 
-      {/* ======================================================= */}
-      {/* SECTION 1 : MON CV */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex justify-between items-start">
         <div>
           <h2 className="font-black text-gray-900 text-lg mb-2">Mon CV</h2>
@@ -276,9 +291,6 @@ const ProfilCandidat = () => {
         </button>
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 2 : INFORMATIONS PERSONNELLES */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-start mb-6">
           <h2 className="font-black text-gray-900 text-lg">
@@ -292,9 +304,9 @@ const ProfilCandidat = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-6 mb-8">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
           <div className="relative">
-            <div className="w-20 h-20 bg-gray-100 rounded-[1.5rem] flex items-center justify-center text-gray-400 text-3xl overflow-hidden border-2 border-gray-200 shadow-sm">
+            <div className="w-24 h-24 bg-gray-100 rounded-[1.5rem] flex items-center justify-center text-gray-400 text-3xl overflow-hidden border-2 border-gray-200 shadow-sm">
               {profil.photo_profil ? (
                 <img
                   src={getPhotoUrl(profil.photo_profil)}
@@ -315,13 +327,21 @@ const ProfilCandidat = () => {
               />
             </label>
           </div>
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-2xl font-black text-gray-900">
               {profil.first_name} {profil.last_name}
             </h3>
-            <p className="text-gray-500 font-medium">
-              📍 {profil.wilaya || "Algérie"}
-            </p>
+
+            <div className="mt-2 space-y-1">
+              <p className="text-gray-600 font-bold text-sm flex items-center justify-center md:justify-start gap-2">
+                📍 {profil.wilaya || "Wilaya non renseignée"}{" "}
+                {profil.commune ? `- ${profil.commune}` : ""}
+              </p>
+              <p className="text-gray-600 font-bold text-sm flex items-center justify-center md:justify-start gap-2">
+                🎓 {formatText(profil.diplome) || "Diplôme non renseigné"} | 🛠️{" "}
+                {formatText(profil.specialite) || "Spécialité non renseignée"}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -368,7 +388,7 @@ const ProfilCandidat = () => {
           <h4 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-3">
             Contact
           </h4>
-          <div className="flex gap-10 text-sm font-bold text-gray-700">
+          <div className="flex flex-wrap gap-10 text-sm font-bold text-gray-700">
             <p className="flex items-center gap-2">
               <span>📞</span> {profil.telephone || "Non renseigné"}
             </p>
@@ -379,9 +399,6 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 3 : PRÉFÉRENCES DE RECRUTEMENT */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-start mb-6">
           <h2 className="font-black text-gray-900 text-lg">
@@ -430,9 +447,6 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 4 : EXPÉRIENCES */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-lg font-black text-gray-900">Vos expériences</h2>
@@ -483,9 +497,6 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 5 : FORMATIONS */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-lg font-black text-gray-900">
@@ -535,9 +546,6 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 6 : COMPÉTENCES */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-black text-gray-900 mb-6">Compétences</h2>
         <div className="flex flex-wrap gap-2 mb-6">
@@ -569,9 +577,6 @@ const ProfilCandidat = () => {
         />
       </section>
 
-      {/* ======================================================= */}
-      {/* SECTION 7 : LANGUES */}
-      {/* ======================================================= */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-black text-gray-900 mb-6">Langues</h2>
         <div className="flex flex-wrap gap-3 mb-8">
@@ -633,14 +638,10 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* ======================================================= */}
-      {/* TOUS LES MODALS (POP-UPS) DE L'APPLICATION */}
-      {/* ======================================================= */}
-
       {/* 1. Modal Modifier Informations Personnelles */}
       {showInfoForm && (
         <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl animate-slideUp">
+          <div className="bg-white rounded-[2rem] p-10 max-w-xl w-full shadow-2xl animate-slideUp overflow-y-auto max-h-[90vh]">
             <h3 className="text-2xl font-black mb-8 text-gray-900 text-center tracking-tight">
               Informations personnelles
             </h3>
@@ -678,6 +679,7 @@ const ProfilCandidat = () => {
                   />
                 </div>
               </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
                   Téléphone
@@ -692,26 +694,135 @@ const ProfilCandidat = () => {
                   }
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
-                  Wilaya de résidence
-                </label>
-                <Select
-                  options={constants.wilayas}
-                  placeholder="Sélectionnez..."
-                  onChange={(opt) =>
-                    setEditInfo({ ...editInfo, wilaya: opt.label })
-                  }
-                  styles={{
-                    control: (b) => ({
-                      ...b,
-                      borderRadius: "1rem",
-                      padding: "0.4rem",
-                      border: "none",
-                      backgroundColor: "#f9fafb",
-                    }),
-                  }}
-                />
+
+              {/* 👇 LES DEUX LISTES DÉROULANTES EN CASCADE 👇 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
+                    Wilaya
+                  </label>
+                  <Select
+                    options={constants.wilayas}
+                    value={
+                      constants.wilayas.find(
+                        (w) => w.value === editInfo.wilaya,
+                      ) || null
+                    }
+                    placeholder="Sélectionnez..."
+                    onChange={(opt) =>
+                      setEditInfo({
+                        ...editInfo,
+                        wilaya: opt ? opt.value : "",
+                        commune: "",
+                      })
+                    }
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "1rem",
+                        padding: "0.4rem",
+                        border: "none",
+                        backgroundColor: "#f9fafb",
+                      }),
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
+                    Commune
+                  </label>
+                  <Select
+                    options={getCommunesOptions()}
+                    isDisabled={
+                      !editInfo.wilaya || getCommunesOptions().length === 0
+                    }
+                    value={
+                      getCommunesOptions().find(
+                        (c) => c.value === editInfo.commune,
+                      ) || null
+                    }
+                    placeholder={
+                      editInfo.wilaya ? "Sélectionnez..." : "Wilaya d'abord"
+                    }
+                    onChange={(opt) =>
+                      setEditInfo({
+                        ...editInfo,
+                        commune: opt ? opt.value : "",
+                      })
+                    }
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "1rem",
+                        padding: "0.4rem",
+                        border: "none",
+                        backgroundColor: "#f9fafb",
+                      }),
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 👇 PROFIL PRINCIPAL POUR L'IA 👇 */}
+              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
+                    Plus haut diplôme
+                  </label>
+                  <Select
+                    options={constants.diplomes}
+                    value={
+                      constants.diplomes.find(
+                        (d) => d.value === editInfo.diplome,
+                      ) || null
+                    }
+                    placeholder="Sélectionnez..."
+                    onChange={(opt) =>
+                      setEditInfo({
+                        ...editInfo,
+                        diplome: opt ? opt.value : "",
+                      })
+                    }
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "1rem",
+                        padding: "0.4rem",
+                        border: "none",
+                        backgroundColor: "#f9fafb",
+                      }),
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
+                    Spécialité Principale
+                  </label>
+                  <Select
+                    options={constants.secteurs}
+                    value={
+                      constants.secteurs.find(
+                        (s) => s.value === editInfo.specialite,
+                      ) || null
+                    }
+                    placeholder="Sélectionnez..."
+                    onChange={(opt) =>
+                      setEditInfo({
+                        ...editInfo,
+                        specialite: opt ? opt.value : "",
+                      })
+                    }
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "1rem",
+                        padding: "0.4rem",
+                        border: "none",
+                        backgroundColor: "#f9fafb",
+                      }),
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Trio Administratif */}
@@ -758,7 +869,6 @@ const ProfilCandidat = () => {
                       }
                     />
                   </label>
-
                   <label className="flex items-center gap-3 text-sm font-bold text-gray-800 cursor-pointer group">
                     <div
                       className={`w-6 h-6 flex items-center justify-center rounded-md border-2 transition-all ${editInfo.passeport_valide ? "bg-blue-600 border-blue-600 text-white" : "border-gray-300 bg-white"}`}
@@ -820,13 +930,21 @@ const ProfilCandidat = () => {
                 </label>
                 <Select
                   options={constants.secteurs}
+                  value={
+                    constants.secteurs.find(
+                      (s) => s.value === editPref.secteur_souhaite,
+                    ) || null
+                  }
                   placeholder="Sélectionnez..."
                   onChange={(opt) =>
-                    setEditPref({ ...editPref, secteur_souhaite: opt.value })
+                    setEditPref({
+                      ...editPref,
+                      secteur_souhaite: opt ? opt.value : "",
+                    })
                   }
                   styles={{
-                    control: (b) => ({
-                      ...b,
+                    control: (base) => ({
+                      ...base,
                       borderRadius: "1rem",
                       padding: "0.4rem",
                       border: "none",
@@ -851,7 +969,6 @@ const ProfilCandidat = () => {
                   }
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
@@ -893,7 +1010,6 @@ const ProfilCandidat = () => {
                   </select>
                 </div>
               </div>
-
               <div className="flex gap-4 pt-6">
                 <button
                   type="button"
@@ -1076,8 +1192,8 @@ const ProfilCandidat = () => {
                     setNewForm({ ...newForm, diplome: opt.label })
                   }
                   styles={{
-                    control: (b) => ({
-                      ...b,
+                    control: (base) => ({
+                      ...base,
                       borderRadius: "1rem",
                       padding: "0.4rem",
                       border: "none",

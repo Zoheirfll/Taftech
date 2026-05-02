@@ -105,6 +105,9 @@ class ProfilEntreprise(models.Model):
     secteur_activite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, verbose_name="Secteur d'activité")
     wilaya_siege = models.CharField(max_length=100, choices=WILAYAS_CHOICES, verbose_name="Wilaya du siège social")
     
+    # 👇 NOUVEAU : Ajout du champ pour la commune du siège 👇
+    commune_siege = models.CharField(max_length=150, blank=True, null=True, verbose_name="Commune du siège")
+    
     registre_commerce = models.CharField(max_length=50, unique=True, verbose_name="Numéro de Registre de Commerce (RC)")
     description = models.TextField(blank=True, null=True, verbose_name="Présentation de l'entreprise")
     logo = models.ImageField(upload_to='logos_entreprises/', blank=True, null=True)
@@ -150,17 +153,34 @@ class OffreEmploi(models.Model):
 
 class Candidature(models.Model):
     """
-    Représente la candidature d'un utilisateur à une offre.
+    Représente la candidature d'un utilisateur à une offre (Connecté OU Rapide).
     """
     STATUTS = (
-        ('EN_ATTENTE', 'En attente d\'examen'),
-        ('EXAMINEE', 'Candidature examinée'),
-        ('ACCEPTEE', 'Retenu pour entretien'),
-        ('REFUSEE', 'Candidature refusée'),
+        ('RECUE', '🟡 Candidature reçue'),
+        ('EN_COURS', '🔵 En cours d’étude'),
+        ('ENTRETIEN', '🟠 Entretien programmé'),
+        ('RETENU', '🟢 Candidat retenu'),
+        ('REFUSE', '🔴 Candidat refusé'),
     )
 
     offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='candidatures')
-    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidatures')
+    
+    # 👇 MODIFIÉ : null=True, blank=True car un visiteur rapide n'a pas de compte
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidatures', null=True, blank=True)
+    
+    # 👇 NOUVEAUX CHAMPS POUR LA POSTULATION RAPIDE 👇
+    est_rapide = models.BooleanField(default=False, verbose_name="Postulation Rapide")
+    nom_rapide = models.CharField(max_length=150, blank=True, null=True)
+    prenom_rapide = models.CharField(max_length=150, blank=True, null=True)
+    email_rapide = models.EmailField(blank=True, null=True)
+    telephone_rapide = models.CharField(max_length=50, blank=True, null=True)
+    cv_rapide = models.FileField(
+        upload_to='cv_rapide/', 
+        blank=True, 
+        null=True, 
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])]
+    )
+
     date_postulation = models.DateTimeField(auto_now_add=True)
     lettre_motivation = models.TextField(blank=True, null=True, verbose_name="Lettre de motivation (Optionnelle)")
     lettre_motivation_file = models.FileField(
@@ -170,14 +190,30 @@ class Candidature(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])],
         verbose_name="Lettre de motivation (Fichier)"
     )
-    statut = models.CharField(max_length=20, choices=STATUTS, default='EN_ATTENTE')
+    
+    statut = models.CharField(max_length=20, choices=STATUTS, default='RECUE')
+    date_entretien = models.DateTimeField(null=True, blank=True, verbose_name="Date et heure de l'entretien")
+    message_entretien = models.TextField(blank=True, null=True, verbose_name="Message du recruteur")
+    score_matching = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True, 
+        verbose_name="Score de correspondance (%)"
+    )
+    
+    details_matching = models.JSONField(
+        null=True, 
+        blank=True, 
+        verbose_name="Détails du Matching"
+    )
 
-    class Meta:
-        unique_together = ('offre', 'candidat')
+    # ⚠️ ATTENTION : J'ai retiré le "unique_together" ici car 'candidat' peut être nul.
 
     def __str__(self):
-        return f"{self.candidat.username} -> {self.offre.titre}"
-
+        nom = self.candidat.username if self.candidat else f"{self.nom_rapide} {self.prenom_rapide} (Rapide)"
+        score_display = f" - {self.score_matching}%" if self.score_matching else ""
+        return f"{nom} -> {self.offre.titre}{score_display}"
 
 class ProfilCandidat(models.Model):
     """
@@ -212,13 +248,17 @@ class ProfilCandidat(models.Model):
     cv_pdf = models.FileField(upload_to='cvs/', blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])])
     photo_profil = models.ImageField(upload_to='photos_profil/', blank=True, null=True, verbose_name="Photo de profil")
 
-    # --- NOUVEAU : INFOS ADMINISTRATIVES ---
+    # --- NOUVEAU : INFOS LOCALISATION (Samira) ---
+    wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, blank=True, null=True, verbose_name="Wilaya de résidence")
+    commune = models.CharField(max_length=100, blank=True, null=True, verbose_name="Commune")
+
+    # --- INFOS ADMINISTRATIVES ---
     service_militaire = models.CharField(max_length=50, choices=SERVICE_MILITAIRE_CHOICES, blank=True, null=True)
     permis_conduire = models.BooleanField(default=False, verbose_name="Permis de conduire")
-    vehicule_personnel = models.BooleanField(default=False, verbose_name="Véhiculé") # Petit bonus très demandé
+    vehicule_personnel = models.BooleanField(default=False, verbose_name="Véhiculé") 
     passeport_valide = models.BooleanField(default=False, verbose_name="Passeport valide")
 
-    # --- NOUVEAU : PRÉFÉRENCES DE RECRUTEMENT ---
+    # --- PRÉFÉRENCES DE RECRUTEMENT ---
     secteur_souhaite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True)
     salaire_souhaite = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 80 000 DA")
     mobilite = models.CharField(max_length=50, choices=MOBILITE_CHOICES, blank=True, null=True)
@@ -231,21 +271,13 @@ class ProfilCandidat(models.Model):
     competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
     langues = models.CharField(max_length=255, blank=True, null=True, verbose_name="Langues")
     
-# --- NOUVEAU : PRÉFÉRENCES DE RECRUTEMENT ---
-    secteur_souhaite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True)
-    salaire_souhaite = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 80 000 DA")
-    mobilite = models.CharField(max_length=50, choices=MOBILITE_CHOICES, blank=True, null=True)
-    situation_actuelle = models.CharField(max_length=50, choices=SITUATION_ACTUELLE, blank=True, null=True)
-
-    # 👇 AJOUTE CE BLOC ICI 👇
-    # --- NOUVEAU : PARAMÈTRES ET NOTIFICATIONS (UX Emploitic) ---
+    # --- PARAMÈTRES ET NOTIFICATIONS (UX Emploitic) ---
     notif_offres_exclusives = models.BooleanField(default=True, verbose_name="Offres exclusives et partenaires")
     notif_newsletter = models.BooleanField(default=True, verbose_name="Actualités et newsletter")
     notif_mise_a_jour = models.BooleanField(default=True, verbose_name="Emails de mise à jour")
-    # 👆 ---------------------- 👆
+    
     def __str__(self):
         return f"Profil de {self.user.username}"
-
 class ExperienceCandidat(models.Model):
     """
     Table pour stocker chaque expérience professionnelle séparément (comme les cartes Emploitic)
@@ -329,3 +361,29 @@ class AlerteEmploi(models.Model):
 
     def __str__(self):
         return f"Alerte de {self.candidat.username} - {self.mots_cles}"
+
+class Notification(models.Model):
+    """
+    Boîte de réception du candidat : Stocke les messages automatiques du système 
+    et les convocations aux entretiens.
+    """
+    TYPES_NOTIF = (
+        ('INFO', 'Information'),
+        ('ENTRETIEN', 'Entretien programmé'),
+        ('RETENU', 'Candidature retenue'),
+        ('REFUS', 'Candidature refusée'),
+        ('ALERTE', 'Alerte Emploi'),
+    )
+
+    destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    type_notif = models.CharField(max_length=20, choices=TYPES_NOTIF, default='INFO')
+    titre = models.CharField(max_length=200)
+    message = models.TextField()
+    lue = models.BooleanField(default=False, verbose_name="Message lu")
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_creation'] # Les messages les plus récents en premier
+
+    def __str__(self):
+        return f"{self.get_type_notif_display()} pour {self.destinataire.username}"

@@ -4,164 +4,165 @@ import logoTafTech from "../assets/logo-taftech.png";
 
 const Footer = () => {
   return (
-    <footer className="bg-[#f8f9fa] border-t border-gray-200 pt-16 pb-8 font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* === COLONNES PRINCIPALES === */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {/* Colonne 1 : Logo et Description */}
-          <div className="space-y-4">
-            <Link to="/">
-              <img
-                src={logoTafTech}
-                alt="TafTech Logo"
-                className="h-10 w-auto object-contain transform scale-150 origin-left ml-[-5px]"
-              />
-            </Link>
-            <p className="text-gray-600 text-sm leading-relaxed mt-4">
-              TafTech est la nouvelle plateforme dédiée à l'emploi et au
-              recrutement en Algérie. Connectez les talents d'aujourd'hui aux
-              entreprises de demain.
+    <footer className="bg-white border-t border-gray-100 font-sans">
+      {/* === SECTION 1 : NEWSLETTER (L'accroche) === */}
+      <div className="bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between gap-6">
+          <div className="text-center lg:text-left text-white">
+            <h3 className="text-xl font-black mb-1">
+              Ne ratez plus aucune opportunité
+            </h3>
+            <p className="text-blue-100 text-sm font-medium">
+              Recevez les meilleures offres de votre secteur chaque semaine.
             </p>
           </div>
-
-          {/* Colonne 2 : Espace Candidat (Basé sur tes vraies routes) */}
-          <div>
-            <h3 className="text-gray-900 font-bold tracking-widest text-sm uppercase mb-4">
-              Espace Candidat
-            </h3>
-            <ul className="space-y-3 text-sm text-gray-600">
-              <li>
-                <Link to="/offres" className="hover:text-blue-600 transition">
-                  Toutes les offres d'emploi
-                </Link>
-              </li>
-              <li>
-                <Link to="/profil" className="hover:text-blue-600 transition">
-                  Créer / Modifier mon CV
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/mes-candidatures"
-                  className="hover:text-blue-600 transition"
-                >
-                  Suivre mes candidatures
-                </Link>
-              </li>
-              <li>
-                <Link to="/register" className="hover:text-blue-600 transition">
-                  Créer un compte Candidat
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Colonne 3 : Espace Recruteur (Basé sur tes vraies routes) */}
-          <div>
-            <h3 className="text-gray-900 font-bold tracking-widest text-sm uppercase mb-4">
-              Espace Recruteur
-            </h3>
-            <ul className="space-y-3 text-sm text-gray-600">
-              <li>
-                <Link
-                  to="/creer-offre"
-                  className="hover:text-blue-600 transition"
-                >
-                  Publier une annonce
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/dashboard"
-                  className="hover:text-blue-600 transition"
-                >
-                  Accéder au Tableau de Bord
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/register-entreprise"
-                  className="hover:text-blue-600 transition"
-                >
-                  Créer un compte Entreprise
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Colonne 4 : À propos & Légal (Prêt pour tes futures pages) */}
-          <div>
-            <h3 className="text-gray-900 font-bold tracking-widest text-sm uppercase mb-4">
-              TafTech
-            </h3>
-            <ul className="space-y-3 text-sm text-gray-600">
-              {/* Ces liens pointent vers "/" en attendant que tu crées les pages */}
-              <li>
-                <Link to="/" className="hover:text-blue-600 transition">
-                  Qui sommes-nous ?
-                </Link>
-              </li>
-              <li>
-                <Link to="/" className="hover:text-blue-600 transition">
-                  Contactez-nous
-                </Link>
-              </li>
-              <li>
-                <Link to="/" className="hover:text-blue-600 transition">
-                  Conditions générales
-                </Link>
-              </li>
-              <li>
-                <Link to="/" className="hover:text-blue-600 transition">
-                  Politique de confidentialité
-                </Link>
-              </li>
-            </ul>
+          <div className="flex w-full max-w-md gap-2">
+            <input
+              type="email"
+              placeholder="Votre email..."
+              className="flex-1 px-4 py-3 rounded-xl outline-none font-bold text-gray-800 text-sm"
+            />
+            <button className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-black transition-all shadow-lg active:scale-95">
+              S'INSCRIRE
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* === PARTIE INFÉRIEURE (Copyright et Réseaux) === */}
-        <div className="border-t border-gray-300 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          {/* Texte de gauche */}
-          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-sm text-gray-600">
-            <div className="font-black text-blue-600 tracking-wider">
-              TAFTECH
+      {/* === SECTION 2 : LIENS PRINCIPAUX === */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+          {/* Brand & Socials */}
+          <div className="space-y-6">
+            <Link
+              to="/"
+              className="inline-block transition-transform hover:scale-105"
+            >
+              <img
+                src={logoTafTech}
+                alt="TafTech"
+                className="h-10 w-auto object-contain transform scale-150 origin-left"
+              />
+            </Link>
+            <p className="text-gray-500 text-sm leading-relaxed font-medium">
+              La plateforme de recrutement nouvelle génération en Algérie. L'IA
+              au service de votre carrière.
+            </p>
+            <div className="flex gap-4">
+              {["facebook-f", "linkedin-in", "instagram"].map((icon) => (
+                <a
+                  key={icon}
+                  href="#"
+                  className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-blue-600 hover:text-white transition-all duration-300"
+                >
+                  <i className={`fab fa-${icon}`}></i>
+                </a>
+              ))}
             </div>
-            <div className="hidden md:block w-1 h-1 bg-gray-400 rounded-full"></div>
-            <p>Propulsez votre carrière en Algérie</p>
           </div>
 
-          {/* Icônes de droite (Réseaux sociaux) */}
-          <div className="flex items-center gap-6 text-gray-600">
-            <a
-              href="#"
-              className="hover:text-blue-600 transition"
-              aria-label="Facebook"
-            >
-              <svg fill="currentColor" className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
-              </svg>
-            </a>
-            <a href="#" className="hover:text-black transition" aria-label="X">
-              <svg fill="currentColor" className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-            <a
-              href="#"
-              className="hover:text-blue-700 transition"
-              aria-label="LinkedIn"
-            >
-              <svg fill="currentColor" className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-            </a>
+          {/* Candidats */}
+          <div>
+            <h4 className="text-gray-900 font-black text-xs uppercase tracking-[0.2em] mb-6 border-l-4 border-blue-600 pl-3">
+              Talents
+            </h4>
+            <ul className="space-y-4">
+              {[
+                { name: "Toutes les offres", to: "/offres" },
+                { name: "Offres par Wilaya", to: "/regions" },
+                { name: "Offres par Secteur", to: "/secteurs" },
+                { name: "Postulation Rapide", to: "/offres" },
+                { name: "Mon Profil", to: "/profil" },
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    to={link.to}
+                    className="text-gray-500 hover:text-blue-600 font-bold text-sm transition-all duration-200 hover:translate-x-1 inline-block"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Recruteurs */}
+          <div>
+            <h4 className="text-gray-900 font-black text-xs uppercase tracking-[0.2em] mb-6 border-l-4 border-blue-600 pl-3">
+              Entreprises
+            </h4>
+            <ul className="space-y-4">
+              {[
+                { name: "Publier une annonce", to: "/creer-offre" },
+                { name: "Espace Recruteur", to: "/dashboard" },
+                { name: "Tarifs & Solutions", to: "/" },
+                { name: "CV-thèque IA", to: "/dashboard" },
+                { name: "Support Client", to: "/" },
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    to={link.to}
+                    className="text-gray-500 hover:text-blue-600 font-bold text-sm transition-all duration-200 hover:translate-x-1 inline-block"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact & Info */}
+          <div>
+            <h4 className="text-gray-900 font-black text-xs uppercase tracking-[0.2em] mb-6 border-l-4 border-blue-600 pl-3">
+              Siège Social
+            </h4>
+            <div className="space-y-4 text-sm font-bold text-gray-600">
+              <p className="flex items-center gap-3">
+                <span className="text-blue-600">📍</span> 16, Rue des Talents,
+                Alger
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="text-blue-600">✉️</span> contact@taftech.dz
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="text-blue-600">📞</span> +213 (0) 555 12 34 56
+              </p>
+              <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase mb-1">
+                  Status du serveur
+                </p>
+                <p className="text-[10px] text-green-600 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>{" "}
+                  Opérationnel
+                </p>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Copyright */}
-        <div className="mt-4 text-center md:text-left text-xs text-gray-500">
-          © {new Date().getFullYear()} TafTech. Tous droits réservés.
+      {/* === SECTION 3 : COPYRIGHT === */}
+      <div className="bg-gray-50 border-t border-gray-100 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+            © {new Date().getFullYear()} TAFTECH — Made for a better recruitment
+          </p>
+
+          <div className="flex gap-6">
+            {["Confidentialité", "CGU", "Cookies"].map((item) => (
+              <Link
+                key={item}
+                to="/"
+                className="text-[11px] font-black text-gray-400 uppercase hover:text-blue-600 transition-colors"
+              >
+                {item}
+              </Link>
+            ))}
+          </div>
+
+          <p className="text-[10px] font-bold text-gray-300 italic">
+            Proudly built with React & Django
+          </p>
         </div>
       </div>
     </footer>

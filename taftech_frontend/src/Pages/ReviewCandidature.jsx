@@ -37,7 +37,6 @@ const ReviewCandidature = () => {
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      // On utilise FormData car on va peut-être envoyer un fichier !
       const formData = new FormData();
 
       if (motivationMode === "texte" && lettreTexte.trim() !== "") {
@@ -125,7 +124,6 @@ const ReviewCandidature = () => {
         </div>
       </div>
 
-      {/* --- NOUVEAU BLOC : LETTRE DE MOTIVATION --- */}
       <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden mb-8">
         <div className="p-8 border-b border-gray-50 bg-gray-50/50">
           <h2 className="text-xl font-black text-gray-900">
@@ -137,7 +135,6 @@ const ReviewCandidature = () => {
         </div>
 
         <div className="p-8">
-          {/* Les onglets de sélection */}
           <div className="flex gap-4 mb-6 bg-gray-100 p-2 rounded-2xl w-fit">
             <button
               onClick={() => setMotivationMode("texte")}
@@ -153,7 +150,6 @@ const ReviewCandidature = () => {
             </button>
           </div>
 
-          {/* Conditionnel : Texte OU Fichier */}
           {motivationMode === "texte" ? (
             <textarea
               rows="6"
@@ -187,9 +183,7 @@ const ReviewCandidature = () => {
           )}
         </div>
       </div>
-      {/* ------------------------------------------ */}
 
-      {/* --- RÉCAPITULATIF DU PROFIL --- */}
       <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden">
         <div className="flex justify-between items-center p-8 border-b border-gray-50 bg-gray-50/50">
           <h2 className="text-xl font-black text-gray-900">
@@ -204,7 +198,6 @@ const ReviewCandidature = () => {
         </div>
 
         <div className="p-8 space-y-10">
-          {/* 1. SECTION INFOS PERSO & PHOTO */}
           <section className="flex flex-col md:flex-row items-center gap-8 bg-gray-50 p-6 rounded-2xl border border-gray-100">
             <div className="w-24 h-24 bg-white rounded-[1.5rem] flex items-center justify-center text-gray-400 text-3xl overflow-hidden shrink-0 shadow-md border-4 border-white">
               {profil.photo_profil ? (
@@ -228,6 +221,21 @@ const ReviewCandidature = () => {
                 <span>📧 {profil.email}</span>
                 <span>📞 {profil.telephone || "Non renseigné"}</span>
               </div>
+
+              {/* 👇 LE BLOC IA (WILAYA, COMMUNE, DIPLÔME, SPÉCIALITÉ) 👇 */}
+              <div className="mt-2 space-y-1 mb-4 bg-white p-3 rounded-xl border border-gray-200 inline-block w-full">
+                <p className="text-gray-700 font-bold text-sm flex items-center justify-center md:justify-start gap-2">
+                  📍 {profil.wilaya || "Wilaya non renseignée"}{" "}
+                  {profil.commune ? `- ${profil.commune}` : ""}
+                </p>
+                <p className="text-gray-700 font-bold text-sm flex items-center justify-center md:justify-start gap-2 mt-1">
+                  🎓 {formatText(profil.diplome) || "Diplôme non renseigné"} |
+                  🛠️{" "}
+                  {formatText(profil.specialite) || "Spécialité non renseignée"}
+                </p>
+              </div>
+              {/* 👆 FIN DU BLOC IA 👆 */}
+
               <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-3 border-t border-gray-200">
                 <span
                   className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${profil.service_militaire === "DEGAGE" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}
@@ -248,7 +256,6 @@ const ReviewCandidature = () => {
             </div>
           </section>
 
-          {/* 2. SECTION PRÉFÉRENCES DE RECRUTEMENT */}
           <section>
             <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-3">
               Préférences de recrutement
@@ -289,7 +296,6 @@ const ReviewCandidature = () => {
             </div>
           </section>
 
-          {/* 3. SECTION CV PDF */}
           <section>
             <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-3">
               Pièce jointe (CV)
@@ -306,7 +312,6 @@ const ReviewCandidature = () => {
             </div>
           </section>
 
-          {/* 4. SECTION EXPÉRIENCES */}
           <section>
             <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-4">
               Expériences professionnelles
@@ -339,7 +344,6 @@ const ReviewCandidature = () => {
             )}
           </section>
 
-          {/* 5. SECTION FORMATIONS */}
           <section>
             <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-4">
               Formations
@@ -383,7 +387,6 @@ const ReviewCandidature = () => {
         </div>
       </div>
 
-      {/* BOUTON D'ENVOI FIXE */}
       <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 flex justify-between items-center px-6 md:px-20 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <Link
           to={`/jobs/${id}`}

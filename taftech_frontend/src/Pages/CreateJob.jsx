@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
-import Select from "react-select"; // <-- NOUVEL IMPORT MAGIQUE
+import Select from "react-select";
+
+// 👇 IMPORTATION DE TES DONNÉES LOCALES 👇
+import communesAlgerie from "../data/communes.json";
 
 const CreateJob = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // NOUVEL ÉTAT : Pour les listes dynamiques depuis Django
   const [constants, setConstants] = useState({
     wilayas: [],
     secteurs: [],
@@ -19,18 +21,17 @@ const CreateJob = () => {
 
   const [formData, setFormData] = useState({
     titre: "",
-    type_contrat: "CDI", // Valeur par défaut
+    type_contrat: "CDI",
     salaire_propose: "",
     wilaya: "",
     commune: "",
     diplome: "",
     specialite: "",
-    experience_requise: "DEBUTANT", // Valeur par défaut
+    experience_requise: "DEBUTANT",
     missions: "",
     profil_recherche: "",
   });
 
-  // CHARGEMENT DES CONSTANTES AU DÉMARRAGE
   useEffect(() => {
     const fetchConstants = async () => {
       try {
@@ -48,7 +49,6 @@ const CreateJob = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // NOUVEAU : Gère les changements de React-Select
   const handleSelectChange = (selectedOption, actionMeta) => {
     setFormData({
       ...formData,
@@ -56,10 +56,22 @@ const CreateJob = () => {
     });
   };
 
+  // 👇 FILTRE LES COMMUNES SELON LA WILAYA SÉLECTIONNÉE 👇
+  const getCommunesOptions = () => {
+    if (!formData.wilaya) return [];
+    // On extrait le code wilaya. Ex: "31 - Oran" -> "31"
+    const wilayaCode = formData.wilaya.split(" - ")[0];
+    return communesAlgerie
+      .filter((c) => c.wilaya_code === wilayaCode)
+      .map((c) => ({
+        value: c.commune_name_ascii,
+        label: c.commune_name_ascii,
+      }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Petite vérification de sécurité avant d'envoyer
     if (!formData.wilaya || !formData.specialite) {
       toast.error(
         "Veuillez sélectionner au moins une Wilaya et une Spécialité.",
@@ -81,13 +93,13 @@ const CreateJob = () => {
         navigate("/dashboard");
       }, 2000);
     } catch (error) {
-      toast.error(
+      (toast.error(
         "Erreur lors de la publication. Vérifiez vos informations.",
         {
           id: toastId,
         },
-        error,
-      );
+      ),
+        console.log(error));
       setLoading(false);
     }
   };
@@ -184,6 +196,8 @@ const CreateJob = () => {
                 <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
                 Localisation
               </h3>
+
+              {/* 👇 LISTES DÉROULANTES EN CASCADE 👇 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
@@ -192,7 +206,13 @@ const CreateJob = () => {
                   <Select
                     name="wilaya"
                     options={constants.wilayas}
-                    onChange={handleSelectChange}
+                    onChange={(opt) => {
+                      setFormData({
+                        ...formData,
+                        wilaya: opt ? opt.value : "",
+                        commune: "",
+                      });
+                    }}
                     value={
                       constants.wilayas.find(
                         (w) => w.value === formData.wilaya,
@@ -213,15 +233,35 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
-                    Commune
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                    Commune (Optionnel)
                   </label>
-                  <input
+                  <Select
                     name="commune"
-                    value={formData.commune}
-                    onChange={handleChange}
-                    className="w-full p-5 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-600 outline-none"
-                    placeholder="Ex: Hydra, Arzew..."
+                    options={getCommunesOptions()}
+                    isDisabled={
+                      !formData.wilaya || getCommunesOptions().length === 0
+                    }
+                    value={
+                      getCommunesOptions().find(
+                        (c) => c.value === formData.commune,
+                      ) || null
+                    }
+                    onChange={handleSelectChange}
+                    placeholder={
+                      formData.wilaya ? "Sélectionnez..." : "Wilaya d'abord"
+                    }
+                    isClearable
+                    className="font-bold text-gray-700"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        padding: "0.6rem",
+                        borderRadius: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderColor: "transparent",
+                      }),
+                    }}
                   />
                 </div>
               </div>

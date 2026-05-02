@@ -4,6 +4,9 @@ import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 
+// 👇 IMPORTATION DES DONNÉES LOCALES 👇
+import communesAlgerie from "../data/communes.json";
+
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
 
@@ -65,6 +68,17 @@ const DashboardRecruteur = () => {
     }
   };
 
+  const getCommunesOptions = (wilayaValue) => {
+    if (!wilayaValue) return [];
+    const wilayaCode = wilayaValue.split(" - ")[0];
+    return communesAlgerie
+      .filter((c) => c.wilaya_code === wilayaCode)
+      .map((c) => ({
+        value: c.commune_name_ascii,
+        label: c.commune_name_ascii,
+      }));
+  };
+
   if (loading)
     return (
       <div className="text-center p-20 font-bold text-blue-600 animate-pulse">
@@ -78,13 +92,35 @@ const DashboardRecruteur = () => {
       </div>
     );
 
-  // Séparation des offres
   const offresOuvertes = offres.filter((o) => o.est_cloturee !== true);
   const offresCloturees = offres.filter((o) => o.est_cloturee === true);
 
+  const calculerStatistiques = () => {
+    let total = 0;
+    let nouvelles = 0;
+    let pertinentes = 0;
+    let enTraitement = 0;
+
+    offres.forEach((offre) => {
+      if (offre.candidatures) {
+        total += offre.candidatures.length;
+        offre.candidatures.forEach((c) => {
+          if (c.statut === "RECUE") nouvelles++;
+          if (c.statut === "EN_COURS" || c.statut === "ENTRETIEN")
+            enTraitement++;
+          if (c.score_matching >= 80) pertinentes++;
+        });
+      }
+    });
+
+    return { total, nouvelles, pertinentes, enTraitement };
+  };
+
+  const stats = calculerStatistiques();
+
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="mb-8 flex justify-between items-start">
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900">
             Espace {entreprise?.nom_entreprise}
@@ -101,12 +137,90 @@ const DashboardRecruteur = () => {
             )}
           </div>
         </div>
-        <button
-          onClick={() => navigate("/creer-offre")}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-8 rounded-xl shadow-lg shadow-blue-100 transition-all hover:scale-105"
-        >
-          + PUBLIER UNE OFFRE
-        </button>
+
+        {/* 👇 ZONE DU BOUTON SÉCURISÉE 👇 */}
+        <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+          {entreprise?.est_approuvee ? (
+            // BOUTON ACTIF SI APPROUVÉ
+            <button
+              onClick={() => navigate("/creer-offre")}
+              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-blue-100 transition-all hover:scale-105 active:scale-95"
+            >
+              + PUBLIER UNE OFFRE
+            </button>
+          ) : (
+            // BOUTON DÉSACTIVÉ AVEC MESSAGE D'EXPLICATION
+            <div className="flex flex-col items-end w-full md:w-auto">
+              <button
+                disabled
+                className="w-full md:w-auto bg-gray-200 text-gray-400 font-black py-4 px-8 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                title="Votre entreprise doit être validée pour publier"
+              >
+                🔒 PUBLIER UNE OFFRE
+              </button>
+              <p className="text-[10px] font-bold text-orange-500 mt-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 animate-pulse">
+                ⚠️ Validation admin requise pour recruter
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reste du Dashboard (Stats, Tabs, etc.) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              👥
+            </div>
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+              Total Candidatures
+            </p>
+          </div>
+          <p className="text-4xl font-black text-gray-900">{stats.total}</p>
+        </div>
+
+        <div className="bg-green-50/50 p-6 rounded-2xl shadow-sm border border-green-100 flex flex-col justify-between">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              📥
+            </div>
+            <p className="text-xs font-black text-green-700 uppercase tracking-widest">
+              Nouvelles
+            </p>
+          </div>
+          <p className="text-4xl font-black text-green-700">
+            {stats.nouvelles}
+          </p>
+        </div>
+
+        <div className="bg-purple-50/50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col justify-between">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+              ✨
+            </div>
+            <p className="text-xs font-black text-purple-700 uppercase tracking-widest">
+              Pertinentes (+80%)
+            </p>
+          </div>
+          <p className="text-4xl font-black text-purple-700">
+            {stats.pertinentes}
+          </p>
+        </div>
+
+        <div className="bg-orange-50/50 p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-between">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+              ⏳
+            </div>
+            <p className="text-xs font-black text-orange-700 uppercase tracking-widest">
+              En traitement
+            </p>
+          </div>
+          <p className="text-4xl font-black text-orange-700">
+            {stats.enTraitement}
+          </p>
+        </div>
       </div>
 
       <div className="flex border-b border-gray-200 mb-8 gap-4">
@@ -139,7 +253,6 @@ const DashboardRecruteur = () => {
         </button>
       </div>
 
-      {/* --- ONGLET OFFRES --- */}
       {(activeTab === "ouvertes" || activeTab === "cloturees") && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {(activeTab === "ouvertes" ? offresOuvertes : offresCloturees)
@@ -169,7 +282,6 @@ const DashboardRecruteur = () => {
                       )}
                     </span>
                   </div>
-
                   <div className="p-6 flex-1 flex flex-col justify-center items-center bg-gray-50/50">
                     <div className="text-4xl font-black text-blue-600 mb-1">
                       {offre.candidatures?.length || 0}
@@ -178,7 +290,6 @@ const DashboardRecruteur = () => {
                       Candidatures
                     </div>
                   </div>
-
                   <div className="p-4 border-t border-gray-100">
                     <button
                       onClick={() => navigate(`/dashboard/offres/${offre.id}`)}
@@ -194,7 +305,6 @@ const DashboardRecruteur = () => {
         </div>
       )}
 
-      {/* --- ONGLET PROFIL --- */}
       {activeTab === "profil" && entreprise && (
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 animate-fadeIn">
           <div className="flex justify-between items-center mb-10">
@@ -293,7 +403,7 @@ const DashboardRecruteur = () => {
                     {entreprise.registre_commerce}
                   </p>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
                     Secteur d'activité
                   </label>
@@ -303,7 +413,6 @@ const DashboardRecruteur = () => {
                     </p>
                   ) : (
                     <Select
-                      name="secteur_activite"
                       options={constants.secteurs}
                       value={
                         constants.secteurs.find(
@@ -316,7 +425,6 @@ const DashboardRecruteur = () => {
                           secteur_activite: selected ? selected.value : "",
                         })
                       }
-                      placeholder="Sélectionner..."
                       className="font-bold text-gray-700"
                       styles={{
                         control: (base) => ({
@@ -324,7 +432,7 @@ const DashboardRecruteur = () => {
                           padding: "0.4rem",
                           borderRadius: "0.75rem",
                           backgroundColor: "#f9fafb",
-                          borderColor: "#e5e7eb",
+                          border: "none",
                         }),
                       }}
                     />
@@ -340,7 +448,6 @@ const DashboardRecruteur = () => {
                     </p>
                   ) : (
                     <Select
-                      name="wilaya_siege"
                       options={constants.wilayas}
                       value={
                         constants.wilayas.find(
@@ -351,17 +458,55 @@ const DashboardRecruteur = () => {
                         setTempEntreprise({
                           ...tempEntreprise,
                           wilaya_siege: selected ? selected.value : "",
+                          commune_siege: "",
                         })
                       }
-                      placeholder="Sélectionner..."
-                      className="font-bold text-gray-700"
                       styles={{
                         control: (base) => ({
                           ...base,
                           padding: "0.4rem",
                           borderRadius: "0.75rem",
                           backgroundColor: "#f9fafb",
-                          borderColor: "#e5e7eb",
+                          border: "none",
+                        }),
+                      }}
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="text-[11px] font-black text-gray-400 uppercase mb-2 block">
+                    Commune du siège
+                  </label>
+                  {!isEditing ? (
+                    <p className="text-lg font-bold text-gray-800 border-b-2 border-gray-50 pb-2">
+                      {entreprise.commune_siege || "Non renseigné"}
+                    </p>
+                  ) : (
+                    <Select
+                      options={getCommunesOptions(tempEntreprise.wilaya_siege)}
+                      isDisabled={
+                        !tempEntreprise.wilaya_siege ||
+                        getCommunesOptions(tempEntreprise.wilaya_siege)
+                          .length === 0
+                      }
+                      value={
+                        getCommunesOptions(tempEntreprise.wilaya_siege).find(
+                          (c) => c.value === tempEntreprise.commune_siege,
+                        ) || null
+                      }
+                      onChange={(selected) =>
+                        setTempEntreprise({
+                          ...tempEntreprise,
+                          commune_siege: selected ? selected.value : "",
+                        })
+                      }
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          padding: "0.4rem",
+                          borderRadius: "0.75rem",
+                          backgroundColor: "#f9fafb",
+                          border: "none",
                         }),
                       }}
                     />
@@ -380,7 +525,6 @@ const DashboardRecruteur = () => {
                     <textarea
                       rows="5"
                       className="w-full p-6 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
-                      placeholder="Décrivez l'entreprise..."
                       value={tempEntreprise.description || ""}
                       onChange={(e) =>
                         setTempEntreprise({

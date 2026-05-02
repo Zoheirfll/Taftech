@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import api from "../../api/axiosConfig";
+// 👇 LA CORRECTION EST ICI : "../../" pour remonter depuis Pages/candidat/ vers Services/ 👇
+import { jobsService } from "../../Services/jobsService";
 
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
-  const [wilayas, setWilayas] = useState([]); // <-- NOUVEAU : Pour stocker les wilayas
+  const [wilayas, setWilayas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [newAlerte, setNewAlerte] = useState({
@@ -19,17 +19,16 @@ const AlertesEmploi = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // On lance les deux requêtes en même temps pour aller plus vite !
-        const [alertesRes, constantsRes] = await Promise.all([
-          api.get("jobs/alertes/"),
-          api.get("jobs/constants/"),
+        const [alertesData, constantsData] = await Promise.all([
+          jobsService.getAlertes(),
+          jobsService.getConstants(),
         ]);
 
-        setAlertes(alertesRes.data);
-        setWilayas(constantsRes.data.wilayas); // On récupère la liste officielle
+        setAlertes(alertesData);
+        setWilayas(constantsData.wilayas);
       } catch (error) {
-        (toast.error("Erreur lors du chargement des données."),
-          console.error(error));
+        toast.error("Erreur lors du chargement des données.");
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -45,21 +44,19 @@ const AlertesEmploi = () => {
       return toast.error("Les mots-clés sont obligatoires.");
     }
 
-    // ASTUCE DE SÉCURITÉ : Si la wilaya est vide, on l'enlève pour ne pas fâcher Django
     const payload = { ...newAlerte };
     if (!payload.wilaya) {
       delete payload.wilaya;
     }
 
     try {
-      const response = await api.post("jobs/alertes/", payload);
-      setAlertes([response.data, ...alertes]);
+      const response = await jobsService.createAlerte(payload);
+      setAlertes([response, ...alertes]);
       toast.success("Alerte créée avec succès !");
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
     } catch (error) {
-      // Pour t'aider à débugger si ça arrive encore :
-      console.error(error.response?.data);
+      console.error(error);
       toast.error("Impossible de créer l'alerte. Vérifiez vos champs.");
     }
   };
@@ -72,9 +69,7 @@ const AlertesEmploi = () => {
       ),
     );
     try {
-      await api.patch(`jobs/alertes/${alerteId}/`, {
-        est_active: !currentState,
-      });
+      await jobsService.toggleAlerte(alerteId, !currentState);
       toast.success(currentState ? "Alerte désactivée" : "Alerte activée");
     } catch (error) {
       setAlertes(
@@ -82,7 +77,8 @@ const AlertesEmploi = () => {
           a.id === alerteId ? { ...a, est_active: currentState } : a,
         ),
       );
-      (toast.error("Erreur lors de la modification."), console.error(error));
+      toast.error("Erreur lors de la modification.");
+      console.error(error);
     }
   };
 
@@ -91,11 +87,12 @@ const AlertesEmploi = () => {
     if (!window.confirm("Voulez-vous vraiment supprimer cette alerte ?"))
       return;
     try {
-      await api.delete(`jobs/alertes/${alerteId}/`);
+      await jobsService.deleteAlerte(alerteId);
       setAlertes(alertes.filter((a) => a.id !== alerteId));
       toast.success("Alerte supprimée.");
     } catch (error) {
-      (toast.error("Erreur lors de la suppression."), console.error(error));
+      toast.error("Erreur lors de la suppression.");
+      console.error(error);
     }
   };
 
@@ -274,7 +271,6 @@ const AlertesEmploi = () => {
                 />
               </div>
 
-              {/* 👇 LA CORRECTION EST ICI : UN BEAU MENU DÉROULANT 👇 */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                   Région, Wilaya

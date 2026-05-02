@@ -17,17 +17,23 @@ import ReviewCandidature from "./Pages/ReviewCandidature";
 import JobsList from "./Pages/JobsList";
 import OffresParRegion from "./Pages/OffresParRegion";
 import OffresParSecteur from "./Pages/OffresParSecteur";
-import GestionOffre from "./Pages/GestionOffre"; // L'ESPACE CANDIDAT
+import GestionOffre from "./Pages/GestionOffre";
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
 import Settings from "./Pages/Candidat/Settings";
 import AlertesEmploi from "./Pages/Candidat/AlertesEmploi";
 import OffresSauvegardees from "./Pages/Candidat/OffresSauvegardees";
+import BoiteReception from "./Pages/BoiteReception";
+
+// 👇 NOUVEL IMPORT POUR LA PAGE ENTREPRISE 👇
+import EntreprisePublic from "./Pages/EntreprisePublic";
+
 // L'ADMINISTRATION
 import AdminLayout from "./Pages/Admin/AdminLayout";
 import AdminEntreprises from "./Pages/Admin/AdminEntreprises";
 import AdminOffres from "./Pages/Admin/AdminOffres";
 import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
 import AdminUsers from "./Pages/Admin/AdminUsers";
+import AdminBroadcast from "./Pages/admin/AdminBroadcast"; // Ajuste le chemin selon ton dossier
 
 // TON FOOTER
 import Footer from "./Components/Footer";
@@ -35,7 +41,6 @@ import Footer from "./Components/Footer";
 function App() {
   return (
     <Router>
-      {/* 👇 1. AJOUT DE 'flex flex-col' POUR ACTIVER LE COMPORTEMENT FLEXBOX 👇 */}
       <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
         <Toaster
           position="top-center"
@@ -51,8 +56,6 @@ function App() {
 
         <Navbar />
 
-        {/* 👇 2. ON ENVELOPPE LES ROUTES AVEC <main> ET 'flex-grow' 👇 */}
-        {/* Ça repousse tout ce qui est en dessous (le footer) vers le bas */}
         <main className="flex-grow">
           <Routes>
             {/* ROUTES PUBLIQUES */}
@@ -68,15 +71,20 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
 
+            {/* 👇 NOUVELLE ROUTE POUR LA PAGE ENTREPRISE 👇 */}
+            <Route path="/entreprise/:id" element={<EntreprisePublic />} />
+
             {/* ROUTES RECRUTEUR */}
             <Route path="/creer-entreprise" element={<CreateEntreprise />} />
             <Route path="/creer-offre" element={<CreateJob />} />
             <Route path="/dashboard" element={<DashboardRecruteur />} />
             <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatLayout />}>
               <Route path="/profil" element={<ProfilCandidat />} />
               <Route path="/mes-candidatures" element={<MesCandidatures />} />
+              <Route path="/inbox" element={<BoiteReception />} />
               <Route
                 path="/jobs/:id/postuler"
                 element={<ReviewCandidature />}
@@ -96,11 +104,11 @@ function App() {
               <Route path="offres" element={<AdminOffres />} />
               <Route path="dashboard" element={<AdminStatistiques />} />
               <Route path="utilisateurs" element={<AdminUsers />} />
+              <Route path="broadcast" element={<AdminBroadcast />} />
             </Route>
           </Routes>
         </main>
 
-        {/* 👇 3. ON AFFICHE LE FOOTER TOUT EN BAS 👇 */}
         <Footer />
       </div>
     </Router>

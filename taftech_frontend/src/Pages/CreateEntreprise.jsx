@@ -1,24 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { entrepriseService } from "../Services/entrepriseService";
+import { jobsService } from "../Services/jobsService"; // Pour récupérer la liste des wilayas
+import Select from "react-select";
+
+// 👇 IMPORTATION DE TES DONNÉES LOCALES 👇
+import communesAlgerie from "../data/communes.json";
 
 const CreateEntreprise = () => {
   const navigate = useNavigate();
+
+  // État pour les wilayas
+  const [wilayasList, setWilayasList] = useState([]);
+
   const [formData, setFormData] = useState({
     nom_entreprise: "",
     secteur_activite: "",
     registre_commerce: "",
-    wilaya_siege: "",
+    wilaya_siege: "", // Sera de la forme "31 - Oran"
+    commune_siege: "", // Nouveau champ pour la commune
     description: "",
   });
   const [status, setStatus] = useState({ type: "", message: "" });
+
+  // On récupère les wilayas au chargement
+  useEffect(() => {
+    const fetchWilayas = async () => {
+      try {
+        const data = await jobsService.getConstants();
+        setWilayasList(data.wilayas);
+      } catch (error) {
+        console.error("Erreur wilayas", error);
+      }
+    };
+    fetchWilayas();
+  }, []);
+
+  // 👇 FILTRE LES COMMUNES SELON LA WILAYA SÉLECTIONNÉE 👇
+  const getCommunesOptions = () => {
+    if (!formData.wilaya_siege) return [];
+    const wilayaCode = formData.wilaya_siege.split(" - ")[0];
+    return communesAlgerie
+      .filter((c) => c.wilaya_code === wilayaCode)
+      .map((c) => ({
+        value: c.commune_name_ascii,
+        label: c.commune_name_ascii,
+      }));
+  };
+
+  const handleSelectChange = (selectedOption, actionMeta) => {
+    setFormData({
+      ...formData,
+      [actionMeta.name]: selectedOption ? selectedOption.value : "",
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus({ type: "", message: "" });
 
     try {
-      // CORRECTION ICI : On utilise le bon nom de fonction !
       await entrepriseService.creerEntreprise(formData);
 
       setStatus({
@@ -26,19 +67,16 @@ const CreateEntreprise = () => {
         message: "Entreprise enregistrée ! Vous êtes maintenant Recruteur.",
       });
 
-      // On le renvoie vers le dashboard recruteur
       setTimeout(() => {
-        navigate("/"); // Pense à changer ça vers ton dashboard si besoin !
+        navigate("/");
       }, 2000);
     } catch (error) {
-      // SÉCURITÉ : On affiche la vraie erreur dans la console F12
       console.error("VRAIE ERREUR :", error);
-
       setStatus({
         type: "error",
         message:
           error.response?.data?.error ||
-          error.response?.data?.registre_commerce?.[0] || // Si le RC existe déjà
+          error.response?.data?.registre_commerce?.[0] ||
           "Erreur lors de la création de l'entreprise.",
       });
     }
@@ -90,37 +128,68 @@ const CreateEntreprise = () => {
             </div>
           </div>
 
+          {/* 👇 LES DEUX LISTES DÉROULANTES EN CASCADE 👇 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Registre de Commerce (RC) *
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    registre_commerce: e.target.value,
-                  })
-                }
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Wilaya du siège *
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Ex: Oran, Alger..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                onChange={(e) =>
-                  setFormData({ ...formData, wilaya_siege: e.target.value })
+              <Select
+                name="wilaya_siege"
+                options={wilayasList}
+                onChange={(opt) => {
+                  setFormData({
+                    ...formData,
+                    wilaya_siege: opt ? opt.value : "",
+                    commune_siege: "",
+                  });
+                }}
+                value={
+                  wilayasList.find((w) => w.value === formData.wilaya_siege) ||
+                  null
                 }
+                placeholder="Sélectionner..."
+                isClearable
+                className="font-medium"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Commune du siège (Optionnel)
+              </label>
+              <Select
+                name="commune_siege"
+                options={getCommunesOptions()}
+                isDisabled={
+                  !formData.wilaya_siege || getCommunesOptions().length === 0
+                }
+                value={
+                  getCommunesOptions().find(
+                    (c) => c.value === formData.commune_siege,
+                  ) || null
+                }
+                onChange={handleSelectChange}
+                placeholder={
+                  formData.wilaya_siege ? "Sélectionnez..." : "Wilaya d'abord"
+                }
+                isClearable
+                className="font-medium"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Registre de Commerce (RC) *
+            </label>
+            <input
+              type="text"
+              required
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              onChange={(e) =>
+                setFormData({ ...formData, registre_commerce: e.target.value })
+              }
+            />
           </div>
 
           <div>

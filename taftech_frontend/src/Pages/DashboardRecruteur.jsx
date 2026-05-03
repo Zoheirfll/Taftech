@@ -120,7 +120,7 @@ const DashboardRecruteur = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900">
             Espace {entreprise?.nom_entreprise}
@@ -138,18 +138,28 @@ const DashboardRecruteur = () => {
           </div>
         </div>
 
-        {/* 👇 ZONE DU BOUTON SÉCURISÉE 👇 */}
-        <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+        {/* 👇 ZONE DES BOUTONS D'ACTION 👇 */}
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
           {entreprise?.est_approuvee ? (
-            // BOUTON ACTIF SI APPROUVÉ
-            <button
-              onClick={() => navigate("/creer-offre")}
-              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-blue-100 transition-all hover:scale-105 active:scale-95"
-            >
-              + PUBLIER UNE OFFRE
-            </button>
+            <>
+              {/* NOUVEAU BOUTON CVTHÈQUE */}
+              <button
+                onClick={() => navigate("/cvtheque")}
+                className="w-full md:w-auto bg-white text-blue-600 border-2 border-blue-600 font-black py-4 px-6 rounded-2xl shadow-sm transition-all hover:bg-blue-50 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+              >
+                🔍 CHERCHER UN CV
+              </button>
+
+              {/* BOUTON EXISTANT PUBLIER */}
+              <button
+                onClick={() => navigate("/creer-offre")}
+                className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-blue-100 transition-all hover:scale-105 active:scale-95"
+              >
+                + PUBLIER UNE OFFRE
+              </button>
+            </>
           ) : (
-            // BOUTON DÉSACTIVÉ AVEC MESSAGE D'EXPLICATION
+            // BOUTONS DÉSACTIVÉS SI NON APPROUVÉ
             <div className="flex flex-col items-end w-full md:w-auto">
               <button
                 disabled

@@ -8,7 +8,8 @@ from .views import PublicStatsAPIView
 from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView, EntrepriseDetailAPIView
 from .views import PostulerRapideAPIView, NotificationListAPIView, MarkNotificationReadAPIView
 from .views import OffresRecommandeesAPIView # <-- Ajoute ça dans tes imports
-from .views import AdminBroadcastEmailAPIView
+from .views import AdminBroadcastEmailAPIView, CVThequeView
+
 
 urlpatterns = [
     path('', JobListAPIView.as_view(), name='job-list'),
@@ -75,4 +76,6 @@ urlpatterns = [
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='offres-recommandees'),
     path('notifications/', NotificationListAPIView.as_view(), name='notifications-list'),
 path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-read'),
+
+    path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque-search'),
 ]

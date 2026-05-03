@@ -4,6 +4,9 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.dateparse import parse_datetime
 from django.conf import settings
+from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
+from django.db.models.functions import Coalesce, Now
+import datetime
 
 # Create your views here.
 from rest_framework.views import APIView
@@ -100,17 +103,23 @@ class PostulerAPIView(APIView):
             )
 
             # ==========================================
-            # 👇 NOUVEAU : ENVOI DE L'EMAIL AU RECRUTEUR 👇
+            # 👇 US 4.3 : EMAIL POUR LES CANDIDATURES PERTINENTES 👇
             # ==========================================
             email_employeur = offre.entreprise.user.email
-            if email_employeur:
+            score_candidat = resultat_matching['total']
+            
+            # On définit le seuil de "pertinence" (ex: 70%)
+            SEUIL_PERTINENCE = 70.0 
+
+            # On n'envoie l'email QUE si l'entreprise a un email ET que le score est bon
+            if email_employeur and score_candidat >= SEUIL_PERTINENCE:
                 nom_candidat = f"{request.user.first_name} {request.user.last_name}"
-                sujet = f"Nouvelle candidature pour : {offre.titre}"
+                sujet = f"⭐ Top Profil détecté pour : {offre.titre}"
                 
                 message = f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
-                message += f"Un nouveau candidat ({nom_candidat}) vient de postuler à votre offre '{offre.titre}'.\n"
-                message += f"🤖 L'IA de TafTech a analysé son profil et lui a attribué un score de correspondance de {resultat_matching['total']}%.\n\n"
-                message += "Connectez-vous à votre tableau de bord TafTech pour examiner son dossier complet.\n\n"
+                message += f"Excellente nouvelle ! Un candidat très pertinent ({nom_candidat}) vient de postuler à votre offre '{offre.titre}'.\n"
+                message += f"🤖 Notre IA a analysé son profil et lui a attribué un excellent score de {score_candidat}%.\n\n"
+                message += "Connectez-vous rapidement à votre tableau de bord TafTech pour examiner son dossier avant qu'il ne trouve un autre poste.\n\n"
                 message += "L'équipe TafTech."
                 
                 try:
@@ -762,29 +771,9 @@ class PostulerRapideAPIView(APIView):
                 statut='RECUE' 
             )
 
-            # ==========================================
-            # 👇 NOUVEAU : ENVOI DE L'EMAIL AU RECRUTEUR 👇
-            # ==========================================
-            email_employeur = offre.entreprise.user.email
-            if email_employeur:
-                sujet = f"Nouvelle Candidature Express pour : {offre.titre}"
-                
-                message = f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
-                message += f"Un candidat ({nom_rapide} {prenom_rapide}) vient de postuler via la fonction 'Postulation Rapide' à votre offre '{offre.titre}'.\n"
-                message += "S'agissant d'une candidature sans compte, l'analyse IA n'est pas disponible pour ce profil.\n\n"
-                message += "Connectez-vous à votre tableau de bord TafTech pour consulter son CV PDF.\n\n"
-                message += "L'équipe TafTech."
-                
-                try:
-                    send_mail(
-                        subject=sujet, 
-                        message=message, 
-                        from_email=settings.EMAIL_HOST_USER, 
-                        recipient_list=[email_employeur], 
-                        fail_silently=True
-                    )
-                except Exception as e:
-                    print(f"Erreur envoi email employeur : {e}")
+            # NOTE : On a volontairement retiré l'envoi d'e-mail ici.
+            # L'US 4.3 demande de n'alerter le recruteur que pour les candidatures "pertinentes" (avec un bon score IA).
+            # Les candidatures rapides seront simplement ajoutées à son tableau de bord silencieusement.
 
             return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
             
@@ -892,3 +881,74 @@ class AdminBroadcastEmailAPIView(APIView):
             
         except Exception as e:
             return Response({"error": f"Erreur lors de l'envoi : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CVthequePagination(PageNumberPagination):
+    page_size = 10
+
+class CVThequeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Vérifier que c'est un recruteur
+        if user.role != 'RECRUTEUR':
+            return Response({"error": "Accès réservé aux employeurs."}, status=403)
+
+        # 2. Récupérer les filtres du Frontend
+        search = request.GET.get('search', '')
+        wilaya = request.GET.get('wilaya', '')
+        diplome = request.GET.get('diplome', '')
+        specialite = request.GET.get('specialite', '')
+        experience = request.GET.get('experience', '') # Ex: "0.5", "1", "3"...
+
+        # 3. Requête de base : Uniquement les candidats actifs
+        candidats = ProfilCandidat.objects.filter(user__is_active=True, user__role='CANDIDAT')
+
+        # 4. Application des filtres texte
+        if search:
+            candidats = candidats.filter(
+                Q(titre_professionnel__icontains=search) |
+                Q(competences__icontains=search) |
+                Q(experiences__icontains=search) |
+                Q(experiences_detail__titre_poste__icontains=search) |
+                Q(experiences_detail__description__icontains=search)
+            ).distinct()
+
+        if wilaya:
+            candidats = candidats.filter(wilaya=wilaya)
+
+        if diplome:
+            candidats = candidats.filter(diplome=diplome)
+
+        if specialite:
+            candidats = candidats.filter(
+                Q(specialite=specialite) | 
+                Q(secteur_souhaite=specialite)
+            ).distinct()
+
+        # 5. 👇 LE FILTRE INTELLIGENT DE L'EXPÉRIENCE 👇
+        if experience:
+            try:
+                min_years = float(experience)
+                min_days = min_years * 365.25
+                
+                # On calcule la somme totale des jours d'expérience pour chaque candidat
+                # Coalesce(date_fin, Now()) permet de dire : "S'il n'y a pas de date de fin, ça veut dire qu'il y travaille encore aujourd'hui"
+                candidats = candidats.annotate(
+                    duree_totale=Sum(
+                        ExpressionWrapper(
+                            Coalesce(F('experiences_detail__date_fin'), Now()) - F('experiences_detail__date_debut'),
+                            output_field=DurationField()
+                        )
+                    )
+                ).filter(duree_totale__gte=datetime.timedelta(days=min_days))
+            except ValueError:
+                pass # Si la conversion en chiffre échoue, on ignore le filtre
+
+        # 6. Pagination et Réponse
+        paginator = CVthequePagination()
+        result_page = paginator.paginate_queryset(candidats, request)
+        serializer = ProfilCandidatDTO(result_page, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)

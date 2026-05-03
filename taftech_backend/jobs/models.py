@@ -111,6 +111,7 @@ class ProfilEntreprise(models.Model):
     registre_commerce = models.CharField(max_length=50, unique=True, verbose_name="Numéro de Registre de Commerce (RC)")
     description = models.TextField(blank=True, null=True, verbose_name="Présentation de l'entreprise")
     logo = models.ImageField(upload_to='logos_entreprises/', blank=True, null=True)
+    est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
 
     def __str__(self):
         return self.nom_entreprise
@@ -275,6 +276,7 @@ class ProfilCandidat(models.Model):
     notif_offres_exclusives = models.BooleanField(default=True, verbose_name="Offres exclusives et partenaires")
     notif_newsletter = models.BooleanField(default=True, verbose_name="Actualités et newsletter")
     notif_mise_a_jour = models.BooleanField(default=True, verbose_name="Emails de mise à jour")
+    niveau_experience = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, blank=True, null=True, verbose_name="Niveau d'expérience global")
     
     def __str__(self):
         return f"Profil de {self.user.username}"

@@ -213,4 +213,23 @@ export const jobsService = {
     const response = await api.put("jobs/parametres/notifications/", data);
     return response.data;
   },
+  searchCVtheque: async (filters = {}, page = 1) => {
+    // On prépare les paramètres de recherche pour l'URL
+    const queryParams = new URLSearchParams({
+      search: filters.search || "",
+      wilaya: filters.wilaya || "",
+      specialite: filters.specialite || "",
+      diplome: filters.diplome || "",
+      experience: filters.experience || "",
+      page: page,
+    }).toString();
+
+    try {
+      const response = await api.get(`jobs/employeur/cvtheque/?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      // On renvoie l'erreur spécifique du backend (ex: "Accès refusé")
+      throw error.response?.data || error;
+    }
+  },
 };

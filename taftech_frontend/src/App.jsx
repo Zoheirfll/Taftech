@@ -24,8 +24,11 @@ import AlertesEmploi from "./Pages/Candidat/AlertesEmploi";
 import OffresSauvegardees from "./Pages/Candidat/OffresSauvegardees";
 import BoiteReception from "./Pages/BoiteReception";
 
-// 👇 NOUVEL IMPORT POUR LA PAGE ENTREPRISE 👇
+// LA PAGE ENTREPRISE PUBLIC
 import EntreprisePublic from "./Pages/EntreprisePublic";
+
+// 👇 NOUVEL IMPORT POUR LA CVTHÈQUE 👇
+import CVTheque from "./Pages/CVTheque";
 
 // L'ADMINISTRATION
 import AdminLayout from "./Pages/Admin/AdminLayout";
@@ -33,7 +36,7 @@ import AdminEntreprises from "./Pages/Admin/AdminEntreprises";
 import AdminOffres from "./Pages/Admin/AdminOffres";
 import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
 import AdminUsers from "./Pages/Admin/AdminUsers";
-import AdminBroadcast from "./Pages/admin/AdminBroadcast"; // Ajuste le chemin selon ton dossier
+import AdminBroadcast from "./Pages/admin/AdminBroadcast";
 
 // TON FOOTER
 import Footer from "./Components/Footer";
@@ -70,8 +73,6 @@ function App() {
             />
             <Route path="/login" element={<Login />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
-
-            {/* 👇 NOUVELLE ROUTE POUR LA PAGE ENTREPRISE 👇 */}
             <Route path="/entreprise/:id" element={<EntreprisePublic />} />
 
             {/* ROUTES RECRUTEUR */}
@@ -79,6 +80,9 @@ function App() {
             <Route path="/creer-offre" element={<CreateJob />} />
             <Route path="/dashboard" element={<DashboardRecruteur />} />
             <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+
+            {/* 👇 NOUVELLE ROUTE POUR LA CVTHÈQUE 👇 */}
+            <Route path="/cvtheque" element={<CVTheque />} />
 
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatLayout />}>

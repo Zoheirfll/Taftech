@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../Services/authService";
 import { profilService } from "../Services/profilService";
-import { jobsService } from "../Services/jobsService"; // 👈 NOUVEL IMPORT ICI
+import { jobsService } from "../Services/jobsService";
 import logoTafTech from "../assets/logo-taftech.png";
 
 const Navbar = () => {
@@ -12,8 +12,6 @@ const Navbar = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState(null);
-
-  // 👇 NOUVEL ÉTAT POUR COMPTER LES MESSAGES NON LUS 👇
   const [unreadCount, setUnreadCount] = useState(0);
 
   const dropdownRef = useRef(null);
@@ -35,7 +33,6 @@ const Navbar = () => {
       };
       loadUserPhoto();
 
-      // 👇 NOUVEAU : CHARGEMENT DES NOTIFICATIONS 👇
       if (role === "CANDIDAT") {
         const loadNotifications = async () => {
           try {
@@ -134,7 +131,6 @@ const Navbar = () => {
             </>
           ) : (
             <div className="flex items-center gap-5">
-              {/* 👇 NOUVEAU : L'ICÔNE MESSAGERIE (Uniquement pour le candidat) 👇 */}
               {role === "CANDIDAT" && (
                 <Link
                   to="/inbox"
@@ -161,7 +157,6 @@ const Navbar = () => {
                   )}
                 </Link>
               )}
-              {/* -------------------------------------------------------- */}
 
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -199,7 +194,6 @@ const Navbar = () => {
                   </div>
                 </button>
 
-                {/* Le Menu Déroulant */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-4 w-64 bg-white rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.1)] border border-gray-100 py-2 z-50 transform origin-top-right transition-all">
                     {/* --- MENU CANDIDAT --- */}
@@ -337,6 +331,29 @@ const Navbar = () => {
                           </svg>
                           Tableau de bord
                         </Link>
+
+                        {/* 👇 LE NOUVEAU LIEN CVTHÈQUE 👇 */}
+                        <Link
+                          onClick={closeDropdown}
+                          to="/cvtheque"
+                          className="flex items-center gap-3 px-5 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                        >
+                          <svg
+                            className="w-5 h-5 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+                            ></path>
+                          </svg>
+                          CVthèque
+                        </Link>
+
                         <Link
                           onClick={closeDropdown}
                           to="/creer-offre"

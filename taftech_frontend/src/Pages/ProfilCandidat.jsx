@@ -3,9 +3,8 @@ import { profilService } from "../Services/profilService";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
-
-// 👇 1. ON IMPORTE LE FICHIER DES COMMUNES ICI 👇
 import communesAlgerie from "../data/communes.json";
+import { reportError } from "../utils/errorReporter"; // ✅ Import Télémétrie
 
 const ProfilCandidat = () => {
   const [loading, setLoading] = useState(true);
@@ -77,16 +76,14 @@ const ProfilCandidat = () => {
       setEditCV({ titre: pData.titre_professionnel || "", file: null });
     } catch (err) {
       toast.error("Erreur de synchronisation avec le serveur.");
-      console.log(err);
+      reportError("ECHEC_FETCH_PROFIL_DATA", err); // 🛑 Remplacement console
     } finally {
       setLoading(false);
     }
   };
 
-  // 👇 2. LA FONCTION QUI FILTRE LES COMMUNES SELON LA WILAYA 👇
   const getCommunesOptions = () => {
     if (!editInfo.wilaya) return [];
-    // On extrait le "31" de "31 - Oran"
     const wilayaCode = editInfo.wilaya.split(" - ")[0];
     return communesAlgerie
       .filter((c) => c.wilaya_code === wilayaCode)
@@ -109,7 +106,7 @@ const ProfilCandidat = () => {
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de la mise à jour");
-      console.log(err);
+      reportError("ECHEC_UPDATE_PROFIL_GENERIC", err); // 🛑 Remplacement console
     }
   };
 
@@ -125,7 +122,7 @@ const ProfilCandidat = () => {
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de l'envoi du fichier");
-      console.log(err);
+      reportError("ECHEC_UPDATE_CV", err); // 🛑 Remplacement console
     }
   };
 
@@ -140,7 +137,7 @@ const ProfilCandidat = () => {
       fetchData();
     } catch (err) {
       toast.error("Erreur lors du téléchargement de la photo.");
-      console.log(err);
+      reportError("ECHEC_UPDATE_PHOTO", err); // 🛑 Remplacement console
     }
   };
 
@@ -160,7 +157,7 @@ const ProfilCandidat = () => {
       fetchData();
     } catch (err) {
       toast.error("Vérifiez les données de l'expérience.");
-      console.log(err);
+      reportError("ECHEC_AJOUT_EXP", err); // 🛑 Remplacement console
     }
   };
 
@@ -171,7 +168,7 @@ const ProfilCandidat = () => {
         fetchData();
       } catch (err) {
         toast.error("Erreur de suppression");
-        console.log(err);
+        reportError("ECHEC_DELETE_EXP", err); // 🛑 Remplacement console
       }
     }
   };
@@ -192,7 +189,7 @@ const ProfilCandidat = () => {
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de l'ajout de la formation");
-      console.log(err);
+      reportError("ECHEC_AJOUT_FORMATION", err); // 🛑 Remplacement console
     }
   };
 
@@ -203,7 +200,7 @@ const ProfilCandidat = () => {
         fetchData();
       } catch (err) {
         toast.error("Erreur de suppression");
-        console.log(err);
+        reportError("ECHEC_DELETE_FORMATION", err); // 🛑 Remplacement console
       }
     }
   };
@@ -214,8 +211,12 @@ const ProfilCandidat = () => {
       const newTags = [...currentTags, value.trim()].join(",");
       const formData = new FormData();
       formData.append(type, newTags);
-      await profilService.updateProfil(formData);
-      fetchData();
+      try {
+        await profilService.updateProfil(formData);
+        fetchData();
+      } catch (err) {
+        reportError("ECHEC_AJOUT_TAG", err);
+      }
     }
   };
 
@@ -226,8 +227,12 @@ const ProfilCandidat = () => {
       .join(",");
     const formData = new FormData();
     formData.append(type, newTags);
-    await profilService.updateProfil(formData);
-    fetchData();
+    try {
+      await profilService.updateProfil(formData);
+      fetchData();
+    } catch (err) {
+      reportError("ECHEC_RETRAIT_TAG", err);
+    }
   };
 
   const handleAddLanguage = async (lang, level) => {
@@ -238,8 +243,12 @@ const ProfilCandidat = () => {
     const newLangs = [...filtered, newEntry].join(",");
     const formData = new FormData();
     formData.append("langues", newLangs);
-    await profilService.updateProfil(formData);
-    fetchData();
+    try {
+      await profilService.updateProfil(formData);
+      fetchData();
+    } catch (err) {
+      reportError("ECHEC_AJOUT_LANGUE", err);
+    }
   };
 
   const getPhotoUrl = (path) => {
@@ -270,6 +279,7 @@ const ProfilCandidat = () => {
         Mon Profil Professionnel
       </h1>
 
+      {/* SECTION CV */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex justify-between items-start">
         <div>
           <h2 className="font-black text-gray-900 text-lg mb-2">Mon CV</h2>
@@ -291,6 +301,7 @@ const ProfilCandidat = () => {
         </button>
       </section>
 
+      {/* SECTION INFORMATIONS PERSONNELLES */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-start mb-6">
           <h2 className="font-black text-gray-900 text-lg">
@@ -399,6 +410,7 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
+      {/* SECTION PREFERENCES */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-start mb-6">
           <h2 className="font-black text-gray-900 text-lg">
@@ -447,6 +459,7 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
+      {/* SECTION EXPERIENCES */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-lg font-black text-gray-900">Vos expériences</h2>
@@ -497,6 +510,7 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
+      {/* SECTION FORMATIONS */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-lg font-black text-gray-900">
@@ -546,6 +560,7 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
+      {/* SECTION COMPETENCES */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-black text-gray-900 mb-6">Compétences</h2>
         <div className="flex flex-wrap gap-2 mb-6">
@@ -577,6 +592,7 @@ const ProfilCandidat = () => {
         />
       </section>
 
+      {/* SECTION LANGUES */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-black text-gray-900 mb-6">Langues</h2>
         <div className="flex flex-wrap gap-3 mb-8">
@@ -638,7 +654,9 @@ const ProfilCandidat = () => {
         </div>
       </section>
 
-      {/* 1. Modal Modifier Informations Personnelles */}
+      {/* --- LES 5 MODALES --- */}
+
+      {/* 1. Modal Informations Personnelles */}
       {showInfoForm && (
         <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] p-10 max-w-xl w-full shadow-2xl animate-slideUp overflow-y-auto max-h-[90vh]">
@@ -695,7 +713,6 @@ const ProfilCandidat = () => {
                 />
               </div>
 
-              {/* 👇 LES DEUX LISTES DÉROULANTES EN CASCADE 👇 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
@@ -763,7 +780,6 @@ const ProfilCandidat = () => {
                 </div>
               </div>
 
-              {/* 👇 PROFIL PRINCIPAL POUR L'IA 👇 */}
               <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2">
@@ -825,7 +841,6 @@ const ProfilCandidat = () => {
                 </div>
               </div>
 
-              {/* Trio Administratif */}
               <div className="bg-blue-50/50 border border-blue-50 p-6 rounded-2xl space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-2">

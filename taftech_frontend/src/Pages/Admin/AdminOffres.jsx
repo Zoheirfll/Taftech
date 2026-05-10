@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
+import { reportError } from "../../utils/errorReporter"; // 👇 Télémétrie ajoutée
 
 const AdminOffres = () => {
   const [offres, setOffres] = useState([]);
@@ -17,16 +18,13 @@ const AdminOffres = () => {
   const [selectedOffre, setSelectedOffre] = useState(null);
   const [motifRejet, setMotifRejet] = useState("");
 
-  // Fonction de chargement mise à jour pour accepter le terme de recherche
   const chargerOffres = useCallback(async () => {
     setLoading(true);
     try {
-      // On envoie la page actuelle et le terme de recherche au backend
       const data = await jobsService.getAdminOffres(currentPage, searchTerm);
 
       if (data.results) {
         setOffres(data.results);
-        // Calcul du nombre de pages basé sur un max de 10 par page (data.count)
         setTotalPages(Math.ceil(data.count / 5));
       } else {
         setOffres(data);
@@ -35,13 +33,12 @@ const AdminOffres = () => {
       toast.error(
         "Erreur d'accès aux offres. Êtes-vous sûr d'être connecté en tant qu'Admin ?",
       );
-      console.error(err);
+      reportError("ECHEC_CHARGEMENT_OFFRES_ADMIN", err); // 🛑 Télémétrie
     } finally {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
 
-  // Utilisation d'un debounce (délai) pour ne pas surcharger le serveur à chaque lettre
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       chargerOffres();
@@ -60,7 +57,8 @@ const AdminOffres = () => {
         chargerOffres();
         toast.success("Offre approuvée et en ligne !");
       } catch (err) {
-        (toast.error("Erreur lors de l'approbation."), console.error(err));
+        toast.error("Erreur lors de l'approbation.");
+        reportError("ECHEC_APPROBATION_OFFRE", err); // 🛑 Télémétrie
       }
     }
   };
@@ -77,7 +75,8 @@ const AdminOffres = () => {
       chargerOffres();
       toast.success("L'offre a été rejetée.");
     } catch (err) {
-      (toast.error("Erreur lors du rejet de l'offre."), console.error(err));
+      toast.error("Erreur lors du rejet de l'offre.");
+      reportError("ECHEC_REJET_OFFRE", err); // 🛑 Télémétrie
     }
   };
 
@@ -92,7 +91,30 @@ const AdminOffres = () => {
       chargerOffres();
       toast.success("Offre corrigée avec succès !");
     } catch (err) {
-      (toast.error("Erreur lors de la modification."), console.error(err));
+      toast.error("Erreur lors de la modification.");
+      reportError("ECHEC_MODIFICATION_OFFRE", err); // 🛑 Télémétrie
+    }
+  };
+
+  // 👇 FONCTION D'EXPORT 👇
+  const handleExport = async () => {
+    const toastId = toast.loading("Génération du fichier en cours...");
+    try {
+      const blob = await jobsService.exportOffres();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "offres_taftech.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Téléchargement réussi !");
+    } catch (err) {
+      toast.error("Erreur lors de l'exportation.");
+      reportError("ECHEC_EXPORT_EXCEL_OFFRES", err); // 🛑 Télémétrie
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -125,26 +147,36 @@ const AdminOffres = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* HEADER AVEC RECHERCHE */}
+      {/* HEADER AVEC RECHERCHE ET EXPORT */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-3xl font-black text-gray-900 tracking-tight">
           Modération des Offres
         </h2>
 
-        <div className="relative group">
-          <input
-            type="text"
-            placeholder="Rechercher un poste ou une entreprise..."
-            className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // On revient à la page 1 lors d'une recherche
-            }}
-          />
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
+          {/* 👇 BOUTON EXCEL 👇 */}
+          <button
+            onClick={handleExport}
+            className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 text-white font-black px-6 py-3 rounded-[1.5rem] hover:bg-green-700 hover:-translate-y-1 transition-all shadow-md text-sm"
+          >
+            📊 EXPORTER EXCEL
+          </button>
+
+          <div className="relative group w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="Rechercher un poste..."
+              className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+              🔍
+            </span>
+          </div>
         </div>
       </div>
 

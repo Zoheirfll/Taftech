@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const OffresParRegion = () => {
   const [wilayas, setWilayas] = useState([]);
@@ -13,7 +14,8 @@ const OffresParRegion = () => {
         const data = await jobsService.getConstants();
         setWilayas(data.wilayas);
       } catch (error) {
-        console.error("Erreur lors du chargement des wilayas", error);
+        // 🛑 Remplacement de console.error par reportError
+        reportError("ECHEC_CHARGEMENT_WILAYAS", error);
       } finally {
         setIsLoading(false);
       }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const OffresParSecteur = () => {
   const [secteurs, setSecteurs] = useState([]);
@@ -31,7 +32,8 @@ const OffresParSecteur = () => {
         const data = await jobsService.getConstants();
         setSecteurs(data.secteurs);
       } catch (error) {
-        console.error("Erreur secteurs", error);
+        // 🛑 Remplacement de console.error par reportError
+        reportError("ECHEC_CHARGEMENT_SECTEURS", error);
       } finally {
         setIsLoading(false);
       }

@@ -4,8 +4,8 @@ import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import api from "../api/axiosConfig";
-
 import communesAlgerie from "../data/communes.json";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const JobsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,7 +14,6 @@ const JobsList = () => {
   const [loading, setLoading] = useState(false);
 
   const [favoris, setFavoris] = useState([]);
-  // 👇 NOUVEL ÉTAT POUR LES RECOMMANDATIONS IA 👇
   const [recommandations, setRecommandations] = useState([]);
 
   const [constants, setConstants] = useState({
@@ -51,7 +50,6 @@ const JobsList = () => {
           promises.push(Promise.resolve({ data: [] }));
         }
 
-        // 👇 SI C'EST UN CANDIDAT, ON CHERCHE LES OFFRES RECOMMANDÉES PAR L'IA 👇
         if (isCandidat) {
           promises.push(jobsService.getOffresRecommandees().catch(() => []));
         } else {
@@ -65,7 +63,7 @@ const JobsList = () => {
         setFavoris(favorisData.data);
         setRecommandations(recommandationsData || []);
       } catch (error) {
-        console.error("Erreur d'initialisation", error);
+        reportError("ECHEC_INITIALISATION_JOBS_LIST", error); // 🛑 Télémétrie
       }
     };
     fetchData();
@@ -78,7 +76,7 @@ const JobsList = () => {
         const data = await jobsService.getAllJobs(filters, 1);
         setJobs(data.results || data);
       } catch (error) {
-        console.error("Erreur lors de la récupération des offres:", error);
+        reportError("ECHEC_RECUPERATION_OFFRES", error); // 🛑 Télémétrie
       } finally {
         setLoading(false);
       }
@@ -110,7 +108,8 @@ const JobsList = () => {
         toast.success("Offre retirée des favoris.");
       } catch (error) {
         setFavoris([...favoris, isDejaSauvegarde]);
-        (toast.error("Erreur lors de la suppression."), console.log(error));
+        toast.error("Erreur lors de la suppression.");
+        reportError("ECHEC_SUPPRESSION_FAVORI", error); // 🛑 Télémétrie
       }
     } else {
       try {
@@ -120,8 +119,8 @@ const JobsList = () => {
         setFavoris([...favoris, response.data]);
         toast.success("Offre sauvegardée !");
       } catch (error) {
-        (toast.error("Impossible de sauvegarder cette offre."),
-          console.log(error));
+        toast.error("Impossible de sauvegarder cette offre.");
+        reportError("ECHEC_SAUVEGARDE_FAVORI", error); // 🛑 Télémétrie
       }
     }
   };
@@ -319,7 +318,6 @@ const JobsList = () => {
 
         {/* COLONNE DROITE : LES RÉSULTATS */}
         <main className="w-full md:w-2/3 lg:w-3/4">
-          {/* 👇 NOUVEAU : CARROUSEL DES RECOMMANDATIONS IA 👇 */}
           {recommandations.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">

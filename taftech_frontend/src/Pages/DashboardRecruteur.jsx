@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
-
-// 👇 IMPORTATION DES DONNÉES LOCALES 👇
 import communesAlgerie from "../data/communes.json";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -37,6 +36,8 @@ const DashboardRecruteur = () => {
         ) {
           navigate("/creer-entreprise");
         } else {
+          // 🛑 Télémétrie en cas de crash du Dashboard
+          reportError("ECHEC_CHARGEMENT_DASHBOARD", err);
           setError("Impossible de charger les données du dashboard.");
         }
       } finally {
@@ -64,7 +65,8 @@ const DashboardRecruteur = () => {
       toast.success("Profil mis à jour !");
     } catch (err) {
       toast.error("Erreur lors de la sauvegarde.");
-      console.log(err);
+      // 🛑 Remplacement de console.log par reportError
+      reportError("ECHEC_MISE_A_JOUR_PROFIL_ENTREPRISE", err);
     }
   };
 

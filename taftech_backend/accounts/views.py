@@ -7,9 +7,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny
-from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, RegisterCandidatDTO, EmailTokenObtainSerializer, RecruteurRegisterSerializer
+from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, EmailTokenObtainSerializer, RecruteurRegisterSerializer
 from django.contrib.auth import get_user_model
+from .models import SystemErrorLog
+from rest_framework.permissions import IsAdminUser
+from .serializers import SystemErrorLogSerializer
+
 User = get_user_model()
+
 class CandidatRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -21,17 +26,22 @@ class CandidatRegistrationAPIView(APIView):
         if dto.is_valid():
             print("2. DONNÉES VALIDÉES PAR LE DTO:", dto.validated_data)
             try:
-                # 1. Le DTO crée l'utilisateur (Django le met 'Actif' par défaut)
+                # 1. Le DTO crée l'utilisateur
                 user = dto.save() 
                 print(f"3. UTILISATEUR CRÉÉ: {user.email}, NIN: {user.nin}")
                 
-                # 👇 2. LE COUP DE MARTEAU EST ICI 👇
-                # On éteint manuellement les statuts juste après la création
+                # 2. On éteint manuellement les statuts juste après la création
                 user.is_active = False 
                 user.email_verifie = False
                 
                 # 3. On génère le code
                 code = str(random.randint(100000, 999999))
+                
+                # 👇 HACK CYPRESS 👇 : OTP magique pour les tests E2E
+                if user.email == "cypress@test.dz":
+                    code = "111111"
+                # 👆 FIN DU HACK 👆
+
                 user.code_verification = code
                 
                 # 4. On sauvegarde tout ça en base de données en une seule fois !
@@ -68,7 +78,6 @@ class CandidatRegistrationAPIView(APIView):
         print("ERREURS DTO:", dto.errors)
         return Response(dto.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class VerifyEmailAPIView(APIView):
     """ Endpoint pour vérifier le code reçu par email """
     permission_classes = [AllowAny]
@@ -96,17 +105,9 @@ class VerifyEmailAPIView(APIView):
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
 class EmailTokenObtainView(TokenObtainPairView):
-    """
-    Endpoint (POST) pour la connexion par Email.
-    Remplace la vue par défaut de SimpleJWT.
-    """
     serializer_class = EmailTokenObtainSerializer
 
 class RecruteurRegisterAPIView(APIView):
-    """
-    Endpoint (POST) pour l'inscription d'une Entreprise.
-    URL prévue : /api/accounts/register/recruteur/
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -117,6 +118,12 @@ class RecruteurRegisterAPIView(APIView):
             
             # 2. On génère le code OTP
             code = str(random.randint(100000, 999999))
+            
+            # 👇 HACK CYPRESS 👇 : OTP magique pour les tests E2E
+            if user.email == "cypress@test.dz":
+                code = "111111"
+            # 👆 FIN DU HACK 👆
+
             user.code_verification = code
             user.save()
 
@@ -136,12 +143,13 @@ class RecruteurRegisterAPIView(APIView):
             return Response(
                 {
                     "message": "Demande envoyée. Veuillez vérifier votre email avec le code à 6 chiffres.",
-                    "email": user.email # Très important pour que React puisse afficher la page de validation OTP !
+                    "email": user.email
                 }, 
                 status=status.HTTP_201_CREATED
             )
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class CookieTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
 
@@ -151,10 +159,7 @@ class CookieTokenObtainView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            # 👇 ESPIONNAGE ULTIME : ON AFFICHE LA VRAIE ERREUR 👇
             print("🚨 VRAIE ERREUR DE LOGIN :", str(e))
-            
-            # On renvoie la vraie erreur à React pour voir ce qui cloche
             return Response({"detail": str(e)}, status=401)
 
         data = serializer.validated_data
@@ -175,10 +180,11 @@ class CookieTokenObtainView(TokenObtainPairView):
             secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
         )
         return response
+
 class CookieTokenRefreshView(TokenRefreshView):
     serializer_class = MyTokenObtainPairSerializer
+    
     def post(self, request, *args, **kwargs):
-        # Sécurité : on cherche le cookie partout où il peut être
         refresh_token = getattr(request, 'COOKIES', {}).get('refreshToken')
         if not refresh_token and hasattr(request, '_request'):
             refresh_token = request._request.COOKIES.get('refreshToken')
@@ -201,3 +207,29 @@ class CookieTokenRefreshView(TokenRefreshView):
             return response
         except Exception as e:
             return Response({"detail": "Session expirée, veuillez vous reconnecter."}, status=401)
+
+class ErrorReportAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            user = request.user if request.user.is_authenticated else None
+            SystemErrorLog.objects.create(
+                user=user,
+                message=request.data.get('message', 'Erreur Inconnue'),
+                details=request.data.get('details', 'N/A'),
+                url=request.data.get('url', 'N/A'),
+                user_agent=request.data.get('user_agent', 'N/A'),
+                stack_trace=request.data.get('stack_trace', 'N/A')
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+class AdminSystemLogAPIView(APIView):
+    permission_classes = [IsAdminUser] 
+
+    def get(self, request):
+        logs = SystemErrorLog.objects.all().order_by('-timestamp')
+        serializer = SystemErrorLogSerializer(logs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

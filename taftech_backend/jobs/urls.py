@@ -8,7 +8,14 @@ from .views import PublicStatsAPIView
 from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView, EntrepriseDetailAPIView
 from .views import PostulerRapideAPIView, NotificationListAPIView, MarkNotificationReadAPIView
 from .views import OffresRecommandeesAPIView # <-- Ajoute ça dans tes imports
-from .views import AdminBroadcastEmailAPIView, CVThequeView
+from .views import AdminBroadcastEmailAPIView, CVThequeView, EvaluerCandidatureAPIView, AdminCandidaturesListAPIView, ExportCandidaturesCSVAPIView
+from .views import ExportEntreprisesCSVAPIView, ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView, GenererBulletinPDFAPIView
+
+
+
+
+
+
 
 
 urlpatterns = [
@@ -42,6 +49,7 @@ urlpatterns = [
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users-list'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast-email'),
+    path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures-list'),
     # URL pour la page publique d'une entreprise
     path('entreprises/<int:entreprise_id>/', EntrepriseDetailAPIView.as_view(), name='entreprise-detail-public'),
     
@@ -75,7 +83,13 @@ urlpatterns = [
     path('parametres/notifications/', ParametresNotificationsAPIView.as_view(), name='parametres-notifications'),
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='offres-recommandees'),
     path('notifications/', NotificationListAPIView.as_view(), name='notifications-list'),
-path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-read'),
+    path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-read'),
 
     path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque-search'),
+    path('candidatures/<int:candidature_id>/evaluer/', EvaluerCandidatureAPIView.as_view(), name='evaluer-candidature'),
+    path('admin/export/candidatures/', ExportCandidaturesCSVAPIView.as_view(), name='admin-export-candidatures'),
+    path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='admin-export-entreprises'),
+    path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='admin-export-offres'),
+    path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='admin-export-utilisateurs'),
+    path('candidatures/<int:candidature_id>/bulletin/', GenererBulletinPDFAPIView.as_view(), name='generer-bulletin'),
 ]

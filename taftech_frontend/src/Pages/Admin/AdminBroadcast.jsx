@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import api from "../../api/axiosConfig"; // Assure-toi du bon chemin vers axiosConfig
+import api from "../../api/axiosConfig";
+import { reportError } from "../../utils/errorReporter"; // Import de la télémétrie
 
 const AdminBroadcast = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +34,8 @@ const AdminBroadcast = () => {
       // On vide le formulaire après succès
       setFormData({ ...formData, sujet: "", message: "" });
     } catch (error) {
-      console.error(error);
+      // 🛑 Remplacement de console.error par la télémétrie
+      reportError("ECHEC_ENVOI_BROADCAST", error);
       toast.error(
         error.response?.data?.error || "Erreur lors de l'envoi des emails.",
       );

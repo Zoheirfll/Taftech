@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
-import { jobsService } from "../../Services/jobsService"; // 👈 On importe jobsService
+import { jobsService } from "../../Services/jobsService";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import télémétrie
 
 const CandidatLayout = () => {
   const location = useLocation();
-  const [unreadCount, setUnreadCount] = useState(0); // 👈 L'état pour le badge
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // On récupère les notifications pour afficher le nombre de messages non lus
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -15,13 +15,13 @@ const CandidatLayout = () => {
         const unread = notifs.filter((n) => !n.lue).length;
         setUnreadCount(unread);
       } catch (error) {
-        console.error("Erreur chargement notifications", error);
+        // 🛑 Remplacement du console.error par reportError
+        reportError("ECHEC_CHARGEMENT_NOTIFS_LAYOUT", error);
       }
     };
     fetchNotifications();
-  }, [location.pathname]); // On rafraîchit le compteur quand on change de page
+  }, [location.pathname]);
 
-  // 👇 On ajoute la Boîte de réception avec la condition du badge
   const menuItems = [
     { name: "Mon profil", path: "/profil", icon: "👤" },
     { name: "Mes candidatures", path: "/mes-candidatures", icon: "💼" },
@@ -29,7 +29,7 @@ const CandidatLayout = () => {
       name: "Boîte de réception",
       path: "/inbox",
       icon: "✉️",
-      badge: unreadCount > 0 ? unreadCount : null, // 👈 Le badge s'affiche seulement s'il y a des messages
+      badge: unreadCount > 0 ? unreadCount : null,
     },
     { name: "Offres sauvegardées", path: "/offres-sauvegardees", icon: "🔖" },
     { name: "Alertes d'emploi", path: "/alertes", icon: "🔔" },
@@ -38,7 +38,6 @@ const CandidatLayout = () => {
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 p-4 md:p-10 min-h-screen bg-gray-50">
-      {/* SIDEBAR GAUCHE (Le menu Emploitic) */}
       <aside className="w-full md:w-64 space-y-2">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sticky top-10">
           <nav className="space-y-1">
@@ -48,7 +47,6 @@ const CandidatLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  // 👇 On change en 'justify-between' pour écarter le badge sur la droite
                   className={`flex items-center justify-between px-4 py-3 rounded-2xl font-bold transition-all ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
@@ -60,7 +58,6 @@ const CandidatLayout = () => {
                     <span className="text-sm">{item.name}</span>
                   </div>
 
-                  {/* L'AFFICHAGE DU BADGE */}
                   {item.badge && (
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
@@ -86,7 +83,6 @@ const CandidatLayout = () => {
         </div>
       </aside>
 
-      {/* CONTENU À DROITE (Outlet injecte la page correspondante) */}
       <main className="flex-1">
         <Outlet />
       </main>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../Services/authService";
 import { profilService } from "../Services/profilService";
 import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter"; // Import ajouté
 import logoTafTech from "../assets/logo-taftech.png";
 
 const Navbar = () => {
@@ -28,7 +29,8 @@ const Navbar = () => {
             setUserPhoto(fullUrl);
           }
         } catch (error) {
-          console.error("Erreur chargement photo navbar", error);
+          // Remplacement du console.log par reportError
+          reportError("ECHEC_CHARGEMENT_PHOTO_NAVBAR", error);
         }
       };
       loadUserPhoto();
@@ -40,7 +42,8 @@ const Navbar = () => {
             const unread = notifs.filter((n) => !n.lue).length;
             setUnreadCount(unread);
           } catch (error) {
-            console.error("Erreur chargement notifications navbar", error);
+            // Remplacement du console.log par reportError
+            reportError("ECHEC_CHARGEMENT_NOTIFS_NAVBAR", error);
           }
         };
         loadNotifications();

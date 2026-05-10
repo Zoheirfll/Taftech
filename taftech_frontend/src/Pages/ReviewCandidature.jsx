@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la télémétrie
 
 const ReviewCandidature = () => {
   const { id } = useParams();
@@ -27,6 +28,7 @@ const ReviewCandidature = () => {
         setProfil(profilData);
       } catch (err) {
         toast.error("Erreur de chargement du profil.", err);
+        reportError("ECHEC_CHARGEMENT_REVIEW_CANDIDATURE", err); // ✅ Ajout télémétrie
       } finally {
         setLoading(false);
       }
@@ -54,6 +56,7 @@ const ReviewCandidature = () => {
           err.response?.data?.error ||
           "Erreur ou candidature déjà envoyée.",
       );
+      reportError("ECHEC_SOUMISSION_CANDIDATURE", err); // ✅ Ajout télémétrie
       setSubmitting(false);
     }
   };

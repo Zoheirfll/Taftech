@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { jobsService } from "../../Services/jobsService"; // Utilisation de jobsService
+import { jobsService } from "../../Services/jobsService";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import télémétrie
 
 const Settings = () => {
-  // --- STATE POUR LES NOTIFICATIONS ---
   const [notifications, setNotifications] = useState({
     notif_offres_exclusives: false,
     notif_newsletter: false,
     notif_mise_a_jour: false,
   });
   const [isLoading, setIsLoading] = useState(true);
-
-  // --- STATE POUR LE MOT DE PASSE ---
   const [passwords, setPasswords] = useState({ old: "", new: "", confirm: "" });
 
-  // --- 1. CHARGER LES PARAMÈTRES AU DÉMARRAGE ---
   useEffect(() => {
     const fetchParametres = async () => {
       try {
@@ -22,7 +19,7 @@ const Settings = () => {
         setNotifications(data);
       } catch (error) {
         toast.error("Erreur lors du chargement de vos paramètres.");
-        console.error(error);
+        reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
       } finally {
         setIsLoading(false);
       }
@@ -30,9 +27,11 @@ const Settings = () => {
     fetchParametres();
   }, []);
 
-  // --- 2. GÉRER LE CLIC SUR UN SWITCH ---
   const handleToggle = async (field) => {
-    // Optimistic UI : on inverse tout de suite pour l'utilisateur
+    // Sauvegarde de l'état précédent pour le rollback
+    const previousState = { ...notifications };
+
+    // Optimistic UI
     const updatedNotifications = {
       ...notifications,
       [field]: !notifications[field],
@@ -40,23 +39,21 @@ const Settings = () => {
     setNotifications(updatedNotifications);
 
     try {
-      // On sauvegarde dans la base de données via jobsService
       await jobsService.updateParametres(updatedNotifications);
       toast.success("Préférence enregistrée !");
     } catch (error) {
-      setNotifications(notifications); // Rollback en cas d'erreur
+      // 🛑 ROLLBACK en cas d'erreur
+      setNotifications(previousState);
+      reportError("ECHEC_MAJ_PARAMETRES", error);
       toast.error("Échec de la sauvegarde.");
-      console.error(error);
     }
   };
 
-  // --- 3. GÉRER LE MOT DE PASSE (Simulé pour l'instant) ---
   const handleUpdatePassword = (e) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
       return toast.error("Les nouveaux mots de passe ne correspondent pas.");
     }
-    // Ici, il faudra connecter une route backend "accounts/change-password/"
     toast.success("Demande de changement envoyée (Backend à connecter)");
   };
 
@@ -74,13 +71,11 @@ const Settings = () => {
         Paramètres
       </h1>
 
-      {/* BLOC NOTIFICATIONS */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
         <h2 className="text-lg font-black text-gray-800 mb-6">
           Gérer mes notifications
         </h2>
         <div className="space-y-6">
-          {/* Switch 1 */}
           <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
             <div>
               <p className="font-bold text-gray-800 text-sm">
@@ -101,7 +96,6 @@ const Settings = () => {
             </label>
           </div>
 
-          {/* Switch 2 */}
           <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
             <div>
               <p className="font-bold text-gray-800 text-sm">
@@ -122,15 +116,13 @@ const Settings = () => {
             </label>
           </div>
 
-          {/* Switch 3 - MODIFIÉ POUR CLARTÉ */}
           <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
             <div>
               <p className="font-bold text-gray-800 text-sm">
                 Rappels de mise à jour du profil
               </p>
               <p className="text-xs text-gray-400 font-medium">
-                Recevez un email amical si votre CV n'a pas été actualisé depuis
-                un certain temps. Un profil à jour attire plus de recruteurs !
+                Recevez un email amical si votre CV n'a pas été actualisé.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -146,7 +138,6 @@ const Settings = () => {
         </div>
       </section>
 
-      {/* BLOC MOT DE PASSE */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
         <h2 className="text-lg font-black text-gray-800 mb-6">
           Modifier mon mot de passe
@@ -171,6 +162,14 @@ const Settings = () => {
               setPasswords({ ...passwords, new: e.target.value })
             }
           />
+          <input
+            type="password"
+            placeholder="Confirmer"
+            className="flex-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500"
+            onChange={(e) =>
+              setPasswords({ ...passwords, confirm: e.target.value })
+            }
+          />
           <button
             type="submit"
             className="bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-black transition-all"
@@ -180,7 +179,6 @@ const Settings = () => {
         </form>
       </section>
 
-      {/* BLOC SUPPRESSION */}
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-red-50 flex justify-between items-center">
         <div>
           <h2 className="text-lg font-black text-red-600">Gérer mon compte</h2>

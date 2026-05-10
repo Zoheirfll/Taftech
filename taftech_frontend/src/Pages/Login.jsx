@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../Services/authService";
-import toast from "react-hot-toast"; // <-- IMPORT
+import toast from "react-hot-toast";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -27,7 +28,8 @@ const Login = () => {
       window.location.reload();
     } catch (err) {
       toast.error("Email ou mot de passe incorrect.", { id: toastId });
-      console.error("Erreur login:", err);
+      // 🛑 Remplacement de console.error par reportError
+      reportError("ECHEC_CONNEXION", err);
     }
   };
 

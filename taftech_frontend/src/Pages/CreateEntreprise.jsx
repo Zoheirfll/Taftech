@@ -1,42 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { entrepriseService } from "../Services/entrepriseService";
-import { jobsService } from "../Services/jobsService"; // Pour récupérer la liste des wilayas
+import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
-
-// 👇 IMPORTATION DE TES DONNÉES LOCALES 👇
 import communesAlgerie from "../data/communes.json";
+import { reportError } from "../utils/errorReporter"; // 👇 Import télémétrie
 
 const CreateEntreprise = () => {
   const navigate = useNavigate();
 
-  // État pour les wilayas
   const [wilayasList, setWilayasList] = useState([]);
-
   const [formData, setFormData] = useState({
     nom_entreprise: "",
     secteur_activite: "",
     registre_commerce: "",
-    wilaya_siege: "", // Sera de la forme "31 - Oran"
-    commune_siege: "", // Nouveau champ pour la commune
+    wilaya_siege: "",
+    commune_siege: "",
     description: "",
   });
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  // On récupère les wilayas au chargement
   useEffect(() => {
     const fetchWilayas = async () => {
       try {
         const data = await jobsService.getConstants();
         setWilayasList(data.wilayas);
       } catch (error) {
-        console.error("Erreur wilayas", error);
+        reportError("ECHEC_CHARGEMENT_WILAYAS_CREATE_ENT", error);
       }
     };
     fetchWilayas();
   }, []);
 
-  // 👇 FILTRE LES COMMUNES SELON LA WILAYA SÉLECTIONNÉE 👇
   const getCommunesOptions = () => {
     if (!formData.wilaya_siege) return [];
     const wilayaCode = formData.wilaya_siege.split(" - ")[0];
@@ -71,13 +66,17 @@ const CreateEntreprise = () => {
         navigate("/");
       }, 2000);
     } catch (error) {
-      console.error("VRAIE ERREUR :", error);
+      // 🛑 Télémétrie et extraction fine de l'erreur
+      reportError("ECHEC_CREATION_ENTREPRISE", error);
+
+      const serverError =
+        error.response?.data?.error ||
+        error.response?.data?.registre_commerce?.[0] ||
+        "Erreur lors de la création de l'entreprise.";
+
       setStatus({
         type: "error",
-        message:
-          error.response?.data?.error ||
-          error.response?.data?.registre_commerce?.[0] ||
-          "Erreur lors de la création de l'entreprise.",
+        message: serverError,
       });
     }
   };
@@ -91,6 +90,7 @@ const CreateEntreprise = () => {
 
         {status.message && (
           <div
+            role="alert"
             className={`p-4 rounded-md mb-6 font-medium ${status.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}
           >
             {status.message}
@@ -128,7 +128,6 @@ const CreateEntreprise = () => {
             </div>
           </div>
 
-          {/* 👇 LES DEUX LISTES DÉROULANTES EN CASCADE 👇 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -137,6 +136,7 @@ const CreateEntreprise = () => {
               <Select
                 name="wilaya_siege"
                 options={wilayasList}
+                aria-label="wilaya-select"
                 onChange={(opt) => {
                   setFormData({
                     ...formData,
@@ -159,6 +159,7 @@ const CreateEntreprise = () => {
               </label>
               <Select
                 name="commune_siege"
+                aria-label="commune-select"
                 options={getCommunesOptions()}
                 isDisabled={
                   !formData.wilaya_siege || getCommunesOptions().length === 0

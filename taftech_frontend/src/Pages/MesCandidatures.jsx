@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const MesCandidatures = () => {
   const [candidatures, setCandidatures] = useState([]);
@@ -11,7 +12,8 @@ const MesCandidatures = () => {
         const data = await jobsService.getMesCandidatures();
         setCandidatures(data);
       } catch (error) {
-        console.error("Erreur lors de la récupération des candidatures", error);
+        // 🛑 Remplacement de console.error par reportError
+        reportError("ECHEC_RECUPERATION_CANDIDATURES", error);
       } finally {
         setLoading(false);
       }

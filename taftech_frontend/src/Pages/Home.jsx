@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
 import api from "../api/axiosConfig";
+import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
 
 const Home = () => {
   const navigate = useNavigate();
@@ -11,7 +12,6 @@ const Home = () => {
   const [search, setSearch] = useState("");
   const [wilaya, setWilaya] = useState("");
 
-  // 👇 1. AJOUT DE 'total_recrutements' DANS L'ÉTAT INITIAL 👇
   const [stats, setStats] = useState({
     total_offres: 0,
     total_entreprises: 0,
@@ -37,7 +37,8 @@ const Home = () => {
           setRecentJobs(jobsData.results.slice(0, 3));
         }
       } catch (error) {
-        console.error("Erreur de chargement de l'accueil", error);
+        // 🛑 Remplacement de console.error par reportError
+        reportError("ECHEC_CHARGEMENT_ACCUEIL", error);
       } finally {
         setLoading(false);
       }
@@ -149,7 +150,6 @@ const Home = () => {
       {/* SECTION 2 : STATISTIQUES EN TEMPS RÉEL    */}
       {/* ========================================= */}
       <section className="py-16 bg-blue-600 text-white">
-        {/* 👇 2. ON PASSE LA GRILLE EN 4 COLONNES (md:grid-cols-4) 👇 */}
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-blue-400">
           <div className="py-4 md:py-0">
             <p className="text-5xl font-black mb-2">
@@ -175,7 +175,6 @@ const Home = () => {
               Offres à pourvoir
             </p>
           </div>
-          {/* 👇 3. LE NOUVEAU BLOC POUR LES RECRUTEMENTS RÉALISÉS 👇 */}
           <div className="py-4 md:py-0 border-t border-l md:border-t-0 border-blue-400">
             <p className="text-5xl font-black mb-2 text-green-300">
               {loading ? "..." : stats.total_recrutements || 0}

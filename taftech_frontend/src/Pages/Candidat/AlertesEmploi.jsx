@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-// 👇 LA CORRECTION EST ICI : "../../" pour remonter depuis Pages/candidat/ vers Services/ 👇
 import { jobsService } from "../../Services/jobsService";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie
 
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
@@ -28,7 +28,7 @@ const AlertesEmploi = () => {
         setWilayas(constantsData.wilayas);
       } catch (error) {
         toast.error("Erreur lors du chargement des données.");
-        console.error(error);
+        reportError("ECHEC_CHARGEMENT_ALERTES", error); // 🛑 Télémétrie
       } finally {
         setIsLoading(false);
       }
@@ -56,7 +56,7 @@ const AlertesEmploi = () => {
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
     } catch (error) {
-      console.error(error);
+      reportError("ECHEC_CREATION_ALERTE", error); // 🛑 Télémétrie
       toast.error("Impossible de créer l'alerte. Vérifiez vos champs.");
     }
   };
@@ -78,7 +78,7 @@ const AlertesEmploi = () => {
         ),
       );
       toast.error("Erreur lors de la modification.");
-      console.error(error);
+      reportError("ECHEC_TOGGLE_ALERTE", error); // 🛑 Télémétrie
     }
   };
 
@@ -92,7 +92,7 @@ const AlertesEmploi = () => {
       toast.success("Alerte supprimée.");
     } catch (error) {
       toast.error("Erreur lors de la suppression.");
-      console.error(error);
+      reportError("ECHEC_SUPPRESSION_ALERTE", error); // 🛑 Télémétrie
     }
   };
 

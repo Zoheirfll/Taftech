@@ -208,9 +208,16 @@ class Candidature(models.Model):
         blank=True, 
         verbose_name="Détails du Matching"
     )
-
-    # ⚠️ ATTENTION : J'ai retiré le "unique_together" ici car 'candidat' peut être nul.
-
+# ==========================================
+    # 👇 NOUVEAUX CHAMPS : ÉVALUATION POST-ENTRETIEN (US 5) 👇
+    # ==========================================
+    note_technique = models.IntegerField(null=True, blank=True, verbose_name="Compétence technique (1-5)")
+    note_communication = models.IntegerField(null=True, blank=True, verbose_name="Communication (1-5)")
+    note_motivation = models.IntegerField(null=True, blank=True, verbose_name="Motivation (1-5)")
+    note_experience = models.IntegerField(null=True, blank=True, verbose_name="Expérience pertinente (1-5)")
+    note_globale = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, verbose_name="Note globale (/20)")
+    commentaire_evaluation = models.TextField(blank=True, null=True, verbose_name="Commentaire (privé recruteur)")
+    
     def __str__(self):
         nom = self.candidat.username if self.candidat else f"{self.nom_rapide} {self.prenom_rapide} (Rapide)"
         score_display = f" - {self.score_matching}%" if self.score_matching else ""

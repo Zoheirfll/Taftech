@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, SystemErrorLog
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import AuthenticationFailed
@@ -153,3 +153,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['role'] = self.user.role 
         
         return data
+
+class SystemErrorLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemErrorLog
+        fields = '__all__'

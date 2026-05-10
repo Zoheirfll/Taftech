@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
+import { reportError } from "../utils/errorReporter"; // ✅ Télémétrie
 
 const GestionOffre = () => {
   const { id } = useParams();
@@ -12,7 +13,7 @@ const GestionOffre = () => {
   const [selectedCandidature, setSelectedCandidature] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
 
-  // 👇 ÉTATS POUR LA MODALE D'ENTRETIEN 👇
+  // Modale pour programmer un entretien
   const [modalEntretien, setModalEntretien] = useState({
     isOpen: false,
     candId: null,
@@ -21,6 +22,19 @@ const GestionOffre = () => {
     date: "",
     heure: "",
     message: "",
+  });
+
+  // Modale pour l'évaluation (US 5)
+  const [modalEval, setModalEval] = useState({
+    isOpen: false,
+    candidature: null,
+  });
+  const [evalForm, setEvalForm] = useState({
+    note_technique: 0,
+    note_communication: 0,
+    note_motivation: 0,
+    note_experience: 0,
+    commentaire_evaluation: "",
   });
 
   useEffect(() => {
@@ -36,7 +50,7 @@ const GestionOffre = () => {
         }
       } catch (err) {
         toast.error("Erreur de chargement.");
-        console.log(err);
+        reportError("ECHEC_CHARGEMENT_OFFRE", err); // 🛑 Télémétrie
         navigate("/dashboard");
       } finally {
         setLoading(false);
@@ -45,7 +59,6 @@ const GestionOffre = () => {
     fetchOffre();
   }, [id, navigate]);
 
-  // 👇 MODIFIÉ : Met à jour l'état local avec la date d'entretien pour affichage immédiat 👇
   const changerStatut = async (
     candidatureId,
     nouveauStatut,
@@ -56,7 +69,6 @@ const GestionOffre = () => {
       let newDate = null;
       let newMsg = null;
 
-      // Si on a des données d'entretien, on les prépare
       if (extraData) {
         newDate = `${extraData.date}T${extraData.heure}`;
         newMsg = extraData.message;
@@ -66,7 +78,6 @@ const GestionOffre = () => {
 
       await jobsService.updateStatutCandidature(candidatureId, payload);
 
-      // Mise à jour de la liste complète des candidatures
       setOffre({
         ...offre,
         candidatures: offre.candidatures.map((c) => {
@@ -89,7 +100,6 @@ const GestionOffre = () => {
           : `Statut mis à jour avec succès.`,
       );
 
-      // Mise à jour de la modale ouverte si c'est le même candidat
       if (selectedCandidature && selectedCandidature.id === candidatureId) {
         setSelectedCandidature({
           ...selectedCandidature,
@@ -101,7 +111,7 @@ const GestionOffre = () => {
       }
     } catch (err) {
       toast.error("Erreur lors de la mise à jour.");
-      console.log(err);
+      reportError("ECHEC_MISE_A_JOUR_STATUT", err); // 🛑 Télémétrie
     }
   };
 
@@ -117,9 +127,7 @@ const GestionOffre = () => {
     if (!entretienForm.date || !entretienForm.heure) {
       return toast.error("Veuillez sélectionner une date et une heure.");
     }
-
     const toastId = toast.loading("Envoi de l'invitation en cours...");
-
     changerStatut(modalEntretien.candId, "ENTRETIEN", entretienForm).then(
       () => {
         toast.dismiss(toastId);
@@ -132,40 +140,97 @@ const GestionOffre = () => {
   const supprimerCandidature = async (candidatureId) => {
     if (
       !window.confirm(
-        "ATTENTION : Voulez-vous supprimer DÉFINITIVEMENT cette candidature ? Cette action est irréversible.",
+        "Voulez-vous supprimer DÉFINITIVEMENT cette candidature ?",
       )
-    ) {
+    )
       return;
-    }
     try {
       await jobsService.deleteCandidature(candidatureId);
       setOffre({
         ...offre,
         candidatures: offre.candidatures.filter((c) => c.id !== candidatureId),
       });
-      toast.success("Candidature supprimée de votre espace.");
+      toast.success("Candidature supprimée.");
       setSelectedCandidature(null);
     } catch (err) {
       toast.error("Erreur lors de la suppression.");
-      console.log(err);
+      reportError("ECHEC_SUPPRESSION_CANDIDATURE", err); // 🛑 Télémétrie
     }
   };
 
   const handleCloturer = async () => {
-    if (
-      !window.confirm(
-        "Voulez-vous vraiment clôturer cette offre ? Elle n'acceptera plus de nouveaux candidats.",
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm("Voulez-vous vraiment clôturer cette offre ?")) return;
     try {
       await jobsService.cloturerOffre(offre.id);
       setOffre({ ...offre, est_cloturee: true });
       toast.success("Offre clôturée et archivée !");
     } catch (err) {
       toast.error("Erreur lors de la clôture.");
-      console.log(err);
+      reportError("ECHEC_CLOTURE_OFFRE", err); // 🛑 Télémétrie
+    }
+  };
+
+  const soumettreEvaluation = async () => {
+    if (
+      !evalForm.note_technique ||
+      !evalForm.note_communication ||
+      !evalForm.note_motivation ||
+      !evalForm.note_experience
+    ) {
+      return toast.error("Veuillez remplir toutes les notes sur 5.");
+    }
+    const toastId = toast.loading("Enregistrement de l'évaluation...");
+    try {
+      const response = await jobsService.evaluerCandidature(
+        modalEval.candidature.id,
+        evalForm,
+      );
+
+      const updatedCandidature = response.candidature;
+      setOffre({
+        ...offre,
+        candidatures: offre.candidatures.map((c) =>
+          c.id === updatedCandidature.id ? updatedCandidature : c,
+        ),
+      });
+      if (
+        selectedCandidature &&
+        selectedCandidature.id === updatedCandidature.id
+      ) {
+        setSelectedCandidature(updatedCandidature);
+      }
+
+      toast.success("Évaluation sauvegardée !");
+      setModalEval({ isOpen: false, candidature: null });
+    } catch (err) {
+      toast.error("Erreur lors de l'évaluation.");
+      reportError("ECHEC_EVALUATION_CANDIDAT", err); // 🛑 Télémétrie
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
+  const handleDownloadBulletin = async (candidatureId) => {
+    const toastId = toast.loading("Génération du bulletin PDF...");
+    try {
+      const blob = await jobsService.telechargerBulletin(candidatureId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Bulletin_TafTech_Candidat_${candidatureId}.pdf`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Bulletin généré avec succès !");
+    } catch (err) {
+      toast.error("Erreur lors de la génération du bulletin.");
+      reportError("ECHEC_TELECHARGEMENT_BULLETIN", err); // 🛑 Télémétrie
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -193,20 +258,18 @@ const GestionOffre = () => {
       return <span className="text-gray-400 italic text-xs">Non calculé</span>;
     }
     const numScore = parseFloat(score);
-    if (numScore >= 80) {
+    if (numScore >= 80)
       return (
         <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg font-black text-xs border border-green-200 inline-block">
           🟢 {numScore}% - Recommandé
         </span>
       );
-    }
-    if (numScore >= 60) {
+    if (numScore >= 60)
       return (
         <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-lg font-black text-xs border border-orange-200 inline-block">
           🟠 {numScore}% - Intéressant
         </span>
       );
-    }
     return (
       <span className="bg-red-100 text-red-800 px-3 py-1 rounded-lg font-black text-xs border border-red-200 inline-block">
         🔴 {numScore}% - Non adapté
@@ -216,16 +279,13 @@ const GestionOffre = () => {
 
   const renderDetailBar = (label, score, max) => {
     const percentage = (score / max) * 100;
-    let color = "bg-green-500";
-    let icon = "✅";
-    if (percentage < 50) {
-      color = "bg-red-500";
-      icon = "❌";
-    } else if (percentage < 100) {
-      color = "bg-orange-400";
-      icon = "⚠️";
-    }
-
+    let color =
+      percentage < 50
+        ? "bg-red-500"
+        : percentage < 100
+          ? "bg-orange-400"
+          : "bg-green-500";
+    let icon = percentage < 50 ? "❌" : percentage < 100 ? "⚠️" : "✅";
     return (
       <div className="mb-3">
         <div className="flex justify-between text-[10px] uppercase font-black tracking-widest mb-1">
@@ -246,20 +306,21 @@ const GestionOffre = () => {
     );
   };
 
-  const getMediaUrl = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
-  };
-
-  const formatText = (text) => {
-    if (!text) return "Non spécifié";
-    return text
-      .replace(/_/g, " ")
-      .replace(
-        /\w\S*/g,
-        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
-      );
-  };
+  const getMediaUrl = (path) =>
+    path
+      ? path.startsWith("http")
+        ? path
+        : `http://127.0.0.1:8000${path}`
+      : null;
+  const formatText = (text) =>
+    text
+      ? text
+          .replace(/_/g, " ")
+          .replace(
+            /\w\S*/g,
+            (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
+          )
+      : "Non spécifié";
 
   const renderTags = (data) => {
     if (!data)
@@ -280,6 +341,30 @@ const GestionOffre = () => {
         </span>
       ));
   };
+
+  const RatingRow = ({ label, value, onChange }) => (
+    <div className="flex justify-between items-center mb-4 p-2 bg-gray-50 rounded-xl border border-gray-100">
+      <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+        {label}
+      </span>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => onChange(num)}
+            className={`w-8 h-8 rounded-full font-black text-xs transition-all ${
+              value >= num
+                ? "bg-orange-500 text-white shadow-md scale-110"
+                : "bg-white text-gray-400 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   if (loading)
     return (
@@ -334,7 +419,7 @@ const GestionOffre = () => {
         )}
       </div>
 
-      {/* BLOC : DÉTAILS DE L'OFFRE (DÉPLIABLE) */}
+      {/* BLOC : DÉTAILS DE L'OFFRE */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
         <button
           onClick={() => setShowJobDetails(!showJobDetails)}
@@ -363,8 +448,7 @@ const GestionOffre = () => {
               !offre.profil_recherche ? (
                 <div className="flex items-center justify-center h-full bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200 p-8">
                   <p className="text-gray-400 font-bold italic text-sm">
-                    Aucun détail textuel (description, missions) n'a été
-                    renseigné pour cette offre.
+                    Aucun détail textuel n'a été renseigné.
                   </p>
                 </div>
               ) : (
@@ -402,7 +486,6 @@ const GestionOffre = () => {
                 </>
               )}
             </div>
-
             <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 h-fit space-y-4">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2">
                 Critères exigés
@@ -565,7 +648,6 @@ const GestionOffre = () => {
                             </button>
                           )}
                         </div>
-                        {/* 👇 AFFICHE LA DATE DANS LE TABLEAU SI ENTRETIEN 👇 */}
                         {cand.statut === "ENTRETIEN" && cand.date_entretien && (
                           <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100">
                             📅{" "}
@@ -580,6 +662,11 @@ const GestionOffre = () => {
                             )}
                           </span>
                         )}
+                        {cand.note_globale && (
+                          <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">
+                            ⭐ {cand.note_globale}/20
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -590,7 +677,7 @@ const GestionOffre = () => {
         )}
       </div>
 
-      {/* --- MODALE DU PROFIL --- */}
+      {/* --- MODALE DU PROFIL COMPLET --- */}
       {selectedCandidature && (
         <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp">
@@ -612,7 +699,7 @@ const GestionOffre = () => {
 
             <div className="p-8 overflow-y-auto flex-1 bg-white">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* COLONNE DE GAUCHE : INFOS CANDIDAT */}
+                {/* COLONNE GAUCHE (Infos Candidat) */}
                 <div className="lg:col-span-2 space-y-8">
                   <div className="flex flex-col md:flex-row items-center gap-6 bg-blue-50/30 p-6 rounded-2xl border border-blue-50">
                     <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center text-gray-400 text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-100">
@@ -632,7 +719,6 @@ const GestionOffre = () => {
                         <span className="text-4xl">⚡</span>
                       )}
                     </div>
-
                     <div className="text-center md:text-left flex-1">
                       <h3 className="font-black text-gray-900 text-2xl uppercase tracking-tight">
                         {selectedCandidature.candidat
@@ -645,7 +731,6 @@ const GestionOffre = () => {
                             "Candidat TafTech"
                           : "Candidature Sans Compte"}
                       </p>
-
                       <div className="flex flex-wrap gap-4 justify-center md:justify-start text-xs text-gray-600 font-bold mt-2">
                         <span>
                           📧{" "}
@@ -661,7 +746,6 @@ const GestionOffre = () => {
                             : selectedCandidature.telephone_rapide}
                         </span>
                       </div>
-
                       {selectedCandidature.candidat && (
                         <>
                           <div className="mt-3 space-y-1 mb-2 bg-gray-50 p-3 rounded-xl inline-block w-full border border-gray-100">
@@ -683,27 +767,6 @@ const GestionOffre = () => {
                                 selectedCandidature.candidat.specialite,
                               ) || "Spécialité non renseignée"}
                             </p>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
-                            <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
-                              🛡️{" "}
-                              {formatText(
-                                selectedCandidature.candidat.service_militaire,
-                              )}
-                            </span>
-                            <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
-                              🚗{" "}
-                              {selectedCandidature.candidat.permis_conduire
-                                ? "Permis B"
-                                : "Sans permis"}
-                            </span>
-                            <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-2 py-1 rounded">
-                              ✈️{" "}
-                              {selectedCandidature.candidat.passeport_valide
-                                ? "Passeport OK"
-                                : "Pas de passeport"}
-                            </span>
                           </div>
                         </>
                       )}
@@ -824,6 +887,12 @@ const GestionOffre = () => {
                           )}
                         </div>
                       </div>
+                      <div className="bg-white border border-gray-100 p-6 rounded-2xl">
+                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                          Compétences
+                        </h4>
+                        {renderTags(selectedCandidature.candidat.competences)}
+                      </div>
                     </>
                   ) : (
                     <div className="bg-orange-50 border border-orange-100 p-8 rounded-2xl text-center">
@@ -833,14 +902,13 @@ const GestionOffre = () => {
                       </h4>
                       <p className="text-sm font-medium text-orange-700">
                         Ce candidat a postulé rapidement sans créer de compte.
-                        Ses informations détaillées ne sont pas disponibles,
-                        veuillez vous référer à son CV PDF ci-contre.
+                        Consultez son CV PDF ci-contre.
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* COLONNE DE DROITE : PANEL RECRUTEUR & MATCHING */}
+                {/* COLONNE DROITE (Actions Recruteur) */}
                 <div className="space-y-6">
                   <div className="bg-gray-50 border border-gray-200 p-6 rounded-2xl">
                     <p className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest">
@@ -867,28 +935,22 @@ const GestionOffre = () => {
                       ))}
                     </select>
 
-                    {/* 👇 AFFICHE L'ENCART DANS LA MODALE SI ENTRETIEN 👇 */}
-                    {selectedCandidature.statut === "ENTRETIEN" &&
-                      selectedCandidature.date_entretien && (
-                        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                          <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest mb-1">
-                            📅 Entretien prévu le
-                          </p>
-                          <p className="text-sm font-bold text-orange-900">
-                            {new Date(
-                              selectedCandidature.date_entretien,
-                            ).toLocaleString("fr-FR", {
-                              dateStyle: "full",
-                              timeStyle: "short",
-                            })}
-                          </p>
-                          {selectedCandidature.message_entretien && (
-                            <p className="text-xs font-medium text-orange-700 italic mt-2 border-t border-orange-200 pt-2">
-                              "{selectedCandidature.message_entretien}"
-                            </p>
-                          )}
-                        </div>
-                      )}
+                    {/* 👇 BOUTON BULLETIN QUI APPARAÎT SEULEMENT SI LE CANDIDAT EST RETENU 👇 */}
+                    {selectedCandidature.statut === "RETENU" && (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center shadow-sm animate-fadeIn">
+                        <p className="text-[10px] font-black text-green-800 uppercase tracking-widest mb-3">
+                          🎉 Candidat sélectionné !
+                        </p>
+                        <button
+                          onClick={() =>
+                            handleDownloadBulletin(selectedCandidature.id)
+                          }
+                          className="w-full bg-green-600 text-white font-black px-4 py-3 rounded-xl shadow hover:bg-green-700 transition flex items-center justify-center gap-2"
+                        >
+                          📥 Télécharger le Bulletin
+                        </button>
+                      </div>
+                    )}
 
                     <div className="mt-4 space-y-2">
                       {selectedCandidature.candidat &&
@@ -904,7 +966,6 @@ const GestionOffre = () => {
                             📄 OUVRIR LE CV PDF
                           </a>
                         )}
-
                       {selectedCandidature.cv_rapide_url && (
                         <a
                           href={selectedCandidature.cv_rapide_url}
@@ -915,7 +976,6 @@ const GestionOffre = () => {
                           ⚡ OUVRIR LE CV RAPIDE
                         </a>
                       )}
-
                       {selectedCandidature.lettre_motivation_file && (
                         <a
                           href={getMediaUrl(
@@ -931,64 +991,127 @@ const GestionOffre = () => {
                     </div>
                   </div>
 
+                  {/* ÉVALUATION POST-ENTRETIEN (US 5) */}
+                  <div className="bg-white border-2 border-purple-100 p-6 rounded-2xl shadow-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest">
+                        Évaluation Entretien
+                      </p>
+                      <span className="text-xl">📝</span>
+                    </div>
+
+                    {selectedCandidature.note_globale ? (
+                      <div className="text-center">
+                        <p className="text-5xl font-black text-purple-600 mb-2">
+                          {selectedCandidature.note_globale}
+                          <span className="text-xl text-purple-300">/20</span>
+                        </p>
+                        <p className="text-xs font-bold text-gray-500 italic">
+                          "
+                          {selectedCandidature.commentaire_evaluation ||
+                            "Aucun commentaire"}
+                          "
+                        </p>
+                        <button
+                          onClick={() => {
+                            setEvalForm({
+                              note_technique:
+                                selectedCandidature.note_technique || 0,
+                              note_communication:
+                                selectedCandidature.note_communication || 0,
+                              note_motivation:
+                                selectedCandidature.note_motivation || 0,
+                              note_experience:
+                                selectedCandidature.note_experience || 0,
+                              commentaire_evaluation:
+                                selectedCandidature.commentaire_evaluation ||
+                                "",
+                            });
+                            setModalEval({
+                              isOpen: true,
+                              candidature: selectedCandidature,
+                            });
+                          }}
+                          className="mt-4 text-xs font-bold text-purple-600 hover:underline"
+                        >
+                          Modifier la note
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 font-medium mb-4">
+                          Gardez une trace objective de votre entretien avec ce
+                          candidat.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setEvalForm({
+                              note_technique: 0,
+                              note_communication: 0,
+                              note_motivation: 0,
+                              note_experience: 0,
+                              commentaire_evaluation: "",
+                            });
+                            setModalEval({
+                              isOpen: true,
+                              candidature: selectedCandidature,
+                            });
+                          }}
+                          className="w-full bg-purple-50 text-purple-700 border border-purple-200 px-4 py-3 rounded-xl font-black text-xs uppercase hover:bg-purple-600 hover:text-white transition"
+                        >
+                          ⭐ Évaluer le candidat
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {selectedCandidature.candidat && (
-                    <>
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-6 rounded-2xl shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                          <h4 className="text-xs font-black text-blue-900 uppercase tracking-widest">
-                            Analyse IA TafTech
-                          </h4>
-                          {renderScore(selectedCandidature.score_matching)}
-                        </div>
-
-                        {selectedCandidature.details_matching ? (
-                          <div>
-                            {renderDetailBar(
-                              "Spécialité",
-                              selectedCandidature.details_matching.specialite ||
-                                0,
-                              25,
-                            )}
-                            {renderDetailBar(
-                              "Diplôme requis",
-                              selectedCandidature.details_matching.diplome || 0,
-                              20,
-                            )}
-                            {renderDetailBar(
-                              "Années d'expérience",
-                              selectedCandidature.details_matching.experience ||
-                                0,
-                              20,
-                            )}
-                            {renderDetailBar(
-                              "Localisation",
-                              selectedCandidature.details_matching.region || 0,
-                              20,
-                            )}
-                            {renderDetailBar(
-                              "Mots-clés",
-                              selectedCandidature.details_matching
-                                .competences || 0,
-                              15,
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center p-4 bg-white/50 rounded-xl">
-                            <p className="text-xs font-bold text-gray-500">
-                              Aucun détail d'analyse disponible pour cette
-                              candidature.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="bg-white border border-gray-100 p-6 rounded-2xl">
-                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                          Compétences
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-6 rounded-2xl shadow-sm">
+                      <div className="flex justify-between items-center mb-6">
+                        <h4 className="text-xs font-black text-blue-900 uppercase tracking-widest">
+                          Analyse IA TafTech
                         </h4>
-                        {renderTags(selectedCandidature.candidat.competences)}
+                        {renderScore(selectedCandidature.score_matching)}
                       </div>
-                    </>
+                      {selectedCandidature.details_matching ? (
+                        <div>
+                          {renderDetailBar(
+                            "Spécialité",
+                            selectedCandidature.details_matching.specialite ||
+                              0,
+                            25,
+                          )}
+                          {renderDetailBar(
+                            "Diplôme requis",
+                            selectedCandidature.details_matching.diplome || 0,
+                            20,
+                          )}
+                          {renderDetailBar(
+                            "Années d'expérience",
+                            selectedCandidature.details_matching.experience ||
+                              0,
+                            20,
+                          )}
+                          {renderDetailBar(
+                            "Localisation",
+                            selectedCandidature.details_matching.region || 0,
+                            20,
+                          )}
+                          {renderDetailBar(
+                            "Mots-clés",
+                            selectedCandidature.details_matching.competences ||
+                              0,
+                            15,
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center p-4 bg-white/50 rounded-xl">
+                          <p className="text-xs font-bold text-gray-500">
+                            Aucun détail d'analyse disponible.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -997,7 +1120,7 @@ const GestionOffre = () => {
         </div>
       )}
 
-      {/* 👇 NOUVELLE MODALE POUR PROGRAMMER L'ENTRETIEN 👇 */}
+      {/* --- MODALE : PROGRAMMER UN ENTRETIEN --- */}
       {modalEntretien.isOpen && (
         <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-slideUp">
@@ -1005,10 +1128,8 @@ const GestionOffre = () => {
               Programmer un entretien
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              Un e-mail d'invitation sera automatiquement envoyé au candidat
-              avec ces informations.
+              Un e-mail d'invitation sera envoyé automatiquement.
             </p>
-
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1046,11 +1167,11 @@ const GestionOffre = () => {
               </div>
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
-                  Message & Lieu (Optionnel)
+                  Message & Lieu
                 </label>
                 <textarea
                   rows="3"
-                  placeholder="Lien Google Meet, Adresse physique..."
+                  placeholder="Lien Google Meet..."
                   value={entretienForm.message}
                   onChange={(e) =>
                     setEntretienForm({
@@ -1077,6 +1198,89 @@ const GestionOffre = () => {
                   Inviter ✉️
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE : ÉVALUATION POST-ENTRETIEN (US 5) */}
+      {modalEval.isOpen && (
+        <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[400] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-slideUp">
+            <div className="text-center mb-6">
+              <span className="text-4xl block mb-2">📝</span>
+              <h3 className="text-2xl font-black text-gray-900">
+                Évaluation Globale
+              </h3>
+              <p className="text-sm text-gray-500">
+                Notez le candidat sur 4 critères essentiels. (Total sur 20)
+              </p>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              <RatingRow
+                label="Compétence Technique"
+                value={evalForm.note_technique}
+                onChange={(val) =>
+                  setEvalForm({ ...evalForm, note_technique: val })
+                }
+              />
+              <RatingRow
+                label="Communication / Soft Skills"
+                value={evalForm.note_communication}
+                onChange={(val) =>
+                  setEvalForm({ ...evalForm, note_communication: val })
+                }
+              />
+              <RatingRow
+                label="Motivation / Attitude"
+                value={evalForm.note_motivation}
+                onChange={(val) =>
+                  setEvalForm({ ...evalForm, note_motivation: val })
+                }
+              />
+              <RatingRow
+                label="Expérience pertinente"
+                value={evalForm.note_experience}
+                onChange={(val) =>
+                  setEvalForm({ ...evalForm, note_experience: val })
+                }
+              />
+            </div>
+
+            <div className="mb-8">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
+                Commentaire privé (Optionnel)
+              </label>
+              <textarea
+                rows="2"
+                placeholder="Points forts, points faibles..."
+                value={evalForm.commentaire_evaluation}
+                onChange={(e) =>
+                  setEvalForm({
+                    ...evalForm,
+                    commentaire_evaluation: e.target.value,
+                  })
+                }
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 resize-none text-sm font-medium"
+              ></textarea>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() =>
+                  setModalEval({ isOpen: false, candidature: null })
+                }
+                className="flex-1 py-4 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={soumettreEvaluation}
+                className="flex-1 py-4 bg-purple-600 text-white font-black rounded-xl shadow-lg hover:bg-purple-700 hover:-translate-y-1 transition"
+              >
+                Sauvegarder
+              </button>
             </div>
           </div>
         </div>

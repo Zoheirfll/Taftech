@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
-import { jobsService } from "../Services/jobsService"; // <-- Pour récupérer les wilayas ET vérifier l'email
+import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
-import Select from "react-select"; // <-- NOUVEAU: Pour la liste des régions
+import Select from "react-select";
+import { reportError } from "../utils/errorReporter"; // ✅ Import Télémétrie
 
 const RegisterCandidat = () => {
   const navigate = useNavigate();
@@ -25,7 +26,6 @@ const RegisterCandidat = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
 
-  // 👇 Liste des wilayas récupérée depuis Django
   const [wilayasList, setWilayasList] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -34,7 +34,7 @@ const RegisterCandidat = () => {
     date_naissance: "",
     telephone: "",
     nin: "",
-    wilaya: "", // <-- NOUVEAU CHAMP DEMANDÉ PAR TON CAHIER DES CHARGES
+    wilaya: "",
     email: "",
     password: "",
     consentement_loi_18_07: false,
@@ -43,14 +43,14 @@ const RegisterCandidat = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Charger les Wilayas au démarrage
   useEffect(() => {
     const fetchConstants = async () => {
       try {
         const data = await jobsService.getConstants();
         setWilayasList(data.wilayas);
       } catch (error) {
-        console.error("Erreur de chargement des wilayas", error);
+        // 🛑 Remplacement console.error par reportError
+        reportError("ECHEC_CHARGEMENT_WILAYAS_REGISTER", error);
       }
     };
     fetchConstants();
@@ -62,7 +62,6 @@ const RegisterCandidat = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  // Gestion du Select react-select
   const handleSelectChange = (selectedOption, actionMeta) => {
     setFormData({
       ...formData,
@@ -101,6 +100,8 @@ const RegisterCandidat = () => {
           "Une erreur est survenue lors de l'inscription.",
         { id: toastId },
       );
+      // 🛑 Télémétrie
+      reportError("ECHEC_REGISTRATION_CANDIDAT", err);
     } finally {
       setLoading(false);
     }
@@ -142,7 +143,9 @@ const RegisterCandidat = () => {
     const toastId = toast.loading("Vérification du code...");
 
     try {
-      await jobsService.verifyEmail(registeredEmail, codeSaisi);
+      // 👇 LA CORRECTION EST ICI : authService au lieu de jobsService 👇
+      await authService.verifyEmail(registeredEmail, codeSaisi);
+
       toast.success("Email vérifié avec succès ! Vous pouvez vous connecter.", {
         id: toastId,
       });
@@ -154,6 +157,8 @@ const RegisterCandidat = () => {
       );
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0].focus();
+      // 🛑 Télémétrie
+      reportError("ECHEC_VERIFY_OTP_CANDIDAT", err);
     } finally {
       setLoading(false);
     }
@@ -276,7 +281,6 @@ const RegisterCandidat = () => {
                       className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
                     />
                   </div>
-                  {/* 👇 NOUVEAU CHAMP : WILAYA 👇 */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
                       Région (Wilaya) *

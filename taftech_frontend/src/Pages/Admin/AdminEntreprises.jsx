@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
@@ -24,6 +25,8 @@ const AdminEntreprises = () => {
       setTotalPages(Math.ceil(data.count / 5) || 1);
     } catch (err) {
       toast.error(err.message || "Erreur de chargement des entreprises.");
+      // 🛑 Télémétrie ajoutée
+      reportError("ECHEC_CHARGEMENT_ENTREPRISES_ADMIN", err);
     } finally {
       setLoading(false);
     }
@@ -47,9 +50,33 @@ const AdminEntreprises = () => {
         chargerEntreprises();
         toast.success(`Statut mis à jour avec succès !`);
       } catch (err) {
-        (toast.error("Erreur lors de la modification du statut."),
-          console.error(err));
+        toast.error("Erreur lors de la modification du statut.");
+        // 🛑 Télémétrie ajoutée
+        reportError("ECHEC_MODERATION_ENTREPRISE", err);
       }
+    }
+  };
+
+  // 👇 FONCTION D'EXPORT 👇
+  const handleExport = async () => {
+    const toastId = toast.loading("Génération du fichier en cours...");
+    try {
+      const blob = await jobsService.exportEntreprises();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "entreprises_taftech.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Téléchargement réussi !");
+    } catch (err) {
+      toast.error("Erreur lors de l'exportation.");
+      // 🛑 Télémétrie ajoutée
+      reportError("ECHEC_EXPORT_EXCEL_ENTREPRISES", err);
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -61,20 +88,30 @@ const AdminEntreprises = () => {
           Validation des Entreprises
         </h2>
 
-        <div className="relative group">
-          <input
-            type="text"
-            placeholder="Rechercher par nom ou RC..."
-            className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset à la page 1 si on change la recherche
-            }}
-          />
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
+          {/* 👇 BOUTON EXCEL 👇 */}
+          <button
+            onClick={handleExport}
+            className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 text-white font-black px-6 py-3 rounded-[1.5rem] hover:bg-green-700 hover:-translate-y-1 transition-all shadow-md text-sm"
+          >
+            📊 EXPORTER EXCEL
+          </button>
+
+          <div className="relative group w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="Rechercher par nom ou RC..."
+              className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset à la page 1 si on change la recherche
+              }}
+            />
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+              🔍
+            </span>
+          </div>
         </div>
       </div>
 

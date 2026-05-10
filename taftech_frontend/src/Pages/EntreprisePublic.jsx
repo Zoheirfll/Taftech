@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter"; // ✅ Import ajouté
 
 const EntreprisePublic = () => {
   const { id } = useParams();
@@ -14,8 +15,9 @@ const EntreprisePublic = () => {
         const data = await jobsService.getEntreprisePublic(id);
         setEntreprise(data);
       } catch (err) {
-        (setError("Cette entreprise n'existe pas ou n'est plus disponible."),
-          console.error(err));
+        setError("Cette entreprise n'existe pas ou n'est plus disponible.");
+        // 🛑 Remplacé console.error par reportError
+        reportError("ECHEC_CHARGEMENT_ENTREPRISE_PUBLIC", err);
       } finally {
         setLoading(false);
       }

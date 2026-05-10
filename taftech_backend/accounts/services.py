@@ -14,6 +14,7 @@ class UserService:
         # Elle gère proprement l'injection du NIN, du Téléphone et le hashage du password.
         user = CustomUser.objects.create_user(
             role='CANDIDAT',
+            password=password,
             **validated_data
         )
         

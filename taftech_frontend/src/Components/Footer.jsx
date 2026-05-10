@@ -1,8 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import logoTafTech from "../assets/logo-taftech.png";
+import api from "../api/axiosConfig"; // Import pour l'API
+import { reportError } from "../utils/errorReporter"; // Import pour la télémétrie
+import toast from "react-hot-toast";
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Logique d'inscription Newsletter avec reportError
+  const handleNewsletter = async (e) => {
+    e.preventDefault();
+    if (!email) return toast.error("Veuillez entrer votre email.");
+
+    setIsSubmitting(true);
+    try {
+      await api.post("newsletter/subscribe/", { email });
+      toast.success("Inscription réussie !");
+      setEmail("");
+    } catch (error) {
+      // Télémétrie si erreur serveur (>=500) ou panne réseau
+      if (!error.response || error.response.status >= 500) {
+        reportError("ECHEC_CRITIQUE_NEWSLETTER", error);
+      }
+      toast.error("Un problème est survenu. Réessayez plus tard.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <footer className="bg-white border-t border-gray-100 font-sans">
       {/* === SECTION 1 : NEWSLETTER (L'accroche) === */}
@@ -16,16 +43,26 @@ const Footer = () => {
               Recevez les meilleures offres de votre secteur chaque semaine.
             </p>
           </div>
-          <div className="flex w-full max-w-md gap-2">
+          <form
+            onSubmit={handleNewsletter}
+            className="flex w-full max-w-md gap-2"
+          >
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Votre email..."
               className="flex-1 px-4 py-3 rounded-xl outline-none font-bold text-gray-800 text-sm"
+              disabled={isSubmitting}
             />
-            <button className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-black transition-all shadow-lg active:scale-95">
-              S'INSCRIRE
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-70"
+            >
+              {isSubmitting ? "..." : "S'INSCRIRE"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
 

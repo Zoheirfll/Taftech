@@ -12,14 +12,10 @@ const JobDetail = () => {
   const [error, setError] = useState("");
   const [postulerStatus, setPostulerStatus] = useState("");
 
-  // 👇 NOUVEL ÉTAT POUR EMPÊCHER LE DOUBLE ENVOI 👇
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Option 1 : TafTech
   const [lettreMotivation, setLettreMotivation] = useState("");
 
-  // Option 2 : Rapide
-  const [postulationMode, setPostulationMode] = useState(null); // 'taftech' | 'rapide' | null
+  const [postulationMode, setPostulationMode] = useState(null);
   const [fastForm, setFastForm] = useState({
     nom_rapide: "",
     prenom_rapide: "",
@@ -43,9 +39,7 @@ const JobDetail = () => {
     fetchJob();
   }, [id]);
 
-  // === OPTION 1 : VIA TAFTECH ===
   const handlePostulerTafTech = async () => {
-    // Si on est déjà en train d'envoyer, on bloque !
     if (isSubmitting) return;
 
     if (
@@ -59,7 +53,7 @@ const JobDetail = () => {
       return;
     }
 
-    setIsSubmitting(true); // On bloque le bouton
+    setIsSubmitting(true);
 
     try {
       await jobsService.postuler(id, { lettre_motivation: lettreMotivation });
@@ -70,7 +64,7 @@ const JobDetail = () => {
         err.response?.data?.error || "Erreur lors de la postulation.",
       );
     } finally {
-      setIsSubmitting(false); // On débloque le bouton quoi qu'il arrive
+      setIsSubmitting(false);
     }
   };
 
@@ -86,7 +80,6 @@ const JobDetail = () => {
     navigate(`/jobs/${id}/postuler`);
   };
 
-  // === OPTION 2 : POSTULATION RAPIDE ===
   const handleFastFormChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "cv_rapide") {
@@ -99,7 +92,6 @@ const JobDetail = () => {
   const handlePostulerRapide = async (e) => {
     e.preventDefault();
 
-    // Si on est déjà en train d'envoyer, on bloque !
     if (isSubmitting) return;
 
     if (!fastForm.cv_rapide) {
@@ -107,7 +99,7 @@ const JobDetail = () => {
       return;
     }
 
-    setIsSubmitting(true); // On bloque le bouton
+    setIsSubmitting(true);
     const toastId = toast.loading("Envoi de votre candidature rapide...");
     const formData = new FormData();
     Object.keys(fastForm).forEach((key) => {
@@ -128,7 +120,7 @@ const JobDetail = () => {
         { id: toastId },
       );
     } finally {
-      setIsSubmitting(false); // On débloque le bouton
+      setIsSubmitting(false);
     }
   };
 
@@ -163,7 +155,6 @@ const JobDetail = () => {
       </Link>
 
       <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-        {/* EN-TÊTE DE L'OFFRE */}
         <div className="bg-blue-600 p-8 md:p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
           <h1 className="text-3xl md:text-4xl font-black mb-4 relative z-10">
@@ -195,7 +186,6 @@ const JobDetail = () => {
         </div>
 
         <div className="p-8 md:p-10 space-y-10">
-          {/* ENCADRÉ DES CRITÈRES */}
           <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 grid grid-cols-2 md:grid-cols-3 gap-6">
             {job.type_contrat && (
               <div>
@@ -277,11 +267,7 @@ const JobDetail = () => {
             </p>
           </section>
 
-          {/* ========================================= */}
-          {/* ZONE DE POSTULATION (LES 2 OPTIONS)       */}
-          {/* ========================================= */}
           <div className="mt-12 bg-gray-50 p-8 rounded-3xl border-2 border-gray-100 shadow-sm relative overflow-hidden">
-            {/* ETAT : SUCCÈS OU ERREUR */}
             {postulerStatus === "success" ? (
               <div className="animate-slideDown text-center">
                 <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
@@ -317,13 +303,11 @@ const JobDetail = () => {
                 </button>
               </div>
             ) : (
-              /* ÉTAT : CHOIX DU MODE DE POSTULATION */
               <div className="max-w-2xl mx-auto">
                 <h3 className="font-black text-2xl text-gray-900 mb-6 text-center">
                   Prêt(e) à relever le défi ?
                 </h3>
 
-                {/* Écran 0 : Choix de l'option */}
                 {!postulationMode && (
                   <div className="flex flex-col gap-4">
                     <button
@@ -356,7 +340,6 @@ const JobDetail = () => {
                   </div>
                 )}
 
-                {/* Écran 1 : Postuler via TafTech (Connecté) */}
                 {postulationMode === "taftech" && (
                   <div className="animate-fadeIn">
                     <button
@@ -380,7 +363,7 @@ const JobDetail = () => {
                     <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
                       <button
                         onClick={handlePostulerTafTech}
-                        disabled={isSubmitting} // 👇 ON DÉSACTIVE ICI 👇
+                        disabled={isSubmitting}
                         className={`text-white font-black py-4 px-8 rounded-2xl transition duration-200 text-lg shadow-xl w-full md:w-auto ${
                           isSubmitting
                             ? "bg-gray-400 cursor-not-allowed"
@@ -393,7 +376,7 @@ const JobDetail = () => {
                       </button>
                       <button
                         onClick={handleReviewClick}
-                        disabled={isSubmitting} // 👇 ET ICI AUSSI 👇
+                        disabled={isSubmitting}
                         className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-black py-4 px-8 rounded-2xl transition duration-200 text-lg shadow-sm hover:-translate-y-1 w-full md:w-auto flex items-center justify-center gap-2"
                       >
                         👁️ Vérifier mon profil
@@ -402,7 +385,6 @@ const JobDetail = () => {
                   </div>
                 )}
 
-                {/* Écran 2 : Postulation Rapide (Visiteur) */}
                 {postulationMode === "rapide" && (
                   <div className="animate-fadeIn text-left">
                     <div className="flex justify-between items-center mb-6">
@@ -483,6 +465,7 @@ const JobDetail = () => {
                             required
                             onChange={handleFastFormChange}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            data-testid="cv-upload-input"
                           />
                           <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">
                             📄
@@ -509,7 +492,7 @@ const JobDetail = () => {
 
                       <button
                         type="submit"
-                        disabled={isSubmitting} // 👇 ET DÉSACTIVÉ ICI POUR LE RAPIDE 👇
+                        disabled={isSubmitting}
                         className={`w-full text-white font-black py-4 rounded-xl transition duration-200 text-lg shadow-xl ${
                           isSubmitting
                             ? "bg-gray-400 cursor-not-allowed"

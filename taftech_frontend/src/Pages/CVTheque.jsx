@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
+import { reportError } from "../utils/errorReporter"; // ✅ Import Télémétrie
 
-// Les options de durée d'expérience (en années/mois) qui seront envoyées au Backend
 const OPTIONS_EXPERIENCE = [
   { value: "0.5", label: "6 mois et +" },
   { value: "1", label: "1 an et +" },
@@ -22,7 +22,6 @@ const CVTheque = () => {
     diplomes: [],
   });
 
-  // États pour les filtres
   const [search, setSearch] = useState("");
   const [wilaya, setWilaya] = useState("");
   const [specialite, setSpecialite] = useState("");
@@ -43,14 +42,14 @@ const CVTheque = () => {
         setConstants(data);
       } catch (err) {
         toast.error("Erreur de chargement des filtres.");
-        console.error(err);
+        // 🛑 Remplacé console.error
+        reportError("ECHEC_CHARGEMENT_FILTRES_CVTHEQUE", err);
       }
     };
     loadConstants();
   }, []);
 
   const chargerCandidats = useCallback(async () => {
-    // Si tous les filtres sont vides, on n'affiche rien et on remet l'écran d'accueil
     if (!search && !wilaya && !specialite && !diplome && !experience) {
       setCandidats([]);
       setTotalCandidats(0);
@@ -71,6 +70,8 @@ const CVTheque = () => {
       setTotalPages(Math.ceil((data.count || 0) / 10));
     } catch (error) {
       if (error.error) toast.error(error.error);
+      // 🛑 Remplacé console.log
+      reportError("ECHEC_RECHERCHE_CVTHEQUE", error);
       setCandidats([]);
     } finally {
       setLoading(false);
@@ -80,7 +81,7 @@ const CVTheque = () => {
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       chargerCandidats();
-    }, 400); // Déclenchement auto 400ms après la dernière modification
+    }, 400);
     return () => clearTimeout(delayDebounce);
   }, [chargerCandidats]);
 
@@ -121,7 +122,6 @@ const CVTheque = () => {
         )}
       </div>
 
-      {/* --- MOTEUR DE RECHERCHE --- */}
       <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-4">
           <input
@@ -193,7 +193,6 @@ const CVTheque = () => {
         </div>
       </div>
 
-      {/* --- RÉSULTATS --- */}
       {!hasSearched ? (
         <div className="bg-white p-20 text-center rounded-[2rem] border border-gray-100 shadow-sm mt-8">
           <span className="text-6xl block mb-4">🔍</span>
@@ -254,8 +253,8 @@ const CVTheque = () => {
                       {candidat.titre_professionnel || "Profil Général"}
                     </p>
                     <p className="text-[10px] font-black text-gray-400 mt-1 uppercase">
-                      📍 {candidat.wilaya || "Localisation N/A"} | 🎓{" "}
-                      {candidat.diplome || "Diplôme N/A"}
+                      📍 {candidat.wilaya || "N/A"} | 🎓{" "}
+                      {candidat.diplome || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -292,7 +291,6 @@ const CVTheque = () => {
                   >
                     Voir Profil Complet
                   </button>
-
                   {candidat.cv_pdf && (
                     <a
                       href={getMediaUrl(candidat.cv_pdf)}
@@ -310,7 +308,6 @@ const CVTheque = () => {
         </>
       )}
 
-      {/* --- PAGINATION --- */}
       {totalPages > 1 && hasSearched && (
         <div className="flex justify-center items-center gap-4 py-4 mt-4">
           <button
@@ -333,14 +330,12 @@ const CVTheque = () => {
         </div>
       )}
 
-      {/* --- MODAL (POP-UP) DU PROFIL COMPLET --- */}
       {selectedCandidat && (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] p-8 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
-            {/* Header Modal */}
             <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center font-bold text-gray-500 overflow-hidden shadow-sm border border-gray-200">
+                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center font-bold text-gray-500 overflow-hidden border border-gray-200">
                   {selectedCandidat.photo_profil ? (
                     <img
                       src={getMediaUrl(selectedCandidat.photo_profil)}
@@ -368,7 +363,6 @@ const CVTheque = () => {
               </button>
             </div>
 
-            {/* Infos Contact */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
               <p className="font-bold text-sm text-gray-800">
                 📧 {selectedCandidat.email}
@@ -385,13 +379,11 @@ const CVTheque = () => {
               </p>
             </div>
 
-            {/* Expériences */}
             <div className="mb-8">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
                 Expériences Professionnelles
               </h4>
-              {selectedCandidat.experiences_detail &&
-              selectedCandidat.experiences_detail.length > 0 ? (
+              {selectedCandidat.experiences_detail?.length > 0 ? (
                 <div className="space-y-4">
                   {selectedCandidat.experiences_detail.map((exp) => (
                     <div
@@ -420,13 +412,11 @@ const CVTheque = () => {
               )}
             </div>
 
-            {/* Formations */}
             <div className="mb-8">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
                 Formations
               </h4>
-              {selectedCandidat.formations_detail &&
-              selectedCandidat.formations_detail.length > 0 ? (
+              {selectedCandidat.formations_detail?.length > 0 ? (
                 <div className="space-y-4">
                   {selectedCandidat.formations_detail.map((form) => (
                     <div
@@ -450,7 +440,6 @@ const CVTheque = () => {
               )}
             </div>
 
-            {/* Compétences et langues */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
               <div>
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">

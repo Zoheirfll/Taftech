@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { jobsService } from "../Services/jobsService"; // Vérifie si tu as besoin de ../ or ../../ selon ton dossier
+import { jobsService } from "../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { reportError } from "../utils/errorReporter"; // 👇 Import télémétrie
 
 const BoiteReception = () => {
   const [notifications, setNotifications] = useState([]);
@@ -18,7 +19,8 @@ const BoiteReception = () => {
       setNotifications(data);
     } catch (error) {
       toast.error("Erreur lors du chargement de vos messages.");
-      console.error("Erreur notifications:", error);
+      // 🛑 Télémétrie ajoutée
+      reportError("ECHEC_CHARGEMENT_INBOX", error);
     } finally {
       setLoading(false);
     }
@@ -36,12 +38,12 @@ const BoiteReception = () => {
           prevNotifs.map((n) => (n.id === notif.id ? { ...n, lue: true } : n)),
         );
       } catch (error) {
-        console.error("Erreur lors du marquage de la notification", error);
+        // 🛑 Télémétrie ajoutée
+        reportError("ECHEC_MARK_READ_NOTIF", error);
       }
     }
   };
 
-  // --- MISE À JOUR ICI POUR GÉRER LE TYPE 'ALERTE' ---
   const getStyleForType = (type) => {
     switch (type) {
       case "ENTRETIEN":
@@ -50,7 +52,7 @@ const BoiteReception = () => {
         return { icon: "🎉", color: "text-green-600", bg: "bg-green-100" };
       case "REFUS":
         return { icon: "🛑", color: "text-red-600", bg: "bg-red-100" };
-      case "ALERTE": // 👈 Nouveau style pour le robot d'alertes
+      case "ALERTE":
         return { icon: "🔔", color: "text-purple-600", bg: "bg-purple-100" };
       default:
         return { icon: "ℹ️", color: "text-blue-600", bg: "bg-blue-100" };
@@ -67,14 +69,16 @@ const BoiteReception = () => {
     );
   }
 
+  const unreadCount = notifications.filter((n) => !n.lue).length;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 bg-gray-50 min-h-screen font-sans">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
           📥 Boîte de réception
-          {notifications.filter((n) => !n.lue).length > 0 && (
+          {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-sm px-3 py-1 rounded-full">
-              {notifications.filter((n) => !n.lue).length} non lus
+              {unreadCount} non lus
             </span>
           )}
         </h1>
@@ -179,7 +183,6 @@ const BoiteReception = () => {
                   </p>
                 </div>
               </div>
-              {/* whitespace-pre-line permet de garder les sauts de ligne du robot Python */}
               <div className="prose max-w-none text-gray-700 font-medium whitespace-pre-line leading-relaxed">
                 {selectedNotif.message}
               </div>

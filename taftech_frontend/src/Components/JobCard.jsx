@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { jobsService } from "../Services/jobsService";
 import { authService } from "../Services/authService";
 import { Link } from "react-router-dom";
+import { reportError } from "../utils/errorReporter"; // Import de la télémétrie
 
 const JobCard = ({ job }) => {
   const isLogged = authService.isAuthenticated();
@@ -14,7 +15,12 @@ const JobCard = ({ job }) => {
       setStatusMessage("✅ " + data.message);
       setIsError(false);
     } catch (error) {
-      // Si on a déjà postulé, Django nous renverra une erreur qu'on affiche ici
+      // 1. Gestion de la télémétrie (Crash serveur ou réseau)
+      if (!error.response || error.response.status >= 500) {
+        reportError(`CRASH_POSTULATION_OFFRE_ID_${job.id}`, error);
+      }
+
+      // 2. Affichage du message d'erreur (Métier ou technique)
       setStatusMessage(
         "❌ " +
           (error.response?.data?.error || "Erreur lors de la candidature."),
@@ -27,7 +33,6 @@ const JobCard = ({ job }) => {
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300 border-l-4 border-blue-600">
       <div className="flex justify-between items-start">
         <div>
-          {/* AJOUT 1 : Le titre est maintenant un lien cliquable */}
           <Link to={`/offre/${job.id}`}>
             <h3 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
               {job.titre}
@@ -52,7 +57,6 @@ const JobCard = ({ job }) => {
         )}
       </div>
 
-      {/* Ligne de séparation */}
       <hr className="my-4 border-gray-100" />
 
       <div className="flex justify-between items-center">
@@ -62,16 +66,16 @@ const JobCard = ({ job }) => {
         </span>
 
         <div className="flex flex-col items-end">
-          {/* Le message de succès ou d'erreur s'affiche ici */}
           {statusMessage && (
             <span
-              className={`text-sm font-bold mb-2 ${isError ? "text-red-500" : "text-green-500"}`}
+              className={`text-sm font-bold mb-2 ${
+                isError ? "text-red-500" : "text-green-500"
+              }`}
             >
               {statusMessage}
             </span>
           )}
 
-          {/* AJOUT 2 : On aligne le lien "Voir les détails" avec le bouton "Postuler" */}
           <div className="flex items-center gap-4">
             <Link
               to={`/offre/${job.id}`}
@@ -80,7 +84,6 @@ const JobCard = ({ job }) => {
               Voir les détails
             </Link>
 
-            {/* Affichage conditionnel du bouton (INCHANGÉ) */}
             {isLogged ? (
               <button
                 onClick={handlePostuler}

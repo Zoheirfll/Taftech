@@ -2,18 +2,21 @@ import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie
 
 const AdminStatistiques = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    setLoading(true); // Assure l'affichage du loader lors d'un rafraîchissement manuel
     try {
       const data = await jobsService.getAdminStats();
       setStats(data);
     } catch (err) {
       toast.error("Erreur lors du chargement des statistiques.");
-      console.error(err);
+      // 🛑 Remplacement de console.error par la télémétrie
+      reportError("ECHEC_CHARGEMENT_STATS_ADMIN", err);
     } finally {
       setLoading(false);
     }
@@ -47,6 +50,7 @@ const AdminStatistiques = () => {
         <button
           onClick={fetchStats}
           className="p-3 hover:bg-gray-100 rounded-2xl transition-all"
+          title="Rafraîchir les statistiques"
         >
           🔄
         </button>
@@ -55,25 +59,30 @@ const AdminStatistiques = () => {
       {/* SECTION CRITIQUE (ALERTES) */}
       {(stats.offres_attente > 0 || stats.entreprises_attente > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link
-            to="/admin-taftech/entreprises"
-            className="bg-orange-50 border-2 border-orange-100 p-5 rounded-[2rem] flex items-center gap-4 hover:border-orange-400 transition-all"
-          >
-            <span className="text-2xl">⚠️</span>
-            <p className="text-sm font-black text-orange-900">
-              {stats.entreprises_attente} Entreprise(s) attendent votre
-              validation
-            </p>
-          </Link>
-          <Link
-            to="/admin-taftech/offres"
-            className="bg-red-50 border-2 border-red-100 p-5 rounded-[2rem] flex items-center gap-4 hover:border-red-400 transition-all"
-          >
-            <span className="text-2xl">🚨</span>
-            <p className="text-sm font-black text-red-900">
-              {stats.offres_attente} Offre(s) attendent votre modération
-            </p>
-          </Link>
+          {stats.entreprises_attente > 0 && (
+            <Link
+              to="/admin-taftech/entreprises"
+              className="bg-orange-50 border-2 border-orange-100 p-5 rounded-[2rem] flex items-center gap-4 hover:border-orange-400 transition-all"
+            >
+              <span className="text-2xl">⚠️</span>
+              <p className="text-sm font-black text-orange-900">
+                {stats.entreprises_attente} Entreprise(s) attendent votre
+                validation
+              </p>
+            </Link>
+          )}
+
+          {stats.offres_attente > 0 && (
+            <Link
+              to="/admin-taftech/offres"
+              className="bg-red-50 border-2 border-red-100 p-5 rounded-[2rem] flex items-center gap-4 hover:border-red-400 transition-all"
+            >
+              <span className="text-2xl">🚨</span>
+              <p className="text-sm font-black text-red-900">
+                {stats.offres_attente} Offre(s) attendent votre modération
+              </p>
+            </Link>
+          )}
         </div>
       )}
 

@@ -168,7 +168,8 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
         model = Candidature
         fields = (
             'id', 'candidat', 'date_postulation', 'lettre_motivation', 'lettre_motivation_file', 'statut', 'score_matching', 'details_matching',
-            'est_rapide', 'nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien' # <-- NOUVEAUX CHAMPS
+            'est_rapide', 'nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien', 
+            'note_technique', 'note_communication', 'note_motivation', 'note_experience', 'note_globale', 'commentaire_evaluation'# <-- NOUVEAUX CHAMPS
         )
 
     def get_lettre_motivation_file(self, obj):

@@ -2,31 +2,32 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
+import { reportError } from "../../utils/errorReporter"; // 👇 Import télémétrie
 
 const OffresSauvegardees = () => {
   const [favoris, setFavoris] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. On sort la fonction du useEffect pour qu'elle soit accessible partout
   const fetchFavoris = async () => {
     try {
       const response = await api.get("jobs/sauvegardes/");
       setFavoris(response.data);
     } catch (error) {
-      (toast.error("Erreur lors du chargement de vos offres sauvegardées."),
-        console.error(error));
+      toast.error("Erreur lors du chargement de vos offres sauvegardées.");
+      // 🛑 Télémétrie ajoutée
+      reportError("ECHEC_CHARGEMENT_FAVORIS", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 2. Le useEffect ne fait plus qu'appeler la fonction au démarrage
   useEffect(() => {
     fetchFavoris();
   }, []);
 
-  // 3. RETIRER UNE OFFRE DES FAVORIS (Le reste du code ne change pas)
   const handleRemove = async (id) => {
+    // Sauvegarde de l'état actuel pour le rollback
+    const previousFavoris = [...favoris];
     const updatedFavoris = favoris.filter((f) => f.id !== id);
     setFavoris(updatedFavoris);
 
@@ -34,9 +35,10 @@ const OffresSauvegardees = () => {
       await api.delete(`jobs/sauvegardes/${id}/`);
       toast.success("Offre retirée des favoris.");
     } catch (error) {
-      // Maintenant ça marche, fetchFavoris est bien reconnue !
-      fetchFavoris();
-      (toast.error("Erreur lors de la suppression."), console.error(error));
+      // 🛑 ROLLBACK : On remet l'ancienne liste en cas d'échec
+      setFavoris(previousFavoris);
+      reportError("ECHEC_SUPPRESSION_FAVORI", error);
+      toast.error("Erreur lors de la suppression.");
     }
   };
 
@@ -50,9 +52,7 @@ const OffresSauvegardees = () => {
 
   return (
     <div className="max-w-4xl space-y-8 animate-fadeIn">
-      {/* LE BLOC PRINCIPAL */}
       <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 min-h-[400px]">
-        {/* L'En-tête (Exactement comme ta capture, mais modernisé) */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-gray-100 gap-4">
           <div>
             <h1 className="text-2xl font-black text-gray-900 tracking-tight mb-2">
@@ -63,16 +63,13 @@ const OffresSauvegardees = () => {
             </p>
           </div>
 
-          {/* Bouton de filtre (Esthétique pour l'instant) */}
           <select className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm">
             <option>Plus récentes</option>
             <option>Plus anciennes</option>
           </select>
         </div>
 
-        {/* LE CONTENU */}
         {favoris.length === 0 ? (
-          /* === AFFICHAGE SI VIDE === */
           <div className="bg-gray-50 border border-gray-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
               <svg
@@ -98,14 +95,12 @@ const OffresSauvegardees = () => {
             </Link>
           </div>
         ) : (
-          /* === AFFICHAGE SI IL Y A DES OFFRES === */
           <div className="space-y-4">
             {favoris.map((favori) => (
               <div
                 key={favori.id}
                 className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 border border-gray-100 rounded-2xl hover:shadow-md hover:border-blue-100 transition-all group bg-white"
               >
-                {/* Infos de l'offre */}
                 <div className="mb-4 md:mb-0">
                   <Link
                     to={`/jobs/${favori.offre_detail.id}`}
@@ -129,7 +124,6 @@ const OffresSauvegardees = () => {
                   </p>
                 </div>
 
-                {/* Boutons d'action */}
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <Link
                     to={`/jobs/${favori.offre_detail.id}`}
@@ -142,7 +136,6 @@ const OffresSauvegardees = () => {
                     className="p-2.5 text-blue-600 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                     title="Retirer des favoris"
                   >
-                    {/* Icône Signet rempli */}
                     <svg
                       className="w-5 h-5"
                       fill="currentColor"

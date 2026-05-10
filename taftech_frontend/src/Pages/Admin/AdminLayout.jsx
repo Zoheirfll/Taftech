@@ -35,11 +35,15 @@ const AdminLayout = () => {
             <span>💼</span> Offres d'emploi
           </NavLink>
 
+          {/* 👇 NOUVEL ONGLET POUR TOUTES LES CANDIDATURES 👇 */}
+          <NavLink to="/admin-taftech/candidatures" className={navLinkClass}>
+            <span>📑</span> Candidatures
+          </NavLink>
+
           <NavLink to="/admin-taftech/utilisateurs" className={navLinkClass}>
             <span>👥</span> Utilisateurs
           </NavLink>
 
-          {/* 👇 NOUVEL ONGLET POUR LES EMAILS 👇 */}
           <NavLink to="/admin-taftech/broadcast" className={navLinkClass}>
             <span>📢</span> Diffusion
           </NavLink>

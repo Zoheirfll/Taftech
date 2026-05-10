@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
-
-// 👇 IMPORTATION DE TES DONNÉES LOCALES 👇
 import communesAlgerie from "../data/communes.json";
+import { reportError } from "../utils/errorReporter"; // ✅ Import ajouté
 
 const CreateJob = () => {
   const navigate = useNavigate();
@@ -38,7 +37,8 @@ const CreateJob = () => {
         const data = await jobsService.getConstants();
         setConstants(data);
       } catch (error) {
-        console.error("Erreur de chargement des constantes", error);
+        // 🛑 Remplacé console.error par reportError
+        reportError("ECHEC_CHARGEMENT_CONSTANTES_JOB", error);
         toast.error("Erreur lors du chargement des listes déroulantes.");
       }
     };
@@ -56,10 +56,8 @@ const CreateJob = () => {
     });
   };
 
-  // 👇 FILTRE LES COMMUNES SELON LA WILAYA SÉLECTIONNÉE 👇
   const getCommunesOptions = () => {
     if (!formData.wilaya) return [];
-    // On extrait le code wilaya. Ex: "31 - Oran" -> "31"
     const wilayaCode = formData.wilaya.split(" - ")[0];
     return communesAlgerie
       .filter((c) => c.wilaya_code === wilayaCode)
@@ -93,13 +91,11 @@ const CreateJob = () => {
         navigate("/dashboard");
       }, 2000);
     } catch (error) {
-      (toast.error(
-        "Erreur lors de la publication. Vérifiez vos informations.",
-        {
-          id: toastId,
-        },
-      ),
-        console.log(error));
+      // 🛑 Remplacé console.log par reportError
+      reportError("ECHEC_PUBLICATION_OFFRE", error);
+      toast.error("Erreur lors de la publication. Vérifiez vos informations.", {
+        id: toastId,
+      });
       setLoading(false);
     }
   };
@@ -123,9 +119,7 @@ const CreateJob = () => {
         className="space-y-8 pb-32 max-w-5xl mx-auto"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* COLONNE GAUCHE (Infos Principales & Localisation) */}
           <div className="lg:col-span-7 space-y-8">
-            {/* SECTION 1 : POSTE */}
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-gray-100">
               <h3 className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-8 flex items-center gap-3">
                 <span className="w-2 h-8 bg-blue-600 rounded-full"></span>{" "}
@@ -190,14 +184,12 @@ const CreateJob = () => {
               </div>
             </div>
 
-            {/* SECTION 2 : LOCALISATION */}
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-gray-100">
               <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-8 flex items-center gap-3">
                 <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
                 Localisation
               </h3>
 
-              {/* 👇 LISTES DÉROULANTES EN CASCADE 👇 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
@@ -268,7 +260,6 @@ const CreateJob = () => {
             </div>
           </div>
 
-          {/* COLONNE DROITE (Ciblage) */}
           <div className="lg:col-span-5 space-y-8">
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-xl border-4 border-blue-50 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-4 py-1 rounded-bl-xl tracking-widest uppercase">
@@ -363,7 +354,6 @@ const CreateJob = () => {
             </div>
           </div>
 
-          {/* DESCRIPTION LONGUE */}
           <div className="lg:col-span-12 space-y-8">
             <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-gray-100">
               <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-widest mb-8 flex items-center gap-3">

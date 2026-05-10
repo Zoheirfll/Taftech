@@ -7,7 +7,11 @@ from django.conf import settings
 from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, Now
 import datetime
-
+import csv
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
 # Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -23,7 +27,7 @@ from .serializers import ExperienceSerializer, FormationSerializer
 from .models import OffreSauvegardee, AlerteEmploi
 from .serializers import OffreSauvegardeeSerializer, AlerteEmploiSerializer, ParametresNotificationsSerializer
 from .serializers import EntreprisePublicSerializer
-from .serializers import PostulerRapideDTO,  NotificationSerializer
+from .serializers import PostulerRapideDTO,  NotificationSerializer, CandidatureRecruteurDTO
 from .matcher import calculer_score_matching
 User = get_user_model()
 class JobListAPIView(APIView):
@@ -952,3 +956,281 @@ class CVThequeView(APIView):
         serializer = ProfilCandidatDTO(result_page, many=True)
         
         return paginator.get_paginated_response(serializer.data)
+
+class EvaluerCandidatureAPIView(APIView):
+    """
+    Endpoint pour que le recruteur soumette l'évaluation post-entretien.
+    URL : /api/jobs/candidatures/<candidature_id>/evaluer/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        # SÉCURITÉ : On vérifie que c'est bien le recruteur propriétaire de l'offre
+        if not hasattr(request.user, 'profil_entreprise') or candidature.offre.entreprise != request.user.profil_entreprise:
+            return Response({"error": "Action non autorisée."}, status=status.HTTP_403_FORBIDDEN)
+
+        # On récupère les 4 notes (qui sont sur 5)
+        try:
+            n_tech = int(request.data.get('note_technique', 0))
+            n_comm = int(request.data.get('note_communication', 0))
+            n_mot = int(request.data.get('note_motivation', 0))
+            n_exp = int(request.data.get('note_experience', 0))
+        except ValueError:
+            return Response({"error": "Les notes doivent être des nombres."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # On enregistre les notes
+        candidature.note_technique = n_tech
+        candidature.note_communication = n_comm
+        candidature.note_motivation = n_mot
+        candidature.note_experience = n_exp
+        candidature.commentaire_evaluation = request.data.get('commentaire_evaluation', '')
+
+        # CALCUL AUTOMATIQUE DE LA NOTE SUR 20
+        # (5 + 5 + 5 + 5 = 20)
+        candidature.note_globale = n_tech + n_comm + n_mot + n_exp
+
+        candidature.save()
+
+        # On renvoie la nouvelle candidature avec les notes mises à jour
+        serializer = CandidatureRecruteurDTO(candidature)
+        return Response({
+            "message": "Évaluation enregistrée avec succès !",
+            "candidature": serializer.data
+        }, status=status.HTTP_200_OK)
+
+class AdminCandidaturesListAPIView(APIView):
+    """
+    Permet à l'Admin TafTech de voir toutes les candidatures de la plateforme,
+    incluant l'IA et les notes d'entretien.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search = request.query_params.get('search', '')
+        
+        # On récupère toutes les candidatures
+        candidatures = Candidature.objects.all().order_by('-date_postulation')
+        
+        # Recherche par nom du candidat ou titre de l'offre
+        if search:
+            candidatures = candidatures.filter(
+                Q(candidat__first_name__icontains=search) | 
+                Q(candidat__last_name__icontains=search) |
+                Q(nom_rapide__icontains=search) |
+                Q(offre__titre__icontains=search) |
+                Q(offre__entreprise__nom_entreprise__icontains=search)
+            )
+
+        # Pagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        result_page = paginator.paginate_queryset(candidatures, request)
+        
+        # On réutilise le serializer que tu as déjà pour le recruteur (il contient tout !)
+        serializer = CandidatureRecruteurDTO(result_page, many=True)
+        
+        # On ajoute les infos de l'offre pour l'admin (car le DTO recruteur ne l'a pas)
+        data = []
+        for index, item in enumerate(serializer.data):
+            cand_obj = result_page[index]
+            item['offre_titre'] = cand_obj.offre.titre
+            item['entreprise_nom'] = cand_obj.offre.entreprise.nom_entreprise
+            data.append(item)
+
+        return paginator.get_paginated_response(data)
+
+class ExportCandidaturesCSVAPIView(APIView):
+    """
+    Exporte la liste de toutes les candidatures au format CSV (Lisible directement par Excel).
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # On prépare la réponse pour forcer le téléchargement d'un fichier avec le bon encodage (utf-8-sig pour les accents)
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="candidatures_taftech.csv"'
+        
+        # On utilise le point-virgule pour qu'Excel fasse de belles colonnes automatiquement
+        writer = csv.writer(response, delimiter=';')
+        
+        # 1. Écriture des en-têtes (les titres des colonnes)
+        writer.writerow(['ID', 'Date', 'Candidat', 'Email / Tel', 'Offre', 'Entreprise', 'Statut', 'Score IA (%)', 'Note Entretien (/20)'])
+        
+        # 2. Récupération des données
+        candidatures = Candidature.objects.all().order_by('-date_postulation')
+        
+        # 3. Écriture ligne par ligne
+        for cand in candidatures:
+            # Gestion du nom (compte vs rapide)
+            if cand.candidat:
+                nom = f"{cand.candidat.last_name} {cand.candidat.first_name}"
+                contact = cand.candidat.email
+            else:
+                nom = f"{cand.nom_rapide} {cand.prenom_rapide} (Rapide)"
+                contact = cand.email_rapide
+
+            score = cand.score_matching if cand.score_matching is not None else "N/A"
+            note = cand.note_globale if cand.note_globale is not None else "Non évalué"
+            statut = cand.get_statut_display() # Récupère le texte complet du statut
+            date = cand.date_postulation.strftime("%d/%m/%Y")
+            
+            writer.writerow([
+                cand.id,
+                date,
+                nom,
+                contact,
+                cand.offre.titre,
+                cand.offre.entreprise.nom_entreprise,
+                statut,
+                score,
+                note
+            ])
+            
+        return response
+
+class ExportEntreprisesCSVAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="entreprises_taftech.csv"'
+        writer = csv.writer(response, delimiter=';')
+        
+        writer.writerow(['ID', 'Nom Entreprise', 'Secteur', 'Wilaya', 'Approuvée', 'Premium', 'Email Contact', 'Téléphone'])
+        
+        entreprises = ProfilEntreprise.objects.all().order_by('-id')
+        for ent in entreprises:
+            telephone = ent.user.telephone if hasattr(ent.user, 'telephone') else ""
+            secteur = ent.get_secteur_activite_display() if ent.secteur_activite else ""
+            writer.writerow([
+                ent.id, ent.nom_entreprise, secteur, ent.wilaya_siege, 
+                'Oui' if ent.est_approuvee else 'Non', 
+                'Oui' if ent.est_premium else 'Non', 
+                ent.user.email, telephone
+            ])
+        return response
+
+# ==========================================
+# EXPORT EXCEL : OFFRES D'EMPLOI
+# ==========================================
+class ExportOffresCSVAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="offres_taftech.csv"'
+        writer = csv.writer(response, delimiter=';')
+        
+        writer.writerow(['ID', 'Titre', 'Entreprise', 'Wilaya', 'Type Contrat', 'Statut', 'Clôturée', 'Date Publication'])
+        
+        offres = OffreEmploi.objects.all().order_by('-date_publication')
+        for offre in offres:
+            contrat = offre.get_type_contrat_display() if offre.type_contrat else ""
+            writer.writerow([
+                offre.id, offre.titre, offre.entreprise.nom_entreprise, offre.wilaya, 
+                contrat, offre.get_statut_moderation_display(), 
+                'Oui' if offre.est_cloturee else 'Non', 
+                offre.date_publication.strftime("%d/%m/%Y")
+            ])
+        return response
+
+# ==========================================
+# EXPORT EXCEL : UTILISATEURS
+# ==========================================
+class ExportUtilisateursCSVAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="utilisateurs_taftech.csv"'
+        writer = csv.writer(response, delimiter=';')
+        
+        writer.writerow(['ID', 'Email', 'Nom', 'Prénom', 'Rôle', 'Actif', 'Date Inscription'])
+        
+        utilisateurs = User.objects.all().order_by('-date_joined')
+        for u in utilisateurs:
+            role = getattr(u, 'role', 'CANDIDAT')
+            date_ins = u.date_joined.strftime("%d/%m/%Y") if u.date_joined else ""
+            writer.writerow([
+                u.id, u.email, u.last_name, u.first_name, 
+                role, 'Oui' if u.is_active else 'Non', date_ins
+            ])
+        return response
+
+from django.utils import timezone
+
+class GenererBulletinPDFAPIView(APIView):
+    """
+    US 10 : Génère un Bulletin de Présentation PDF quand un candidat est retenu.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=404)
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Bulletin_Presentation_TafTech.pdf"'
+
+        # Création du "Canvas" (la feuille blanche A4)
+        p = canvas.Canvas(response, pagesize=A4)
+        width, height = A4
+
+        # --- EN-TÊTE TAFTECH ---
+        p.setFillColor(colors.HexColor("#1e3a8a")) # Bandeau bleu foncé
+        p.rect(0, height - 80, width, 80, fill=1, stroke=0)
+        
+        p.setFillColor(colors.white)
+        p.setFont("Helvetica-Bold", 28)
+        p.drawString(50, height - 55, "TAFTECH")
+
+        # --- TITRE DU DOCUMENT ---
+        p.setFillColor(colors.HexColor("#1f2937"))
+        p.setFont("Helvetica-Bold", 18)
+        p.drawString(50, height - 130, "BULLETIN DE PRÉSENTATION OFFICIEL")
+        p.line(50, height - 140, width - 50, height - 140)
+
+        # --- INFORMATIONS REQUISES PAR L'US 10 ---
+        p.setFont("Helvetica", 14)
+        
+        # 👇 C'est cette fameuse variable y qui avait disparu ! 👇
+        y = height - 200 
+
+        if candidature.candidat:
+            nom = f"{candidature.candidat.last_name} {candidature.candidat.first_name}"
+        else:
+            nom = f"{candidature.nom_rapide} {candidature.prenom_rapide}"
+        
+        p.drawString(50, y, f"Candidat(e) retenu(e) : {nom.upper()}")
+        y -= 40
+        p.drawString(50, y, f"Poste attribué : {candidature.offre.titre}")
+        y -= 40
+        p.drawString(50, y, f"Entreprise d'accueil : {candidature.offre.entreprise.nom_entreprise}")
+        y -= 40
+        
+        # Utilisation propre de l'heure Django
+        p.drawString(50, y, f"Date de validation : {timezone.now().strftime('%d/%m/%Y')}")
+
+        # --- SIGNATURE ---
+        y -= 100
+        p.setFont("Helvetica-Oblique", 12)
+        p.setFillColor(colors.gray)
+        p.drawString(50, y, "Ce document certifie la selection du candidat via la plateforme TafTech.")
+        
+        y -= 40
+        p.setFont("Helvetica-Bold", 16)
+        p.setFillColor(colors.HexColor("#ea580c")) # Orange TafTech
+        p.drawString(50, y, "Signature officielle : L'equipe TAFTECH")
+
+        # Sauvegarde du PDF
+        p.showPage()
+        p.save()
+
+        return response

@@ -4,12 +4,12 @@ import { authService } from "../Services/authService";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
+import { reportError } from "../utils/errorReporter"; // ✅ Télémétrie ajoutée
 
 const RegisterRecruteur = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // NOUVEAU : Gestion des étapes (1: Formulaire, 2: OTP, 3: Succès)
   const [step, setStep] = useState(1);
   const [otpCode, setOtpCode] = useState("");
 
@@ -33,7 +33,7 @@ const RegisterRecruteur = () => {
         const data = await jobsService.getConstants();
         setConstants(data);
       } catch (err) {
-        console.error("Erreur chargement des constantes", err);
+        reportError("ECHEC_CHARGEMENT_CONSTANTES_RECRUTEUR", err); // ✅ Télémétrie
       }
     };
     fetchConstants();
@@ -43,7 +43,6 @@ const RegisterRecruteur = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- ÉTAPE 1 : SOUMISSION DU FORMULAIRE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -68,7 +67,6 @@ const RegisterRecruteur = () => {
         { id: toastId, duration: 3000 },
       );
 
-      // On passe à l'étape du code OTP au lieu de rediriger !
       setStep(2);
     } catch (err) {
       const serverError = err.response?.data;
@@ -78,12 +76,12 @@ const RegisterRecruteur = () => {
           "Une erreur est survenue lors de l'inscription.",
         { id: toastId },
       );
+      reportError("ECHEC_REGISTRATION_RECRUTEUR", err); // ✅ Télémétrie
     } finally {
       setLoading(false);
     }
   };
 
-  // --- ÉTAPE 2 : SOUMISSION DU CODE OTP ---
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (otpCode.length !== 6)
@@ -95,11 +93,12 @@ const RegisterRecruteur = () => {
     try {
       await authService.verifyEmail(formData.email, otpCode);
       toast.success("Email vérifié avec succès !", { id: toastId });
-      setStep(3); // On passe au message de fin !
+      setStep(3);
     } catch (err) {
       toast.error(err.response?.data?.error || "Code incorrect.", {
         id: toastId,
       });
+      reportError("ECHEC_VERIFICATION_OTP_RECRUTEUR", err); // ✅ Télémétrie
     } finally {
       setLoading(false);
     }
@@ -108,7 +107,7 @@ const RegisterRecruteur = () => {
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        {/* Colonne de gauche (Reste identique !) */}
+        {/* Colonne Gauche */}
         <div className="md:w-1/3 bg-gray-900 p-10 text-white flex flex-col justify-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-bl-full opacity-20"></div>
           <h2 className="text-3xl font-black mb-4 z-10">
@@ -142,9 +141,9 @@ const RegisterRecruteur = () => {
           </div>
         </div>
 
-        {/* Colonne de droite : DYNAMIQUE SELON L'ÉTAPE */}
+        {/* Colonne Droite */}
         <div className="md:w-2/3 p-10 flex flex-col justify-center">
-          {/* ================= ÉTAPE 1 : LE FORMULAIRE ================= */}
+          {/* ÉTAPE 1 */}
           {step === 1 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <h3 className="text-2xl font-black text-gray-900 mb-6">
@@ -320,7 +319,7 @@ const RegisterRecruteur = () => {
             </form>
           )}
 
-          {/* ================= ÉTAPE 2 : CODE OTP ================= */}
+          {/* ÉTAPE 2 */}
           {step === 2 && (
             <div className="space-y-6 text-center animate-fade-in">
               <h3 className="text-2xl font-black text-gray-900 mb-2">
@@ -341,7 +340,7 @@ const RegisterRecruteur = () => {
                     value={otpCode}
                     onChange={(e) =>
                       setOtpCode(e.target.value.replace(/\D/g, ""))
-                    } // N'accepte que les chiffres
+                    }
                     placeholder="------"
                     className="w-48 text-center text-3xl tracking-[0.5em] p-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-600 outline-none font-black text-gray-800 uppercase"
                     required
@@ -358,7 +357,7 @@ const RegisterRecruteur = () => {
             </div>
           )}
 
-          {/* ================= ÉTAPE 3 : MESSAGE FINAL ADMIN ================= */}
+          {/* ÉTAPE 3 */}
           {step === 3 && (
             <div className="space-y-6 text-center animate-fade-in">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -367,7 +366,6 @@ const RegisterRecruteur = () => {
               <h3 className="text-2xl font-black text-gray-900 mb-2">
                 Compte Sécurisé !
               </h3>
-
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-left">
                 <p className="text-blue-900 text-sm leading-relaxed">
                   <strong>Bravo {formData.first_name} !</strong> Votre email est
@@ -383,7 +381,6 @@ const RegisterRecruteur = () => {
                   sera approuvé !
                 </p>
               </div>
-
               <button
                 onClick={() => navigate("/login")}
                 className="w-full border-2 border-blue-600 text-blue-600 font-black py-4 rounded-xl hover:bg-blue-50 transition-all mt-4"

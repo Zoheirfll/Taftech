@@ -1,39 +1,36 @@
-import React, { useState, useEffect, useCallback } from "react"; // Ajout de useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
+import { reportError } from "../../utils/errorReporter";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // --- NOUVEAUX ÉTATS POUR LA RECHERCHE ET PAGINATION ---
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Stabilisation de la fonction de chargement
   const chargerUsers = useCallback(async () => {
     setLoading(true);
     try {
-      // Appel au service avec la page et le terme de recherche
       const data = await jobsService.getAdminUsers(currentPage, searchTerm);
 
       if (data.results) {
         setUsers(data.results);
-        setTotalPages(Math.ceil(data.count / 5)); // Calcul basé sur 10 par page
+        setTotalPages(Math.ceil(data.count / 5));
       } else {
         setUsers(data);
       }
     } catch (err) {
       toast.error("Erreur de chargement des utilisateurs.");
-      console.error(err);
+      reportError("ECHEC_CHARGEMENT_USERS_ADMIN", err);
     } finally {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
 
-  // Gestion du Debounce (300ms) pour la recherche
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       chargerUsers();
@@ -57,8 +54,29 @@ const AdminUsers = () => {
         }
       } catch (err) {
         toast.error("Erreur lors de la modification du statut.");
-        console.error(err);
+        reportError("ECHEC_MODERATION_USER", err);
       }
+    }
+  };
+
+  const handleExport = async () => {
+    const toastId = toast.loading("Génération du fichier en cours...");
+    try {
+      const blob = await jobsService.exportUtilisateurs();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "utilisateurs_taftech.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Téléchargement réussi !");
+    } catch (err) {
+      toast.error("Erreur lors de l'exportation.");
+      reportError("ECHEC_EXPORT_EXCEL_USERS", err);
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -87,7 +105,6 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* HEADER AVEC RECHERCHE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -98,24 +115,32 @@ const AdminUsers = () => {
           </p>
         </div>
 
-        <div className="relative group">
-          <input
-            type="text"
-            placeholder="Chercher un nom ou un email..."
-            className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset à la page 1 si on cherche
-            }}
-          />
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
+          <button
+            onClick={handleExport}
+            className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 text-white font-black px-6 py-3 rounded-[1.5rem] hover:bg-green-700 hover:-translate-y-1 transition-all shadow-md text-sm"
+          >
+            📊 EXPORTER EXCEL
+          </button>
+
+          <div className="relative group w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="Chercher nom ou email..."
+              className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+              🔍
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* TABLEAU */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-100">
@@ -208,7 +233,6 @@ const AdminUsers = () => {
         </table>
       </div>
 
-      {/* PAGINATION */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 py-4">
           <button
@@ -233,7 +257,6 @@ const AdminUsers = () => {
         </div>
       )}
 
-      {/* --- MODAL D'INSPECTION (TOUTE TA LOGIQUE ORIGINALE PRÉSERVÉE) --- */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto animate-slideUp">

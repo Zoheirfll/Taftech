@@ -1,66 +1,69 @@
 import React from "react";
 import { NavLink, Outlet, Link } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Building2,
+  Briefcase,
+  FileText,
+  Users,
+  Megaphone,
+  ArrowLeft,
+} from "lucide-react";
 
 const AdminLayout = () => {
-  // Petite fonction pour gérer la couleur du bouton actif automatiquement
   const navLinkClass = ({ isActive }) =>
-    `w-full text-left px-4 py-3 rounded-xl font-bold transition flex items-center gap-3 ${
+    `w-full text-left px-3 py-2.5 rounded-lg font-medium text-sm transition flex items-center gap-3 ${
       isActive
-        ? "bg-blue-600 text-white shadow-md"
-        : "text-gray-400 hover:bg-gray-800 hover:text-white"
+        ? "bg-indigo-600 text-white"
+        : "text-slate-400 hover:bg-slate-800 hover:text-white"
     }`;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* MENU LATÉRAL FIXE */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col shadow-2xl z-10">
-        <div className="p-6 text-center border-b border-gray-800">
-          <h1 className="text-2xl font-black tracking-widest text-blue-500">
+    <div className="flex h-screen bg-slate-50">
+      <div className="w-60 bg-slate-900 text-white flex flex-col shadow-2xl z-10 flex-shrink-0">
+        <div className="px-5 py-6 border-b border-slate-800">
+          <h1 className="text-lg font-bold tracking-widest text-indigo-400">
             TAFTECH
           </h1>
-          <p className="text-xs text-gray-400 font-bold mt-1">SUPER ADMIN</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Super Admin
+          </p>
         </div>
-
-        <nav className="flex-1 p-4 space-y-2 mt-4">
-          {/* NavLink gère tout seul le fait d'être "actif" ou non grâce à l'URL */}
+        <nav className="flex-1 p-3 space-y-0.5 mt-2">
           <NavLink to="/admin-taftech/dashboard" className={navLinkClass}>
-            <span>📊</span> Vue d'ensemble
+            <LayoutDashboard size={16} className="flex-shrink-0" /> Vue
+            d'ensemble
           </NavLink>
-
+          <NavLink to="/admin-taftech/metiers" className={navLinkClass}>
+            <Briefcase size={16} className="flex-shrink-0" /> Référentiel
+            métiers
+          </NavLink>
           <NavLink to="/admin-taftech/entreprises" className={navLinkClass}>
-            <span>🏢</span> Entreprises
+            <Building2 size={16} className="flex-shrink-0" /> Entreprises
           </NavLink>
-
           <NavLink to="/admin-taftech/offres" className={navLinkClass}>
-            <span>💼</span> Offres d'emploi
+            <Briefcase size={16} className="flex-shrink-0" /> Offres d'emploi
           </NavLink>
-
-          {/* 👇 NOUVEL ONGLET POUR TOUTES LES CANDIDATURES 👇 */}
           <NavLink to="/admin-taftech/candidatures" className={navLinkClass}>
-            <span>📑</span> Candidatures
+            <FileText size={16} className="flex-shrink-0" /> Candidatures
           </NavLink>
-
           <NavLink to="/admin-taftech/utilisateurs" className={navLinkClass}>
-            <span>👥</span> Utilisateurs
+            <Users size={16} className="flex-shrink-0" /> Utilisateurs
           </NavLink>
-
           <NavLink to="/admin-taftech/broadcast" className={navLinkClass}>
-            <span>📢</span> Diffusion
+            <Megaphone size={16} className="flex-shrink-0" /> Diffusion
           </NavLink>
         </nav>
-
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-slate-800">
           <Link
             to="/"
-            className="text-gray-400 text-sm font-bold hover:text-white flex justify-center items-center gap-2 transition"
+            className="flex items-center gap-2 text-slate-400 text-sm font-medium hover:text-white transition-colors"
           >
-            ← Quitter l'Admin
+            <ArrowLeft size={14} /> Quitter l'admin
           </Link>
         </div>
       </div>
-
-      {/* CONTENU DYNAMIQUE (La "fenêtre" où les pages s'affichent) */}
-      <div className="flex-1 overflow-y-auto p-10">
+      <div className="flex-1 overflow-y-auto p-8">
         <Outlet />
       </div>
     </div>

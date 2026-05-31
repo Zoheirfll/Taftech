@@ -2,7 +2,15 @@ import React, { useState } from "react";
 import { jobsService } from "../Services/jobsService";
 import { authService } from "../Services/authService";
 import { Link } from "react-router-dom";
-import { reportError } from "../utils/errorReporter"; // Import de la télémétrie
+import { reportError } from "../utils/errorReporter";
+import {
+  MapPin,
+  Briefcase,
+  Banknote,
+  Calendar,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 const JobCard = ({ job }) => {
   const isLogged = authService.isAuthenticated();
@@ -12,89 +20,95 @@ const JobCard = ({ job }) => {
   const handlePostuler = async () => {
     try {
       const data = await jobsService.postuler(job.id);
-      setStatusMessage("✅ " + data.message);
+      setStatusMessage(data.message);
       setIsError(false);
     } catch (error) {
-      // 1. Gestion de la télémétrie (Crash serveur ou réseau)
       if (!error.response || error.response.status >= 500) {
         reportError(`CRASH_POSTULATION_OFFRE_ID_${job.id}`, error);
       }
-
-      // 2. Affichage du message d'erreur (Métier ou technique)
       setStatusMessage(
-        "❌ " +
-          (error.response?.data?.error || "Erreur lors de la candidature."),
+        error.response?.data?.error || "Erreur lors de la candidature.",
       );
       setIsError(true);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300 border-l-4 border-blue-600">
-      <div className="flex justify-between items-start">
-        <div>
-          <Link to={`/offre/${job.id}`}>
-            <h3 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
-              {job.titre}
-            </h3>
-          </Link>
-          <p className="text-blue-600 font-semibold uppercase text-sm mt-1">
-            {job.entreprise.nom_entreprise}
-          </p>
-        </div>
-        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
-          {job.type_contrat}
-        </span>
-      </div>
-
-      <div className="mt-4 flex items-center text-gray-500 text-sm space-x-4">
-        <span>📍 {job.wilaya}</span>
-        <span>💼 {job.experience_requise}</span>
-        {job.salaire_propose && (
-          <span className="font-medium text-green-600">
-            💰 {job.salaire_propose}
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all">
+      <div className="h-0.5 bg-indigo-600" />
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex-1 min-w-0">
+            <Link to={`/jobs/${job.id}`}>
+              <h3 className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors line-clamp-2">
+                {job.titre}
+              </h3>
+            </Link>
+            <p className="text-xs font-medium text-indigo-600 mt-0.5">
+              {job.entreprise?.nom_entreprise}
+            </p>
+          </div>
+          <span className="flex-shrink-0 px-2.5 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-full">
+            {job.type_contrat}
           </span>
-        )}
-      </div>
+        </div>
 
-      <hr className="my-4 border-gray-100" />
-
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-gray-400 italic">
-          Publiée le{" "}
-          {new Date(job.date_publication).toLocaleDateString("fr-FR")}
-        </span>
-
-        <div className="flex flex-col items-end">
-          {statusMessage && (
-            <span
-              className={`text-sm font-bold mb-2 ${
-                isError ? "text-red-500" : "text-green-500"
-              }`}
-            >
-              {statusMessage}
+        <div className="flex flex-wrap gap-2 mt-3 mb-4">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-500 text-xs rounded-md">
+            <MapPin size={11} />
+            {job.wilaya?.split(" - ")[1] || job.wilaya}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-500 text-xs rounded-md">
+            <Briefcase size={11} />
+            {job.experience_requise}
+          </span>
+          {job.salaire_propose && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-md">
+              <Banknote size={11} />
+              {job.salaire_propose}
             </span>
           )}
+        </div>
 
-          <div className="flex items-center gap-4">
+        {statusMessage && (
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-3 text-xs font-medium ${
+              isError
+                ? "bg-red-50 text-red-600"
+                : "bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {isError ? <XCircle size={14} /> : <CheckCircle size={14} />}
+            {statusMessage}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            <Calendar size={11} />
+            {new Date(job.date_publication).toLocaleDateString("fr-FR")}
+          </span>
+          <div className="flex items-center gap-2">
             <Link
-              to={`/offre/${job.id}`}
-              className="text-blue-600 font-bold hover:underline text-sm"
+              to={`/jobs/${job.id}`}
+              className="text-xs font-medium text-indigo-600 hover:underline"
             >
               Voir les détails
             </Link>
-
             {isLogged ? (
               <button
                 onClick={handlePostuler}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors"
               >
                 Postuler
               </button>
             ) : (
-              <span className="text-sm text-gray-500 italic border px-3 py-1 rounded">
-                Connectez-vous pour postuler
-              </span>
+              <Link
+                to="/login"
+                className="px-3 py-1.5 border border-slate-200 text-slate-500 text-xs rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Se connecter
+              </Link>
             )}
           </div>
         </div>

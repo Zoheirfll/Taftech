@@ -193,7 +193,7 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     );
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/creer-entreprise");
+      expect(mockNavigate).toHaveBeenCalledWith("/register-entreprise");
     });
   });
 

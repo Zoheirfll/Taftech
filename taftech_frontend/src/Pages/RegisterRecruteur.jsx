@@ -4,17 +4,16 @@ import { authService } from "../Services/authService";
 import { jobsService } from "../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
-import { reportError } from "../utils/errorReporter"; // ✅ Télémétrie ajoutée
+import { reportError } from "../utils/errorReporter";
+import { selectStyles } from "../theme";
+import { CheckCircle } from "lucide-react";
 
 const RegisterRecruteur = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-
   const [step, setStep] = useState(1);
   const [otpCode, setOtpCode] = useState("");
-
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
-
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -33,7 +32,7 @@ const RegisterRecruteur = () => {
         const data = await jobsService.getConstants();
         setConstants(data);
       } catch (err) {
-        reportError("ECHEC_CHARGEMENT_CONSTANTES_RECRUTEUR", err); // ✅ Télémétrie
+        reportError("ECHEC_CHARGEMENT_CONSTANTES_RECRUTEUR", err);
       }
     };
     fetchConstants();
@@ -45,38 +44,33 @@ const RegisterRecruteur = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.secteur_activite || !formData.wilaya_siege) {
       return toast.error("Veuillez sélectionner un secteur et une wilaya.");
     }
-
     setLoading(true);
     const toastId = toast.loading("Création de votre compte entreprise...");
-
     try {
       const usernameGenere =
         formData.email.split("@")[0] +
         "_pro_" +
         Math.floor(Math.random() * 999);
-      const dataToSend = { ...formData, username: usernameGenere };
-
-      const response = await authService.registerRecruteur(dataToSend);
-
-      toast.success(
-        response.message || "Un code a été envoyé à votre adresse email.",
-        { id: toastId, duration: 3000 },
-      );
-
+      const response = await authService.registerRecruteur({
+        ...formData,
+        username: usernameGenere,
+      });
+      toast.success(response.message || "Code envoyé à votre email.", {
+        id: toastId,
+      });
       setStep(2);
     } catch (err) {
       const serverError = err.response?.data;
       toast.error(
         serverError?.email?.[0] ||
           serverError?.registre_commerce?.[0] ||
-          "Une erreur est survenue lors de l'inscription.",
+          "Une erreur est survenue.",
         { id: toastId },
       );
-      reportError("ECHEC_REGISTRATION_RECRUTEUR", err); // ✅ Télémétrie
+      reportError("ECHEC_REGISTRATION_RECRUTEUR", err);
     } finally {
       setLoading(false);
     }
@@ -86,10 +80,8 @@ const RegisterRecruteur = () => {
     e.preventDefault();
     if (otpCode.length !== 6)
       return toast.error("Le code doit contenir 6 chiffres.");
-
     setLoading(true);
     const toastId = toast.loading("Vérification en cours...");
-
     try {
       await authService.verifyEmail(formData.email, otpCode);
       toast.success("Email vérifié avec succès !", { id: toastId });
@@ -98,61 +90,56 @@ const RegisterRecruteur = () => {
       toast.error(err.response?.data?.error || "Code incorrect.", {
         id: toastId,
       });
-      reportError("ECHEC_VERIFICATION_OTP_RECRUTEUR", err); // ✅ Télémétrie
+      reportError("ECHEC_VERIFICATION_OTP_RECRUTEUR", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4 font-sans">
-      <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        {/* Colonne Gauche */}
-        <div className="md:w-1/3 bg-gray-900 p-10 text-white flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-bl-full opacity-20"></div>
-          <h2 className="text-3xl font-black mb-4 z-10">
-            Espace
-            <br />
-            <span className="text-blue-500">Recruteur</span>
+    <div className="min-h-screen bg-slate-50 py-10 px-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
+        {/* COLONNE GAUCHE */}
+        <div className="md:w-1/3 bg-slate-900 p-10 text-white flex flex-col justify-center">
+          <h2 className="text-2xl font-bold mb-3">
+            Espace <span className="text-indigo-400">Recruteur</span>
           </h2>
-          <p className="text-gray-400 text-sm leading-relaxed z-10">
+          <p className="text-slate-400 text-sm leading-relaxed mb-8">
             Rejoignez TafTech pour accéder aux meilleurs talents d'Algérie.
             Votre compte sera actif après vérification de vos documents légaux.
           </p>
-          <div className="mt-10 space-y-4 z-10">
-            <div className="flex items-center gap-3 text-xs text-gray-300 font-bold">
-              <span className="w-6 h-6 flex items-center justify-center bg-blue-600/20 text-blue-500 rounded-full">
-                ✓
-              </span>{" "}
-              Publication illimitée
-            </div>
-            <div className="flex items-center gap-3 text-xs text-gray-300 font-bold">
-              <span className="w-6 h-6 flex items-center justify-center bg-blue-600/20 text-blue-500 rounded-full">
-                ✓
-              </span>{" "}
-              Gestion des candidatures
-            </div>
-            <div className="flex items-center gap-3 text-xs text-gray-300 font-bold">
-              <span className="w-6 h-6 flex items-center justify-center bg-blue-600/20 text-blue-500 rounded-full">
-                ✓
-              </span>{" "}
-              Visibilité Premium
-            </div>
+          <div className="space-y-3">
+            {[
+              "Publication illimitée",
+              "Gestion des candidatures",
+              "Visibilité Premium",
+            ].map((item) => (
+              <div
+                key={item}
+                className="flex items-center gap-2 text-sm text-slate-300"
+              >
+                <CheckCircle
+                  size={15}
+                  className="text-indigo-400 flex-shrink-0"
+                />
+                {item}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Colonne Droite */}
-        <div className="md:w-2/3 p-10 flex flex-col justify-center">
+        {/* COLONNE DROITE */}
+        <div className="md:w-2/3 p-8 md:p-10 flex flex-col justify-center">
           {/* ÉTAPE 1 */}
           {step === 1 && (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <h3 className="text-2xl font-black text-gray-900 mb-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
                 Créer un compte entreprise
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Nom
                   </label>
                   <input
@@ -160,11 +147,11 @@ const RegisterRecruteur = () => {
                     name="last_name"
                     required
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Prénom
                   </label>
                   <input
@@ -172,26 +159,26 @@ const RegisterRecruteur = () => {
                     name="first_name"
                     required
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Email Pro
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    Email pro
                   </label>
                   <input
                     type="email"
                     name="email"
                     required
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Téléphone
                   </label>
                   <input
@@ -199,15 +186,13 @@ const RegisterRecruteur = () => {
                     name="telephone"
                     required
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
               </div>
 
-              <hr className="border-gray-100" />
-
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+              <div className="border-t border-slate-100 pt-4">
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                   Nom de l'entreprise
                 </label>
                 <input
@@ -215,75 +200,61 @@ const RegisterRecruteur = () => {
                   name="nom_entreprise"
                   required
                   onChange={handleChange}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Secteur d'activité
                   </label>
                   <Select
                     options={constants.secteurs}
                     placeholder="Sélectionnez..."
                     onChange={(opt) =>
-                      setFormData({ ...formData, secteur_activite: opt.value })
+                      setFormData({
+                        ...formData,
+                        secteur_activite: opt?.value || "",
+                      })
                     }
-                    styles={{
-                      control: (b) => ({
-                        ...b,
-                        borderRadius: "0.75rem",
-                        padding: "0.15rem",
-                        borderColor: "#e5e7eb",
-                        backgroundColor: "#f9fafb",
-                        fontSize: "0.875rem",
-                        fontWeight: "bold",
-                      }),
-                    }}
+                    styles={selectStyles}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Wilaya du siège
                   </label>
                   <Select
                     options={constants.wilayas}
                     placeholder="Sélectionnez..."
                     onChange={(opt) =>
-                      setFormData({ ...formData, wilaya_siege: opt.value })
+                      setFormData({
+                        ...formData,
+                        wilaya_siege: opt?.value || "",
+                      })
                     }
-                    styles={{
-                      control: (b) => ({
-                        ...b,
-                        borderRadius: "0.75rem",
-                        padding: "0.15rem",
-                        borderColor: "#e5e7eb",
-                        backgroundColor: "#f9fafb",
-                        fontSize: "0.875rem",
-                        fontWeight: "bold",
-                      }),
-                    }}
+                    styles={selectStyles}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Registre de Commerce
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    Registre de commerce
                   </label>
                   <input
                     type="text"
                     name="registre_commerce"
                     required
-                    onChange={handleChange}
                     placeholder="Ex: 1234567A89"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Mot de passe
                   </label>
                   <input
@@ -292,7 +263,7 @@ const RegisterRecruteur = () => {
                     minLength="8"
                     required
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-600 outline-none font-bold text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
               </div>
@@ -300,18 +271,18 @@ const RegisterRecruteur = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1 mt-4"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm disabled:opacity-50 mt-2"
               >
                 {loading
-                  ? "CRÉATION EN COURS..."
-                  : "S'INSCRIRE COMME EMPLOYEUR"}
+                  ? "Création en cours..."
+                  : "S'inscrire comme employeur"}
               </button>
 
-              <p className="text-center mt-6 text-sm text-gray-500 font-medium">
+              <p className="text-center text-xs text-slate-500">
                 Déjà un compte ?{" "}
                 <Link
                   to="/login"
-                  className="text-blue-600 font-black hover:underline"
+                  className="text-indigo-600 font-semibold hover:underline"
                 >
                   Se connecter
                 </Link>
@@ -319,73 +290,70 @@ const RegisterRecruteur = () => {
             </form>
           )}
 
-          {/* ÉTAPE 2 */}
+          {/* ÉTAPE 2 — OTP */}
           {step === 2 && (
-            <div className="space-y-6 text-center animate-fade-in">
-              <h3 className="text-2xl font-black text-gray-900 mb-2">
-                Vérifiez votre Email
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                Vérifiez votre email
               </h3>
-              <p className="text-gray-500 text-sm">
-                Un code à 6 chiffres a été envoyé à <br />
-                <span className="font-bold text-gray-800">
+              <p className="text-sm text-slate-500 mb-6">
+                Code envoyé à{" "}
+                <span className="font-semibold text-slate-900">
                   {formData.email}
                 </span>
               </p>
-
-              <form onSubmit={handleOtpSubmit} className="space-y-6 mt-8">
-                <div>
-                  <input
-                    type="text"
-                    maxLength="6"
-                    value={otpCode}
-                    onChange={(e) =>
-                      setOtpCode(e.target.value.replace(/\D/g, ""))
-                    }
-                    placeholder="------"
-                    className="w-48 text-center text-3xl tracking-[0.5em] p-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-600 outline-none font-black text-gray-800 uppercase"
-                    required
-                  />
-                </div>
+              <form onSubmit={handleOtpSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  maxLength="6"
+                  value={otpCode}
+                  onChange={(e) =>
+                    setOtpCode(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="______"
+                  className="w-48 text-center text-2xl tracking-[0.5em] px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-bold text-slate-900"
+                  required
+                />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
                 >
-                  {loading ? "VÉRIFICATION..." : "VALIDER MON EMAIL"}
+                  {loading ? "Vérification..." : "Valider mon email"}
                 </button>
               </form>
             </div>
           )}
 
-          {/* ÉTAPE 3 */}
+          {/* ÉTAPE 3 — SUCCÈS */}
           {step === 3 && (
-            <div className="space-y-6 text-center animate-fade-in">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-green-500 text-4xl">✓</span>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle size={28} className="text-emerald-600" />
               </div>
-              <h3 className="text-2xl font-black text-gray-900 mb-2">
-                Compte Sécurisé !
+              <h3 className="text-xl font-bold text-slate-900">
+                Compte sécurisé !
               </h3>
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-left">
-                <p className="text-blue-900 text-sm leading-relaxed">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-left">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   <strong>Bravo {formData.first_name} !</strong> Votre email est
-                  validé. <br />
+                  validé.
+                  <br />
                   <br />
                   Pour garantir la qualité des entreprises sur TafTech, votre
-                  compte est actuellement{" "}
-                  <strong>en cours de vérification</strong> par nos
-                  administrateurs (Analyse du Registre de Commerce).
+                  compte est en cours de vérification par nos administrateurs
+                  (analyse du Registre de Commerce).
                   <br />
                   <br />
-                  Vous pourrez publier vos offres d'emploi dès que votre compte
-                  sera approuvé !
+                  Vous pourrez publier vos offres dès que votre compte sera
+                  approuvé.
                 </p>
               </div>
               <button
                 onClick={() => navigate("/login")}
-                className="w-full border-2 border-blue-600 text-blue-600 font-black py-4 rounded-xl hover:bg-blue-50 transition-all mt-4"
+                className="w-full border border-indigo-600 text-indigo-600 font-semibold py-2.5 rounded-lg hover:bg-indigo-50 transition-colors text-sm"
               >
-                ALLER À LA PAGE DE CONNEXION
+                Aller à la connexion
               </button>
             </div>
           )}

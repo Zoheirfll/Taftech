@@ -65,4 +65,23 @@ export const profilService = {
       throw err;
     }
   },
+  updateExperience: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/profil/experiences/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_EXPERIENCE_API", err);
+      throw err;
+    }
+  },
+
+  updateFormation: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/profil/formations/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_FORMATION_API", err);
+      throw err;
+    }
+  },
 };

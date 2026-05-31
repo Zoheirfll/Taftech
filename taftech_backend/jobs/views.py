@@ -29,6 +29,15 @@ from .serializers import OffreSauvegardeeSerializer, AlerteEmploiSerializer, Par
 from .serializers import EntreprisePublicSerializer
 from .serializers import PostulerRapideDTO,  NotificationSerializer, CandidatureRecruteurDTO
 from .matcher import calculer_score_matching
+from .cv_parser import parse_cv
+import tempfile
+import os
+from .models import ProfilCandidatFavori, CandidatureSpontanee
+from .serializers import CandidatureSpontaneeSerializer
+from .models import Questionnaire, QuestionQuestionnaire, ReponseChoix, ReponseCandidat
+from .serializers import QuestionnaireSerializer, ReponseCandidatSerializer
+from .models import MetierReferentiel
+from .serializers import MetierReferentielSerializer
 User = get_user_model()
 class JobListAPIView(APIView):
     permission_classes = [AllowAny]
@@ -73,65 +82,123 @@ class JobListAPIView(APIView):
         page = paginator.paginate_queryset(offres, request)
         serializer = OffreEmploiSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
 class PostulerAPIView(APIView):
-    """
-    Endpoint pour postuler à une offre avec un compte.
-    URL : /api/jobs/<id_offre>/postuler/
-    """
     permission_classes = [IsAuthenticated] 
     parser_classes = (MultiPartParser, FormParser, JSONParser)
-
+    
     def post(self, request, offre_id):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Seuls les candidats peuvent postuler."}, status=status.HTTP_403_FORBIDDEN)
         try:
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
-
+        
         if Candidature.objects.filter(offre=offre, candidat=request.user).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre."}, status=status.HTTP_400_BAD_REQUEST)
-
+        
         serializer = PostulerDTO(data=request.data)
         if serializer.is_valid():
-            
             # L'algo renvoie le score IA
             resultat_matching = calculer_score_matching(request.user, offre)
+            
+            # Snapshot du profil au moment de la postulation
+            try:
+                profil = request.user.profil_candidat
+                snapshot = {
+                    "first_name": request.user.first_name,
+                    "last_name": request.user.last_name,
+                    "email": request.user.email,
+                    "telephone": request.user.telephone,
+                    "titre_professionnel": profil.titre_professionnel,
+                    "wilaya": profil.wilaya,
+                    "commune": profil.commune,
+                    "diplome": profil.diplome,
+                    "specialite": profil.specialite,
+                    "competences": profil.competences,
+                    "langues": profil.langues,
+                    "cv_pdf": str(profil.cv_pdf) if profil.cv_pdf else None,
+                    "photo_profil": str(profil.photo_profil) if profil.photo_profil else None,
+                    "experiences": [
+                        {
+                            "titre_poste": exp.titre_poste,
+                            "entreprise": exp.entreprise,
+                            "date_debut": str(exp.date_debut),
+                            "date_fin": str(exp.date_fin) if exp.date_fin else None,
+                            "description": exp.description,
+                        }
+                        for exp in profil.experiences_detail.all()
+                    ],
+                    "formations": [
+                        {
+                            "diplome": f.diplome,
+                            "etablissement": f.etablissement,
+                            "date_debut": str(f.date_debut),
+                            "date_fin": str(f.date_fin) if f.date_fin else None,
+                            "description": f.description,
+                        }
+                        for f in profil.formations_detail.all()
+                    ],
+                }
+            except Exception as e:
+                print(f"Erreur snapshot profil : {e}")
+                snapshot = None
 
-            Candidature.objects.create(
+            candidature = Candidature.objects.create(
                 offre=offre,
                 candidat=request.user,
                 lettre_motivation=serializer.validated_data.get('lettre_motivation', ''),
                 lettre_motivation_file=serializer.validated_data.get('lettre_motivation_file', None),
                 score_matching=resultat_matching["total"],
-                details_matching=resultat_matching["details"],
-                statut='RECUE' 
+                details_matching={
+                    "scores": resultat_matching["details"],
+                    "explications": resultat_matching["explications"],
+                    "highlights": resultat_matching["highlights"]
+                },
+                profil_snapshot=snapshot,
+                statut='RECUE'
             )
 
-            # ==========================================
-            # 👇 US 4.3 : EMAIL POUR LES CANDIDATURES PERTINENTES 👇
-            # ==========================================
+            # Sauvegarder les réponses au questionnaire
+            reponses_raw = request.data.get('reponses', None)
+            if reponses_raw and offre.questionnaire:
+                try:
+                    import json
+                    reponses_dict = json.loads(reponses_raw) if isinstance(reponses_raw, str) else reponses_raw
+                    for question_id, reponse_texte in reponses_dict.items():
+                        try:
+                            question = QuestionQuestionnaire.objects.get(id=int(question_id))
+                            ReponseCandidat.objects.create(
+                                candidature=candidature,
+                                question=question,
+                                reponse=reponse_texte
+                            )
+                        except QuestionQuestionnaire.DoesNotExist:
+                            pass
+                except Exception as e:
+                    print(f"Erreur sauvegarde réponses : {e}")
+
+            # Email pour les candidatures pertinentes
             email_employeur = offre.entreprise.user.email
             score_candidat = resultat_matching['total']
+            SEUIL_PERTINENCE = 70.0
             
-            # On définit le seuil de "pertinence" (ex: 70%)
-            SEUIL_PERTINENCE = 70.0 
-
-            # On n'envoie l'email QUE si l'entreprise a un email ET que le score est bon
             if email_employeur and score_candidat >= SEUIL_PERTINENCE:
                 nom_candidat = f"{request.user.first_name} {request.user.last_name}"
                 sujet = f"⭐ Top Profil détecté pour : {offre.titre}"
-                
                 message = f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
                 message += f"Excellente nouvelle ! Un candidat très pertinent ({nom_candidat}) vient de postuler à votre offre '{offre.titre}'.\n"
                 message += f"🤖 Notre IA a analysé son profil et lui a attribué un excellent score de {score_candidat}%.\n\n"
                 message += "Connectez-vous rapidement à votre tableau de bord TafTech pour examiner son dossier avant qu'il ne trouve un autre poste.\n\n"
                 message += "L'équipe TafTech."
-                
                 try:
                     send_mail(
-                        subject=sujet, 
-                        message=message, 
-                        from_email=settings.EMAIL_HOST_USER, 
-                        recipient_list=[email_employeur], 
+                        subject=sujet,
+                        message=message,
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[email_employeur],
                         fail_silently=True
                     )
                 except Exception as e:
@@ -155,13 +222,49 @@ class JobCreateAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # LA SEULE LIGNE QUI CHANGE EST CELLE-CI :
         serializer = OffreEmploiCreateDTO(data=request.data)
         
         if serializer.is_valid():
             serializer.save(entreprise=request.user.profil_entreprise)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UpdateOffreRecruteurAPIView(APIView):
+    """
+    Permet au recruteur de modifier son offre rejetée.
+    Remet automatiquement le statut en EN_ATTENTE après modification.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, offre_id):
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=404)
+
+        # Sécurité : seul le propriétaire peut modifier
+        if offre.entreprise.user != request.user:
+            return Response({"error": "Non autorisé."}, status=403)
+
+        # On ne peut modifier qu'une offre rejetée ou en attente
+        if offre.statut_moderation == "APPROUVEE":
+            return Response(
+                {"error": "Impossible de modifier une offre déjà publiée."},
+                status=400
+            )
+
+        serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(
+                statut_moderation="EN_ATTENTE",
+                motif_rejet=""
+            )
+            return Response({
+                "message": "Offre mise à jour et soumise pour validation.",
+                "offre": OffreDashboardDTO(offre).data
+            }, status=200)
+
+        return Response(serializer.errors, status=400)
 class DashboardRecruteurAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -172,12 +275,11 @@ class DashboardRecruteurAPIView(APIView):
         entreprise = request.user.profil_entreprise
         offres = OffreEmploi.objects.filter(entreprise=entreprise).order_by('-date_publication')
         
-        # On utilise le nouveau serializer qui contient first_name, email, etc.
         entreprise_serializer = EntrepriseDashboardDetailSerializer(entreprise)
         offres_serializer = OffreDashboardDTO(offres, many=True)
         
         data = {
-            "entreprise": entreprise_serializer.data, # Contient maintenant TOUTES les infos
+            "entreprise": entreprise_serializer.data,
             "offres": offres_serializer.data
         }
         
@@ -237,7 +339,48 @@ class UpdateCandidatureStatusAPIView(APIView):
             candidature.message_entretien = message_custom
 
         candidature.save()
+        
+        # Envoi email de refus automatique
+        if nouveau_statut == "REFUSE":
+            try:
+                profil_entreprise = candidature.offre.entreprise
+                email_refus_auto = getattr(profil_entreprise, 'email_refus_auto', False)
+                print(f"🔔 email_refus_auto = {email_refus_auto}")
 
+                if email_refus_auto:
+                    if candidature.candidat:
+                        prenom = candidature.candidat.first_name or "Candidat"
+                        email_candidat = candidature.candidat.email or ""
+                    else:
+                        prenom = candidature.prenom_rapide or "Candidat"
+                        email_candidat = candidature.email_rapide or ""
+
+                    print(f"📧 Envoi à : {email_candidat}")
+
+                    if not email_candidat:
+                        raise Exception("Pas d'email candidat disponible")
+
+                    message_template = profil_entreprise.message_refus_auto or ""
+                    titre_offre = candidature.offre.titre or "ce poste"
+                    nom_entreprise = profil_entreprise.nom_entreprise or "notre entreprise"
+
+                    message_final = message_template.replace("{prenom}", prenom)
+                    message_final = message_final.replace("{titre_offre}", titre_offre)
+                    message_final = message_final.replace("{nom_entreprise}", nom_entreprise)
+
+                    sujet = f"Réponse à votre candidature — {titre_offre}"
+
+                    send_mail(
+                        sujet,
+                        message_final,
+                        settings.EMAIL_HOST_USER,
+                        [email_candidat],
+                        fail_silently=False,
+                    )
+                    print(f"✅ Email de refus envoyé à {email_candidat}")
+
+            except Exception as e:
+                print(f"❌ Erreur envoi email refus : {e}")   
         # ==========================================
         # 👇 NOUVEAU : CRÉATION DE LA NOTIFICATION (INBOX) 👇
         # ==========================================
@@ -273,6 +416,7 @@ class UpdateCandidatureStatusAPIView(APIView):
                     titre=titre_notif,
                     message=message_notif
                 )
+                
 
         return Response({"message": "Statut mis à jour avec succès !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
 class ProfilCandidatAPIView(APIView):
@@ -347,6 +491,7 @@ class MesCandidaturesAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 class UpdateProfilEntrepriseAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def put(self, request):
         if not hasattr(request.user, 'profil_entreprise'):
@@ -354,23 +499,32 @@ class UpdateProfilEntrepriseAPIView(APIView):
         
         profil = request.user.profil_entreprise
         data = request.data
-
         # ON NE PREND QUE LES CHAMPS AUTORISÉS À LA MODIFICATION
         # Le nom et le RC ne sont jamais récupérés ici
         if 'secteur_activite' in data:
             profil.secteur_activite = data['secteur_activite']
         if 'wilaya_siege' in data:
             profil.wilaya_siege = data['wilaya_siege']
+        if 'commune_siege' in data:
+            profil.commune_siege = data['commune_siege']
+        if 'taille_entreprise' in data:
+            profil.taille_entreprise = data['taille_entreprise']
         if 'description' in data:
             profil.description = data['description']
-
+        if 'logo' in request.FILES:
+            profil.logo = request.FILES['logo']
         profil.save()
+        
+        logo_url = f"http://127.0.0.1:8000{profil.logo.url}" if profil.logo else None
         
         return Response({
             "message": "Informations mises à jour avec succès.",
             "description": profil.description,
             "wilaya_siege": profil.wilaya_siege,
-            "secteur_activite": profil.secteur_activite
+            "commune_siege": profil.commune_siege,
+            "secteur_activite": profil.secteur_activite,
+            "taille_entreprise": profil.taille_entreprise,
+            "logo": logo_url
         }, status=status.HTTP_200_OK)
 
 class AdminPagination(PageNumberPagination):
@@ -388,8 +542,14 @@ class AdminOffresListAPIView(APIView):
             )
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(offres, request)
-        serializer = OffreEmploiSerializer(result_page, many=True)
+        
+        # 👇 CORRECTION CRITIQUE ICI 👇
+        # On utilise OffreDashboardDTO au lieu de OffreEmploiSerializer 
+        # pour forcer Django à envoyer la liste complète des candidats à l'Admin !
+        serializer = OffreDashboardDTO(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
 class AdminOffreModerateAPIView(APIView):
     """ Permet à l'Admin d'approuver, rejeter ou corriger une offre """
     permission_classes = [IsAdminUser]
@@ -400,14 +560,16 @@ class AdminOffreModerateAPIView(APIView):
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        # On utilise partial=True pour permettre à l'admin de ne modifier que quelques champs (ex: juste le statut, ou juste corriger une faute dans le titre)
         serializer = OffreEmploiSerializer(offre, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
+            # 👇 CORRECTION ICI AUSSI 👇
+            # On renvoie le DTO complet pour ne pas vider les candidatures sur le Front-end 
+            # après avoir approuvé ou rejeté une offre.
             return Response({
                 "message": "Offre modifiée et modérée avec succès !", 
-                "offre": serializer.data
+                "offre": OffreDashboardDTO(offre).data
             }, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -587,7 +749,7 @@ class CloturerOffreAPIView(APIView):
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
 class DeleteCandidatureAPIView(APIView):
-    """ Permet au recruteur de supprimer définitivement une can-didature refusée """
+    """ Permet au recruteur de supprimer définitivement une candidature refusée """
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, candidature_id):
@@ -596,7 +758,7 @@ class DeleteCandidatureAPIView(APIView):
             
             # SÉCURITÉ : On vérifie que la candidature est liée à une offre du 'user'
             if candidature.offre.entreprise.user != request.user:
-                return Response({"error": "Vous n'êtes pas autorisé à supprimer cette candidature."}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"error": "Vous n'avez pas l'autorisation de supprimer cette candidature."}, status=status.HTTP_403_FORBIDDEN)
 
             candidature.delete()
             return Response({"message": "Candidature supprimée avec succès."}, status=status.HTTP_204_NO_CONTENT)
@@ -704,6 +866,35 @@ class ParametresNotificationsAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ParametresRecruteurAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({"error": "Accès refusé."}, status=403)
+        try:
+            profil = request.user.profil_entreprise
+            return Response({
+                "email_refus_auto": profil.email_refus_auto,
+                "message_refus_auto": profil.message_refus_auto,
+            }, status=200)
+        except Exception:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+
+    def put(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({"error": "Accès refusé."}, status=403)
+        try:
+            profil = request.user.profil_entreprise
+            profil.email_refus_auto = request.data.get('email_refus_auto', profil.email_refus_auto)
+            profil.message_refus_auto = request.data.get('message_refus_auto', profil.message_refus_auto)
+            profil.save(update_fields=['email_refus_auto', 'message_refus_auto'])
+            return Response({
+                "email_refus_auto": profil.email_refus_auto,
+                "message_refus_auto": profil.message_refus_auto,
+            }, status=200)
+        except Exception:
+            return Response({"error": "Erreur lors de la sauvegarde."}, status=500)
 class EntrepriseDetailAPIView(APIView):
     """
     Endpoint public pour consulter le profil d'une entreprise et ses offres.
@@ -894,22 +1085,32 @@ class CVThequeView(APIView):
 
     def get(self, request):
         user = request.user
-        
-        # 1. Vérifier que c'est un recruteur
+
         if user.role != 'RECRUTEUR':
             return Response({"error": "Accès réservé aux employeurs."}, status=403)
 
-        # 2. Récupérer les filtres du Frontend
+        # Récupérer les filtres
         search = request.GET.get('search', '')
         wilaya = request.GET.get('wilaya', '')
         diplome = request.GET.get('diplome', '')
         specialite = request.GET.get('specialite', '')
-        experience = request.GET.get('experience', '') # Ex: "0.5", "1", "3"...
+        experience = request.GET.get('experience', '')
+        avec_photo = request.GET.get('avec_photo', '') == 'true'
+        avec_cv = request.GET.get('avec_cv', '') == 'true'
+        inscrit_recent = request.GET.get('inscrit_recent', '') == 'true'
+        favoris_only = request.GET.get('favoris', '') == 'true'  # NOUVEAU
+        tri = request.GET.get('tri', 'recents')
 
-        # 3. Requête de base : Uniquement les candidats actifs
         candidats = ProfilCandidat.objects.filter(user__is_active=True, user__role='CANDIDAT')
 
-        # 4. Application des filtres texte
+        # FILTRE FAVORIS (NOUVEAU)
+        if favoris_only:
+            ids_favoris = ProfilCandidatFavori.objects.filter(
+                recruteur=user
+            ).values_list('candidat_id', flat=True)
+            candidats = candidats.filter(user__id__in=ids_favoris)
+
+        # Filtres texte
         if search:
             candidats = candidats.filter(
                 Q(titre_professionnel__icontains=search) |
@@ -921,24 +1122,25 @@ class CVThequeView(APIView):
 
         if wilaya:
             candidats = candidats.filter(wilaya=wilaya)
-
         if diplome:
             candidats = candidats.filter(diplome=diplome)
-
         if specialite:
             candidats = candidats.filter(
-                Q(specialite=specialite) | 
-                Q(secteur_souhaite=specialite)
+                Q(specialite=specialite) | Q(secteur_souhaite=specialite)
             ).distinct()
 
-        # 5. 👇 LE FILTRE INTELLIGENT DE L'EXPÉRIENCE 👇
+        if avec_photo:
+            candidats = candidats.exclude(photo_profil='').exclude(photo_profil__isnull=True)
+        if avec_cv:
+            candidats = candidats.exclude(cv_pdf='').exclude(cv_pdf__isnull=True)
+        if inscrit_recent:
+            date_limite = datetime.datetime.now() - datetime.timedelta(days=30)
+            candidats = candidats.filter(user__date_joined__gte=date_limite)
+
         if experience:
             try:
                 min_years = float(experience)
                 min_days = min_years * 365.25
-                
-                # On calcule la somme totale des jours d'expérience pour chaque candidat
-                # Coalesce(date_fin, Now()) permet de dire : "S'il n'y a pas de date de fin, ça veut dire qu'il y travaille encore aujourd'hui"
                 candidats = candidats.annotate(
                     duree_totale=Sum(
                         ExpressionWrapper(
@@ -948,14 +1150,74 @@ class CVThequeView(APIView):
                     )
                 ).filter(duree_totale__gte=datetime.timedelta(days=min_days))
             except ValueError:
-                pass # Si la conversion en chiffre échoue, on ignore le filtre
+                pass
 
-        # 6. Pagination et Réponse
+        # Tri
+        if tri == 'nom_asc':
+            candidats = candidats.order_by('user__last_name', 'user__first_name')
+        elif tri == 'experience_desc':
+            if 'duree_totale' not in str(candidats.query):
+                candidats = candidats.annotate(
+                    duree_totale=Sum(
+                        ExpressionWrapper(
+                            Coalesce(F('experiences_detail__date_fin'), Now()) - F('experiences_detail__date_debut'),
+                            output_field=DurationField()
+                        )
+                    )
+                )
+            candidats = candidats.order_by(F('duree_totale').desc(nulls_last=True))
+        else:
+            candidats = candidats.order_by('-user__date_joined')
+
+        # Pagination
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
-        serializer = ProfilCandidatDTO(result_page, many=True)
-        
+
+        # On passe le recruteur dans le contexte pour calculer is_favori
+        serializer = ProfilCandidatDTO(
+            result_page,
+            many=True,
+            context={'recruteur': user}
+        )
+
         return paginator.get_paginated_response(serializer.data)
+
+
+class ToggleFavoriCVAPIView(APIView):
+    """
+    Ajoute ou retire un candidat des favoris du recruteur.
+    URL : POST /api/jobs/cvtheque/favoris/<candidat_id>/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, candidat_id):
+        if request.user.role != 'RECRUTEUR':
+            return Response({"error": "Action réservée aux recruteurs."}, status=403)
+
+        try:
+            candidat = User.objects.get(id=candidat_id, role='CANDIDAT')
+        except User.DoesNotExist:
+            return Response({"error": "Candidat introuvable."}, status=404)
+
+        favori, created = ProfilCandidatFavori.objects.get_or_create(
+            recruteur=request.user,
+            candidat=candidat
+        )
+
+        if not created:
+            # Existait déjà → on retire
+            favori.delete()
+            return Response({
+                "action": "retire",
+                "is_favori": False,
+                "message": "Retiré des favoris."
+            }, status=200)
+
+        return Response({
+            "action": "ajoute",
+            "is_favori": True,
+            "message": "Ajouté aux favoris."
+        }, status=201)
 
 class EvaluerCandidatureAPIView(APIView):
     """
@@ -1200,7 +1462,7 @@ class GenererBulletinPDFAPIView(APIView):
         # --- INFORMATIONS REQUISES PAR L'US 10 ---
         p.setFont("Helvetica", 14)
         
-        # 👇 C'est cette fameuse variable y qui avait disparu ! 👇
+        # Variable y pour le positionnement vertical
         y = height - 200 
 
         if candidature.candidat:
@@ -1234,3 +1496,416 @@ class GenererBulletinPDFAPIView(APIView):
         p.save()
 
         return response
+
+class Top5CandidatsAPIView(APIView):
+    """
+    US : Génère automatiquement la shortlist des 5 meilleurs profils triés par l'IA.
+    Accessible par le recruteur propriétaire ou un Admin TafTech.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, offre_id):
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        # SÉCURITÉ : Vérifier que c'est le recruteur de l'offre OU un administrateur TafTech
+        is_recruteur_proprio = hasattr(request.user, 'profil_entreprise') and offre.entreprise == request.user.profil_entreprise
+        is_admin_taftech = request.user.is_superuser or request.user.role == 'ADMIN' # s'adapte à vos rôles admin
+
+        if not (is_recruteur_proprio or is_admin_taftech):
+            return Response({"error": "Vous n'avez pas l'autorisation de voir la shortlist de cette offre."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Récupérer les candidatures liées, exclure les postulations rapides (pas de score), 
+        # trier par le score IA et limiter à 5 résultats
+        shortlist = candidature_set = offre.candidatures.filter(
+            est_rapide=False, 
+            score_matching__isnull=False
+        ).order_by('-score_matching')[:5]
+
+        serializer = CandidatureRecruteurDTO(shortlist, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ParserCVAPIView(APIView):
+    """
+    Reçoit un fichier CV (PDF ou DOCX) et renvoie les champs extraits.
+    Le candidat valide ensuite côté React avant de remplir son profil.
+    URL : /api/jobs/parser-cv/
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        cv_file = request.FILES.get('cv')
+
+        if not cv_file:
+            return Response(
+                {"error": "Aucun fichier reçu. Envoyez un CV en PDF ou Word."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Vérification extension
+        allowed_ext = ['.pdf', '.docx', '.doc']
+        ext = os.path.splitext(cv_file.name)[1].lower()
+        if ext not in allowed_ext:
+            return Response(
+                {"error": f"Format non supporté ({ext}). Utilisez PDF ou Word."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Vérification taille (max 5 Mo)
+        if cv_file.size > 5 * 1024 * 1024:
+            return Response(
+                {"error": "Fichier trop volumineux (max 5 Mo)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # On sauvegarde temporairement pour pdfplumber/docx
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+        try:
+            for chunk in cv_file.chunks():
+                tmp_file.write(chunk)
+            tmp_file.close()
+
+            result = parse_cv(tmp_file.name, cv_file.name)
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Erreur lors du parsing : {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        finally:
+            # On supprime le fichier temporaire
+            if os.path.exists(tmp_file.name):
+                os.unlink(tmp_file.name)
+
+class EnvoyerCandidatureSpontaneeAPIView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request, entreprise_id):
+        try:
+            entreprise = ProfilEntreprise.objects.get(id=entreprise_id, est_approuvee=True)
+        except ProfilEntreprise.DoesNotExist:
+            return Response({'error': 'Entreprise introuvable.'}, status=404)
+
+        # Vérification unicité AVANT sauvegarde
+        if request.user.is_authenticated and request.user.role == 'CANDIDAT':
+            if CandidatureSpontanee.objects.filter(entreprise=entreprise, candidat=request.user).exists():
+                return Response({'error': 'Vous avez déjà envoyé une candidature spontanée à cette entreprise.'}, status=400)
+
+        serializer = CandidatureSpontaneeSerializer(data=request.data)
+        if serializer.is_valid():
+            candidature = serializer.save(entreprise=entreprise)
+            if request.user.is_authenticated and request.user.role == 'CANDIDAT':
+                candidature.candidat = request.user
+                candidature.save()
+            return Response({'message': 'Candidature spontanée envoyée avec succès !'}, status=201)
+            
+        return Response(serializer.errors, status=400)
+
+class ListeCandidaturesSpontaneesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        try:
+            entreprise = ProfilEntreprise.objects.get(user=request.user)
+        except ProfilEntreprise.DoesNotExist:
+            return Response([], status=200)
+
+        candidatures = CandidatureSpontanee.objects.filter(entreprise=entreprise)
+        serializer = CandidatureSpontaneeSerializer(candidatures, many=True)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        try:
+            candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise__user_id=request.user.id)
+            candidature.lue = True
+            candidature.save()
+            return Response({'message': 'Marquée comme lue.'})
+        except CandidatureSpontanee.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+    def delete(self, request, pk):
+        try:
+            candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise__user_id=request.user.id)
+            candidature.delete()
+            return Response({'message': 'Supprimée.'})
+        except CandidatureSpontanee.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+
+class MarquerSpontaneeLueAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def patch(self, request, pk):
+        try:
+            candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise__user_id=request.user.id)
+            candidature.lue = True
+            candidature.save()
+            return Response({'message': 'Marquée comme lue.'})
+        except CandidatureSpontanee.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+
+
+class SupprimerSpontaneeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, pk):
+        try:
+            candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise__user_id=request.user.id)
+            candidature.delete()
+            return Response({'message': 'Supprimée.'})
+        except CandidatureSpontanee.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+
+class QuestionnaireListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        questionnaires = Questionnaire.objects.filter(recruteur=request.user)
+        serializer = QuestionnaireSerializer(questionnaires, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        data = request.data
+        questionnaire = Questionnaire.objects.create(
+            recruteur=request.user,
+            titre=data.get('titre', 'Sans titre')
+        )
+        questions_data = data.get('questions', [])
+        for i, q in enumerate(questions_data):
+            question = QuestionQuestionnaire.objects.create(
+                questionnaire=questionnaire,
+                texte=q.get('texte', ''),
+                type_question=q.get('type_question', 'COURT'),
+                requis=q.get('requis', False),
+                disqualifiant=q.get('disqualifiant', False),
+                ordre=i,
+            )
+            for choix in q.get('choix', []):
+                if choix.get('texte'):
+                    ReponseChoix.objects.create(question=question, texte=choix['texte'])
+        serializer = QuestionnaireSerializer(questionnaire)
+        return Response(serializer.data, status=201)
+
+
+class QuestionnaireDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            questionnaire = Questionnaire.objects.get(pk=pk, recruteur=request.user)
+            serializer = QuestionnaireSerializer(questionnaire)
+            return Response(serializer.data)
+        except Questionnaire.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+
+    def put(self, request, pk):
+        try:
+            questionnaire = Questionnaire.objects.get(pk=pk, recruteur=request.user)
+        except Questionnaire.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+        questionnaire.titre = request.data.get('titre', questionnaire.titre)
+        questionnaire.save()
+        # Supprimer les anciennes questions et recréer
+        questionnaire.questions.all().delete()
+        for i, q in enumerate(request.data.get('questions', [])):
+            question = QuestionQuestionnaire.objects.create(
+                questionnaire=questionnaire,
+                texte=q.get('texte', ''),
+                type_question=q.get('type_question', 'COURT'),
+                requis=q.get('requis', False),
+                disqualifiant=q.get('disqualifiant', False),
+                ordre=i,
+            )
+            for choix in q.get('choix', []):
+                if choix.get('texte'):
+                    ReponseChoix.objects.create(question=question, texte=choix['texte'])
+        serializer = QuestionnaireSerializer(questionnaire)
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        try:
+            questionnaire = Questionnaire.objects.get(pk=pk, recruteur=request.user)
+            questionnaire.delete()
+            return Response({'message': 'Supprimé.'})
+        except Questionnaire.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+        
+class AdminMarcheAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+
+        from django.db.models import Avg, Count, Q
+        from decimal import Decimal
+        import re
+
+        # 1. Salaires moyens par secteur (depuis les offres)
+        def extraire_montant(salaire_str):
+            if not salaire_str:
+                return None
+            chiffres = re.findall(r'\d+', salaire_str.replace(' ', ''))
+            if chiffres:
+                return int(chiffres[0])
+            return None
+
+        # Salaires offres par secteur
+        offres_avec_salaire = OffreEmploi.objects.filter(
+            salaire_propose__isnull=False,
+            statut_moderation='APPROUVEE'
+        ).exclude(salaire_propose='').values('specialite', 'salaire_propose')
+
+        salaires_offres = {}
+        for offre in offres_avec_salaire:
+            secteur = offre['specialite']
+            montant = extraire_montant(offre['salaire_propose'])
+            if montant and secteur:
+                if secteur not in salaires_offres:
+                    salaires_offres[secteur] = []
+                salaires_offres[secteur].append(montant)
+
+        # Salaires candidats par secteur
+        candidats_avec_salaire = ProfilCandidat.objects.filter(
+            salaire_souhaite__isnull=False
+        ).exclude(salaire_souhaite='').values('secteur_souhaite', 'salaire_souhaite')
+
+        salaires_candidats = {}
+        for c in candidats_avec_salaire:
+            secteur = c['secteur_souhaite']
+            montant = extraire_montant(c['salaire_souhaite'])
+            if montant and secteur:
+                if secteur not in salaires_candidats:
+                    salaires_candidats[secteur] = []
+                salaires_candidats[secteur].append(montant)
+
+        # Fusion
+        tous_secteurs = set(list(salaires_offres.keys()) + list(salaires_candidats.keys()))
+        salaires_par_secteur = []
+        for secteur in tous_secteurs:
+            offres_list = salaires_offres.get(secteur, [])
+            cands_list = salaires_candidats.get(secteur, [])
+            salaires_par_secteur.append({
+                'secteur': secteur,
+                'moy_offres': int(sum(offres_list) / len(offres_list)) if offres_list else None,
+                'moy_candidats': int(sum(cands_list) / len(cands_list)) if cands_list else None,
+                'nb_offres': len(offres_list),
+                'nb_candidats': len(cands_list),
+            })
+        salaires_par_secteur.sort(key=lambda x: x['nb_offres'] + x['nb_candidats'], reverse=True)
+
+        # 2. Top wilayas
+        top_wilayas = list(
+            OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
+            .values('wilaya')
+            .annotate(nb_offres=Count('id'))
+            .order_by('-nb_offres')[:10]
+        )
+
+        # 3. Top secteurs
+        top_secteurs = list(
+            OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
+            .values('specialite')
+            .annotate(nb_offres=Count('id'))
+            .order_by('-nb_offres')[:10]
+        )
+
+        # Ajouter nb candidats par secteur
+        for s in top_secteurs:
+            s['nb_candidats'] = ProfilCandidat.objects.filter(
+                secteur_souhaite=s['specialite']
+            ).count()
+
+        # 4. Matching moyen global
+        matching_moyen = Candidature.objects.filter(
+            score_matching__isnull=False
+        ).aggregate(moy=Avg('score_matching'))['moy']
+
+        return Response({
+            'salaires_par_secteur': salaires_par_secteur[:8],
+            'top_wilayas': top_wilayas,
+            'top_secteurs': top_secteurs,
+            'matching_moyen': round(float(matching_moyen), 1) if matching_moyen else None,
+        })
+        
+class MetierReferentielAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        metiers = MetierReferentiel.objects.filter(est_actif=True)
+        secteur = request.query_params.get('secteur', None)
+        search = request.query_params.get('search', None)
+        if secteur:
+            metiers = metiers.filter(secteur=secteur)
+        if search:
+            metiers = metiers.filter(titre__icontains=search)
+        serializer = MetierReferentielSerializer(metiers, many=True)
+        return Response(serializer.data)
+
+
+class MetierReferentielAdminAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        from django.core.paginator import Paginator
+        metiers = MetierReferentiel.objects.all()
+        search = request.query_params.get('search', '')
+        page = int(request.query_params.get('page', 1))
+        if search:
+            mots = search.strip().split()
+            from django.db.models import Q
+            q = Q()
+            for mot in mots:
+                q &= Q(titre__icontains=mot)
+            metiers = metiers.filter(q)
+        paginator = Paginator(metiers, 20)
+        page_obj = paginator.get_page(page)
+        serializer = MetierReferentielSerializer(page_obj.object_list, many=True)
+        return Response({
+    'results': serializer.data,
+    'count': paginator.count,
+    'total_pages': paginator.num_pages,
+})
+
+    def post(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        serializer = MetierReferentielSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+    def put(self, request, pk=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        try:
+            metier = MetierReferentiel.objects.get(pk=pk)
+        except MetierReferentiel.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+        serializer = MetierReferentielSerializer(metier, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        try:
+            metier = MetierReferentiel.objects.get(pk=pk)
+            metier.delete()
+            return Response({'message': 'Supprimé.'})
+        except MetierReferentiel.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)

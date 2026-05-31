@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../Services/authService";
 import toast from "react-hot-toast";
-import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
+import { reportError } from "../utils/errorReporter";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -14,61 +14,84 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const toastId = toast.loading("Connexion en cours...");
-
     try {
-      // Appelle le nouveau authService qui utilise les cookies
       await authService.login(credentials.username, credentials.password);
-
       toast.success("Connexion réussie !", { id: toastId });
-
-      // On redirige vers la page d'accueil ou le dashboard
       navigate("/");
-
-      // Crucial : On recharge pour que la Navbar détecte le 'userRole' mis dans le localStorage
       window.location.reload();
     } catch (err) {
       toast.error("Email ou mot de passe incorrect.", { id: toastId });
-      // 🛑 Remplacement de console.error par reportError
       reportError("ECHEC_CONNEXION", err);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm border-t-4 border-blue-600">
-        <h2 className="text-3xl font-black text-gray-800 mb-2 text-center">
-          Connexion
-        </h2>
-        <p className="text-gray-500 text-center mb-6 text-sm">
-          Accédez à votre espace TafTech
-        </p>
-
+    <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 px-4">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm w-full max-w-sm p-8 border-t-2 border-t-indigo-600">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Connexion
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Accédez à votre espace TafTech
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Adresse Email"
-            required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-            onChange={(e) =>
-              setCredentials({ ...credentials, username: e.target.value })
-            }
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-            onChange={(e) =>
-              setCredentials({ ...credentials, password: e.target.value })
-            }
-          />
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="votre@email.com"
+              required
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-colors"
+              onChange={(e) =>
+                setCredentials({ ...credentials, username: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              required
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-colors"
+              onChange={(e) =>
+                setCredentials({ ...credentials, password: e.target.value })
+              }
+            />
+          </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition duration-300"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm mt-2"
           >
             Se connecter
           </button>
         </form>
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-xs text-slate-500">
+            Pas encore de compte ?{" "}
+            <Link
+              to="/register"
+              className="text-indigo-600 font-semibold hover:underline"
+            >
+              S'inscrire
+            </Link>
+          </p>
+          <p className="text-xs text-slate-500">
+            Vous recrutez ?{" "}
+            <Link
+              to="/register-entreprise"
+              className="text-indigo-600 font-semibold hover:underline"
+            >
+              Espace recruteur
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

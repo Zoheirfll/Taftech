@@ -5,17 +5,41 @@ from django.contrib.auth import get_user_model
 from .models import ProfilCandidat
 from .models import ExperienceCandidat, FormationCandidat
 from .models import OffreSauvegardee, AlerteEmploi, Notification
+from .models import CandidatureSpontanee, ReponseChoix, QuestionQuestionnaire, Questionnaire, ReponseCandidat
+from .models import Questionnaire, MetierReferentiel
+
+
+
 
 User = get_user_model()
+
 # 1 Entreprise Serializer
 class EntrepriseSimpleSerializer(serializers.ModelSerializer):
     """Un petit DTO pour afficher juste le nom et la wilaya de l'entreprise dans l'offre."""
     class Meta:
         model = ProfilEntreprise
         fields = ('id','nom_entreprise', 'wilaya_siege')
+class ReponseChoixSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReponseChoix
+        fields = ['id', 'texte']
+
+class QuestionQuestionnaireSerializer(serializers.ModelSerializer):
+    choix = ReponseChoixSerializer(many=True, read_only=True)
+    class Meta:
+        model = QuestionQuestionnaire
+        fields = ['id', 'texte', 'type_question', 'requis', 'disqualifiant', 'ordre', 'choix']
+
+class QuestionnaireSerializer(serializers.ModelSerializer):
+    questions = QuestionQuestionnaireSerializer(many=True, read_only=True)
+    class Meta:
+        model = Questionnaire
+        fields = ['id', 'titre', 'date_creation', 'questions']
+        read_only_fields = ['date_creation']
 # 2 Offre Emploi Serializer
 class OffreEmploiSerializer(serializers.ModelSerializer):
     entreprise = EntrepriseSimpleSerializer(read_only=True)
+    questionnaire = QuestionnaireSerializer(read_only=True)
     class Meta:
         model = OffreEmploi
         fields = '__all__'
@@ -30,6 +54,7 @@ class PostulerRapideDTO(serializers.ModelSerializer):
     class Meta:
         model = Candidature
         fields = ('nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide', 'lettre_motivation')
+
 class OffreEmploiCreateDTO(serializers.ModelSerializer):
     """
     DTO pour la publication d'une nouvelle offre d'emploi.
@@ -39,7 +64,7 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
         model = OffreEmploi
         fields = (
             'titre', 'wilaya', 'commune', 'diplome', 'specialite', 'missions', 'profil_recherche', 
-            'type_contrat', 'experience_requise', 'salaire_propose'
+            'type_contrat', 'experience_requise', 'salaire_propose', 'questionnaire'
         )
 
 # 1. Vigile pour les infos basiques du candidat
@@ -156,11 +181,16 @@ class CandidatInfoDTO(serializers.ModelSerializer):
 
     def get_specialite(self, obj):
         return obj.profil_candidat.specialite if hasattr(obj, 'profil_candidat') else None
+
+class ReponseCandidatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReponseCandidat
+        fields = ['id', 'question', 'reponse']
 # 2. Vigile pour la candidature
 class CandidatureRecruteurDTO(serializers.ModelSerializer):
     # candidat peut être nul si c'est une postulation rapide
     candidat = CandidatInfoDTO(read_only=True)
-    
+    reponses = ReponseCandidatSerializer(many=True, read_only=True)
     lettre_motivation_file = serializers.SerializerMethodField()
     cv_rapide_url = serializers.SerializerMethodField() # <-- NOUVEAU
     
@@ -169,7 +199,7 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
         fields = (
             'id', 'candidat', 'date_postulation', 'lettre_motivation', 'lettre_motivation_file', 'statut', 'score_matching', 'details_matching',
             'est_rapide', 'nom_rapide', 'prenom_rapide', 'email_rapide', 'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien', 
-            'note_technique', 'note_communication', 'note_motivation', 'note_experience', 'note_globale', 'commentaire_evaluation'# <-- NOUVEAUX CHAMPS
+            'note_technique', 'note_communication', 'note_motivation', 'note_experience', 'note_globale', 'commentaire_evaluation','reponses', 'profil_snapshot' # <-- NOUVEAUX CHAMPS
         )
 
     def get_lettre_motivation_file(self, obj):
@@ -181,9 +211,11 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
         if obj.cv_rapide:
             return f"http://127.0.0.1:8000{obj.cv_rapide.url}"
         return None
+
 # 3. Vigile pour l'offre (avec ses candidatures imbriquées)
 class OffreDashboardDTO(serializers.ModelSerializer):
     candidatures = CandidatureRecruteurDTO(many=True, read_only=True)
+    questionnaire = QuestionnaireSerializer(read_only=True)
     
     class Meta:
         model = OffreEmploi
@@ -191,7 +223,7 @@ class OffreDashboardDTO(serializers.ModelSerializer):
             'id', 'titre', 'date_publication', 'est_active', 'est_cloturee', 
             'wilaya', 'commune', 'diplome', 'specialite', 'type_contrat', 
             'experience_requise', 'description', 'missions', 'profil_recherche', 'salaire_propose',
-            'candidatures'
+            'candidatures', 'statut_moderation', 'motif_rejet', 'entreprise','questionnaire'
         )
 
 class ExperienceSerializer(serializers.ModelSerializer):
@@ -204,6 +236,7 @@ class FormationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormationCandidat
         fields = ['id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description']
+
 # =======================================================
 # 1. LE PROFIL COMPLET POUR LE CANDIDAT (ET POUR L'UPDATE)
 # =======================================================
@@ -216,22 +249,44 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     
     experiences_detail = ExperienceSerializer(many=True, read_only=True)
     formations_detail = FormationSerializer(many=True, read_only=True)
+    date_joined = serializers.SerializerMethodField()
+    is_favori = serializers.SerializerMethodField()
+    last_login = serializers.SerializerMethodField()
+    user_id = serializers.SerializerMethodField()
 
     class Meta:
         model = ProfilCandidat
         fields = (
-            'titre_professionnel', 'cv_pdf', 'photo_profil', 'diplome', 'specialite', # <-- Ajout de photo_profil ici
+            'titre_professionnel', 'cv_pdf', 'photo_profil', 'diplome', 'specialite',
             'experiences', 'competences', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin',
             'experiences_detail', 'formations_detail', 'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
-            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle', 'wilaya', 'commune'
+            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle', 'wilaya', 'commune',
+            'date_joined',
+            'is_favori', 'last_login', 'user_id',  # NOUVEAUX
         )
-
     def get_first_name(self, obj): return obj.user.first_name
     def get_last_name(self, obj): return obj.user.last_name
     def get_email(self, obj): return obj.user.email
     def get_telephone(self, obj): return obj.user.telephone
     def get_nin(self, obj): return obj.user.nin
+    def get_date_joined(self, obj): return obj.user.date_joined
+    def get_user_id(self, obj):
+        return obj.user.id
+
+    def get_last_login(self, obj):
+        return obj.user.last_login
+
+    def get_is_favori(self, obj):
+        recruteur = self.context.get('recruteur')
+        if not recruteur:
+            return False
+        from .models import ProfilCandidatFavori
+        return ProfilCandidatFavori.objects.filter(
+            recruteur=recruteur,
+            candidat=obj.user
+        ).exists()
+
 class MesCandidaturesDTO(serializers.ModelSerializer):
     offre_titre = serializers.CharField(source='offre.titre', read_only=True)
     entreprise_nom = serializers.CharField(source='offre.entreprise.nom_entreprise', read_only=True)
@@ -239,7 +294,6 @@ class MesCandidaturesDTO(serializers.ModelSerializer):
     class Meta:
         model = Candidature
         fields = ('id', 'offre_titre', 'entreprise_nom', 'date_postulation', 'statut', 'offre_est_cloturee','date_entretien', 'message_entretien')
-
 
 class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     # On va chercher les infos dans l'objet User lié
@@ -252,7 +306,8 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
         model = ProfilEntreprise
         fields = (
             'id','nom_entreprise', 'secteur_activite', 'registre_commerce', 
-            'wilaya_siege', 'description', 'est_approuvee',
+            'wilaya_siege', 'commune_siege', 'taille_entreprise', 'logo',
+            'description', 'est_approuvee',
             'first_name', 'last_name', 'email', 'telephone'
         )
 
@@ -275,6 +330,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
             'is_active', 'date_joined', 'telephone', 'nin', 'date_naissance', 
             'consentement_loi_18_07', 'profil_candidat'
         )
+
 class OffreSauvegardeeSerializer(serializers.ModelSerializer):
     """
     Serializer pour les offres mises en favoris.
@@ -285,8 +341,6 @@ class OffreSauvegardeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = OffreSauvegardee
         fields = ['id', 'offre', 'offre_detail', 'date_sauvegarde']
-        # On rend 'offre' obligatoire pour la création, mais on affiche 'offre_detail' à la lecture
-
 
 class AlerteEmploiSerializer(serializers.ModelSerializer):
     """
@@ -323,7 +377,7 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
         model = ProfilEntreprise
         fields = (
             'id', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege', 
-            'description', 'logo_url', 'offres_actives'
+            'taille_entreprise', 'description', 'logo_url', 'offres_actives'
         )
 
     def get_offres_actives(self, obj):
@@ -340,3 +394,17 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'type_notif', 'titre', 'message', 'lue', 'date_creation']
+
+class CandidatureSpontaneeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CandidatureSpontanee
+        fields = ['id', 'nom', 'prenom', 'email', 'telephone' , 'wilaya', 'diplome', 'specialite', 'cv', 'lettre_motivation', 'date_envoi', 'lue']
+        read_only_fields = ['date_envoi', 'lue']
+
+class MetierReferentielSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MetierReferentiel
+        fields = ['id', 'titre', 'secteur', 'niveau_experience', 'mots_cles', 'est_actif', 'date_creation']
+        read_only_fields = ['date_creation']
+        
+

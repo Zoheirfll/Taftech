@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
-import { reportError } from "../../utils/errorReporter"; // 👇 Import télémétrie
+import { reportError } from "../../utils/errorReporter";
+
+const Toggle = ({ checked, onChange }) => (
+  <button
+    onClick={onChange}
+    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-indigo-600" : "bg-slate-200"}`}
+  >
+    <span
+      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-0"}`}
+    />
+  </button>
+);
 
 const Settings = () => {
   const [notifications, setNotifications] = useState({
@@ -18,7 +29,7 @@ const Settings = () => {
         const data = await jobsService.getParametres();
         setNotifications(data);
       } catch (error) {
-        toast.error("Erreur lors du chargement de vos paramètres.");
+        toast.error("Erreur lors du chargement.");
         reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
       } finally {
         setIsLoading(false);
@@ -28,21 +39,13 @@ const Settings = () => {
   }, []);
 
   const handleToggle = async (field) => {
-    // Sauvegarde de l'état précédent pour le rollback
     const previousState = { ...notifications };
-
-    // Optimistic UI
-    const updatedNotifications = {
-      ...notifications,
-      [field]: !notifications[field],
-    };
-    setNotifications(updatedNotifications);
-
+    const updated = { ...notifications, [field]: !notifications[field] };
+    setNotifications(updated);
     try {
-      await jobsService.updateParametres(updatedNotifications);
+      await jobsService.updateParametres(updated);
       toast.success("Préférence enregistrée !");
     } catch (error) {
-      // 🛑 ROLLBACK en cas d'erreur
       setNotifications(previousState);
       reportError("ECHEC_MAJ_PARAMETRES", error);
       toast.error("Échec de la sauvegarde.");
@@ -51,148 +54,130 @@ const Settings = () => {
 
   const handleUpdatePassword = (e) => {
     e.preventDefault();
-    if (passwords.new !== passwords.confirm) {
-      return toast.error("Les nouveaux mots de passe ne correspondent pas.");
-    }
-    toast.success("Demande de changement envoyée (Backend à connecter)");
+    if (passwords.new !== passwords.confirm)
+      return toast.error("Les mots de passe ne correspondent pas.");
+    toast.success("Demande de changement envoyée.");
   };
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
-  }
+
+  const inputClass =
+    "flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
-    <div className="max-w-4xl space-y-8 animate-fadeIn">
-      <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-        Paramètres
-      </h1>
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold text-slate-900">Paramètres</h1>
 
-      <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-black text-gray-800 mb-6">
-          Gérer mes notifications
-        </h2>
-        <div className="space-y-6">
-          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
-            <div>
-              <p className="font-bold text-gray-800 text-sm">
-                Offres exclusives
-              </p>
-              <p className="text-xs text-gray-400 font-medium">
-                Reçois des offres spéciales de nos partenaires.
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={notifications.notif_offres_exclusives}
-                onChange={() => handleToggle("notif_offres_exclusives")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
-            <div>
-              <p className="font-bold text-gray-800 text-sm">
-                Actualité et newsletter
-              </p>
-              <p className="text-xs text-gray-400 font-medium">
-                Découvre les tendances du marché et astuces pro.
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={notifications.notif_newsletter}
-                onChange={() => handleToggle("notif_newsletter")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
-            <div>
-              <p className="font-bold text-gray-800 text-sm">
-                Rappels de mise à jour du profil
-              </p>
-              <p className="text-xs text-gray-400 font-medium">
-                Recevez un email amical si votre CV n'a pas été actualisé.
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={notifications.notif_mise_a_jour}
-                onChange={() => handleToggle("notif_mise_a_jour")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
+      {/* NOTIFICATIONS */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Notifications
+          </h2>
         </div>
-      </section>
+        <div className="divide-y divide-slate-100">
+          {[
+            {
+              field: "notif_offres_exclusives",
+              label: "Offres exclusives",
+              desc: "Recevez des offres spéciales de nos partenaires.",
+            },
+            {
+              field: "notif_newsletter",
+              label: "Newsletter",
+              desc: "Tendances du marché et astuces professionnelles.",
+            },
+            {
+              field: "notif_mise_a_jour",
+              label: "Rappels de profil",
+              desc: "Email si votre CV n'a pas été actualisé.",
+            },
+          ].map(({ field, label, desc }) => (
+            <div
+              key={field}
+              className="flex justify-between items-center px-5 py-4"
+            >
+              <div>
+                <p className="text-sm font-medium text-slate-800">{label}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+              </div>
+              <Toggle
+                checked={notifications[field]}
+                onChange={() => handleToggle(field)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-black text-gray-800 mb-6">
-          Modifier mon mot de passe
-        </h2>
-        <form
-          onSubmit={handleUpdatePassword}
-          className="flex flex-col md:flex-row gap-4"
-        >
-          <input
-            type="password"
-            placeholder="Mot de passe actuel"
-            className="flex-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500"
-            onChange={(e) =>
-              setPasswords({ ...passwords, old: e.target.value })
-            }
-          />
-          <input
-            type="password"
-            placeholder="Nouveau"
-            className="flex-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500"
-            onChange={(e) =>
-              setPasswords({ ...passwords, new: e.target.value })
-            }
-          />
-          <input
-            type="password"
-            placeholder="Confirmer"
-            className="flex-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500"
-            onChange={(e) =>
-              setPasswords({ ...passwords, confirm: e.target.value })
-            }
-          />
-          <button
-            type="submit"
-            className="bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-black transition-all"
+      {/* MOT DE PASSE */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Modifier mon mot de passe
+          </h2>
+        </div>
+        <div className="p-5">
+          <form
+            onSubmit={handleUpdatePassword}
+            className="flex flex-col md:flex-row gap-3"
           >
-            MODIFIER
-          </button>
-        </form>
-      </section>
+            <input
+              type="password"
+              placeholder="Mot de passe actuel"
+              className={inputClass}
+              onChange={(e) =>
+                setPasswords({ ...passwords, old: e.target.value })
+              }
+            />
+            <input
+              type="password"
+              placeholder="Nouveau"
+              className={inputClass}
+              onChange={(e) =>
+                setPasswords({ ...passwords, new: e.target.value })
+              }
+            />
+            <input
+              type="password"
+              placeholder="Confirmer"
+              className={inputClass}
+              onChange={(e) =>
+                setPasswords({ ...passwords, confirm: e.target.value })
+              }
+            />
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
+            >
+              Modifier
+            </button>
+          </form>
+        </div>
+      </div>
 
-      <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-red-50 flex justify-between items-center">
+      {/* DANGER ZONE */}
+      <div className="bg-white border border-red-100 rounded-xl p-5 flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-black text-red-600">Gérer mon compte</h2>
-          <p className="text-xs text-gray-400 font-medium">
-            Attention, cette action est irréversible.
+          <h2 className="text-sm font-semibold text-red-600">
+            Supprimer mon compte
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Cette action est irréversible.
           </p>
         </div>
         <button
-          className="text-red-500 font-black text-sm hover:underline uppercase tracking-widest"
           onClick={() => toast.error("Action désactivée pour l'instant.")}
+          className="text-sm font-medium text-red-500 hover:underline"
         >
-          Supprimer mon compte
+          Supprimer
         </button>
-      </section>
+      </div>
     </div>
   );
 };

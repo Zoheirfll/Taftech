@@ -5,17 +5,24 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import api from "../api/axiosConfig";
 import communesAlgerie from "../data/communes.json";
-import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
+import { reportError } from "../utils/errorReporter";
+import { selectStyles } from "../theme";
+import {
+  MapPin,
+  Briefcase,
+  Banknote,
+  Bookmark,
+  Sparkles,
+  Search,
+  X,
+} from "lucide-react";
 
 const JobsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [favoris, setFavoris] = useState([]);
   const [recommandations, setRecommandations] = useState([]);
-
   const [constants, setConstants] = useState({
     wilayas: [],
     secteurs: [],
@@ -23,7 +30,6 @@ const JobsList = () => {
     experiences: [],
     contrats: [],
   });
-
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
@@ -39,31 +45,24 @@ const JobsList = () => {
       try {
         const isConnected = !!localStorage.getItem("userRole");
         const isCandidat = localStorage.getItem("userRole") === "CANDIDAT";
-
         const promises = [jobsService.getConstants()];
-
-        if (isConnected) {
-          promises.push(
-            api.get("jobs/sauvegardes/").catch(() => ({ data: [] })),
-          );
-        } else {
-          promises.push(Promise.resolve({ data: [] }));
-        }
-
-        if (isCandidat) {
-          promises.push(jobsService.getOffresRecommandees().catch(() => []));
-        } else {
-          promises.push(Promise.resolve([]));
-        }
-
+        promises.push(
+          isConnected
+            ? api.get("jobs/sauvegardes/").catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+        );
+        promises.push(
+          isCandidat
+            ? jobsService.getOffresRecommandees().catch(() => [])
+            : Promise.resolve([]),
+        );
         const [constantsData, favorisData, recommandationsData] =
           await Promise.all(promises);
-
         setConstants(constantsData);
         setFavoris(favorisData.data);
         setRecommandations(recommandationsData || []);
       } catch (error) {
-        reportError("ECHEC_INITIALISATION_JOBS_LIST", error); // 🛑 Télémétrie
+        reportError("ECHEC_INITIALISATION_JOBS_LIST", error);
       }
     };
     fetchData();
@@ -76,31 +75,26 @@ const JobsList = () => {
         const data = await jobsService.getAllJobs(filters, 1);
         setJobs(data.results || data);
       } catch (error) {
-        reportError("ECHEC_RECUPERATION_OFFRES", error); // 🛑 Télémétrie
+        reportError("ECHEC_RECUPERATION_OFFRES", error);
       } finally {
         setLoading(false);
       }
     };
-
-    const delayDebounceFn = setTimeout(() => {
+    const delay = setTimeout(() => {
       fetchJobs();
-
       const params = new URLSearchParams();
       if (filters.search) params.append("search", filters.search);
       if (filters.wilaya) params.append("wilaya", filters.wilaya);
       setSearchParams(params, { replace: true });
     }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
+    return () => clearTimeout(delay);
   }, [filters, setSearchParams]);
 
   const handleToggleFavori = async (offreId) => {
     if (!localStorage.getItem("userRole")) {
-      return toast.error("Veuillez vous connecter pour sauvegarder une offre.");
+      return toast.error("Connectez-vous pour sauvegarder une offre.");
     }
-
     const isDejaSauvegarde = favoris.find((f) => f.offre === offreId);
-
     if (isDejaSauvegarde) {
       setFavoris(favoris.filter((f) => f.offre !== offreId));
       try {
@@ -109,7 +103,7 @@ const JobsList = () => {
       } catch (error) {
         setFavoris([...favoris, isDejaSauvegarde]);
         toast.error("Erreur lors de la suppression.");
-        reportError("ECHEC_SUPPRESSION_FAVORI", error); // 🛑 Télémétrie
+        reportError("ECHEC_SUPPRESSION_FAVORI", error);
       }
     } else {
       try {
@@ -120,13 +114,9 @@ const JobsList = () => {
         toast.success("Offre sauvegardée !");
       } catch (error) {
         toast.error("Impossible de sauvegarder cette offre.");
-        reportError("ECHEC_SAUVEGARDE_FAVORI", error); // 🛑 Télémétrie
+        reportError("ECHEC_SAUVEGARDE_FAVORI", error);
       }
     }
-  };
-
-  const handleChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   const handleSelectChange = (selectedOption, actionMeta) => {
@@ -160,208 +150,173 @@ const JobsList = () => {
     setSearchParams({});
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50 min-h-screen">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* COLONNE GAUCHE : LES FILTRES */}
-        <aside className="w-full md:w-1/3 lg:w-1/4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-4">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-              <h2 className="text-xl font-black text-gray-900">Filtrez par</h2>
-              <button
-                onClick={handleReset}
-                className="text-sm font-bold text-gray-500 hover:text-blue-600 transition"
-              >
-                Réinitialiser
-              </button>
-            </div>
+  const hasFilters = Object.values(filters).some(Boolean);
 
-            <div className="space-y-5">
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8 bg-slate-50 min-h-screen">
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* FILTRES */}
+        <aside className="w-full md:w-72 flex-shrink-0">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 sticky top-20">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-sm font-bold text-slate-900">Filtres</h2>
+              {hasFilters && (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
+                >
+                  <X size={12} /> Réinitialiser
+                </button>
+              )}
+            </div>
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Mots-clés / Métier
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Mots-clés
                 </label>
-                <input
-                  type="text"
-                  name="search"
-                  value={filters.search}
-                  onChange={handleChange}
-                  placeholder="Ex: Développeur..."
-                  className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:border-blue-500 outline-none text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Expérience demandée
-                </label>
-                <Select
-                  name="experience"
-                  options={constants.experiences}
-                  onChange={handleSelectChange}
-                  value={
-                    constants.experiences.find(
-                      (c) => c.value === filters.experience,
-                    ) || null
-                  }
-                  placeholder="Toutes les expériences"
-                  isClearable
-                  className="text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Type de contrat
-                </label>
-                <Select
-                  name="contrat"
-                  options={constants.contrats}
-                  onChange={handleSelectChange}
-                  value={
-                    constants.contrats.find(
-                      (c) => c.value === filters.contrat,
-                    ) || null
-                  }
-                  placeholder="Tous les contrats"
-                  isClearable
-                  className="text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Secteur d'activité
-                </label>
-                <Select
-                  name="specialite"
-                  options={constants.secteurs}
-                  onChange={handleSelectChange}
-                  value={
-                    constants.secteurs.find(
-                      (c) => c.value === filters.specialite,
-                    ) || null
-                  }
-                  placeholder="Ex: Finance..."
-                  isClearable
-                  className="text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">
-                  Diplôme attendu
-                </label>
-                <Select
-                  name="diplome"
-                  options={constants.diplomes}
-                  onChange={handleSelectChange}
-                  value={
-                    constants.diplomes.find(
-                      (c) => c.value === filters.diplome,
-                    ) || null
-                  }
-                  placeholder="Ex: Master 2..."
-                  isClearable
-                  className="text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-5 mt-2">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
-                    Wilaya
-                  </label>
-                  <Select
-                    name="wilaya"
-                    options={constants.wilayas}
-                    onChange={(opt) => {
-                      setFilters({
-                        ...filters,
-                        wilaya: opt ? opt.value : "",
-                        commune: "",
-                      });
-                    }}
-                    value={
-                      constants.wilayas.find(
-                        (c) => c.value === filters.wilaya,
-                      ) || null
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type="text"
+                    name="search"
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters({ ...filters, search: e.target.value })
                     }
-                    placeholder="Ex: Alger"
-                    isClearable
-                    className="text-sm"
+                    placeholder="Développeur, comptable..."
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
-                    Commune
+              </div>
+              {[
+                {
+                  label: "Expérience",
+                  name: "experience",
+                  options: constants.experiences,
+                  placeholder: "Toutes",
+                },
+                {
+                  label: "Type de contrat",
+                  name: "contrat",
+                  options: constants.contrats,
+                  placeholder: "Tous",
+                },
+                {
+                  label: "Secteur",
+                  name: "specialite",
+                  options: constants.secteurs,
+                  placeholder: "Tous",
+                },
+                {
+                  label: "Diplôme",
+                  name: "diplome",
+                  options: constants.diplomes,
+                  placeholder: "Tous",
+                },
+              ].map(({ label, name, options, placeholder }) => (
+                <div key={name}>
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    {label}
                   </label>
                   <Select
-                    name="commune"
-                    options={getCommunesListOptions(filters.wilaya)}
-                    isDisabled={
-                      !filters.wilaya ||
-                      getCommunesListOptions(filters.wilaya).length === 0
-                    }
-                    value={
-                      getCommunesListOptions(filters.wilaya).find(
-                        (c) => c.value === filters.commune,
-                      ) || null
-                    }
+                    name={name}
+                    options={options}
                     onChange={handleSelectChange}
-                    placeholder={
-                      filters.wilaya ? "Toutes les communes" : "Wilaya d'abord"
+                    value={
+                      options.find((c) => c.value === filters[name]) || null
                     }
+                    placeholder={placeholder}
                     isClearable
-                    className="text-sm"
+                    styles={selectStyles}
                   />
                 </div>
+              ))}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Wilaya
+                </label>
+                <Select
+                  name="wilaya"
+                  options={constants.wilayas}
+                  onChange={(opt) =>
+                    setFilters({
+                      ...filters,
+                      wilaya: opt ? opt.value : "",
+                      commune: "",
+                    })
+                  }
+                  value={
+                    constants.wilayas.find((c) => c.value === filters.wilaya) ||
+                    null
+                  }
+                  placeholder="Toutes"
+                  isClearable
+                  styles={selectStyles}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Commune
+                </label>
+                <Select
+                  name="commune"
+                  options={getCommunesListOptions(filters.wilaya)}
+                  isDisabled={!filters.wilaya}
+                  value={
+                    getCommunesListOptions(filters.wilaya).find(
+                      (c) => c.value === filters.commune,
+                    ) || null
+                  }
+                  onChange={handleSelectChange}
+                  placeholder={filters.wilaya ? "Toutes" : "Wilaya d'abord"}
+                  isClearable
+                  styles={selectStyles}
+                />
               </div>
             </div>
           </div>
         </aside>
 
-        {/* COLONNE DROITE : LES RÉSULTATS */}
-        <main className="w-full md:w-2/3 lg:w-3/4">
+        {/* RÉSULTATS */}
+        <main className="flex-1 min-w-0">
+          {/* RECOMMANDATIONS */}
           {recommandations.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                🔥 Recommandées pour vous
+            <div className="mb-6">
+              <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <Sparkles size={15} className="text-amber-500" />
+                Recommandées pour vous
               </h2>
-              <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+              <div className="flex overflow-x-auto gap-3 pb-3">
                 {recommandations.map((rec) => (
                   <div
                     key={rec.id}
-                    className="min-w-[300px] md:min-w-[350px] bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-100 shadow-sm snap-start flex flex-col justify-between shrink-0 hover:shadow-md transition"
+                    className="min-w-[280px] bg-white border border-indigo-200 rounded-xl p-4 flex-shrink-0 hover:shadow-sm transition-all"
                   >
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 bg-indigo-100 px-2 py-1 rounded-md">
-                          {rec.matching_score >= 80
-                            ? "⭐ Top Match"
-                            : "🎯 Recommandé"}
-                        </span>
-                        <span className="text-xs font-black text-blue-800 bg-white px-2 py-1 rounded-full border border-blue-200">
-                          {rec.matching_score}%
-                        </span>
-                      </div>
-                      <Link
-                        to={`/jobs/${rec.id}`}
-                        className="text-lg font-black text-gray-900 hover:text-blue-700 hover:underline line-clamp-1"
-                      >
-                        {rec.titre}
-                      </Link>
-                      <p className="text-xs font-bold text-gray-500 mt-1 mb-4">
-                        🏢{" "}
-                        {rec.entreprise?.nom_entreprise || "Entreprise Anonyme"}
-                      </p>
-                      <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-                        <span className="bg-white text-gray-600 px-2 py-1 rounded border border-gray-200">
-                          📍 {rec.wilaya.split(" - ")[0]}
-                        </span>
-                        <span className="bg-white text-gray-600 px-2 py-1 rounded border border-gray-200">
-                          💼 {rec.experience_requise}
-                        </span>
-                      </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-semibold rounded-full">
+                        {rec.matching_score >= 80
+                          ? "⭐ Top Match"
+                          : "Recommandé"}
+                      </span>
+                      <span className="text-xs font-bold text-indigo-600">
+                        {rec.matching_score}%
+                      </span>
                     </div>
                     <Link
                       to={`/jobs/${rec.id}`}
-                      className="mt-4 block text-center w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg transition-colors text-xs"
+                      className="text-sm font-semibold text-slate-900 hover:text-indigo-600 line-clamp-1 block mb-1"
+                    >
+                      {rec.titre}
+                    </Link>
+                    <p className="text-xs text-slate-500 mb-3">
+                      {rec.entreprise?.nom_entreprise || "Entreprise anonyme"}
+                    </p>
+                    <Link
+                      to={`/jobs/${rec.id}`}
+                      className="block text-center py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors"
                     >
                       Voir l'offre
                     </Link>
@@ -371,121 +326,115 @@ const JobsList = () => {
             </div>
           )}
 
-          <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
-            <h1 className="font-bold text-gray-800">
-              {jobs.length} Offres d'emploi trouvées
-            </h1>
-            <Link
-              to="/"
-              className="text-sm text-blue-600 font-bold hover:underline"
-            >
-              ← Retour à l'accueil
-            </Link>
+          {/* COMPTEUR */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-slate-500">
+              <span className="font-semibold text-slate-900">
+                {jobs.length}
+              </span>{" "}
+              offre{jobs.length > 1 ? "s" : ""} trouvée
+              {jobs.length > 1 ? "s" : ""}
+            </p>
           </div>
 
+          {/* LISTE */}
           {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <span className="text-blue-600 font-bold animate-pulse text-xl">
-                Recherche en cours...
-              </span>
+            <div className="flex items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : jobs.length === 0 ? (
-            <div className="bg-white p-10 rounded-2xl border border-gray-200 text-center shadow-sm">
-              <h2 className="text-2xl font-black text-gray-800 mb-2">
-                Aucune offre trouvée 😕
-              </h2>
-              <p className="text-gray-500 mb-6">
-                Essayez de modifier vos filtres ou de réinitialiser la
-                recherche.
+            <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
+              <Search size={32} className="text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-900 mb-1">
+                Aucune offre trouvée
+              </p>
+              <p className="text-xs text-slate-500 mb-4">
+                Essayez de modifier vos filtres.
               </p>
               <button
                 onClick={handleReset}
-                className="bg-gray-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-black transition"
+                className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
               >
-                Effacer les filtres
+                Réinitialiser les filtres
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {jobs.map((job) => {
                 const isSaved = favoris.some((f) => f.offre === job.id);
-
                 return (
                   <div
                     key={job.id}
-                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col md:flex-row justify-between gap-4"
+                    className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all"
                   >
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <Link
-                          to={`/jobs/${job.id}`}
-                          className="text-xl font-black text-blue-700 hover:underline"
-                        >
-                          {job.titre}
-                        </Link>
-                      </div>
-                      <div className="text-sm font-bold text-gray-600 mb-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-3 mb-1">
+                          <Link
+                            to={`/jobs/${job.id}`}
+                            className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+                          >
+                            {job.titre}
+                          </Link>
+                        </div>
                         {job.entreprise ? (
                           <Link
                             to={`/entreprise/${job.entreprise.id}`}
-                            className="hover:text-blue-600 hover:underline transition-colors"
-                            title="Voir la page de cette entreprise"
+                            className="text-xs text-indigo-600 hover:underline font-medium"
                           >
-                            🏢 {job.entreprise.nom_entreprise}
+                            {job.entreprise.nom_entreprise}
                           </Link>
                         ) : (
-                          <span>🏢 Entreprise anonyme</span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs font-bold">
-                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
-                          📍 {job.wilaya}{" "}
-                          {job.commune ? `- ${job.commune}` : ""}
-                        </span>
-                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
-                          💼 {job.experience_requise}
-                        </span>
-                        <span className="bg-green-50 text-green-700 px-3 py-1 rounded-lg">
-                          📄 {job.type_contrat}
-                        </span>
-                        {job.specialite && (
-                          <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg">
-                            🎯 {job.specialite}
+                          <span className="text-xs text-slate-500">
+                            Entreprise anonyme
                           </span>
                         )}
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                            <MapPin size={10} />
+                            {job.wilaya?.split(" - ")[1] || job.wilaya}
+                            {job.commune ? ` · ${job.commune}` : ""}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                            <Briefcase size={10} />
+                            {job.experience_requise}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded-md">
+                            {job.type_contrat}
+                          </span>
+                          {job.salaire_propose && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-md">
+                              <Banknote size={10} />
+                              {job.salaire_propose}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center md:items-start justify-end mt-4 md:mt-0 gap-3">
-                      <button
-                        onClick={() => handleToggleFavori(job.id)}
-                        className={`p-3 rounded-xl transition-all border ${isSaved ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100" : "bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"}`}
-                        title={
-                          isSaved
-                            ? "Retirer des favoris"
-                            : "Sauvegarder l'offre"
-                        }
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill={isSaved ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth={isSaved ? "0" : "2"}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleToggleFavori(job.id)}
+                          className={`p-2 rounded-lg border transition-colors ${
+                            isSaved
+                              ? "bg-amber-50 border-amber-200 text-amber-500"
+                              : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                          }`}
+                          title={
+                            isSaved ? "Retirer des favoris" : "Sauvegarder"
+                          }
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                          ></path>
-                        </svg>
-                      </button>
-                      <Link
-                        to={`/jobs/${job.id}`}
-                        className="bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition"
-                      >
-                        Voir l'offre
-                      </Link>
+                          <Bookmark
+                            size={15}
+                            className={isSaved ? "fill-amber-500" : ""}
+                          />
+                        </button>
+                        <Link
+                          to={`/jobs/${job.id}`}
+                          className="px-3 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                        >
+                          Voir l'offre
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );

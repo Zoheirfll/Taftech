@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
-import { reportError } from "../../utils/errorReporter"; // Import de la télémétrie
+import { reportError } from "../../utils/errorReporter";
+import { Send } from "lucide-react";
 
 const AdminBroadcast = () => {
   const [formData, setFormData] = useState({
-    type_envoi: "NEWSLETTER", // Valeur par défaut
+    type_envoi: "NEWSLETTER",
     sujet: "",
     message: "",
   });
@@ -13,123 +14,94 @@ const AdminBroadcast = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formData.sujet.trim() || !formData.message.trim()) {
+    if (!formData.sujet.trim() || !formData.message.trim())
       return toast.error("Le sujet et le message sont obligatoires.");
-    }
-
     if (
       !window.confirm(
-        `Êtes-vous sûr de vouloir envoyer cet email à tous les abonnés de la liste "${formData.type_envoi}" ?`,
+        `Envoyer cet email à tous les abonnés "${formData.type_envoi}" ?`,
       )
-    ) {
+    )
       return;
-    }
-
     setIsSending(true);
     try {
       const response = await api.post("jobs/admin/broadcast-email/", formData);
-      toast.success(response.data.message || "Emails envoyés avec succès !");
-
-      // On vide le formulaire après succès
+      toast.success(response.data.message || "Emails envoyés !");
       setFormData({ ...formData, sujet: "", message: "" });
     } catch (error) {
-      // 🛑 Remplacement de console.error par la télémétrie
       reportError("ECHEC_ENVOI_BROADCAST", error);
-      toast.error(
-        error.response?.data?.error || "Erreur lors de l'envoi des emails.",
-      );
+      toast.error(error.response?.data?.error || "Erreur lors de l'envoi.");
     } finally {
       setIsSending(false);
     }
   };
 
+  const inputClass =
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
   return (
-    <div className="max-w-4xl mx-auto p-8 font-sans animate-fadeIn">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-          Diffusion d'Emails (Broadcast)
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Diffusion d'emails
         </h1>
-        <p className="text-gray-500 font-medium mt-2">
-          Envoyez des communications ciblées aux candidats en respectant leurs
-          préférences de notification.
+        <p className="text-sm text-slate-500 mt-0.5">
+          Envoyez des communications ciblées aux candidats.
         </p>
       </div>
 
-      <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* CIBLE DE L'ENVOI */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-              Audience Cible <span className="text-red-500">*</span>
+            <label className="text-xs font-medium text-slate-500 mb-2 block">
+              Audience cible *
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label
-                className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                  formData.type_envoi === "NEWSLETTER"
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="type_envoi"
-                  value="NEWSLETTER"
-                  checked={formData.type_envoi === "NEWSLETTER"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type_envoi: e.target.value })
-                  }
-                  className="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <div className="ml-3">
-                  <span className="block text-sm font-black text-gray-900">
-                    Actualités & Newsletter
-                  </span>
-                  <span className="block text-xs text-gray-500 font-medium">
-                    Pour les conseils, actus TafTech et événements.
-                  </span>
-                </div>
-              </label>
-
-              <label
-                className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                  formData.type_envoi === "EXCLUSIF"
-                    ? "border-purple-600 bg-purple-50"
-                    : "border-gray-200 hover:border-purple-200"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="type_envoi"
-                  value="EXCLUSIF"
-                  checked={formData.type_envoi === "EXCLUSIF"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type_envoi: e.target.value })
-                  }
-                  className="w-5 h-5 text-purple-600 focus:ring-purple-500 border-gray-300"
-                />
-                <div className="ml-3">
-                  <span className="block text-sm font-black text-gray-900">
-                    Offres Exclusives
-                  </span>
-                  <span className="block text-xs text-gray-500 font-medium">
-                    Pour les offres partenaires très spécifiques.
-                  </span>
-                </div>
-              </label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                {
+                  value: "NEWSLETTER",
+                  label: "Newsletter",
+                  desc: "Conseils, actus TafTech et événements.",
+                },
+                {
+                  value: "EXCLUSIF",
+                  label: "Offres exclusives",
+                  desc: "Offres partenaires spécifiques.",
+                },
+              ].map(({ value, label, desc }) => (
+                <label
+                  key={value}
+                  className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${formData.type_envoi === value ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-200"}`}
+                >
+                  <input
+                    type="radio"
+                    name="type_envoi"
+                    value={value}
+                    checked={formData.type_envoi === value}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type_envoi: e.target.value })
+                    }
+                    className="mt-0.5 accent-indigo-600"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {label}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                  </div>
+                </label>
+              ))}
             </div>
           </div>
 
-          {/* SUJET */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-              Sujet de l'email <span className="text-red-500">*</span>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Sujet *
             </label>
             <input
               type="text"
               required
               placeholder="Ex: Les 5 compétences les plus recherchées en 2026..."
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+              className={inputClass}
               value={formData.sujet}
               onChange={(e) =>
                 setFormData({ ...formData, sujet: e.target.value })
@@ -137,52 +109,46 @@ const AdminBroadcast = () => {
             />
           </div>
 
-          {/* MESSAGE */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-              Corps du message <span className="text-red-500">*</span>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              Corps du message *
             </label>
             <textarea
               required
-              rows="8"
+              rows="7"
               placeholder="Rédigez votre email ici..."
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              className={inputClass + " resize-none"}
               value={formData.message}
               onChange={(e) =>
                 setFormData({ ...formData, message: e.target.value })
               }
-            ></textarea>
-            <p className="text-xs text-gray-400 mt-2">
-              💡 Les emails seront envoyés en "Copie Cachée" (BCC) pour protéger
-              la vie privée des candidats.
+            />
+            <p className="text-xs text-slate-400 mt-1.5">
+              Les emails seront envoyés en copie cachée (BCC) pour protéger la
+              vie privée.
             </p>
           </div>
 
-          {/* BOUTON D'ENVOI */}
-          <div className="pt-4 border-t border-gray-100 flex justify-end">
+          <div className="flex justify-end pt-2 border-t border-slate-100">
             <button
               type="submit"
               disabled={isSending}
-              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-black text-sm text-white shadow-md transition-all ${
-                isSending
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gray-900 hover:bg-black hover:-translate-y-1"
-              }`}
+              className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSending ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ENVOI EN COURS...
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>{" "}
+                  Envoi...
                 </>
               ) : (
                 <>
-                  <span>🚀</span> ENVOYER LA CAMPAGNE
+                  <Send size={15} /> Envoyer la campagne
                 </>
               )}
             </button>
           </div>
         </form>
-      </section>
+      </div>
     </div>
   );
 };

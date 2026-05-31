@@ -86,6 +86,13 @@ TYPES_CONTRAT = [
     ('FREELANCE', 'Freelance'),
     ('TEMPS_PARTIEL', 'Temps Partiel'),
 ]
+TAILLES_ENTREPRISE_CHOICES = [
+    ('TPE', '1 à 10 employés'),
+    ('PE', '11 à 50 employés'),
+    ('ME', '51 à 200 employés'),
+    ('GE', '201 à 500 employés'),
+    ('TGE', 'Plus de 500 employés'),
+]
 
 
 # ==========================================
@@ -110,12 +117,43 @@ class ProfilEntreprise(models.Model):
     
     registre_commerce = models.CharField(max_length=50, unique=True, verbose_name="Numéro de Registre de Commerce (RC)")
     description = models.TextField(blank=True, null=True, verbose_name="Présentation de l'entreprise")
-    logo = models.ImageField(upload_to='logos_entreprises/', blank=True, null=True)
+    logo = models.ImageField(
+        upload_to='logos_entreprises/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])]
+    )
+    taille_entreprise = models.CharField(
+        max_length=10,
+        choices=TAILLES_ENTREPRISE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Taille de l'entreprise (effectif)"
+    )
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
+    
+    email_refus_auto = models.BooleanField(default=False)
+    message_refus_auto = models.TextField(
+    blank=True,
+    default="Bonjour {prenom},\n\nNous avons bien étudié votre candidature pour le poste de {titre_offre} et nous avons le regret de vous informer qu'elle n'a pas été retenue.\n\nNous vous remercions de l'intérêt que vous portez à {nom_entreprise} et vous souhaitons bonne chance dans vos recherches.\n\nCordialement,\nL'équipe {nom_entreprise}"
+)
 
     def __str__(self):
         return self.nom_entreprise
 
+class MetierReferentiel(models.Model):
+    titre = models.CharField(max_length=200)
+    secteur = models.CharField(max_length=100)
+    niveau_experience = models.CharField(max_length=50, blank=True)
+    mots_cles = models.TextField(blank=True)
+    est_actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['secteur', 'titre']
+
+    def __str__(self):
+        return f"{self.titre} — {self.secteur}"
 
 class OffreEmploi(models.Model):
     """
@@ -148,6 +186,7 @@ class OffreEmploi(models.Model):
     statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
     motif_rejet = models.TextField(blank=True, null=True)
     est_cloturee = models.BooleanField(default=False)
+    questionnaire = models.ForeignKey('Questionnaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='offres')
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
 
@@ -217,7 +256,7 @@ class Candidature(models.Model):
     note_experience = models.IntegerField(null=True, blank=True, verbose_name="Expérience pertinente (1-5)")
     note_globale = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, verbose_name="Note globale (/20)")
     commentaire_evaluation = models.TextField(blank=True, null=True, verbose_name="Commentaire (privé recruteur)")
-    
+    profil_snapshot = models.JSONField(null=True, blank=True)    
     def __str__(self):
         nom = self.candidat.username if self.candidat else f"{self.nom_rapide} {self.prenom_rapide} (Rapide)"
         score_display = f" - {self.score_matching}%" if self.score_matching else ""
@@ -396,3 +435,88 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.get_type_notif_display()} pour {self.destinataire.username}"
+
+class ProfilCandidatFavori(models.Model):
+    """
+    Lien entre un recruteur et un candidat marqué en favori dans la CVthèque.
+    """
+    recruteur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='candidats_favoris'
+    )
+    candidat = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favori_par'
+    )
+    date_ajout = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('recruteur', 'candidat')
+        ordering = ['-date_ajout']
+
+    def __str__(self):
+        return f"{self.recruteur.username} ⭐ {self.candidat.username}"
+    
+class CandidatureSpontanee(models.Model):
+    entreprise = models.ForeignKey('ProfilEntreprise', on_delete=models.CASCADE, related_name='candidatures_spontanees')
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField()
+    telephone = models.CharField(max_length=20, blank=True)
+    cv = models.FileField(upload_to='cvs_spontanes/')
+    lettre_motivation = models.TextField(blank=True)
+    date_envoi = models.DateTimeField(auto_now_add=True)
+    lue = models.BooleanField(default=False)
+    wilaya = models.CharField(max_length=100, blank=True)
+    diplome = models.CharField(max_length=100, blank=True)
+    specialite = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ['-date_envoi']
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom} → {self.entreprise.nom_entreprise}"
+    
+class Questionnaire(models.Model):
+    recruteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='questionnaires')
+    titre = models.CharField(max_length=200)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.titre
+
+
+class QuestionQuestionnaire(models.Model):
+    TYPE_CHOICES = [
+        ('COURT', 'Réponse courte'),
+        ('LONG', 'Réponse longue'),
+        ('NUMERIQUE', 'Numérique'),
+        ('CHOIX_UNIQUE', 'Choix unique'),
+        ('CHOIX_MULTIPLE', 'Choix multiple'),
+    ]
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.CASCADE, related_name='questions')
+    texte = models.CharField(max_length=500)
+    type_question = models.CharField(max_length=20, choices=TYPE_CHOICES, default='COURT')
+    requis = models.BooleanField(default=False)
+    disqualifiant = models.BooleanField(default=False)
+    ordre = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['ordre']
+
+
+class ReponseChoix(models.Model):
+    question = models.ForeignKey(QuestionQuestionnaire, on_delete=models.CASCADE, related_name='choix')
+    texte = models.CharField(max_length=200)
+
+
+class ReponseCandidat(models.Model):
+    candidature = models.ForeignKey('Candidature', on_delete=models.CASCADE, related_name='reponses')
+    question = models.ForeignKey(QuestionQuestionnaire, on_delete=models.CASCADE)
+    reponse = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ['candidature', 'question']

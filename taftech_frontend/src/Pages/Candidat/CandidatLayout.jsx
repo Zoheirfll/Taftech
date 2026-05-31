@@ -2,7 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
-import { reportError } from "../../utils/errorReporter"; // 👇 Import télémétrie
+import { reportError } from "../../utils/errorReporter";
+import {
+  User,
+  Briefcase,
+  Mail,
+  Bookmark,
+  Bell,
+  Settings,
+  LogOut,
+} from "lucide-react";
 
 const CandidatLayout = () => {
   const location = useLocation();
@@ -12,10 +21,8 @@ const CandidatLayout = () => {
     const fetchNotifications = async () => {
       try {
         const notifs = await jobsService.getNotifications();
-        const unread = notifs.filter((n) => !n.lue).length;
-        setUnreadCount(unread);
+        setUnreadCount(notifs.filter((n) => !n.lue).length);
       } catch (error) {
-        // 🛑 Remplacement du console.error par reportError
         reportError("ECHEC_CHARGEMENT_NOTIFS_LAYOUT", error);
       }
     };
@@ -23,47 +30,53 @@ const CandidatLayout = () => {
   }, [location.pathname]);
 
   const menuItems = [
-    { name: "Mon profil", path: "/profil", icon: "👤" },
-    { name: "Mes candidatures", path: "/mes-candidatures", icon: "💼" },
+    { name: "Mon profil", path: "/profil", icon: User },
+    { name: "Mes candidatures", path: "/mes-candidatures", icon: Briefcase },
     {
       name: "Boîte de réception",
       path: "/inbox",
-      icon: "✉️",
+      icon: Mail,
       badge: unreadCount > 0 ? unreadCount : null,
     },
-    { name: "Offres sauvegardées", path: "/offres-sauvegardees", icon: "🔖" },
-    { name: "Alertes d'emploi", path: "/alertes", icon: "🔔" },
-    { name: "Paramètres", path: "/parametres", icon: "⚙️" },
+    {
+      name: "Offres sauvegardées",
+      path: "/offres-sauvegardees",
+      icon: Bookmark,
+    },
+    { name: "Alertes d'emploi", path: "/alertes", icon: Bell },
+    { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 p-4 md:p-10 min-h-screen bg-gray-50">
-      <aside className="w-full md:w-64 space-y-2">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sticky top-10">
-          <nav className="space-y-1">
+    <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen bg-slate-50">
+      <aside className="w-full md:w-56 flex-shrink-0">
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden sticky top-20">
+          <nav className="p-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center justify-between px-4 py-3 rounded-2xl font-bold transition-all ${
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-colors mb-0.5 ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
-                      : "text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                      ? "bg-indigo-600 text-white"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{item.icon}</span>
+                  <div className="flex items-center gap-2.5">
+                    <item.icon
+                      size={16}
+                      className={isActive ? "text-white" : "text-slate-400"}
+                    />
                     <span className="text-sm">{item.name}</span>
                   </div>
-
                   {item.badge && (
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                         isActive
-                          ? "bg-white text-blue-600"
-                          : "bg-red-500 text-white animate-pulse"
+                          ? "bg-white text-indigo-600"
+                          : "bg-red-500 text-white"
                       }`}
                     >
                       {item.badge}
@@ -72,18 +85,19 @@ const CandidatLayout = () => {
                 </Link>
               );
             })}
-            <button
-              onClick={() => authService.logout()}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-red-500 hover:bg-red-50 transition-all mt-4 border-t border-gray-50 pt-6"
-            >
-              <span className="text-xl">🚪</span>
-              <span className="text-sm">Déconnexion</span>
-            </button>
+            <div className="border-t border-slate-100 mt-2 pt-2">
+              <button
+                onClick={() => authService.logout()}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} />
+                Déconnexion
+              </button>
+            </div>
           </nav>
         </div>
       </aside>
-
-      <main className="flex-1">
+      <main className="flex-1 min-w-0">
         <Outlet />
       </main>
     </div>

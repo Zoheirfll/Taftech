@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os 
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -174,3 +176,8 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'taftech963@gmail.com' # Remplace par ton adresse Gmail
 EMAIL_HOST_PASSWORD = 'biojesdfiyakrvlv' # VOIR LA NOTE IMPORTANTE CI-DESSOUS
+
+# ==========================================
+# CLÉS API EXTERNES
+# ==========================================
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")

@@ -3,15 +3,25 @@ import { useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../Services/jobsService";
 import Select from "react-select";
 import api from "../api/axiosConfig";
-import { reportError } from "../utils/errorReporter"; // ✅ Import de la Télémétrie
+import { reportError } from "../utils/errorReporter";
+import { authService } from "../Services/authService";
+import {
+  MapPin,
+  Search,
+  Briefcase,
+  Users,
+  Building2,
+  Sparkles,
+} from "lucide-react";
 
 const Home = () => {
   const navigate = useNavigate();
-  const [constants, setConstants] = useState({ wilayas: [] });
+  const isLogged = authService.isAuthenticated();
+  const role = authService.getUserRole();
 
+  const [constants, setConstants] = useState({ wilayas: [] });
   const [search, setSearch] = useState("");
   const [wilaya, setWilaya] = useState("");
-
   const [stats, setStats] = useState({
     total_offres: 0,
     total_entreprises: 0,
@@ -29,15 +39,10 @@ const Home = () => {
           api.get("jobs/stats/public/"),
           jobsService.getAllJobs({}, 1),
         ]);
-
         setConstants(constantsData);
         setStats(statsData.data);
-
-        if (jobsData.results) {
-          setRecentJobs(jobsData.results.slice(0, 3));
-        }
+        if (jobsData.results) setRecentJobs(jobsData.results.slice(0, 3));
       } catch (error) {
-        // 🛑 Remplacement de console.error par reportError
         reportError("ECHEC_CHARGEMENT_ACCUEIL", error);
       } finally {
         setLoading(false);
@@ -51,267 +56,324 @@ const Home = () => {
     const queryParams = new URLSearchParams();
     if (search) queryParams.append("search", search);
     if (wilaya) queryParams.append("wilaya", wilaya);
-
     navigate(`/offres?${queryParams.toString()}`);
   };
 
   return (
-    <div className="bg-white font-sans overflow-x-hidden">
-      {/* ========================================= */}
-      {/* SECTION 1 : HERO & RECHERCHE              */}
-      {/* ========================================= */}
-      <section className="relative pt-20 pb-32 px-4 bg-gradient-to-b from-blue-50 to-white">
-        <div className="max-w-6xl mx-auto text-center space-y-6 relative z-10">
-          <h1 className="text-6xl md:text-7xl font-black text-blue-700 tracking-tighter mb-2">
-            TAFTECH
+    <div className="bg-slate-50 font-sans overflow-x-hidden">
+      {/* HERO */}
+      <section className="relative pt-24 pb-28 px-4 bg-white border-b border-slate-100">
+        <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full mb-2">
+            <Sparkles size={13} className="text-indigo-600" />
+            <span className="text-xs font-semibold text-indigo-700">
+              Matching IA · Plateforme algérienne
+            </span>
+          </div>
+
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight leading-tight">
+            Trouvez votre prochain{" "}
+            <span className="text-indigo-600">talent</span> ou votre prochaine{" "}
+            <span className="text-indigo-600">opportunité</span>
           </h1>
-          <p className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Connecter les talents aux opportunités
-          </p>
-          <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto pb-8">
-            Des milliers d'opportunités n'attendent que vous en Algérie. Lancez
-            votre carrière ou trouvez le candidat idéal dès aujourd'hui.
+
+          <p className="text-base text-slate-500 max-w-xl mx-auto">
+            TafTech connecte les entreprises algériennes aux profils qualifiés
+            grâce à un moteur de matching par intelligence artificielle.
           </p>
 
-          {/* LA BARRE DE RECHERCHE */}
+          {/* BARRE DE RECHERCHE */}
           <form
             onSubmit={handleInitialSearch}
-            className="w-full max-w-4xl mx-auto bg-white p-4 md:p-3 rounded-full shadow-2xl flex flex-col md:flex-row gap-3 border border-gray-100"
+            className="w-full max-w-3xl mx-auto mt-8 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col md:flex-row gap-0 overflow-hidden"
           >
-            <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-3 md:py-0 border border-transparent focus-within:border-blue-500 transition">
-              <span className="text-xl mr-3">🔍</span>
+            <div className="flex-1 flex items-center px-4 py-3 border-b md:border-b-0 md:border-r border-slate-200">
+              <Search size={18} className="text-slate-400 mr-3 flex-shrink-0" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Métier, mot-clé, entreprise..."
-                className="w-full bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
+                placeholder="Métier, compétence, entreprise..."
+                className="w-full bg-transparent outline-none text-sm font-medium text-slate-700 placeholder-slate-400"
               />
             </div>
-
-            <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-1 md:py-0 border border-transparent focus-within:border-blue-500 transition relative">
-              <span className="text-xl mr-3 z-10">📍</span>
+            <div className="flex-1 flex items-center px-4 py-1 border-b md:border-b-0 md:border-r border-slate-200">
+              <MapPin size={18} className="text-slate-400 mr-2 flex-shrink-0" />
               <Select
                 options={constants.wilayas}
-                onChange={(selectedOption) =>
-                  setWilaya(selectedOption ? selectedOption.value : "")
-                }
+                onChange={(opt) => setWilaya(opt ? opt.value : "")}
                 value={
                   constants.wilayas.find((w) => w.value === wilaya) || null
                 }
-                placeholder="Wilaya (ex: Alger...)"
+                placeholder="Wilaya..."
                 isClearable
-                className="w-full font-bold text-gray-700"
+                className="w-full text-sm"
                 styles={{
                   control: (base) => ({
                     ...base,
                     border: 0,
                     boxShadow: "none",
                     backgroundColor: "transparent",
-                    cursor: "text",
+                    minHeight: "36px",
+                    cursor: "pointer",
                   }),
                   menu: (base) => ({
                     ...base,
-                    zIndex: 50,
-                    borderRadius: "1rem",
-                    overflow: "hidden",
+                    zIndex: 9999,
+                    borderRadius: "0.5rem",
+                    marginTop: "8px",
                   }),
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                 }}
+                menuPortalTarget={document.body}
               />
             </div>
-
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-black px-10 py-4 rounded-full transition-transform hover:scale-105 shadow-lg z-10 w-full md:w-auto"
+              className="px-6 py-3 bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               Rechercher
             </button>
           </form>
 
-          {/* LES BOUTONS D'APPEL À L'ACTION */}
-          <div className="flex flex-col md:flex-row gap-4 justify-center items-center pt-12">
-            <Link
-              to="/register"
-              className="w-full md:w-auto bg-gray-900 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 hover:bg-black transition-all"
-            >
-              👨‍💻 JE SUIS CANDIDAT
-            </Link>
-            <Link
-              to="/register-entreprise"
-              className="w-full md:w-auto bg-white text-blue-600 border-2 border-blue-600 px-8 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 hover:bg-blue-50 transition-all"
-            >
-              🏢 JE SUIS EMPLOYEUR
-            </Link>
-          </div>
+          {/* CTA — masqué si connecté */}
+          {!isLogged && (
+            <div className="flex flex-col md:flex-row gap-3 justify-center items-center pt-6">
+              <Link
+                to="/register"
+                className="w-full md:w-auto px-6 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors shadow-sm"
+              >
+                Je cherche un emploi
+              </Link>
+              <Link
+                to="/register-entreprise"
+                className="w-full md:w-auto px-6 py-2.5 bg-white text-indigo-600 border border-indigo-200 text-sm font-semibold rounded-lg hover:bg-indigo-50 transition-colors"
+              >
+                Je recrute
+              </Link>
+            </div>
+          )}
+
+          {/* CTA connecté */}
+          {isLogged && role === "CANDIDAT" && (
+            <div className="flex flex-col md:flex-row gap-3 justify-center items-center pt-6">
+              <Link
+                to="/profil"
+                className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Compléter mon profil
+              </Link>
+              <Link
+                to="/mes-candidatures"
+                className="w-full md:w-auto px-6 py-2.5 bg-white text-slate-700 border border-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Mes candidatures
+              </Link>
+            </div>
+          )}
+
+          {isLogged && role === "RECRUTEUR" && (
+            <div className="flex flex-col md:flex-row gap-3 justify-center items-center pt-6">
+              <Link
+                to="/creer-offre"
+                className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Publier une offre
+              </Link>
+              <Link
+                to="/dashboard"
+                className="w-full md:w-auto px-6 py-2.5 bg-white text-slate-700 border border-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Tableau de bord
+              </Link>
+            </div>
+          )}
         </div>
       </section>
-
-      {/* ========================================= */}
-      {/* SECTION 2 : STATISTIQUES EN TEMPS RÉEL    */}
-      {/* ========================================= */}
-      <section className="py-16 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-blue-400">
-          <div className="py-4 md:py-0">
-            <p className="text-5xl font-black mb-2">
-              {loading ? "..." : stats.total_candidats}
-            </p>
-            <p className="text-sm font-bold tracking-widest text-blue-200 uppercase">
-              Talents Inscrits
-            </p>
-          </div>
-          <div className="py-4 md:py-0 border-l border-blue-400 md:border-l-0">
-            <p className="text-5xl font-black mb-2">
-              {loading ? "..." : stats.total_entreprises}
-            </p>
-            <p className="text-sm font-bold tracking-widest text-blue-200 uppercase">
-              Entreprises Partenaires
-            </p>
-          </div>
-          <div className="py-4 md:py-0 border-t md:border-t-0 border-blue-400">
-            <p className="text-5xl font-black mb-2">
-              {loading ? "..." : stats.total_offres}
-            </p>
-            <p className="text-sm font-bold tracking-widest text-blue-200 uppercase">
-              Offres à pourvoir
-            </p>
-          </div>
-          <div className="py-4 md:py-0 border-t border-l md:border-t-0 border-blue-400">
-            <p className="text-5xl font-black mb-2 text-green-300">
-              {loading ? "..." : stats.total_recrutements || 0}
-            </p>
-            <p className="text-sm font-bold tracking-widest text-blue-200 uppercase">
-              Recrutements Réalisés
-            </p>
-          </div>
+      {/* STATS */}
+      <section className="py-12 bg-indigo-600">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          {[
+            {
+              label: "Talents inscrits",
+              value: stats.total_candidats,
+              icon: Users,
+            },
+            {
+              label: "Entreprises partenaires",
+              value: stats.total_entreprises,
+              icon: Building2,
+            },
+            {
+              label: "Offres à pourvoir",
+              value: stats.total_offres,
+              icon: Briefcase,
+            },
+            {
+              label: "Recrutements réalisés",
+              value: stats.total_recrutements || 0,
+              icon: Sparkles,
+            },
+          ].map(({ label, value }) => (
+            <div key={label} className="py-4">
+              <p className="text-3xl font-bold text-white tabular-nums mb-1">
+                {loading ? "—" : value}
+              </p>
+              <p className="text-xs font-medium text-indigo-200 uppercase tracking-wide">
+                {label}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
-
-      {/* ========================================= */}
-      {/* SECTION 3 : DERNIÈRES OFFRES              */}
-      {/* ========================================= */}
-      <section className="py-24 bg-gray-50 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-end mb-12">
+      {/* DERNIÈRES OFFRES */}
+      <section className="py-20 bg-slate-50 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-end mb-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
-                Dernières Offres
+              <h2 className="text-xl font-bold text-slate-900">
+                Dernières offres
               </h2>
-              <p className="text-gray-500 font-medium">
-                Découvrez les opportunités récemment publiées.
+              <p className="text-sm text-slate-500 mt-1">
+                Opportunités récemment publiées.
               </p>
             </div>
             <Link
               to="/offres"
-              className="hidden md:block text-blue-600 font-black hover:underline"
+              className="text-sm font-semibold text-indigo-600 hover:underline hidden md:block"
             >
-              Voir tout ➔
+              Voir tout →
             </Link>
           </div>
 
           {loading ? (
-            <div className="text-center py-10 font-bold text-blue-600 animate-pulse">
-              Chargement des offres...
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {recentJobs.map((job) => (
                 <div
                   key={job.id}
-                  className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all flex flex-col justify-between h-full"
+                  className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-md mb-4 inline-block">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full mb-3">
+                      <Sparkles size={10} />
                       Nouveau
                     </span>
-                    <h3 className="text-xl font-black text-gray-900 mb-2 line-clamp-2">
+                    <h3 className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
                       {job.titre}
                     </h3>
-                    <p className="text-sm font-bold text-gray-500 mb-6">
-                      🏢{" "}
-                      {job.entreprise?.nom_entreprise || "Entreprise Anonyme"}
+                    <p className="text-xs text-slate-500 mb-3">
+                      {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
                     </p>
-
-                    <div className="flex flex-wrap gap-2 mb-8">
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-black uppercase px-2 py-1 rounded">
-                        📍 {job.wilaya.split(" - ")[0]}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                        <MapPin size={10} />
+                        {job.wilaya?.split(" - ")[1] || job.wilaya}
                       </span>
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-black uppercase px-2 py-1 rounded">
-                        💼 {job.experience_requise}
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                        <Briefcase size={10} />
+                        {job.experience_requise}
                       </span>
                     </div>
                   </div>
                   <Link
                     to={`/jobs/${job.id}`}
-                    className="block text-center w-full py-3 bg-gray-50 hover:bg-blue-600 hover:text-white text-gray-900 font-black rounded-xl transition-colors text-sm"
+                    className="block text-center w-full py-2 bg-slate-50 hover:bg-indigo-600 hover:text-white text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200 hover:border-indigo-600"
                   >
-                    Découvrir
+                    Voir l'offre
                   </Link>
                 </div>
               ))}
             </div>
           )}
-          <div className="mt-8 text-center md:hidden">
+
+          <div className="mt-6 text-center md:hidden">
             <Link
               to="/offres"
-              className="text-blue-600 font-black hover:underline"
+              className="text-sm font-semibold text-indigo-600 hover:underline"
             >
-              Voir tout ➔
+              Voir tout →
             </Link>
           </div>
         </div>
       </section>
-
-      {/* ========================================= */}
-      {/* SECTION 4 : PRÉSENTATION TAFTECH          */}
-      {/* ========================================= */}
-      <section className="py-24 bg-white px-4 border-t border-gray-100">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
-          <span className="text-5xl block mb-6">🚀</span>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900">
-            Pourquoi choisir TafTech ?
-          </h2>
-          <p className="text-lg text-gray-600 font-medium leading-relaxed">
-            TafTech est la nouvelle plateforme de recrutement intelligente en
-            Algérie. Notre mission est de simplifier la rencontre entre les
-            entreprises à la recherche de profils qualifiés et les talents en
-            quête de nouveaux défis professionnels. Grâce à notre moteur de
-            matching par Intelligence Artificielle, nous mettons en avant les CV
-            les plus pertinents pour chaque poste.
-          </p>
-        </div>
-      </section>
-
-      {/* ========================================= */}
-      {/* SECTION 5 : CONTACT                       */}
-      {/* ========================================= */}
-      <section className="py-20 bg-gray-900 text-white px-4">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-3xl font-black">
-            Besoin d'aide ou d'informations ?
-          </h2>
-          <p className="text-gray-400 font-medium">
-            Notre équipe est à votre disposition pour vous accompagner dans vos
-            recrutements ou votre recherche d'emploi.
-          </p>
-
-          <div className="flex flex-col md:flex-row gap-6 justify-center items-center pt-6">
-            <div className="bg-gray-800 p-6 rounded-2xl w-full md:w-64 border border-gray-700">
-              <span className="text-2xl block mb-2">✉️</span>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">
-                Email
-              </p>
-              <p className="font-black text-sm">contact@taftech.dz</p>
-            </div>
-            <div className="bg-gray-800 p-6 rounded-2xl w-full md:w-64 border border-gray-700">
-              <span className="text-2xl block mb-2">📞</span>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">
-                Téléphone
-              </p>
-              <p className="font-black text-sm">+213 (0) 555 12 34 56</p>
-            </div>
+      {/* POURQUOI TAFTECH */}
+      <section className="py-20 bg-white px-4 border-t border-slate-100">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
+              Pourquoi TafTech ?
+            </h2>
+            <p className="text-sm text-slate-500">
+              La plateforme de recrutement intelligente en Algérie.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Sparkles,
+                title: "Matching IA",
+                desc: "Notre algorithme analyse les profils et les offres pour proposer les candidatures les plus pertinentes.",
+                color: "bg-indigo-50 text-indigo-600",
+              },
+              {
+                icon: Users,
+                title: "Base de talents",
+                desc: "Accédez à une CVthèque qualifiée de profils algériens dans tous les secteurs d'activité.",
+                color: "bg-amber-50 text-amber-600",
+              },
+              {
+                icon: Building2,
+                title: "Fait pour l'Algérie",
+                desc: "Conçu pour le marché local, conforme aux réglementations et adapté aux réalités du terrain.",
+                color: "bg-emerald-50 text-emerald-600",
+              },
+            ].map(({ title, desc, color }) => (
+              <div
+                key={title}
+                className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+              >
+                <div
+                  className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-4`}
+                ></div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">
+                  {title}
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+      {/* CONTACT */}
+      <section className="py-16 bg-slate-900 px-4">
+        <div className="max-w-3xl mx-auto text-center space-y-6">
+          <h2 className="text-lg font-bold text-white">Une question ?</h2>
+          <p className="text-sm text-slate-400">
+            Notre équipe est disponible pour vous accompagner.
+          </p>
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center pt-2">
+            <div className="bg-slate-800 px-6 py-4 rounded-xl border border-slate-700 text-center">
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">
+                Email
+              </p>
+              <p className="text-sm font-semibold text-white">
+                taftech963@gmail.com
+              </p>
+            </div>
+            <div className="bg-slate-800 px-6 py-4 rounded-xl border border-slate-700 text-center">
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">
+                Localisation
+              </p>
+              <p className="text-sm font-semibold text-white">Oran, Algérie</p>
+            </div>
+          </div>
+        </div>
+      </section>{" "}
     </div>
   );
 };

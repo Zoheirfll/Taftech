@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
-import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie ajouté
+import { reportError } from "../../utils/errorReporter";
+import { Search, Download } from "lucide-react";
+
+const getBadgeStyle = (statut) => {
+  const styles = {
+    RECUE: "bg-amber-50 text-amber-700 border-amber-200",
+    EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
+    ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
+    RETENU: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    REFUSE: "bg-red-50 text-red-700 border-red-200",
+  };
+  return styles[statut] || "bg-slate-100 text-slate-700";
+};
 
 const AdminCandidatures = () => {
   const [candidatures, setCandidatures] = useState([]);
@@ -15,10 +27,9 @@ const AdminCandidatures = () => {
     try {
       const data = await jobsService.getAdminCandidatures(currentPage, search);
       setCandidatures(data.results);
-      setTotalPages(Math.ceil(data.count / 10)); // 10 est le page_size défini dans Django
+      setTotalPages(Math.ceil(data.count / 10));
     } catch (err) {
-      toast.error("Erreur lors du chargement des candidatures.");
-      // 🛑 Remplacement de console.error par reportError
+      toast.error("Erreur lors du chargement.");
       reportError("ECHEC_CHARGEMENT_CANDIDATURES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -27,123 +38,106 @@ const AdminCandidatures = () => {
 
   useEffect(() => {
     fetchCandidatures(page, searchTerm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page]); // eslint-disable-line
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setPage(1); // On revient à la première page lors d'une nouvelle recherche
+    setPage(1);
     fetchCandidatures(1, searchTerm);
   };
 
-  // 👇 FONCTION POUR L'EXPORT EXCEL SÉCURISÉ 👇
   const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier en cours...");
+    const toastId = toast.loading("Génération du fichier...");
     try {
       const blob = await jobsService.exportCandidatures();
-
-      // Magie Javascript pour forcer le téléchargement du fichier reçu
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "candidatures_taftech.csv"); // Nom du fichier
+      link.setAttribute("download", "candidatures_taftech.csv");
       document.body.appendChild(link);
       link.click();
-
-      // Nettoyage
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-
       toast.success("Téléchargement réussi !");
     } catch (err) {
       toast.error("Erreur lors de l'exportation.");
-      // 🛑 Remplacement de console.error par reportError
       reportError("ECHEC_EXPORT_EXCEL_CANDIDATURES", err);
     } finally {
       toast.dismiss(toastId);
     }
   };
 
-  const getBadgeStyle = (statut) => {
-    const styles = {
-      RECUE: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
-      ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
-      RETENU: "bg-green-100 text-green-800 border-green-300",
-      REFUSE: "bg-red-50 text-red-700 border-red-200",
-    };
-    return styles[statut] || "bg-gray-100 text-gray-800";
-  };
-
   return (
-    <div className="space-y-6 font-sans animate-fadeIn">
+    <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-            Candidatures Globales
+          <h1 className="text-2xl font-bold text-slate-900">
+            Candidatures globales
           </h1>
-          <p className="text-gray-500 font-bold mt-1 text-sm">
-            Vue d'ensemble de tous les recrutements de la plateforme.
+          <p className="text-sm text-slate-500 mt-0.5">
+            Vue d'ensemble de tous les recrutements.
           </p>
         </div>
-
-        {/* 👇 LE BOUTON EXCEL SÉCURISÉ 👇 */}
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 bg-green-600 text-white font-black px-6 py-3 rounded-2xl hover:bg-green-700 hover:-translate-y-1 transition-all shadow-md"
+          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
         >
-          📊 EXPORTER EN EXCEL
+          <Download size={15} /> Exporter CSV
         </button>
       </div>
 
-      {/* Barre de recherche */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+      <div className="bg-white border border-slate-200 rounded-xl p-4">
         <form onSubmit={handleSearch} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Rechercher un candidat, une offre, une entreprise..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-gray-50 border border-gray-200 text-sm font-bold rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all"
-          />
+          <div className="relative flex-1">
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Candidat, offre, entreprise..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+            />
+          </div>
           <button
             type="submit"
-            className="bg-blue-600 text-white font-black px-6 py-3 rounded-xl hover:bg-blue-700 transition-all"
+            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            🔍 Chercher
+            Chercher
           </button>
         </form>
       </div>
 
-      {/* Tableau des candidatures */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="bg-gray-50 text-left text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                <th className="p-4">Date & ID</th>
-                <th className="p-4">Candidat</th>
-                <th className="p-4">Offre & Entreprise</th>
-                <th className="p-4 text-center">Score IA</th>
-                <th className="p-4 text-center">Note Entretien</th>
-                <th className="p-4 text-center">Statut</th>
+              <tr className="bg-slate-50 border-b border-slate-100 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                <th className="px-4 py-3 text-left">Date & ID</th>
+                <th className="px-4 py-3 text-left">Candidat</th>
+                <th className="px-4 py-3 text-left">Offre & Entreprise</th>
+                <th className="px-4 py-3 text-center">Score IA</th>
+                <th className="px-4 py-3 text-center">Note entretien</th>
+                <th className="px-4 py-3 text-center">Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td
                     colSpan="6"
-                    className="p-8 text-center text-blue-600 font-bold animate-pulse"
+                    className="py-12 text-center text-sm font-medium text-indigo-600 animate-pulse"
                   >
-                    Chargement des données...
+                    Chargement...
                   </td>
                 </tr>
               ) : candidatures.length === 0 ? (
                 <tr>
                   <td
                     colSpan="6"
-                    className="p-8 text-center text-gray-400 font-bold italic"
+                    className="py-12 text-center text-sm text-slate-400 italic"
                   >
                     Aucune candidature trouvée.
                   </td>
@@ -152,63 +146,57 @@ const AdminCandidatures = () => {
                 candidatures.map((cand) => (
                   <tr
                     key={cand.id}
-                    className="hover:bg-blue-50/30 transition-colors"
+                    className="hover:bg-slate-50 transition-colors"
                   >
-                    <td className="p-4 align-middle">
-                      <p className="text-xs font-black text-gray-900">
+                    <td className="px-4 py-3">
+                      <p className="text-xs font-semibold text-slate-900">
                         {new Date(cand.date_postulation).toLocaleDateString(
                           "fr-FR",
                         )}
                       </p>
-                      <p className="text-[10px] text-gray-400 font-bold">
-                        ID: #{cand.id}
-                      </p>
+                      <p className="text-[10px] text-slate-400">#{cand.id}</p>
                     </td>
-                    <td className="p-4 align-middle">
-                      <p className="text-sm font-black text-gray-900 uppercase">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-slate-900">
                         {cand.candidat
                           ? `${cand.candidat.last_name} ${cand.candidat.first_name}`
                           : `${cand.nom_rapide} ${cand.prenom_rapide}`}
                       </p>
-                      <p className="text-xs text-blue-600 font-bold">
-                        {cand.est_rapide
-                          ? "⚡ Rapide (Sans compte)"
-                          : "Compte TafTech"}
+                      <p className="text-xs text-indigo-600 font-medium">
+                        {cand.est_rapide ? "⚡ Rapide" : "Compte TafTech"}
                       </p>
                     </td>
-                    <td className="p-4 align-middle">
-                      <p className="text-sm font-black text-gray-900 truncate max-w-[250px]">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">
                         {cand.offre_titre}
                       </p>
-                      <p className="text-xs text-gray-500 font-bold">
-                        🏢 {cand.entreprise_nom}
+                      <p className="text-xs text-slate-500">
+                        {cand.entreprise_nom}
                       </p>
                     </td>
-                    <td className="p-4 align-middle text-center">
+                    <td className="px-4 py-3 text-center">
                       {cand.est_rapide ? (
-                        <span className="text-[10px] text-gray-400 font-bold">
-                          N/A
-                        </span>
+                        <span className="text-xs text-slate-400">N/A</span>
                       ) : (
-                        <span className="text-sm font-black text-gray-800">
+                        <span className="text-sm font-semibold text-slate-800">
                           {cand.score_matching}%
                         </span>
                       )}
                     </td>
-                    <td className="p-4 align-middle text-center">
+                    <td className="px-4 py-3 text-center">
                       {cand.note_globale ? (
-                        <span className="bg-purple-100 text-purple-800 border border-purple-200 px-3 py-1 rounded-lg text-xs font-black">
+                        <span className="px-2.5 py-1 bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold rounded-full">
                           ⭐ {cand.note_globale}/20
                         </span>
                       ) : (
-                        <span className="text-[10px] text-gray-400 font-bold italic">
+                        <span className="text-xs text-slate-400 italic">
                           Non évalué
                         </span>
                       )}
                     </td>
-                    <td className="p-4 align-middle text-center">
+                    <td className="px-4 py-3 text-center">
                       <span
-                        className={`text-[10px] font-black px-3 py-1.5 rounded-lg border ${getBadgeStyle(cand.statut)}`}
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(cand.statut)}`}
                       >
                         {cand.statut.replace("_", " ")}
                       </span>
@@ -219,26 +207,24 @@ const AdminCandidatures = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 flex justify-center gap-2 bg-gray-50">
+          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-lg disabled:opacity-50 text-sm hover:bg-gray-100"
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
             >
-              Précédent
+              ← Précédent
             </button>
-            <span className="px-4 py-2 text-sm font-black text-gray-800">
-              Page {page} sur {totalPages}
+            <span className="text-xs font-medium text-slate-600">
+              Page {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-lg disabled:opacity-50 text-sm hover:bg-gray-100"
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
             >
-              Suivant
+              Suivant →
             </button>
           </div>
         )}

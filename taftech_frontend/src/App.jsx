@@ -23,11 +23,12 @@ import OffresParRegion from "./Pages/OffresParRegion";
 import OffresParSecteur from "./Pages/OffresParSecteur";
 
 // Pages Recruteur
-import CreateEntreprise from "./Pages/CreateEntreprise";
 import CreateJob from "./Pages/CreateJob";
 import DashboardRecruteur from "./Pages/DashboardRecruteur";
 import GestionOffre from "./Pages/GestionOffre";
 import CVTheque from "./Pages/CVTheque";
+import CandidaturesSpontanees from "./pages/CandidaturesSpontanees";
+import Questionnaires from "./Pages/Questionnaires";
 
 // Pages Candidat
 import ProfilCandidat from "./Pages/ProfilCandidat";
@@ -45,6 +46,8 @@ import AdminOffres from "./Pages/Admin/AdminOffres";
 import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
 import AdminUsers from "./Pages/Admin/AdminUsers";
 import AdminBroadcast from "./Pages/admin/AdminBroadcast";
+import ParametresRecruteur from "./Pages/ParametresRecruteur";
+import AdminMetiers from "./Pages/Admin/AdminMetiers";
 
 // 🛑 LE MUR DE SILENCE 🛑
 // On neutralise la console uniquement si on est en production
@@ -94,11 +97,15 @@ function App() {
               <Route path="/entreprise/:id" element={<EntreprisePublic />} />
 
               {/* ROUTES RECRUTEUR */}
-              <Route path="/creer-entreprise" element={<CreateEntreprise />} />
               <Route path="/creer-offre" element={<CreateJob />} />
               <Route path="/dashboard" element={<DashboardRecruteur />} />
               <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
               <Route path="/cvtheque" element={<CVTheque />} />
+              <Route
+                path="/candidatures-spontanees"
+                element={<CandidaturesSpontanees />}
+              />
+              <Route path="/questionnaires" element={<Questionnaires />} />
 
               {/* ESPACE CANDIDAT (Layout partagé) */}
               <Route element={<CandidatLayout />}>
@@ -109,13 +116,14 @@ function App() {
                   path="/jobs/:id/postuler"
                   element={<ReviewCandidature />}
                 />
-                <Route path="/parametres" element={<Settings />} />
+                <Route path="/parametres/candidat" element={<Settings />} />
                 <Route path="/alertes" element={<AlertesEmploi />} />
                 <Route
                   path="/offres-sauvegardees"
                   element={<OffresSauvegardees />}
                 />
               </Route>
+              <Route path="/parametres" element={<ParametresRecruteur />} />
 
               {/* ZONE ADMINISTRATION */}
               <Route path="/admin-taftech" element={<AdminLayout />}>
@@ -126,6 +134,11 @@ function App() {
                 <Route path="utilisateurs" element={<AdminUsers />} />
                 <Route path="broadcast" element={<AdminBroadcast />} />
                 <Route path="candidatures" element={<AdminCandidatures />} />
+
+                <Route
+                  path="/admin-taftech/metiers"
+                  element={<AdminMetiers />}
+                />
               </Route>
             </Routes>
           </main>

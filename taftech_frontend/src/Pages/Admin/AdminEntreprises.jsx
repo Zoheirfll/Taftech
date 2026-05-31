@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
-import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie
+import { reportError } from "../../utils/errorReporter";
+import { Search, Download, X } from "lucide-react";
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntreprise, setSelectedEntreprise] = useState(null);
-
-  // --- RECHERCHE ET PAGINATION ---
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Stabilisation de la fonction avec useCallback
   const chargerEntreprises = useCallback(async () => {
     setLoading(true);
     try {
@@ -24,42 +22,39 @@ const AdminEntreprises = () => {
       setEntreprises(data.results || []);
       setTotalPages(Math.ceil(data.count / 5) || 1);
     } catch (err) {
-      toast.error(err.message || "Erreur de chargement des entreprises.");
-      // 🛑 Télémétrie ajoutée
+      toast.error("Erreur de chargement.");
       reportError("ECHEC_CHARGEMENT_ENTREPRISES_ADMIN", err);
     } finally {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
 
-  // Déclenchement automatique de la recherche (Debounce 300ms)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      chargerEntreprises();
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
+    const delay = setTimeout(() => chargerEntreprises(), 300);
+    return () => clearTimeout(delay);
   }, [chargerEntreprises]);
 
   const handleToggleApprobation = async (id, statutActuel) => {
-    const action = statutActuel ? "suspendre" : "approuver";
-    if (window.confirm(`Voulez-vous vraiment ${action} cette entreprise ?`)) {
+    if (
+      window.confirm(
+        `Voulez-vous vraiment ${statutActuel ? "suspendre" : "approuver"} cette entreprise ?`,
+      )
+    ) {
       try {
         await jobsService.moderateEntreprise(id, {
           est_approuvee: !statutActuel,
         });
         chargerEntreprises();
-        toast.success(`Statut mis à jour avec succès !`);
+        toast.success("Statut mis à jour !");
       } catch (err) {
-        toast.error("Erreur lors de la modification du statut.");
-        // 🛑 Télémétrie ajoutée
+        toast.error("Erreur lors de la modification.");
         reportError("ECHEC_MODERATION_ENTREPRISE", err);
       }
     }
   };
 
-  // 👇 FONCTION D'EXPORT 👇
   const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier en cours...");
+    const toastId = toast.loading("Génération du fichier...");
     try {
       const blob = await jobsService.exportEntreprises();
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -73,116 +68,142 @@ const AdminEntreprises = () => {
       toast.success("Téléchargement réussi !");
     } catch (err) {
       toast.error("Erreur lors de l'exportation.");
-      // 🛑 Télémétrie ajoutée
       reportError("ECHEC_EXPORT_EXCEL_ENTREPRISES", err);
     } finally {
       toast.dismiss(toastId);
     }
   };
 
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* HEADER + BARRE DE RECHERCHE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
-          Validation des Entreprises
-        </h2>
+  const Pagination = () =>
+    totalPages > 1 ? (
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-100">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1 || loading}
+          className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+        >
+          ← Précédent
+        </button>
+        <span className="text-xs font-medium text-slate-600">
+          Page {currentPage} / {totalPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages || loading}
+          className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+        >
+          Suivant →
+        </button>
+      </div>
+    ) : null;
 
-        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
-          {/* 👇 BOUTON EXCEL 👇 */}
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Validation des entreprises
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Approuvez ou suspendez les entreprises inscrites.
+          </p>
+        </div>
+        <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={handleExport}
-            className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 text-white font-black px-6 py-3 rounded-[1.5rem] hover:bg-green-700 hover:-translate-y-1 transition-all shadow-md text-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
           >
-            📊 EXPORTER EXCEL
+            <Download size={15} /> Exporter
           </button>
-
-          <div className="relative group w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
             <input
               type="text"
               placeholder="Rechercher par nom ou RC..."
-              className="w-full md:w-80 p-4 pl-12 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset à la page 1 si on change la recherche
+                setCurrentPage(1);
               }}
             />
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
-              🔍
-            </span>
           </div>
         </div>
       </div>
 
-      {/* TABLEAU DES RÉSULTATS */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr className="text-[10px] text-gray-400 uppercase font-black tracking-widest">
-              <th className="p-6">Entreprise & RC</th>
-              <th className="p-6">Contact Responsable</th>
-              <th className="p-6">Statut</th>
-              <th className="p-6 text-right">Actions</th>
+          <thead className="bg-slate-50 border-b border-slate-100">
+            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+              <th className="px-5 py-3">Entreprise</th>
+              <th className="px-5 py-3">Contact</th>
+              <th className="px-5 py-3">Statut</th>
+              <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100">
             {loading && entreprises.length === 0 ? (
               <tr>
                 <td
                   colSpan="4"
-                  className="p-20 text-center font-black text-blue-600 animate-pulse uppercase text-xs tracking-tighter"
+                  className="py-12 text-center text-sm text-indigo-600 animate-pulse font-medium"
                 >
-                  Synchronisation en cours...
+                  Chargement...
                 </td>
               </tr>
             ) : (
               entreprises.map((ent) => (
-                <tr key={ent.id} className="hover:bg-gray-50/50 transition">
-                  <td className="p-6">
-                    <p className="font-black text-gray-900 text-lg">
+                <tr
+                  key={ent.id}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="px-5 py-4">
+                    <p className="text-sm font-semibold text-slate-900">
                       {ent.nom_entreprise}
                     </p>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase">
-                      Secteur: {ent.secteur_activite}
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {ent.secteur_activite}
                     </p>
-                    <p className="text-[10px] text-gray-400 font-mono mt-1">
+                    <p className="text-xs font-mono text-slate-400 mt-0.5">
                       RC: {ent.registre_commerce}
                     </p>
                   </td>
-                  <td className="p-6">
-                    <p className="font-bold text-sm text-gray-800">
+                  <td className="px-5 py-4">
+                    <p className="text-sm font-medium text-slate-800">
                       {ent.last_name} {ent.first_name}
                     </p>
-                    <p className="text-xs text-blue-600 mt-1 font-medium">
-                      ✉️ {ent.email}
+                    <p className="text-xs text-indigo-600 mt-0.5">
+                      {ent.email}
                     </p>
                   </td>
-                  <td className="p-6">
+                  <td className="px-5 py-4">
                     {ent.est_approuvee ? (
-                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                        ✓ VÉRIFIÉE
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold rounded-full">
+                        ✓ Vérifiée
                       </span>
                     ) : (
-                      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                        ⏳ EN ATTENTE
+                      <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full">
+                        ⏳ En attente
                       </span>
                     )}
                   </td>
-                  <td className="p-6 text-right space-x-2">
+                  <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
                     <button
                       onClick={() => setSelectedEntreprise(ent)}
-                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl font-black text-[10px] transition"
+                      className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
                     >
-                      VOIR
+                      Voir
                     </button>
                     <button
                       onClick={() =>
                         handleToggleApprobation(ent.id, ent.est_approuvee)
                       }
-                      className={`px-4 py-2 rounded-xl font-black text-[10px] transition ${ent.est_approuvee ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-600 text-white shadow-md hover:bg-green-700"}`}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${ent.est_approuvee ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
                     >
-                      {ent.est_approuvee ? "BLOQUER" : "APPROUVER"}
+                      {ent.est_approuvee ? "Bloquer" : "Approuver"}
                     </button>
                   </td>
                 </tr>
@@ -190,90 +211,63 @@ const AdminEntreprises = () => {
             )}
           </tbody>
         </table>
+        <Pagination />
       </div>
 
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 py-4">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || loading}
-            className="px-6 py-2 font-black text-xs rounded-xl bg-white border border-gray-200 text-gray-700 disabled:opacity-30 transition"
-          >
-            ← PRÉCÉDENT
-          </button>
-
-          <span className="font-black text-xs text-blue-600 bg-blue-50 px-4 py-2 rounded-lg uppercase tracking-widest">
-            Page {currentPage} / {totalPages}
-          </span>
-
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages || loading}
-            className="px-6 py-2 font-black text-xs rounded-xl bg-white border border-gray-200 text-gray-700 disabled:opacity-30 transition"
-          >
-            SUIVANT →
-          </button>
-        </div>
-      )}
-
-      {/* --- MODAL DE DÉTAILS --- */}
       {selectedEntreprise && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-2xl w-full shadow-2xl animate-slideUp">
-            <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-7 max-w-xl w-full shadow-2xl">
+            <div className="flex justify-between items-start mb-5 pb-4 border-b border-slate-100">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 uppercase">
+                <h2 className="text-lg font-bold text-slate-900">
                   {selectedEntreprise.nom_entreprise}
                 </h2>
-                <p className="text-blue-600 font-bold text-sm">
-                  📍 Siège : {selectedEntreprise.wilaya_siege}{" "}
+                <p className="text-sm text-indigo-600 mt-0.5">
+                  📍 {selectedEntreprise.wilaya_siege}
                   {selectedEntreprise.commune_siege
-                    ? `(${selectedEntreprise.commune_siege})`
+                    ? ` · ${selectedEntreprise.commune_siege}`
                     : ""}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedEntreprise(null)}
-                className="text-gray-400 hover:text-red-500 text-2xl font-black transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
-                  Informations Légales
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Informations légales
                 </p>
-                <p className="font-black text-gray-800 font-mono bg-white border border-gray-200 p-2 rounded-lg text-xs">
+                <p className="text-xs font-mono text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded">
                   RC: {selectedEntreprise.registre_commerce}
                 </p>
-                <p className="font-bold mt-2 text-xs text-gray-600 uppercase">
-                  Secteur : {selectedEntreprise.secteur_activite}
+                <p className="text-xs font-medium text-slate-600 mt-2">
+                  {selectedEntreprise.secteur_activite}
                 </p>
               </div>
-              <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
-                  Contact Recruteur
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Contact recruteur
                 </p>
-                <p className="font-black text-gray-800 text-sm">
+                <p className="text-sm font-semibold text-slate-900">
                   {selectedEntreprise.last_name} {selectedEntreprise.first_name}
                 </p>
-                <p className="text-xs mt-1 font-bold text-blue-600">
-                  📧 {selectedEntreprise.email}
+                <p className="text-xs text-indigo-600 mt-1">
+                  {selectedEntreprise.email}
                 </p>
-                <p className="text-xs mt-1 font-bold text-gray-500">
-                  📞 {selectedEntreprise.telephone}
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedEntreprise.telephone}
                 </p>
               </div>
             </div>
-
             <div>
-              <h3 className="font-black text-gray-400 uppercase text-[10px] tracking-widest mb-3">
-                Présentation de l'entreprise
-              </h3>
-              <p className="text-sm bg-gray-50 p-6 rounded-2xl border border-gray-100 text-gray-700 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Présentation
+              </p>
+              <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 leading-relaxed max-h-36 overflow-y-auto whitespace-pre-line">
                 {selectedEntreprise.description ||
                   "Aucune présentation fournie."}
               </p>

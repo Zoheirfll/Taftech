@@ -6,10 +6,18 @@ from .views import ExperienceAPIView, ExperienceDetailAPIView, FormationAPIView,
 from .views import PublicStatsAPIView
 # 👇 IMPORT DES 5 NOUVELLES VUES 👇
 from .views import OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView, AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView, ParametresNotificationsAPIView, EntrepriseDetailAPIView
-from .views import PostulerRapideAPIView, NotificationListAPIView, MarkNotificationReadAPIView
+from .views import PostulerRapideAPIView, NotificationListAPIView, MarkNotificationReadAPIView, Top5CandidatsAPIView
 from .views import OffresRecommandeesAPIView # <-- Ajoute ça dans tes imports
 from .views import AdminBroadcastEmailAPIView, CVThequeView, EvaluerCandidatureAPIView, AdminCandidaturesListAPIView, ExportCandidaturesCSVAPIView
 from .views import ExportEntreprisesCSVAPIView, ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView, GenererBulletinPDFAPIView
+from .views import ParserCVAPIView
+from .views import ToggleFavoriCVAPIView
+from .views import UpdateOffreRecruteurAPIView
+from .views import ParametresRecruteurAPIView
+from .views import EnvoyerCandidatureSpontaneeAPIView, ListeCandidaturesSpontaneesAPIView, MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView, QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView, AdminMarcheAPIView, MetierReferentielAPIView, MetierReferentielAdminAPIView
+
+
+
 
 
 
@@ -50,6 +58,7 @@ urlpatterns = [
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderate'),
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast-email'),
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures-list'),
+    path('admin/marche/', AdminMarcheAPIView.as_view()),
     # URL pour la page publique d'une entreprise
     path('entreprises/<int:entreprise_id>/', EntrepriseDetailAPIView.as_view(), name='entreprise-detail-public'),
     
@@ -92,4 +101,18 @@ urlpatterns = [
     path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='admin-export-offres'),
     path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='admin-export-utilisateurs'),
     path('candidatures/<int:candidature_id>/bulletin/', GenererBulletinPDFAPIView.as_view(), name='generer-bulletin'),
+    path('jobs/<int:offre_id>/top5/', Top5CandidatsAPIView.as_view(), name='offre-top5'),
+    path('parser-cv/', ParserCVAPIView.as_view(), name='parser-cv'),
+    path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-toggle-favori'),
+    path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre-recruteur'),
+    path('parametres/recruteur/', ParametresRecruteurAPIView.as_view(), name='parametres-recruteur'),
+    path('entreprises/<int:entreprise_id>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view()),
+path('dashboard/candidatures-spontanees/', ListeCandidaturesSpontaneesAPIView.as_view()),
+path('dashboard/candidatures-spontanees/<int:pk>/lire/', MarquerSpontaneeLueAPIView.as_view()),
+path('dashboard/candidatures-spontanees/<int:pk>/supprimer/', SupprimerSpontaneeAPIView.as_view()),
+path('questionnaires/', QuestionnaireListCreateAPIView.as_view()),
+path('questionnaires/<int:pk>/', QuestionnaireDetailAPIView.as_view()),
+path('metiers/', MetierReferentielAPIView.as_view()),
+path('admin/metiers/', MetierReferentielAdminAPIView.as_view()),
+path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view()),
 ]

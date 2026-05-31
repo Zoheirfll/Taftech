@@ -100,7 +100,28 @@ export const jobsService = {
 
   updateProfilEntreprise: async (dataModifiee) => {
     try {
-      const response = await api.put("jobs/entreprise/update/", dataModifiee);
+      // Détection : si on a un fichier logo, on passe en multipart
+      const hasFile = dataModifiee.logo instanceof File;
+
+      let payload = dataModifiee;
+      let config = {};
+
+      if (hasFile) {
+        const formData = new FormData();
+        Object.keys(dataModifiee).forEach((key) => {
+          if (dataModifiee[key] !== null && dataModifiee[key] !== undefined) {
+            formData.append(key, dataModifiee[key]);
+          }
+        });
+        payload = formData;
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      }
+
+      const response = await api.put(
+        "jobs/entreprise/update/",
+        payload,
+        config,
+      );
       return response.data;
     } catch (err) {
       reportError("ECHEC_UPDATE_PROFIL_ENTREPRISE_API", err);
@@ -375,15 +396,28 @@ export const jobsService = {
       specialite: filters.specialite || "",
       diplome: filters.diplome || "",
       experience: filters.experience || "",
+      avec_photo: filters.avec_photo ? "true" : "",
+      avec_cv: filters.avec_cv ? "true" : "",
+      inscrit_recent: filters.inscrit_recent ? "true" : "",
+      favoris: filters.favoris ? "true" : "",
+      tri: filters.tri || "recents",
       page: page,
     }).toString();
-
     try {
       const response = await api.get(`jobs/employeur/cvtheque/?${queryParams}`);
       return response.data;
     } catch (error) {
-      reportError("ECHEC_SEARCH_CVTHEQUE_API", error); // ✅ Télémétrie ajoutée
+      reportError("ECHEC_SEARCH_CVTHEQUE_API", error);
       throw error.response?.data || error;
+    }
+  },
+  toggleFavoriCV: async (candidatId) => {
+    try {
+      const response = await api.post(`jobs/cvtheque/favoris/${candidatId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_TOGGLE_FAVORI_CV_API", err);
+      throw err;
     }
   },
 
@@ -472,6 +506,202 @@ export const jobsService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_TELECHARGER_BULLETIN_API", err);
+      throw err;
+    }
+  },
+  // Parser un CV pour pré-remplir le profil
+  parserCV: async (cvFile) => {
+    try {
+      const formData = new FormData();
+      formData.append("cv", cvFile);
+      const response = await api.post("jobs/parser-cv/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000, // 30 secondes (Groq est rapide)
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_PARSER_CV_API", err);
+      throw err;
+    }
+  },
+  modifierOffre: async (offreId, data) => {
+    try {
+      const response = await api.patch(
+        `jobs/dashboard/offres/${offreId}/modifier/`,
+        data,
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_MODIFIER_OFFRE_API", err);
+      throw err;
+    }
+  },
+  getParametresRecruteur: async () => {
+    try {
+      const response = await api.get("jobs/parametres/recruteur/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_PARAMETRES_RECRUTEUR", err);
+      throw err;
+    }
+  },
+
+  updateParametresRecruteur: async (data) => {
+    try {
+      const response = await api.put("jobs/parametres/recruteur/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_PARAMETRES_RECRUTEUR", err);
+      throw err;
+    }
+  },
+  envoyerCandidatureSpontanee: async (entrepriseId, formData) => {
+    try {
+      const response = await api.post(
+        `jobs/entreprises/${entrepriseId}/candidature-spontanee/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CANDIDATURE_SPONTANEE", err);
+      throw err;
+    }
+  },
+
+  getCandidaturesSpontanees: async () => {
+    try {
+      const response = await api.get("jobs/dashboard/candidatures-spontanees/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_CANDIDATURES_SPONTANEES", err);
+      throw err;
+    }
+  },
+
+  marquerSpontaneeCommentLue: async (id) => {
+    try {
+      const response = await api.patch(
+        `jobs/dashboard/candidatures-spontanees/${id}/lire/`,
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_MARK_SPONTANEE_LUE", err);
+      throw err;
+    }
+  },
+  supprimerCandidatureSpontanee: async (id) => {
+    try {
+      const response = await api.delete(
+        `jobs/dashboard/candidatures-spontanees/${id}/supprimer/`,
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_SPONTANEE", err);
+      throw err;
+    }
+  },
+  getQuestionnaires: async () => {
+    try {
+      const response = await api.get("jobs/questionnaires/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUESTIONNAIRES", err);
+      throw err;
+    }
+  },
+
+  createQuestionnaire: async (data) => {
+    try {
+      const response = await api.post("jobs/questionnaires/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_QUESTIONNAIRE", err);
+      throw err;
+    }
+  },
+
+  updateQuestionnaire: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/questionnaires/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_QUESTIONNAIRE", err);
+      throw err;
+    }
+  },
+
+  deleteQuestionnaire: async (id) => {
+    try {
+      const response = await api.delete(`jobs/questionnaires/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_QUESTIONNAIRE", err);
+      throw err;
+    }
+  },
+  getAdminMarche: async () => {
+    try {
+      const response = await api.get("jobs/admin/marche/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_MARCHE", err);
+      throw err;
+    }
+  },
+  getMetiers: async (search = "", secteur = "") => {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      if (secteur) params.append("secteur", secteur);
+      const response = await api.get(`jobs/metiers/?${params.toString()}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_METIERS", err);
+      throw err;
+    }
+  },
+
+  getAdminMetiers: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(
+        `jobs/admin/metiers/?search=${search}&page=${page}`,
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_METIERS", err);
+      throw err;
+    }
+  },
+
+  createMetier: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/metiers/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_METIER", err);
+      throw err;
+    }
+  },
+
+  updateMetier: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/metiers/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_METIER", err);
+      throw err;
+    }
+  },
+
+  deleteMetier: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/metiers/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_METIER", err);
       throw err;
     }
   },

@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
-import { reportError } from "../../utils/errorReporter"; // 👇 Import de la télémétrie
+import { reportError } from "../../utils/errorReporter";
+import { Bell, Trash2, Plus, X } from "lucide-react";
 
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
   const [wilayas, setWilayas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [newAlerte, setNewAlerte] = useState({
     mots_cles: "",
     wilaya: "",
     frequence: "QUOTIDIENNE",
   });
 
-  // 1. CHARGER LES ALERTES ET LES CONSTANTES (WILAYAS) AU DÉMARRAGE
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -23,45 +22,36 @@ const AlertesEmploi = () => {
           jobsService.getAlertes(),
           jobsService.getConstants(),
         ]);
-
         setAlertes(alertesData);
         setWilayas(constantsData.wilayas);
       } catch (error) {
-        toast.error("Erreur lors du chargement des données.");
-        reportError("ECHEC_CHARGEMENT_ALERTES", error); // 🛑 Télémétrie
+        toast.error("Erreur lors du chargement.");
+        reportError("ECHEC_CHARGEMENT_ALERTES", error);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
-  // 2. CRÉER UNE ALERTE
   const handleCreateAlerte = async (e) => {
     e.preventDefault();
-    if (!newAlerte.mots_cles.trim()) {
+    if (!newAlerte.mots_cles.trim())
       return toast.error("Les mots-clés sont obligatoires.");
-    }
-
     const payload = { ...newAlerte };
-    if (!payload.wilaya) {
-      delete payload.wilaya;
-    }
-
+    if (!payload.wilaya) delete payload.wilaya;
     try {
       const response = await jobsService.createAlerte(payload);
       setAlertes([response, ...alertes]);
-      toast.success("Alerte créée avec succès !");
+      toast.success("Alerte créée !");
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
     } catch (error) {
-      reportError("ECHEC_CREATION_ALERTE", error); // 🛑 Télémétrie
-      toast.error("Impossible de créer l'alerte. Vérifiez vos champs.");
+      reportError("ECHEC_CREATION_ALERTE", error);
+      toast.error("Impossible de créer l'alerte.");
     }
   };
 
-  // 3. ACTIVER/DÉSACTIVER UNE ALERTE
   const handleToggle = async (alerteId, currentState) => {
     setAlertes(
       alertes.map((a) =>
@@ -78,191 +68,127 @@ const AlertesEmploi = () => {
         ),
       );
       toast.error("Erreur lors de la modification.");
-      reportError("ECHEC_TOGGLE_ALERTE", error); // 🛑 Télémétrie
+      reportError("ECHEC_TOGGLE_ALERTE", error);
     }
   };
 
-  // 4. SUPPRIMER UNE ALERTE
   const handleDelete = async (alerteId) => {
-    if (!window.confirm("Voulez-vous vraiment supprimer cette alerte ?"))
-      return;
+    if (!window.confirm("Supprimer cette alerte ?")) return;
     try {
       await jobsService.deleteAlerte(alerteId);
       setAlertes(alertes.filter((a) => a.id !== alerteId));
       toast.success("Alerte supprimée.");
     } catch (error) {
       toast.error("Erreur lors de la suppression.");
-      reportError("ECHEC_SUPPRESSION_ALERTE", error); // 🛑 Télémétrie
+      reportError("ECHEC_SUPPRESSION_ALERTE", error);
     }
   };
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
-  }
+
+  const inputClass =
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
-    <div className="max-w-4xl space-y-8 animate-fadeIn relative">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-          Alertes d'emploi
-        </h1>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Alertes d'emploi</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Recevez les offres qui correspondent à vos critères.
+          </p>
+        </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-md flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
         >
-          <span>+</span> Créer une alerte
+          <Plus size={16} /> Créer une alerte
         </button>
       </div>
 
-      <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 min-h-[300px]">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {alertes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-12">
-            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-2">
-              <svg
-                className="w-10 h-10 text-blue-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                ></path>
-              </svg>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
+              <Bell size={24} className="text-indigo-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900">
-              Aucune alerte enregistrée
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">
+              Aucune alerte
             </h3>
-            <p className="text-gray-500 max-w-md">
-              Créez une alerte pour recevoir par email les dernières
-              opportunités d'emploi qui correspondent à vos critères.
+            <p className="text-xs text-slate-500 max-w-xs">
+              Créez une alerte pour recevoir les opportunités correspondant à
+              vos critères.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="divide-y divide-slate-100">
             {alertes.map((alerte) => (
               <div
                 key={alerte.id}
-                className="flex justify-between items-center p-6 border border-gray-100 rounded-2xl hover:shadow-md transition-shadow"
+                className="flex justify-between items-center px-5 py-4"
               >
                 <div>
-                  <h4 className="font-bold text-lg text-gray-900">
+                  <p className="text-sm font-semibold text-slate-900">
                     {alerte.mots_cles}
-                  </h4>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {alerte.wilaya ? alerte.wilaya : "Toute l'Algérie"} •{" "}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {alerte.wilaya || "Toute l'Algérie"} ·{" "}
                     {alerte.frequence === "QUOTIDIENNE"
-                      ? "Chaque jour"
-                      : "Chaque semaine"}
+                      ? "Quotidienne"
+                      : "Hebdomadaire"}
                   </p>
                 </div>
-                <div className="flex items-center gap-6">
-                  <label
-                    className="relative inline-flex items-center cursor-pointer"
-                    title={alerte.est_active ? "Désactiver" : "Activer"}
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => handleToggle(alerte.id, alerte.est_active)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? "bg-indigo-600" : "bg-slate-200"}`}
                   >
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={alerte.est_active}
-                      onChange={() =>
-                        handleToggle(alerte.id, alerte.est_active)
-                      }
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                  </label>
-
+                  </button>
                   <button
                     onClick={() => handleDelete(alerte.id)}
-                    className="text-red-400 hover:text-red-600 transition-colors"
-                    title="Supprimer"
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      ></path>
-                    </svg>
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </div>
 
-      {/* POPUP MODALE */}
+      {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-slideUp">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    ></path>
-                  </svg>
-                </div>
-                <h3 className="text-xl font-black text-gray-900">
-                  Créer une alerte
-                </h3>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                Créer une alerte
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-700 transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
+                <X size={18} />
               </button>
             </div>
-
-            <form onSubmit={handleCreateAlerte} className="p-8 space-y-6">
-              <p className="text-sm text-gray-500 text-center mb-6">
-                Reçois par email les dernières opportunités d'emploi qui
-                correspondent à ta recherche.
-              </p>
-
+            <form onSubmit={handleCreateAlerte} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-                  Mots clés <span className="text-red-500">*</span>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Mots-clés *
                 </label>
                 <input
                   type="text"
                   placeholder="Ex: Développeur React, Comptable..."
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className={inputClass}
                   value={newAlerte.mots_cles}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, mots_cles: e.target.value })
@@ -270,19 +196,18 @@ const AlertesEmploi = () => {
                   required
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-                  Région, Wilaya
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Wilaya
                 </label>
                 <select
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium appearance-none"
+                  className={inputClass}
                   value={newAlerte.wilaya}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, wilaya: e.target.value })
                   }
                 >
-                  <option value="">Toute l'Algérie (Toutes les wilayas)</option>
+                  <option value="">Toute l'Algérie</option>
                   {wilayas.map((w, i) => (
                     <option key={i} value={w.value}>
                       {w.label}
@@ -290,13 +215,12 @@ const AlertesEmploi = () => {
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                   Fréquence
                 </label>
                 <select
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium appearance-none"
+                  className={inputClass}
                   value={newAlerte.frequence}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, frequence: e.target.value })
@@ -306,18 +230,17 @@ const AlertesEmploi = () => {
                   <option value="HEBDOMADAIRE">Hebdomadaire</option>
                 </select>
               </div>
-
-              <div className="flex justify-end gap-4 pt-4 mt-6 border-t border-gray-100">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-3 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   Enregistrer
                 </button>

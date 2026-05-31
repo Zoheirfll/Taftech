@@ -163,6 +163,18 @@ class CookieTokenObtainView(TokenObtainPairView):
             return Response({"detail": str(e)}, status=401)
 
         data = serializer.validated_data
+
+        # Met à jour last_login manuellement
+        # Met à jour last_login manuellement
+        try:
+            from django.utils import timezone
+            email = request.data.get('email') or request.data.get('username')
+            user_obj = User.objects.get(email=email)
+            user_obj.last_login = timezone.now()
+            user_obj.save(update_fields=['last_login'])
+        except Exception:
+            pass
+
         response = Response({"role": data['role']}, status=status.HTTP_200_OK)
 
         response.set_cookie(

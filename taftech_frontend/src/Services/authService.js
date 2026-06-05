@@ -111,4 +111,27 @@ export const authService = {
       throw err;
     }
   },
+  forgotPassword: async (email) => {
+    try {
+      const response = await api.post("accounts/forgot-password/", { email });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_FORGOT_PASSWORD", err);
+      throw err;
+    }
+  },
+
+  resetPassword: async (email, code, nouveau_mdp) => {
+    try {
+      const response = await api.post("accounts/reset-password/", {
+        email,
+        code,
+        nouveau_mdp,
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_RESET_PASSWORD", err);
+      throw err;
+    }
+  },
 };

@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../utils/errorReporter";
 import { selectStyles } from "../theme";
-
 import {
   Users,
   Inbox,
@@ -17,15 +16,12 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronRight,
+  MapPin,
+  Briefcase,
+  Calendar,
+  UserCheck,
+  AlertTriangle,
 } from "lucide-react";
-
-const TAILLES_ENTREPRISE_OPTIONS = [
-  { value: "TPE", label: "1 à 10 employés" },
-  { value: "PE", label: "11 à 50 employés" },
-  { value: "ME", label: "51 à 200 employés" },
-  { value: "GE", label: "201 à 500 employés" },
-  { value: "TGE", label: "Plus de 500 employés" },
-];
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -141,8 +137,33 @@ const DashboardRecruteur = () => {
   const offresCloturees = offres.filter((o) => o.est_cloturee);
   const stats = calculerStatistiques();
 
+  const getOffresFiltrees = () => {
+    const liste = activeTab === "ouvertes" ? offresOuvertes : offresCloturees;
+    if (filtreStatut === "toutes") return liste;
+    return liste.filter((o) => o.statut_moderation === filtreStatut);
+  };
+
+  const getStatutBadge = (offre) => {
+    if (offre.est_cloturee)
+      return { label: "Archivée", cls: "bg-slate-100 text-slate-600" };
+    if (offre.statut_moderation === "EN_ATTENTE")
+      return {
+        label: "En validation",
+        cls: "bg-amber-50 text-amber-700 border border-amber-200",
+      };
+    if (offre.statut_moderation === "REJETEE")
+      return {
+        label: "À corriger",
+        cls: "bg-red-50 text-red-700 border border-red-200",
+      };
+    return {
+      label: "Publiée",
+      cls: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    };
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-5xl mx-auto px-6 py-8">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex items-center gap-4">
@@ -178,23 +199,20 @@ const DashboardRecruteur = () => {
             </div>
           </div>
         </div>
-
         <div className="flex items-center gap-3">
           {entreprise?.est_approuvee ? (
             <>
               <button
                 onClick={() => navigate("/cvtheque")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
               >
-                <Search size={16} />
-                Chercher un CV
+                <Search size={16} /> Chercher un CV
               </button>
               <button
                 onClick={() => navigate("/creer-offre")}
                 className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
               >
-                <Plus size={16} />
-                Publier une offre
+                <Plus size={16} /> Publier une offre
               </button>
             </>
           ) : (
@@ -203,17 +221,17 @@ const DashboardRecruteur = () => {
                 disabled
                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed"
               >
-                <Plus size={16} />
-                Publier une offre
+                <Plus size={16} /> Publier une offre
               </button>
               <p className="text-xs text-amber-600 font-medium mt-1.5">
-                Validation admin requise pour recruter
+                Validation admin requise
               </p>
             </div>
           )}
         </div>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white border border-slate-200 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -264,6 +282,7 @@ const DashboardRecruteur = () => {
           </p>
         </div>
       </div>
+
       {/* ONGLETS */}
       <div className="flex gap-1 border-b border-slate-200 mb-6">
         {[
@@ -281,23 +300,13 @@ const DashboardRecruteur = () => {
         ].map(({ key, label, count }) => (
           <button
             key={key}
-            onClick={() => {
-              setActiveTab(key);
-            }}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === key
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-500 hover:text-slate-900"
-            }`}
+            onClick={() => setActiveTab(key)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === key ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
           >
             {label}
             {count !== null && (
               <span
-                className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                  activeTab === key
-                    ? "bg-indigo-100 text-indigo-700"
-                    : "bg-slate-100 text-slate-600"
-                }`}
+                className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}
               >
                 {count}
               </span>
@@ -305,7 +314,8 @@ const DashboardRecruteur = () => {
           </button>
         ))}
       </div>
-      {/* SOUS-ONGLETS STATUT MODÉRATION */}
+
+      {/* SOUS-ONGLETS */}
       {activeTab === "ouvertes" && (
         <div className="flex gap-1 overflow-x-auto border-b border-slate-100 mb-6 pb-px">
           {[
@@ -335,20 +345,12 @@ const DashboardRecruteur = () => {
             <button
               key={key}
               onClick={() => setFiltreStatut(key)}
-              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${
-                filtreStatut === key
-                  ? "bg-white border border-b-white border-slate-200 text-indigo-600 font-semibold -mb-px"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
+              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${filtreStatut === key ? "bg-white border border-b-white border-slate-200 text-indigo-600 font-semibold -mb-px" : "text-slate-500 hover:text-slate-900"}`}
             >
               {label}
               {count > 0 && (
                 <span
-                  className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                    filtreStatut === key
-                      ? "bg-indigo-100 text-indigo-700"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
+                  className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${filtreStatut === key ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}
                 >
                   {count}
                 </span>
@@ -357,11 +359,11 @@ const DashboardRecruteur = () => {
           ))}
         </div>
       )}
-      {/* CONTENU ONGLETS OFFRES */}
+
+      {/* LISTE DES OFFRES */}
       {(activeTab === "ouvertes" || activeTab === "cloturees") && (
         <>
-          {(activeTab === "ouvertes" ? offresOuvertes : offresCloturees)
-            .length === 0 ? (
+          {getOffresFiltrees().length === 0 ? (
             <div className="bg-white border border-dashed border-slate-200 rounded-xl p-16 text-center">
               <Building2 size={32} className="text-slate-300 mx-auto mb-3" />
               <p className="text-sm font-medium text-slate-900">
@@ -372,108 +374,178 @@ const DashboardRecruteur = () => {
                   onClick={() => navigate("/creer-offre")}
                   className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  <Plus size={16} />
-                  Créer votre première offre
+                  <Plus size={16} /> Créer votre première offre
                 </button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(activeTab === "ouvertes"
-                ? filtreStatut === "toutes"
-                  ? offresOuvertes
-                  : offresOuvertes.filter(
-                      (o) => o.statut_moderation === filtreStatut,
-                    )
-                : offresCloturees
-              ).map((offre) => {
+            <div className="space-y-3">
+              {getOffresFiltrees().map((offre) => {
                 const nbCandidatures = offre.candidatures?.length || 0;
                 const nbNouvelles =
                   offre.candidatures?.filter((c) => c.statut === "RECUE")
                     .length || 0;
-                const statutModeration = offre.statut_moderation;
+                const nbEntretiens =
+                  offre.candidatures?.filter((c) => c.statut === "ENTRETIEN")
+                    .length || 0;
+                const nbRetenus =
+                  offre.candidatures?.filter((c) => c.statut === "RETENU")
+                    .length || 0;
+                const meilleurScore =
+                  offre.candidatures?.length > 0
+                    ? Math.max(
+                        ...offre.candidatures.map(
+                          (c) => parseFloat(c.score_matching) || 0,
+                        ),
+                      )
+                    : null;
+                const badge = getStatutBadge(offre);
 
                 return (
                   <div
                     key={offre.id}
-                    className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all"
+                    className="bg-white border border-slate-200 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden"
                   >
-                    <div
-                      className={`h-1 ${activeTab === "ouvertes" ? "bg-indigo-600" : "bg-slate-300"}`}
-                    />
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <h2 className="text-sm font-semibold text-slate-900 line-clamp-2 flex-1">
-                          {offre.titre}
-                        </h2>
-                        {offre.motif_rejet && (
-                          <div className="mt-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
-                            <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wider mb-1">
-                              Motif de rejet
-                            </p>
-                            <p className="text-xs text-red-600">
-                              {offre.motif_rejet}
-                            </p>
-                          </div>
-                        )}
-                        {statutModeration === "EN_ATTENTE" && (
-                          <span className="flex-shrink-0 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-medium rounded-full border border-amber-200">
-                            En validation
-                          </span>
-                        )}
-                        {statutModeration === "REJETEE" && (
-                          <span className="flex-shrink-0 px-2 py-0.5 bg-red-50 text-red-700 text-[10px] font-medium rounded-full border border-red-200">
-                            À corriger
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400 mb-4">
-                        Publiée le{" "}
-                        {new Date(offre.date_publication).toLocaleDateString(
-                          "fr-FR",
-                        )}
-                      </p>
+                    <div className="flex items-center gap-0">
+                      {/* Barre colorée gauche */}
+                      <div
+                        className={`w-1 self-stretch flex-shrink-0 ${offre.statut_moderation === "REJETEE" ? "bg-red-500" : offre.statut_moderation === "EN_ATTENTE" ? "bg-amber-400" : offre.est_cloturee ? "bg-slate-300" : "bg-indigo-600"}`}
+                      />
 
-                      <div className="flex items-center gap-4 py-3 border-y border-slate-100">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-indigo-600 tabular-nums">
-                            {nbCandidatures}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">
-                            Total
-                          </p>
+                      <div className="flex-1 p-5">
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Infos principales */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h2 className="text-sm font-bold text-slate-900 truncate">
+                                {offre.titre}
+                              </h2>
+                              <span
+                                className={`flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${badge.cls}`}
+                              >
+                                {badge.label}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <MapPin size={11} />{" "}
+                                {offre.wilaya?.split(" - ")[1] || offre.wilaya}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Briefcase size={11} /> {offre.type_contrat}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar size={11} />{" "}
+                                {new Date(
+                                  offre.date_publication,
+                                ).toLocaleDateString("fr-FR")}
+                              </span>
+                              {offre.salaire_propose && (
+                                <span className="text-emerald-600 font-medium">
+                                  {offre.salaire_propose} DA
+                                </span>
+                              )}
+                            </div>
+                            {offre.motif_rejet && (
+                              <div className="mt-2 flex items-start gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
+                                <AlertTriangle
+                                  size={13}
+                                  className="text-red-500 flex-shrink-0 mt-0.5"
+                                />
+                                <p className="text-xs text-red-600">
+                                  {offre.motif_rejet}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Stats candidatures */}
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                              <div className="text-center min-w-[40px]">
+                                <p className="text-xl font-bold text-slate-700 tabular-nums">
+                                  {nbCandidatures}
+                                </p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                  Total
+                                </p>
+                              </div>
+                              {nbNouvelles > 0 && (
+                                <div className="text-center min-w-[40px]">
+                                  <p className="text-xl font-bold text-emerald-600 tabular-nums">
+                                    {nbNouvelles}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                    Nouvelles
+                                  </p>
+                                </div>
+                              )}
+                              {nbEntretiens > 0 && (
+                                <div className="text-center min-w-[40px]">
+                                  <p className="text-xl font-bold text-orange-500 tabular-nums">
+                                    {nbEntretiens}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                    Entretiens
+                                  </p>
+                                </div>
+                              )}
+                              {nbRetenus > 0 && (
+                                <div className="text-center min-w-[40px]">
+                                  <p className="text-xl font-bold text-indigo-600 tabular-nums">
+                                    {nbRetenus}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                    Retenus
+                                  </p>
+                                </div>
+                              )}
+                              {meilleurScore !== null && meilleurScore > 0 && (
+                                <div className="text-center min-w-[48px]">
+                                  <p
+                                    className={`text-xl font-bold tabular-nums ${meilleurScore >= 80 ? "text-emerald-600" : meilleurScore >= 60 ? "text-amber-500" : "text-red-500"}`}
+                                  >
+                                    {meilleurScore}%
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                    Top IA
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bouton action */}
+                            <div className="ml-2">
+                              {offre.statut_moderation === "REJETEE" ? (
+                                <button
+                                  onClick={() =>
+                                    handleOuvrirModification(offre)
+                                  }
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                                >
+                                  Corriger <ChevronRight size={13} />
+                                </button>
+                              ) : offre.statut_moderation === "EN_ATTENTE" ? (
+                                <button
+                                  disabled
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-400 text-xs font-medium rounded-lg cursor-not-allowed"
+                                >
+                                  En attente
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    navigate(`/dashboard/offres/${offre.id}`)
+                                  }
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                                >
+                                  Candidats <ChevronRight size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        {nbNouvelles > 0 && (
-                          <div className="text-center">
-                            <p className="text-2xl font-bold text-emerald-600 tabular-nums">
-                              {nbNouvelles}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">
-                              Nouvelles
-                            </p>
-                          </div>
-                        )}
                       </div>
-
-                      {statutModeration === "REJETEE" ? (
-                        <button
-                          onClick={() => handleOuvrirModification(offre)}
-                          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          Corriger et republier
-                          <ChevronRight size={14} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            navigate(`/dashboard/offres/${offre.id}`)
-                          }
-                          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-black transition-colors"
-                        >
-                          Gérer les candidats
-                          <ChevronRight size={14} />
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
@@ -483,7 +555,7 @@ const DashboardRecruteur = () => {
         </>
       )}
 
-      {/* ONGLET PROFIL ENTREPRISE */}
+      {/* ONGLET PROFIL */}
       {activeTab === "profil" && (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
           <Building2 size={32} className="text-slate-300 mx-auto mb-3" />
@@ -501,7 +573,8 @@ const DashboardRecruteur = () => {
           </button>
         </div>
       )}
-      {/* MODAL MODIFICATION OFFRE */}
+
+      {/* MODAL MODIFICATION */}
       {showModifierModal && offreAModifier && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -521,23 +594,20 @@ const DashboardRecruteur = () => {
                 ✕
               </button>
             </div>
-
-            {/* Motif de rejet */}
             {offreAModifier.motif_rejet && (
               <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
                 <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">
-                  Motif de rejet par TafTech
+                  Motif de rejet
                 </p>
                 <p className="text-sm text-red-600">
                   {offreAModifier.motif_rejet}
                 </p>
               </div>
             )}
-
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Titre du poste *
+                  Titre *
                 </label>
                 <input
                   type="text"
@@ -545,10 +615,9 @@ const DashboardRecruteur = () => {
                   onChange={(e) =>
                     setModifierForm({ ...modifierForm, titre: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
@@ -591,58 +660,26 @@ const DashboardRecruteur = () => {
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Description
-                </label>
-                <textarea
-                  rows="3"
-                  value={modifierForm.description || ""}
-                  onChange={(e) =>
-                    setModifierForm({
-                      ...modifierForm,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Missions
-                </label>
-                <textarea
-                  rows="3"
-                  value={modifierForm.missions || ""}
-                  onChange={(e) =>
-                    setModifierForm({
-                      ...modifierForm,
-                      missions: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Profil recherché
-                </label>
-                <textarea
-                  rows="3"
-                  value={modifierForm.profil_recherche || ""}
-                  onChange={(e) =>
-                    setModifierForm({
-                      ...modifierForm,
-                      profil_recherche: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
-                />
-              </div>
-
+              {["description", "missions", "profil_recherche"].map((field) => (
+                <div key={field}>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                    {field === "profil_recherche"
+                      ? "Profil recherché"
+                      : field.charAt(0).toUpperCase() + field.slice(1)}
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={modifierForm[field] || ""}
+                    onChange={(e) =>
+                      setModifierForm({
+                        ...modifierForm,
+                        [field]: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                  />
+                </div>
+              ))}
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowModifierModal(false)}

@@ -21,6 +21,8 @@ import RegisterRecruteur from "./Pages/RegisterRecruteur";
 import EntreprisePublic from "./Pages/EntreprisePublic";
 import OffresParRegion from "./Pages/OffresParRegion";
 import OffresParSecteur from "./Pages/OffresParSecteur";
+import ForgotPassword from "./Pages/ForgotPassword";
+import ResetPassword from "./Pages/ResetPassword";
 
 // Pages Recruteur
 import CreateJob from "./Pages/CreateJob";
@@ -95,6 +97,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/jobs/:id" element={<JobDetail />} />
               <Route path="/entreprise/:id" element={<EntreprisePublic />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* ROUTES RECRUTEUR */}
               <Route path="/creer-offre" element={<CreateJob />} />

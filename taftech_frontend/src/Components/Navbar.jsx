@@ -127,8 +127,8 @@ const Navbar = () => {
           <Link to="/" className="flex items-center flex-shrink-0">
             <img
               src={logoTafTech}
-              alt="TafTech Logo"
-              className="h-10 w-auto object-contain"
+              alt="TafTech"
+              className="h-20 w-auto object-contain"
             />
           </Link>
           <div className="hidden lg:flex items-center gap-6">

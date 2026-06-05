@@ -82,6 +82,12 @@ const Login = () => {
               S'inscrire
             </Link>
           </p>
+          <Link
+            to="/forgot-password"
+            className="text-xs text-indigo-600 hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
           <p className="text-xs text-slate-500">
             Vous recrutez ?{" "}
             <Link

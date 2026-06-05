@@ -245,3 +245,63 @@ class AdminSystemLogAPIView(APIView):
         logs = SystemErrorLog.objects.all().order_by('-timestamp')
         serializer = SystemErrorLogSerializer(logs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ForgotPasswordAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        if not email:
+            return Response({'error': 'Email obligatoire.'}, status=400)
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Sécurité : ne pas révéler si l'email existe
+            return Response({'message': 'Si cet email existe, un code a été envoyé.'}, status=200)
+        
+        # Générer code 6 chiffres
+        code = str(random.randint(100000, 999999))
+        user.code_verification = code
+        user.save(update_fields=['code_verification'])
+        
+        # Envoyer email
+        try:
+            send_mail(
+                subject="Réinitialisation de votre mot de passe TafTech",
+                message=f"Bonjour {user.first_name},\n\nVotre code de réinitialisation est : {code}\n\nCe code est valable 10 minutes.\n\nL'équipe TafTech.",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Erreur envoi email reset : {e}")
+            return Response({'error': 'Erreur lors de l\'envoi de l\'email.'}, status=500)
+        
+        return Response({'message': 'Si cet email existe, un code a été envoyé.'}, status=200)
+
+
+class ResetPasswordAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        code = request.data.get('code', '').strip()
+        nouveau_mdp = request.data.get('nouveau_mdp', '').strip()
+
+        if not email or not code or not nouveau_mdp:
+            return Response({'error': 'Email, code et nouveau mot de passe obligatoires.'}, status=400)
+
+        if len(nouveau_mdp) < 8:
+            return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
+
+        try:
+            user = User.objects.get(email=email, code_verification=code)
+        except User.DoesNotExist:
+            return Response({'error': 'Code invalide ou expiré.'}, status=400)
+
+        user.set_password(nouveau_mdp)
+        user.code_verification = None
+        user.save()
+
+        return Response({'message': 'Mot de passe réinitialisé avec succès !'}, status=200)

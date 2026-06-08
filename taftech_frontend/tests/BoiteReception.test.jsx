@@ -11,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import BoiteReception from "../src/Pages/BoiteReception";
+import BoiteReception from "../src/Pages/Candidat/BoiteReception";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -57,10 +57,8 @@ describe("📥 UI & Logique - Composant <BoiteReception />", () => {
     );
 
     await waitFor(() => {
-      // On cherche spécifiquement le titre dans la liste (h4)
-      expect(
-        screen.getByRole("heading", { level: 4, name: /Entretien SOMIZ/i }),
-      ).toBeInTheDocument();
+      // The title is rendered as a <p> element, not a heading
+      expect(screen.getByText(/Entretien SOMIZ/i)).toBeInTheDocument();
       expect(screen.getByText("1 non lus")).toBeInTheDocument();
     });
   });
@@ -75,20 +73,14 @@ describe("📥 UI & Logique - Composant <BoiteReception />", () => {
     );
 
     // Attendre le chargement
-    const messageTitle = await screen.findByRole("heading", {
-      level: 4,
-      name: /Entretien SOMIZ/i,
-    });
+    const messageTitle = await screen.findByText(/Entretien SOMIZ/i);
 
     // Clic sur l'élément de la liste
     fireEvent.click(messageTitle);
 
-    // ✅ SOLUTION AU DOUBLON : On vérifie que le message est présent dans le panneau de détail (conteneur prose)
+    // The detail panel shows message in a <p> with whitespace-pre-line class
     await waitFor(() => {
-      const detailContainer = document.querySelector(".prose");
-      expect(
-        within(detailContainer).getByText(/Nous retenons votre CV/i),
-      ).toBeInTheDocument();
+      expect(screen.getAllByText(/Nous retenons votre CV/i)[0]).toBeInTheDocument();
       expect(jobsService.markNotificationAsRead).toHaveBeenCalledWith(1);
     });
   });
@@ -107,7 +99,7 @@ describe("📥 UI & Logique - Composant <BoiteReception />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement de vos messages.",
+        "Erreur lors du chargement.",
       );
     });
   });
@@ -123,17 +115,11 @@ describe("📥 UI & Logique - Composant <BoiteReception />", () => {
       </MemoryRouter>,
     );
 
-    const messageTitle = await screen.findByRole("heading", {
-      level: 4,
-      name: /Entretien SOMIZ/i,
-    });
+    const messageTitle = await screen.findByText(/Entretien SOMIZ/i);
     fireEvent.click(messageTitle);
 
     await waitFor(() => {
-      const detailContainer = document.querySelector(".prose");
-      expect(
-        within(detailContainer).getByText(/Nous retenons votre CV/i),
-      ).toBeInTheDocument();
+      expect(screen.getAllByText(/Nous retenons votre CV/i)[0]).toBeInTheDocument();
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_MARK_READ_NOTIF",
         expect.anything(),

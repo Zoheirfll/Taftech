@@ -11,7 +11,7 @@ import {
   act,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import JobsList from "../src/Pages/JobsList";
+import JobsList from "../src/Pages/Public/JobsList";
 import { jobsService } from "../src/Services/jobsService";
 import api from "../src/api/axiosConfig";
 import * as reporter from "../src/utils/errorReporter";
@@ -123,13 +123,13 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
 
     await waitFor(() => {
       // Recommandations IA (Carrousel)
-      expect(screen.getByText("🔥 Recommandées pour vous")).toBeInTheDocument();
+      expect(screen.getByText("Recommandées pour vous")).toBeInTheDocument();
       expect(screen.getByText("Tech Lead Frontend")).toBeInTheDocument();
       expect(screen.getByText("⭐ Top Match")).toBeInTheDocument();
 
       // Liste des offres
       expect(
-        screen.getByText("1 Offres d'emploi trouvées"),
+        screen.getByText(/offre.*trouvée/i),
       ).toBeInTheDocument();
       expect(
         screen.getByText("Développeur Fullstack React/Node"),
@@ -157,7 +157,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
     jobsService.getAllJobs.mockClear();
 
     // On tape dans la barre de recherche
-    const inputRecherche = screen.getByPlaceholderText("Ex: Développeur...");
+    const inputRecherche = screen.getByPlaceholderText("Développeur, comptable...");
     fireEvent.change(inputRecherche, { target: { value: "React" } });
 
     // Immédiatement après la frappe, l'API ne doit PAS avoir été appelée
@@ -198,7 +198,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
       vi.advanceTimersByTime(500);
     });
 
-    const btnFavori = await screen.findByTitle("Sauvegarder l'offre");
+    const btnFavori = await screen.findByTitle("Sauvegarder");
     fireEvent.click(btnFavori);
 
     await waitFor(() => {
@@ -254,12 +254,12 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
       vi.advanceTimersByTime(500);
     });
 
-    const btnFavori = await screen.findByTitle("Sauvegarder l'offre");
+    const btnFavori = await screen.findByTitle("Sauvegarder");
     fireEvent.click(btnFavori);
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez vous connecter pour sauvegarder une offre.",
+        "Connectez-vous pour sauvegarder une offre.",
       );
       expect(api.post).not.toHaveBeenCalled();
     });
@@ -306,11 +306,11 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Aucune offre trouvée 😕")).toBeInTheDocument();
+      expect(screen.getByText("Aucune offre trouvée")).toBeInTheDocument();
     });
 
     // Clic sur "Effacer les filtres"
-    fireEvent.click(screen.getByText("Effacer les filtres"));
+    fireEvent.click(screen.getByText("Réinitialiser les filtres"));
     expect(mockSetSearchParams).toHaveBeenCalledWith({});
   });
 

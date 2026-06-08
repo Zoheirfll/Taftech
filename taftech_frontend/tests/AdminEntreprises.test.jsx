@@ -14,7 +14,6 @@ import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
-// MOCKS
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getAdminEntreprises: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("../src/Services/jobsService", () => ({
     exportEntreprises: vi.fn(),
   },
 }));
-
 vi.mock("react-hot-toast", () => ({
   default: {
     loading: vi.fn(() => "toast-id"),
@@ -33,7 +31,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const mockData = {
-  count: 6, // Plus de 5 pour forcer la pagination
+  count: 6,
   results: [
     {
       id: 1,
@@ -55,11 +53,10 @@ const mockData = {
 describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockImplementation(() => true); // Accepte les popups
+    vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
     window.URL.revokeObjectURL = vi.fn();
   });
-
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -67,92 +64,75 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
 
   it("🟢 Happy Path 1 : Chargement et affichage des données", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
-
     render(<AdminEntreprises />);
-
     await waitFor(() => {
       expect(screen.getByText("SOMIZ Arzew")).toBeInTheDocument();
-      expect(screen.getByText(/EN ATTENTE/i)).toBeInTheDocument();
+      expect(screen.getByText(/En attente/i)).toBeInTheDocument();
     });
   });
 
   it("🟢 Happy Path 2 : Ouverture de la modale de détails", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     render(<AdminEntreprises />);
-
-    await waitFor(() => screen.getByText("VOIR"));
-
-    // Ouvre la modale
-    fireEvent.click(screen.getByText("VOIR"));
-
+    await waitFor(() => screen.getByText("Voir"));
+    fireEvent.click(screen.getByText("Voir"));
     expect(screen.getByText(/Filiale Sonatrach/i)).toBeInTheDocument();
-    expect(screen.getByText(/📍 Siège : Oran/i)).toBeInTheDocument();
-
-    // Ferme la modale
-    fireEvent.click(screen.getByText("✕"));
-    expect(screen.queryByText(/Filiale Sonatrach/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/📍 Oran/i)).toBeInTheDocument();
+    // Ferme la modale — le bouton close a la classe p-1.5
+    const allButtons = screen.getAllByRole("button");
+    const closeBtn = allButtons.find(
+      (btn) => btn.className.includes("p-1.5") && btn.querySelector("svg"),
+    );
+    fireEvent.click(closeBtn);
+    await waitFor(() => {
+      expect(screen.queryByText(/Filiale Sonatrach/i)).not.toBeInTheDocument();
+    });
   });
 
   it("🟢 Happy Path 3 : Modération d'entreprise (Approbation)", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     jobsService.moderateEntreprise.mockResolvedValue({});
-
     render(<AdminEntreprises />);
-
-    await waitFor(() => screen.getByText("APPROUVER"));
-
-    fireEvent.click(screen.getByText("APPROUVER"));
-
+    await waitFor(() => screen.getByText("Approuver"));
+    fireEvent.click(screen.getByText("Approuver"));
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalled();
       expect(jobsService.moderateEntreprise).toHaveBeenCalledWith(1, {
         est_approuvee: true,
       });
-      expect(toast.success).toHaveBeenCalledWith(
-        "Statut mis à jour avec succès !",
-      );
+      expect(toast.success).toHaveBeenCalledWith("Statut mis à jour !");
     });
   });
-  it("🟢 Happy Path 4 : Export Excel réussi", async () => {
+
+  it("🟢 Happy Path 4 : Export réussi", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     jobsService.exportEntreprises.mockResolvedValue(new Blob(["data,test"]));
-
     render(<AdminEntreprises />);
-
-    // ✅ CORRECTION : On utilise / /i pour ignorer l'émoji 📊
-    await waitFor(() => screen.getByText(/EXPORTER EXCEL/i));
-
-    // ✅ CORRECTION
-    fireEvent.click(screen.getByText(/EXPORTER EXCEL/i));
-
+    await waitFor(() => screen.getByText(/Exporter/i));
+    fireEvent.click(screen.getByText(/Exporter/i));
     await waitFor(() => {
       expect(jobsService.exportEntreprises).toHaveBeenCalled();
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
     });
   });
+
   it("🟡 Edge Case : Annulation de la modération", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
-    window.confirm.mockImplementationOnce(() => false); // L'admin annule
-
+    window.confirm.mockImplementationOnce(() => false);
     render(<AdminEntreprises />);
-
-    await waitFor(() => screen.getByText("APPROUVER"));
-    fireEvent.click(screen.getByText("APPROUVER"));
-
+    await waitFor(() => screen.getByText("Approuver"));
+    fireEvent.click(screen.getByText("Approuver"));
     expect(window.confirm).toHaveBeenCalled();
     expect(jobsService.moderateEntreprise).not.toHaveBeenCalled();
   });
 
-  it("🔴 Edge Case : Crash lors de l'export Excel déclenche reportError", async () => {
+  it("🔴 Edge Case : Crash lors de l'export déclenche reportError", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     jobsService.exportEntreprises.mockRejectedValue(new Error("API Down"));
-
     render(<AdminEntreprises />);
-
-    const exportBtn = screen.getByText(/EXPORTER EXCEL/i);
-    fireEvent.click(exportBtn);
-
+    await waitFor(() => screen.getByText(/Exporter/i));
+    fireEvent.click(screen.getByText(/Exporter/i));
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_EXPORT_EXCEL_ENTREPRISES",

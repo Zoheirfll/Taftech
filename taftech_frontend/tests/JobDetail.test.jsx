@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import JobDetail from "../src/Pages/JobDetail";
+import JobDetail from "../src/Pages/Public/JobDetail";
 import { jobsService } from "../src/Services/jobsService";
 import { authService } from "../src/Services/authService";
 import * as reporter from "../src/utils/errorReporter";
@@ -103,19 +103,19 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
 
     // 1. Ouvrir le mode TafTech
     fireEvent.click(screen.getByText(/Postuler avec mon profil TafTech/i));
     expect(
-      screen.getByText(/Les recruteurs auront accès à votre CV/i),
+      screen.getByText(/Envoyer ma candidature/i),
     ).toBeInTheDocument();
 
     // 2. Revenir au choix initial
-    fireEvent.click(screen.getByText(/← Changer d'option/i));
+    fireEvent.click(screen.getByText(/Changer d'option/i));
 
     // 3. Ouvrir le mode Rapide
-    fireEvent.click(screen.getByText(/Postulation Rapide \(Sans compte\)/i));
+    fireEvent.click(screen.getByText(/Postulation rapide \(sans compte\)/i));
     // Vérifier qu'un input du form rapide est bien là
     const inputNom = screen
       .getByText("Nom *")
@@ -143,15 +143,16 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
 
     fireEvent.click(screen.getByText(/Postuler avec mon profil TafTech/i));
     fireEvent.click(screen.getByText(/Envoyer ma candidature/i));
 
     await waitFor(() => {
-      expect(jobsService.postuler).toHaveBeenCalledWith("42", {
-        lettre_motivation: "",
-      });
+      expect(jobsService.postuler).toHaveBeenCalledWith(
+        "42",
+        expect.objectContaining({ lettre_motivation: "" }),
+      );
       expect(screen.getByText(/Candidature envoyée/i)).toBeInTheDocument();
     });
   });
@@ -165,8 +166,8 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
-    fireEvent.click(screen.getByText(/Postulation Rapide/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
+    fireEvent.click(screen.getByText(/Postulation rapide \(sans compte\)/i));
 
     fireEvent.change(container.querySelector('input[name="nom_rapide"]'), {
       target: { value: "Doe" },
@@ -185,7 +186,7 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
     const file = new File(["dummy content"], "cv.pdf", {
       type: "application/pdf",
     });
-    const inputFichier = screen.getByTestId("cv-upload-input");
+    const inputFichier = container.querySelector('input[name="cv_rapide"]');
     fireEvent.change(inputFichier, {
       target: { name: "cv_rapide", files: [file] },
     });
@@ -229,14 +230,14 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
         <JobDetail />
       </MemoryRouter>,
     );
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
 
     fireEvent.click(screen.getByText(/Postuler avec mon profil TafTech/i));
     fireEvent.click(screen.getByText(/Envoyer ma candidature/i));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Vous devez être connecté en tant que candidat pour utiliser votre profil TafTech.",
+        "Vous devez être connecté en tant que candidat.",
       );
       expect(mockNavigate).toHaveBeenCalledWith("/login");
       expect(jobsService.postuler).not.toHaveBeenCalled();
@@ -251,8 +252,8 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
-    fireEvent.click(screen.getByText(/Postulation Rapide/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
+    fireEvent.click(screen.getByText(/Postulation rapide \(sans compte\)/i));
 
     fireEvent.submit(container.querySelector("form"));
 
@@ -278,7 +279,7 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
         <JobDetail />
       </MemoryRouter>,
     );
-    await waitFor(() => screen.getByText(/Prêt\(e\) à relever le défi/i));
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
 
     fireEvent.click(screen.getByText(/Postuler avec mon profil TafTech/i));
 

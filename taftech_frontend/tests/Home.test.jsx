@@ -10,12 +10,10 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Home from "../src/Pages/Home";
+import Home from "../src/Pages/Public/Home";
 import { jobsService } from "../src/Services/jobsService";
 import api from "../src/api/axiosConfig";
 import * as reporter from "../src/utils/errorReporter";
-import selectEvent from "react-select-event";
-
 // --- MOCKS ---
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -118,34 +116,25 @@ describe("🏠 UI & Logique - Composant <Home />", () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     api.get.mockResolvedValue(mockStats);
     jobsService.getAllJobs.mockResolvedValue(mockJobs);
-
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>,
     );
-
-    // Attendre la fin du chargement
     await waitFor(() => screen.getByText("1500"));
 
     // Remplir le texte
-    const textInput = screen.getByPlaceholderText(
-      /Métier, mot-clé, entreprise/i,
+    fireEvent.change(
+      screen.getByPlaceholderText(/Métier, compétence, entreprise/i),
+      {
+        target: { value: "React" },
+      },
     );
-    fireEvent.change(textInput, { target: { value: "React" } });
 
-    // Remplir le Select de Wilaya
-    const wilayaSelect = await screen.findByText(/Wilaya \(ex: Alger\.\.\.\)/i);
-    await selectEvent.select(wilayaSelect, "31 - Oran");
+    // Soumettre sans sélectionner la wilaya
+    fireEvent.click(screen.getByRole("button", { name: /Rechercher/i }));
 
-    // Soumettre
-    const btnSubmit = screen.getByRole("button", { name: /Rechercher/i });
-    fireEvent.click(btnSubmit);
-
-    // Vérifier la navigation avec les bons query params
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/offres?search=React&wilaya=31+-+Oran",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/offres?search=React");
   });
 
   // --- 🔴 EDGE CASES (2/2) ---

@@ -70,7 +70,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Aucune alerte enregistrée/i),
+        screen.getByText(/Aucune alerte/i),
       ).toBeInTheDocument();
     });
   });
@@ -101,7 +101,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
         mots_cles: "Designer",
         frequence: "QUOTIDIENNE",
       });
-      expect(toast.success).toHaveBeenCalledWith("Alerte créée avec succès !");
+      expect(toast.success).toHaveBeenCalledWith("Alerte créée !");
       expect(screen.getByText("Designer")).toBeInTheDocument();
     });
   });
@@ -114,10 +114,13 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     render(<AlertesEmploi />);
     await waitFor(() => screen.getByText("Développeur React"));
 
-    const toggleInput = screen.getByRole("checkbox");
-    expect(toggleInput).toBeChecked();
+    // The toggle is a <button>, not a checkbox
+    const toggleBtn = screen.getAllByRole("button").find(
+      (btn) => btn.className && btn.className.includes("rounded-full")
+    );
+    expect(toggleBtn).toBeTruthy();
 
-    fireEvent.click(toggleInput);
+    fireEvent.click(toggleBtn);
 
     await waitFor(() => {
       expect(jobsService.toggleAlerte).toHaveBeenCalledWith(1, false);
@@ -133,7 +136,10 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     render(<AlertesEmploi />);
     await waitFor(() => screen.getByText("Développeur React"));
 
-    const deleteBtn = screen.getByTitle("Supprimer");
+    // The delete button contains a Trash2 icon; target by its position after the toggle
+    const allBtns = screen.getAllByRole("button");
+    // Last button in the alerte row is the delete button
+    const deleteBtn = allBtns.find(btn => btn.className && btn.className.includes("hover:text-red-500"));
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
@@ -157,7 +163,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement des données.",
+        "Erreur lors du chargement.",
       );
     });
   });
@@ -214,15 +220,18 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     render(<AlertesEmploi />);
     await waitFor(() => screen.getByText("Développeur React"));
 
-    const toggleInput = screen.getByRole("checkbox");
-    fireEvent.click(toggleInput);
+    const toggleBtn = screen.getAllByRole("button").find(
+      (btn) => btn.className && btn.className.includes("rounded-full")
+    );
+    fireEvent.click(toggleBtn);
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_TOGGLE_ALERTE",
         expect.anything(),
       );
-      expect(toggleInput).toBeChecked();
+      // After rollback, button returns to active state (indigo background)
+      expect(toggleBtn).toHaveClass("bg-indigo-600");
     });
   });
 
@@ -234,7 +243,8 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     render(<AlertesEmploi />);
     await waitFor(() => screen.getByText("Développeur React"));
 
-    fireEvent.click(screen.getByTitle("Supprimer"));
+    const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
+    fireEvent.click(deleteBtn);
 
     expect(jobsService.deleteAlerte).not.toHaveBeenCalled();
     expect(screen.getByText("Développeur React")).toBeInTheDocument();
@@ -248,7 +258,8 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     render(<AlertesEmploi />);
     await waitFor(() => screen.getByText("Développeur React"));
 
-    fireEvent.click(screen.getByTitle("Supprimer"));
+    const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
+    fireEvent.click(deleteBtn);
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

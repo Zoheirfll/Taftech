@@ -32,7 +32,7 @@ class ApiAdminTest(APITestCase):
     # =======================================================
     def test_admin_approuve_entreprise_success(self):
         """ Happy Path : L'admin valide le registre de commerce """
-        url = reverse('admin-entreprise-moderate', kwargs={'entreprise_id': self.entreprise.id})
+        url = reverse('admin-entreprise-moderer', kwargs={'entreprise_id': self.entreprise.id})
         self.client.force_authenticate(user=self.user_admin)
         
         payload = {"est_approuvee": True}
@@ -44,7 +44,7 @@ class ApiAdminTest(APITestCase):
 
     def test_recruteur_ne_peut_pas_s_auto_approuver(self):
         """ Edge Case (CRITIQUE) : Un recruteur essaie de bypasser la modération """
-        url = reverse('admin-entreprise-moderate', kwargs={'entreprise_id': self.entreprise.id})
+        url = reverse('admin-entreprise-moderer', kwargs={'entreprise_id': self.entreprise.id})
         
         # On authentifie le RECRUTEUR au lieu de l'Admin !
         self.client.force_authenticate(user=self.user_rh)
@@ -61,7 +61,7 @@ class ApiAdminTest(APITestCase):
 
     def test_admin_approuve_offre_success(self):
         """ Happy Path : L'admin met une offre en ligne """
-        url = reverse('admin-offre-moderate', kwargs={'offre_id': self.offre.id})
+        url = reverse('admin-entreprise-moderer', kwargs={'entreprise_id': self.entreprise.id})
         self.client.force_authenticate(user=self.user_admin)
         
         payload = {"statut_moderation": "APPROUVEE"}
@@ -76,7 +76,7 @@ class ApiAdminTest(APITestCase):
     # =======================================================
     def test_admin_export_utilisateurs_csv(self):
         """ Happy Path : L'admin télécharge la base de données CSV """
-        url = reverse('admin-export-utilisateurs')
+        url = reverse('export-utilisateurs')
         self.client.force_authenticate(user=self.user_admin)
         
         response = self.client.get(url)
@@ -89,7 +89,7 @@ class ApiAdminTest(APITestCase):
 
     def test_recruteur_export_csv_interdit(self):
         """ Edge Case : Blocage de fuite de données """
-        url = reverse('admin-export-utilisateurs')
+        url = reverse('export-utilisateurs')
         self.client.force_authenticate(user=self.user_rh) # Un simple recruteur
         
         response = self.client.get(url)

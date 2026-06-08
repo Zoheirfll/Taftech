@@ -23,7 +23,7 @@ class ApiAvancesTest(APITestCase):
     # =======================================================
     def test_ajouter_favori_success(self):
         """ Happy Path : Le candidat A sauvegarde une offre """
-        url = reverse('liste-ajout-sauvegardes')
+        url = reverse('liste-sauvegardes')
         self.client.force_authenticate(user=self.candidat_a)
         
         payload = {"offre": self.offre.id}
@@ -34,7 +34,7 @@ class ApiAvancesTest(APITestCase):
 
     def test_ajouter_favori_doublon_echoue(self):
         """ Edge Case : DRF bloque le double-clic (sauvegarde multiple) """
-        url = reverse('liste-ajout-sauvegardes')
+        url = reverse('liste-sauvegardes')
         self.client.force_authenticate(user=self.candidat_a)
         
         # Première sauvegarde (Succès)
@@ -48,7 +48,7 @@ class ApiAvancesTest(APITestCase):
         """ Edge Case : Le candidat B ne doit pas voir les favoris du candidat A """
         OffreSauvegardee.objects.create(candidat=self.candidat_a, offre=self.offre)
         
-        url = reverse('liste-ajout-sauvegardes')
+        url = reverse('liste-sauvegardes')
         
         # On authentifie le Candidat B
         self.client.force_authenticate(user=self.candidat_b)
@@ -63,7 +63,7 @@ class ApiAvancesTest(APITestCase):
     # =======================================================
     def test_creer_alerte_success(self):
         """ Happy Path : Création d'une alerte emploi """
-        url = reverse('liste-ajout-alertes')
+        url = reverse('liste-alertes')
         self.client.force_authenticate(user=self.candidat_a)
         
         payload = {
@@ -85,7 +85,7 @@ class ApiAvancesTest(APITestCase):
             destinataire=self.candidat_a, titre="Entretien", message="Demain à 9h", lue=False
         )
         
-        url = reverse('notification-read', kwargs={'notif_id': notif.id})
+        url = reverse('notification-lire', kwargs={'notif_id': notif.id})
         self.client.force_authenticate(user=self.candidat_a)
         
         # CORRECTION : Utilisation de PATCH au lieu de POST, pour correspondre à la vue

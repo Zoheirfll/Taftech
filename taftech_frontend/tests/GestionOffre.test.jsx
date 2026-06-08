@@ -11,7 +11,7 @@ import {
   act,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import GestionOffre from "../src/Pages/GestionOffre";
+import GestionOffre from "../src/Pages/Recruteur/GestionOffre/index";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -109,7 +109,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Ingénieur React")).toBeInTheDocument();
-      expect(screen.getByText("Belamri Meriem")).toBeInTheDocument();
+      expect(screen.getAllByText("Belamri Meriem")[0]).toBeInTheDocument();
       expect(screen.getByText("Ouverte")).toBeInTheDocument();
     });
   });
@@ -123,13 +123,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
-
-    const decisionLabel = await screen.findByText("Décision Recrutement");
-    const selectModal = decisionLabel.parentElement.querySelector("select");
+    const selectModal = await screen.findByRole("combobox");
     fireEvent.change(selectModal, { target: { value: "RETENU" } });
 
     await waitFor(() => {
@@ -137,9 +133,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
         statut: "RETENU",
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Statut mis à jour avec succès.",
+        "Statut mis à jour.",
       );
-      expect(screen.getByText(/Télécharger le Bulletin/i)).toBeInTheDocument();
+      expect(screen.getByText(/Télécharger/i)).toBeInTheDocument();
     });
   });
 
@@ -152,13 +148,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
-
-    const decisionLabel = await screen.findByText("Décision Recrutement");
-    const selectModal = decisionLabel.parentElement.querySelector("select");
+    const selectModal = await screen.findByRole("combobox");
     fireEvent.change(selectModal, { target: { value: "ENTRETIEN" } });
 
     await waitFor(() => screen.getByText("Programmer un entretien"));
@@ -172,7 +164,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
     fireEvent.change(dateInput, { target: { value: "2026-06-01" } });
     fireEvent.change(heureInput, { target: { value: "14:30" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /Inviter/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Envoyer l'invitation/i }));
 
     await waitFor(() => {
       expect(jobsService.updateStatutCandidature).toHaveBeenCalledWith(100, {
@@ -181,7 +173,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
         message_entretien: "",
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Entretien programmé et e-mail envoyé !",
+        "Entretien programmé et email envoyé !",
       );
     });
   });
@@ -201,15 +193,18 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
+    // Activer l'onglet Évaluation pour afficher le bouton
+    await act(async () => {
+      fireEvent.click(await screen.findByText("Évaluation"));
+    });
 
-    const btnEval = await screen.findByText("⭐ Évaluer le candidat");
-    fireEvent.click(btnEval);
+    await act(async () => {
+      fireEvent.click(await screen.findByText(/Évaluer ce candidat/i));
+    });
 
-    await waitFor(() => screen.getByText("Évaluation Globale"));
+    await waitFor(() => screen.getByText("Évaluation post-entretien"));
 
     // ✅ SOLUTION MIRACLE : On RE-QUÉRY le DOM après chaque clic pour éviter les nœuds détachés.
     for (let i = 0; i < 4; i++) {
@@ -254,18 +249,16 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const btnDownload = await screen.findByText(/Télécharger le Bulletin/i);
+    const btnDownload = await screen.findByText(/Télécharger/i);
     fireEvent.click(btnDownload);
 
     await waitFor(() => {
       expect(jobsService.telechargerBulletin).toHaveBeenCalledWith(100);
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Bulletin généré avec succès !",
+        "Bulletin généré !",
       );
     });
   });
@@ -313,12 +306,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const decisionLabel = await screen.findByText("Décision Recrutement");
-    const selectModal = decisionLabel.parentElement.querySelector("select");
+    const selectModal = await screen.findByRole("combobox");
     fireEvent.change(selectModal, { target: { value: "RETENU" } });
 
     await waitFor(() => {
@@ -340,21 +330,18 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const decisionLabel = await screen.findByText("Décision Recrutement");
-    const selectModal = decisionLabel.parentElement.querySelector("select");
+    const selectModal = await screen.findByRole("combobox");
     fireEvent.change(selectModal, { target: { value: "ENTRETIEN" } });
 
     await waitFor(() => screen.getByText("Programmer un entretien"));
 
-    fireEvent.click(screen.getByRole("button", { name: /Inviter/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Envoyer l'invitation/i }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez sélectionner une date et une heure.",
+        "Date et heure requises.",
       );
       expect(jobsService.updateStatutCandidature).not.toHaveBeenCalled();
     });
@@ -368,20 +355,24 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Belamri Meriem"));
-    const btnsVoir = screen.getAllByText("👁️ Voir");
-    fireEvent.click(btnsVoir[0]);
+    await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const btnEval = await screen.findByText("⭐ Évaluer le candidat");
-    fireEvent.click(btnEval);
+    // Activer l'onglet Évaluation pour afficher le bouton
+    await act(async () => {
+      fireEvent.click(await screen.findByText("Évaluation"));
+    });
 
-    await waitFor(() => screen.getByText("Évaluation Globale"));
+    await act(async () => {
+      fireEvent.click(await screen.findByText(/Évaluer ce candidat/i));
+    });
+
+    await waitFor(() => screen.getByText("Évaluation post-entretien"));
 
     fireEvent.click(screen.getByRole("button", { name: /Sauvegarder/i }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez remplir toutes les notes sur 5.",
+        "Veuillez remplir toutes les notes.",
       );
       expect(jobsService.evaluerCandidature).not.toHaveBeenCalled();
     });
@@ -398,8 +389,15 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => screen.getByText("Doe John"));
 
-    const btnCorbeille = screen.getByTitle("Supprimer définitivement");
-    fireEvent.click(btnCorbeille);
+    // Ouvrir le détail de "Doe John" (statut REFUSE) pour afficher le bouton de suppression
+    fireEvent.click(screen.getByText("Doe John"));
+    await waitFor(() => {
+      const btnCorbeille = screen.getAllByRole("button").find(
+        btn => btn.className && btn.className.includes("bg-red-50")
+      );
+      expect(btnCorbeille).toBeTruthy();
+      fireEvent.click(btnCorbeille);
+    });
 
     expect(jobsService.deleteCandidature).not.toHaveBeenCalled();
   });

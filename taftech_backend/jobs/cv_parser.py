@@ -12,88 +12,9 @@ import fitz  # pymupdf - pour extraire les images du PDF
 import json
 import os
 from groq import Groq
+from .constants import WILAYAS_MAPPING, DIPLOMES_MAPPING, SPECIALITES_MAPPING
 
 
-# ==========================================
-# CONSTANTES DE MAPPING (alignées sur vos choices Django)
-# ==========================================
-
-# Wilayas algériennes pour détection
-WILAYAS_LIST = [
-    'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Bejaia',
-    'Biskra', 'Béchar', 'Bechar', 'Blida', 'Bouira', 'Tamanrasset', 'Tébessa', 'Tebessa',
-    'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Alger', 'Djelfa', 'Jijel', 'Sétif', 'Setif',
-    'Saïda', 'Saida', 'Skikda', 'Sidi Bel Abbès', 'Sidi Bel Abbes', 'Annaba', 'Guelma',
-    'Constantine', 'Médéa', 'Medea', 'Mostaganem', "M'Sila", 'Msila', 'Mascara',
-    'Ouargla', 'Oran', 'El Bayadh', 'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'Boumerdes',
-    'El Tarf', 'Tindouf', 'Tissemsilt', 'El Oued', 'Khenchela', 'Souk Ahras',
-    'Tipaza', 'Mila', 'Aïn Defla', 'Ain Defla', 'Naâma', 'Naama',
-    'Aïn Témouchent', 'Ain Temouchent', 'Ghardaïa', 'Ghardaia', 'Relizane',
-]
-
-# Mapping Wilaya -> code Django (ex: "Oran" -> "31 - Oran")
-WILAYAS_MAPPING = {
-    'adrar': '01 - Adrar', 'chlef': '02 - Chlef', 'laghouat': '03 - Laghouat',
-    'oum el bouaghi': '04 - Oum El Bouaghi', 'batna': '05 - Batna',
-    'béjaïa': '06 - Béjaïa', 'bejaia': '06 - Béjaïa',
-    'biskra': '07 - Biskra', 'béchar': '08 - Béchar', 'bechar': '08 - Béchar',
-    'blida': '09 - Blida', 'bouira': '10 - Bouira', 'tamanrasset': '11 - Tamanrasset',
-    'tébessa': '12 - Tébessa', 'tebessa': '12 - Tébessa',
-    'tlemcen': '13 - Tlemcen', 'tiaret': '14 - Tiaret', 'tizi ouzou': '15 - Tizi Ouzou',
-    'alger': '16 - Alger', 'djelfa': '17 - Djelfa', 'jijel': '18 - Jijel',
-    'sétif': '19 - Sétif', 'setif': '19 - Sétif',
-    'saïda': '20 - Saïda', 'saida': '20 - Saïda', 'skikda': '21 - Skikda',
-    'sidi bel abbès': '22 - Sidi Bel Abbès', 'sidi bel abbes': '22 - Sidi Bel Abbès',
-    'annaba': '23 - Annaba', 'guelma': '24 - Guelma', 'constantine': '25 - Constantine',
-    'médéa': '26 - Médéa', 'medea': '26 - Médéa', 'mostaganem': '27 - Mostaganem',
-    "m'sila": "28 - M'Sila", 'msila': "28 - M'Sila", 'mascara': '29 - Mascara',
-    'ouargla': '30 - Ouargla', 'oran': '31 - Oran', 'el bayadh': '32 - El Bayadh',
-    'illizi': '33 - Illizi', 'bordj bou arréridj': '34 - Bordj Bou Arréridj',
-    'boumerdès': '35 - Boumerdès', 'boumerdes': '35 - Boumerdès',
-    'el tarf': '36 - El Tarf', 'tindouf': '37 - Tindouf', 'tissemsilt': '38 - Tissemsilt',
-    'el oued': '39 - El Oued', 'khenchela': '40 - Khenchela', 'souk ahras': '41 - Souk Ahras',
-    'tipaza': '42 - Tipaza', 'mila': '43 - Mila',
-    'aïn defla': '44 - Aïn Defla', 'ain defla': '44 - Aïn Defla',
-    'naâma': '45 - Naâma', 'naama': '45 - Naâma',
-    'aïn témouchent': '46 - Aïn Témouchent', 'ain temouchent': '46 - Aïn Témouchent',
-    'ghardaïa': '47 - Ghardaïa', 'ghardaia': '47 - Ghardaïa', 'relizane': '48 - Relizane',
-}
-
-# Mapping diplôme texte → code Django
-DIPLOMES_MAPPING = [
-    (['doctorat', 'phd', 'ph.d'], 'DOCTORAT'),
-    (['magistère', 'magistere', 'bac +7', 'bac+7'], 'MAGISTERE'),
-    (['master 2', 'master2', 'm2', 'ingéniorat', 'ingeniorat', 'ingénieur d\'état', 'bac +5', 'bac+5', 'ingénieur'], 'MASTER_2'),
-    (['master 1', 'master1', 'm1', 'maîtrise', 'maitrise', 'bac +4', 'bac+4'], 'MASTER_1'),
-    (['licence', 'lmd', 'bachelor', 'bac +3', 'bac+3'], 'LICENCE'),
-    (['ts', 'technicien supérieur', 'technicien superieur', 'bac +2', 'bac+2', 'dut', 'bts'], 'TS'),
-    (['baccalauréat', 'baccalaureat', 'bac'], 'BACCALAUREAT'),
-    (['terminale', 'terminal'], 'NIVEAU_TERMINAL'),
-    (['secondaire'], 'NIVEAU_SECONDAIRE'),
-    (['formation professionnelle', 'formation pro', 'cap', 'cfa'], 'FORMATION_PRO'),
-    (['certification', 'certifié', 'certifie', 'certificat'], 'CERTIFICATION'),
-]
-
-# Mapping spécialité texte → code Django (vos SECTEURS_CHOICES)
-SPECIALITES_MAPPING = [
-    (['informatique', 'informatic', 'computer', 'développeur', 'developpeur', 'développement', 'developer', 'software', 'web', 'mobile', 'fullstack', 'front-end', 'frontend', 'back-end', 'backend', 'ia', 'intelligence artificielle', 'machine learning', 'data scien'], 'IT'),
-    (['ingénieur', 'ingeniorat', 'ingénierie', 'ingenierie', 'r&d', 'recherche', 'études'], 'INGENIERIE'),
-    (['commercial', 'commerce', 'vente', 'sales', 'client'], 'COMMERCIAL'),
-    (['marketing', 'communication', 'community', 'digital marketing', 'seo'], 'MARKETING'),
-    (['finance', 'comptable', 'comptabilité', 'comptabilite', 'audit'], 'FINANCE'),
-    (['logistique', 'achat', 'stock', 'transport', 'supply'], 'LOGISTIQUE'),
-    (['production', 'industriel', 'industrie', 'méthode'], 'PRODUCTION'),
-    (['btp', 'chantier', 'génie civil', 'architecte'], 'BTP'),
-    (['administration', 'cadre administratif'], 'ADMIN'),
-    (['rh', 'ressources humaines', 'paie', 'recrutement', 'formation'], 'RH'),
-    (['banque', 'assurance'], 'BANQUE'),
-    (['santé', 'médical', 'pharmacie', 'infirmier'], 'SANTE'),
-    (['secrétariat', 'secretariat', 'assistanat', 'assistant'], 'SECRETARIAT'),
-    (['qualité', 'qse', 'hse', 'sécurité', 'environnement'], 'QSE'),
-    (['hôtellerie', 'hotellerie', 'restauration', 'tourisme'], 'TOURISME'),
-    (['maintenance', 'entretien'], 'MAINTENANCE'),
-    (['juridique', 'avocat', 'droit', 'fiscal'], 'JURIDIQUE'),
-]
 
 
 # ==========================================
@@ -874,14 +795,20 @@ RÈGLES :
 - Pour le nom complet : nom + prénom du candidat (ex: "FILALI Zoheir"). NE MET PAS son titre professionnel.
 - Pour le téléphone : récupère TOUS les chiffres, format brut.
 - Pour les compétences : liste TOUTES les compétences techniques mentionnées (langages, outils, logiciels, soft skills). Sépare par des virgules.
-- Pour les langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé, Français:Bon"). Si pas de niveau, mets "Intermédiaire".
+- Pour les langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau, mets "Intermédiaire".
+- NOUVEAU - linkedin : Extrais l'URL complète du profil LinkedIn si elle est présente dans le texte.
+- NOUVEAU - github : Extrais l'URL complète du profil GitHub si elle est présente (crucial pour les profils IT).
+- NOUVEAU - bio : Rédige un résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences.
 
 FORMAT EXIGÉ :
 {
   "nom_complet": "string ou null",
   "telephone": "string ou null",
   "competences": "string (compétences séparées par virgules) ou null",
-  "langues": "string (format Langue:Niveau séparé par virgules) ou null"
+  "langues": "string (format Langue:Niveau séparé par virgules) ou null",
+  "linkedin": "string ou null",
+  "github": "string ou null",
+  "bio": "string ou null"
 }
 
 CV À ANALYSER :
@@ -978,6 +905,9 @@ def parse_with_groq(text):
         "telephone": None,
         "competences": None,
         "langues": None,
+        "linkedin": None,  # NOUVEAU
+        "github": None,    # NOUVEAU
+        "bio": None,       # NOUVEAU
     }
 
     any_success = False
@@ -1024,7 +954,7 @@ def parse_with_groq(text):
         result["formations"] = formations_clean[:10]
         any_success = True
 
-    # === APPEL 4 : INFOS PERSO (nom, téléphone, compétences, langues) ===
+    # === APPEL 4 : INFOS PERSO (nom, téléphone, compétences, langues, réseaux, bio) ===
     print("Groq : extraction des infos personnelles...")
     content = _call_groq(
         PROMPT_INFOS_PERSO.replace("{cv_text}", text_truncated),
@@ -1035,13 +965,17 @@ def parse_with_groq(text):
         if infos.get("nom_complet"):
             result["nom_complet"] = str(infos["nom_complet"]).strip()
         if infos.get("telephone"):
-            # Nettoie le téléphone (enlève espaces, points, tirets)
             tel = re.sub(r'[\s.\-]', '', str(infos["telephone"]))
             result["telephone"] = tel
         if infos.get("competences"):
             result["competences"] = str(infos["competences"]).strip()
         if infos.get("langues"):
             result["langues"] = str(infos["langues"]).strip()
+        
+        # Injection des nouveaux champs extraits par l'IA
+        result["linkedin"] = infos.get("linkedin")
+        result["github"] = infos.get("github")
+        result["bio"] = infos.get("bio")
         any_success = True
 
     if not any_success:
@@ -1067,7 +1001,7 @@ def parse_cv(file_path, file_name):
     if file_name.lower().endswith(".pdf"):
         photo = extract_photo_from_pdf(file_path)
 
-    # === Champs simples via regex (rapides et fiables) ===
+    # === Champs simples via regex ===
     result = {
         "success": True,
         "email": extract_email(text),
@@ -1079,14 +1013,16 @@ def parse_cv(file_path, file_name):
         "passeport_valide": extract_passeport(text),
         "vehicule_personnel": extract_vehicule(text),
         "photo": photo,
+        "linkedin": None,  # Initialisation par défaut
+        "github": None,    # Initialisation par défaut
+        "bio": None,       # Initialisation par défaut
     }
 
-    # === Champs complexes : Groq avec fallback regex PAR CHAMP ===
+    # === Champs complexes via Groq ===
     ai_data = parse_with_groq(text)
-
     methods_used = []
 
-    # Nom complet : Groq sinon regex
+    # Nom complet
     if ai_data and ai_data.get("nom_complet"):
         result["nom_complet"] = ai_data["nom_complet"]
         methods_used.append("nom:ai")
@@ -1094,7 +1030,7 @@ def parse_cv(file_path, file_name):
         result["nom_complet"] = extract_name(text)
         methods_used.append("nom:regex")
 
-    # Téléphone : Groq sinon regex
+    # Téléphone
     if ai_data and ai_data.get("telephone"):
         result["telephone"] = ai_data["telephone"]
         methods_used.append("tel:ai")
@@ -1102,7 +1038,7 @@ def parse_cv(file_path, file_name):
         result["telephone"] = extract_phone(text)
         methods_used.append("tel:regex")
 
-    # Titre : Groq sinon regex
+    # Titre professionnel
     if ai_data and ai_data.get("titre_professionnel"):
         result["titre_professionnel"] = ai_data["titre_professionnel"]
         methods_used.append("titre:ai")
@@ -1110,7 +1046,7 @@ def parse_cv(file_path, file_name):
         result["titre_professionnel"] = extract_titre_professionnel(text)
         methods_used.append("titre:regex")
 
-    # Compétences : Groq sinon regex
+    # Compétences
     if ai_data and ai_data.get("competences"):
         result["competences"] = ai_data["competences"]
         methods_used.append("comp:ai")
@@ -1118,7 +1054,7 @@ def parse_cv(file_path, file_name):
         result["competences"] = extract_competences(sections.get('competences', ''))
         methods_used.append("comp:regex")
 
-    # Langues : Groq sinon regex
+    # Langues
     if ai_data and ai_data.get("langues"):
         result["langues"] = ai_data["langues"]
         methods_used.append("lang:ai")
@@ -1126,7 +1062,13 @@ def parse_cv(file_path, file_name):
         result["langues"] = extract_langues(sections.get('langues', ''))
         methods_used.append("lang:regex")
 
-    # Expériences : Groq sinon regex
+    # Récupération des nouveaux attributs spécifiques à l'IA
+    if ai_data:
+        result["linkedin"] = ai_data.get("linkedin")
+        result["github"] = ai_data.get("github")
+        result["bio"] = ai_data.get("bio")
+
+    # Expériences
     if ai_data and ai_data.get("experiences"):
         result["experiences"] = ai_data["experiences"]
         methods_used.append("exp:ai")
@@ -1134,7 +1076,7 @@ def parse_cv(file_path, file_name):
         result["experiences"] = extract_experiences_list(sections.get('experiences', ''))
         methods_used.append("exp:regex")
 
-    # Formations : Groq sinon regex
+    # Formations
     if ai_data and ai_data.get("formations"):
         result["formations"] = ai_data["formations"]
         methods_used.append("form:ai")

@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import ProfilCandidat from "../src/Pages/ProfilCandidat";
+import ProfilCandidat from "../src/Pages/Candidat/ProfilCandidat/index";
 import { profilService } from "../src/Services/profilService";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
@@ -144,10 +144,10 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     );
     await screen.findByText(/Mon Profil Professionnel/i);
 
-    const btnsAjouter = screen.getAllByText(/\+ Ajouter/i);
-    fireEvent.click(btnsAjouter[0]);
+    const btnsAjouter = screen.getAllByRole("button", { name: /Ajouter/i });
+    fireEvent.click(btnsAjouter[1]);
 
-    fireEvent.change(screen.getByPlaceholderText(/Titre du poste/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Ex: Développeur Backend/i), {
       target: { value: "Ingénieur" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Nom de l'entreprise/i), {
@@ -159,7 +159,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
       .parentElement.querySelector("input");
     fireEvent.change(dateInput, { target: { value: "2026-01-01" } });
 
-    fireEvent.click(screen.getByText("SAUVEGARDER"));
+    fireEvent.click(screen.getByText("Sauvegarder"));
 
     await waitFor(() => {
       expect(profilService.addExperience).toHaveBeenCalled();
@@ -212,7 +212,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du téléchargement de la photo.",
+        "Erreur lors du téléchargement.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_UPDATE_PHOTO",
@@ -232,10 +232,10 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     );
     await screen.findByText(/Mon Profil Professionnel/i);
 
-    const btnsAjouter = screen.getAllByText(/\+ Ajouter/i);
-    fireEvent.click(btnsAjouter[0]);
+    const btnsAjouter = screen.getAllByRole("button", { name: /Ajouter/i });
+    fireEvent.click(btnsAjouter[1]);
 
-    fireEvent.click(screen.getByText("SAUVEGARDER"));
+    fireEvent.click(screen.getByText("Sauvegarder"));
     expect(profilService.addExperience).not.toHaveBeenCalled();
   });
 });

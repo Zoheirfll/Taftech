@@ -20,6 +20,7 @@ import {
   Shield,
   Menu,
   X,
+  Sparkles,
 } from "lucide-react";
 
 const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
@@ -247,13 +248,7 @@ const Navbar = () => {
                         >
                           Mon profil
                         </DropdownLink>
-                        <DropdownLink
-                          to="/offres-sauvegardees"
-                          icon={Bookmark}
-                          onClick={closeDropdown}
-                        >
-                          Offres sauvegardées
-                        </DropdownLink>
+
                         <DropdownLink
                           to="/mes-candidatures"
                           icon={Briefcase}
@@ -262,11 +257,25 @@ const Navbar = () => {
                           Mes candidatures
                         </DropdownLink>
                         <DropdownLink
+                          to="/offres-sauvegardees"
+                          icon={Bookmark}
+                          onClick={closeDropdown}
+                        >
+                          Offres sauvegardées
+                        </DropdownLink>
+                        <DropdownLink
                           to="/alertes"
                           icon={Bell}
                           onClick={closeDropdown}
                         >
                           Alertes d'emploi
+                        </DropdownLink>
+                        <DropdownLink
+                          to="/suggestions-carriere"
+                          icon={Sparkles}
+                          onClick={closeDropdown}
+                        >
+                          Suggestions carrière
                         </DropdownLink>
                         <DropdownLink
                           to="/parametres/candidat"
@@ -407,14 +416,17 @@ const Navbar = () => {
                   <MobileLink to="/mes-candidatures" onClick={closeMobile}>
                     Mes candidatures
                   </MobileLink>
+                  <MobileLink to="/inbox" onClick={closeMobile}>
+                    Boîte de réception
+                  </MobileLink>
                   <MobileLink to="/offres-sauvegardees" onClick={closeMobile}>
                     Offres sauvegardées
                   </MobileLink>
                   <MobileLink to="/alertes" onClick={closeMobile}>
                     Alertes d'emploi
                   </MobileLink>
-                  <MobileLink to="/inbox" onClick={closeMobile}>
-                    Boîte de réception
+                  <MobileLink to="/suggestions-carriere" onClick={closeMobile}>
+                    Suggestions carrière
                   </MobileLink>
                   <MobileLink to="/parametres/candidat" onClick={closeMobile}>
                     Paramètres

@@ -4,7 +4,7 @@ import React from "react";
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import EntreprisePublic from "../src/Pages/EntreprisePublic";
+import EntreprisePublic from "../src/Pages/Recruteur/EntreprisePublic";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 
@@ -21,6 +21,7 @@ vi.mock("react-router-dom", async () => {
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getEntreprisePublic: vi.fn(),
+    getConstants: vi.fn(),
   },
 }));
 
@@ -38,6 +39,7 @@ const mockEntrepriseBase = {
 describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
+    jobsService.getConstants = vi.fn().mockResolvedValue({ wilayas: [], secteurs: [], diplomes: [] });
   });
 
   afterEach(() => {
@@ -74,12 +76,12 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
     );
 
     await waitFor(() => {
-      // Vérification Image
-      const logo = screen.getByAltText("Logo TafTech Solutions");
+      // The alt text is the company name directly
+      const logo = screen.getByAltText("TafTech Solutions");
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png");
 
-      // Vérification Localisation (Wilaya + Commune)
-      expect(screen.getByText("📍 31 - Oran - Oran")).toBeInTheDocument();
+      // Location shows wilaya_siege with commune separated by " · "
+      expect(screen.getByText(/31 - Oran/i)).toBeInTheDocument();
     });
   });
 
@@ -109,8 +111,9 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
 
       // Détails de l'offre
       expect(screen.getByText("Développeur Front-End")).toBeInTheDocument();
-      expect(screen.getByText("📍 Alger - Bab Ezzouar")).toBeInTheDocument();
-      expect(screen.getByText("📄 CDI")).toBeInTheDocument();
+      // Location and contract shown with lucide icons (no emojis)
+      expect(screen.getByText("Alger")).toBeInTheDocument();
+      expect(screen.getByText("CDI")).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: /Voir l'offre/i }),
       ).toHaveAttribute("href", "/jobs/1");
@@ -145,16 +148,16 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
     );
 
     await waitFor(() => {
-      // Affichage du message d'erreur
+      // Affichage du message d'erreur (no emoji in component)
       expect(
         screen.getByText(
-          "😕 Cette entreprise n'existe pas ou n'est plus disponible.",
+          "Cette entreprise n'existe pas ou n'est plus disponible.",
         ),
       ).toBeInTheDocument();
 
       // Bouton de secours vers la liste globale
       expect(
-        screen.getByRole("link", { name: /Voir toutes les offres d'emploi/i }),
+        screen.getByRole("link", { name: /Voir toutes les offres/i }),
       ).toHaveAttribute("href", "/offres");
 
       // Télémétrie appelée
@@ -175,9 +178,10 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
     );
 
     await waitFor(() => {
-      // L'émoji bâtiment doit s'afficher à la place de l'image
-      expect(screen.getByText("🏢")).toBeInTheDocument();
-      expect(screen.queryByAltText(/Logo/i)).not.toBeInTheDocument();
+      // A Building2 lucide icon is rendered instead of an image
+      expect(screen.queryByAltText(/TafTech Solutions/i)).not.toBeInTheDocument();
+      // Company name still shows
+      expect(screen.getByText("TafTech Solutions")).toBeInTheDocument();
     });
   });
 });

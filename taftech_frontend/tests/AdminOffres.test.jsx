@@ -67,7 +67,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Développeur React")).toBeInTheDocument();
-      expect(screen.getByText(/EN ATTENTE/i)).toBeInTheDocument();
+      expect(screen.getByText(/En attente/i)).toBeInTheDocument();
     });
   });
 
@@ -86,9 +86,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         statut_moderation: "APPROUVEE",
         motif_rejet: "",
       });
-      expect(toast.success).toHaveBeenCalledWith(
-        "Offre approuvée et en ligne !",
-      );
+      expect(toast.success).toHaveBeenCalledWith("Offre approuvée !");
     });
   });
 
@@ -99,8 +97,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
     render(<AdminOffres />);
 
     // Ouverture de la modale de rejet
-    await waitFor(() => screen.getByTitle("Refuser"));
-    fireEvent.click(screen.getByTitle("Refuser"));
+    await waitFor(() => screen.getByTitle("Rejeter"));
+    fireEvent.click(screen.getByTitle("Rejeter"));
 
     // Saisie du motif
     fireEvent.change(
@@ -116,7 +114,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         statut_moderation: "REJETEE",
         motif_rejet: "Salaire manquant",
       });
-      expect(toast.success).toHaveBeenCalledWith("L'offre a été rejetée.");
+      expect(toast.success).toHaveBeenCalledWith("Offre rejetée.");
     });
   });
 
@@ -144,9 +142,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
           titre: "Développeur React Senior",
         }),
       );
-      expect(toast.success).toHaveBeenCalledWith(
-        "Offre corrigée avec succès !",
-      );
+      expect(toast.success).toHaveBeenCalledWith("Offre corrigée !");
     });
   });
 
@@ -156,8 +152,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     render(<AdminOffres />);
 
-    await waitFor(() => screen.getByText(/EXPORTER EXCEL/i));
-    fireEvent.click(screen.getByText(/EXPORTER EXCEL/i));
+    await waitFor(() => screen.getByText(/Exporter/i));
+    fireEvent.click(screen.getByText(/Exporter/i));
 
     await waitFor(() => {
       expect(jobsService.exportOffres).toHaveBeenCalled();
@@ -171,8 +167,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     render(<AdminOffres />);
 
-    await waitFor(() => screen.getByTitle("Refuser"));
-    fireEvent.click(screen.getByTitle("Refuser"));
+    await waitFor(() => screen.getByTitle("Rejeter"));
+    fireEvent.click(screen.getByTitle("Rejeter"));
 
     // Clic direct sur confirmer sans rien écrire
     fireEvent.click(screen.getByText("Confirmer le rejet"));

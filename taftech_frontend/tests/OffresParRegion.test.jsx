@@ -4,7 +4,7 @@ import React from "react";
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import OffresParRegion from "../src/Pages/OffresParRegion";
+import OffresParRegion from "../src/Pages/Public/OffresParRegion";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 
@@ -81,7 +81,7 @@ describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
     await waitFor(() => {
       // Le composant ne crashe pas, la grille est juste vide
       expect(
-        screen.getByText(/Offres d'emploi en Algérie par/i),
+        screen.getByText(/Offres par/i),
       ).toBeInTheDocument();
 
       // La télémétrie capte l'erreur

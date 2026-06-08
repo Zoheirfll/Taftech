@@ -10,7 +10,7 @@ import {
   waitFor,
   act,
 } from "@testing-library/react";
-import CVTheque from "../src/Pages/CVTheque";
+import CVTheque from "../src/Pages/Recruteur/CVTheque";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import selectEvent from "react-select-event";
@@ -65,8 +65,9 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
 
     await waitFor(() => {
       expect(jobsService.getConstants).toHaveBeenCalled();
+      // The component shows "Explorez le vivier de CV" as the heading
       expect(
-        screen.getByText(/Prêt à trouver votre perle rare/i),
+        screen.getByText(/Explorez le vivier de CV/i),
       ).toBeInTheDocument();
     });
   });
@@ -76,7 +77,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
     render(<CVTheque />);
 
-    const input = screen.getByPlaceholderText(/Rechercher un poste/i);
+    const input = screen.getByPlaceholderText(/Mots clés, métier, poste/i);
     fireEvent.change(input, { target: { value: "React" } });
 
     // On avance le temps manuellement pour le debounce
@@ -86,7 +87,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
 
     await waitFor(() => {
       expect(jobsService.searchCVtheque).toHaveBeenCalled();
-      expect(screen.getByText(/BELAMRI Meriem/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/BELAMRI Meriem/i)[0]).toBeInTheDocument();
     });
   });
 
@@ -112,20 +113,20 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
     render(<CVTheque />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher un poste/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "A" },
     });
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
 
-    const btn = await screen.findByText(/Voir Profil Complet/i);
-    fireEvent.click(btn);
-
-    expect(
-      screen.getByText(/Expériences Professionnelles/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/@ SOMIZ/i)).toBeInTheDocument();
+    // The component auto-selects first result, details show in the right panel
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Expériences professionnelles/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText("SOMIZ")).toBeInTheDocument();
+    });
   });
 
   // --- 🔴 EDGE CASES (4/4) ---
@@ -147,7 +148,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue({ count: 0, results: [] });
     render(<CVTheque />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher un poste/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Unknown" },
     });
     await act(async () => {
@@ -155,7 +156,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Aucun talent trouvé/i)).toBeInTheDocument();
+      expect(screen.getByText(/Aucun profil trouvé/i)).toBeInTheDocument();
     });
   });
 
@@ -164,7 +165,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockRejectedValue(new Error("Fail"));
     render(<CVTheque />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher un poste/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Bug" },
     });
     await act(async () => {
@@ -188,7 +189,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(incomplete);
     render(<CVTheque />);
 
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher un poste/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Ali" },
     });
     await act(async () => {
@@ -196,7 +197,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("BA")).toBeInTheDocument();
+      expect(screen.getAllByText(/B Ali/i)[0]).toBeInTheDocument();
     });
   });
 });

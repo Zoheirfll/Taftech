@@ -19,7 +19,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Login from "../src/Pages/Login";
+import Login from "../src/Pages/Auth/Login";
 import { authService } from "../src/Services/authService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -83,10 +83,10 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
     );
 
     // Remplissage du formulaire
-    fireEvent.change(screen.getByPlaceholderText("Adresse Email"), {
+    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
       target: { value: "test@taftech.dz" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Mot de passe"), {
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
       target: { value: "password123" },
     });
 
@@ -122,10 +122,10 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Adresse Email"), {
+    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
       target: { value: "wrong@taftech.dz" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Mot de passe"), {
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
       target: { value: "wrongpass" },
     });
 

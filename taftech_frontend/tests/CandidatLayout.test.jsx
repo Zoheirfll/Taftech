@@ -70,11 +70,11 @@ describe("🏠 UI & Routage - Composant <CandidatLayout />", () => {
       </MemoryRouter>,
     );
 
-    // ✅ CORRECTION : Utilisation d'une Regex plus souple (.*) pour gérer l'espace entre l'émoji et le texte
+    // The active link has "bg-indigo-600" class
     const activeLink = screen.getByRole("link", {
-      name: /💼.*mes candidatures/i,
+      name: /Mes candidatures/i,
     });
-    expect(activeLink).toHaveClass("bg-blue-600");
+    expect(activeLink).toHaveClass("bg-indigo-600");
   });
 
   it("🟢 HP3 : Appel de la déconnexion", async () => {

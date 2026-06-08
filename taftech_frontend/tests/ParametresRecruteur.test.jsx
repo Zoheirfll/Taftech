@@ -10,7 +10,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import ParametresRecruteur from "../src/Pages/ParametresRecruteur";
+import ParametresRecruteur from "../src/Pages/Recruteur/ParametresRecruteur";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";

@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import CreateJob from "../src/Pages/CreateJob";
+import CreateJob from "../src/Pages/Recruteur/CreateJob";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";

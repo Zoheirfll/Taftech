@@ -57,7 +57,7 @@ describe("💼 UI & Logique - Composant <JobCard />", () => {
     fireEvent.click(screen.getByText(/Postuler/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/✅ Candidature envoyée/i)).toBeInTheDocument();
+      expect(screen.getByText(/Candidature envoyée/i)).toBeInTheDocument();
     });
   });
 
@@ -70,7 +70,7 @@ describe("💼 UI & Logique - Composant <JobCard />", () => {
     );
 
     expect(
-      screen.getByText(/Connectez-vous pour postuler/i),
+      screen.getByText(/Se connecter/i),
     ).toBeInTheDocument();
     expect(screen.queryByText("Postuler")).not.toBeInTheDocument();
   });
@@ -90,7 +90,7 @@ describe("💼 UI & Logique - Composant <JobCard />", () => {
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalled();
       expect(
-        screen.getByText(/❌ Erreur lors de la candidature/i),
+        screen.getByText(/Erreur lors de la candidature/i),
       ).toBeInTheDocument();
     });
   });

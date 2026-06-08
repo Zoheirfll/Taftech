@@ -12,31 +12,31 @@ import CandidatLayout from "./Pages/Candidat/CandidatLayout";
 import AdminLayout from "./Pages/Admin/AdminLayout";
 
 // Pages Publiques
-import Home from "./Pages/Home";
-import JobsList from "./Pages/JobsList";
-import JobDetail from "./Pages/JobDetail";
-import Login from "./Pages/Login";
-import RegisterCandidat from "./Pages/RegisterCandidat";
-import RegisterRecruteur from "./Pages/RegisterRecruteur";
-import EntreprisePublic from "./Pages/EntreprisePublic";
-import OffresParRegion from "./Pages/OffresParRegion";
-import OffresParSecteur from "./Pages/OffresParSecteur";
-import ForgotPassword from "./Pages/ForgotPassword";
-import ResetPassword from "./Pages/ResetPassword";
+import Home from "./Pages/Public/Home";
+import JobsList from "./Pages/Public/JobsList";
+import JobDetail from "./Pages/Public/JobDetail";
+import Login from "./Pages/Auth/Login";
+import RegisterCandidat from "./Pages/Auth/RegisterCandidat";
+import RegisterRecruteur from "./Pages/Auth/RegisterRecruteur";
+import EntreprisePublic from "./Pages/Recruteur/EntreprisePublic";
+import OffresParRegion from "./Pages/Public/OffresParRegion";
+import OffresParSecteur from "./Pages/Public/OffresParSecteur";
+import ForgotPassword from "./Pages/Auth/ForgotPassword";
+import ResetPassword from "./Pages/Auth/ResetPassword";
 
 // Pages Recruteur
-import CreateJob from "./Pages/CreateJob";
-import DashboardRecruteur from "./Pages/DashboardRecruteur";
-import GestionOffre from "./Pages/GestionOffre";
-import CVTheque from "./Pages/CVTheque";
-import CandidaturesSpontanees from "./pages/CandidaturesSpontanees";
-import Questionnaires from "./Pages/Questionnaires";
+import CreateJob from "./Pages/Recruteur/CreateJob";
+import DashboardRecruteur from "./Pages/Recruteur/DashboardRecruteur";
+import GestionOffre from "./Pages/Recruteur/GestionOffre/index";
+import CVTheque from "./Pages/Recruteur/CVTheque";
+import CandidaturesSpontanees from "./Pages/Recruteur/CandidaturesSpontanees";
+import Questionnaires from "./Pages/Recruteur/Questionnaires";
 
 // Pages Candidat
-import ProfilCandidat from "./Pages/ProfilCandidat";
-import MesCandidatures from "./Pages/MesCandidatures";
-import BoiteReception from "./Pages/BoiteReception";
-import ReviewCandidature from "./Pages/ReviewCandidature";
+import ProfilCandidat from "./Pages/Candidat/ProfilCandidat/index";
+import MesCandidatures from "./Pages/Candidat/MesCandidatures";
+import BoiteReception from "./Pages/Candidat/BoiteReception";
+import ReviewCandidature from "./Pages/Recruteur/ReviewCandidature";
 import Settings from "./Pages/Candidat/Settings";
 import AlertesEmploi from "./Pages/Candidat/AlertesEmploi";
 import OffresSauvegardees from "./Pages/Candidat/OffresSauvegardees";
@@ -48,8 +48,9 @@ import AdminOffres from "./Pages/Admin/AdminOffres";
 import AdminStatistiques from "./Pages/Admin/AdminStatistiques";
 import AdminUsers from "./Pages/Admin/AdminUsers";
 import AdminBroadcast from "./Pages/admin/AdminBroadcast";
-import ParametresRecruteur from "./Pages/ParametresRecruteur";
+import ParametresRecruteur from "./Pages/Recruteur/ParametresRecruteur";
 import AdminMetiers from "./Pages/Admin/AdminMetiers";
+import SuggestionsCarriere from "./Pages/Candidat/SuggestionsCarriere";
 
 // 🛑 LE MUR DE SILENCE 🛑
 // On neutralise la console uniquement si on est en production
@@ -121,6 +122,10 @@ function App() {
                   element={<ReviewCandidature />}
                 />
                 <Route path="/parametres/candidat" element={<Settings />} />
+                <Route
+                  path="/suggestions-carriere"
+                  element={<SuggestionsCarriere />}
+                />
                 <Route path="/alertes" element={<AlertesEmploi />} />
                 <Route
                   path="/offres-sauvegardees"
@@ -138,7 +143,6 @@ function App() {
                 <Route path="utilisateurs" element={<AdminUsers />} />
                 <Route path="broadcast" element={<AdminBroadcast />} />
                 <Route path="candidatures" element={<AdminCandidatures />} />
-
                 <Route
                   path="/admin-taftech/metiers"
                   element={<AdminMetiers />}

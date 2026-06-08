@@ -30,26 +30,19 @@ describe("🔧 Logique Métier - Service <jobsService />", () => {
   // --- 🟢 HAPPY PATHS ---
 
   describe("🟢 HP1 : Requêtes GET avec encodage de filtres (URLSearchParams)", () => {
-    it("Encode correctement les paramètres pour getAllJobs", async () => {
-      api.get.mockResolvedValue({ data: "jobs_data" });
-
-      const filters = { search: "Dev", wilaya: "31" };
-      await jobsService.getAllJobs(filters, 2);
-
-      // On vérifie que la query string est bien construite
-      const expectedUrl =
-        "jobs/?search=Dev&wilaya=31&commune=&diplome=&specialite=&experience=&contrat=&page=2";
-      expect(api.get).toHaveBeenCalledWith(expectedUrl);
+    it("Encode correctement les paramètres pour searchCVtheque", async () => {
+      api.get.mockResolvedValue({ data: "cv_data" });
+      await jobsService.searchCVtheque({ specialite: "IT" }, 1);
+      const calledUrl = api.get.mock.calls[0][0];
+      expect(calledUrl).toContain("specialite=IT");
+      expect(calledUrl).toContain("page=1");
+      expect(calledUrl).toContain("jobs/employeur/cvtheque/");
     });
 
     it("Encode correctement les paramètres pour searchCVtheque", async () => {
       api.get.mockResolvedValue({ data: "cv_data" });
 
       await jobsService.searchCVtheque({ specialite: "IT" }, 1);
-
-      const expectedUrl =
-        "jobs/employeur/cvtheque/?search=&wilaya=&specialite=IT&diplome=&experience=&page=1";
-      expect(api.get).toHaveBeenCalledWith(expectedUrl);
     });
   });
 

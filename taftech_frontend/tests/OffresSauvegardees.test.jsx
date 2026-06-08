@@ -78,7 +78,7 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Aucune offre enregistrée/i)).toBeInTheDocument();
+      expect(screen.getByText(/Aucune offre sauvegardée/i)).toBeInTheDocument();
       expect(screen.getByText(/Explorer les offres/i)).toBeInTheDocument();
     });
   });
@@ -95,7 +95,8 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
 
     await waitFor(() => screen.getByText("Ingénieur React"));
 
-    fireEvent.click(screen.getByTitle("Retirer des favoris"));
+    const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
+    fireEvent.click(deleteBtn);
 
     // Vérifie la mise à jour immédiate (Optimistic)
     expect(screen.queryByText("Ingénieur React")).not.toBeInTheDocument();
@@ -121,7 +122,7 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement de vos offres sauvegardées.",
+        "Erreur lors du chargement.",
       );
     });
   });
@@ -138,7 +139,8 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
 
     await waitFor(() => screen.getByText("Ingénieur React"));
 
-    fireEvent.click(screen.getByTitle("Retirer des favoris"));
+    const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
+    fireEvent.click(deleteBtn);
 
     // UI disparaît d'abord
     expect(screen.queryByText("Ingénieur React")).not.toBeInTheDocument();

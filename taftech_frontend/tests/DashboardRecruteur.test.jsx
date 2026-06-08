@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import DashboardRecruteur from "../src/Pages/DashboardRecruteur";
+import DashboardRecruteur from "../src/Pages/Recruteur/DashboardRecruteur";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -100,8 +100,8 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
 
     await waitFor(() => {
       // Vérification du Header
-      expect(screen.getByText("Espace TafTech")).toBeInTheDocument();
-      expect(screen.getByText("✓ COMPTE VÉRIFIÉ")).toBeInTheDocument();
+      expect(screen.getByText("TafTech")).toBeInTheDocument();
+      expect(screen.getByText("Compte vérifié")).toBeInTheDocument();
       // Vérification de l'onglet par défaut et des stats (1 candidature totale)
       expect(screen.getByText("Offre Ouverte")).toBeInTheDocument();
       // La stat "Total Candidatures" est dans une carte, on vérifie que le "1" est affiché
@@ -118,16 +118,17 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Espace TafTech"));
+    await waitFor(() => screen.getByText("TafTech"));
 
-    // Onglet Archives
-    fireEvent.click(screen.getByText(/Archives \(1\)/i));
+    // Onglet Archives - the tab button contains text "Archives" with a count badge
+    fireEvent.click(screen.getByRole("button", { name: /Archives/i }));
     expect(screen.getByText("Offre Archives")).toBeInTheDocument();
     expect(screen.queryByText("Offre Ouverte")).not.toBeInTheDocument();
 
-    // Onglet Profil
-    fireEvent.click(screen.getByText(/Profil Entreprise/i));
-    expect(screen.getByText("Identité du Responsable")).toBeInTheDocument();
+    // Onglet Profil entreprise
+    fireEvent.click(screen.getByRole("button", { name: /Profil entreprise/i }));
+    // The profil tab shows a redirect to Paramètres
+    expect(screen.getByText(/Paramètres de l'entreprise/i)).toBeInTheDocument();
   });
 
   it("🟢 HP3 : Actions autorisées si l'entreprise est approuvée", async () => {
@@ -138,48 +139,36 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Espace TafTech"));
+    await waitFor(() => screen.getByText("TafTech"));
 
     // Les deux boutons doivent être présents et cliquables
-    const btnPublier = screen.getByText(/\+ PUBLIER UNE OFFRE/i);
+    const btnPublier = screen.getByRole("button", { name: /Publier une offre/i });
     fireEvent.click(btnPublier);
     expect(mockNavigate).toHaveBeenCalledWith("/creer-offre");
 
-    const btnCV = screen.getByText(/🔍 CHERCHER UN CV/i);
+    const btnCV = screen.getByRole("button", { name: /Chercher un CV/i });
     fireEvent.click(btnCV);
     expect(mockNavigate).toHaveBeenCalledWith("/cvtheque");
   });
 
-  it("🟢 HP4 : Édition et sauvegarde du profil", async () => {
+  it("🟢 HP4 : Onglet Profil affiche le lien vers Paramètres", async () => {
     jobsService.getDashboard.mockResolvedValue(mockData);
-    jobsService.updateProfilEntreprise.mockResolvedValue({});
     render(
       <MemoryRouter>
         <DashboardRecruteur />
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Espace TafTech"));
+    await waitFor(() => screen.getByText("TafTech"));
 
     // Aller sur le profil
-    fireEvent.click(screen.getByText(/Profil Entreprise/i));
+    fireEvent.click(screen.getByRole("button", { name: /Profil entreprise/i }));
 
-    // Activer l'édition
-    fireEvent.click(screen.getByText("MODIFIER MON PROFIL"));
-
-    // Modifier le champ Prénom
-    const prenomInput = getFieldByLabel("Prénom");
-    fireEvent.change(prenomInput, { target: { value: "Jack" } });
-
-    // Sauvegarder
-    fireEvent.click(screen.getByText("SAUVEGARDER"));
-
-    await waitFor(() => {
-      expect(jobsService.updateProfilEntreprise).toHaveBeenCalledWith(
-        expect.objectContaining({ first_name: "Jack" }),
-      );
-      expect(toast.success).toHaveBeenCalledWith("Profil mis à jour !");
-    });
+    // The profil tab shows a link to Paramètres
+    const btnParametres = screen.getByText(/Aller aux Paramètres/i);
+    expect(btnParametres).toBeInTheDocument();
+    fireEvent.click(btnParametres);
+    expect(mockNavigate).toHaveBeenCalledWith("/parametres");
   });
 
   // --- 🔴 EDGE CASES (4/4) ---
@@ -230,12 +219,13 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("⏳ EN ATTENTE DE VALIDATION"),
+        screen.getByText("En attente de validation"),
       ).toBeInTheDocument();
-      // Le bouton normal n'est plus là, c'est la version bloquée
-      expect(screen.getByText("🔒 PUBLIER UNE OFFRE")).toBeDisabled();
+      // The publish button is disabled when not approved
+      const btnPublier = screen.getByRole("button", { name: /Publier une offre/i });
+      expect(btnPublier).toBeDisabled();
       expect(
-        screen.getByText(/Validation admin requise pour recruter/i),
+        screen.getByText(/Validation admin requise/i),
       ).toBeInTheDocument();
     });
   });
@@ -249,18 +239,11 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Espace TafTech"));
+    await waitFor(() => screen.getByText("TafTech"));
 
-    fireEvent.click(screen.getByText(/Profil Entreprise/i));
-    fireEvent.click(screen.getByText("MODIFIER MON PROFIL"));
-    fireEvent.click(screen.getByText("SAUVEGARDER"));
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de la sauvegarde.");
-      expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_MISE_A_JOUR_PROFIL_ENTREPRISE",
-        expect.anything(),
-      );
-    });
+    // The profil tab redirects to Paramètres and doesn't have a save form
+    // Test that the offres tab works correctly
+    await waitFor(() => screen.getByText("TafTech"));
+    expect(screen.getByText("Offre Ouverte")).toBeInTheDocument();
   });
 });

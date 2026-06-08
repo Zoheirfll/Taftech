@@ -10,7 +10,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Questionnaires from "../src/Pages/Questionnaires";
+import Questionnaires from "../src/Pages/Recruteur/Questionnaires";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";

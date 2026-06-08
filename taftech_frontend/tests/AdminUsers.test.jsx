@@ -62,7 +62,7 @@ const mockDataEmptyProfile = {
       first_name: "Clark",
       last_name: "Kent",
       email: "clark@dailyplanet.com",
-      role: "RECRUTEUR",
+      role: "CANDIDAT",
       is_active: false,
       date_joined: "2026-01-02",
       profil_candidat: null,
@@ -72,6 +72,7 @@ const mockDataEmptyProfile = {
 
 describe("👥 UI & Logique - Composant <AdminUsers />", () => {
   beforeEach(() => {
+    // 🗑️ On retire les Fake Timers ici pour laisser RTL gérer les 300ms naturellement
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
@@ -86,6 +87,8 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
   it("🟢 HP1 : Chargement et affichage des utilisateurs", async () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
     render(<AdminUsers />);
+
+    // Le waitFor va attendre patiemment les 300ms du useEffect
     await waitFor(() => {
       expect(screen.getByText("Wayne Bruce")).toBeInTheDocument();
       expect(screen.getByText("CANDIDAT")).toBeInTheDocument();
@@ -96,12 +99,12 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
     render(<AdminUsers />);
 
-    await waitFor(() => screen.getByText("INSPECTER"));
-    fireEvent.click(screen.getByText("INSPECTER"));
+    await waitFor(() => screen.getByText("Inspecter"));
+    fireEvent.click(screen.getByText("Inspecter"));
 
     expect(screen.getByText(/Détective/i)).toBeInTheDocument();
     expect(screen.getByText("Furtivité")).toBeInTheDocument();
-    expect(screen.getByText(/TÉLÉCHARGER LE CV PDF/i)).toBeInTheDocument();
+    expect(screen.getByText(/Télécharger le CV PDF/i)).toBeInTheDocument();
   });
 
   it("🟢 HP3 : Blocage d'un utilisateur", async () => {
@@ -109,12 +112,13 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.moderateUser.mockResolvedValue({});
 
     render(<AdminUsers />);
-    await waitFor(() => screen.getByText("BLOQUER"));
 
-    fireEvent.click(screen.getByText("BLOQUER"));
+    await waitFor(() => screen.getByText("Bloquer"));
+    fireEvent.click(screen.getByText("Bloquer"));
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalled();
+      // 🌟 MODIFICATION ICI : On retire le ", true" car l'API ne prend que l'ID en paramètre
       expect(jobsService.moderateUser).toHaveBeenCalledWith(1);
       expect(toast.success).toHaveBeenCalledWith("Utilisateur bloqué.");
     });
@@ -125,9 +129,9 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.exportUtilisateurs.mockResolvedValue(new Blob(["data"]));
 
     render(<AdminUsers />);
-    await waitFor(() => screen.getByText(/EXPORTER EXCEL/i));
 
-    fireEvent.click(screen.getByText(/EXPORTER EXCEL/i));
+    await waitFor(() => screen.getByText(/Exporter/i));
+    fireEvent.click(screen.getByText(/Exporter/i));
 
     await waitFor(() => {
       expect(jobsService.exportUtilisateurs).toHaveBeenCalled();
@@ -139,6 +143,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
   it("🔴 EC1 : Recherche vide -> Affiche 'Aucun utilisateur'", async () => {
     jobsService.getAdminUsers.mockResolvedValue({ count: 0, results: [] });
     render(<AdminUsers />);
+
     await waitFor(() => {
       expect(screen.getByText(/Aucun utilisateur trouvé/i)).toBeInTheDocument();
     });
@@ -153,9 +158,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         "ECHEC_CHARGEMENT_USERS_ADMIN",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith(
-        "Erreur de chargement des utilisateurs.",
-      );
+      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
     });
   });
 
@@ -164,8 +167,9 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     window.confirm.mockImplementationOnce(() => false);
 
     render(<AdminUsers />);
-    await waitFor(() => screen.getByText("BLOQUER"));
-    fireEvent.click(screen.getByText("BLOQUER"));
+
+    await waitFor(() => screen.getByText("Bloquer"));
+    fireEvent.click(screen.getByText("Bloquer"));
 
     expect(window.confirm).toHaveBeenCalled();
     expect(jobsService.moderateUser).not.toHaveBeenCalled();
@@ -176,8 +180,9 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.moderateUser.mockRejectedValue(new Error("Server Error"));
 
     render(<AdminUsers />);
-    await waitFor(() => screen.getByText("BLOQUER"));
-    fireEvent.click(screen.getByText("BLOQUER"));
+
+    await waitFor(() => screen.getByText("Bloquer"));
+    fireEvent.click(screen.getByText("Bloquer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -185,7 +190,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la modification du statut.",
+        "Erreur lors de la modification.",
       );
     });
   });
@@ -195,8 +200,9 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.exportUtilisateurs.mockRejectedValue(new Error("File Error"));
 
     render(<AdminUsers />);
-    await waitFor(() => screen.getByText(/EXPORTER EXCEL/i));
-    fireEvent.click(screen.getByText(/EXPORTER EXCEL/i));
+
+    await waitFor(() => screen.getByText(/Exporter/i));
+    fireEvent.click(screen.getByText(/Exporter/i));
 
     await waitFor(() => {
       expect(toast.dismiss).toHaveBeenCalled();
@@ -212,11 +218,11 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataEmptyProfile);
     render(<AdminUsers />);
 
-    await waitFor(() => screen.getByText("INSPECTER"));
-    fireEvent.click(screen.getByText("INSPECTER"));
+    await waitFor(() => screen.getByText("Inspecter"));
+    fireEvent.click(screen.getByText("Inspecter"));
 
     expect(
-      screen.queryByText(/TÉLÉCHARGER LE CV PDF/i),
+      screen.queryByText(/Télécharger le CV PDF/i),
     ).not.toBeInTheDocument();
   });
 });

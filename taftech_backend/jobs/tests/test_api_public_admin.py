@@ -53,7 +53,7 @@ class PublicAndAdminListsTests(APITestCase):
 
     def test_stats_publiques_filtrent_les_donnees(self):
         """ US-PUB-04 (EDGE CASE): L'accueil ne doit pas compter les offres/entreprises cachées """
-        url = reverse('public-stats')
+        url = reverse('stats-public')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -65,12 +65,12 @@ class PublicAndAdminListsTests(APITestCase):
     def test_entreprise_detail_bloque_entreprise_en_attente(self):
         """ US-PUB-05 (EDGE CASE): Impossible de voir la page d'une entreprise non validée """
         # Test Happy Path (OK Corp)
-        url_ok = reverse('entreprise-detail-public', kwargs={'entreprise_id': self.ent_approuvee.id})
+        url_ok = reverse('entreprise-public', kwargs={'entreprise_id': self.ent_approuvee.id})
         res_ok = self.client.get(url_ok)
         self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
         
         # Test Edge Case (Wait Corp)
-        url_wait = reverse('entreprise-detail-public', kwargs={'entreprise_id': self.ent_attente.id})
+        url_wait = reverse('entreprise-public', kwargs={'entreprise_id': self.ent_attente.id})
         res_wait = self.client.get(url_wait)
         self.assertEqual(res_wait.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -92,7 +92,7 @@ class PublicAndAdminListsTests(APITestCase):
     def test_admin_listes_securite_acces(self):
         """ US-ADM-04 (EDGE CASE): Un recruteur tente de lister les utilisateurs """
         self.client.force_authenticate(user=self.rh_approuve) # <-- Token recruteur
-        url = reverse('admin-users-list')
+        url = reverse('admin-users')
         
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -100,7 +100,7 @@ class PublicAndAdminListsTests(APITestCase):
     def test_admin_bannir_utilisateur(self):
         """ US-ADM-06: Le bouton de modération inverse le statut is_active """
         self.client.force_authenticate(user=self.admin)
-        url = reverse('admin-user-moderate', kwargs={'user_id': self.cand.id})
+        url = reverse('admin-user-moderer', kwargs={'user_id': self.cand.id})
         
         # Le candidat est actif au départ
         self.assertTrue(self.cand.is_active)

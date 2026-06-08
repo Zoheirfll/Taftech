@@ -42,7 +42,7 @@ class GestionAvanceeRecruteurTests(APITestCase):
     def test_cloturer_offre_success(self):
         """ US-REC-05: Le recruteur clôture sa propre offre """
         self.client.force_authenticate(user=self.rh_a)
-        url = reverse('cloturer_offre', kwargs={'offre_id': self.offre_a.id})
+        url = reverse('cloturer-offre', kwargs={'offre_id': self.offre_a.id})
         
         response = self.client.patch(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -52,7 +52,7 @@ class GestionAvanceeRecruteurTests(APITestCase):
     def test_cloturer_offre_concurrent_interdit(self):
         """ US-REC-07 (EDGE CASE): Le recruteur B tente de clôturer l'offre du recruteur A """
         self.client.force_authenticate(user=self.rh_b)
-        url = reverse('cloturer_offre', kwargs={'offre_id': self.offre_a.id})
+        url = reverse('cloturer-offre', kwargs={'offre_id': self.offre_a.id})
         
         response = self.client.patch(url)
         # La vue possède la vérification : if offre.entreprise.user != request.user
@@ -64,7 +64,7 @@ class GestionAvanceeRecruteurTests(APITestCase):
     def test_supprimer_candidature_concurrent_interdite(self):
         """ US-REC-07 (EDGE CASE): Le recruteur B tente de supprimer la candidature de A """
         self.client.force_authenticate(user=self.rh_b)
-        url = reverse('supprimer_candidature', kwargs={'candidature_id': self.cand_a.id})
+        url = reverse('supprimer-candidature', kwargs={'candidature_id': self.cand_a.id})
         
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

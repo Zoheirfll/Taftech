@@ -11,6 +11,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 
 const CandidatLayout = () => {
@@ -44,6 +45,11 @@ const CandidatLayout = () => {
       icon: Bookmark,
     },
     { name: "Alertes d'emploi", path: "/alertes", icon: Bell },
+    {
+      name: "Suggestions carrière",
+      path: "/suggestions-carriere",
+      icon: Sparkles,
+    },
     { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
   ];
 

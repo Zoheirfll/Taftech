@@ -1,103 +1,10 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
-
-# ==========================================
-# 1. LES LISTES STANDARDISÉES (Constantes)
-# ==========================================
-
-WILAYAS_CHOICES = [
-    ('01 - Adrar', '01 - Adrar'), ('02 - Chlef', '02 - Chlef'), ('03 - Laghouat', '03 - Laghouat'),
-    ('04 - Oum El Bouaghi', '04 - Oum El Bouaghi'), ('05 - Batna', '05 - Batna'), ('06 - Béjaïa', '06 - Béjaïa'),
-    ('07 - Biskra', '07 - Biskra'), ('08 - Béchar', '08 - Béchar'), ('09 - Blida', '09 - Blida'),
-    ('10 - Bouira', '10 - Bouira'), ('11 - Tamanrasset', '11 - Tamanrasset'), ('12 - Tébessa', '12 - Tébessa'),
-    ('13 - Tlemcen', '13 - Tlemcen'), ('14 - Tiaret', '14 - Tiaret'), ('15 - Tizi Ouzou', '15 - Tizi Ouzou'),
-    ('16 - Alger', '16 - Alger'), ('17 - Djelfa', '17 - Djelfa'), ('18 - Jijel', '18 - Jijel'),
-    ('19 - Sétif', '19 - Sétif'), ('20 - Saïda', '20 - Saïda'), ('21 - Skikda', '21 - Skikda'),
-    ('22 - Sidi Bel Abbès', '22 - Sidi Bel Abbès'), ('23 - Annaba', '23 - Annaba'), ('24 - Guelma', '24 - Guelma'),
-    ('25 - Constantine', '25 - Constantine'), ('26 - Médéa', '26 - Médéa'), ('27 - Mostaganem', '27 - Mostaganem'),
-    ('28 - M\'Sila', '28 - M\'Sila'), ('29 - Mascara', '29 - Mascara'), ('30 - Ouargla', '30 - Ouargla'),
-    ('31 - Oran', '31 - Oran'), ('32 - El Bayadh', '32 - El Bayadh'), ('33 - Illizi', '33 - Illizi'),
-    ('34 - Bordj Bou Arréridj', '34 - Bordj Bou Arréridj'), ('35 - Boumerdès', '35 - Boumerdès'), 
-    ('36 - El Tarf', '36 - El Tarf'), ('37 - Tindouf', '37 - Tindouf'), ('38 - Tissemsilt', '38 - Tissemsilt'),
-    ('39 - El Oued', '39 - El Oued'), ('40 - Khenchela', '40 - Khenchela'), ('41 - Souk Ahras', '41 - Souk Ahras'),
-    ('42 - Tipaza', '42 - Tipaza'), ('43 - Mila', '43 - Mila'), ('44 - Aïn Defla', '44 - Aïn Defla'),
-    ('45 - Naâma', '45 - Naâma'), ('46 - Aïn Témouchent', '46 - Aïn Témouchent'), ('47 - Ghardaïa', '47 - Ghardaïa'),
-    ('48 - Relizane', '48 - Relizane'), ('49 - Timimoun', '49 - Timimoun'), ('50 - Bordj Badji Mokhtar', '50 - Bordj Badji Mokhtar'),
-    ('51 - Ouled Djellal', '51 - Ouled Djellal'), ('52 - Béni Abbès', '52 - Béni Abbès'), ('53 - In Salah', '53 - In Salah'),
-    ('54 - In Guezzam', '54 - In Guezzam'), ('55 - Touggourt', '55 - Touggourt'), ('56 - Djanet', '56 - Djanet'),
-    ('57 - El M\'Ghair', '57 - El M\'Ghair'), ('58 - El Meniaa', '58 - El Meniaa'),
-]
-
-SECTEURS_CHOICES = [
-    ('COMMERCIAL', 'Commercial, Technico Commercial, Service Client'),
-    ('PRODUCTION', 'Production, Méthode, Industrie'),
-    ('FINANCE', 'Comptabilité, Finance'),
-    ('LOGISTIQUE', 'Logistique, Achat, Stock, Transport'),
-    ('MARKETING', 'Marketing, Communication'),
-    ('IT', 'Informatique, Systèmes d\'Information, Internet'),
-    ('BTP', 'Chantier, Métiers BTP, Architecture'),
-    ('ADMIN', 'Administration, Moyens Généraux'),
-    ('VENTE', 'Vente, Télévente, Assistanat'),
-    ('BANQUE', 'Métiers Banque et Assurances'),
-    ('SANTE', 'Santé, Médical, Pharmacie'),
-    ('INGENIERIE', 'Ingénierie, Etudes, Projet, R&D'),
-    ('RH', 'RH, Personnel, Formation'),
-    ('AUTRE', 'Autre'),
-    ('SECRETARIAT', 'Assistanat, Secrétariat'),
-    ('QSE', 'Qualité, Sécurité, Environnement'),
-    ('TOURISME', 'Hôtellerie, Tourisme, Restauration, Loisirs'),
-    ('MAINTENANCE', 'Maintenance, Entretien'),
-    ('JURIDIQUE', 'Juridique, Fiscal, Audit, Conseil'),
-    ('GRANDS_COMPTES', 'Responsable Commercial, Grands Comptes'),
-]
-
-DIPLOMES_CHOICES = [
-    ('NIVEAU_SECONDAIRE', 'Niveau Secondaire'),
-    ('NIVEAU_TERMINAL', 'Niveau Terminal'),
-    ('BACCALAUREAT', 'Baccalauréat'),
-    ('TS', 'TS Bac +2'),
-    ('LICENCE', 'Licence (LMD), Bac + 3'),
-    ('MASTER_1', 'Master 1, Licence Bac + 4'),
-    ('MASTER_2', 'Master 2, Ingéniorat, Bac + 5'),
-    ('MAGISTERE', 'Magistère Bac + 7'),
-    ('DOCTORAT', 'Doctorat'),
-    ('NON_DIPLOMANTE', 'Non Diplômante'),
-    ('FORMATION_PRO', 'Formation Professionnelle'),
-    ('UNIVERSITAIRE_SANS_DIPLOME', 'Universitaire Sans Diplôme'),
-    ('CERTIFICATION', 'Certification'),
-]
-
-NIVEAUX_EXPERIENCE = [
-    ('DEBUTANT', 'Débutant / Junior'),
-    ('JEUNE_DIPLOME', 'Jeune Diplômé'),
-    ('STAGIAIRE', 'Stagiaire / Etudiant'),
-    ('CONFIRME', 'Confirmé / Expérimenté'),
-    ('MANAGER', 'Manager / Responsable Département'),
-    ('RESPONSABLE_EQUIPE', 'Responsable d\'Équipe'),
-    ('CADRE_DIRIGEANT', 'Cadre Dirigeant'),
-]
-
-TYPES_CONTRAT = [
-    ('CDI', 'CDI'),
-    ('CDD', 'CDD'),
-    ('ANEM', 'Contrat ANEM (CTA / DAIP)'),
-    ('STAGE', 'Stage / PFE'),
-    ('FREELANCE', 'Freelance'),
-    ('TEMPS_PARTIEL', 'Temps Partiel'),
-]
-TAILLES_ENTREPRISE_CHOICES = [
-    ('TPE', '1 à 10 employés'),
-    ('PE', '11 à 50 employés'),
-    ('ME', '51 à 200 employés'),
-    ('GE', '201 à 500 employés'),
-    ('TGE', 'Plus de 500 employés'),
-]
-
-
-# ==========================================
-# 2. LES MODÈLES DE BASE DE DONNÉES
-# ==========================================
+from .constants import (
+    WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES,
+    NIVEAUX_EXPERIENCE, TYPES_CONTRAT, TAILLES_ENTREPRISE_CHOICES
+)
 
 class ProfilEntreprise(models.Model):
     """
@@ -294,6 +201,10 @@ class ProfilCandidat(models.Model):
     
     cv_pdf = models.FileField(upload_to='cvs/', blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])])
     photo_profil = models.ImageField(upload_to='photos_profil/', blank=True, null=True, verbose_name="Photo de profil")
+    # --- NOUVEAU : RÉSEAUX ET BIO EXTRAITS PAR L'IA ---
+    bio = models.TextField(blank=True, null=True, verbose_name="Résumé de profil / Bio")
+    linkedin = models.URLField(blank=True, null=True, verbose_name="Lien LinkedIn")
+    github = models.URLField(blank=True, null=True, verbose_name="Lien GitHub")
 
     # --- NOUVEAU : INFOS LOCALISATION (Samira) ---
     wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, blank=True, null=True, verbose_name="Wilaya de résidence")

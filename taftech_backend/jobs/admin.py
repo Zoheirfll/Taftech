@@ -3,7 +3,7 @@ from .models import ProfilEntreprise, OffreEmploi
 from .models import Candidature
 from .models import (
     ProfilCandidat, ExperienceCandidat, FormationCandidat, 
-    Notification, AlerteEmploi, OffreSauvegardee
+    Notification, AlerteEmploi, OffreSauvegardee, CandidatureSpontanee, Questionnaire, MetierReferentiel, ProfilCandidatFavori
 )
 
 @admin.register(ProfilEntreprise)
@@ -92,3 +92,25 @@ class AlerteEmploiAdmin(admin.ModelAdmin):
 class OffreSauvegardeeAdmin(admin.ModelAdmin):
     list_display = ('candidat', 'offre', 'date_sauvegarde')
     search_fields = ('candidat__email', 'offre__titre')
+
+@admin.register(CandidatureSpontanee)
+class CandidatureSpontaneeAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'prenom', 'email', 'entreprise', 'date_envoi', 'lue')
+    list_filter = ('lue', 'date_envoi')
+    search_fields = ('nom', 'prenom', 'email', 'entreprise__nom_entreprise')
+
+@admin.register(Questionnaire)
+class QuestionnaireAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'recruteur', 'date_creation')
+    search_fields = ('titre', 'recruteur__email')
+
+@admin.register(MetierReferentiel)
+class MetierReferentielAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'secteur', 'niveau_experience', 'est_actif')
+    list_filter = ('secteur', 'est_actif')
+    search_fields = ('titre',)
+
+@admin.register(ProfilCandidatFavori)
+class ProfilCandidatFavoriAdmin(admin.ModelAdmin):
+    list_display = ('recruteur', 'candidat', 'date_ajout')
+    search_fields = ('recruteur__email', 'candidat__email')

@@ -10,7 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import RegisterRecruteur from "../src/Pages/RegisterRecruteur";
+import RegisterRecruteur from "../src/Pages/Auth/RegisterRecruteur";
 import { authService } from "../src/Services/authService";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
@@ -104,11 +104,11 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
     expect(
-      await screen.findByText(/Vérifiez votre Email/i),
+      await screen.findByText(/Vérifiez votre email/i),
     ).toBeInTheDocument();
     expect(authService.registerRecruteur).toHaveBeenCalled();
   });
@@ -124,17 +124,17 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
-    await screen.findByText(/Vérifiez votre Email/i);
+    await screen.findByText(/Vérifiez votre email/i);
 
-    const otpInput = screen.getByPlaceholderText("------");
+    const otpInput = screen.getByPlaceholderText("______");
     fireEvent.change(otpInput, { target: { value: "123456" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /VALIDER MON EMAIL/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));
 
-    expect(await screen.findByText(/Compte Sécurisé !/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Compte sécurisé/i)).toBeInTheDocument();
     expect(authService.verifyEmail).toHaveBeenCalledWith(
       "admin@taftech.dz",
       "123456",
@@ -152,17 +152,17 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
-    await screen.findByText(/Vérifiez votre Email/i);
-    fireEvent.change(screen.getByPlaceholderText("------"), {
+    await screen.findByText(/Vérifiez votre email/i);
+    fireEvent.change(screen.getByPlaceholderText("______"), {
       target: { value: "111111" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /VALIDER MON EMAIL/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));
 
     const finalBtn = await screen.findByRole("button", {
-      name: /ALLER À LA PAGE DE CONNEXION/i,
+      name: /Aller à la connexion/i,
     });
     fireEvent.click(finalBtn);
 
@@ -179,11 +179,11 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
-    await screen.findByText(/Vérifiez votre Email/i);
-    const otpInput = screen.getByPlaceholderText("------");
+    await screen.findByText(/Vérifiez votre email/i);
+    const otpInput = screen.getByPlaceholderText("______");
 
     fireEvent.change(otpInput, { target: { value: "A1B2C3" } });
 
@@ -226,7 +226,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
     // OMISSION VOLONTAIRE : On ne touche pas aux Selects React
 
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
     await waitFor(() => {
@@ -265,7 +265,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
     await waitFor(() => {
@@ -294,14 +294,14 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await remplirEtape1Complet(container);
     fireEvent.click(
-      screen.getByRole("button", { name: /S'INSCRIRE COMME EMPLOYEUR/i }),
+      screen.getByRole("button", { name: /S'inscrire comme employeur/i }),
     );
 
-    await screen.findByText(/Vérifiez votre Email/i);
-    fireEvent.change(screen.getByPlaceholderText("------"), {
+    await screen.findByText(/Vérifiez votre email/i);
+    fireEvent.change(screen.getByPlaceholderText("______"), {
       target: { value: "000000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /VALIDER MON EMAIL/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(

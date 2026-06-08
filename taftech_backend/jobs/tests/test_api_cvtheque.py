@@ -28,7 +28,7 @@ class CVthequeAndAdvancedTests(APITestCase):
 
     def test_acces_cvtheque_recruteur_uniquement(self):
         """ Edge Case: Seuls les recruteurs peuvent chasser les têtes """
-        url = reverse('cvtheque-search')
+        url = reverse('cvtheque')
         
         # Tentative du candidat (Doit échouer)
         self.client.force_authenticate(user=self.cand)
@@ -45,19 +45,19 @@ class CVthequeAndAdvancedTests(APITestCase):
         self.client.force_authenticate(user=self.rh)
         
         # On cherche quelqu'un avec au moins 2 ans d'XP. Le candidat en a 3, il doit ressortir.
-        url_match = reverse('cvtheque-search') + "?experience=2"
+        url_match = reverse('cvtheque') + "?experience=2"
         response_match = self.client.get(url_match)
         self.assertEqual(len(response_match.data['results']), 1)
         
         # On cherche quelqu'un avec 5 ans d'XP. Le candidat n'en a que 3, il ne doit pas ressortir.
-        url_no_match = reverse('cvtheque-search') + "?experience=5"
+        url_no_match = reverse('cvtheque') + "?experience=5"
         response_no_match = self.client.get(url_no_match)
         self.assertEqual(len(response_no_match.data['results']), 0)
 
     def test_offres_recommandees_ia(self):
         """ US-IA-01: L'IA scanne et propose des jobs """
         self.client.force_authenticate(user=self.cand)
-        url = reverse('offres-recommandees')
+        url = reverse('recommandations')
         
         # L'algo de matcher est mocké ou exécuté. Si aucune offre n'existe, retourne []
         response = self.client.get(url)

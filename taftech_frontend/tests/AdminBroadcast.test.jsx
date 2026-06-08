@@ -9,7 +9,7 @@ import {
   cleanup,
   waitFor,
 } from "@testing-library/react";
-import AdminBroadcast from "../src/Pages/admin/AdminBroadcast";
+import AdminBroadcast from "../src/Pages/Admin/AdminBroadcast";
 import api from "../src/api/axiosConfig";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -49,7 +49,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     });
 
     // Soumission
-    fireEvent.click(screen.getByText(/ENVOYER LA CAMPAGNE/i));
+    fireEvent.click(screen.getByText(/Envoyer la campagne/i));
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalled();
@@ -76,7 +76,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
       target: { value: "Message..." },
     });
 
-    fireEvent.click(screen.getByText(/ENVOYER LA CAMPAGNE/i));
+    fireEvent.click(screen.getByText(/Envoyer la campagne/i));
 
     expect(window.confirm).toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled(); // L'API ne doit pas être appelée
@@ -95,16 +95,14 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
       target: { value: "Message..." },
     });
 
-    fireEvent.click(screen.getByText(/ENVOYER LA CAMPAGNE/i));
+    fireEvent.click(screen.getByText(/Envoyer la campagne/i));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_ENVOI_BROADCAST",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de l'envoi des emails.",
-      );
+      expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'envoi.");
     });
   });
 });

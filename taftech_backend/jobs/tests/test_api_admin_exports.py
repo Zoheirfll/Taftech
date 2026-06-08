@@ -26,7 +26,7 @@ class AdminAndExportsTests(APITestCase):
 
     def test_export_csv_admin_uniquement(self):
         """ US-ADM-02: Seul l'admin peut télécharger les CSV """
-        url = reverse('admin-export-candidatures')
+        url = reverse('export-candidatures')
         
         # 1. Test avec un simple recruteur (Edge Case)
         self.client.force_authenticate(user=self.rh)
@@ -52,7 +52,7 @@ class AdminAndExportsTests(APITestCase):
     def test_admin_broadcast_email(self):
         """ US-ADM-03: Envoi massif de newsletter """
         self.client.force_authenticate(user=self.admin)
-        url = reverse('admin-broadcast-email')
+        url = reverse('admin-broadcast')
         
         data = {
             "sujet": "Nouvelle fonctionnalité !",

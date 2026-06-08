@@ -71,7 +71,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
     await waitFor(() => {
       expect(screen.getByText(/Doe John/i)).toBeInTheDocument();
       expect(screen.getByText(/Développeur Fullstack/i)).toBeInTheDocument();
-      expect(screen.getByText(/Page 1 sur 2/i)).toBeInTheDocument();
+      expect(screen.getByText(/Page 1 \/ 2/i)).toBeInTheDocument();
     });
   });
 
@@ -79,7 +79,9 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
     jobsService.getAdminCandidatures.mockResolvedValue(mockData);
     render(<AdminCandidatures />);
 
-    const searchInput = screen.getByPlaceholderText(/Rechercher un candidat/i);
+    const searchInput = screen.getByPlaceholderText(
+      /Candidat, offre, entreprise/i,
+    );
     const searchButton = screen.getByText(/Chercher/i);
 
     fireEvent.change(searchInput, { target: { value: "TafTech" } });
@@ -102,7 +104,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
 
     render(<AdminCandidatures />);
 
-    const exportBtn = screen.getByText(/EXPORTER EN EXCEL/i);
+    const exportBtn = screen.getByText(/Exporter CSV/i);
     fireEvent.click(exportBtn);
 
     await waitFor(() => {
@@ -125,9 +127,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
         "ECHEC_CHARGEMENT_CANDIDATURES_ADMIN",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement des candidatures.",
-      );
+      expect(toast.error).toHaveBeenCalledWith("Erreur lors du chargement.");
       expect(
         screen.getByText(/Aucune candidature trouvée/i),
       ).toBeInTheDocument();

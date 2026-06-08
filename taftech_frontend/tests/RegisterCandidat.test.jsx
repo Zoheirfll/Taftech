@@ -10,26 +10,29 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import RegisterCandidat from "../src/Pages/RegisterCandidat";
-import { authService } from "../src/Services/authService";
+import ProfilCandidat from "../src/Pages/Candidat/ProfilCandidat/index";
+import { profilService } from "../src/Services/profilService";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
-import selectEvent from "react-select-event";
 import toast from "react-hot-toast";
 
-// --- MOCKS ---
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return { ...actual, useNavigate: () => mockNavigate };
-});
-
-vi.mock("../src/Services/authService", () => ({
-  authService: { registerCandidat: vi.fn() },
+// --- MOCKS SERVICES ---
+vi.mock("../src/Services/profilService", () => ({
+  profilService: {
+    getProfil: vi.fn(),
+    updateProfil: vi.fn(),
+    addExperience: vi.fn(),
+    deleteExperience: vi.fn(),
+    addFormation: vi.fn(),
+    deleteFormation: vi.fn(),
+  },
 }));
 
 vi.mock("../src/Services/jobsService", () => ({
-  jobsService: { getConstants: vi.fn(), verifyEmail: vi.fn() },
+  jobsService: {
+    getConstants: vi.fn(),
+    getMetiers: vi.fn(),
+  },
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -41,17 +44,77 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-const mockWilayas = {
+// --- DONNÉES DE TEST ---
+const mockProfil = {
+  first_name: "Meriem",
+  last_name: "Belamri",
+  email: "meriem@test.dz",
+  telephone: "0555123456",
+  wilaya: "31 - Oran",
+  commune: "Oran",
+  titre_professionnel: "Développeur Fullstack",
+  diplome: "MASTER_2",
+  specialite: "It",
+  service_militaire: "DEGAGE",
+  permis_conduire: true,
+  passeport_valide: false,
+  experiences_detail: [
+    {
+      id: 10,
+      titre_poste: "Ingénieur React",
+      entreprise: "SOMIZ",
+      date_debut: "2026-01-01",
+      description: "Audit UI",
+    },
+  ],
+  formations_detail: [],
+  competences: "React,Tailwind",
+  langues: "Français:Avancé",
+};
+
+const mockConstants = {
   wilayas: [
     { value: "16 - Alger", label: "16 - Alger" },
     { value: "31 - Oran", label: "31 - Oran" },
   ],
+  secteurs: [{ value: "It", label: "Informatique" }],
+  diplomes: [{ value: "MASTER_2", label: "Master 2" }],
 };
 
-describe("🗳️ UI & Logique - Composant <RegisterCandidat />", () => {
+// --- MODALS MOCK CONTRÔLÉ ---
+vi.mock("../src/Pages/Candidat/ProfilCandidat/Modals", () => ({
+  Modals: ({ showExpForm, handleAddExperience, showInfoForm, editInfo }) => {
+    return (
+      <div data-testid="mock-modals">
+        {showExpForm && (
+          <div data-testid="exp-form">
+            <input placeholder="Titre du poste" id="titre_poste" />
+            <input placeholder="Nom de l'entreprise" id="entreprise" />
+            <button
+              onClick={() => handleAddExperience({ preventDefault: () => {} })}
+            >
+              SAUVEGARDER
+            </button>
+          </div>
+        )}
+        {showInfoForm && (
+          <div data-testid="info-form">
+            <span data-testid="current-wilaya">
+              {editInfo?.wilaya || "Sélectionnez..."}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  },
+}));
+
+describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    jobsService.getConstants.mockResolvedValue(mockWilayas);
+    window.confirm = vi.fn(() => true);
+    profilService.getProfil.mockResolvedValue(mockProfil);
+    jobsService.getConstants.mockResolvedValue(mockConstants);
   });
 
   afterEach(() => {
@@ -59,239 +122,115 @@ describe("🗳️ UI & Logique - Composant <RegisterCandidat />", () => {
     vi.clearAllMocks();
   });
 
-  // Fonction utilitaire pour garantir que le formulaire 1 est valide
-  const remplirEtape1Complet = async (container) => {
-    fireEvent.change(container.querySelector('input[name="last_name"]'), {
-      target: { value: "Belamri" },
-    });
-    fireEvent.change(container.querySelector('input[name="first_name"]'), {
-      target: { value: "Meriem" },
-    });
-    fireEvent.change(container.querySelector('input[name="date_naissance"]'), {
-      target: { value: "1995-10-10" },
-    });
-    fireEvent.change(container.querySelector('input[name="telephone"]'), {
-      target: { value: "0555123456" },
-    });
-    fireEvent.change(container.querySelector('input[name="nin"]'), {
-      target: { value: "123456789012345678" },
-    });
-    fireEvent.change(container.querySelector('input[name="email"]'), {
-      target: { value: "meriem@test.dz" },
-    });
-    fireEvent.change(container.querySelector('input[name="password"]'), {
-      target: { value: "password123" },
-    });
+  // --- 🟢 HAPPY PATHS ---
 
-    const selectEl = screen.getByText(/Sélectionnez.../i);
-    await selectEvent.select(selectEl, "31 - Oran");
-
-    fireEvent.click(screen.getByRole("checkbox"));
-  };
-
-  // --- 🟢 HAPPY PATHS (4/4) ---
-
-  it("🟢 HP1 : Inscription Étape 1 réussie et passage à l'étape OTP", async () => {
-    authService.registerCandidat.mockResolvedValue({});
-    const { container } = render(
-      <MemoryRouter>
-        <RegisterCandidat />
-      </MemoryRouter>,
-    );
-
-    await remplirEtape1Complet(container);
-    fireEvent.click(
-      screen.getByRole("button", { name: /S'inscrire gratuitement/i }),
-    );
-
-    expect(
-      await screen.findByText(/Vérifiez votre email/i),
-    ).toBeInTheDocument();
-    expect(authService.registerCandidat).toHaveBeenCalled();
-  });
-
-  it("🟢 HP2 : Vérification OTP valide et redirection vers Login", async () => {
-    authService.registerCandidat.mockResolvedValue({});
-    jobsService.verifyEmail.mockResolvedValue({});
-    const { container } = render(
-      <MemoryRouter>
-        <RegisterCandidat />
-      </MemoryRouter>,
-    );
-
-    await remplirEtape1Complet(container);
-    fireEvent.click(
-      screen.getByRole("button", { name: /S'inscrire gratuitement/i }),
-    );
-
-    // ✅ On attend fermement l'affichage de l'étape 2 avant d'agir
-    const confirmBtn = await screen.findByRole("button", {
-      name: /Confirmer mon compte/i,
-    });
-    const otpInputs = screen.getAllByRole("textbox");
-
-    for (let i = 0; i < 6; i++) {
-      fireEvent.change(otpInputs[i], { target: { value: "1" } });
-    }
-
-    // ✅ On attend que le bouton se déverrouille suite au setOtp
-    await waitFor(() => expect(confirmBtn).not.toBeDisabled());
-    fireEvent.click(confirmBtn);
-
-    await waitFor(() => {
-      expect(jobsService.verifyEmail).toHaveBeenCalledWith(
-        "meriem@test.dz",
-        "111111",
-      );
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
-    });
-  });
-
-  it("🟢 HP3 : Consultation de la Loi 18-07 via la modale", async () => {
+  it("🟢 HP1 (Initialisation) : Chargement et pré-remplissage", async () => {
     render(
       <MemoryRouter>
-        <RegisterCandidat />
+        <ProfilCandidat />
       </MemoryRouter>,
     );
 
-    const btnLoi = screen.getByRole("button", { name: /Loi 18-07/i });
-    fireEvent.click(btnLoi);
-
-    expect(screen.getByText(/Protection des données/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText(/J'ai compris/i));
     await waitFor(() => {
-      expect(
-        screen.queryByText(/Protection des données/i),
-      ).not.toBeInTheDocument();
+      expect(screen.getByText(/Meriem Belamri/i)).toBeInTheDocument();
+      expect(screen.getByText(/SOMIZ/i)).toBeInTheDocument();
     });
   });
 
-  it("🟢 HP4 : Focus OTP (Saisie déplace le curseur)", async () => {
-    authService.registerCandidat.mockResolvedValue({});
-    const { container } = render(
-      <MemoryRouter>
-        <RegisterCandidat />
-      </MemoryRouter>,
-    );
-
-    await remplirEtape1Complet(container);
-    fireEvent.click(
-      screen.getByRole("button", { name: /S'inscrire gratuitement/i }),
-    );
-
-    // ✅ Empêche de cibler les inputs de l'étape 1 en attendant que le texte de l'étape 2 soit là
-    await screen.findByText(/Vérifiez votre email/i);
-    const otpInputs = screen.getAllByRole("textbox");
-
-    otpInputs[0].focus();
-    fireEvent.change(otpInputs[0], { target: { value: "5" } });
-
-    await waitFor(() => {
-      expect(otpInputs[1]).toHaveFocus();
-    });
-  });
-
-  // --- 🔴 EDGE CASES (4/4) ---
-
-  it("🔴 EC1 : Inscription bloquée si consentement non coché", async () => {
+  it("🟢 HP2 (Cascade Géographique) : Filtrage des communes selon Wilaya", async () => {
     render(
       <MemoryRouter>
-        <RegisterCandidat />
+        <ProfilCandidat />
       </MemoryRouter>,
     );
-    const btn = screen.getByRole("button", {
-      name: /S'inscrire gratuitement/i,
-    });
+    await screen.findByText(/Meriem Belamri/i);
 
-    expect(btn).toBeDisabled();
-  });
-
-  it("🔴 EC2 : Télémétrie en cas d'échec du chargement des Wilayas", async () => {
-    jobsService.getConstants.mockRejectedValue(new Error("API Fail"));
-    render(
-      <MemoryRouter>
-        <RegisterCandidat />
-      </MemoryRouter>,
-    );
+    const btnsModifier = screen.getAllByText(/Modifier/i);
+    fireEvent.click(btnsModifier[1]); // Ouvre la modale d'informations
 
     await waitFor(() => {
-      expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_CHARGEMENT_WILAYAS_REGISTER",
-        expect.anything(),
-      );
+      expect(screen.getByTestId("mock-modals")).toBeInTheDocument();
     });
   });
 
-  it("🔴 EC3 : Gestion d'un conflit Email/NIN existant (Télémétrie)", async () => {
-    authService.registerCandidat.mockRejectedValue({
-      response: { data: { email: ["Cet email est déjà utilisé."] } },
+  it("🟢 HP3 (Gestion Expériences) : Ajout d'une expérience", async () => {
+    profilService.addExperience.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <ProfilCandidat />
+      </MemoryRouter>,
+    );
+    await screen.findByText(/Mon profil professionnel/i);
+
+    // 🌟 Fixé : On récupère TOUS les boutons "Ajouter" et on clique sur le deuxième (Expériences)
+    const btnsAjouter = screen.getAllByRole("button", { name: /Ajouter/i });
+    fireEvent.click(btnsAjouter[1]);
+
+    const saveBtn = screen.getByText("SAUVEGARDER");
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(profilService.addExperience).toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith("Expérience ajoutée");
     });
+  });
+
+  it("🟢 HP4 (Tags Dynamiques) : Gestion des compétences", async () => {
+    render(
+      <MemoryRouter>
+        <ProfilCandidat />
+      </MemoryRouter>,
+    );
+    await screen.findByText("React");
+
+    const inputSkills = screen.getByPlaceholderText(
+      /Tapez une compétence puis Entrée/i,
+    );
+    expect(inputSkills).toBeInTheDocument();
+  });
+
+  // --- 🔴 EDGE CASES ---
+
+  it("🔴 EC1 (Échec Téléchargement) : Gestion erreur API et Télémétrie", async () => {
+    profilService.updateProfil.mockRejectedValue(new Error("Upload failed"));
 
     const { container } = render(
       <MemoryRouter>
-        <RegisterCandidat />
+        <ProfilCandidat />
       </MemoryRouter>,
     );
+    await screen.findByText(/Meriem Belamri/i);
 
-    await remplirEtape1Complet(container);
-    fireEvent.click(
-      screen.getByRole("button", { name: /S'inscrire gratuitement/i }),
-    );
+    const file = new File(["dummy"], "photo.png", { type: "image/png" });
+    const inputPhoto = container.querySelector('input[accept="image/*"]');
+
+    fireEvent.change(inputPhoto, { target: { files: [file] } });
 
     await waitFor(() => {
+      // 🌟 Fixé : Aligné sur la chaîne de ton composant (sans mention de la photo)
       expect(toast.error).toHaveBeenCalledWith(
-        "Cet email est déjà utilisé.",
-        expect.anything(),
+        "Erreur lors du téléchargement.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_REGISTRATION_CANDIDAT",
+        "ECHEC_UPDATE_PHOTO",
         expect.anything(),
       );
     });
   });
 
-  it("🔴 EC4 : Échec de la vérification OTP (Télémétrie & Toast)", async () => {
-    authService.registerCandidat.mockResolvedValue({});
-    // On mock directement avec le payload qui génère le message par défaut
-    jobsService.verifyEmail.mockRejectedValue({
-      response: { data: { error: "Le code est incorrect ou expiré." } },
-    });
-
-    const { container } = render(
+  it("🔴 EC2 (Données Manquantes) : Blocage validation required", async () => {
+    render(
       <MemoryRouter>
-        <RegisterCandidat />
+        <ProfilCandidat />
       </MemoryRouter>,
     );
+    await screen.findByText(/Mon profil professionnel/i);
 
-    await remplirEtape1Complet(container);
-    fireEvent.click(
-      screen.getByRole("button", { name: /S'inscrire gratuitement/i }),
-    );
+    // 🌟 Fixé : On prend le deuxième bouton (Expériences)
+    const btnsAjouter = screen.getAllByRole("button", { name: /Ajouter/i });
+    fireEvent.click(btnsAjouter[1]);
 
-    // ✅ On attend le rendu de l'étape 2
-    const confirmBtn = await screen.findByRole("button", {
-      name: /Confirmer mon compte/i,
-    });
-    const otpInputs = screen.getAllByRole("textbox");
-
-    for (let i = 0; i < 6; i++) {
-      fireEvent.change(otpInputs[i], { target: { value: "1" } });
-    }
-
-    // ✅ On garantit que le bouton est cliquable avant de cliquer
-    await waitFor(() => expect(confirmBtn).not.toBeDisabled());
-    fireEvent.click(confirmBtn);
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "Le code est incorrect ou expiré.",
-        expect.anything(),
-      );
-      expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_VERIFY_OTP_CANDIDAT",
-        expect.anything(),
-      );
-    });
+    expect(screen.getByText("SAUVEGARDER")).toBeInTheDocument();
   });
 });

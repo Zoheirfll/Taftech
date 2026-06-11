@@ -7,10 +7,5 @@ export default defineConfig({
     setupNodeEvents(on, config) {},
     specPattern: "cypress/e2e/**/*.cy.js",
   },
-  env: {
-    RECRUTEUR_EMAIL: "zoheir.f31@gmail.com",
-    RECRUTEUR_PASSWORD: "22032002",
-    CANDIDAT_EMAIL: "zoheir.53@gmail.com",
-    CANDIDAT_PASSWORD: "22032002",
-  },
+  // Les credentials sont dans cypress.env.json (gitignore)
 });

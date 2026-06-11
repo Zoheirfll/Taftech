@@ -1,9 +1,13 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import get_user_model
+
+logger = logging.getLogger(__name__)
 from django.db.models import Q
 import os
 import random
@@ -15,6 +19,10 @@ from ..matcher import calculer_score_matching
 from ..cv_parser import parse_cv
 
 User = get_user_model()
+
+
+class GroqThrottle(UserRateThrottle):
+    scope = 'groq'
 
 
 class OffresRecommandeesAPIView(APIView):
@@ -135,6 +143,7 @@ class MetierReferentielAdminAPIView(APIView):
 
 class SuggestionsCarriereAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [GroqThrottle]
 
     def get(self, request):
         if request.user.role != 'CANDIDAT':
@@ -190,6 +199,7 @@ def _appel_groq(messages, max_tokens=500, temperature=0.7):
 
 class AnalyseCarriereGroqAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [GroqThrottle]
 
     def get(self, request):
         if request.user.role != 'CANDIDAT':
@@ -231,12 +241,13 @@ Secteur souhaité : {profil.secteur_souhaite or 'Non renseigné'}
             ], max_tokens=500, temperature=0.7)
             return Response({'analyse': analyse})
         except Exception as e:
-            print(f"Erreur Groq carrière : {e}")
+            logger.error("Erreur Groq carrière : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
 
 
 class AnalyseGroqRecruteurAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [GroqThrottle]
 
     def post(self, request, candidature_id):
         if request.user.role != 'RECRUTEUR':
@@ -309,5 +320,5 @@ Pas de markdown, maximum 150 mots."""
             )
             return Response({'analyse': analyse})
         except Exception as e:
-            print(f"Erreur Groq recruteur : {e}")
+            logger.error("Erreur Groq recruteur : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)

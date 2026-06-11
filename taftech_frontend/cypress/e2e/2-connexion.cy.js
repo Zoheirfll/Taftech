@@ -1,68 +1,49 @@
 /// <reference types="cypress" />
-/* global cy, describe, it, beforeEach, expect */
 
-/// <reference types="cypress" />
-
-describe("🔐 Flux E2E : Connexion Utilisateur", () => {
+describe("Flux E2E : Connexion Utilisateur", () => {
   beforeEach(() => {
-    // On écoute les requêtes vers l'API de connexion
     cy.intercept("POST", "**/accounts/login/").as("loginAPI");
-
-    // On visite la page de connexion
-    cy.visit("http://localhost:5173/login");
+    cy.visit("/login");
   });
 
-  it("🔴 EC1 : Doit empêcher la connexion si les identifiants sont invalides", () => {
-    cy.log("📝 Saisie de mauvais identifiants...");
-
-    // 👇 CIBLAGE PRÉCIS : On utilise le placeholder pour ne pas confondre avec le footer
-    cy.get('input[placeholder="Adresse Email"]').type(
-      "compte_imaginaire@taftech.dz",
-    );
-    cy.get('input[placeholder="Mot de passe"]').type("MauvaisMotDePasse123!");
-
-    // Ciblage strict du bouton
+  it("EC1 : Doit bloquer la connexion avec de mauvais identifiants", () => {
+    cy.get('input[placeholder="votre@email.com"]').type("compte_inexistant@taftech.dz");
+    cy.get('input[placeholder="••••••••"]').type("MauvaisMotDePasse123!");
     cy.contains("button", "Se connecter").click();
 
-    // On attend la réponse de Django (401 Unauthorized)
     cy.wait("@loginAPI").its("response.statusCode").should("eq", 401);
 
-    // On vérifie la VRAIE sécurité : l'utilisateur reste bloqué sur la page Login
     cy.url().should("include", "/login");
-
-    // Et on s'assure qu'absolument rien n'a été stocké dans le navigateur
-    cy.window().then((win) => {
-      expect(win.localStorage.getItem("userRole")).to.be.null;
-    });
+    cy.window().its("localStorage").invoke("getItem", "userRole").should("be.null");
   });
 
-  it("🟢 HP1 : Doit connecter l'utilisateur, rediriger et recharger la page", () => {
-    cy.log("📝 Simulation d'une connexion réussie...");
-
-    // On force Django à répondre "OK" (200) avec un rôle (indépendant de la DB)
+  it("HP1 : Doit connecter le candidat et rediriger vers l'accueil", () => {
+    // Interception avec mock pour ne pas dépendre de la DB
     cy.intercept("POST", "**/accounts/login/", {
       statusCode: 200,
       body: { role: "CANDIDAT" },
-    }).as("loginSuccess");
+    }).as("loginMock");
 
-    // 👇 CIBLAGE PRÉCIS par placeholder
-    cy.get('input[placeholder="Adresse Email"]').type(
-      "candidat_valide@test.dz",
-    );
-    cy.get('input[placeholder="Mot de passe"]').type("MotDePasseValide123!");
-
-    // Ciblage strict du bouton
+    cy.get('input[placeholder="votre@email.com"]').type(Cypress.env("CANDIDAT_EMAIL"));
+    cy.get('input[placeholder="••••••••"]').type(Cypress.env("CANDIDAT_PASSWORD"));
     cy.contains("button", "Se connecter").click();
 
-    // On attend l'interception de succès
-    cy.wait("@loginSuccess");
+    cy.wait("@loginMock");
+    cy.url().should("eq", `${Cypress.config("baseUrl")}/`);
+    cy.window().its("localStorage").invoke("getItem", "userRole").should("eq", "CANDIDAT");
+  });
 
-    // On vérifie directement qu'on est bien sur l'accueil
-    cy.url().should("eq", "http://localhost:5173/");
+  it("HP2 : Doit connecter le recruteur et rediriger vers le dashboard", () => {
+    cy.intercept("POST", "**/accounts/login/", {
+      statusCode: 200,
+      body: { role: "RECRUTEUR" },
+    }).as("loginMock");
 
-    // On vérifie que le rôle a bien été stocké par votre code React
-    cy.window().then((win) => {
-      expect(win.localStorage.getItem("userRole")).to.eq("CANDIDAT");
-    });
+    cy.get('input[placeholder="votre@email.com"]').type(Cypress.env("RECRUTEUR_EMAIL"));
+    cy.get('input[placeholder="••••••••"]').type(Cypress.env("RECRUTEUR_PASSWORD"));
+    cy.contains("button", "Se connecter").click();
+
+    cy.wait("@loginMock");
+    cy.window().its("localStorage").invoke("getItem", "userRole").should("eq", "RECRUTEUR");
   });
 });

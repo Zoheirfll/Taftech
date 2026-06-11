@@ -2,18 +2,29 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from ..models import Notification, ProfilEntreprise
 from ..serializers import NotificationSerializer, EntreprisePublicSerializer
 
 User = get_user_model()
 
+
+class NotificationPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
 class NotificationListAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        notifs = Notification.objects.filter(destinataire=request.user)
-        serializer = NotificationSerializer(notifs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        notifs = Notification.objects.filter(destinataire=request.user).order_by('-date_creation')
+        paginator = NotificationPagination()
+        result_page = paginator.paginate_queryset(notifs, request)
+        serializer = NotificationSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 class MarkNotificationReadAPIView(APIView):
     permission_classes = [IsAuthenticated]

@@ -462,3 +462,26 @@ class ReponseCandidat(models.Model):
 
     class Meta:
         unique_together = ['candidature', 'question']
+
+
+class AuditLog(models.Model):
+    ACTIONS = [
+        ('APPROUVER_OFFRE', 'Approuver offre'),
+        ('REFUSER_OFFRE', 'Refuser offre'),
+        ('APPROUVER_ENTREPRISE', 'Approuver entreprise'),
+        ('REFUSER_ENTREPRISE', 'Refuser entreprise'),
+        ('SUPPRIMER_USER', 'Supprimer utilisateur'),
+        ('SUPPRIMER_OFFRE', 'Supprimer offre'),
+        ('AUTRE', 'Autre'),
+    ]
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
+    action = models.CharField(max_length=30, choices=ACTIONS)
+    detail = models.CharField(max_length=255, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.admin} | {self.action} | {self.date:%Y-%m-%d %H:%M}"

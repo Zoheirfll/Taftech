@@ -53,7 +53,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
         if 'logo' in request.FILES:
             profil.logo = request.FILES['logo']
         profil.save()
-        logo_url = f"http://127.0.0.1:8000{profil.logo.url}" if profil.logo else None
+        logo_url = request.build_absolute_uri(profil.logo.url) if profil.logo else None
         return Response({
             "message": "Informations mises à jour.",
             "description": profil.description,

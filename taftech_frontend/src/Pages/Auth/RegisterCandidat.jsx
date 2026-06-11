@@ -259,6 +259,7 @@ const RegisterCandidat = () => {
                       onChange={handleSelectChange}
                       placeholder="Sélectionnez..."
                       styles={selectStyles}
+                      classNamePrefix="wilaya-select"
                     />
                   </div>
                 </div>

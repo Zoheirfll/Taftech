@@ -6,14 +6,15 @@ from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Avg, Count
 from django.http import HttpResponse
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 import csv
 import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise
+    ProfilEntreprise, AuditLog
 )
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
@@ -28,6 +29,15 @@ class AdminPagination(PageNumberPagination):
     page_size = 5
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+
+def _get_client_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    return x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
+
+
+def _audit(request, action, detail=''):
+    AuditLog.objects.create(admin=request.user, action=action, detail=detail, ip=_get_client_ip(request))
 
 
 class AdminOffresListAPIView(APIView):
@@ -57,6 +67,9 @@ class AdminOffreModerateAPIView(APIView):
         serializer = OffreEmploiSerializer(offre, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            nouveau_statut = request.data.get('statut_moderation', '')
+            action = 'APPROUVER_OFFRE' if nouveau_statut == 'APPROUVEE' else 'REFUSER_OFFRE' if nouveau_statut == 'REFUSEE' else 'AUTRE'
+            _audit(request, action, f"offre #{offre.id} - {offre.titre}")
             return Response({
                 "message": "Offre modérée avec succès !",
                 "offre": OffreDashboardDTO(offre).data
@@ -91,6 +104,9 @@ class AdminEntrepriseModerateAPIView(APIView):
         serializer = EntrepriseDashboardDetailSerializer(entreprise, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            approuvee = request.data.get('est_approuvee')
+            action = 'APPROUVER_ENTREPRISE' if approuvee is True or approuvee == 'true' else 'REFUSER_ENTREPRISE' if approuvee is False or approuvee == 'false' else 'AUTRE'
+            _audit(request, action, f"entreprise #{entreprise.id} - {entreprise.nom_entreprise}")
             return Response({"message": "Statut mis à jour !"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -138,6 +154,7 @@ class AdminUserModerateAPIView(APIView):
             user.is_active = not user.is_active
             user.save()
             statut = "débloqué" if user.is_active else "bloqué"
+            _audit(request, 'SUPPRIMER_USER', f"user #{user.id} - {user.email} ({statut})")
             return Response({"message": f"Utilisateur {statut} !"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
@@ -160,13 +177,16 @@ class AdminBroadcastEmailAPIView(APIView):
         if not liste_emails:
             return Response({"message": "Aucun candidat abonné."}, status=status.HTTP_200_OK)
         try:
-            email = EmailMessage(
+            ctx = {'sujet': sujet, 'message': message, 'annee': datetime.datetime.now().year}
+            html_body = render_to_string('emails/broadcast.html', ctx)
+            email = EmailMultiAlternatives(
                 subject=sujet,
                 body=message,
                 from_email=settings.EMAIL_HOST_USER,
                 to=[settings.EMAIL_HOST_USER],
-                bcc=liste_emails
+                bcc=liste_emails,
             )
+            email.attach_alternative(html_body, 'text/html')
             email.send(fail_silently=False)
             return Response({"message": f"Email envoyé à {len(liste_emails)} candidat(s) !"}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -353,3 +373,25 @@ class AdminMarcheAPIView(APIView):
             'top_secteurs': top_secteurs,
             'matching_moyen': round(float(matching_moyen), 1) if matching_moyen else None,
         })
+
+
+class AdminAuditLogAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        logs = AuditLog.objects.select_related('admin').all()
+        paginator = AdminPagination()
+        paginator.page_size = int(request.query_params.get('page_size', 20))
+        result_page = paginator.paginate_queryset(logs, request)
+        data = [
+            {
+                'id': log.id,
+                'admin': log.admin.email if log.admin else '—',
+                'action': log.action,
+                'detail': log.detail,
+                'ip': log.ip,
+                'date': log.date.strftime('%d/%m/%Y %H:%M'),
+            }
+            for log in result_page
+        ]
+        return paginator.get_paginated_response(data)

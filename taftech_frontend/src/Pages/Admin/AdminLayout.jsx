@@ -8,6 +8,7 @@ import {
   Users,
   Megaphone,
   ArrowLeft,
+  ShieldCheck,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -52,6 +53,9 @@ const AdminLayout = () => {
           </NavLink>
           <NavLink to="/admin-taftech/broadcast" className={navLinkClass}>
             <Megaphone size={16} className="flex-shrink-0" /> Diffusion
+          </NavLink>
+          <NavLink to="/admin-taftech/audit" className={navLinkClass}>
+            <ShieldCheck size={16} className="flex-shrink-0" /> Journal d'audit
           </NavLink>
         </nav>
         <div className="p-4 border-t border-slate-800">

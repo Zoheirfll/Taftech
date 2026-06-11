@@ -62,6 +62,7 @@ from .admin import (
     ExportOffresCSVAPIView,
     ExportUtilisateursCSVAPIView,
     AdminMarcheAPIView,
+    AdminAuditLogAPIView,
 )
 from .ia import (
     OffresRecommandeesAPIView,

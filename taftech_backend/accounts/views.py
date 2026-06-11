@@ -1,13 +1,24 @@
 import random
 import logging
 from django.contrib.auth import authenticate
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.throttling import AnonRateThrottle
+
+
+class CypressAwareThrottle(AnonRateThrottle):
+    """En mode DEBUG, désactive le throttle pour 127.0.0.1 (Cypress)."""
+    def allow_request(self, request, view):
+        if settings.DEBUG:
+            ip = request.META.get('REMOTE_ADDR', '')
+            if ip in ('127.0.0.1', '::1'):
+                return True
+        return super().allow_request(request, view)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, EmailTokenObtainSerializer, RecruteurRegisterSerializer
@@ -33,7 +44,7 @@ def _generate_otp(user):
 
 class CandidatRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         dto = RegisterCandidatDTO(data=request.data)
@@ -50,10 +61,13 @@ class CandidatRegistrationAPIView(APIView):
                 user.save()
 
                 sujet = "Bienvenue sur TafTech ! Votre code de vérification"
-                message = f"Bonjour {user.first_name},\n\nVotre code de vérification est : {code}\n\nÀ très vite !"
-
+                ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': False, 'annee': timezone.now().year}
+                html_body = render_to_string('emails/verification_code.html', ctx)
+                texte = f"Bonjour {user.first_name},\n\nVotre code de vérification est : {code}\n\nÀ très vite !"
                 try:
-                    send_mail(sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False)
+                    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+                    msg.attach_alternative(html_body, 'text/html')
+                    msg.send(fail_silently=False)
                 except Exception as e:
                     logger.error("Erreur envoi email inscription: %s", e)
 
@@ -72,7 +86,7 @@ class CandidatRegistrationAPIView(APIView):
 
 class VerifyEmailAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         email = request.data.get('email')
@@ -110,7 +124,7 @@ class EmailTokenObtainView(TokenObtainPairView):
 
 class RecruteurRegisterAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         serializer = RecruteurRegisterSerializer(data=request.data)
@@ -123,15 +137,17 @@ class RecruteurRegisterAPIView(APIView):
             user.save()
 
             sujet = "Bienvenue sur TafTech ! Vérifiez votre compte Entreprise"
-            message = (
+            ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': True, 'annee': timezone.now().year}
+            html_body = render_to_string('emails/verification_code.html', ctx)
+            texte = (
                 f"Bonjour {user.first_name},\n\n"
-                "Votre demande de création de compte recruteur a bien été enregistrée.\n\n"
                 f"Votre code de vérification est : {code}\n\n"
-                "Une fois votre email vérifié, notre équipe validera votre Registre de Commerce pour que vous puissiez publier des offres."
+                "Une fois votre email vérifié, notre équipe validera votre Registre de Commerce."
             )
-
             try:
-                send_mail(sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False)
+                msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+                msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=False)
             except Exception as e:
                 logger.error("Erreur envoi email recruteur: %s", e)
 
@@ -145,7 +161,7 @@ class RecruteurRegisterAPIView(APIView):
 
 class CookieTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -259,7 +275,7 @@ class AdminSystemLogAPIView(APIView):
 
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip()
@@ -277,17 +293,17 @@ class ForgotPasswordAPIView(APIView):
         user.save(update_fields=['code_verification', 'code_verification_created_at'])
 
         try:
-            send_mail(
-                subject="Réinitialisation de votre mot de passe TafTech",
-                message=(
-                    f"Bonjour {user.first_name},\n\n"
-                    f"Votre code de réinitialisation est : {code}\n\n"
-                    "Ce code est valable 10 minutes.\n\nL'équipe TafTech."
-                ),
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[user.email],
-                fail_silently=False,
+            ctx = {'prenom': user.first_name, 'code': code, 'annee': timezone.now().year}
+            html_body = render_to_string('emails/reset_password.html', ctx)
+            texte = f"Bonjour {user.first_name},\n\nVotre code de réinitialisation est : {code}\n\nCe code est valable 10 minutes.\n\nL'équipe TafTech."
+            msg = EmailMultiAlternatives(
+                "Réinitialisation de votre mot de passe TafTech",
+                texte,
+                settings.EMAIL_HOST_USER,
+                [user.email],
             )
+            msg.attach_alternative(html_body, 'text/html')
+            msg.send(fail_silently=False)
         except Exception as e:
             logger.error("Erreur envoi email reset password: %s", e)
             return Response({'error': "Erreur lors de l'envoi de l'email."}, status=500)
@@ -297,7 +313,7 @@ class ForgotPasswordAPIView(APIView):
 
 class ResetPasswordAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip()

@@ -104,7 +104,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/day',
-        'auth': '10/min',    # Utilisé sur les endpoints sensibles
+        'auth': '10/min',
+        'groq': '20/hour',
     },
 }
 
@@ -145,6 +146,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # EXTERNAL APIS
 # ──────────────────────────────────────────────
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+
+# URL publique du frontend (utilisée dans les emails)
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:5173')
 
 # ──────────────────────────────────────────────
 # FILES

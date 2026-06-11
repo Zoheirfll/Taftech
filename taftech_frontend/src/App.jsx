@@ -50,6 +50,7 @@ import AdminUsers from "./Pages/Admin/AdminUsers";
 import AdminBroadcast from "./Pages/admin/AdminBroadcast";
 import ParametresRecruteur from "./Pages/Recruteur/ParametresRecruteur";
 import AdminMetiers from "./Pages/Admin/AdminMetiers";
+import AdminAuditLogs from "./Pages/Admin/AdminAuditLogs";
 import SuggestionsCarriere from "./Pages/Candidat/SuggestionsCarriere";
 
 // 🛑 LE MUR DE SILENCE 🛑
@@ -147,6 +148,7 @@ function App() {
                   path="/admin-taftech/metiers"
                   element={<AdminMetiers />}
                 />
+                <Route path="audit" element={<AdminAuditLogs />} />
               </Route>
             </Routes>
           </main>

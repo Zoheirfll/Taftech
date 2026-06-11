@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
+from .validators import validate_document_mime, validate_image_mime, validate_file_size
 from .constants import (
     WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES,
     NIVEAUX_EXPERIENCE, TYPES_CONTRAT, TAILLES_ENTREPRISE_CHOICES
@@ -28,7 +29,11 @@ class ProfilEntreprise(models.Model):
         upload_to='logos_entreprises/',
         blank=True,
         null=True,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])]
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_mime,
+            validate_file_size(2),
+        ]
     )
     taille_entreprise = models.CharField(
         max_length=10,
@@ -122,19 +127,27 @@ class Candidature(models.Model):
     email_rapide = models.EmailField(blank=True, null=True)
     telephone_rapide = models.CharField(max_length=50, blank=True, null=True)
     cv_rapide = models.FileField(
-        upload_to='cv_rapide/', 
-        blank=True, 
-        null=True, 
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])]
+        upload_to='cv_rapide/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx']),
+            validate_document_mime,
+            validate_file_size(5),
+        ]
     )
 
     date_postulation = models.DateTimeField(auto_now_add=True)
     lettre_motivation = models.TextField(blank=True, null=True, verbose_name="Lettre de motivation (Optionnelle)")
     lettre_motivation_file = models.FileField(
-        upload_to='lettres_motivation/', 
-        blank=True, 
-        null=True, 
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])],
+        upload_to='lettres_motivation/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx']),
+            validate_document_mime,
+            validate_file_size(5),
+        ],
         verbose_name="Lettre de motivation (Fichier)"
     )
     
@@ -199,8 +212,26 @@ class ProfilCandidat(models.Model):
     titre_professionnel = models.CharField(max_length=150, blank=True, null=True)
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
     
-    cv_pdf = models.FileField(upload_to='cvs/', blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])])
-    photo_profil = models.ImageField(upload_to='photos_profil/', blank=True, null=True, verbose_name="Photo de profil")
+    cv_pdf = models.FileField(
+        upload_to='cvs/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx']),
+            validate_document_mime,
+            validate_file_size(5),
+        ]
+    )
+    photo_profil = models.ImageField(
+        upload_to='photos_profil/',
+        blank=True,
+        null=True,
+        verbose_name="Photo de profil",
+        validators=[
+            validate_image_mime,
+            validate_file_size(2),
+        ]
+    )
     # --- NOUVEAU : RÉSEAUX ET BIO EXTRAITS PAR L'IA ---
     bio = models.TextField(blank=True, null=True, verbose_name="Résumé de profil / Bio")
     linkedin = models.URLField(blank=True, null=True, verbose_name="Lien LinkedIn")

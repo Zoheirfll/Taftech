@@ -1,6 +1,6 @@
 # CONTEXT.md — TafTech Project
 
-_Dernière mise à jour : 08/06/2026_
+_Dernière mise à jour : 11/06/2026 (sécurité complète)_
 
 ---
 
@@ -26,8 +26,8 @@ _Dernière mise à jour : 08/06/2026_
 - **IA Analyse** : Groq API (llama-3.1-8b-instant) — gratuit 30 req/min — à la demande uniquement
 - **PDF** : ReportLab (Platypus) + logo TafTech
 - **Email** : Django send_mail (SMTP Gmail)
-- **Tests Backend** : Django TestCase + APIClient
-- **Tests Frontend** : Vitest + @testing-library/react — 250/250 passent ✅
+- **Tests Backend** : Django TestCase + APIClient — 186/186 passent ✅
+- **Tests Frontend** : Vitest + @testing-library/react — 270/270 passent ✅
 - **Tests E2E** : Cypress
 - **GitHub** : https://github.com/Zoheirfll/Taftech (branch main)
 
@@ -71,9 +71,11 @@ Centralise toutes les constantes métier (importées dans models.py, matcher.py,
 
 Single grouped import block — toutes les vues importées en un seul bloc groupé par domaine.
 
-### accounts/ (inchangé)
+### accounts/ (sécurisé 11/06/2026)
 
-Aucun changement nécessaire — views.py, serializers.py, models.py, urls.py restent tels quels.
+- `views.py` — secrets retirés, `print()` → `logger`, rate limiting (`AnonRateThrottle`), hack Cypress isolé (`if settings.DEBUG`), expiry réelle du code reset (10 min)
+- `models.py` — champ `code_verification_created_at` ajouté (DateTimeField)
+- Migration `0006_add_code_verification_created_at` appliquée
 
 ---
 
@@ -300,7 +302,7 @@ Ancien `jobsService.js` (~726 lignes) → façade + 4 sous-services :
 
 ### accounts/
 
-- CustomUser (email, telephone, role, code_verification, date_naissance)
+- CustomUser (email, telephone, role, code_verification, code_verification_created_at, failed_login_attempts, locked_until, date_naissance)
 - SystemErrorLog (user, message, stack_trace, url, timestamp)
 
 ### jobs/
@@ -337,6 +339,33 @@ Ancien `jobsService.js` (~726 lignes) → façade + 4 sous-services :
 - **Bouton annuler** : `bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200`
 - **Modales** : `fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50`
 - **Cards** : `bg-white border border-slate-200 rounded-xl`
+
+---
+
+## 🔒 SÉCURITÉ (audit 11/06/2026)
+
+| Mesure | Statut | Détail |
+|--------|--------|--------|
+| Secrets dans `.env` | ✅ | SECRET_KEY, DB, EMAIL, GROQ — plus rien hardcodé |
+| DEBUG via env var | ✅ | `DEBUG=False` en prod automatiquement |
+| ALLOWED_HOSTS via env var | ✅ | Plus de liste vide |
+| JWT expiry configuré | ✅ | Access 15 min / Refresh 7 jours |
+| JWT blacklist à la rotation | ✅ | `token_blacklist` activé |
+| Rate limiting auth | ✅ | `AnonRateThrottle` sur tous les endpoints sensibles |
+| Expiry code reset (10 min) | ✅ | `code_verification_created_at` vérifié à chaque reset |
+| Code reset usage unique | ✅ | Effacé après usage ou expiry |
+| Hack Cypress isolé | ✅ | `if settings.DEBUG` uniquement — inactif en prod |
+| `print()` → `logger` | ✅ | Logging structuré, aucune donnée sensible en console |
+| HTTPS/HSTS en prod | ✅ | Activé automatiquement si `DEBUG=False` |
+| Cookies `Secure` en prod | ✅ | `AUTH_COOKIE_SECURE = not DEBUG` |
+| `.env` dans `.gitignore` | ✅ | Déjà configuré |
+| Logout révoque JWT | ✅ | `LogoutAPIView` blackliste refreshToken + efface cookies |
+| Verrouillage compte | ✅ | 5 échecs → verrou 15 min (`failed_login_attempts`, `locked_until`) |
+| Validation MIME fichiers | ✅ | Magic bytes PDF/DOCX/JPEG/PNG — `jobs/validators.py` |
+| Limite taille fichiers | ✅ | CV/lettre 5 Mo, logo/photo 2 Mo |
+| CSP headers | ✅ | `SecurityHeadersMiddleware` — report-only en dev, strict en prod |
+
+**Important** : ne jamais committer `.env`. Regénérer la `SECRET_KEY` avant la mise en prod avec `django-admin startproject` ou `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`.
 
 ---
 
@@ -513,7 +542,7 @@ git push origin main
 ### Architecture cible
 
 ```
-Candidat/Recruteur → Django API → RAG Engine → Ollama (LLM local) → Réponse
+Candidat/Recruteur → Django API → RAG Engine → Ollama (LLM local) → Réponsese
                                        ↑
                               PostgreSQL + pgvector
                         (offres, profils, matchings, évaluations)

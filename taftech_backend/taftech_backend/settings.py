@@ -146,6 +146,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # ──────────────────────────────────────────────
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 
+# URL publique du frontend (utilisée dans les emails)
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:5173')
+
 # ──────────────────────────────────────────────
 # FILES
 # ──────────────────────────────────────────────

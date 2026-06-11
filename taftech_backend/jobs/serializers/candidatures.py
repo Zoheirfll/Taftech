@@ -53,11 +53,17 @@ class CandidatInfoDTO(serializers.ModelSerializer):
 
     def get_cv_pdf(self, obj):
         p = self._profil(obj)
-        return f"http://127.0.0.1:8000{p.cv_pdf.url}" if p and p.cv_pdf else None
+        if not (p and p.cv_pdf):
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(p.cv_pdf.url) if request else p.cv_pdf.url
 
     def get_photo_profil(self, obj):
         p = self._profil(obj)
-        return f"http://127.0.0.1:8000{p.photo_profil.url}" if p and p.photo_profil else None
+        if not (p and p.photo_profil):
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(p.photo_profil.url) if request else p.photo_profil.url
 
     def get_experiences(self, obj):
         p = self._profil(obj)
@@ -149,14 +155,16 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
         )
 
     def get_lettre_motivation_file(self, obj):
-        if obj.lettre_motivation_file:
-            return f"http://127.0.0.1:8000{obj.lettre_motivation_file.url}"
-        return None
+        if not obj.lettre_motivation_file:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.lettre_motivation_file.url) if request else obj.lettre_motivation_file.url
 
     def get_cv_rapide_url(self, obj):
-        if obj.cv_rapide:
-            return f"http://127.0.0.1:8000{obj.cv_rapide.url}"
-        return None
+        if not obj.cv_rapide:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.cv_rapide.url) if request else obj.cv_rapide.url
 
 
 class MesCandidaturesDTO(serializers.ModelSerializer):

@@ -55,11 +55,24 @@ def validate_image_mime(file_obj):
         )
 
 
-def validate_file_size(max_mb: int):
-    """Factory — retourne un validator qui limite la taille du fichier."""
-    def validator(file_obj):
-        if file_obj.size > max_mb * 1024 * 1024:
+class validate_file_size:
+    """Validator de taille de fichier sérialisable par les migrations Django."""
+
+    def __init__(self, max_mb: int):
+        self.max_mb = max_mb
+
+    def __call__(self, file_obj):
+        if file_obj.size > self.max_mb * 1024 * 1024:
             raise ValidationError(
-                f"La taille du fichier dépasse la limite autorisée ({max_mb} Mo)."
+                f"La taille du fichier dépasse la limite autorisée ({self.max_mb} Mo)."
             )
-    return validator
+
+    def __eq__(self, other):
+        return isinstance(other, validate_file_size) and self.max_mb == other.max_mb
+
+    def deconstruct(self):
+        return (
+            'jobs.validators.validate_file_size',
+            [self.max_mb],
+            {},
+        )

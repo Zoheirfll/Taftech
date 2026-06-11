@@ -61,12 +61,12 @@ class ApiAdminTest(APITestCase):
 
     def test_admin_approuve_offre_success(self):
         """ Happy Path : L'admin met une offre en ligne """
-        url = reverse('admin-entreprise-moderer', kwargs={'entreprise_id': self.entreprise.id})
+        url = reverse('admin-offre-moderer', kwargs={'offre_id': self.offre.id})
         self.client.force_authenticate(user=self.user_admin)
-        
+
         payload = {"statut_moderation": "APPROUVEE"}
         response = self.client.patch(url, payload)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.offre.refresh_from_db()
         self.assertEqual(self.offre.statut_moderation, "APPROUVEE")

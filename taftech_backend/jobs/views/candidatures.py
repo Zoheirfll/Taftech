@@ -1,11 +1,16 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from ..models import OffreEmploi, Candidature, Notification
 from ..models import QuestionQuestionnaire, ReponseCandidat
@@ -78,7 +83,7 @@ class PostulerAPIView(APIView):
                 ],
             }
         except Exception as e:
-            print(f"Erreur snapshot profil : {e}")
+            logger.warning("Erreur snapshot profil : %s", e)
             snapshot = None
 
         candidature = Candidature.objects.create(
@@ -113,23 +118,32 @@ class PostulerAPIView(APIView):
                     except QuestionQuestionnaire.DoesNotExist:
                         pass
             except Exception as e:
-                print(f"Erreur sauvegarde réponses : {e}")
+                logger.error("Erreur sauvegarde réponses : %s", e)
 
         # Email recruteur si score >= 70%
         email_employeur = offre.entreprise.user.email
         if email_employeur and resultat_matching['total'] >= 70.0:
             nom_candidat = f"{request.user.first_name} {request.user.last_name}"
             sujet = f"⭐ Top Profil détecté pour : {offre.titre}"
-            message = (
+            ctx = {
+                'nom_entreprise': offre.entreprise.nom_entreprise,
+                'nom_candidat': nom_candidat,
+                'titre_offre': offre.titre,
+                'score': int(resultat_matching['total']),
+                'annee': timezone.now().year,
+            }
+            html_body = render_to_string('emails/top_profil.html', ctx)
+            texte = (
                 f"Bonjour {offre.entreprise.nom_entreprise},\n\n"
                 f"Un candidat très pertinent ({nom_candidat}) vient de postuler à '{offre.titre}'.\n"
-                f"Score IA : {resultat_matching['total']}%.\n\n"
-                "Connectez-vous à votre tableau de bord TafTech.\n\nL'équipe TafTech."
+                f"Score IA : {resultat_matching['total']}%.\n\nL'équipe TafTech."
             )
             try:
-                send_mail(sujet, message, settings.EMAIL_HOST_USER, [email_employeur], fail_silently=True)
+                msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [email_employeur])
+                msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=True)
             except Exception as e:
-                print(f"Erreur envoi email employeur : {e}")
+                logger.error("Erreur envoi email employeur : %s", e)
 
         return Response({"message": "Candidature envoyée avec succès !"}, status=status.HTTP_201_CREATED)
 
@@ -201,19 +215,28 @@ class UpdateCandidatureStatusAPIView(APIView):
             nom_candidat = candidature.candidat.first_name if candidature.candidat else candidature.prenom_rapide
             if email_destinataire:
                 sujet = f"Convocation à un entretien - {nom_entreprise}"
-                corps = (
-                    f"Bonjour {nom_candidat},\n\n"
-                    f"{nom_entreprise} vous convie à un entretien pour le poste de {candidature.offre.titre}.\n"
-                )
-                if date_entretien_str:
-                    corps += f"📅 Date : {date_entretien_str.replace('T', ' à ')}\n"
+                date_formatee = date_entretien_str.replace('T', ' à ') if date_entretien_str else None
+                ctx = {
+                    'prenom': nom_candidat,
+                    'nom_entreprise': nom_entreprise,
+                    'titre_offre': candidature.offre.titre,
+                    'date_entretien': date_formatee,
+                    'message_custom': message_custom,
+                    'annee': timezone.now().year,
+                }
+                html_body = render_to_string('emails/entretien.html', ctx)
+                texte = f"Bonjour {nom_candidat},\n\n{nom_entreprise} vous convie à un entretien pour {candidature.offre.titre}."
+                if date_formatee:
+                    texte += f"\nDate : {date_formatee}"
                 if message_custom:
-                    corps += f"💬 Message : {message_custom}\n"
-                corps += f"\nCordialement,\n{nom_entreprise}\n(Via TafTech)"
+                    texte += f"\nMessage : {message_custom}"
+                texte += f"\n\nCordialement,\n{nom_entreprise} (via TafTech)"
                 try:
-                    send_mail(sujet, corps, settings.EMAIL_HOST_USER, [email_destinataire], fail_silently=True)
+                    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [email_destinataire])
+                    msg.attach_alternative(html_body, 'text/html')
+                    msg.send(fail_silently=True)
                 except Exception as e:
-                    print(f"Erreur envoi email : {e}")
+                    logger.error("Erreur envoi email entretien : %s", e)
             candidature.message_entretien = message_custom
 
         if nouveau_statut == "REFUSE":
@@ -227,15 +250,24 @@ class UpdateCandidatureStatusAPIView(APIView):
                         message_final = message_template.replace("{prenom}", prenom)
                         message_final = message_final.replace("{titre_offre}", candidature.offre.titre or "ce poste")
                         message_final = message_final.replace("{nom_entreprise}", profil_entreprise.nom_entreprise or "notre entreprise")
-                        send_mail(
+                        ctx = {
+                            'prenom': prenom,
+                            'titre_offre': candidature.offre.titre or "ce poste",
+                            'nom_entreprise': profil_entreprise.nom_entreprise or "notre entreprise",
+                            'message': message_final,
+                            'annee': timezone.now().year,
+                        }
+                        html_body = render_to_string('emails/refus.html', ctx)
+                        msg = EmailMultiAlternatives(
                             f"Réponse à votre candidature — {candidature.offre.titre}",
                             message_final,
                             settings.EMAIL_HOST_USER,
                             [email_candidat],
-                            fail_silently=False,
                         )
+                        msg.attach_alternative(html_body, 'text/html')
+                        msg.send(fail_silently=False)
             except Exception as e:
-                print(f"Erreur envoi email refus : {e}")
+                logger.error("Erreur envoi email refus : %s", e)
 
         candidature.save()
 

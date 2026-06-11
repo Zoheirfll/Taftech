@@ -2,6 +2,7 @@
 from django.urls import path
 from .views import CandidatRegistrationAPIView, RecruteurRegisterAPIView, CookieTokenObtainView, VerifyEmailAPIView, ErrorReportAPIView
 from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView
+from django.conf import settings
 
 
 urlpatterns = [
@@ -16,3 +17,18 @@ urlpatterns = [
     path('reset-password/', ResetPasswordAPIView.as_view(), name='reset-password'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
 ]
+
+if settings.DEBUG:
+    from django.http import JsonResponse
+    from django.views import View
+    from django.contrib.auth import get_user_model
+
+    class CypressCleanupView(View):
+        def delete(self, request):
+            User = get_user_model()
+            User.objects.filter(email="cypress@test.dz").delete()
+            return JsonResponse({"ok": True})
+
+    urlpatterns += [
+        path('cypress-cleanup/', CypressCleanupView.as_view(), name='cypress-cleanup'),
+    ]

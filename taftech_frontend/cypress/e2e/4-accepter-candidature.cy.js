@@ -1,75 +1,55 @@
 /// <reference types="cypress" />
-/* global cy, describe, it, beforeEach,  */
 
-describe("🤝 Flux E2E : Parcours Recruteur (Accepter un candidat)", () => {
+describe("Flux E2E : Parcours Recruteur (Accepter un candidat)", () => {
   beforeEach(() => {
-    // 1. Interceptions pour surveiller le réseau
-    cy.intercept("POST", "**/accounts/login/").as("loginAPI");
-
-    // Selon votre configuration DRF, la mise à jour (update) est un PUT ou un PATCH
-    cy.intercept("PUT", "**/candidatures/**").as("updateStatutAPI");
     cy.intercept("PATCH", "**/candidatures/**").as("updateStatutAPI");
-
-    // 2. Le Recruteur se connecte
-    cy.visit("http://localhost:5173/login");
-
-    // 👇 REMPLACEZ PAR LES IDENTIFIANTS DU RECRUTEUR PROPRIÉTAIRE DE L'OFFRE 👇
-    cy.get('input[placeholder="Adresse Email"]').type("zoheir.f31@gmail.com");
-    cy.get('input[placeholder="Mot de passe"]').type("22032002");
-    // 👆 ===================================================================== 👆
-
-    cy.contains("button", "Se connecter").click();
-
-    // On attend la validation de l'API
-    cy.wait("@loginAPI").its("response.statusCode").should("eq", 200);
+    cy.login("recruteur");
   });
 
-  it("🟢 HP1 : Doit ouvrir les candidatures d'une offre et accepter un talent", () => {
-    // -----------------------------------------------------
-    // ÉTAPE 1 : Le Dashboard
-    // -----------------------------------------------------
-    cy.log("🗺️ Navigation vers le Dashboard Recruteur...");
+  it("HP1 : Doit ouvrir les candidatures d'une offre et accepter un talent", () => {
+    cy.visit("/dashboard");
 
-    // On force la visite au dashboard au cas où la redirection atterrirait ailleurs
-    cy.visit("http://localhost:5173/dashboard");
+    // Cliquer sur la première offre qui a des candidats
+    cy.contains("button", "Candidats").first().click();
 
-    // On clique sur le bouton de la première offre de la liste
-    cy.contains("button", "GÉRER LES CANDIDATS ➔").first().click();
+    cy.contains(/candidatures/i).should("be.visible");
 
-    // On s'assure d'être bien arrivé sur la page de Gestion de l'Offre
-    cy.contains("Candidatures reçues").should("be.visible");
+    // Ouvrir le dossier du premier candidat (bouton sans texte fixe — clic sur le 1er de la liste)
+    cy.get(".divide-y button").first().click();
 
-    // -----------------------------------------------------
-    // ÉTAPE 2 : Ouverture du profil candidat
-    // -----------------------------------------------------
-    cy.log("🖱️ Ouverture du dossier du candidat...");
+    // Le panneau candidat est ouvert quand le select de statut est visible
+    cy.get("select").last().should("be.visible");
 
-    // On clique sur le bouton "Voir" de la première candidature du tableau
-    cy.contains("button", "👁️ Voir").first().click();
+    // Changer le statut vers EN_COURS d'abord (force un vrai changement)
+    cy.get("select").last().select("EN_COURS");
+    cy.wait("@updateStatutAPI").its("response.statusCode").should("eq", 200);
 
-    // On s'assure que le panneau latéral / modale s'est bien ouvert
-    cy.contains("Décision Recrutement").should("be.visible");
-
-    // -----------------------------------------------------
-    // ÉTAPE 3 : Acceptation (Changement de statut)
-    // -----------------------------------------------------
-    cy.log('✅ Changement du statut vers "Candidat retenu"...');
-
-    // Comme il y a un <select> dans le tableau et un dans la modale, on cible le dernier (celui de la modale)
+    // Re-intercept pour le 2ème changement
+    cy.intercept("PATCH", "**/candidatures/**").as("updateStatutAPI2");
     cy.get("select").last().select("RETENU");
+    cy.wait("@updateStatutAPI2").its("response.statusCode").should("eq", 200);
 
-    // On vérifie que le Toast de succès apparaît bien à l'écran
-    cy.contains("Statut mis à jour avec succès").should("be.visible");
+    cy.contains("Statut mis à jour.").should("be.visible");
 
-    // -----------------------------------------------------
-    // ÉTAPE 4 : Apparition du Bulletin
-    // -----------------------------------------------------
-    cy.log("📄 Vérification du déblocage du Bulletin...");
+    // La section bulletin apparaît pour un candidat retenu
+    cy.contains("Candidat retenu").should("be.visible");
+    cy.contains("button", /télécharger/i).should("be.visible");
+  });
 
-    // Puisque le statut est "RETENU", ce bouton doit obligatoirement être généré par React
-    cy.contains("button", "📥 Télécharger le Bulletin").should("be.visible");
+  it("EC1 : Doit pouvoir refuser un candidat", () => {
+    cy.visit("/dashboard");
 
-    // (Optionnel) : On pourrait même cliquer dessus pour tester le téléchargement !
-    // cy.contains('button', '📥 Télécharger le Bulletin').click();
+    cy.contains("button", "Candidats").first().click();
+    cy.get(".divide-y button").first().click();
+    cy.get("select").last().should("be.visible");
+
+    // Forcer un vrai changement depuis EN_COURS
+    cy.get("select").last().select("EN_COURS");
+    cy.wait("@updateStatutAPI").its("response.statusCode").should("eq", 200);
+
+    cy.intercept("PATCH", "**/candidatures/**").as("updateStatutAPI2");
+    cy.get("select").last().select("REFUSE");
+    cy.wait("@updateStatutAPI2").its("response.statusCode").should("eq", 200);
+    cy.contains("Statut mis à jour.").should("be.visible");
   });
 });

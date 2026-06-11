@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 from django.db.models import Q
 from datetime import timedelta
@@ -91,28 +92,31 @@ class Command(BaseCommand):
             if not hasattr(candidat, 'profil_candidat') or not candidat.profil_candidat.notif_newsletter:
                 continue
 
-            message_email = f"Bonjour {candidat.first_name},\n\n"
-            message_email += f"Voici les nouvelles offres correspondant à votre alerte : {alerte.mots_cles}\n\n"
-
-            for offre in offres:
-                message_email += f"- {offre.titre}\n"
-                message_email += f"  Entreprise : {offre.entreprise.nom_entreprise}\n"
-                message_email += f"  Lieu : {offre.wilaya}\n"
-                message_email += f"  Lien : {SITE_URL}/offres/{offre.id}\n\n"
-
-            message_email += "Retrouvez également ces alertes dans votre boîte de réception TafTech.\n"
-            message_email += "L'équipe TafTech.\n\n"
-            message_email += "---\nVous recevez ce message car vous avez activé les alertes emploi sur TafTech."
+            offres_ctx = [
+                {'titre': o.titre, 'entreprise': o.entreprise.nom_entreprise, 'wilaya': o.wilaya, 'lien': f"{SITE_URL}/offres/{o.id}"}
+                for o in offres[:5]
+            ]
+            ctx = {
+                'prenom': candidat.first_name,
+                'mots_cles': alerte.mots_cles,
+                'nb_offres': nb_offres,
+                'offres': offres_ctx,
+                'nb_restantes': max(0, nb_offres - 5),
+                'annee': timezone.now().year,
+            }
+            html_body = render_to_string('emails/alerte_emploi.html', ctx)
+            texte = f"Bonjour {candidat.first_name},\n\n{nb_offres} offre(s) correspondent à votre alerte « {alerte.mots_cles} ».\n\nL'équipe TafTech."
 
             if not dry_run:
                 try:
-                    send_mail(
-                        subject=f"[TafTech] {titre_notif}",
-                        message=message_email,
-                        from_email=settings.EMAIL_HOST_USER,
-                        recipient_list=[candidat.email],
-                        fail_silently=False,
+                    msg = EmailMultiAlternatives(
+                        f"[TafTech] {titre_notif}",
+                        texte,
+                        settings.EMAIL_HOST_USER,
+                        [candidat.email],
                     )
+                    msg.attach_alternative(html_body, 'text/html')
+                    msg.send(fail_silently=False)
                     emails_envoyes += 1
                 except Exception as e:
                     self.stderr.write(self.style.ERROR(f"Erreur email pour {candidat.email} : {e}"))

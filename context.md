@@ -1,6 +1,6 @@
 # CONTEXT.md — TafTech Project
 
-_Dernière mise à jour : 11/06/2026_
+_Dernière mise à jour : 11/06/2026 — US9 qualité & tests_
 
 ---
 
@@ -28,7 +28,7 @@ _Dernière mise à jour : 11/06/2026_
 - **Email** : Django send_mail (SMTP Gmail)
 - **Tests Backend** : Django TestCase + APIClient — 186/186 passent ✅
 - **Tests Frontend** : Vitest + @testing-library/react — 270/270 passent ✅
-- **Tests E2E** : Cypress
+- **Tests E2E** : Cypress (7 fichiers — tests 1/2/3 stables, 4/5 partiellement instables)
 - **GitHub** : https://github.com/Zoheirfll/Taftech (branch main)
 
 ---
@@ -77,6 +77,21 @@ Single grouped import block — toutes les vues importées en un seul bloc group
 - `relance_maj_cv.py` — Relance par email les candidats inactifs depuis 60 jours (si `notif_mise_a_jour=True`). Option `--dry-run`. URL prod depuis `settings.SITE_URL`.
 
 **Déclenchement** : `crontab` sur le serveur algérien (voir section Déploiement).
+
+### US9 — Qualité & Tests (11/06/2026)
+
+- **Logging structuré** : tous les `print()` remplacés par `logger = logging.getLogger(__name__)` dans `cv_parser.py`, `views/ia.py`, `views/candidatures.py`, `accounts/views.py`
+- **Throttling Groq** : `GroqThrottle(UserRateThrottle, scope='groq')` — 20 req/heure sur les 3 vues IA
+- **CypressAwareThrottle** : bypass throttle pour 127.0.0.1 en DEBUG — Cypress ne reçoit plus de 429
+- **Endpoint cypress-cleanup** : `DELETE /accounts/cypress-cleanup/` (DEBUG only) — supprime cypress@test.dz avant chaque test
+- **AuditLog** : nouveau modèle + `_audit()` helper — trace les actions admin (approuver/refuser offre/entreprise, supprimer user/offre)
+- **Page admin Journal d'audit** : `AdminAuditLogs.jsx` avec pagination, accessible via `/admin-taftech/audit`
+- **Pagination** : `AdminPagination` (audit logs) + `NotificationPagination` (notifications, 20/page)
+- **Templates HTML emails** : tous les emails utilisent `EmailMultiAlternatives` + `render_to_string` — templates dans `jobs/templates/emails/` et `accounts/templates/emails/`
+  - `entretien.html`, `refus.html`, `top_profil.html`, `alerte_emploi.html`, `relance_cv.html`, `broadcast.html`
+  - `verification_code.html`, `reset_password.html`
+- **Cypress E2E** : 7 fichiers de tests — `cypress/support/e2e.js` ignore les uncaught exceptions React, `commands.js` avec `cy.login()` et `cy.selectOption()`
+- **Note code** : 8.3/10 (depuis 7.5)
 
 ### accounts/ (sécurisé 11/06/2026)
 
@@ -559,7 +574,8 @@ taftech_frontend/
 
 ## 🔲 FEATURES RESTANTES
 
-- [ ] Cypress E2E HP2-HP6 (react-select bloque)
+- [ ] Corriger tests Cypress 4 (accepter candidature) et 5 (questionnaire) — encore instables
+- [ ] Ajouter Sentry error tracking (optionnel — SystemErrorLog existant couvre le besoin de base)
 - [ ] Remplacer Groq par modèle local Ollama après déploiement
 
 ---

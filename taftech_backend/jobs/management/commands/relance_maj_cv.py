@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 from datetime import timedelta
 from jobs.models import ProfilCandidat
@@ -38,31 +39,27 @@ class Command(BaseCommand):
         for profil in profils:
             candidat = profil.user
             sujet = f"{candidat.first_name}, boostez votre visibilité sur TafTech !"
+            ctx = {
+                'prenom': candidat.first_name,
+                'jours': JOURS_INACTIVITE,
+                'lien_profil': f"{SITE_URL}/profil",
+                'annee': timezone.now().year,
+            }
+            html_body = render_to_string('emails/relance_cv.html', ctx)
             message = (
                 f"Bonjour {candidat.first_name},\n\n"
                 f"Cela fait {JOURS_INACTIVITE} jours que nous ne vous avons pas vu sur TafTech.\n\n"
-                f"Saviez-vous que les recruteurs consultent en priorité les profils mis à jour récemment ? "
-                f"Un profil actualisé multiplie vos chances d'être contacté pour une opportunité.\n\n"
-                f"Prenez 2 minutes pour rafraîchir votre CV ou vos compétences !\n\n"
-                f"Actualiser mon profil : {SITE_URL}/profil\n\n"
-                f"Bonne chance dans vos recherches,\n"
-                f"L'équipe TafTech.\n\n"
-                f"---\n"
-                f"Vous recevez ce rappel car l'option est activée dans vos paramètres. "
-                f"Vous pouvez la désactiver depuis votre espace candidat."
+                f"Actualisez votre profil : {SITE_URL}/profil\n\n"
+                f"L'équipe TafTech."
             )
 
             self.stdout.write(f"  → Relance : {candidat.email}")
 
             if not dry_run:
                 try:
-                    send_mail(
-                        subject=sujet,
-                        message=message,
-                        from_email=settings.EMAIL_HOST_USER,
-                        recipient_list=[candidat.email],
-                        fail_silently=False,
-                    )
+                    msg = EmailMultiAlternatives(sujet, message, settings.EMAIL_HOST_USER, [candidat.email])
+                    msg.attach_alternative(html_body, 'text/html')
+                    msg.send(fail_silently=False)
                     emails_envoyes += 1
                 except Exception as e:
                     self.stderr.write(self.style.ERROR(f"Erreur envoi {candidat.email} : {e}"))

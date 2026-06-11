@@ -6,6 +6,7 @@ Phase 2 (futur) : Ollama pour les CV complexes.
 import re
 import io
 import base64
+import logging
 import pdfplumber
 from docx import Document
 import fitz  # pymupdf - pour extraire les images du PDF
@@ -13,6 +14,8 @@ import json
 import os
 from groq import Groq
 from .constants import WILAYAS_MAPPING, DIPLOMES_MAPPING, SPECIALITES_MAPPING
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -30,7 +33,7 @@ def extract_text_from_pdf(file_path):
                 if page_text:
                     text += page_text + "\n"
     except Exception as e:
-        print(f"Erreur extraction PDF : {e}")
+        logger.error("Erreur extraction PDF : %s", e)
     return text
 
 
@@ -42,7 +45,7 @@ def extract_text_from_docx(file_path):
         for para in doc.paragraphs:
             text += para.text + "\n"
     except Exception as e:
-        print(f"Erreur extraction DOCX : {e}")
+        logger.error("Erreur extraction DOCX : %s", e)
     return text
 def extract_text_from_pdf_smart(file_path):
     """
@@ -78,7 +81,7 @@ def extract_text_from_pdf_smart(file_path):
                     line_text = " ".join(w['text'] for w in line_words)
                     text += line_text + "\n"
     except Exception as e:
-        print(f"Erreur extraction PDF smart : {e}")
+        logger.error("Erreur extraction PDF smart : %s", e)
     return text
 
 def extract_text(file_path, file_name):
@@ -129,7 +132,7 @@ def extract_photo_from_pdf(file_path):
         doc.close()
         return biggest_image
     except Exception as e:
-        print(f"Erreur extraction image : {e}")
+        logger.error("Erreur extraction image : %s", e)
         return None
 
 
@@ -826,7 +829,7 @@ def _call_groq(prompt, max_tokens=3000):
     """
     client = get_groq_client()
     if client is None:
-        print("Groq : clé API manquante, fallback regex")
+        logger.warning("Groq : clé API manquante, fallback regex")
         return None
 
     try:
@@ -839,7 +842,7 @@ def _call_groq(prompt, max_tokens=3000):
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Groq : erreur - {e}")
+        logger.error("Groq : erreur - %s", e)
         return None
 
 
@@ -864,7 +867,7 @@ def _extract_json_array(content):
         if isinstance(data, list):
             return data
     except json.JSONDecodeError as e:
-        print(f"Ollama : JSON invalide - {e}")
+        logger.warning("Ollama : JSON invalide - %s", e)
     return None
 
 def _extract_json_object(content):
@@ -886,7 +889,7 @@ def _extract_json_object(content):
         if isinstance(data, dict):
             return data
     except json.JSONDecodeError as e:
-        print(f"Groq : JSON object invalide - {e}")
+        logger.warning("Groq : JSON object invalide - %s", e)
     return None
 
 def parse_with_groq(text):
@@ -913,7 +916,7 @@ def parse_with_groq(text):
     any_success = False
 
     # === APPEL 1 : TITRE ===
-    print("Groq : extraction du titre...")
+    logger.debug("Groq : extraction du titre...")
     content = _call_groq(
         PROMPT_TITRE.replace("{cv_text}", text_truncated),
         max_tokens=100
@@ -925,7 +928,7 @@ def parse_with_groq(text):
             any_success = True
 
     # === APPEL 2 : EXPÉRIENCES ===
-    print("Groq : extraction des expériences...")
+    logger.debug("Groq : extraction des expériences...")
     content = _call_groq(
         PROMPT_EXPERIENCES.replace("{cv_text}", text_truncated),
         max_tokens=3000
@@ -940,7 +943,7 @@ def parse_with_groq(text):
         any_success = True
 
     # === APPEL 3 : FORMATIONS ===
-    print("Groq : extraction des formations...")
+    logger.debug("Groq : extraction des formations...")
     content = _call_groq(
         PROMPT_FORMATIONS.replace("{cv_text}", text_truncated),
         max_tokens=2000
@@ -955,7 +958,7 @@ def parse_with_groq(text):
         any_success = True
 
     # === APPEL 4 : INFOS PERSO (nom, téléphone, compétences, langues, réseaux, bio) ===
-    print("Groq : extraction des infos personnelles...")
+    logger.debug("Groq : extraction des infos personnelles...")
     content = _call_groq(
         PROMPT_INFOS_PERSO.replace("{cv_text}", text_truncated),
         max_tokens=1500

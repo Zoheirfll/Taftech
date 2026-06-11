@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Votre code de vérification</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:1px;">TafTech</h1>
+              <p style="margin:4px 0 0;color:#c7d2fe;font-size:13px;">Plateforme de recrutement</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">Bienvenue {{ prenom }} 👋</h2>
+              <p style="color:#475569;font-size:15px;line-height:1.7;margin:0 0 28px;">
+                Merci de vous être inscrit sur <strong>TafTech</strong>. Voici votre code de vérification :
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <div style="display:inline-block;background:#f0f0ff;border:2px dashed #4f46e5;border-radius:12px;padding:20px 40px;">
+                      <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#4f46e5;">{{ code }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              {% if est_recruteur %}
+              <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;padding:14px 18px;margin-bottom:24px;">
+                <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
+                  ⏳ Une fois votre email vérifié, notre équipe validera votre <strong>Registre de Commerce</strong> pour que vous puissiez publier des offres.
+                </p>
+              </div>
+              {% endif %}
+              <p style="color:#94a3b8;font-size:13px;margin:0;">
+                Ce code est valable <strong>15 minutes</strong>. Ne le partagez avec personne.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;color:#94a3b8;font-size:12px;">
+                Si vous n'avez pas créé de compte, ignorez cet email.<br>
+                &copy; {{ annee }} TafTech — Tous droits réservés.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

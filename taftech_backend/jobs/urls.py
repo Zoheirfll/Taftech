@@ -34,7 +34,7 @@ from .views import (
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
     ExportCandidaturesCSVAPIView, ExportEntreprisesCSVAPIView,
     ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView,
-    AdminMarcheAPIView,
+    AdminMarcheAPIView, AdminAuditLogAPIView,
 
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
@@ -108,6 +108,7 @@ urlpatterns = [
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast'),
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures'),
     path('admin/marche/', AdminMarcheAPIView.as_view(), name='admin-marche'),
+    path('admin/audit-logs/', AdminAuditLogAPIView.as_view(), name='admin-audit-logs'),
     path('admin/export/candidatures/', ExportCandidaturesCSVAPIView.as_view(), name='export-candidatures'),
     path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='export-entreprises'),
     path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='export-offres'),

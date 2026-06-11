@@ -104,7 +104,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/day',
-        'auth': '10/min',    # Utilisé sur les endpoints sensibles
+        'auth': '10/min',
+        'groq': '20/hour',
     },
 }
 

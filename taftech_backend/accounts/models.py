@@ -27,6 +27,8 @@ class CustomUser(AbstractUser):
     email_verifie = models.BooleanField(default=False)
     code_verification = models.CharField(max_length=6, blank=True, null=True)
     code_verification_created_at = models.DateTimeField(null=True, blank=True)
+    failed_login_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
     

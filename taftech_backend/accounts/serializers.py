@@ -2,8 +2,14 @@ from rest_framework import serializers
 from .models import CustomUser, SystemErrorLog
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.exceptions import AuthenticationFailed
+
 User = get_user_model()
+
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION_MINUTES = 15
 class RegisterCandidatDTO(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     # 👇 AJOUT : On récupère la wilaya depuis React
@@ -63,24 +69,46 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email_saisi = attrs.get('username')
         user = User.objects.filter(email=email_saisi).first()
-        
-        if user:
-            # 🚨 ON BLOQUE TOUT LE MONDE S'ILS NE SONT PAS ACTIFS !
-            if not user.is_active:
-                raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
-            
-            # (Optionnel) Si c'est un recruteur actif, mais que l'admin ne l'a pas encore validé
-            if user.role == 'RECRUTEUR' and hasattr(user, 'profilentreprise') and not user.profilentreprise.est_approuvee:
-                # Tu peux soit le laisser se connecter mais bloquer ses actions dans React,
-                # Soit le bloquer complètement ici. En général, on le laisse se connecter
-                # pour qu'il voie un message "Votre compte est en cours de validation par l'admin".
-                pass
-                
-            attrs['username'] = user.username
-        else:
+
+        if not user:
             raise AuthenticationFailed("Aucun compte trouvé avec cette adresse email.")
-            
-        data = super().validate(attrs)
+
+        # Vérification verrou actif
+        if user.locked_until and timezone.now() < user.locked_until:
+            minutes_restantes = int((user.locked_until - timezone.now()).total_seconds() // 60) + 1
+            raise AuthenticationFailed(
+                f"Compte temporairement verrouillé. Réessayez dans {minutes_restantes} minute(s)."
+            )
+
+        if not user.is_active:
+            raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
+
+        if user.role == 'RECRUTEUR' and hasattr(user, 'profilentreprise') and not user.profilentreprise.est_approuvee:
+            pass
+
+        attrs['username'] = user.username
+
+        try:
+            data = super().validate(attrs)
+        except Exception:
+            # Mauvais mot de passe — incrémenter le compteur
+            user.failed_login_attempts += 1
+            if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
+                user.locked_until = timezone.now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                user.failed_login_attempts = 0
+                user.save(update_fields=['failed_login_attempts', 'locked_until'])
+                raise AuthenticationFailed(
+                    f"Trop de tentatives échouées. Compte verrouillé {LOCKOUT_DURATION_MINUTES} minutes."
+                )
+            user.save(update_fields=['failed_login_attempts'])
+            raise AuthenticationFailed("Email ou mot de passe incorrect.")
+
+        # Login réussi — réinitialiser le compteur
+        if user.failed_login_attempts > 0 or user.locked_until:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            user.save(update_fields=['failed_login_attempts', 'locked_until'])
+
         data['role'] = self.user.role
         return data
 class RecruteurRegisterSerializer(serializers.ModelSerializer):

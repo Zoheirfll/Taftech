@@ -210,6 +210,25 @@ class CookieTokenRefreshView(TokenRefreshView):
             return Response({"detail": "Session expirée, veuillez vous reconnecter."}, status=401)
 
 
+class LogoutAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refreshToken')
+        if refresh_token:
+            try:
+                from rest_framework_simplejwt.tokens import RefreshToken
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception:
+                pass  # Token déjà expiré ou invalide — on nettoie quand même les cookies
+
+        response = Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
+        response.delete_cookie('accessToken')
+        response.delete_cookie('refreshToken')
+        return response
+
+
 class ErrorReportAPIView(APIView):
     permission_classes = [AllowAny]
 

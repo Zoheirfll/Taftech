@@ -166,6 +166,106 @@ class RegistrationAndAuthTests(APITestCase):
         self.assertEqual(response.data['error'], "Le code de vérification est incorrect.")
 
 
+class LoginLockoutTests(APITestCase):
+    """Tests pour le verrouillage de compte après X tentatives échouées."""
+
+    def setUp(self):
+        self.login_url = reverse('token_obtain_pair')
+        self.user = User.objects.create_user(
+            username="lockout_user",
+            email="lockout@taftech.dz",
+            password="CorrectPassword123!",
+            is_active=True,
+            email_verifie=True,
+            role="CANDIDAT",
+        )
+
+    def _try_login(self, password="WrongPassword!"):
+        return self.client.post(self.login_url, {
+            "username": "lockout@taftech.dz",
+            "password": password,
+        })
+
+    def test_compteur_incremente_apres_echec(self):
+        """Chaque mauvais mot de passe incrémente failed_login_attempts."""
+        self._try_login()
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_attempts, 1)
+
+    def test_compte_verrouille_apres_5_echecs(self):
+        """Au 5ème échec, le compte est verrouillé 15 min."""
+        for _ in range(5):
+            self._try_login()
+
+        response = self._try_login()
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("verrouillé", response.data['detail'])
+
+    def test_login_reussi_reinitialise_compteur(self):
+        """Un login réussi remet failed_login_attempts à 0."""
+        self._try_login()
+        self._try_login()
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_attempts, 2)
+
+        self._try_login(password="CorrectPassword123!")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_attempts, 0)
+        self.assertIsNone(self.user.locked_until)
+
+    def test_compte_verrouille_bloque_meme_bon_mdp(self):
+        """Un compte verrouillé est bloqué même avec le bon mot de passe."""
+        self.user.locked_until = timezone.now() + timedelta(minutes=10)
+        self.user.save()
+
+        response = self._try_login(password="CorrectPassword123!")
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("verrouillé", response.data['detail'])
+
+
+class LogoutSecurityTests(APITestCase):
+    """Tests pour la révocation du token au logout."""
+
+    def setUp(self):
+        self.logout_url = reverse('logout')
+        self.login_url = reverse('token_obtain_pair')
+        self.user = User.objects.create_user(
+            username="logout_user",
+            email="logout@taftech.dz",
+            password="Password123!",
+            is_active=True,
+            email_verifie=True,
+            role="CANDIDAT",
+        )
+
+    def test_logout_supprime_cookies(self):
+        """Après logout, les cookies accessToken et refreshToken sont supprimés."""
+        # Login pour obtenir les cookies
+        self.client.post(self.login_url, {"username": "logout@taftech.dz", "password": "Password123!"})
+
+        response = self.client.post(self.logout_url)
+        self.assertEqual(response.status_code, 200)
+
+        # Les cookies doivent être vidés (max-age=0 ou expires dans le passé)
+        access_cookie = response.cookies.get('accessToken')
+        refresh_cookie = response.cookies.get('refreshToken')
+        if access_cookie:
+            self.assertTrue(
+                access_cookie.get('max-age') == 0 or access_cookie.value == '',
+                "accessToken doit être effacé"
+            )
+        if refresh_cookie:
+            self.assertTrue(
+                refresh_cookie.get('max-age') == 0 or refresh_cookie.value == '',
+                "refreshToken doit être effacé"
+            )
+
+    def test_logout_sans_token_ne_crashe_pas(self):
+        """Logout sans cookie → 200 propre (pas de crash)."""
+        response = self.client.post(self.logout_url)
+        self.assertEqual(response.status_code, 200)
+
+
 class PasswordResetSecurityTests(APITestCase):
     """Tests pour la sécurité du reset de mot de passe (US8)."""
 

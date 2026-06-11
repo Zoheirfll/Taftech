@@ -26,14 +26,14 @@ export const authService = {
   // --------------------------------------------------------
   // 2. LOGOUT : On nettoie le rôle et on redirige
   // --------------------------------------------------------
-  logout: () => {
+  logout: async () => {
     try {
-      localStorage.removeItem("userRole");
-      // Optionnel : appeler une route backend api/accounts/logout/
-      // pour supprimer les cookies côté serveur.
-      window.location.href = "/login";
+      await api.post("accounts/logout/");
     } catch (err) {
-      reportError("ECHEC_LOGOUT_CLIENT", err);
+      // On ignore l'erreur réseau — on nettoie quand même côté client
+    } finally {
+      localStorage.removeItem("userRole");
+      window.location.href = "/login";
     }
   },
 

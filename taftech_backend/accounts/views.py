@@ -1,10 +1,13 @@
 import random
+import logging
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, EmailTokenObtainSerializer, RecruteurRegisterSerializer
@@ -12,75 +15,64 @@ from django.contrib.auth import get_user_model
 from .models import SystemErrorLog
 from rest_framework.permissions import IsAdminUser
 from .serializers import SystemErrorLogSerializer
+from datetime import timedelta
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
+
+RESET_CODE_EXPIRY_MINUTES = 10
+
+
+def _generate_otp(user):
+    """Génère un OTP 6 chiffres. En mode DEBUG uniquement, email cypress utilise 111111."""
+    code = str(random.randint(100000, 999999))
+    if settings.DEBUG and user.email == "cypress@test.dz":
+        code = "111111"
+    return code
+
 
 class CandidatRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
-        print("1. DONNÉES BRUTES DE REACT:", request.data) 
-        
         dto = RegisterCandidatDTO(data=request.data)
-        
-        if dto.is_valid():
-            print("2. DONNÉES VALIDÉES PAR LE DTO:", dto.validated_data)
-            try:
-                # 1. Le DTO crée l'utilisateur
-                user = dto.save() 
-                print(f"3. UTILISATEUR CRÉÉ: {user.email}, NIN: {user.nin}")
-                
-                # 2. On éteint manuellement les statuts juste après la création
-                user.is_active = False 
-                user.email_verifie = False
-                
-                # 3. On génère le code
-                code = str(random.randint(100000, 999999))
-                
-                # 👇 HACK CYPRESS 👇 : OTP magique pour les tests E2E
-                if user.email == "cypress@test.dz":
-                    code = "111111"
-                # 👆 FIN DU HACK 👆
 
+        if dto.is_valid():
+            try:
+                user = dto.save()
+                user.is_active = False
+                user.email_verifie = False
+
+                code = _generate_otp(user)
                 user.code_verification = code
-                
-                # 4. On sauvegarde tout ça en base de données en une seule fois !
+                user.code_verification_created_at = timezone.now()
                 user.save()
 
                 sujet = "Bienvenue sur TafTech ! Votre code de vérification"
                 message = f"Bonjour {user.first_name},\n\nVotre code de vérification est : {code}\n\nÀ très vite !"
-                
+
                 try:
-                    send_mail(
-                        sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False,
-                    )
-                    print("4. EMAIL ENVOYÉ AVEC SUCCÈS À", user.email)
+                    send_mail(sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False)
                 except Exception as e:
-                    print(f"ERREUR CRITIQUE D'ENVOI D'EMAIL : {e}")
+                    logger.error("Erreur envoi email inscription: %s", e)
 
                 return Response({
                     "message": "Candidat créé avec succès.",
-                    "email": user.email, 
-                    "user": {
-                        "username": user.username,
-                        "email": user.email,
-                        "role": user.role
-                    }
+                    "email": user.email,
+                    "user": {"username": user.username, "email": user.email, "role": user.role}
                 }, status=status.HTTP_201_CREATED)
-                
+
             except Exception as e:
-                print("ERREUR SERVICE:", str(e))
-                return Response(
-                    {"error": "Une erreur serveur est survenue."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
-        print("ERREURS DTO:", dto.errors)
+                logger.exception("Erreur création candidat")
+                return Response({"error": "Une erreur serveur est survenue."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response(dto.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class VerifyEmailAPIView(APIView):
-    """ Endpoint pour vérifier le code reçu par email """
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         email = request.data.get('email')
@@ -88,86 +80,84 @@ class VerifyEmailAPIView(APIView):
 
         try:
             user = User.objects.get(email=email)
-            
+
             if user.email_verifie:
                 return Response({"message": "Ce compte est déjà vérifié."}, status=status.HTTP_200_OK)
 
-            if user.code_verification == str(code):
-                user.is_active = True
-                user.email_verifie = True
-                user.code_verification = None # On vide le code
-                user.save()
-                return Response({"message": "Email vérifié avec succès !"}, status=status.HTTP_200_OK)
-            else:
+            if user.code_verification != str(code):
                 return Response({"error": "Le code de vérification est incorrect."}, status=status.HTTP_400_BAD_REQUEST)
-                
+
+            # Vérification expiry (10 min)
+            if user.code_verification_created_at:
+                expiry = user.code_verification_created_at + timedelta(minutes=RESET_CODE_EXPIRY_MINUTES)
+                if timezone.now() > expiry:
+                    return Response({"error": "Le code a expiré. Veuillez en demander un nouveau."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.is_active = True
+            user.email_verifie = True
+            user.code_verification = None
+            user.code_verification_created_at = None
+            user.save()
+            return Response({"message": "Email vérifié avec succès !"}, status=status.HTTP_200_OK)
+
         except User.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
 
 class EmailTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
 
+
 class RecruteurRegisterAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = RecruteurRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            # 1. On crée l'utilisateur (il est is_active=False grâce au serializer)
             user = serializer.save()
-            
-            # 2. On génère le code OTP
-            code = str(random.randint(100000, 999999))
-            
-            # 👇 HACK CYPRESS 👇 : OTP magique pour les tests E2E
-            if user.email == "cypress@test.dz":
-                code = "111111"
-            # 👆 FIN DU HACK 👆
 
+            code = _generate_otp(user)
             user.code_verification = code
+            user.code_verification_created_at = timezone.now()
             user.save()
 
-            # 3. On prépare l'email
             sujet = "Bienvenue sur TafTech ! Vérifiez votre compte Entreprise"
-            message = f"Bonjour {user.first_name},\n\nVotre demande de création de compte recruteur a bien été enregistrée.\n\nVotre code de vérification est : {code}\n\nUne fois votre email vérifié, notre équipe validera votre Registre de Commerce pour que vous puissiez publier des offres."
-            
-            # 4. On l'envoie
+            message = (
+                f"Bonjour {user.first_name},\n\n"
+                "Votre demande de création de compte recruteur a bien été enregistrée.\n\n"
+                f"Votre code de vérification est : {code}\n\n"
+                "Une fois votre email vérifié, notre équipe validera votre Registre de Commerce pour que vous puissiez publier des offres."
+            )
+
             try:
-                send_mail(
-                    sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False,
-                )
-                print("📧 EMAIL RECRUTEUR ENVOYÉ AVEC SUCCÈS À", user.email)
+                send_mail(sujet, message, settings.EMAIL_HOST_USER, [user.email], fail_silently=False)
             except Exception as e:
-                print(f"🚨 ERREUR CRITIQUE D'ENVOI D'EMAIL : {e}")
+                logger.error("Erreur envoi email recruteur: %s", e)
 
             return Response(
-                {
-                    "message": "Demande envoyée. Veuillez vérifier votre email avec le code à 6 chiffres.",
-                    "email": user.email
-                }, 
+                {"message": "Demande envoyée. Veuillez vérifier votre email avec le code à 6 chiffres.", "email": user.email},
                 status=status.HTTP_201_CREATED
             )
-            
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CookieTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        
+
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            print("🚨 VRAIE ERREUR DE LOGIN :", str(e))
             return Response({"detail": str(e)}, status=401)
 
         data = serializer.validated_data
 
-        # Met à jour last_login manuellement
-        # Met à jour last_login manuellement
         try:
-            from django.utils import timezone
             email = request.data.get('email') or request.data.get('username')
             user_obj = User.objects.get(email=email)
             user_obj.last_login = timezone.now()
@@ -176,7 +166,6 @@ class CookieTokenObtainView(TokenObtainPairView):
             pass
 
         response = Response({"role": data['role']}, status=status.HTTP_200_OK)
-
         response.set_cookie(
             key=settings.SIMPLE_JWT['AUTH_COOKIE'],
             value=data['access'],
@@ -193,20 +182,20 @@ class CookieTokenObtainView(TokenObtainPairView):
         )
         return response
 
+
 class CookieTokenRefreshView(TokenRefreshView):
     serializer_class = MyTokenObtainPairSerializer
-    
+
     def post(self, request, *args, **kwargs):
         refresh_token = getattr(request, 'COOKIES', {}).get('refreshToken')
         if not refresh_token and hasattr(request, '_request'):
             refresh_token = request._request.COOKIES.get('refreshToken')
-        
+
         if refresh_token:
             request.data['refresh'] = refresh_token
-            
+
         try:
             response = super().post(request, *args, **kwargs)
-            
             if response.status_code == 200:
                 response.set_cookie(
                     key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -217,8 +206,9 @@ class CookieTokenRefreshView(TokenRefreshView):
                 )
                 del response.data['access']
             return response
-        except Exception as e:
+        except Exception:
             return Response({"detail": "Session expirée, veuillez vous reconnecter."}, status=401)
+
 
 class ErrorReportAPIView(APIView):
     permission_classes = [AllowAny]
@@ -235,54 +225,60 @@ class ErrorReportAPIView(APIView):
                 stack_trace=request.data.get('stack_trace', 'N/A')
             )
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except:
+        except Exception:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
+
 class AdminSystemLogAPIView(APIView):
-    permission_classes = [IsAdminUser] 
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         logs = SystemErrorLog.objects.all().order_by('-timestamp')
         serializer = SystemErrorLogSerializer(logs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip()
         if not email:
             return Response({'error': 'Email obligatoire.'}, status=400)
-        
+
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Sécurité : ne pas révéler si l'email existe
             return Response({'message': 'Si cet email existe, un code a été envoyé.'}, status=200)
-        
-        # Générer code 6 chiffres
+
         code = str(random.randint(100000, 999999))
         user.code_verification = code
-        user.save(update_fields=['code_verification'])
-        
-        # Envoyer email
+        user.code_verification_created_at = timezone.now()
+        user.save(update_fields=['code_verification', 'code_verification_created_at'])
+
         try:
             send_mail(
                 subject="Réinitialisation de votre mot de passe TafTech",
-                message=f"Bonjour {user.first_name},\n\nVotre code de réinitialisation est : {code}\n\nCe code est valable 10 minutes.\n\nL'équipe TafTech.",
+                message=(
+                    f"Bonjour {user.first_name},\n\n"
+                    f"Votre code de réinitialisation est : {code}\n\n"
+                    "Ce code est valable 10 minutes.\n\nL'équipe TafTech."
+                ),
                 from_email=settings.EMAIL_HOST_USER,
                 recipient_list=[user.email],
                 fail_silently=False,
             )
         except Exception as e:
-            print(f"Erreur envoi email reset : {e}")
-            return Response({'error': 'Erreur lors de l\'envoi de l\'email.'}, status=500)
-        
+            logger.error("Erreur envoi email reset password: %s", e)
+            return Response({'error': "Erreur lors de l'envoi de l'email."}, status=500)
+
         return Response({'message': 'Si cet email existe, un code a été envoyé.'}, status=200)
 
 
 class ResetPasswordAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip()
@@ -300,8 +296,18 @@ class ResetPasswordAPIView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'Code invalide ou expiré.'}, status=400)
 
+        # Vérification expiry (10 min)
+        if user.code_verification_created_at:
+            expiry = user.code_verification_created_at + timedelta(minutes=RESET_CODE_EXPIRY_MINUTES)
+            if timezone.now() > expiry:
+                user.code_verification = None
+                user.code_verification_created_at = None
+                user.save(update_fields=['code_verification', 'code_verification_created_at'])
+                return Response({'error': 'Code invalide ou expiré.'}, status=400)
+
         user.set_password(nouveau_mdp)
         user.code_verification = None
+        user.code_verification_created_at = None
         user.save()
 
         return Response({'message': 'Mot de passe réinitialisé avec succès !'}, status=200)

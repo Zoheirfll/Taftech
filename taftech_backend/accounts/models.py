@@ -26,6 +26,7 @@ class CustomUser(AbstractUser):
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
     email_verifie = models.BooleanField(default=False)
     code_verification = models.CharField(max_length=6, blank=True, null=True)
+    code_verification_created_at = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
     

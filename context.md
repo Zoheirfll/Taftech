@@ -1,6 +1,6 @@
 # CONTEXT.md — TafTech Project
 
-_Dernière mise à jour : 11/06/2026 (sécurité complète)_
+_Dernière mise à jour : 11/06/2026_
 
 ---
 
@@ -70,6 +70,13 @@ Centralise toutes les constantes métier (importées dans models.py, matcher.py,
 ### jobs/urls.py (nettoyé)
 
 Single grouped import block — toutes les vues importées en un seul bloc groupé par domaine.
+
+### jobs/management/commands/
+
+- `envoyer_alertes.py` — Scan les nouvelles offres + envoie email + notification interne aux candidats ayant des alertes actives. Option `--dry-run` pour tester sans envoyer. URL prod depuis `settings.SITE_URL`.
+- `relance_maj_cv.py` — Relance par email les candidats inactifs depuis 60 jours (si `notif_mise_a_jour=True`). Option `--dry-run`. URL prod depuis `settings.SITE_URL`.
+
+**Déclenchement** : `crontab` sur le serveur algérien (voir section Déploiement).
 
 ### accounts/ (sécurisé 11/06/2026)
 
@@ -386,6 +393,56 @@ Ancien `jobsService.js` (~726 lignes) → façade + 4 sous-services :
 | constants.py   | Fichier centralisé                                      | Plus de duplication entre models/matcher/cv_parser |
 | jobsService.js | Façade + 4 sous-services                                | Zéro changement dans les composants                |
 | Pages/         | Organisées par domaine (Auth/Public/Candidat/Recruteur) | Navigation claire, imports propres                 |
+
+---
+
+## 🚀 DÉPLOIEMENT SERVEUR ALGÉRIEN
+
+### Variables `.env` à configurer en production
+
+```env
+SECRET_KEY=<nouvelle clé générée>
+DEBUG=False
+ALLOWED_HOSTS=taftech.dz,www.taftech.dz
+DB_NAME=taftech_db
+DB_USER=<user postgres>
+DB_PASSWORD=<mot de passe>
+DB_HOST=127.0.0.1
+DB_PORT=5432
+EMAIL_HOST_USER=taftech963@gmail.com
+EMAIL_HOST_PASSWORD=<app password Gmail>
+GROQ_API_KEY=<clé Groq>
+CORS_ALLOWED_ORIGINS=https://taftech.dz,https://www.taftech.dz
+SITE_URL=https://taftech.dz          ← URL du frontend (utilisée dans les emails)
+```
+
+### Crontab à configurer sur le serveur
+
+```bash
+crontab -e
+```
+
+```bash
+# Alertes emploi — tous les jours à 8h
+0 8 * * * cd /chemin/vers/taftech_backend && python manage.py envoyer_alertes >> /var/log/taftech_alertes.log 2>&1
+
+# Relance CV inactifs — le 1er de chaque mois à 9h
+0 9 1 * * cd /chemin/vers/taftech_backend && python manage.py relance_maj_cv >> /var/log/taftech_relance.log 2>&1
+```
+
+### Tester avant de mettre en prod (sans envoyer d'emails)
+
+```bash
+python manage.py envoyer_alertes --dry-run
+python manage.py relance_maj_cv --dry-run
+```
+
+### Migrations à appliquer au déploiement
+
+```bash
+python manage.py migrate
+python manage.py collectstatic
+```
 
 ---
 

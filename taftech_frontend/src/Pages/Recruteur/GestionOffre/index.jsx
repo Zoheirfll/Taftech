@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -76,7 +76,7 @@ const GestionOffre = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -153,7 +153,7 @@ const GestionOffre = () => {
             <div className="md:col-span-2 space-y-4">
               {offre.description && (
                 <div>
-                  <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
                     Description
                   </h4>
                   <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
@@ -163,7 +163,7 @@ const GestionOffre = () => {
               )}
               {offre.missions && (
                 <div>
-                  <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
                     Missions
                   </h4>
                   <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
@@ -173,7 +173,7 @@ const GestionOffre = () => {
               )}
               {offre.profil_recherche && (
                 <div>
-                  <h4 className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
                     Profil recherché
                   </h4>
                   <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
@@ -230,7 +230,7 @@ const GestionOffre = () => {
                   Candidatures ({offre.candidatures.length})
                 </p>
                 {showTop5Only && (
-                  <p className="text-xs text-indigo-600 font-medium">
+                  <p className="text-xs text-teal-700 font-medium">
                     Shortlist IA · Top 5
                   </p>
                 )}
@@ -257,14 +257,14 @@ const GestionOffre = () => {
                     setShowTop5Only(!showTop5Only);
                     if (!showTop5Only) toast?.success("Shortlist IA activée !");
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${showTop5Only ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${showTop5Only ? "bg-teal-700 text-white border-teal-700" : "bg-white text-teal-700 border-teal-200 hover:bg-teal-50"}`}
                 >
                   <Sparkles size={12} /> Top 5
                 </button>
                 {compareIds.length === 2 && (
                   <button
                     onClick={() => setShowCompare(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition-colors"
                   >
                     Comparer
                   </button>
@@ -292,7 +292,7 @@ const GestionOffre = () => {
                     <div key={cand.id}>
                       <button
                         onClick={() => setSelectedCandidature(cand)}
-                        className={`w-full text-left px-4 py-3.5 transition-colors ${isSelected ? "bg-indigo-50" : "hover:bg-slate-50"}`}
+                        className={`w-full text-left px-4 py-3.5 transition-colors ${isSelected ? "bg-teal-50" : "hover:bg-slate-50"}`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -365,7 +365,7 @@ const GestionOffre = () => {
                             e.stopPropagation();
                             toggleCompare(cand.id);
                           }}
-                          className={`w-full py-1 text-[10px] font-semibold rounded-md transition-colors ${compareIds.includes(cand.id) ? "bg-indigo-100 text-indigo-700" : "bg-slate-50 text-slate-400 hover:text-indigo-600"}`}
+                          className={`w-full py-1 text-[10px] font-semibold rounded-md transition-colors ${compareIds.includes(cand.id) ? "bg-teal-100 text-teal-800" : "bg-slate-50 text-slate-400 hover:text-teal-700"}`}
                         >
                           {compareIds.includes(cand.id)
                             ? "✓ Sélectionné"

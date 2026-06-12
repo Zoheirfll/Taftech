@@ -5,13 +5,11 @@ export const authService = {
   // --------------------------------------------------------
   // 1. LOGIN : Plus de stockage de token ici !
   // --------------------------------------------------------
-  login: async (email, password) => {
+  login: async (email, password, portal = null) => {
     try {
-      // L'URL exacte doit être accounts/login/ pour correspondre au backend
-      const response = await api.post("accounts/login/", {
-        username: email, // Le serializer attend 'username' (qui contient l'email)
-        password: password,
-      });
+      const payload = { username: email, password };
+      if (portal) payload.portal = portal;
+      const response = await api.post("accounts/login/", payload);
 
       if (response.data.role) {
         localStorage.setItem("userRole", response.data.role);

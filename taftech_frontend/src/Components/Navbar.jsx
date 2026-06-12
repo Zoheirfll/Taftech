@@ -172,8 +172,8 @@ const Navbar = () => {
           {!isLogged && (
             <>
               <Link
-                to="/register-entreprise"
-                className="hidden md:block text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
+                to="/recruteurs"
+                className="hidden md:block text-sm font-medium text-slate-600 hover:text-teal-700 transition-colors"
               >
                 Espace recruteur
               </Link>
@@ -408,7 +408,7 @@ const Navbar = () => {
               <MobileLink to="/register" onClick={closeMobile}>
                 S'inscrire
               </MobileLink>
-              <MobileLink to="/register-entreprise" onClick={closeMobile}>
+              <MobileLink to="/recruteurs" onClick={closeMobile}>
                 Espace recruteur
               </MobileLink>
             </>

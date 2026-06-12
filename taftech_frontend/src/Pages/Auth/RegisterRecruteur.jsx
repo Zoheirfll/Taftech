@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
@@ -77,7 +77,7 @@ const RegisterRecruteur = () => {
     }
   };
 
-  const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+  const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
   const labelClass = "text-sm font-semibold text-slate-600 mb-2 block";
 
   return (
@@ -86,7 +86,7 @@ const RegisterRecruteur = () => {
         {/* COLONNE GAUCHE */}
         <div className="md:w-1/3 bg-slate-900 p-10 text-white flex flex-col justify-center">
           <h2 className="text-2xl font-bold mb-3">
-            Espace <span className="text-indigo-400">Recruteur</span>
+            Espace <span className="text-teal-400">Recruteur</span>
           </h2>
           <p className="text-slate-400 text-sm leading-relaxed mb-8">
             Rejoignez TafTech pour accéder aux meilleurs talents d'Algérie.
@@ -95,7 +95,7 @@ const RegisterRecruteur = () => {
           <div className="space-y-4">
             {["Publication illimitée", "Gestion des candidatures", "Visibilité Premium"].map((item) => (
               <div key={item} className="flex items-center gap-3 text-base text-slate-300">
-                <CheckCircle size={17} className="text-indigo-400 shrink-0" />
+                <CheckCircle size={17} className="text-teal-400 shrink-0" />
                 {item}
               </div>
             ))}
@@ -173,14 +173,14 @@ const RegisterRecruteur = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50 mt-2"
+                className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50 mt-2"
               >
                 {loading ? "Création en cours..." : "S'inscrire comme employeur"}
               </button>
 
               <p className="text-center text-sm text-slate-500">
                 Déjà un compte ?{" "}
-                <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
+                <Link to="/recruteurs/connexion" className="text-teal-700 font-semibold hover:underline">
                   Se connecter
                 </Link>
               </p>
@@ -204,13 +204,13 @@ const RegisterRecruteur = () => {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="______"
-                  className="w-48 text-center text-2xl tracking-[0.5em] px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-bold text-slate-900"
+                  className="w-48 text-center text-2xl tracking-[0.5em] px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none font-bold text-slate-900"
                   required
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+                  className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
                 >
                   {loading ? "Vérification..." : "Valider mon email"}
                 </button>
@@ -227,7 +227,7 @@ const RegisterRecruteur = () => {
               <h3 className="text-xl font-bold text-slate-900">
                 Compte sécurisé !
               </h3>
-              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 text-left">
+              <div className="bg-teal-50 border border-teal-100 rounded-2xl p-6 text-left">
                 <p className="text-base text-slate-700 leading-relaxed">
                   <strong>Bravo {formData.first_name} !</strong> Votre email est validé.
                   <br /><br />
@@ -237,8 +237,8 @@ const RegisterRecruteur = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate("/login")}
-                className="w-full border-2 border-indigo-600 text-indigo-600 font-semibold py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-sm"
+                onClick={() => navigate("/recruteurs/connexion")}
+                className="w-full border-2 border-teal-700 text-teal-700 font-semibold py-2.5 rounded-xl hover:bg-teal-50 transition-colors text-sm"
               >
                 Aller à la connexion
               </button>

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   FileText,
   Zap,
@@ -259,7 +259,7 @@ export const DetailCandidature = ({
           <button
             key={tab}
             onClick={() => setActiveDetailTab(tab)}
-            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeDetailTab === tab ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeDetailTab === tab ? "border-teal-700 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-900"}`}
           >
             {tab === "profil" && "Profil"}
             {tab === "ia" && "Analyse IA"}
@@ -277,7 +277,7 @@ export const DetailCandidature = ({
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-lg hover:bg-indigo-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-medium rounded-lg hover:bg-teal-100 transition-colors"
             >
               <FileText size={12} /> CV PDF
             </a>
@@ -308,18 +308,18 @@ export const DetailCandidature = ({
         <div className="p-6 space-y-6 overflow-y-auto max-h-[500px]">
           {/* Résumé IA */}
           {candidatData && (
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={13} className="text-indigo-600" />
-                  <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">
+                  <Sparkles size={13} className="text-teal-700" />
+                  <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
                     Résumé IA
                   </span>
                 </div>
                 {!loadingResume && !resumeIA && (
                   <button
                     onClick={handleResumeIA}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
                   >
                     <Sparkles size={11} /> Générer
                   </button>
@@ -327,15 +327,15 @@ export const DetailCandidature = ({
                 {resumeIA && (
                   <button
                     onClick={() => setResumeIA(null)}
-                    className="text-xs text-indigo-400 hover:underline"
+                    className="text-xs text-teal-400 hover:underline"
                   >
                     Effacer
                   </button>
                 )}
               </div>
               {loadingResume ? (
-                <div className="flex items-center gap-2 text-indigo-600">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-indigo-600"></div>
+                <div className="flex items-center gap-2 text-teal-700">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-teal-700"></div>
                   <span className="text-xs animate-pulse">
                     Analyse en cours...
                   </span>
@@ -386,7 +386,7 @@ export const DetailCandidature = ({
                   href={candidatData.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
                 >
                   <ExternalLink size={13} /> LinkedIn
                 </a>
@@ -453,12 +453,12 @@ export const DetailCandidature = ({
                     {candidatData.experiences.map((exp) => (
                       <div
                         key={exp.id}
-                        className="pl-4 border-l-2 border-indigo-100"
+                        className="pl-4 border-l-2 border-teal-100"
                       >
                         <p className="text-sm font-semibold text-slate-900">
                           {exp.titre_poste}
                         </p>
-                        <p className="text-sm text-indigo-600">
+                        <p className="text-sm text-teal-700">
                           {exp.entreprise}
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
@@ -486,7 +486,7 @@ export const DetailCandidature = ({
                           {form.diplome || "Diplôme non précisé"}
                         </p>
                         {form.description && (
-                          <p className="text-xs text-indigo-600 font-medium">
+                          <p className="text-xs text-teal-700 font-medium">
                             {form.description}
                           </p>
                         )}
@@ -516,7 +516,7 @@ export const DetailCandidature = ({
                       .map((c, i) => (
                         <span
                           key={i}
-                          className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md"
+                          className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
                         >
                           {c.trim()}
                         </span>
@@ -686,7 +686,7 @@ export const DetailCandidature = ({
                   {!loadingGroq && (
                     <button
                       onClick={handleAnalyseGroq}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
                     >
                       <Sparkles size={12} />{" "}
                       {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
@@ -694,8 +694,8 @@ export const DetailCandidature = ({
                   )}
                 </div>
                 {loadingGroq ? (
-                  <div className="flex items-center gap-2 py-4 text-indigo-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                  <div className="flex items-center gap-2 py-4 text-teal-700">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-700"></div>
                     <p className="text-xs font-medium animate-pulse">
                       Analyse en cours...
                     </p>
@@ -724,7 +724,7 @@ export const DetailCandidature = ({
                       if (!content) return null;
                       const colorMap = {
                         indigo:
-                          "bg-indigo-50 border-indigo-100 text-indigo-700",
+                          "bg-teal-50 border-teal-100 text-teal-800",
                         emerald:
                           "bg-emerald-50 border-emerald-100 text-emerald-700",
                         amber: "bg-amber-50 border-amber-100 text-amber-700",
@@ -763,7 +763,7 @@ export const DetailCandidature = ({
         <div className="p-6 overflow-y-auto max-h-[500px]">
           {selectedCandidature.note_globale ? (
             <div className="text-center">
-              <p className="text-5xl font-bold text-indigo-600 tabular-nums mb-1">
+              <p className="text-5xl font-bold text-teal-700 tabular-nums mb-1">
                 {selectedCandidature.note_globale}
                 <span className="text-xl text-slate-400">/20</span>
               </p>
@@ -788,7 +788,7 @@ export const DetailCandidature = ({
                     candidature: selectedCandidature,
                   });
                 }}
-                className="mt-4 text-xs font-medium text-indigo-600 hover:underline"
+                className="mt-4 text-xs font-medium text-teal-700 hover:underline"
               >
                 Modifier la note
               </button>
@@ -816,7 +816,7 @@ export const DetailCandidature = ({
                     candidature: selectedCandidature,
                   });
                 }}
-                className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
               >
                 Évaluer ce candidat
               </button>
@@ -829,7 +829,7 @@ export const DetailCandidature = ({
       {activeDetailTab === "questionnaire" && offre.questionnaire && (
         <div className="p-6 overflow-y-auto max-h-[500px] space-y-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-4 bg-indigo-600 rounded-full" />
+            <div className="w-2 h-4 bg-teal-700 rounded-full" />
             <p className="text-sm font-semibold text-slate-900">
               {offre.questionnaire.titre}
             </p>

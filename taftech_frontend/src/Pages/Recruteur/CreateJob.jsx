@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -124,7 +124,7 @@ const CreateJob = () => {
     <div className="max-w-7xl mx-auto p-4 md:p-10 bg-slate-100 min-h-screen font-sans">
       <div className="mb-10 text-center space-y-4">
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Créer une <span className="text-indigo-600">Offre Ciblée</span>
+          Créer une <span className="text-teal-700">Offre Ciblée</span>
         </h1>
         <p className="text-slate-500 text-base font-medium">
           Attirez les meilleurs talents d'Algérie avec des critères précis.
@@ -138,8 +138,8 @@ const CreateJob = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 space-y-8">
             <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
-              <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-8 flex items-center gap-3">
-                <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
+              <h3 className="text-[11px] font-black text-teal-700 uppercase tracking-widest mb-8 flex items-center gap-3">
+                <span className="w-2 h-8 bg-teal-700 rounded-full"></span>{" "}
                 Informations du Poste
               </h3>
 
@@ -157,7 +157,7 @@ const CreateJob = () => {
                       onBlur={() =>
                         setTimeout(() => setShowSuggestions(false), 200)
                       }
-                      className="w-full text-2xl font-black text-gray-800 bg-gray-50 p-5 rounded-lg border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                      className="w-full text-2xl font-black text-gray-800 bg-gray-50 p-5 rounded-lg border-2 border-transparent focus:border-teal-500 focus:bg-white outline-none transition-all"
                       placeholder="Ex: Ingénieur Fullstack Django/React"
                     />
                     {showSuggestions && metierSuggestions.length > 0 && (
@@ -171,7 +171,7 @@ const CreateJob = () => {
                                 setFormData({ ...formData, titre: m.titre });
                                 setShowSuggestions(false);
                               }}
-                              className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0"
+                              className="w-full text-left px-4 py-2.5 hover:bg-teal-50 transition-colors border-b border-slate-100 last:border-0"
                             >
                               <p className="text-sm font-medium text-slate-900">
                                 {m.titre}
@@ -214,7 +214,7 @@ const CreateJob = () => {
                       name="salaire_propose"
                       value={formData.salaire_propose}
                       onChange={handleChange}
-                      className="w-full p-5 bg-gray-50 rounded-lg font-bold border-2 border-transparent focus:border-indigo-500 outline-none"
+                      className="w-full p-5 bg-gray-50 rounded-lg font-bold border-2 border-transparent focus:border-teal-500 outline-none"
                       placeholder="Ex: 80 000 DA / Négociable"
                     />
                   </div>
@@ -223,8 +223,8 @@ const CreateJob = () => {
             </div>
 
             <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
-              <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-8 flex items-center gap-3">
-                <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
+              <h3 className="text-[11px] font-black text-teal-700 uppercase tracking-widest mb-8 flex items-center gap-3">
+                <span className="w-2 h-8 bg-teal-700 rounded-full"></span>{" "}
                 Localisation
               </h3>
 
@@ -282,8 +282,8 @@ const CreateJob = () => {
             </div>
             <div className="lg:col-span-12">
               <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
-                <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                  <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>
+                <h3 className="text-[11px] font-black text-teal-700 uppercase tracking-widest mb-6 flex items-center gap-3">
+                  <span className="w-2 h-8 bg-teal-700 rounded-full"></span>
                   Questionnaire (Optionnel)
                 </h3>
                 <Select
@@ -320,7 +320,7 @@ const CreateJob = () => {
 
           <div className="lg:col-span-5 space-y-8">
             <div className="bg-white p-8 md:p-10 rounded-xl shadow-xl focus:border-slate-200 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black px-4 py-1 rounded-bl-xl tracking-widest uppercase">
+              <div className="absolute top-0 right-0 bg-teal-700 text-white text-[9px] font-black px-4 py-1 rounded-bl-xl tracking-widest uppercase">
                 Ciblage Précis
               </div>
               <h3 className="text-[11px] font-semibold text-slate-900 tracking-widest mb-6">
@@ -431,7 +431,7 @@ const CreateJob = () => {
           <button
             type="submit"
             disabled={loading}
-            className="bg-indigo-600 text-white font-bold px-10 py-4 rounded-2xl shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 text-base"
+            className="bg-teal-700 text-white font-bold px-10 py-4 rounded-2xl shadow-lg hover:bg-teal-800 transition-colors disabled:opacity-50 text-base"
           >
             {loading ? "Publication en cours..." : "🚀 Publier l'offre"}
           </button>

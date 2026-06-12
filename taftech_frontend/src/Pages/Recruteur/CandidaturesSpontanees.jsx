@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
@@ -66,7 +66,7 @@ const CandidaturesSpontanees = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -145,7 +145,7 @@ const CandidaturesSpontanees = () => {
           {spontaneesFiltrees.map((c) => (
             <div
               key={c.id}
-              className={`bg-white border rounded-xl p-5 flex items-start justify-between gap-4 ${!c.lue ? "border-indigo-200 bg-indigo-50/30" : "border-slate-200"}`}
+              className={`bg-white border rounded-xl p-5 flex items-start justify-between gap-4 ${!c.lue ? "border-teal-200 bg-teal-50/30" : "border-slate-200"}`}
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -153,7 +153,7 @@ const CandidaturesSpontanees = () => {
                     {c.nom} {c.prenom}
                   </p>
                   {!c.lue && (
-                    <span className="w-2 h-2 bg-indigo-600 rounded-full" />
+                    <span className="w-2 h-2 bg-teal-700 rounded-full" />
                   )}
                 </div>
                 <p className="text-xs text-slate-500">
@@ -172,7 +172,7 @@ const CandidaturesSpontanees = () => {
                     </span>
                   )}
                   {c.specialite && (
-                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] rounded-md">
+                    <span className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] rounded-md">
                       {c.specialite}
                     </span>
                   )}
@@ -196,7 +196,7 @@ const CandidaturesSpontanees = () => {
                     }
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors text-center"
+                    className="px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors text-center"
                   >
                     Voir CV
                   </a>

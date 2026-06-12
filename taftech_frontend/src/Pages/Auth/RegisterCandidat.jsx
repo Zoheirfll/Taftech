@@ -13,7 +13,7 @@ const TEXTE_LOI_1807 = {
   titre: "Protection des données à caractère personnel (Loi 18-07)",
   contenu: `Conformément à la loi n° 18-07 du 10 juin 2018 relative à la protection des personnes physiques dans le traitement des données à caractère personnel, TafTech s'engage à :
 
-1. Finalité : Vos données (NIN, Téléphone, CV) sont collectées exclusivement pour faciliter votre mise en relation avec des recruteurs.
+1. Finalité : Vos données (Téléphone, CV) sont collectées exclusivement pour faciliter votre mise en relation avec des recruteurs.
 2. Droits de l'utilisateur : Vous disposez d'un droit d'accès, de rectification et de suppression de vos données depuis votre espace personnel.
 3. Sécurité : TafTech met en œuvre des mesures de sécurité techniques pour prévenir toute fuite ou utilisation frauduleuse de vos informations.
 
@@ -32,7 +32,6 @@ const RegisterCandidat = () => {
     last_name: "",
     date_naissance: "",
     telephone: "",
-    nin: "",
     wilaya: "",
     email: "",
     password: "",
@@ -90,9 +89,7 @@ const RegisterCandidat = () => {
       setStep(2);
     } catch (err) {
       toast.error(
-        err.response?.data?.email?.[0] ||
-          err.response?.data?.nin?.[0] ||
-          "Une erreur est survenue.",
+        err.response?.data?.email?.[0] || "Une erreur est survenue.",
         { id: toastId },
       );
       reportError("ECHEC_REGISTRATION_CANDIDAT", err);
@@ -278,20 +275,6 @@ const RegisterCandidat = () => {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
-                      NIN (18 chiffres) *
-                    </label>
-                    <input
-                      type="text"
-                      name="nin"
-                      required
-                      maxLength="18"
-                      placeholder="108..."
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -353,7 +336,7 @@ const RegisterCandidat = () => {
                   disabled={loading || !formData.consentement_loi_18_07}
                   className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Création en cours..." : "S'inscrire gratuitement"}
+                  {loading ? "Création en cours..." : "S'inscrire"}
                 </button>
               </form>
 
@@ -362,7 +345,9 @@ const RegisterCandidat = () => {
                   <div className="w-full border-t border-slate-200" />
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-xs text-slate-400 font-medium">ou</span>
+                  <span className="bg-white px-3 text-xs text-slate-400 font-medium">
+                    ou
+                  </span>
                 </div>
               </div>
 
@@ -371,12 +356,19 @@ const RegisterCandidat = () => {
                   onSuccess={async (credentialResponse) => {
                     const toastId = toast.loading("Inscription Google...");
                     try {
-                      await authService.googleLogin(credentialResponse.credential, "CANDIDAT");
-                      toast.success("Compte créé et connecté !", { id: toastId });
+                      await authService.googleLogin(
+                        credentialResponse.credential,
+                        "CANDIDAT",
+                      );
+                      toast.success("Compte créé et connecté !", {
+                        id: toastId,
+                      });
                       navigate("/");
                       window.location.reload();
                     } catch {
-                      toast.error("Échec de l'inscription Google.", { id: toastId });
+                      toast.error("Échec de l'inscription Google.", {
+                        id: toastId,
+                      });
                     }
                   }}
                   onError={() => toast.error("Échec de l'inscription Google.")}

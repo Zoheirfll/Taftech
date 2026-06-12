@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
@@ -137,12 +137,12 @@ const Questionnaires = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -155,7 +155,7 @@ const Questionnaires = () => {
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
         >
           <Plus size={16} /> Nouveau questionnaire
         </button>
@@ -188,7 +188,7 @@ const Questionnaires = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleOpenEdit(q)}
-                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
                 >
                   <Pencil size={15} />
                 </button>
@@ -323,7 +323,7 @@ const Questionnaires = () => {
                         <button
                           type="button"
                           onClick={() => addChoix(i)}
-                          className="text-xs text-indigo-600 font-medium hover:underline flex items-center gap-1"
+                          className="text-xs text-teal-700 font-medium hover:underline flex items-center gap-1"
                         >
                           <Plus size={12} /> Ajouter une option
                         </button>
@@ -334,7 +334,7 @@ const Questionnaires = () => {
                       <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
                         <input
                           type="checkbox"
-                          className="accent-indigo-600"
+                          className="accent-teal-700"
                           checked={q.requis}
                           onChange={(e) =>
                             updateQuestion(i, "requis", e.target.checked)
@@ -361,7 +361,7 @@ const Questionnaires = () => {
                   <button
                     type="button"
                     onClick={addQuestion}
-                    className="w-full py-2.5 border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium rounded-xl hover:border-indigo-400 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium rounded-xl hover:border-teal-400 hover:text-teal-700 transition-colors flex items-center justify-center gap-2"
                   >
                     <Plus size={16} /> Ajouter une question
                   </button>
@@ -378,7 +378,7 @@ const Questionnaires = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                  className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors"
                 >
                   {editingId ? "Mettre à jour" : "Créer le questionnaire"}
                 </button>

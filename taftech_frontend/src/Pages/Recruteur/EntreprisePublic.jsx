@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 
 const getMediaUrl = (path) =>
   path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
@@ -98,7 +98,7 @@ const EntreprisePublic = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -108,7 +108,7 @@ const EntreprisePublic = () => {
         <p className="text-slate-700 font-medium">{error}</p>
         <Link
           to="/offres"
-          className="text-sm text-indigo-600 font-semibold hover:underline"
+          className="text-sm text-teal-700 font-semibold hover:underline"
         >
           Voir toutes les offres
         </Link>
@@ -118,7 +118,7 @@ const EntreprisePublic = () => {
   if (!entreprise) return null;
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -131,7 +131,7 @@ const EntreprisePublic = () => {
 
       {/* EN-TÊTE */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6">
-        <div className="h-28 bg-gradient-to-r from-indigo-600 to-indigo-800" />
+        <div className="h-28 bg-gradient-to-r from-teal-700 to-teal-900" />
         <div className="px-8 pb-8 relative">
           <div className="flex flex-col md:flex-row gap-5 items-start md:items-end -mt-12 mb-6">
             <div className="w-24 h-24 bg-white rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
@@ -162,7 +162,7 @@ const EntreprisePublic = () => {
                     : ""}
                 </span>
                 {entreprise.taille_entreprise && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-md">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-800 text-xs font-medium rounded-md">
                     <Users size={12} />{" "}
                     {TAILLES_ENTREPRISE_LABELS[entreprise.taille_entreprise] ||
                       entreprise.taille_entreprise}
@@ -183,7 +183,7 @@ const EntreprisePublic = () => {
           {/* BOUTON CANDIDATURE SPONTANÉE */}
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors shadow-sm"
           >
             <Send size={15} /> Candidature spontanée
           </button>
@@ -196,7 +196,7 @@ const EntreprisePublic = () => {
           <h2 className="text-lg font-bold text-slate-900">
             Offres disponibles
           </h2>
-          <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full">
+          <span className="px-2.5 py-0.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-full">
             {entreprise.offres_actives?.length || 0}
           </span>
         </div>
@@ -205,12 +205,12 @@ const EntreprisePublic = () => {
             {entreprise.offres_actives.map((offre) => (
               <div
                 key={offre.id}
-                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-teal-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
               >
                 <div>
                   <Link
                     to={`/jobs/${offre.id}`}
-                    className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+                    className="text-sm font-semibold text-slate-900 hover:text-teal-700 transition-colors"
                   >
                     {offre.titre}
                   </Link>
@@ -227,7 +227,7 @@ const EntreprisePublic = () => {
                 </div>
                 <Link
                   to={`/jobs/${offre.id}`}
-                  className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                  className="shrink-0 px-4 py-2 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-700 hover:text-white transition-colors"
                 >
                   Voir l'offre →
                 </Link>
@@ -245,7 +245,7 @@ const EntreprisePublic = () => {
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors mx-auto"
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors mx-auto"
             >
               <Send size={13} /> Envoyer une candidature spontanée
             </button>
@@ -374,7 +374,7 @@ const EntreprisePublic = () => {
                 <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                   CV (PDF, DOC) *
                 </label>
-                <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-teal-400 transition-colors group">
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx"
@@ -388,7 +388,7 @@ const EntreprisePublic = () => {
                     size={22}
                     className="text-slate-300 mx-auto mb-1.5"
                   />
-                  <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+                  <p className="text-sm font-medium text-slate-600 group-hover:text-teal-700 transition-colors">
                     {form.cv ? form.cv.name : "Cliquez ou glissez votre CV"}
                   </p>
                 </div>
@@ -418,7 +418,7 @@ const EntreprisePublic = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     "Envoi..."

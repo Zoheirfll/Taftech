@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -122,7 +122,7 @@ const DashboardRecruteur = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -210,7 +210,7 @@ const DashboardRecruteur = () => {
               </button>
               <button
                 onClick={() => navigate("/creer-offre")}
-                className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
               >
                 <Plus size={16} /> Publier une offre
               </button>
@@ -251,14 +251,14 @@ const DashboardRecruteur = () => {
           </div>
           <p className="text-4xl font-bold text-emerald-600 tabular-nums">{stats.nouvelles}</p>
         </div>
-        <div className="bg-white border border-indigo-200 rounded-2xl p-5">
+        <div className="bg-white border border-teal-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Sparkles size={18} className="text-indigo-600" />
+            <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center">
+              <Sparkles size={18} className="text-teal-700" />
             </div>
             <p className="text-sm font-semibold text-slate-500">Pertinentes +80%</p>
           </div>
-          <p className="text-4xl font-bold text-indigo-600 tabular-nums">{stats.pertinentes}</p>
+          <p className="text-4xl font-bold text-teal-700 tabular-nums">{stats.pertinentes}</p>
         </div>
         <div className="bg-white border border-amber-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -289,12 +289,12 @@ const DashboardRecruteur = () => {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`px-4 py-3 text-base font-semibold border-b-2 transition-colors ${activeTab === key ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            className={`px-4 py-3 text-base font-semibold border-b-2 transition-colors ${activeTab === key ? "border-teal-700 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-900"}`}
           >
             {label}
             {count !== null && (
               <span
-                className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"}`}
+                className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-600"}`}
               >
                 {count}
               </span>
@@ -333,12 +333,12 @@ const DashboardRecruteur = () => {
             <button
               key={key}
               onClick={() => setFiltreStatut(key)}
-              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${filtreStatut === key ? "bg-white border border-b-white border-slate-200 text-indigo-600 font-semibold -mb-px" : "text-slate-500 hover:text-slate-900"}`}
+              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${filtreStatut === key ? "bg-white border border-b-white border-slate-200 text-teal-700 font-semibold -mb-px" : "text-slate-500 hover:text-slate-900"}`}
             >
               {label}
               {count > 0 && (
                 <span
-                  className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${filtreStatut === key ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}
+                  className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${filtreStatut === key ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-500"}`}
                 >
                   {count}
                 </span>
@@ -360,7 +360,7 @@ const DashboardRecruteur = () => {
               {activeTab === "ouvertes" && entreprise?.est_approuvee && (
                 <button
                   onClick={() => navigate("/creer-offre")}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-teal-700 text-white text-sm font-medium rounded-lg hover:bg-teal-800 transition-colors"
                 >
                   <Plus size={16} /> Créer votre première offre
                 </button>
@@ -392,12 +392,12 @@ const DashboardRecruteur = () => {
                 return (
                   <div
                     key={offre.id}
-                    className="bg-white border border-slate-200 rounded-2xl hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden"
+                    className="bg-white border border-slate-200 rounded-2xl hover:border-teal-200 hover:shadow-sm transition-all overflow-hidden"
                   >
                     <div className="flex items-center gap-0">
                       {/* Barre colorée gauche */}
                       <div
-                        className={`w-1 self-stretch flex-shrink-0 ${offre.statut_moderation === "REJETEE" ? "bg-red-500" : offre.statut_moderation === "EN_ATTENTE" ? "bg-amber-400" : offre.est_cloturee ? "bg-slate-300" : "bg-indigo-600"}`}
+                        className={`w-1 self-stretch flex-shrink-0 ${offre.statut_moderation === "REJETEE" ? "bg-red-500" : offre.statut_moderation === "EN_ATTENTE" ? "bg-amber-400" : offre.est_cloturee ? "bg-slate-300" : "bg-teal-700"}`}
                       />
 
                       <div className="flex-1 p-5">
@@ -480,7 +480,7 @@ const DashboardRecruteur = () => {
                               )}
                               {nbRetenus > 0 && (
                                 <div className="text-center min-w-[40px]">
-                                  <p className="text-xl font-bold text-indigo-600 tabular-nums">
+                                  <p className="text-xl font-bold text-teal-700 tabular-nums">
                                     {nbRetenus}
                                   </p>
                                   <p className="text-[10px] text-slate-400 uppercase tracking-wide">
@@ -525,7 +525,7 @@ const DashboardRecruteur = () => {
                                   onClick={() =>
                                     navigate(`/dashboard/offres/${offre.id}`)
                                   }
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors"
                                 >
                                   Candidats <ChevronRight size={13} />
                                 </button>
@@ -555,7 +555,7 @@ const DashboardRecruteur = () => {
           </p>
           <button
             onClick={() => navigate("/parametres")}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
           >
             Aller aux Paramètres
           </button>
@@ -603,7 +603,7 @@ const DashboardRecruteur = () => {
                   onChange={(e) =>
                     setModifierForm({ ...modifierForm, titre: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -664,7 +664,7 @@ const DashboardRecruteur = () => {
                         [field]: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 resize-none"
                   />
                 </div>
               ))}
@@ -677,7 +677,7 @@ const DashboardRecruteur = () => {
                 </button>
                 <button
                   onClick={handleSauvegarderModification}
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
                 >
                   Soumettre pour revalidation
                 </button>

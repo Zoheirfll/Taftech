@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { X, Calendar } from "lucide-react";
 
 const RatingRow = ({ label, value, onChange }) => (
@@ -10,7 +10,7 @@ const RatingRow = ({ label, value, onChange }) => (
           key={num}
           type="button"
           onClick={() => onChange(num)}
-          className={`w-8 h-8 rounded-full text-xs font-semibold transition-all ${value >= num ? "bg-indigo-600 text-white shadow-sm" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
+          className={`w-8 h-8 rounded-full text-xs font-semibold transition-all ${value >= num ? "bg-teal-700 text-white shadow-sm" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
         >
           {num}
         </button>
@@ -84,10 +84,10 @@ export const Modals = ({
                       <th className="text-left text-xs text-slate-400 font-medium pb-3 w-1/3">
                         Critère
                       </th>
-                      <th className="text-center text-xs font-semibold text-indigo-700 pb-3 w-1/3 truncate">
+                      <th className="text-center text-xs font-semibold text-teal-800 pb-3 w-1/3 truncate">
                         {nom1}
                       </th>
-                      <th className="text-center text-xs font-semibold text-indigo-700 pb-3 w-1/3 truncate">
+                      <th className="text-center text-xs font-semibold text-teal-800 pb-3 w-1/3 truncate">
                         {nom2}
                       </th>
                     </tr>
@@ -225,7 +225,7 @@ export const Modals = ({
                       setShowCompare(false);
                       setCompareIds([]);
                     }}
-                    className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
                   >
                     Réinitialiser
                   </button>
@@ -260,7 +260,7 @@ export const Modals = ({
                         date: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                   />
                 </div>
                 <div>
@@ -276,7 +276,7 @@ export const Modals = ({
                         heure: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -294,7 +294,7 @@ export const Modals = ({
                       message: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 resize-none"
                 />
               </div>
               <div className="flex gap-3 pt-2">
@@ -308,7 +308,7 @@ export const Modals = ({
                 </button>
                 <button
                   onClick={validerEntretien}
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
                 >
                   Envoyer l'invitation
                 </button>
@@ -372,7 +372,7 @@ export const Modals = ({
                     commentaire_evaluation: e.target.value,
                   })
                 }
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 resize-none"
               />
             </div>
             <div className="flex gap-3">
@@ -386,7 +386,7 @@ export const Modals = ({
               </button>
               <button
                 onClick={soumettreEvaluation}
-                className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
               >
                 Sauvegarder
               </button>

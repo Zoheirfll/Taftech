@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
@@ -32,6 +32,8 @@ const DashboardRecruteur = () => {
   const [modifierForm, setModifierForm] = useState({});
   const [entreprise, setEntreprise] = useState(null);
   const [offres, setOffres] = useState([]);
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumExpire, setPremiumExpire] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
@@ -46,6 +48,8 @@ const DashboardRecruteur = () => {
         setConstants(constData);
         setEntreprise(dashData.entreprise);
         setOffres(dashData.offres);
+        setIsPremium(dashData.est_premium || false);
+        setPremiumExpire(dashData.premium_expire_at || null);
       } catch (err) {
         if (
           err.response &&
@@ -186,7 +190,7 @@ const DashboardRecruteur = () => {
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               {entreprise?.nom_entreprise}
             </h1>
-            <div className="mt-1">
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
               {entreprise?.est_approuvee ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-full">
                   <CheckCircle size={13} /> Compte vérifié
@@ -195,6 +199,20 @@ const DashboardRecruteur = () => {
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-sm font-semibold rounded-full">
                   <AlertCircle size={13} /> En attente de validation
                 </span>
+              )}
+              {isPremium ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 text-teal-700 text-sm font-bold rounded-full border border-teal-200">
+                  ⭐ Premium
+                  {premiumExpire && (
+                    <span className="text-xs font-normal text-teal-600 opacity-80">
+                      — expire le {new Date(premiumExpire).toLocaleDateString("fr-DZ")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <Link to="/recruteurs/premium" className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 text-sm font-medium rounded-full hover:bg-teal-50 hover:text-teal-700 transition-colors">
+                  🔒 Passer Premium
+                </Link>
               )}
             </div>
           </div>

@@ -48,6 +48,14 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
+vi.mock("@react-oauth/google", () => ({
+  GoogleLogin: ({ onSuccess, onError }) => (
+    <button onClick={() => onSuccess({ credential: "fake-token" })}>
+      Connexion Google (mock)
+    </button>
+  ),
+}));
+
 // Hack JSDOM : Impossible de mocker window.location.reload directement
 // car location est en lecture seule. On doit le redéfinir temporairement.
 const originalLocation = window.location;
@@ -98,6 +106,7 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       expect(authService.login).toHaveBeenCalledWith(
         "test@taftech.dz",
         "password123",
+        "candidat",
       );
 
       // Vérification des retours visuels

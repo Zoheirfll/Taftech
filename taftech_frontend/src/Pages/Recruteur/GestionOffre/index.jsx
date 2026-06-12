@@ -42,6 +42,7 @@ const GestionOffre = () => {
     setShowCompare,
     triMode,
     setTriMode,
+    isPremium,
     analyseGroq,
     loadingGroq,
     resumeIA,
@@ -395,6 +396,7 @@ const GestionOffre = () => {
               handleStatusChange={handleStatusChange}
               handleDownloadBulletin={handleDownloadBulletin}
               supprimerCandidature={supprimerCandidature}
+              isPremium={isPremium}
               analyseGroq={analyseGroq}
               loadingGroq={loadingGroq}
               handleAnalyseGroq={handleAnalyseGroq}

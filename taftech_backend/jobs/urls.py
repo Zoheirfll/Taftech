@@ -22,6 +22,7 @@ from .views import (
     EnvoyerCandidatureSpontaneeAPIView, ListeCandidaturesSpontaneesAPIView,
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
+    DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
 
     # Notifications
     NotificationListAPIView, MarkNotificationReadAPIView,
@@ -34,7 +35,7 @@ from .views import (
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
     ExportCandidaturesCSVAPIView, ExportEntreprisesCSVAPIView,
     ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView,
-    AdminMarcheAPIView, AdminAuditLogAPIView,
+    AdminMarcheAPIView, AdminAuditLogAPIView, AdminDemandesPremiumAPIView,
 
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
@@ -110,6 +111,10 @@ urlpatterns = [
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures'),
     path('admin/marche/', AdminMarcheAPIView.as_view(), name='admin-marche'),
     path('admin/audit-logs/', AdminAuditLogAPIView.as_view(), name='admin-audit-logs'),
+    path('admin/demandes-premium/', AdminDemandesPremiumAPIView.as_view(), name='admin-demandes-premium'),
+    path('admin/demandes-premium/<int:demande_id>/activer/', AdminDemandesPremiumAPIView.as_view(), name='admin-activer-premium'),
+    path('premium/demande/', DemanderActivationPremiumAPIView.as_view(), name='demande-premium'),
+    path('premium/envoyer-recu/', EnvoyerRecuPremiumAPIView.as_view(), name='envoyer-recu-premium'),
     path('admin/export/candidatures/', ExportCandidaturesCSVAPIView.as_view(), name='export-candidatures'),
     path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='export-entreprises'),
     path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='export-offres'),

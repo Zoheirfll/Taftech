@@ -43,9 +43,12 @@ api.interceptors.response.use(
       // 👆 FIN DE LA CORRECTION 👆
 
       // Si c'est déjà le rafraîchissement qui échoue, on arrête tout
+      const role = localStorage.getItem("userRole");
+      const loginRedirect = role === "RECRUTEUR" ? "/recruteurs/connexion" : "/login";
+
       if (originalRequest.url.includes("token/refresh/")) {
         localStorage.removeItem("userRole");
-        window.location.href = "/login";
+        window.location.href = loginRedirect;
         return Promise.reject(error);
       }
 
@@ -59,7 +62,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("userRole");
-        window.location.href = "/login";
+        window.location.href = loginRedirect;
         return Promise.reject(refreshError);
       }
     }

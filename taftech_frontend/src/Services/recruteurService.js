@@ -282,4 +282,25 @@ export const recruteurService = {
       throw err;
     }
   },
+
+  demanderPremium: async (moyen_paiement, nb_mois = 1) => {
+    try {
+      const response = await api.post("jobs/premium/demande/", { moyen_paiement, nb_mois });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DEMANDE_PREMIUM", err);
+      throw err;
+    }
+  },
+
+  envoyerRecuPremium: async (moyen_paiement, nb_mois, message) => {
+    try {
+      const response = await api.post("jobs/premium/envoyer-recu/", { moyen_paiement, nb_mois, message });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_ENVOI_RECU_PREMIUM", err);
+      throw err;
+    }
+  },
+
 };

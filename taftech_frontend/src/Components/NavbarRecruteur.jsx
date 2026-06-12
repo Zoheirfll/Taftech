@@ -6,7 +6,7 @@ import { reportError } from "../utils/errorReporter";
 import logoTafTech from "../assets/logo-taftech.png";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
-  ClipboardList, Settings, LogOut, Menu, X, User, Users, Shield,
+  ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
 } from "lucide-react";
 
 const NavbarRecruteur = () => {
@@ -16,6 +16,8 @@ const NavbarRecruteur = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumExpire, setPremiumExpire] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -27,6 +29,8 @@ const NavbarRecruteur = () => {
             const logo = dash.entreprise.logo;
             setUserPhoto(logo.startsWith("http") ? logo : `http://localhost:8000${logo}`);
           }
+          if (dash.est_premium) setIsPremium(true);
+          if (dash.premium_expire_at) setPremiumExpire(dash.premium_expire_at);
         } catch (err) {
           reportError("ECHEC_PHOTO_NAVBAR_RECRUTEUR", err);
         }
@@ -46,7 +50,6 @@ const NavbarRecruteur = () => {
 
   const handleLogout = () => {
     authService.logout();
-    navigate("/recruteurs/connexion");
   };
 
   return (
@@ -113,7 +116,18 @@ const NavbarRecruteur = () => {
               >
                 <div className="hidden md:block text-right">
                   <p className="text-sm font-semibold text-slate-800 leading-tight">Mon espace</p>
-                  <p className="text-xs text-slate-400 leading-tight">Recruteur</p>
+                  <p className="text-xs leading-tight">
+                    {isPremium ? (
+                      <span className="text-amber-600 font-semibold">
+                        ⭐ Premium
+                        {premiumExpire && (
+                          <span className="text-amber-500 font-normal"> · {new Date(premiumExpire).toLocaleDateString("fr-DZ")}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">Recruteur</span>
+                    )}
+                  </p>
                 </div>
                 <div className="w-9 h-9 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center overflow-hidden">
                   {userPhoto ? (
@@ -133,6 +147,7 @@ const NavbarRecruteur = () => {
                     { to: "/creer-offre", icon: Briefcase, label: "Publier une offre" },
                     { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires" },
                     { to: "/parametres", icon: Settings, label: "Paramètres" },
+                    { to: "/recruteurs/premium", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true },
                   ].map(({ to, icon: Icon, label, accent }) => (
                     <Link
                       key={to}
@@ -149,14 +164,6 @@ const NavbarRecruteur = () => {
                     </Link>
                   ))}
                   <div className="border-t border-slate-100 mt-1 pt-1">
-                    <Link
-                      to="/"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                    >
-                      <Users size={15} className="shrink-0" />
-                      Espace candidat
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"

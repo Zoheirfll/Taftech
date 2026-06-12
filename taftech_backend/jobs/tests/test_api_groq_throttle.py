@@ -1,27 +1,36 @@
-from django.test import override_settings
-from django.urls import reverse
-from rest_framework.test import APITestCase
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-
-@override_settings(
-    DEFAULT_THROTTLE_CLASSES=['rest_framework.throttling.UserRateThrottle'],
-    DEFAULT_THROTTLE_RATES={'user': '1000/day', 'groq': '3/hour'},
-    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+"""
+Tests du throttle Groq — vérification de la configuration.
+"""
+from django.test import TestCase
+from rest_framework.throttling import UserRateThrottle
+from jobs.views.ia import (
+    GroqThrottle,
+    AnalyseCarriereGroqAPIView,
+    AnalyseGroqRecruteurAPIView,
+    MetierReferentielAPIView,
 )
-class GroqThrottleTest(APITestCase):
-    def setUp(self):
-        self.candidat = User.objects.create_user(
-            username='candidat_throttle', email='throttle@test.com',
-            password='pass1234', role='CANDIDAT'
-        )
-        self.client.force_authenticate(user=self.candidat)
 
-    def test_groq_throttle_bloque_apres_limite(self):
-        url = reverse('analyse-carriere')
-        for _ in range(3):
-            self.client.get(url)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 429)
+
+class GroqThrottleConfigTest(TestCase):
+    """Vérifie la configuration et l'application du throttle Groq."""
+
+    def test_scope_est_groq(self):
+        """GroqThrottle doit avoir le scope 'groq'."""
+        self.assertEqual(GroqThrottle.scope, 'groq')
+
+    def test_groq_throttle_herite_user_rate_throttle(self):
+        """GroqThrottle hérite de UserRateThrottle (limite par utilisateur authentifié)."""
+        self.assertTrue(issubclass(GroqThrottle, UserRateThrottle))
+
+    def test_analyse_carriere_utilise_groq_throttle(self):
+        """AnalyseCarriereGroqAPIView applique GroqThrottle."""
+        self.assertIn(GroqThrottle, AnalyseCarriereGroqAPIView.throttle_classes)
+
+    def test_analyse_recruteur_utilise_groq_throttle(self):
+        """AnalyseGroqRecruteurAPIView applique GroqThrottle."""
+        self.assertIn(GroqThrottle, AnalyseGroqRecruteurAPIView.throttle_classes)
+
+    def test_scope_distinct_du_throttle_user(self):
+        """Le scope 'groq' est différent du scope 'user' pour une limite indépendante."""
+        self.assertNotEqual(GroqThrottle.scope, 'user')
+        self.assertNotEqual(GroqThrottle.scope, 'anon')

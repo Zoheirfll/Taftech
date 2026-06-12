@@ -43,6 +43,16 @@ class ProfilEntreprise(models.Model):
         verbose_name="Taille de l'entreprise (effectif)"
     )
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
+    premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
+
+    @property
+    def est_premium_actif(self):
+        if not self.est_premium:
+            return False
+        if self.premium_expire_at is None:
+            return True
+        from django.utils import timezone
+        return self.premium_expire_at > timezone.now()
     
     email_refus_auto = models.BooleanField(default=False)
     message_refus_auto = models.TextField(
@@ -485,3 +495,18 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.admin} | {self.action} | {self.date:%Y-%m-%d %H:%M}"
+
+
+class DemandeActivationPremium(models.Model):
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='demandes_premium')
+    moyen_paiement = models.CharField(max_length=20, choices=[('CIB', 'CIB'), ('EDAHABIA', 'EDAHABIA')], default='CIB')
+    nb_mois = models.PositiveSmallIntegerField(default=1)
+    est_traitee = models.BooleanField(default=False)
+    date_demande = models.DateTimeField(auto_now_add=True)
+    date_traitement = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_demande']
+
+    def __str__(self):
+        return f"{self.entreprise.nom_entreprise} — {self.moyen_paiement} — {'Traitée' if self.est_traitee else 'En attente'}"

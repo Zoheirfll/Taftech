@@ -217,4 +217,24 @@ export const adminService = {
       throw err;
     }
   },
+
+  getDemandesPremium: async () => {
+    try {
+      const response = await api.get("jobs/admin/demandes-premium/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_DEMANDES_PREMIUM", err);
+      throw err;
+    }
+  },
+
+  activerPremium: async (demandeId, nb_mois = 1) => {
+    try {
+      const response = await api.patch(`jobs/admin/demandes-premium/${demandeId}/activer/`, { nb_mois });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_ACTIVER_PREMIUM", err);
+      throw err;
+    }
+  },
 };

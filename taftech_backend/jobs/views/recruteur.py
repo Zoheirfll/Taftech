@@ -7,11 +7,14 @@ from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, Now
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
 import datetime
 from ..models import (
     OffreEmploi, ProfilCandidat, ProfilEntreprise,
     ProfilCandidatFavori, CandidatureSpontanee,
-    Questionnaire, QuestionQuestionnaire, ReponseChoix, Candidature
+    Questionnaire, QuestionQuestionnaire, ReponseChoix, Candidature,
+    DemandeActivationPremium
 )
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
@@ -30,9 +33,14 @@ class DashboardRecruteurAPIView(APIView):
             return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
         entreprise = request.user.profil_entreprise
         offres = OffreEmploi.objects.filter(entreprise=entreprise).order_by('-date_publication')
+        derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,
-            "offres": OffreDashboardDTO(offres, many=True).data
+            "offres": OffreDashboardDTO(offres, many=True).data,
+            "est_premium": entreprise.est_premium_actif,
+            "premium_expire_at": entreprise.premium_expire_at.strftime('%d/%m/%Y') if entreprise.premium_expire_at else None,
+            "premium_active_since": derniere_activation.date_traitement.strftime('%d/%m/%Y') if derniere_activation else None,
+            "premium_nb_mois": derniere_activation.nb_mois if derniere_activation else None,
         }
         return Response(data, status=status.HTTP_200_OK)
 
@@ -168,10 +176,16 @@ class CVThequeView(APIView):
             candidats = candidats.order_by(F('duree_totale').desc(nulls_last=True))
         else:
             candidats = candidats.order_by('-user__date_joined')
+        try:
+            is_premium = request.user.profil_entreprise.est_premium_actif
+        except Exception:
+            is_premium = False
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
-        serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user})
-        return paginator.get_paginated_response(serializer.data)
+        serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
+        response = paginator.get_paginated_response(serializer.data)
+        response.data['is_premium'] = is_premium
+        return response
 
 
 class ToggleFavoriCVAPIView(APIView):
@@ -320,3 +334,61 @@ class QuestionnaireDetailAPIView(APIView):
             return Response({'message': 'Supprimé.'})
         except Questionnaire.DoesNotExist:
             return Response({'error': 'Introuvable.'}, status=404)
+
+
+class DemanderActivationPremiumAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        try:
+            entreprise = request.user.profil_entreprise
+        except Exception:
+            return Response({'error': 'Profil entreprise introuvable.'}, status=404)
+        moyen = request.data.get('moyen_paiement', 'CIB')
+        nb_mois = int(request.data.get('nb_mois', 1))
+        if DemandeActivationPremium.objects.filter(entreprise=entreprise, est_traitee=False).exists():
+            return Response({'message': 'Demande déjà envoyée. En attente de traitement.'}, status=200)
+        DemandeActivationPremium.objects.create(entreprise=entreprise, moyen_paiement=moyen, nb_mois=nb_mois)
+        return Response({'message': 'Demande enregistrée. Votre compte sera activé sous 24h ouvrables.'}, status=201)
+
+
+class EnvoyerRecuPremiumAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'RECRUTEUR':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        try:
+            entreprise = request.user.profil_entreprise
+        except Exception:
+            return Response({'error': 'Profil entreprise introuvable.'}, status=404)
+        moyen = request.data.get('moyen_paiement', 'CIB')
+        nb_mois = request.data.get('nb_mois', 1)
+        montant = int(nb_mois) * 2000
+        message_custom = request.data.get('message', '')
+        subject = f"[TafTech Premium] Reçu de paiement — {entreprise.nom_entreprise}"
+        body = f"""
+Bonjour,
+
+L'entreprise suivante a envoyé une confirmation de paiement Premium :
+
+• Entreprise : {entreprise.nom_entreprise}
+• Email : {request.user.email}
+• Téléphone : {request.user.telephone or 'Non renseigné'}
+• Moyen de paiement : {moyen}
+• Durée : {nb_mois} mois
+• Montant : {montant} DA
+
+Message du recruteur :
+{message_custom or '(aucun message)'}
+
+→ Activez le compte depuis le panel admin TafTech.
+        """.strip()
+        try:
+            mail = EmailMultiAlternatives(subject, body, settings.EMAIL_HOST_USER, [settings.EMAIL_HOST_USER])
+            mail.send()
+        except Exception as e:
+            return Response({'error': 'Erreur lors de l\'envoi du mail.'}, status=500)
+        return Response({'message': 'Email envoyé avec succès. Activation sous 24h ouvrables.'}, status=200)

@@ -46,6 +46,8 @@ from .recruteur import (
     SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView,
     QuestionnaireDetailAPIView,
+    DemanderActivationPremiumAPIView,
+    EnvoyerRecuPremiumAPIView,
 )
 from .admin import (
     AdminPagination,
@@ -64,6 +66,7 @@ from .admin import (
     ExportUtilisateursCSVAPIView,
     AdminMarcheAPIView,
     AdminAuditLogAPIView,
+    AdminDemandesPremiumAPIView,
 )
 from .ia import (
     OffresRecommandeesAPIView,

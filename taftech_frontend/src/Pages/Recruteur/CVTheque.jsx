@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
@@ -70,6 +71,7 @@ const CVTheque = () => {
   const [selectedCandidat, setSelectedCandidat] = useState(null);
   const [showFiltres, setShowFiltres] = useState(true);
   const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     const loadConstants = async () => {
@@ -103,6 +105,7 @@ const CVTheque = () => {
       setCandidats(data.results || []);
       setTotalCandidats(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / 10));
+      if (data.is_premium !== undefined) setIsPremium(data.is_premium);
 
       // Auto-sélection du premier candidat sur desktop
       if (data.results && data.results.length > 0) {
@@ -253,6 +256,28 @@ const CVTheque = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* BANNIÈRE PREMIUM */}
+      {!isPremium && (
+        <div className="mb-6 bg-linear-to-br from-teal-700 to-teal-900 rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔒</span>
+            <div>
+              <p className="text-white font-bold text-sm">Accès limité — Coordonnées masquées</p>
+              <p className="text-teal-200 text-xs mt-0.5">Passez en Premium pour accéder aux emails, téléphones et réseaux sociaux des candidats.</p>
+            </div>
+          </div>
+          <Link to="/recruteurs/premium" className="shrink-0 px-4 py-2 bg-white text-teal-700 text-sm font-bold rounded-xl hover:bg-teal-50 transition-colors">
+            Passer Premium →
+          </Link>
+        </div>
+      )}
+      {isPremium && (
+        <div className="mb-6 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5 w-fit">
+          <span className="text-teal-700 text-sm font-bold">⭐ Compte Premium actif</span>
+          <span className="text-teal-600 text-xs">— Accès complet aux coordonnées</span>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">
@@ -526,7 +551,7 @@ const CVTheque = () => {
                   </button>
 
                   <div className="flex gap-3 pr-8">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                       {candidat.photo_profil ? (
                         <img
                           src={getMediaUrl(candidat.photo_profil)}
@@ -543,7 +568,7 @@ const CVTheque = () => {
                           {candidat.titre_professionnel || "Profil candidat"}
                         </h3>
                         {recent && (
-                          <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full">
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full">
                             <Sparkles size={10} />
                             Nouveau
                           </span>
@@ -552,7 +577,7 @@ const CVTheque = () => {
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {statutActivite && (
                           <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statutActivite.dot}`}
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`}
                             title={statutActivite.label}
                           />
                         )}
@@ -612,11 +637,31 @@ const CVTheque = () => {
         {/* COLONNE DROITE : DÉTAIL */}
         <div className="lg:col-span-2">
           {selectedCandidat ? (
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="relative bg-white border border-slate-200 rounded-xl overflow-hidden">
+              {/* OVERLAY PREMIUM */}
+              {!isPremium && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl">
+                  <div className="text-center px-8 max-w-sm">
+                    <div className="w-16 h-16 bg-teal-50 border-2 border-teal-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">🔒</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">Accès Premium requis</h3>
+                    <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                      Passez en compte Premium pour accéder aux profils complets, coordonnées, CV et réseaux sociaux des candidats.
+                    </p>
+                    <Link
+                      to="/recruteurs/premium"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+                    >
+                      ⭐ Passer Premium
+                    </Link>
+                  </div>
+                </div>
+              )}
               {/* En-tête détail */}
               <div className="p-6 border-b border-slate-100">
                 <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                     {selectedCandidat.photo_profil ? (
                       <img
                         src={getMediaUrl(selectedCandidat.photo_profil)}
@@ -704,21 +749,15 @@ const CVTheque = () => {
 
               {/* Coordonnées */}
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                  Coordonnées
-                </h3>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Coordonnées</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail size={14} className="text-slate-400 flex-shrink-0" />
-                    <span className="text-slate-700 truncate">
-                      {selectedCandidat.email}
-                    </span>
+                    <Mail size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-slate-700 truncate">{selectedCandidat.email || "—"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
-                    <span className="text-slate-700">
-                      {selectedCandidat.telephone || "Non renseigné"}
-                    </span>
+                    <Phone size={14} className="text-slate-400 shrink-0" />
+                    <span className="text-slate-700">{selectedCandidat.telephone || "Non renseigné"}</span>
                   </div>
                 </div>
               </div>

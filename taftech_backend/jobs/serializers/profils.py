@@ -43,11 +43,14 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'bio', 'linkedin', 'github'
         )
 
+    def _is_premium(self):
+        return self.context.get('is_premium', False)
+
     def get_first_name(self, obj): return obj.user.first_name
     def get_last_name(self, obj): return obj.user.last_name
-    def get_email(self, obj): return obj.user.email
-    def get_telephone(self, obj): return obj.user.telephone
-    def get_nin(self, obj): return obj.user.nin
+    def get_email(self, obj): return obj.user.email if self._is_premium() else None
+    def get_telephone(self, obj): return obj.user.telephone if self._is_premium() else None
+    def get_nin(self, obj): return obj.user.nin if self._is_premium() else None
     def get_date_joined(self, obj): return obj.user.date_joined
     def get_last_login(self, obj): return obj.user.last_login
     def get_user_id(self, obj): return obj.user.id
@@ -60,6 +63,16 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
         return ProfilCandidatFavori.objects.filter(
             recruteur=recruteur, candidat=obj.user
         ).exists()
+
+    def get_linkedin(self, obj):
+        p = obj
+        val = getattr(p, 'linkedin', None)
+        return val if self._is_premium() else None
+
+    def get_github(self, obj):
+        p = obj
+        val = getattr(p, 'github', None)
+        return val if self._is_premium() else None
 
 
 class ProfilCandidatAdminSerializer(serializers.ModelSerializer):

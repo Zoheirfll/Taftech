@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 12/06/2026 — US10 visual consistency + responsive mobile_
+_Dernière mise à jour : 12/06/2026 — US11 portail recruteur + US12 système Premium_
 
 ---
 
@@ -45,8 +45,8 @@ Plateforme de recrutement en ligne ciblant le marché algérien.
 - **IA Analyse**: Groq API (llama-3.1-8b-instant) — à la demande uniquement
 - **PDF**: ReportLab
 - **Email**: Django SMTP Gmail
-- **Tests Backend**: Django TestCase + APIClient — 186/186 ✅
-- **Tests Frontend**: Vitest + @testing-library/react — 270/270 ✅
+- **Tests Backend**: Django TestCase + APIClient — 211/211 ✅
+- **Tests Frontend**: Vitest + @testing-library/react — 283/283 ✅
 - **Tests E2E**: Cypress — 7 fichiers (1/2/3 stables, 4/5 instables — déprioritisés)
 - **GitHub**: https://github.com/Zoheirfll/Taftech
 
@@ -99,8 +99,8 @@ Ne jamais commencer un grid directement à `grid-cols-2` sans breakpoint mobile.
 - `offres.py` — JobListAPIView, JobDetailAPIView, JobCreateAPIView, UpdateOffreRecruteurAPIView, CloturerOffreAPIView, ConstantsAPIView
 - `profils.py` — ProfilCandidatAPIView, ExperienceAPIView, FormationAPIView, alertes, favoris, paramètres
 - `candidatures.py` — PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView, UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView, EvaluerCandidatureAPIView, Top5CandidatsAPIView
-- `recruteur.py` — DashboardRecruteurAPIView, CVThequeView, questionnaires, spontanées, paramètres
-- `admin.py` — AdminPagination + toutes vues admin + exports CSV
+- `recruteur.py` — DashboardRecruteurAPIView (retourne `est_premium`, `premium_expire_at`, `premium_active_since`, `premium_nb_mois`), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
+- `admin.py` — AdminPagination + toutes vues admin + exports CSV + **AdminDemandesPremiumAPIView** (GET liste toutes, PATCH activer avec nb_mois → étend premium_expire_at)
 - `ia.py` — OffresRecommandeesAPIView, ParserCVAPIView, MetierReferentiel, SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView, AnalyseGroqRecruteurAPIView. Helper `_appel_groq()` mutualisé.
 - `bulletin.py` — GenererBulletinPDFAPIView
 
@@ -212,6 +212,22 @@ Pages/
 ### 📝 Candidatures Spontanées
 - Envoi sans compte, anti-doublon, vue recruteur filtrable, marquer lue / supprimer
 
+### ⭐ Système Premium (US11/12)
+- `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement)
+- `ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`
+- `premium_expire_at` + `premium_nb_mois` sur `ProfilEntreprise`
+- Flow paiement recruteur : choix durée (1/3/6/12 mois) + CIB/EDAHABIA + envoi reçu email
+- Prix avec remises : 6 mois −8% (11 040 DA), 12 mois −17% (19 920 DA)
+- Page statut `/recruteurs/premium` : actif → dates activation/expiration/jours restants + section "envoyer reçu"
+- Renouvellement/prolongation depuis page statut (étend l'expiry existante)
+- Badge ⭐ Premium dans NavbarRecruteur (subtitle) + DashboardRecruteur (avec date expiry)
+- Lien "Mon Premium ⭐" / "Passer Premium 🔒" dans dropdown navbar
+- CVThèque bloquée intégralement pour non-premium (overlay)
+- Analyse IA + Résumé IA bloqués dans GestionOffre pour non-premium
+- Admin panel : onglet "Demandes Premium" dans `AdminEntreprises`, activation avec sélecteur mois
+- Logout role-aware : recruteur → `/recruteurs/connexion`, candidat → `/login`
+- 401 interceptor dans `axiosConfig.js` aussi role-aware
+
 ---
 
 ## 🏗️ MODÈLES DJANGO
@@ -223,10 +239,11 @@ Pages/
 ### jobs/
 - `ProfilCandidat` (titre, cv_pdf, photo, bio, linkedin, github, wilaya, commune, diplome, specialite, competences, langues, mobilite, situation_actuelle, salaire_souhaite, secteur_souhaite, service_militaire, permis, passeport, niveau_experience, notif_mise_a_jour)
 - `ExperienceCandidat`, `FormationCandidat`
-- `ProfilEntreprise` (nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto)
+- `ProfilEntreprise` (nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto, **est_premium**, **premium_expire_at**, property `est_premium_actif`)
 - `OffreEmploi` (entreprise, titre, wilaya, commune, specialite, diplome, experience_requise, type_contrat, description, missions, profil_recherche, salaire_propose, est_active, est_cloturee, statut_moderation, motif_rejet, questionnaire)
 - `Candidature` (offre, candidat, statut, score_matching, details_matching, profil_snapshot, est_rapide, date_entretien, note_technique/communication/motivation/experience, note_globale, commentaire_evaluation)
 - `CandidatureSpontanee`, `Notification`, `MetierReferentiel`, `Questionnaire`, `QuestionQuestionnaire`, `ReponseChoix`, `ReponseCandidat`, `ProfilCandidatFavori`
+- **`DemandeActivationPremium`** (entreprise FK, moyen_paiement, nb_mois, est_traitee, date_demande, date_traitement) — migration 0040/0041
 
 ---
 
@@ -277,6 +294,10 @@ Pages/
 | serializers/ | Package avec __init__ façade | Imports inchangés dans les vues |
 | constants.py | Fichier centralisé | Plus de duplication entre models/matcher/cv_parser |
 | jobsService.js | Façade + 4 sous-services | Zéro changement dans les composants |
+| Premium paiement | Manuel CIB/EDAHABIA + email | Pas de Chargily Pay pour l'instant |
+| Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
+| Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
+| Logout redirect | Role-aware (RECRUTEUR → /recruteurs/connexion) | Lire role AVANT clearStorage |
 | Déploiement | Serveur algérien .dz | Conformité ANPDP + latence |
 
 ---
@@ -291,12 +312,12 @@ Pages/
 
 ---
 
-## ✅ ÉTAT TESTS (dernière vérification — US10)
+## ✅ ÉTAT TESTS (dernière vérification — US12)
 
-- Backend : 186/186 ✅
-- Frontend Vitest : 270/270 ✅
+- Backend : 211/211 ✅ (dont 18 nouveaux tests US12 premium + 5 tests throttle refactorisés)
+- Frontend Vitest : 283/283 ✅ (dont 10 nouveaux tests PremiumPage + 2 tests AdminEntreprises)
 - Cypress E2E : 7 fichiers — tests 1/2/3 stables, 4/5 instables (déprioritisé)
-- Vite build : propre ✅ (1918 modules)
+- Vite build : propre ✅ (1923 modules)
 
 ---
 

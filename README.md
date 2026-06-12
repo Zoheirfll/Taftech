@@ -30,11 +30,11 @@ npm run dev
 ## Tests
 
 ```bash
-# Backend (186 tests)
+# Backend (211 tests)
 cd taftech_backend
-python manage.py test jobs.tests
+python manage.py test
 
-# Frontend (270 tests)
+# Frontend (283 tests)
 cd taftech_frontend
 npm test -- --run
 
@@ -67,7 +67,7 @@ Copier `.env.example` en `.env` et renseigner :
 - Matching IA (score 0–100% sur 5 critères : spécialité, diplôme, expérience, région, compétences)
 - Candidature TafTech (avec profil) et candidature rapide (sans compte)
 - Tableau de bord recruteur avec KPIs et pipeline candidatures
-- CVThèque avec filtres avancés
+- CVThèque avec filtres avancés (accès Premium)
 - Questionnaires personnalisés par offre
 - Candidatures spontanées
 - Bulletin PDF professionnel (ReportLab)
@@ -75,3 +75,4 @@ Copier `.env.example` en `.env` et renseigner :
 - Notifications internes + alertes emploi par email
 - Panel admin complet avec journal d'audit
 - Référentiel métiers ROME (11 090 métiers)
+- Système Premium : abonnement mensuel (CIB/EDAHABIA), gestion durée, page statut

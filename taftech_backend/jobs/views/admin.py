@@ -14,8 +14,9 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog
+    ProfilEntreprise, AuditLog, DemandeActivationPremium
 )
+import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
     EntrepriseDashboardDetailSerializer,
@@ -395,3 +396,50 @@ class AdminAuditLogAPIView(APIView):
             for log in result_page
         ]
         return paginator.get_paginated_response(data)
+
+
+class AdminDemandesPremiumAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        demandes = DemandeActivationPremium.objects.select_related('entreprise__user').order_by('-date_demande')
+        data = [
+            {
+                'id': d.id,
+                'entreprise_id': d.entreprise.id,
+                'nom_entreprise': d.entreprise.nom_entreprise,
+                'email': d.entreprise.user.email,
+                'telephone': d.entreprise.user.telephone,
+                'moyen_paiement': d.moyen_paiement,
+                'nb_mois': d.nb_mois,
+                'montant': d.nb_mois * 2000,
+                'date_demande': d.date_demande.strftime('%d/%m/%Y %H:%M'),
+                'est_traitee': d.est_traitee,
+                'date_traitement': d.date_traitement.strftime('%d/%m/%Y %H:%M') if d.date_traitement else None,
+                'est_premium_actif': d.entreprise.est_premium_actif,
+                'premium_expire_at': d.entreprise.premium_expire_at.strftime('%d/%m/%Y') if d.entreprise.premium_expire_at else None,
+            }
+            for d in demandes
+        ]
+        return Response(data)
+
+    def patch(self, request, demande_id):
+        try:
+            demande = DemandeActivationPremium.objects.get(id=demande_id)
+        except DemandeActivationPremium.DoesNotExist:
+            return Response({'error': 'Demande introuvable.'}, status=404)
+        nb_mois = int(request.data.get('nb_mois', demande.nb_mois))
+        entreprise = demande.entreprise
+        # Prolonger si déjà premium actif, sinon partir de maintenant
+        base = entreprise.premium_expire_at if entreprise.est_premium_actif else timezone.now()
+        entreprise.est_premium = True
+        entreprise.premium_expire_at = base + datetime.timedelta(days=30 * nb_mois)
+        entreprise.save(update_fields=['est_premium', 'premium_expire_at'])
+        demande.est_traitee = True
+        demande.date_traitement = timezone.now()
+        demande.save()
+        _audit(request, 'AUTRE', f"Premium {nb_mois} mois activé pour {entreprise.nom_entreprise} — expire {entreprise.premium_expire_at.strftime('%d/%m/%Y')}")
+        return Response({
+            'message': 'Premium activé.',
+            'premium_expire_at': entreprise.premium_expire_at.strftime('%d/%m/%Y'),
+        })

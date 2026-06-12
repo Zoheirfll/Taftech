@@ -16,6 +16,7 @@ export const useGestionOffre = () => {
   const [compareIds, setCompareIds] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
   const [triMode, setTriMode] = useState("score");
+  const [isPremium, setIsPremium] = useState(false);
   const [analyseGroq, setAnalyseGroq] = useState(null);
   const [loadingGroq, setLoadingGroq] = useState(false);
   const [resumeIA, setResumeIA] = useState(null);
@@ -46,6 +47,7 @@ export const useGestionOffre = () => {
     const fetchOffre = async () => {
       try {
         const dashData = await jobsService.getDashboard();
+        if (dashData.est_premium) setIsPremium(true);
         const foundOffre = dashData.offres.find((o) => o.id === parseInt(id));
         if (foundOffre) {
           setOffre(foundOffre);
@@ -374,6 +376,7 @@ export const useGestionOffre = () => {
     handleCloturer,
     soumettreEvaluation,
     handleDownloadBulletin,
+    isPremium,
     handleAnalyseGroq,
     handleResumeIA,
     toggleCompare,

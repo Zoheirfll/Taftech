@@ -22,4 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.envcypress.env.json
+.env
+cypress.env.json

@@ -2,9 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { Search, Download, X } from "lucide-react";
+import { Search, Download, X, Star } from "lucide-react";
 
 const AdminEntreprises = () => {
+  const [activeTab, setActiveTab] = useState("entreprises");
+  const [demandesPremium, setDemandesPremium] = useState([]);
+  const [loadingDemandes, setLoadingDemandes] = useState(false);
   const [entreprises, setEntreprises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntreprise, setSelectedEntreprise] = useState(null);
@@ -33,6 +36,46 @@ const AdminEntreprises = () => {
     const delay = setTimeout(() => chargerEntreprises(), 300);
     return () => clearTimeout(delay);
   }, [chargerEntreprises]);
+
+  const chargerDemandesPremium = useCallback(async () => {
+    setLoadingDemandes(true);
+    try {
+      const data = await jobsService.getDemandesPremium();
+      setDemandesPremium(data);
+    } catch (err) {
+      reportError("ECHEC_CHARGEMENT_DEMANDES_PREMIUM", err);
+    } finally {
+      setLoadingDemandes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "premium") chargerDemandesPremium();
+  }, [activeTab, chargerDemandesPremium]);
+
+  const [nbMoisActivation, setNbMoisActivation] = useState({});
+
+  const handleActiverPremium = async (demandeId, nomEntreprise, nbMois) => {
+    try {
+      await jobsService.activerPremium(demandeId, nbMois);
+      toast.success(`Premium ${nbMois} mois activé pour ${nomEntreprise} !`);
+      chargerDemandesPremium();
+    } catch (err) {
+      toast.error("Erreur lors de l'activation.");
+      reportError("ECHEC_ACTIVER_PREMIUM_ADMIN", err);
+    }
+  };
+
+  const handleTogglePremium = async (id, statutActuel) => {
+    try {
+      await jobsService.moderateEntreprise(id, { est_premium: !statutActuel });
+      chargerEntreprises();
+      toast.success(statutActuel ? "Premium retiré." : "Compte Premium activé !");
+    } catch (err) {
+      toast.error("Erreur lors de la modification.");
+      reportError("ECHEC_TOGGLE_PREMIUM", err);
+    }
+  };
 
   const handleToggleApprobation = async (id, statutActuel) => {
     if (
@@ -99,7 +142,103 @@ const AdminEntreprises = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* ONGLETS */}
+      <div className="flex gap-1 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab("entreprises")}
+          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "entreprises" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+        >
+          Entreprises
+        </button>
+        <button
+          onClick={() => setActiveTab("premium")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "premium" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+        >
+          <Star size={14} className={activeTab === "premium" ? "fill-amber-500" : ""} />
+          Demandes Premium
+          {demandesPremium.length > 0 && (
+            <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{demandesPremium.length}</span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "premium" && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                <th className="px-5 py-3">Entreprise</th>
+                <th className="px-5 py-3">Contact</th>
+                <th className="px-5 py-3">Moyen / Durée</th>
+                <th className="px-5 py-3">Statut</th>
+                <th className="px-5 py-3">Date demande</th>
+                <th className="px-5 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loadingDemandes ? (
+                <tr><td colSpan="6" className="py-10 text-center text-sm text-indigo-600 animate-pulse">Chargement...</td></tr>
+              ) : demandesPremium.length === 0 ? (
+                <tr><td colSpan="6" className="py-10 text-center text-sm text-slate-400">Aucune demande</td></tr>
+              ) : demandesPremium.map((d) => (
+                <tr key={d.id} className={`transition-colors ${d.est_traitee ? "bg-slate-50/50" : "hover:bg-slate-50"}`}>
+                  <td className="px-5 py-4">
+                    <p className="text-sm font-semibold text-slate-900">{d.nom_entreprise}</p>
+                    {d.premium_expire_at && (
+                      <p className="text-[10px] text-teal-600 mt-0.5">expire {d.premium_expire_at}</p>
+                    )}
+                  </td>
+                  <td className="px-5 py-4">
+                    <p className="text-sm text-slate-700">{d.email}</p>
+                    <p className="text-xs text-slate-400">{d.telephone}</p>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full border ${d.moyen_paiement === "CIB" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                      {d.moyen_paiement}
+                    </span>
+                    <p className="text-xs text-slate-500 mt-1">{d.nb_mois} mois — {d.montant?.toLocaleString("fr-DZ")} DA</p>
+                  </td>
+                  <td className="px-5 py-4">
+                    {d.est_traitee ? (
+                      <div>
+                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold rounded-full">✓ Activé</span>
+                        {d.date_traitement && <p className="text-[10px] text-slate-400 mt-1">{d.date_traitement}</p>}
+                      </div>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full">⏳ En attente</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-4 text-xs text-slate-500">{d.date_demande}</td>
+                  <td className="px-5 py-4 text-right">
+                    {!d.est_traitee ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <select
+                          value={nbMoisActivation[d.id] || d.nb_mois}
+                          onChange={(e) => setNbMoisActivation(prev => ({ ...prev, [d.id]: parseInt(e.target.value) }))}
+                          className="px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-amber-400"
+                        >
+                          {[1,2,3,6,12].map(m => <option key={m} value={m}>{m} mois</option>)}
+                        </select>
+                        <button
+                          onClick={() => handleActiverPremium(d.id, d.nom_entreprise, nbMoisActivation[d.id] || d.nb_mois)}
+                          className="px-3 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition-colors whitespace-nowrap"
+                        >
+                          ⭐ Activer
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Traité</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === "entreprises" && (
+      <><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             Validation des entreprises
@@ -141,6 +280,7 @@ const AdminEntreprises = () => {
               <th className="px-5 py-3">Entreprise</th>
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3">Statut</th>
+              <th className="px-5 py-3">Premium</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -190,6 +330,17 @@ const AdminEntreprises = () => {
                       </span>
                     )}
                   </td>
+                  <td className="px-5 py-4">
+                    {ent.est_premium ? (
+                      <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full">
+                        ⭐ Premium
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 text-[10px] font-semibold rounded-full">
+                        Standard
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
                     <button
                       onClick={() => setSelectedEntreprise(ent)}
@@ -205,6 +356,12 @@ const AdminEntreprises = () => {
                     >
                       {ent.est_approuvee ? "Bloquer" : "Approuver"}
                     </button>
+                    <button
+                      onClick={() => handleTogglePremium(ent.id, ent.est_premium)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${ent.est_premium ? "bg-amber-50 text-amber-700 hover:bg-amber-100" : "bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-700"}`}
+                    >
+                      {ent.est_premium ? "⭐ Retirer" : "⭐ Premium"}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -213,6 +370,8 @@ const AdminEntreprises = () => {
         </table>
         <Pagination />
       </div>
+      </>
+      )}
 
       {selectedEntreprise && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

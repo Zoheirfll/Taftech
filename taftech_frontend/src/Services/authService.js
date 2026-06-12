@@ -24,14 +24,16 @@ export const authService = {
   // --------------------------------------------------------
   // 2. LOGOUT : On nettoie le rôle et on redirige
   // --------------------------------------------------------
-  logout: async () => {
+  logout: async (redirectTo = null) => {
     try {
       await api.post("accounts/logout/");
     } catch (err) {
       // On ignore l'erreur réseau — on nettoie quand même côté client
     } finally {
+      const role = localStorage.getItem("userRole");
       localStorage.removeItem("userRole");
-      window.location.href = "/login";
+      const dest = redirectTo || (role === "RECRUTEUR" ? "/recruteurs/connexion" : "/login");
+      window.location.href = dest;
     }
   },
 

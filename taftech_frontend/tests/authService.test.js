@@ -67,15 +67,25 @@ describe("🔧 Logique Métier - Service <authService />", () => {
     expect(result).toEqual({ role: "CANDIDAT", message: "Connecté" });
   });
 
-  it("🟢 HP2 : Déconnexion (Nettoyage et Redirection)", async () => {
+  it("🟢 HP2 : Déconnexion Recruteur — redirige vers /recruteurs/connexion", async () => {
     mockStore["userRole"] = "RECRUTEUR";
-    api.post.mockResolvedValue({});  // logout backend OK
+    api.post.mockResolvedValue({});
 
     await authService.logout();
 
     expect(api.post).toHaveBeenCalledWith("accounts/logout/");
     expect(localStorage.removeItem).toHaveBeenCalledWith("userRole");
     expect(mockStore["userRole"]).toBeUndefined();
+    expect(window.location.href).toBe("/recruteurs/connexion");
+  });
+
+  it("🟢 HP2b : Déconnexion Candidat — redirige vers /login", async () => {
+    mockStore["userRole"] = "CANDIDAT";
+    api.post.mockResolvedValue({});
+
+    await authService.logout();
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith("userRole");
     expect(window.location.href).toBe("/login");
   });
 

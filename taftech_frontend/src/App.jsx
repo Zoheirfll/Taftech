@@ -28,6 +28,7 @@ import ResetPassword from "./Pages/Auth/ResetPassword";
 // Portail Recruteur
 import LandingRecruteur from "./Pages/Recruteur/Portal/LandingRecruteur";
 import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
+import PremiumPage from "./Pages/Recruteur/Portal/PremiumPage";
 
 // Pages Recruteur (espace connecté)
 import CreateJob from "./Pages/Recruteur/CreateJob";
@@ -119,6 +120,7 @@ function AppContent() {
           {/* PORTAIL RECRUTEUR */}
           <Route path="/recruteurs" element={<LandingRecruteur />} />
           <Route path="/recruteurs/connexion" element={<LoginRecruteur />} />
+          <Route path="/recruteurs/premium" element={<PremiumPage />} />
           <Route path="/recruteurs/inscription" element={<RegisterRecruteur />} />
 
           {/* ESPACE RECRUTEUR CONNECTÉ */}

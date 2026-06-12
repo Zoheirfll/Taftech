@@ -166,7 +166,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
     });
     fireEvent.click(finalBtn);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/login");
+    expect(mockNavigate).toHaveBeenCalledWith("/recruteurs/connexion");
   });
 
   it("🟢 HP4 : Filtre Regex du champ OTP (bloque les lettres)", async () => {

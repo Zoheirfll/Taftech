@@ -19,6 +19,8 @@ vi.mock("../src/Services/jobsService", () => ({
     getAdminEntreprises: vi.fn(),
     moderateEntreprise: vi.fn(),
     exportEntreprises: vi.fn(),
+    getDemandesPremium: vi.fn(),
+    activerPremium: vi.fn(),
   },
 }));
 vi.mock("react-hot-toast", () => ({
@@ -56,6 +58,7 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
     vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
     window.URL.revokeObjectURL = vi.fn();
+    jobsService.getDemandesPremium.mockResolvedValue([]);
   });
   afterEach(() => {
     cleanup();
@@ -139,6 +142,48 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'exportation.");
+    });
+  });
+
+  it("🟢 HP5 : Onglet Demandes Premium — liste vide", async () => {
+    jobsService.getAdminEntreprises.mockResolvedValue(mockData);
+    jobsService.getDemandesPremium.mockResolvedValue([]);
+    render(<AdminEntreprises />);
+    await waitFor(() => screen.getByText("SOMIZ Arzew"));
+    fireEvent.click(screen.getByText(/Demandes Premium/i));
+    await waitFor(() => {
+      expect(jobsService.getDemandesPremium).toHaveBeenCalled();
+      expect(screen.getByText(/Aucune demande/i)).toBeInTheDocument();
+    });
+  });
+
+  it("🟢 HP6 : Onglet Demandes Premium — activation", async () => {
+    jobsService.getAdminEntreprises.mockResolvedValue(mockData);
+    jobsService.getDemandesPremium.mockResolvedValue([
+      {
+        id: 1,
+        nom_entreprise: "SOMIZ Arzew",
+        email: "rh@somiz.dz",
+        telephone: "0555000000",
+        moyen_paiement: "CIB",
+        nb_mois: 3,
+        montant: 6000,
+        est_traitee: false,
+        date_demande: "12/06/2026 10:00",
+        date_traitement: null,
+        premium_expire_at: null,
+        est_premium_actif: false,
+      },
+    ]);
+    jobsService.activerPremium.mockResolvedValue({});
+    render(<AdminEntreprises />);
+    await waitFor(() => screen.getByText("SOMIZ Arzew"));
+    fireEvent.click(screen.getByText(/Demandes Premium/i));
+    await waitFor(() => screen.getAllByText("SOMIZ Arzew"));
+    fireEvent.click(screen.getByRole("button", { name: /Activer/i }));
+    await waitFor(() => {
+      expect(jobsService.activerPremium).toHaveBeenCalledWith(1, expect.any(Number));
+      expect(toast.success).toHaveBeenCalled();
     });
   });
 });

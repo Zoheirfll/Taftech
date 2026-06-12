@@ -10,6 +10,7 @@ import {
   waitFor,
   act,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import CVTheque from "../src/Pages/Recruteur/CVTheque";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
@@ -20,6 +21,7 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
     searchCVtheque: vi.fn(),
+    getDashboard: vi.fn(),
   },
 }));
 
@@ -47,7 +49,7 @@ const mockResults = {
 describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    // ✅ SOLUTION MIRACLE : Permet à waitFor de fonctionner même avec des fake timers
+    jobsService.getDashboard.mockResolvedValue({ est_premium: true });
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -61,7 +63,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
 
   it("🟢 HP1 : Chargement des filtres et état initial", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     await waitFor(() => {
       expect(jobsService.getConstants).toHaveBeenCalled();
@@ -75,7 +77,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   it("🟢 HP2 : Recherche par texte avec debounce", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText(/Mots clés, métier, poste/i);
     fireEvent.change(input, { target: { value: "React" } });
@@ -94,7 +96,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   it("🟢 HP3 : Utilisation des filtres Select", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     const select = await screen.findByText("Wilaya");
     await selectEvent.select(select, "31 - Oran");
@@ -111,7 +113,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   it("🟢 HP4 : Ouverture de la Modal de profil complet", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "A" },
@@ -133,7 +135,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
 
   it("🔴 EC1 : Échec du chargement des filtres", async () => {
     jobsService.getConstants.mockRejectedValue(new Error("500"));
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -146,7 +148,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   it("🔴 EC2 : Aucun résultat trouvé", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockResolvedValue({ count: 0, results: [] });
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Unknown" },
@@ -163,7 +165,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
   it("🔴 EC3 : Échec de la recherche API (Télémétrie)", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockRejectedValue(new Error("Fail"));
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Bug" },
@@ -187,7 +189,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     };
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.searchCVtheque.mockResolvedValue(incomplete);
-    render(<CVTheque />);
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Ali" },

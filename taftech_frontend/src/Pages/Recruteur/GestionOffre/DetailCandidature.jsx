@@ -142,6 +142,7 @@ export const DetailCandidature = ({
   handleStatusChange,
   handleDownloadBulletin,
   supprimerCandidature,
+  isPremium,
   analyseGroq,
   loadingGroq,
   handleAnalyseGroq,
@@ -317,12 +318,16 @@ export const DetailCandidature = ({
                   </span>
                 </div>
                 {!loadingResume && !resumeIA && (
-                  <button
-                    onClick={handleResumeIA}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
-                  >
-                    <Sparkles size={11} /> Générer
-                  </button>
+                  isPremium ? (
+                    <button
+                      onClick={handleResumeIA}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                    >
+                      <Sparkles size={11} /> Générer
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400 font-semibold">🔒 Premium</span>
+                  )
                 )}
                 {resumeIA && (
                   <button
@@ -684,13 +689,23 @@ export const DetailCandidature = ({
                     Analyse approfondie IA
                   </p>
                   {!loadingGroq && (
-                    <button
-                      onClick={handleAnalyseGroq}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
-                    >
-                      <Sparkles size={12} />{" "}
-                      {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
-                    </button>
+                    isPremium ? (
+                      <button
+                        onClick={handleAnalyseGroq}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                      >
+                        <Sparkles size={12} />{" "}
+                        {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
+                      </button>
+                    ) : (
+                      <a
+                        href="mailto:taftech963@gmail.com?subject=Demande Premium TafTech"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 text-xs font-semibold rounded-lg cursor-not-allowed"
+                        title="Fonctionnalité Premium"
+                      >
+                        🔒 Premium
+                      </a>
+                    )
                   )}
                 </div>
                 {loadingGroq ? (

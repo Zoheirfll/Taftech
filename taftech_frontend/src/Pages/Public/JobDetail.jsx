@@ -16,7 +16,24 @@ import {
   Zap,
   CheckCircle,
   XCircle,
+  Building2,
 } from "lucide-react";
+
+const getMediaUrl = (path) =>
+  path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
+
+const LogoEntreprise = ({ url, nom }) => {
+  const [err, setErr] = React.useState(false);
+  return (
+    <div className="w-16 h-16 rounded-2xl border-2 border-white/30 bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
+      {url && !err ? (
+        <img src={url} alt={nom} className="w-full h-full object-contain p-1.5" onError={() => setErr(true)} />
+      ) : (
+        <Building2 size={26} className="text-white/60" />
+      )}
+    </div>
+  );
+};
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -194,7 +211,8 @@ const JobDetail = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
+    <div className="bg-slate-100 min-h-screen">
+      <div className="max-w-4xl mx-auto px-6 py-8">
       <Link
         to="/offres"
         className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
@@ -204,31 +222,40 @@ const JobDetail = () => {
       </Link>
 
       {/* EN-TÊTE */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6">
-        <div className="bg-indigo-600 px-8 py-8">
-          <h1 className="text-2xl font-bold text-white mb-4 tracking-tight">
-            {job.titre}
-          </h1>
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
+        <div className="bg-linear-to-br from-indigo-700 to-indigo-500 px-8 py-10">
+          <div className="flex items-start gap-5 mb-5">
+            <LogoEntreprise
+              url={job.entreprise?.logo_url ? getMediaUrl(job.entreprise.logo_url) : null}
+              nom={job.entreprise?.nom_entreprise}
+            />
+            <div>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                {job.titre}
+              </h1>
+              {job.entreprise && (
+                <Link
+                  to={`/entreprise/${job.entreprise.id}`}
+                  className="text-indigo-200 hover:text-white text-sm font-medium transition-colors mt-1 inline-block"
+                >
+                  {job.entreprise.nom_entreprise}
+                </Link>
+              )}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {job.entreprise ? (
-              <Link
-                to={`/entreprise/${job.entreprise.id}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-full transition-colors"
-              >
-                {job.entreprise.nom_entreprise}
-              </Link>
-            ) : (
+            {!job.entreprise && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-xs font-medium rounded-full">
                 Entreprise anonyme
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-xs font-medium rounded-full">
-              <MapPin size={12} />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-full">
+              <MapPin size={13} />
               {job.wilaya}
               {job.commune ? ` · ${job.commune}` : ""}
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-xs font-medium rounded-full">
-              <Calendar size={12} />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-full">
+              <Calendar size={13} />
               {new Date(job.date_publication).toLocaleDateString("fr-FR")}
             </span>
           </div>
@@ -236,56 +263,56 @@ const JobDetail = () => {
 
         {/* CRITÈRES */}
         <div className="p-6 border-b border-slate-100">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
             {job.type_contrat && (
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Contrat
                 </p>
-                <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Briefcase size={13} className="text-slate-400" />
+                <p className="text-base font-semibold text-slate-800 flex items-center gap-1.5">
+                  <Briefcase size={14} className="text-slate-400" />
                   {job.type_contrat}
                 </p>
               </div>
             )}
             {job.experience_requise && (
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Expérience
                 </p>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-base font-semibold text-slate-800">
                   {job.experience_requise}
                 </p>
               </div>
             )}
             {job.diplome && (
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Diplôme
                 </p>
-                <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  <GraduationCap size={13} className="text-slate-400" />
+                <p className="text-base font-semibold text-slate-800 flex items-center gap-1.5">
+                  <GraduationCap size={14} className="text-slate-400" />
                   {job.diplome}
                 </p>
               </div>
             )}
             {job.specialite && (
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Spécialité
                 </p>
-                <p className="text-sm font-semibold text-indigo-600">
+                <p className="text-base font-semibold text-indigo-600">
                   {job.specialite}
                 </p>
               </div>
             )}
             {job.salaire_propose && (
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                   Salaire
                 </p>
-                <p className="text-sm font-semibold text-emerald-600 flex items-center gap-1.5">
-                  <Banknote size={13} />
+                <p className="text-base font-semibold text-emerald-600 flex items-center gap-1.5">
+                  <Banknote size={14} />
                   {job.salaire_propose}
                 </p>
               </div>
@@ -307,36 +334,36 @@ const JobDetail = () => {
         )}
 
         {/* CONTENU */}
-        <div className="p-6 space-y-6">
+        <div className="p-8 space-y-8">
           {job.description && (
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-4 bg-indigo-600 rounded-full" />
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-5 bg-indigo-600 rounded-full" />
                 Description du poste
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
                 {job.description}
               </p>
             </div>
           )}
           {job.missions && (
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-4 bg-amber-500 rounded-full" />
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-5 bg-amber-500 rounded-full" />
                 Missions principales
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
                 {job.missions}
               </p>
             </div>
           )}
           {job.profil_recherche && (
             <div>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-4 bg-emerald-500 rounded-full" />
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-5 bg-emerald-500 rounded-full" />
                 Profil recherché
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
                 {job.profil_recherche}
               </p>
             </div>
@@ -595,7 +622,7 @@ const JobDetail = () => {
                 </button>
               </div>
               <form onSubmit={handlePostulerRapide} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-slate-500 mb-1 block">
                       Nom *
@@ -621,7 +648,7 @@ const JobDetail = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-slate-500 mb-1 block">
                       Email *
@@ -834,6 +861,7 @@ const JobDetail = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

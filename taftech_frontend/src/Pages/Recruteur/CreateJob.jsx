@@ -121,12 +121,12 @@ const CreateJob = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-10 bg-slate-50 min-h-screen font-sans">
+    <div className="max-w-7xl mx-auto p-4 md:p-10 bg-slate-100 min-h-screen font-sans">
       <div className="mb-10 text-center space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tighter uppercase">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
           Créer une <span className="text-indigo-600">Offre Ciblée</span>
         </h1>
-        <p className="text-gray-500 font-medium tracking-wide">
+        <p className="text-slate-500 text-base font-medium">
           Attirez les meilleurs talents d'Algérie avec des critères précis.
         </p>
       </div>
@@ -137,7 +137,7 @@ const CreateJob = () => {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 space-y-8">
-            <div className="bg-white p-8 md:p-10 rounded-xl shadow-sm border border-slate-200">
+            <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-8 flex items-center gap-3">
                 <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
                 Informations du Poste
@@ -145,7 +145,7 @@ const CreateJob = () => {
 
               <div className="space-y-6">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Titre du poste *
                   </label>
                   <div className="relative">
@@ -189,7 +189,7 @@ const CreateJob = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                    <label className="text-sm font-bold text-slate-500 mb-2 block">
                       Type de contrat
                     </label>
                     <Select
@@ -207,7 +207,7 @@ const CreateJob = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                    <label className="text-sm font-bold text-slate-500 mb-2 block">
                       Salaire proposé
                     </label>
                     <input
@@ -222,7 +222,7 @@ const CreateJob = () => {
               </div>
             </div>
 
-            <div className="bg-white p-8 md:p-10 rounded-xl shadow-sm border border-slate-200">
+            <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-8 flex items-center gap-3">
                 <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>{" "}
                 Localisation
@@ -230,7 +230,7 @@ const CreateJob = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Wilaya *
                   </label>
                   <Select
@@ -255,7 +255,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Commune (Optionnel)
                   </label>
                   <Select
@@ -281,7 +281,7 @@ const CreateJob = () => {
               </div>
             </div>
             <div className="lg:col-span-12">
-              <div className="bg-white p-8 md:p-10 rounded-xl shadow-sm border border-slate-200">
+              <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
                 <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
                   <span className="w-2 h-8 bg-indigo-600 rounded-full"></span>
                   Questionnaire (Optionnel)
@@ -329,7 +329,7 @@ const CreateJob = () => {
 
               <div className="space-y-5">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Expérience requise
                   </label>
                   <Select
@@ -347,7 +347,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Diplôme attendu
                   </label>
                   <Select
@@ -366,7 +366,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Spécialité (Secteur)
                   </label>
                   <Select
@@ -389,7 +389,7 @@ const CreateJob = () => {
           </div>
 
           <div className="lg:col-span-12 space-y-8">
-            <div className="bg-white p-8 md:p-10 rounded-xl shadow-sm border border-slate-200">
+            <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-[11px] font-semibold text-slate-900 tracking-widest mb-8 flex items-center gap-3">
                 <span className="w-2 h-8 bg-gray-800 rounded-full"></span>{" "}
                 Détails de la mission
@@ -397,7 +397,7 @@ const CreateJob = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Missions & Tâches
                   </label>
                   <textarea
@@ -410,7 +410,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                  <label className="text-sm font-bold text-slate-500 mb-2 block">
                     Profil Recherché (Exigences)
                   </label>
                   <textarea
@@ -431,9 +431,9 @@ const CreateJob = () => {
           <button
             type="submit"
             disabled={loading}
-            className="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="bg-indigo-600 text-white font-bold px-10 py-4 rounded-2xl shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 text-base"
           >
-            {loading ? "PUBLICATION..." : "🚀 PUBLIER L'OFFRE"}
+            {loading ? "Publication en cours..." : "🚀 Publier l'offre"}
           </button>
         </div>
       </form>

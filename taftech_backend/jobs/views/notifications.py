@@ -49,6 +49,27 @@ class PublicStatsAPIView(APIView):
         }
         return Response(stats, status=status.HTTP_200_OK)
 
+class EntrepriseListAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        qs = ProfilEntreprise.objects.filter(est_approuvee=True).order_by('-id')
+        search = request.query_params.get('search', '').strip()
+        secteur = request.query_params.get('secteur', '').strip()
+        tri = request.query_params.get('tri', '')
+        if search:
+            qs = qs.filter(nom_entreprise__icontains=search)
+        if secteur:
+            qs = qs.filter(secteur_activite=secteur)
+        if tri == 'nom':
+            qs = qs.order_by('nom_entreprise')
+        elif tri == 'offres':
+            from django.db.models import Count
+            qs = qs.annotate(nb_offres=Count('offres')).order_by('-nb_offres')
+        serializer = EntreprisePublicSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
 class EntrepriseDetailAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, entreprise_id):

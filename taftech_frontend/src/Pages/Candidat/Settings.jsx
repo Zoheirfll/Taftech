@@ -67,16 +67,16 @@ const Settings = () => {
     );
 
   const inputClass =
-    "flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900">Paramètres</h1>
+      <h1 className="text-2xl font-extrabold text-slate-900">Paramètres</h1>
 
       {/* NOTIFICATIONS */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900">
             Notifications
           </h2>
         </div>
@@ -116,9 +116,9 @@ const Settings = () => {
       </div>
 
       {/* MOT DE PASSE */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900">
             Modifier mon mot de passe
           </h2>
         </div>
@@ -153,7 +153,7 @@ const Settings = () => {
             />
             <button
               type="submit"
-              className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
+              className="px-5 py-3 bg-slate-900 text-white text-base font-bold rounded-xl hover:bg-black transition-colors"
             >
               Modifier
             </button>
@@ -162,7 +162,7 @@ const Settings = () => {
       </div>
 
       {/* DANGER ZONE */}
-      <div className="bg-white border border-red-100 rounded-xl p-5 flex justify-between items-center">
+      <div className="bg-white border border-red-100 rounded-2xl p-5 flex justify-between items-center">
         <div>
           <h2 className="text-sm font-semibold text-red-600">
             Supprimer mon compte

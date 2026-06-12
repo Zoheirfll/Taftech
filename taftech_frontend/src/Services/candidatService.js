@@ -121,7 +121,7 @@ export const candidatService = {
   getNotifications: async () => {
     try {
       const response = await api.get("jobs/notifications/");
-      return response.data;
+      return Array.isArray(response.data) ? response.data : (response.data.results ?? []);
     } catch (err) {
       reportError("ECHEC_GET_NOTIFICATIONS_API", err);
       throw err;

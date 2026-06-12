@@ -26,19 +26,19 @@ const ForgotPassword = () => {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Mail size={24} className="text-indigo-600" />
+          <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Mail size={26} className="text-indigo-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
             Mot de passe oublié
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-2">
             Entrez votre email pour recevoir un code de réinitialisation.
           </p>
         </div>
@@ -58,7 +58,7 @@ const ForgotPassword = () => {
               <Link
                 to="/reset-password"
                 state={{ email }}
-                className="block w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors text-center mt-4"
+                className="block w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-center mt-4"
               >
                 Entrer mon code →
               </Link>
@@ -66,7 +66,7 @@ const ForgotPassword = () => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
                   Adresse email *
                 </label>
                 <input
@@ -81,7 +81,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 {loading ? "Envoi en cours..." : "Envoyer le code"}
               </button>

@@ -304,7 +304,7 @@ const ReviewCandidature = () => {
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               Préférences
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 {
                   label: "Secteur",

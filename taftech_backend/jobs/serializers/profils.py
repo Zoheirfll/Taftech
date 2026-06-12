@@ -86,3 +86,4 @@ class AdminUserSerializer(serializers.ModelSerializer):
 class ParametresNotificationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilCandidat
+        fields = ['notif_offres_exclusives', 'notif_newsletter', 'notif_mise_a_jour']

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+
+const getMediaUrl = (path) =>
+  path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
 import { useParams, Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
@@ -127,16 +130,17 @@ const EntreprisePublic = () => {
       </Link>
 
       {/* EN-TÊTE */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6">
         <div className="h-28 bg-gradient-to-r from-indigo-600 to-indigo-800" />
         <div className="px-8 pb-8 relative">
           <div className="flex flex-col md:flex-row gap-5 items-start md:items-end -mt-12 mb-6">
-            <div className="w-24 h-24 bg-white rounded-xl border-2 border-slate-200 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-24 h-24 bg-white rounded-2xl border-2 border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
               {entreprise.logo_url ? (
                 <img
-                  src={entreprise.logo_url}
+                  src={getMediaUrl(entreprise.logo_url)}
                   alt={entreprise.nom_entreprise}
                   className="w-full h-full object-contain"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               ) : (
                 <Building2 size={32} className="text-slate-300" />
@@ -223,7 +227,7 @@ const EntreprisePublic = () => {
                 </div>
                 <Link
                   to={`/jobs/${offre.id}`}
-                  className="flex-shrink-0 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                  className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
                 >
                   Voir l'offre →
                 </Link>
@@ -270,7 +274,7 @@ const EntreprisePublic = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                     Nom *
@@ -324,7 +328,7 @@ const EntreprisePublic = () => {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-medium text-slate-500 mb-1.5 block">
                       Wilaya

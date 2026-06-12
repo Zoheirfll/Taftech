@@ -18,7 +18,7 @@ const ResetPassword = () => {
   const [showPass, setShowPass] = useState(false);
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,16 +44,16 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <KeyRound size={24} className="text-indigo-600" />
+          <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <KeyRound size={26} className="text-indigo-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
             Nouveau mot de passe
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-2">
             Entrez le code reçu par email et votre nouveau mot de passe.
           </p>
         </div>
@@ -61,7 +61,7 @@ const ResetPassword = () => {
         <div className="bg-white border border-slate-200 rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
                 Email *
               </label>
               <input
@@ -74,7 +74,7 @@ const ResetPassword = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
                 Code de vérification *
               </label>
               <input
@@ -90,7 +90,7 @@ const ResetPassword = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
                 Nouveau mot de passe *
               </label>
               <div className="relative">
@@ -114,7 +114,7 @@ const ResetPassword = () => {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+              <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
                 Confirmer le mot de passe *
               </label>
               <input
@@ -131,7 +131,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {loading
                 ? "Réinitialisation..."

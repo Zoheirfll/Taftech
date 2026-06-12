@@ -79,19 +79,19 @@ const ProfilCandidat = () => {
   } = hook;
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
   const modalClass =
     "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4";
   const modalInnerClass =
     "bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl overflow-y-auto max-h-[90vh]";
   const btnPrimary =
-    "flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors";
+    "flex-1 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors";
   const btnCancel =
-    "flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors";
-  const sectionClass = "bg-white border border-slate-200 rounded-xl p-6";
-  const sectionTitle = "text-base font-bold text-slate-900";
+    "flex-1 py-3 bg-slate-100 text-slate-600 text-base font-semibold rounded-xl hover:bg-slate-200 transition-colors";
+  const sectionClass = "bg-white border border-slate-200 rounded-2xl p-6";
+  const sectionTitle = "text-lg font-bold text-slate-900";
   const editBtn =
-    "flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors";
+    "flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors";
 
   if (loading)
     return (
@@ -102,7 +102,7 @@ const ProfilCandidat = () => {
 
   return (
     <div className="space-y-6 pb-16">
-      <h1 className="text-xl font-bold text-slate-900">
+      <h1 className="text-2xl font-extrabold text-slate-900">
         Mon profil professionnel
       </h1>
 
@@ -327,7 +327,7 @@ const ProfilCandidat = () => {
               });
               setShowExpForm(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
           >
             <Plus size={13} /> Ajouter
           </button>
@@ -346,7 +346,7 @@ const ProfilCandidat = () => {
               <div className="absolute -left-2 top-1 w-3.5 h-3.5 bg-white border-2 border-indigo-500 rounded-full" />
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">
+                  <h4 className="text-base font-semibold text-slate-900">
                     {exp.titre_poste}
                   </h4>
                   <p className="text-xs text-indigo-600 font-medium">
@@ -398,7 +398,7 @@ const ProfilCandidat = () => {
               });
               setShowFormForm(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
           >
             <Plus size={13} /> Ajouter
           </button>
@@ -417,7 +417,7 @@ const ProfilCandidat = () => {
               <div className="absolute -left-2 top-1 w-3.5 h-3.5 bg-white border-2 border-slate-400 rounded-full" />
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">
+                  <h4 className="text-base font-semibold text-slate-900">
                     {f.diplome || "Diplôme non précisé"}
                   </h4>
                   {f.description && (

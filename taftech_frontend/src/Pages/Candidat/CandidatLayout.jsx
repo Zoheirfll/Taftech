@@ -54,9 +54,9 @@ const CandidatLayout = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen bg-slate-50">
-      <aside className="w-full md:w-56 flex-shrink-0">
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden sticky top-20">
+    <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen bg-slate-100">
+      <aside className="w-full md:w-60 shrink-0">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden sticky top-20">
           <nav className="p-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -64,7 +64,7 @@ const CandidatLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-colors mb-0.5 ${
+                  className={`flex items-center justify-between px-3 py-3 rounded-xl font-medium transition-colors mb-0.5 ${
                     isActive
                       ? "bg-indigo-600 text-white"
                       : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
@@ -72,10 +72,10 @@ const CandidatLayout = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     <item.icon
-                      size={16}
+                      size={17}
                       className={isActive ? "text-white" : "text-slate-400"}
                     />
-                    <span className="text-sm">{item.name}</span>
+                    <span className="text-sm font-semibold">{item.name}</span>
                   </div>
                   {item.badge && (
                     <span
@@ -94,9 +94,9 @@ const CandidatLayout = () => {
             <div className="border-t border-slate-100 mt-2 pt-2">
               <button
                 onClick={() => authService.logout()}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
               >
-                <LogOut size={16} />
+                <LogOut size={17} />
                 Déconnexion
               </button>
             </div>

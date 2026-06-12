@@ -189,12 +189,18 @@ class ParametresNotificationsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profil = request.user.profil_candidat
+        try:
+            profil = request.user.profil_candidat
+        except Exception:
+            return Response({"error": "Profil candidat introuvable."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ParametresNotificationsSerializer(profil)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
-        profil = request.user.profil_candidat
+        try:
+            profil = request.user.profil_candidat
+        except Exception:
+            return Response({"error": "Profil candidat introuvable."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ParametresNotificationsSerializer(profil, data=request.data)
         if serializer.is_valid():
             serializer.save()

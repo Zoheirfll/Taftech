@@ -92,7 +92,7 @@ const CandidaturesSpontanees = () => {
       </div>
 
       {/* FILTRES */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 bg-white border border-slate-200 rounded-xl p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 bg-white border border-slate-200 rounded-xl p-4">
         <Select
           options={constants.wilayas}
           styles={selectStyles}

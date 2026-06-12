@@ -117,18 +117,18 @@ const SuggestionsCarriere = () => {
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       {/* HEADER */}
       <div>
-        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <Sparkles size={20} className="text-indigo-600" />
+        <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+          <Sparkles size={22} className="text-indigo-600" />
           Suggestions de carrière
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-base text-slate-500 mt-1">
           Découvrez les métiers qui correspondent à votre profil et obtenez une
           analyse personnalisée.
         </p>
       </div>
 
       {/* MÉTIERS */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
           <Briefcase size={16} className="text-indigo-600" />
           <h2 className="text-sm font-bold text-slate-900">
@@ -212,7 +212,7 @@ const SuggestionsCarriere = () => {
       </div>
 
       {/* ANALYSE IA */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-indigo-600" />

@@ -4,9 +4,17 @@ from .questionnaires import QuestionnaireSerializer
 
 
 class EntrepriseSimpleSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = ProfilEntreprise
-        fields = ('id', 'nom_entreprise', 'wilaya_siege')
+        fields = ('id', 'nom_entreprise', 'wilaya_siege', 'logo_url')
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
 
 
 class OffreEmploiSerializer(serializers.ModelSerializer):

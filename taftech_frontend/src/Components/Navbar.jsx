@@ -125,11 +125,11 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
         {/* GAUCHE : LOGO + LIENS */}
         <div className="flex items-center gap-8">
-          <Link to="/" className="flex items-center flex-shrink-0">
+          <Link to="/" className="flex items-center shrink-0">
             <img
               src={logoTafTech}
               alt="TafTech"
-              className="h-20 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </Link>
           <div className="hidden lg:flex items-center gap-6">
@@ -156,6 +156,12 @@ const Navbar = () => {
               className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
             >
               Par région
+            </Link>
+            <Link
+              to="/entreprises"
+              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
+            >
+              Entreprises
             </Link>
           </div>
         </div>
@@ -388,6 +394,9 @@ const Navbar = () => {
           </MobileLink>
           <MobileLink to="/regions" onClick={closeMobile}>
             Par région
+          </MobileLink>
+          <MobileLink to="/entreprises" onClick={closeMobile}>
+            Entreprises
           </MobileLink>
 
           {!isLogged && (

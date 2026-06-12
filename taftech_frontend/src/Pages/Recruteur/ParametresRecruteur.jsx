@@ -237,13 +237,14 @@ const ParametresRecruteur = () => {
       : null);
 
   return (
+    <div className="bg-slate-100 min-h-screen">
     <div className="max-w-4xl mx-auto px-6 py-8">
       {/* HEADER */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           Paramètres
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-base text-slate-500 mt-1">
           Gérez votre profil et vos préférences.
         </p>
       </div>
@@ -254,7 +255,7 @@ const ParametresRecruteur = () => {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-base font-semibold border-b-2 transition-colors ${
               activeTab === key
                 ? "border-indigo-600 text-indigo-600"
                 : "border-transparent text-slate-500 hover:text-slate-900"
@@ -267,7 +268,7 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET MON PROFIL */}
       {activeTab === "profil" && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="text-base font-semibold text-slate-900">
               Informations personnelles
@@ -325,7 +326,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, last_name: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
               <div>
@@ -338,7 +339,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, first_name: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
               <div>
@@ -351,7 +352,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, email: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
               <div>
@@ -364,7 +365,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, telephone: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
             </div>
@@ -373,7 +374,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderProfil}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -385,7 +386,7 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET MON ENTREPRISE */}
       {activeTab === "entreprise" && entreprise && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="text-base font-semibold text-slate-900">
               Informations de l'entreprise
@@ -587,7 +588,7 @@ const ParametresRecruteur = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
@@ -597,7 +598,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderEntreprise}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -609,7 +610,7 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET NOTIFICATIONS */}
       {activeTab === "notifications" && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="text-base font-semibold text-slate-900">
               Notifications aux candidats
@@ -681,7 +682,7 @@ const ParametresRecruteur = () => {
                       message_refus_auto: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none font-mono"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none font-mono"
                 />
                 <p className="text-xs text-slate-400 mt-2">
                   Utilisez les variables ci-dessus pour personnaliser le message
@@ -694,7 +695,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderNotifs}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -703,6 +704,7 @@ const ParametresRecruteur = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

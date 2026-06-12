@@ -14,6 +14,7 @@ import AdminLayout from "./Pages/Admin/AdminLayout";
 // Pages Publiques
 import Home from "./Pages/Public/Home";
 import JobsList from "./Pages/Public/JobsList";
+import Entreprises from "./Pages/Public/Entreprises";
 import JobDetail from "./Pages/Public/JobDetail";
 import Login from "./Pages/Auth/Login";
 import RegisterCandidat from "./Pages/Auth/RegisterCandidat";
@@ -89,6 +90,7 @@ function App() {
               {/* ROUTES PUBLIQUES */}
               <Route path="/" element={<Home />} />
               <Route path="/offres" element={<JobsList />} />
+              <Route path="/entreprises" element={<Entreprises />} />
               <Route path="/regions" element={<OffresParRegion />} />
               <Route path="/secteurs" element={<OffresParSecteur />} />
               <Route path="/register" element={<RegisterCandidat />} />

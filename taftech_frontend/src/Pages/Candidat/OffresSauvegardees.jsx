@@ -47,15 +47,15 @@ const OffresSauvegardees = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">
+        <h1 className="text-2xl font-extrabold text-slate-900">
           Offres sauvegardées
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <p className="text-base text-slate-500 mt-0.5">
           Retrouvez toutes les offres que vous avez enregistrées.
         </p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         {favoris.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-4">

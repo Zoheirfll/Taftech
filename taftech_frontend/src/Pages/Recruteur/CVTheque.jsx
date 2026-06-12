@@ -255,22 +255,18 @@ const CVTheque = () => {
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
           Explorez le vivier de CV
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Recherchez parmi nos talents et trouvez le profil idéal pour votre
-          équipe.
+          Recherchez parmi nos talents et trouvez le profil idéal pour votre équipe.
         </p>
       </div>
 
       {/* ONGLETS */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
         <button
-          onClick={() => {
-            setActiveTab("tous");
-            setCurrentPage(1);
-          }}
+          onClick={() => { setActiveTab("tous"); setCurrentPage(1); }}
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === "tous"
               ? "border-indigo-600 text-indigo-600"
@@ -280,10 +276,7 @@ const CVTheque = () => {
           CVthèque
         </button>
         <button
-          onClick={() => {
-            setActiveTab("favoris");
-            setCurrentPage(1);
-          }}
+          onClick={() => { setActiveTab("favoris"); setCurrentPage(1); }}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === "favoris"
               ? "border-amber-500 text-amber-600"
@@ -302,7 +295,7 @@ const CVTheque = () => {
       <div className="flex flex-col md:flex-row gap-3 mb-4">
         <button
           onClick={() => setShowFiltres(!showFiltres)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
         >
           <SlidersHorizontal size={16} />
           Filtres
@@ -321,7 +314,7 @@ const CVTheque = () => {
           <input
             type="text"
             placeholder="Mots clés, métier, poste..."
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -342,7 +335,7 @@ const CVTheque = () => {
 
       {/* PANNEAU FILTRES */}
       {showFiltres && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <Select
               options={constants.wilayas}

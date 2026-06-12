@@ -12,7 +12,17 @@ import {
   Users,
   Building2,
   Sparkles,
+  Clock,
 } from "lucide-react";
+
+const tempsDepuis = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
+  if (diff < 2592000) return `il y a ${Math.floor(diff / 86400)}j`;
+  return `il y a ${Math.floor(diff / 2592000)} mois`;
+};
 
 const Home = () => {
   const navigate = useNavigate();
@@ -266,9 +276,15 @@ const Home = () => {
                     <h3 className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
                       {job.titre}
                     </h3>
-                    <p className="text-xs text-slate-500 mb-3">
+                    <p className="text-xs text-slate-500 mb-1">
                       {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
                     </p>
+                    {job.date_publication && (
+                      <p className="text-xs text-slate-400 mb-3 flex items-center gap-1">
+                        <Clock size={10} />
+                        {tempsDepuis(job.date_publication)}
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-1.5 mb-4">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
                         <MapPin size={10} />

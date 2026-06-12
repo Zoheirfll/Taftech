@@ -167,7 +167,7 @@ const DashboardRecruteur = () => {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
             {entreprise?.logo ? (
               <img
                 src={
@@ -183,17 +183,17 @@ const DashboardRecruteur = () => {
             )}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               {entreprise?.nom_entreprise}
             </h1>
             <div className="mt-1">
               {entreprise?.est_approuvee ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">
-                  <CheckCircle size={12} /> Compte vérifié
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-full">
+                  <CheckCircle size={13} /> Compte vérifié
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">
-                  <AlertCircle size={12} /> En attente de validation
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-sm font-semibold rounded-full">
+                  <AlertCircle size={13} /> En attente de validation
                 </span>
               )}
             </div>
@@ -204,13 +204,13 @@ const DashboardRecruteur = () => {
             <>
               <button
                 onClick={() => navigate("/cvtheque")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
               >
                 <Search size={16} /> Chercher un CV
               </button>
               <button
                 onClick={() => navigate("/creer-offre")}
-                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
               >
                 <Plus size={16} /> Publier une offre
               </button>
@@ -232,54 +232,42 @@ const DashboardRecruteur = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-              <Users size={16} className="text-slate-600" />
+            <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center">
+              <Users size={18} className="text-slate-600" />
             </div>
-            <p className="text-xs font-medium text-slate-500">
-              Total candidatures
-            </p>
+            <p className="text-sm font-semibold text-slate-500">Total candidatures</p>
           </div>
-          <p className="text-3xl font-bold text-slate-600 tabular-nums">
-            {stats.total}
-          </p>
+          <p className="text-4xl font-bold text-slate-600 tabular-nums">{stats.total}</p>
         </div>
-        <div className="bg-white border border-emerald-200 rounded-xl p-5">
+        <div className="bg-white border border-emerald-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Inbox size={16} className="text-emerald-600" />
+            <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <Inbox size={18} className="text-emerald-600" />
             </div>
-            <p className="text-xs font-medium text-slate-500">Nouvelles</p>
+            <p className="text-sm font-semibold text-slate-500">Nouvelles</p>
           </div>
-          <p className="text-3xl font-bold text-emerald-600 tabular-nums">
-            {stats.nouvelles}
-          </p>
+          <p className="text-4xl font-bold text-emerald-600 tabular-nums">{stats.nouvelles}</p>
         </div>
-        <div className="bg-white border border-indigo-200 rounded-xl p-5">
+        <div className="bg-white border border-indigo-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
-              <Sparkles size={16} className="text-indigo-600" />
+            <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <Sparkles size={18} className="text-indigo-600" />
             </div>
-            <p className="text-xs font-medium text-slate-500">
-              Pertinentes +80%
-            </p>
+            <p className="text-sm font-semibold text-slate-500">Pertinentes +80%</p>
           </div>
-          <p className="text-3xl font-bold text-indigo-600 tabular-nums">
-            {stats.pertinentes}
-          </p>
+          <p className="text-4xl font-bold text-indigo-600 tabular-nums">{stats.pertinentes}</p>
         </div>
-        <div className="bg-white border border-amber-200 rounded-xl p-5">
+        <div className="bg-white border border-amber-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
-              <Clock size={16} className="text-amber-600" />
+            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Clock size={18} className="text-amber-600" />
             </div>
-            <p className="text-xs font-medium text-slate-500">En traitement</p>
+            <p className="text-sm font-semibold text-slate-500">En traitement</p>
           </div>
-          <p className="text-3xl font-bold text-amber-600 tabular-nums">
-            {stats.enTraitement}
-          </p>
+          <p className="text-4xl font-bold text-amber-600 tabular-nums">{stats.enTraitement}</p>
         </div>
       </div>
 
@@ -301,7 +289,7 @@ const DashboardRecruteur = () => {
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === key ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            className={`px-4 py-3 text-base font-semibold border-b-2 transition-colors ${activeTab === key ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
           >
             {label}
             {count !== null && (
@@ -404,7 +392,7 @@ const DashboardRecruteur = () => {
                 return (
                   <div
                     key={offre.id}
-                    className="bg-white border border-slate-200 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden"
+                    className="bg-white border border-slate-200 rounded-2xl hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden"
                   >
                     <div className="flex items-center gap-0">
                       {/* Barre colorée gauche */}
@@ -416,17 +404,17 @@ const DashboardRecruteur = () => {
                         <div className="flex items-start justify-between gap-4">
                           {/* Infos principales */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h2 className="text-sm font-bold text-slate-900 truncate">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <h2 className="text-base font-bold text-slate-900 truncate">
                                 {offre.titre}
                               </h2>
                               <span
-                                className={`flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${badge.cls}`}
+                                className={`shrink-0 px-2.5 py-0.5 text-xs font-semibold rounded-full ${badge.cls}`}
                               >
                                 {badge.label}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
                               <span className="flex items-center gap-1">
                                 <MapPin size={11} />{" "}
                                 {offre.wilaya?.split(" - ")[1] || offre.wilaya}
@@ -521,14 +509,14 @@ const DashboardRecruteur = () => {
                                   onClick={() =>
                                     handleOuvrirModification(offre)
                                   }
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
                                 >
                                   Corriger <ChevronRight size={13} />
                                 </button>
                               ) : offre.statut_moderation === "EN_ATTENTE" ? (
                                 <button
                                   disabled
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-400 text-xs font-medium rounded-lg cursor-not-allowed"
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-xl cursor-not-allowed"
                                 >
                                   En attente
                                 </button>
@@ -537,7 +525,7 @@ const DashboardRecruteur = () => {
                                   onClick={() =>
                                     navigate(`/dashboard/offres/${offre.id}`)
                                   }
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
                                 >
                                   Candidats <ChevronRight size={13} />
                                 </button>
@@ -618,7 +606,7 @@ const DashboardRecruteur = () => {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
                     Wilaya

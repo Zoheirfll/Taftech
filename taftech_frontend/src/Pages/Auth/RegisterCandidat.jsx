@@ -148,10 +148,10 @@ const RegisterCandidat = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="max-w-5xl w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
         {/* COLONNE GAUCHE */}
-        <div className="md:w-5/12 bg-indigo-600 p-10 text-white flex flex-col justify-between">
+        <div className="md:w-5/12 bg-linear-to-br from-indigo-700 to-indigo-500 p-10 text-white flex flex-col justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
               Propulsez votre <span className="text-indigo-200">carrière</span>
@@ -183,14 +183,14 @@ const RegisterCandidat = () => {
                     <span className="text-xs font-bold text-indigo-100">✓</span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{title}</p>
-                    <p className="text-xs text-indigo-200">{desc}</p>
+                    <p className="text-base font-semibold">{title}</p>
+                    <p className="text-sm text-indigo-200">{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-sm text-indigo-100 mt-8 pt-6 border-t border-indigo-500/50">
+          <p className="text-base text-indigo-100 mt-8 pt-6 border-t border-indigo-500/50">
             Déjà membre ?{" "}
             <Link
               to="/login"
@@ -212,7 +212,7 @@ const RegisterCandidat = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Nom *
                     </label>
                     <input
@@ -220,11 +220,11 @@ const RegisterCandidat = () => {
                       name="last_name"
                       required
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Prénom *
                     </label>
                     <input
@@ -232,13 +232,13 @@ const RegisterCandidat = () => {
                       name="first_name"
                       required
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Date de naissance *
                     </label>
                     <input
@@ -246,11 +246,11 @@ const RegisterCandidat = () => {
                       name="date_naissance"
                       required
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Wilaya *
                     </label>
                     <Select
@@ -265,7 +265,7 @@ const RegisterCandidat = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Téléphone *
                     </label>
                     <input
@@ -274,11 +274,11 @@ const RegisterCandidat = () => {
                       required
                       placeholder="0555..."
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       NIN (18 chiffres) *
                     </label>
                     <input
@@ -288,13 +288,13 @@ const RegisterCandidat = () => {
                       maxLength="18"
                       placeholder="108..."
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Email *
                     </label>
                     <input
@@ -302,11 +302,11 @@ const RegisterCandidat = () => {
                       name="email"
                       required
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Mot de passe *
                     </label>
                     <input
@@ -315,7 +315,7 @@ const RegisterCandidat = () => {
                       required
                       minLength="8"
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                   </div>
                 </div>
@@ -332,7 +332,7 @@ const RegisterCandidat = () => {
                   />
                   <label
                     htmlFor="consentement"
-                    className="text-xs text-slate-600 leading-relaxed cursor-pointer"
+                    className="text-sm text-slate-600 leading-relaxed cursor-pointer"
                   >
                     J'autorise l'utilisation de mes données pour le recrutement
                     conformément à la{" "}
@@ -350,7 +350,7 @@ const RegisterCandidat = () => {
                 <button
                   type="submit"
                   disabled={loading || !formData.consentement_loi_18_07}
-                  className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Création en cours..." : "S'inscrire gratuitement"}
                 </button>
@@ -367,7 +367,7 @@ const RegisterCandidat = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-2">
                 Vérifiez votre email
               </h3>
-              <p className="text-sm text-slate-500 mb-8">
+              <p className="text-base text-slate-500 mb-8">
                 Code envoyé à{" "}
                 <span className="font-semibold text-slate-900">
                   {registeredEmail}
@@ -391,12 +391,12 @@ const RegisterCandidat = () => {
                 <button
                   type="submit"
                   disabled={loading || otp.join("").length !== 6}
-                  className="w-full py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors disabled:opacity-50"
+                  className="w-full py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors disabled:opacity-50"
                 >
                   {loading ? "Vérification..." : "Confirmer mon compte"}
                 </button>
               </form>
-              <p className="text-xs text-slate-400 mt-4">
+              <p className="text-sm text-slate-400 mt-4">
                 Vous n'avez rien reçu ? Vérifiez vos spams.
               </p>
             </div>

@@ -15,7 +15,38 @@ import {
   Sparkles,
   Search,
   X,
+  Building2,
+  Clock,
 } from "lucide-react";
+
+const tempsDepuis = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
+  if (diff < 2592000) return `il y a ${Math.floor(diff / 86400)}j`;
+  return `il y a ${Math.floor(diff / 2592000)} mois`;
+};
+
+const getMediaUrl = (path) =>
+  path
+    ? path.startsWith("http")
+      ? path
+      : `http://127.0.0.1:8000${path}`
+    : null;
+
+const LogoEntreprise = ({ url }) => {
+  const [err, setErr] = React.useState(false);
+  return (
+    <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
+      {url && !err ? (
+        <img src={url} alt="" className="w-full h-full object-contain p-1" onError={() => setErr(true)} />
+      ) : (
+        <Building2 size={22} className="text-slate-400" />
+      )}
+    </div>
+  );
+};
 
 const JobsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -157,7 +188,7 @@ const JobsList = () => {
       <div className="flex flex-col md:flex-row gap-6">
         {/* FILTRES */}
         <aside className="w-full md:w-72 flex-shrink-0">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 sticky top-20">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 sticky top-20">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-sm font-bold text-slate-900">Filtres</h2>
               {hasFilters && (
@@ -343,7 +374,7 @@ const JobsList = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : jobs.length === 0 ? (
-            <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
+            <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-12 text-center">
               <Search size={32} className="text-slate-300 mx-auto mb-3" />
               <p className="text-sm font-medium text-slate-900 mb-1">
                 Aucune offre trouvée
@@ -359,59 +390,69 @@ const JobsList = () => {
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {jobs.map((job) => {
                 const isSaved = favoris.some((f) => f.offre === job.id);
+                const logoUrl = getMediaUrl(job.entreprise?.logo_url);
                 return (
                   <div
                     key={job.id}
-                    className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all"
+                    className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-400 hover:shadow-md transition-all"
                   >
                     <div className="flex items-start justify-between gap-4">
+                      {/* Logo entreprise */}
+                      <LogoEntreprise url={logoUrl} />
+
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3 mb-1">
-                          <Link
-                            to={`/jobs/${job.id}`}
-                            className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
-                          >
-                            {job.titre}
-                          </Link>
+                        <Link
+                          to={`/jobs/${job.id}`}
+                          className="text-base font-bold text-slate-900 hover:text-indigo-600 transition-colors leading-snug"
+                        >
+                          {job.titre}
+                        </Link>
+                        <div className="mt-0.5">
+                          {job.entreprise ? (
+                            <Link
+                              to={`/entreprise/${job.entreprise.id}`}
+                              className="text-sm text-indigo-600 hover:underline font-semibold"
+                            >
+                              {job.entreprise.nom_entreprise}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-slate-500 font-medium">
+                              Entreprise anonyme
+                            </span>
+                          )}
                         </div>
-                        {job.entreprise ? (
-                          <Link
-                            to={`/entreprise/${job.entreprise.id}`}
-                            className="text-xs text-indigo-600 hover:underline font-medium"
-                          >
-                            {job.entreprise.nom_entreprise}
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-slate-500">
-                            Entreprise anonyme
-                          </span>
+                        {job.date_publication && (
+                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock size={10} />
+                            {tempsDepuis(job.date_publication)}
+                          </p>
                         )}
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
-                            <MapPin size={10} />
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg">
+                            <MapPin size={11} />
                             {job.wilaya?.split(" - ")[1] || job.wilaya}
                             {job.commune ? ` · ${job.commune}` : ""}
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
-                            <Briefcase size={10} />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg">
+                            <Briefcase size={11} />
                             {job.experience_requise}
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded-md">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg">
                             {job.type_contrat}
                           </span>
                           {job.salaire_propose && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-md">
-                              <Banknote size={10} />
-                              {job.salaire_propose}
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg">
+                              <Banknote size={11} />
+                              {job.salaire_propose} Da
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleToggleFavori(job.id)}
                           className={`p-2 rounded-lg border transition-colors ${
@@ -419,18 +460,13 @@ const JobsList = () => {
                               ? "bg-amber-50 border-amber-200 text-amber-500"
                               : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
                           }`}
-                          title={
-                            isSaved ? "Retirer des favoris" : "Sauvegarder"
-                          }
+                          title={isSaved ? "Retirer des favoris" : "Sauvegarder"}
                         >
-                          <Bookmark
-                            size={15}
-                            className={isSaved ? "fill-amber-500" : ""}
-                          />
+                          <Bookmark size={15} className={isSaved ? "fill-amber-500" : ""} />
                         </button>
                         <Link
                           to={`/jobs/${job.id}`}
-                          className="px-3 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                          className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
                         >
                           Voir l'offre
                         </Link>

@@ -142,31 +142,31 @@ const Questionnaires = () => {
     );
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Questionnaires</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             Créez des questionnaires à associer à vos offres.
           </p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
         >
           <Plus size={16} /> Nouveau questionnaire
         </button>
       </div>
 
       {questionnaires.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
-          <p className="text-sm font-medium text-slate-900 mb-1">
+        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
+          <p className="text-sm font-semibold text-slate-900 mb-1">
             Aucun questionnaire
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-500">
             Créez votre premier questionnaire pour filtrer vos candidats.
           </p>
         </div>
@@ -175,13 +175,13 @@ const Questionnaires = () => {
           {questionnaires.map((q) => (
             <div
               key={q.id}
-              className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between gap-4"
+              className="bg-white border border-slate-200 rounded-2xl p-6 flex items-center justify-between gap-4"
             >
               <div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-bold text-slate-900">
                   {q.titre}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-sm text-slate-500 mt-0.5">
                   {q.questions.length} question(s)
                 </p>
               </div>
@@ -224,7 +224,7 @@ const Questionnaires = () => {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-sm font-semibold text-slate-600 mb-2 block">
                   Titre du questionnaire *
                 </label>
                 <input
@@ -372,13 +372,13 @@ const Questionnaires = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
                 >
                   {editingId ? "Mettre à jour" : "Créer le questionnaire"}
                 </button>

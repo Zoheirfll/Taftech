@@ -79,7 +79,7 @@ const BoiteReception = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-slate-900">
+          <h1 className="text-2xl font-extrabold text-slate-900">
             Boîte de réception
           </h1>
           {unreadCount > 0 && (
@@ -98,7 +98,7 @@ const BoiteReception = () => {
 
       <div className="flex flex-col md:flex-row gap-4 h-[600px]">
         {/* LISTE GAUCHE */}
-        <div className="w-full md:w-2/5 bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
+        <div className="w-full md:w-2/5 bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <Inbox size={32} className="text-slate-300 mb-3" />
@@ -163,7 +163,7 @@ const BoiteReception = () => {
         </div>
 
         {/* DÉTAIL DROITE */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-y-auto">
+        <div className="flex-1 bg-white border border-slate-200 rounded-2xl overflow-y-auto">
           {selectedNotif ? (
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
@@ -180,7 +180,7 @@ const BoiteReception = () => {
                   );
                 })()}
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">
+                  <h2 className="text-xl font-extrabold text-slate-900">
                     {selectedNotif.titre}
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">

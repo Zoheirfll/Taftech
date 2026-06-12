@@ -346,3 +346,72 @@ class ResetPasswordAPIView(APIView):
         user.save()
 
         return Response({'message': 'Mot de passe réinitialisé avec succès !'}, status=200)
+
+
+class GoogleSocialAuthView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        credential = request.data.get('credential')
+        role = request.data.get('role', 'CANDIDAT')
+
+        if not credential:
+            return Response({'error': 'Token Google manquant.'}, status=400)
+
+        if role not in ('CANDIDAT', 'RECRUTEUR'):
+            return Response({'error': 'Rôle invalide.'}, status=400)
+
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            client_id = settings.GOOGLE_CLIENT_ID
+            id_info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+        except Exception as e:
+            logger.warning("Échec vérification token Google: %s", e)
+            return Response({'error': 'Token Google invalide.'}, status=400)
+
+        email = id_info.get('email')
+        first_name = id_info.get('given_name', '')
+        last_name = id_info.get('family_name', '')
+
+        if not email:
+            return Response({'error': 'Email non fourni par Google.'}, status=400)
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'username': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'role': role,
+                'email_verifie': True,
+                'is_active': True,
+                'consentement_loi_18_07': True,
+            }
+        )
+
+        if not created:
+            # Utilisateur existant — on met à jour last_login
+            user.last_login = timezone.now()
+            user.save(update_fields=['last_login'])
+
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        refresh['role'] = user.role
+
+        response = Response({'role': user.role}, status=200)
+        response.set_cookie(
+            key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+            value=str(refresh.access_token),
+            httponly=True,
+            samesite='Lax',
+            secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+        )
+        response.set_cookie(
+            key='refreshToken',
+            value=str(refresh),
+            httponly=True,
+            samesite='Lax',
+            secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+        )
+        return response

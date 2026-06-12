@@ -1,6 +1,6 @@
 # CONTEXT.md — TafTech Project
 
-_Dernière mise à jour : 11/06/2026 — US9 qualité & tests_
+_Dernière mise à jour : 12/06/2026 — US10 visual consistency + responsive mobile_
 
 ---
 
@@ -571,6 +571,18 @@ taftech_frontend/
 - [ ] CI/CD GitHub Actions
 - [ ] SSL/HTTPS via Let's Encrypt (Certbot)
 - [ ] Nginx + Gunicorn config
+
+## US10 — Visual Consistency + Responsive Mobile (12/06/2026)
+
+- **Système deux niveaux de densité** établi et appliqué sur toutes les pages :
+  - "Grand" (pages publiques/profil) : `text-2xl/3xl font-extrabold`, `text-base`, `py-3`, `rounded-2xl`
+  - "Petit" (auth/outils denses) : `text-xl/2xl font-bold`, `text-sm`, `py-2.5`, `rounded-xl`
+- **Responsive mobile** : tous les grids fixés avec `grid-cols-1 sm:grid-cols-2 md:grid-cols-N`
+  - DashboardRecruteur (KPIs + modal wilaya), ReviewCandidature, JobDetail, CandidaturesSpontanees, EntreprisePublic
+- **Bugs corrigés** :
+  - `notifications.filter is not a function` — réponse paginée Django dans `candidatService.js`
+  - `ParametresNotificationsSerializer` 500 — champ `fields` manquant + guard `profil_candidat`
+- **Build Vite** : propre (1918 modules, 0 erreurs)
 
 ## 🔲 FEATURES RESTANTES
 

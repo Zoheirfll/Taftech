@@ -1,7 +1,7 @@
 # accounts/urls.py
 from django.urls import path
 from .views import CandidatRegistrationAPIView, RecruteurRegisterAPIView, CookieTokenObtainView, VerifyEmailAPIView, ErrorReportAPIView
-from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView
+from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView, GoogleSocialAuthView
 from django.conf import settings
 
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordAPIView.as_view(), name='forgot-password'),
     path('reset-password/', ResetPasswordAPIView.as_view(), name='reset-password'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
+    path('social/google/', GoogleSocialAuthView.as_view(), name='social-google'),
 ]
 
 if settings.DEBUG:

@@ -5,14 +5,13 @@ html {
 html,
 body {
   font-family:
-    "Inter",
+    "Plus Jakarta Sans",
     system-ui,
     -apple-system,
     sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-weight: 500;
+  font-weight: 600;
   color: #1e293b;
 }
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
@@ -19,6 +20,18 @@ const Login = () => {
     } catch (err) {
       toast.error("Email ou mot de passe incorrect.", { id: toastId });
       reportError("ECHEC_CONNEXION", err);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const toastId = toast.loading("Connexion Google...");
+    try {
+      await authService.googleLogin(credentialResponse.credential);
+      toast.success("Connexion réussie !", { id: toastId });
+      navigate("/");
+      window.location.reload();
+    } catch (err) {
+      toast.error("Échec de la connexion Google.", { id: toastId });
     }
   };
 
@@ -65,6 +78,28 @@ const Login = () => {
             Se connecter
           </button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-white px-3 text-xs text-slate-400 font-medium">ou</span>
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => toast.error("Échec de la connexion Google.")}
+            text="signin_with"
+            shape="rectangular"
+            theme="outline"
+            size="large"
+            width="360"
+          />
+        </div>
+
         <div className="mt-7 text-center space-y-3">
           <p className="text-sm text-slate-500">
             Pas encore de compte ?{" "}

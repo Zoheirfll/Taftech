@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -355,6 +356,37 @@ const RegisterCandidat = () => {
                   {loading ? "Création en cours..." : "S'inscrire gratuitement"}
                 </button>
               </form>
+
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-xs text-slate-400 font-medium">ou</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    const toastId = toast.loading("Inscription Google...");
+                    try {
+                      await authService.googleLogin(credentialResponse.credential, "CANDIDAT");
+                      toast.success("Compte créé et connecté !", { id: toastId });
+                      navigate("/");
+                      window.location.reload();
+                    } catch {
+                      toast.error("Échec de l'inscription Google.", { id: toastId });
+                    }
+                  }}
+                  onError={() => toast.error("Échec de l'inscription Google.")}
+                  text="signup_with"
+                  shape="rectangular"
+                  theme="outline"
+                  size="large"
+                  width="360"
+                />
+              </div>
             </div>
           )}
 

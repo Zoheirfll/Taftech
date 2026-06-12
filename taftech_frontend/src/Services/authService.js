@@ -134,4 +134,17 @@ export const authService = {
       throw err;
     }
   },
+
+  googleLogin: async (credential, role = "CANDIDAT") => {
+    try {
+      const response = await api.post("accounts/social/google/", { credential, role });
+      if (response.data.role) {
+        localStorage.setItem("userRole", response.data.role);
+      }
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GOOGLE_LOGIN", err);
+      throw err;
+    }
+  },
 };

@@ -173,6 +173,20 @@ class CookieTokenObtainView(TokenObtainPairView):
 
         data = serializer.validated_data
 
+        # Validation du portail : candidat ne peut pas se connecter sur l'espace recruteur et vice-versa
+        portal = request.data.get('portal')
+        role = data.get('role')
+        if portal == 'recruteur' and role not in ('RECRUTEUR', 'ADMIN'):
+            return Response(
+                {"detail": "Ce compte n'est pas un compte recruteur."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if portal == 'candidat' and role not in ('CANDIDAT', 'ADMIN'):
+            return Response(
+                {"detail": "Ce compte n'est pas un compte candidat."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         try:
             email = request.data.get('email') or request.data.get('username')
             user_obj = User.objects.get(email=email)
@@ -391,7 +405,17 @@ class GoogleSocialAuthView(APIView):
         )
 
         if not created:
-            # Utilisateur existant — on met à jour last_login
+            # Vérifier que le rôle correspond au portail demandé
+            if role == 'RECRUTEUR' and user.role not in ('RECRUTEUR', 'ADMIN'):
+                return Response(
+                    {'error': 'Ce compte Google est associé à un espace candidat. Utilisez l\'espace candidat pour vous connecter.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if role == 'CANDIDAT' and user.role not in ('CANDIDAT', 'ADMIN'):
+                return Response(
+                    {'error': 'Ce compte Google est associé à un espace recruteur. Utilisez l\'espace recruteur pour vous connecter.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             user.last_login = timezone.now()
             user.save(update_fields=['last_login'])
 

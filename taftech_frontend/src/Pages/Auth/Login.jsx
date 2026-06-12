@@ -13,7 +13,7 @@ const Login = () => {
     e.preventDefault();
     const toastId = toast.loading("Connexion en cours...");
     try {
-      await authService.login(credentials.username, credentials.password);
+      await authService.login(credentials.username, credentials.password, "candidat");
       toast.success("Connexion réussie !", { id: toastId });
       navigate("/");
       window.location.reload();
@@ -26,12 +26,13 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     const toastId = toast.loading("Connexion Google...");
     try {
-      await authService.googleLogin(credentialResponse.credential);
+      await authService.googleLogin(credentialResponse.credential, "CANDIDAT");
       toast.success("Connexion réussie !", { id: toastId });
       navigate("/");
       window.location.reload();
     } catch (err) {
-      toast.error("Échec de la connexion Google.", { id: toastId });
+      const msg = err.response?.data?.error || "Échec de la connexion Google.";
+      toast.error(msg, { id: toastId });
     }
   };
 
@@ -112,7 +113,7 @@ const Login = () => {
           </Link>
           <p className="text-sm text-slate-500">
             Vous recrutez ?{" "}
-            <Link to="/register-entreprise" className="text-indigo-600 font-semibold hover:underline">
+            <Link to="/recruteurs/connexion" className="text-indigo-600 font-semibold hover:underline">
               Espace recruteur
             </Link>
           </p>

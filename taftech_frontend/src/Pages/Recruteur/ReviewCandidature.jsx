@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -110,7 +110,7 @@ const ReviewCandidature = () => {
           .map((item, idx) => (
             <span
               key={idx}
-              className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md"
+              className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
             >
               {item.trim()}
             </span>
@@ -122,7 +122,7 @@ const ReviewCandidature = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -135,14 +135,14 @@ const ReviewCandidature = () => {
 
   const profileCompletion = calculerCompletionProfil();
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8 mb-24">
       {/* EN-TÊTE */}
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold text-slate-900">
-          Postuler pour : <span className="text-indigo-600">{job.titre}</span>
+          Postuler pour : <span className="text-teal-700">{job.titre}</span>
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
@@ -182,7 +182,7 @@ const ReviewCandidature = () => {
               <button
                 key={mode}
                 onClick={() => setMotivationMode(mode)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
               >
                 {mode === "texte" ? "Texte" : "Fichier"}
               </button>
@@ -199,7 +199,7 @@ const ReviewCandidature = () => {
               onChange={(e) => setLettreTexte(e.target.value)}
             />
           ) : (
-            <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
+            <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center relative cursor-pointer hover:border-teal-400 transition-colors group">
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
@@ -207,7 +207,7 @@ const ReviewCandidature = () => {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <FileText size={28} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+              <p className="text-sm font-medium text-slate-600 group-hover:text-teal-700 transition-colors">
                 {lettreFile
                   ? lettreFile.name
                   : "Cliquez ou glissez votre fichier (PDF/Word)"}
@@ -230,7 +230,7 @@ const ReviewCandidature = () => {
           </h2>
           <Link
             to="/profil"
-            className="text-xs font-medium text-indigo-600 hover:underline"
+            className="text-xs font-medium text-teal-700 hover:underline"
           >
             Modifier
           </Link>
@@ -253,7 +253,7 @@ const ReviewCandidature = () => {
               <p className="text-sm font-bold text-slate-900">
                 {profil.first_name} {profil.last_name}
               </p>
-              <p className="text-xs text-indigo-600 font-medium">
+              <p className="text-xs text-teal-700 font-medium">
                 {profil.titre_professionnel || "Aucun titre"}
               </p>
               <div className="flex flex-wrap gap-2 mt-1.5">
@@ -364,7 +364,7 @@ const ReviewCandidature = () => {
                   href={profil.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
                 >
                   <ExternalLink size={13} /> LinkedIn
                 </a>
@@ -391,12 +391,12 @@ const ReviewCandidature = () => {
                 {profil.experiences_detail.map((exp) => (
                   <div
                     key={exp.id}
-                    className="pl-4 border-l-2 border-indigo-100"
+                    className="pl-4 border-l-2 border-teal-100"
                   >
                     <p className="text-sm font-semibold text-slate-900">
                       {exp.titre_poste}
                     </p>
-                    <p className="text-xs text-indigo-600">{exp.entreprise}</p>
+                    <p className="text-xs text-teal-700">{exp.entreprise}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
                     </p>
@@ -422,7 +422,7 @@ const ReviewCandidature = () => {
                       {form.diplome || "Diplôme non précisé"}
                     </p>
                     {form.description && (
-                      <p className="text-xs text-indigo-600 font-medium">
+                      <p className="text-xs text-teal-700 font-medium">
                         {form.description}
                       </p>
                     )}
@@ -469,7 +469,7 @@ const ReviewCandidature = () => {
         <button
           onClick={handleConfirm}
           disabled={submitting}
-          className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Rocket size={16} />
           {submitting ? "Envoi en cours..." : "Confirmer & postuler"}

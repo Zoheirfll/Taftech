@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import { profilService } from "../../Services/profilService";
@@ -224,7 +224,7 @@ const ParametresRecruteur = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
       </div>
     );
 
@@ -257,7 +257,7 @@ const ParametresRecruteur = () => {
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-3 text-base font-semibold border-b-2 transition-colors ${
               activeTab === key
-                ? "border-indigo-600 text-indigo-600"
+                ? "border-teal-700 text-teal-700"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -326,7 +326,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, last_name: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                 />
               </div>
               <div>
@@ -339,7 +339,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, first_name: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                 />
               </div>
               <div>
@@ -352,7 +352,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                 />
               </div>
               <div>
@@ -365,7 +365,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, telephone: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                 />
               </div>
             </div>
@@ -374,7 +374,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderProfil}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -588,7 +588,7 @@ const ParametresRecruteur = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none"
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
@@ -598,7 +598,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderEntreprise}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -640,7 +640,7 @@ const ParametresRecruteur = () => {
                   })
                 }
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                  notifForm.email_refus_auto ? "bg-indigo-600" : "bg-slate-200"
+                  notifForm.email_refus_auto ? "bg-teal-700" : "bg-slate-200"
                 }`}
               >
                 <span
@@ -665,7 +665,7 @@ const ParametresRecruteur = () => {
                       (v) => (
                         <span
                           key={v}
-                          className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-mono rounded border border-indigo-100"
+                          className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] font-mono rounded border border-teal-100"
                         >
                           {v}
                         </span>
@@ -682,7 +682,7 @@ const ParametresRecruteur = () => {
                       message_refus_auto: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none font-mono"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none font-mono"
                 />
                 <p className="text-xs text-slate-400 mt-2">
                   Utilisez les variables ci-dessus pour personnaliser le message
@@ -695,7 +695,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderNotifs}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}

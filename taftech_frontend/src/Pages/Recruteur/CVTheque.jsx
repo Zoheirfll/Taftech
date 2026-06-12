@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
@@ -269,7 +269,7 @@ const CVTheque = () => {
           onClick={() => { setActiveTab("tous"); setCurrentPage(1); }}
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === "tous"
-              ? "border-indigo-600 text-indigo-600"
+              ? "border-teal-700 text-teal-700"
               : "border-transparent text-slate-500 hover:text-slate-900"
           }`}
         >
@@ -300,7 +300,7 @@ const CVTheque = () => {
           <SlidersHorizontal size={16} />
           Filtres
           {filtresActifs > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-indigo-600 text-white text-xs font-semibold rounded-full">
+            <span className="ml-1 px-2 py-0.5 bg-teal-700 text-white text-xs font-semibold rounded-full">
               {filtresActifs}
             </span>
           )}
@@ -314,7 +314,7 @@ const CVTheque = () => {
           <input
             type="text"
             placeholder="Mots clés, métier, poste..."
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -398,7 +398,7 @@ const CVTheque = () => {
               onClick={() => setAvecPhoto(!avecPhoto)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 avecPhoto
-                  ? "bg-indigo-50 border-blue-300 text-indigo-700"
+                  ? "bg-teal-50 border-blue-300 text-teal-800"
                   : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
               }`}
             >
@@ -409,7 +409,7 @@ const CVTheque = () => {
               onClick={() => setAvecCV(!avecCV)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 avecCV
-                  ? "bg-indigo-50 border-blue-300 text-indigo-700"
+                  ? "bg-teal-50 border-blue-300 text-teal-800"
                   : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
               }`}
             >
@@ -420,7 +420,7 @@ const CVTheque = () => {
               onClick={() => setInscritRecent(!inscritRecent)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 inscritRecent
-                  ? "bg-indigo-50 border-blue-300 text-indigo-700"
+                  ? "bg-teal-50 border-blue-300 text-teal-800"
                   : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
               }`}
             >
@@ -432,7 +432,7 @@ const CVTheque = () => {
             {filtresActifs > 0 && (
               <button
                 onClick={handleReset}
-                className="ml-auto text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
+                className="ml-auto text-xs font-medium text-slate-500 hover:text-teal-700 transition-colors"
               >
                 Réinitialiser
               </button>
@@ -463,7 +463,7 @@ const CVTheque = () => {
         <div className="lg:col-span-1 space-y-3">
           {loading ? (
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700 mx-auto"></div>
               <p className="text-xs text-slate-500 mt-3">Chargement...</p>
             </div>
           ) : candidats.length === 0 ? (
@@ -501,7 +501,7 @@ const CVTheque = () => {
                   onClick={() => setSelectedCandidat(candidat)}
                   className={`relative cursor-pointer w-full text-left bg-white border rounded-xl p-4 transition-all ${
                     isSelected
-                      ? "border-indigo-500 ring-2 ring-indigo-100 shadow-sm"
+                      ? "border-teal-500 ring-2 ring-teal-100 shadow-sm"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
@@ -733,7 +733,7 @@ const CVTheque = () => {
                     {selectedCandidat.experiences_detail.map((exp) => (
                       <div
                         key={exp.id}
-                        className="pl-4 border-l-2 border-indigo-100"
+                        className="pl-4 border-l-2 border-teal-100"
                       >
                         <p className="text-sm font-semibold text-slate-900">
                           {exp.titre_poste}
@@ -773,13 +773,13 @@ const CVTheque = () => {
                     {selectedCandidat.formations_detail.map((form) => (
                       <div
                         key={form.id}
-                        className="pl-4 border-l-2 border-indigo-100"
+                        className="pl-4 border-l-2 border-teal-100"
                       >
                         <p className="text-sm font-semibold text-slate-900">
                           {form.diplome || "Diplôme non précisé"}
                         </p>
                         {form.description && (
-                          <p className="text-xs text-indigo-600 font-medium">
+                          <p className="text-xs text-teal-700 font-medium">
                             {form.description}
                           </p>
                         )}
@@ -817,7 +817,7 @@ const CVTheque = () => {
                         .map((c, i) => (
                           <span
                             key={i}
-                            className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md"
+                            className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
                           >
                             {c.trim()}
                           </span>

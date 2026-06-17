@@ -5,6 +5,7 @@ import { profilService } from "../../Services/profilService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl } from "../../utils/mediaUrl";
 import { selectStyles } from "../../theme";
 import communesAlgerie from "../../data/communes.json";
 import {
@@ -119,9 +120,7 @@ const ParametresRecruteur = () => {
           });
           if (data.photo_profil) {
             setPhotoPreview(
-              data.photo_profil.startsWith("http")
-                ? data.photo_profil
-                : `http://127.0.0.1:8000${data.photo_profil}`,
+              mediaUrl(data.photo_profil),
             );
           }
         } else {
@@ -134,9 +133,7 @@ const ParametresRecruteur = () => {
           });
           if (data.photo_profil) {
             setPhotoPreview(
-              data.photo_profil.startsWith("http")
-                ? data.photo_profil
-                : `http://127.0.0.1:8000${data.photo_profil}`,
+              mediaUrl(data.photo_profil),
             );
           }
         }
@@ -267,12 +264,7 @@ const ParametresRecruteur = () => {
     );
 
   const logoUrl =
-    logoPreview ||
-    (entreprise?.logo
-      ? entreprise.logo.startsWith("http")
-        ? entreprise.logo
-        : `http://127.0.0.1:8000${entreprise.logo}`
-      : null);
+    logoPreview || mediaUrl(entreprise?.logo);
 
   return (
     <div className="bg-slate-100 min-h-screen">

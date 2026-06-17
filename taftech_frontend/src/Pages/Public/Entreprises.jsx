@@ -2,10 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { Building2, MapPin, Users, Briefcase, Search, ChevronDown } from "lucide-react";
-
-const getMediaUrl = (path) =>
-  path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
 
 const LogoEntreprise = ({ url, nom }) => {
   const [err, setErr] = React.useState(false);

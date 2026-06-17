@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl } from "../../utils/mediaUrl";
 import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 import Select from "react-select";
@@ -186,14 +187,10 @@ const CandidaturesSpontanees = () => {
                   {new Date(c.date_envoi).toLocaleDateString("fr-FR")}
                 </p>
               </div>
-              <div className="flex flex-col gap-2 flex-shrink-0">
+              <div className="flex flex-col gap-2 shrink-0">
                 {c.cv && (
                   <a
-                    href={
-                      c.cv.startsWith("http")
-                        ? c.cv
-                        : `http://127.0.0.1:8000${c.cv}`
-                    }
+                    href={mediaUrl(c.cv)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors text-center"

@@ -5,6 +5,7 @@ import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl } from "../../utils/mediaUrl";
 import { selectStyles } from "../../theme";
 import {
   Users,
@@ -185,11 +186,7 @@ const DashboardRecruteur = () => {
           <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
             {entreprise?.logo ? (
               <img
-                src={
-                  entreprise.logo.startsWith("http")
-                    ? entreprise.logo
-                    : `http://127.0.0.1:8000${entreprise.logo}`
-                }
+                src={mediaUrl(entreprise.logo)}
                 alt="Logo"
                 className="w-full h-full object-cover"
               />
@@ -364,7 +361,7 @@ const DashboardRecruteur = () => {
             <button
               key={key}
               onClick={() => setFiltreStatut(key)}
-              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${filtreStatut === key ? "bg-white border border-b-white border-slate-200 text-teal-700 font-semibold -mb-px" : "text-slate-500 hover:text-slate-900"}`}
+              className={`shrink-0 px-4 py-2 text-sm font-medium rounded-t transition-colors ${filtreStatut === key ? "bg-white border border-b-white border-slate-200 text-teal-700 font-semibold -mb-px" : "text-slate-500 hover:text-slate-900"}`}
             >
               {label}
               {count > 0 && (
@@ -428,7 +425,7 @@ const DashboardRecruteur = () => {
                     <div className="flex items-center gap-0">
                       {/* Barre colorée gauche */}
                       <div
-                        className={`w-1 self-stretch flex-shrink-0 ${offre.statut_moderation === "REJETEE" ? "bg-red-500" : offre.statut_moderation === "EN_ATTENTE" ? "bg-amber-400" : offre.est_cloturee ? "bg-slate-300" : "bg-teal-700"}`}
+                        className={`w-1 self-stretch shrink-0 ${offre.statut_moderation === "REJETEE" ? "bg-red-500" : offre.statut_moderation === "EN_ATTENTE" ? "bg-amber-400" : offre.est_cloturee ? "bg-slate-300" : "bg-teal-700"}`}
                       />
 
                       <div className="flex-1 p-5">
@@ -469,7 +466,7 @@ const DashboardRecruteur = () => {
                               <div className="mt-2 flex items-start gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
                                 <AlertTriangle
                                   size={13}
-                                  className="text-red-500 flex-shrink-0 mt-0.5"
+                                  className="text-red-500 shrink-0 mt-0.5"
                                 />
                                 <p className="text-xs text-red-600">
                                   {offre.motif_rejet}
@@ -479,9 +476,9 @@ const DashboardRecruteur = () => {
                           </div>
 
                           {/* Stats candidatures */}
-                          <div className="flex items-center gap-4 flex-shrink-0">
+                          <div className="flex items-center gap-4 shrink-0">
                             <div className="flex items-center gap-3">
-                              <div className="text-center min-w-[40px]">
+                              <div className="text-center min-w-10">
                                 <p className="text-xl font-bold text-slate-700 tabular-nums">
                                   {nbCandidatures}
                                 </p>
@@ -490,7 +487,7 @@ const DashboardRecruteur = () => {
                                 </p>
                               </div>
                               {nbNouvelles > 0 && (
-                                <div className="text-center min-w-[40px]">
+                                <div className="text-center min-w-10">
                                   <p className="text-xl font-bold text-emerald-600 tabular-nums">
                                     {nbNouvelles}
                                   </p>
@@ -500,7 +497,7 @@ const DashboardRecruteur = () => {
                                 </div>
                               )}
                               {nbEntretiens > 0 && (
-                                <div className="text-center min-w-[40px]">
+                                <div className="text-center min-w-10">
                                   <p className="text-xl font-bold text-orange-500 tabular-nums">
                                     {nbEntretiens}
                                   </p>
@@ -510,7 +507,7 @@ const DashboardRecruteur = () => {
                                 </div>
                               )}
                               {nbRetenus > 0 && (
-                                <div className="text-center min-w-[40px]">
+                                <div className="text-center min-w-10">
                                   <p className="text-xl font-bold text-teal-700 tabular-nums">
                                     {nbRetenus}
                                   </p>
@@ -520,7 +517,7 @@ const DashboardRecruteur = () => {
                                 </div>
                               )}
                               {meilleurScore !== null && meilleurScore > 0 && (
-                                <div className="text-center min-w-[48px]">
+                                <div className="text-center min-w-12">
                                   <p
                                     className={`text-xl font-bold tabular-nums ${meilleurScore >= 80 ? "text-emerald-600" : meilleurScore >= 60 ? "text-amber-500" : "text-red-500"}`}
                                   >

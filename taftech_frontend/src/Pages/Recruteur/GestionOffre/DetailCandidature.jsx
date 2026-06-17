@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { authService } from "../../../Services/authService";
+import { mediaUrl } from "../../../utils/mediaUrl";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -274,9 +275,7 @@ export const DetailCandidature = ({
           {candidatData?.cv_pdf && (
             <a
               href={
-                candidatData.cv_pdf.startsWith("http")
-                  ? candidatData.cv_pdf
-                  : `http://127.0.0.1:8000${candidatData.cv_pdf.startsWith("/") ? "" : "/"}${candidatData.cv_pdf}`
+                mediaUrl(candidatData.cv_pdf.startsWith("/") ? candidatData.cv_pdf : `/${candidatData.cv_pdf}`)
               }
               target="_blank"
               rel="noopener noreferrer"

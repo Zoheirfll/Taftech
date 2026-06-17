@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl } from "../../utils/mediaUrl";
 import {
   MapPin,
   GraduationCap,
@@ -84,10 +85,7 @@ const ReviewCandidature = () => {
     }
   };
 
-  const getMediaUrl = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
-  };
+  const getMediaUrl = mediaUrl;
 
   const formatText = (text) => {
     if (!text) return "Non spécifié";
@@ -152,7 +150,7 @@ const ReviewCandidature = () => {
       {/* AVERTISSEMENT COMPLETION */}
       {profileCompletion < 100 && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
-          <AlertTriangle size={18} className="text-amber-600 flex-shrink-0" />
+          <AlertTriangle size={18} className="text-amber-600 shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-amber-900">
               Profil rempli à {profileCompletion}%
@@ -238,7 +236,7 @@ const ReviewCandidature = () => {
         <div className="p-5 space-y-6">
           {/* IDENTITÉ */}
           <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
               {profil.photo_profil ? (
                 <img
                   src={getMediaUrl(profil.photo_profil)}

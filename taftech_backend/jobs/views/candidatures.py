@@ -14,7 +14,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from ..models import OffreEmploi, Candidature, Notification, EquipeActionLog
 from ..models import QuestionQuestionnaire, ReponseCandidat
-from .equipe import get_entreprise_for_user, _log
+from .equipe import get_entreprise_for_user, get_membre_role, _log
+
+_ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 from ..serializers import (
     PostulerDTO, PostulerRapideDTO,
     MesCandidaturesDTO, CandidatureRecruteurDTO
@@ -197,8 +199,11 @@ class UpdateCandidatureStatusAPIView(APIView):
             candidature = Candidature.objects.get(id=candidature_id)
         except Candidature.DoesNotExist:
             return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
-        if not hasattr(request.user, 'profil_entreprise') or candidature.offre.entreprise != request.user.profil_entreprise:
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
             return Response({"error": "Vous n'avez pas l'autorisation de modifier cette candidature."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
         nouveau_statut = request.data.get('statut')
         statuts_valides = [choix[0] for choix in Candidature.STATUTS]
         if nouveau_statut not in statuts_valides:
@@ -315,12 +320,15 @@ class DeleteCandidatureAPIView(APIView):
     def delete(self, request, candidature_id):
         try:
             candidature = Candidature.objects.get(id=candidature_id)
-            if candidature.offre.entreprise.user != request.user:
-                return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
-            candidature.delete()
-            return Response({"message": "Candidature supprimée."}, status=status.HTTP_204_NO_CONTENT)
         except Candidature.DoesNotExist:
             return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
+        candidature.delete()
+        return Response({"message": "Candidature supprimée."}, status=status.HTTP_204_NO_CONTENT)
 
 
 class EvaluerCandidatureAPIView(APIView):
@@ -331,8 +339,11 @@ class EvaluerCandidatureAPIView(APIView):
             candidature = Candidature.objects.get(id=candidature_id)
         except Candidature.DoesNotExist:
             return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
-        if not hasattr(request.user, 'profil_entreprise') or candidature.offre.entreprise != request.user.profil_entreprise:
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
             return Response({"error": "Action non autorisée."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
         try:
             n_tech = int(request.data.get('note_technique', 0))
             n_comm = int(request.data.get('note_communication', 0))
@@ -364,9 +375,10 @@ class Top5CandidatsAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
-        is_recruteur = hasattr(request.user, 'profil_entreprise') and offre.entreprise == request.user.profil_entreprise
+        entreprise = get_entreprise_for_user(request.user)
+        is_membre = entreprise and offre.entreprise == entreprise
         is_admin = request.user.is_superuser or request.user.role == 'ADMIN'
-        if not (is_recruteur or is_admin):
+        if not (is_membre or is_admin):
             return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
         shortlist = offre.candidatures.filter(
             est_rapide=False,

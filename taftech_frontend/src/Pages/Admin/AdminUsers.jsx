@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl } from "../../utils/mediaUrl";
 import { Search, Download, X } from "lucide-react";
 
 const AdminUsers = () => {
@@ -75,10 +76,6 @@ const AdminUsers = () => {
     }
   };
 
-  const getMediaUrl = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
-  };
 
   const renderTags = (data) => {
     if (!data)
@@ -181,7 +178,7 @@ const AdminUsers = () => {
                       <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0 border border-white shadow-sm">
                         {user.profil_candidat?.photo_profil ? (
                           <img
-                            src={getMediaUrl(user.profil_candidat.photo_profil)}
+                            src={mediaUrl(user.profil_candidat.photo_profil)}
                             alt="Profil"
                             className="w-full h-full object-cover"
                           />
@@ -264,7 +261,7 @@ const AdminUsers = () => {
                 <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
                   {selectedUser.profil_candidat?.photo_profil ? (
                     <img
-                      src={getMediaUrl(
+                      src={mediaUrl(
                         selectedUser.profil_candidat.photo_profil,
                       )}
                       alt="Profil"
@@ -512,7 +509,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.cv_pdf && (
                     <div className="text-center pt-2">
                       <a
-                        href={getMediaUrl(selectedUser.profil_candidat.cv_pdf)}
+                        href={mediaUrl(selectedUser.profil_candidat.cv_pdf)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors shadow-sm"

@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import {
   ArrowLeft,
   MapPin,
@@ -18,9 +19,6 @@ import {
   XCircle,
   Building2,
 } from "lucide-react";
-
-const getMediaUrl = (path) =>
-  path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
 
 const LogoEntreprise = ({ url, nom }) => {
   const [err, setErr] = React.useState(false);

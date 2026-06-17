@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
+import { mediaUrl } from "../../../utils/mediaUrl";
 import toast from "react-hot-toast";
 
 export const useGestionOffre = () => {
@@ -79,12 +80,7 @@ export const useGestionOffre = () => {
     setLoadingResume(false);
   }, [selectedCandidature?.id]);
 
-  const getMediaUrl = (path) =>
-    path
-      ? path.startsWith("http")
-        ? path
-        : `http://127.0.0.1:8000${path}`
-      : null;
+  const getMediaUrl = mediaUrl;
 
   const formatText = (text) =>
     text

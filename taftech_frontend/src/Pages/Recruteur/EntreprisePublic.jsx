@@ -1,8 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
-
-const getMediaUrl = (path) =>
-  path ? (path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`) : null;
 import { useParams, Link } from "react-router-dom";
+import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import { selectStyles } from "../../theme";

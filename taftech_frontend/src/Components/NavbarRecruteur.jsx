@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../Services/authService";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
+import { mediaUrl } from "../utils/mediaUrl";
 import logoTafTech from "../assets/logo-taftech.png";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
@@ -28,7 +29,7 @@ const NavbarRecruteur = () => {
           const dash = await jobsService.getDashboard();
           if (dash.entreprise?.logo) {
             const logo = dash.entreprise.logo;
-            setUserPhoto(logo.startsWith("http") ? logo : `http://localhost:8000${logo}`);
+            setUserPhoto(mediaUrl(logo));
           }
           if (dash.est_premium) setIsPremium(true);
           if (dash.premium_expire_at) setPremiumExpire(dash.premium_expire_at);

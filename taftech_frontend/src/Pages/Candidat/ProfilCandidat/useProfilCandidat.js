@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
+import { mediaUrl } from "../../../utils/mediaUrl";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
 
@@ -553,10 +554,7 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const getPhotoUrl = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `http://127.0.0.1:8000${path}`;
-  };
+  const getPhotoUrl = mediaUrl;
 
   const formatText = (text) => {
     if (!text) return "Non spécifié";

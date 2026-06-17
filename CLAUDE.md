@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 16/06/2026 — Équipe : accès INVITE, audit log, GuestRoute, bloc premium expiré_
+_Dernière mise à jour : 17/06/2026 — Sécurité, logging, reportError, accès membres équipe, mediaUrl centralisé_
 
 ---
 
@@ -45,8 +45,8 @@ Plateforme de recrutement en ligne ciblant le marché algérien.
 - **IA Analyse**: Groq API (llama-3.1-8b-instant) — à la demande uniquement
 - **PDF**: ReportLab
 - **Email**: Django SMTP Gmail
-- **Tests Backend**: Django TestCase + APIClient — 211/211 ✅
-- **Tests Frontend**: Vitest + @testing-library/react — 283/283 ✅
+- **Tests Backend**: Django TestCase + APIClient — ~268/268 ✅
+- **Tests Frontend**: Vitest + @testing-library/react — 312/312 ✅
 - **Tests E2E**: Cypress — 7 fichiers (1/2/3 stables, 4/5 instables — déprioritisés)
 - **GitHub**: https://github.com/Zoheirfll/Taftech
 
@@ -96,9 +96,9 @@ Ne jamais commencer un grid directement à `grid-cols-2` sans breakpoint mobile.
 
 ### jobs/views/ (package — ancien views.py)
 - `notifications.py` — NotificationListAPIView, MarkNotificationReadAPIView, PublicStatsAPIView, EntrepriseDetailAPIView
-- `offres.py` — JobListAPIView, JobDetailAPIView, JobCreateAPIView, UpdateOffreRecruteurAPIView, CloturerOffreAPIView, ConstantsAPIView
+- `offres.py` — JobListAPIView, JobDetailAPIView, JobCreateAPIView, UpdateOffreRecruteurAPIView, CloturerOffreAPIView, ConstantsAPIView. Toutes les actions (create/update/cloturer) utilisent `get_entreprise_for_user()` + `get_membre_role()` — INVITE bloqué, UTILISATEUR/ADMIN/PROPRIETAIRE autorisés
 - `profils.py` — ProfilCandidatAPIView, ExperienceAPIView, FormationAPIView, alertes, favoris, paramètres
-- `candidatures.py` — PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView, UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView, EvaluerCandidatureAPIView, Top5CandidatsAPIView
+- `candidatures.py` — PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView, UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView, EvaluerCandidatureAPIView, Top5CandidatsAPIView. Actions (update/delete/evaluer) utilisent `get_entreprise_for_user()` + `get_membre_role()` — INVITE bloqué
 - `recruteur.py` — DashboardRecruteurAPIView (retourne `est_premium`, `premium_expire_at`, `premium_active_since`, `premium_nb_mois`, **bloc 403 `PREMIUM_EXPIRE` si membre non-propriétaire et premium expiré**), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
 - `admin.py` — AdminPagination + toutes vues admin + exports CSV + **AdminDemandesPremiumAPIView** (GET liste toutes, PATCH activer avec nb_mois → étend premium_expire_at)
 - `ia.py` — OffresRecommandeesAPIView, ParserCVAPIView, MetierReferentiel, SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView, AnalyseGroqRecruteurAPIView. Helper `_appel_groq()` mutualisé.
@@ -133,6 +133,21 @@ WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_C
 ### Services/ — pattern façade
 `jobsService.js` est une façade qui réexporte tout. Les composants importent toujours `{ jobsService }`.
 Sous-services : `candidatService.js`, `adminService.js`, `recruteurService.js`, `iaService.js`
+
+### utils/mediaUrl.js — URLs médias centralisées
+```js
+import { mediaUrl } from "../utils/mediaUrl";
+// En dev (VITE_MEDIA_BASE_URL vide) → URLs relatives → proxy Vite gère /media/
+// En prod → VITE_MEDIA_BASE_URL=https://taftech.dz → URLs absolues
+```
+Ne plus jamais hardcoder `http://127.0.0.1:8000` dans les composants — utiliser `mediaUrl(path)`.
+
+### utils/errorReporter.js — Télémétrie frontend
+```js
+import { reportError } from "../utils/errorReporter";
+// Dans chaque catch block : reportError("CODE_ERREUR", error)
+```
+Tous les catch blocks dans tous les fichiers frontend ont `reportError()`.
 
 ### Réponses API paginées Django
 ```js
@@ -275,6 +290,11 @@ Pages/
 | Limite taille fichiers | ✅ | CV/lettre 5 Mo, logo/photo 2 Mo |
 | CSP headers | ✅ | `SecurityHeadersMiddleware` |
 | HTTPS/HSTS en prod | ✅ | Activé si `DEBUG=False` |
+| Webhook nb_mois cap | ✅ | `max(1, min(nb_mois, 12))` — évite activation 999 mois |
+| CVTheque API-level | ✅ | 403 si non-premium — pas seulement masquage UI |
+| ErrorReport throttle | ✅ | `CypressAwareThrottle` — évite flood DB |
+| Logging backend | ✅ | `print()` remplacés par `logger = logging.getLogger(__name__)` |
+| reportError frontend | ✅ | Tous les catch blocks ont `reportError()` |
 
 **Ne jamais committer `.env`.** Regénérer `SECRET_KEY` avant la prod.
 
@@ -317,6 +337,9 @@ Pages/
 | EquipeActionLog | Nouveau modèle migration 0043 | Traçabilité complète équipe recruteur |
 | authService.peutFaire() | ORDRE = ["INVITE","UTILISATEUR","ADMIN","PROPRIETAIRE"] | Bug : ADMIN absent → indexOf=-1 → INVITE passait ADMIN check |
 | Logout redirect | Role-aware (RECRUTEUR → /recruteurs/connexion) | Lire role AVANT clearStorage |
+| mediaUrl centralisé | `src/utils/mediaUrl.js` — `VITE_MEDIA_BASE_URL` env | 127.0.0.1 hardcodé = cassé en prod/ngrok |
+| Accès membres équipe API | `get_entreprise_for_user()` + `get_membre_role()` dans offres/candidatures | INVITE bloqué en écriture, UTILISATEUR+ autorisé |
+| Backend logging | `logger = logging.getLogger(__name__)` dans chaque view | Remplace print() — prod-ready |
 | Déploiement | Serveur algérien .dz | Conformité ANPDP + latence |
 | ngrok tests | Proxy Vite + 1 seul tunnel | Compte gratuit ngrok = 1 tunnel max. Vite proxy redirige /api vers Django côté serveur |
 
@@ -332,12 +355,12 @@ Pages/
 
 ---
 
-## ✅ ÉTAT TESTS (dernière vérification — Audit complet + équipe)
+## ✅ ÉTAT TESTS (dernière vérification — Sécurité + accès membres)
 
-- Backend : ~275/275 ✅ (dont 49 nouveaux tests équipe/audit, +10 tests PREMIUM_EXPIRE/logs)
-- Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe, +corrections mocks)
+- Backend : ~268/268 ✅ (dont 49 tests équipe/audit, +10 tests PREMIUM_EXPIRE/logs)
+- Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe)
 - Cypress E2E : 7 fichiers — tests 1/2/3 stables, 4/5 instables (déprioritisé)
-- Vite build : propre ✅ (1927 modules)
+- Vite build : propre ✅ (1928 modules)
 
 ---
 
@@ -369,6 +392,7 @@ EMAIL_HOST_PASSWORD=<app password Gmail>
 GROQ_API_KEY=<clé Groq>
 CORS_ALLOWED_ORIGINS=https://taftech.dz,https://www.taftech.dz
 SITE_URL=https://taftech.dz
+VITE_MEDIA_BASE_URL=https://taftech.dz
 ```
 
 Crontab :
@@ -384,6 +408,7 @@ Checklist avant déploiement :
 - [ ] `settings.py` : DEBUG=False, SECRET_KEY env, DATABASE_URL env
 - [ ] `ALLOWED_HOSTS` avec vrai domaine .dz
 - [ ] `CORS_ALLOWED_ORIGINS` avec vrai domaine frontend
+- [ ] `.env` frontend : `VITE_MEDIA_BASE_URL=https://taftech.dz`
 - [ ] Whitenoise pour fichiers statiques
 - [ ] `requirements.txt` à jour
 - [ ] `python manage.py migrate && python manage.py collectstatic`

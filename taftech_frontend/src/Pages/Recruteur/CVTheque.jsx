@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles } from "../../theme";
 import {
   Search,
@@ -194,12 +195,6 @@ const CVTheque = () => {
     }
   };
 
-  const getMediaUrl = (path) =>
-    path
-      ? path.startsWith("http")
-        ? path
-        : `http://127.0.0.1:8000${path}`
-      : null;
 
   const isRecent = (dateString) => {
     if (!dateString) return false;

@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from ..models import OffreEmploi, Candidature, EquipeActionLog
-from .equipe import get_entreprise_for_user, _log
+from .equipe import get_entreprise_for_user, get_membre_role, _log
 from ..serializers import (
     OffreEmploiSerializer,
     OffreEmploiCreateDTO,
@@ -58,17 +58,23 @@ class JobDetailAPIView(APIView):
             return Response({"error": "Cette offre n'existe pas ou n'est plus disponible."}, status=status.HTTP_404_NOT_FOUND)
 
 
+_ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
+
+
 class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        if not hasattr(request.user, 'profil_entreprise'):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
             return Response({"error": "Profil entreprise inexistant."}, status=403)
-        if not request.user.profil_entreprise.est_approuvee:
+        if not entreprise.est_approuvee:
             return Response({"error": "Votre entreprise doit être validée par TafTech avant de publier."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
-            offre = serializer.save(entreprise=request.user.profil_entreprise)
-            _log(request.user, request.user.profil_entreprise, 'CREER_OFFRE', offre.titre)
+            offre = serializer.save(entreprise=entreprise)
+            _log(request.user, entreprise, 'CREER_OFFRE', offre.titre)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -80,8 +86,11 @@ class UpdateOffreRecruteurAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=404)
-        if offre.entreprise.user != request.user:
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or offre.entreprise != entreprise:
             return Response({"error": "Non autorisé."}, status=403)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
         if offre.statut_moderation == "APPROUVEE":
             return Response({"error": "Impossible de modifier une offre déjà publiée."}, status=400)
         serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
@@ -100,14 +109,17 @@ class CloturerOffreAPIView(APIView):
     def patch(self, request, offre_id):
         try:
             offre = OffreEmploi.objects.get(id=offre_id)
-            if offre.entreprise.user != request.user:
-                return Response({"error": "Vous n'êtes pas autorisé à modifier cette offre."}, status=status.HTTP_403_FORBIDDEN)
-            offre.est_cloturee = True
-            offre.save()
-            _log(request.user, offre.entreprise, 'CLOTURER_OFFRE', offre.titre)
-            return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or offre.entreprise != entreprise:
+            return Response({"error": "Vous n'êtes pas autorisé à modifier cette offre."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
+        offre.est_cloturee = True
+        offre.save()
+        _log(request.user, offre.entreprise, 'CLOTURER_OFFRE', offre.titre)
+        return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)
 
 
 class ConstantsAPIView(APIView):

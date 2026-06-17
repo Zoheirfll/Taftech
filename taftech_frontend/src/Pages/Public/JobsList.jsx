@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
+import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles } from "../../theme";
 import {
   MapPin,
@@ -28,12 +29,6 @@ const tempsDepuis = (dateStr) => {
   return `il y a ${Math.floor(diff / 2592000)} mois`;
 };
 
-const getMediaUrl = (path) =>
-  path
-    ? path.startsWith("http")
-      ? path
-      : `http://127.0.0.1:8000${path}`
-    : null;
 
 const LogoEntreprise = ({ url }) => {
   const [err, setErr] = React.useState(false);
@@ -187,7 +182,7 @@ const JobsList = () => {
     <div className="max-w-7xl mx-auto px-6 py-8 bg-slate-50 min-h-screen">
       <div className="flex flex-col md:flex-row gap-6">
         {/* FILTRES */}
-        <aside className="w-full md:w-72 flex-shrink-0">
+        <aside className="w-full md:w-72 shrink-0">
           <div className="bg-white border border-slate-200 rounded-2xl p-5 sticky top-20">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-sm font-bold text-slate-900">Filtres</h2>
@@ -324,7 +319,7 @@ const JobsList = () => {
                 {recommandations.map((rec) => (
                   <div
                     key={rec.id}
-                    className="min-w-[280px] bg-white border border-indigo-200 rounded-xl p-4 flex-shrink-0 hover:shadow-sm transition-all"
+                    className="min-w-70 bg-white border border-indigo-200 rounded-xl p-4 shrink-0 hover:shadow-sm transition-all"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-semibold rounded-full">
@@ -452,7 +447,7 @@ const JobsList = () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <button
                           onClick={() => handleToggleFavori(job.id)}
                           className={`p-2 rounded-lg border transition-colors ${

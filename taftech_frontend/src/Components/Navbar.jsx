@@ -4,6 +4,7 @@ import { authService } from "../Services/authService";
 import { profilService } from "../Services/profilService";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
+import { mediaUrl } from "../utils/mediaUrl";
 import logoTafTech from "../assets/logo-taftech.png";
 import {
   User,
@@ -65,16 +66,14 @@ const Navbar = () => {
             if (dash.entreprise?.logo) {
               const logo = dash.entreprise.logo;
               setUserPhoto(
-                logo.startsWith("http") ? logo : `http://127.0.0.1:8000${logo}`,
+                mediaUrl(logo),
               );
             }
           } else {
             const data = await profilService.getProfil();
             if (data.photo_profil) {
               setUserPhoto(
-                data.photo_profil.startsWith("http")
-                  ? data.photo_profil
-                  : `http://127.0.0.1:8000${data.photo_profil}`,
+                mediaUrl(data.photo_profil),
               );
             }
           }

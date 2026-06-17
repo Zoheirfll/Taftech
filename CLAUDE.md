@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 17/06/2026 — Sécurité, logging, reportError, accès membres équipe, mediaUrl centralisé_
+_Dernière mise à jour : 17/06/2026 — Code splitting, Swagger, mediaUrl, accès membres équipe, sécurité complète_
 
 ---
 

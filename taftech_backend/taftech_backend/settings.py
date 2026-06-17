@@ -42,6 +42,20 @@ INSTALLED_APPS = [
     'jobs',
 ]
 
+# Swagger — activé automatiquement si drf-spectacular est installé
+try:
+    import drf_spectacular  # noqa: F401
+    INSTALLED_APPS += ['drf_spectacular']
+    SPECTACULAR_SETTINGS = {
+        'TITLE': 'TafTech API',
+        'DESCRIPTION': 'API de la plateforme de recrutement TafTech — marché algérien.',
+        'VERSION': '1.0.0',
+        'SERVE_INCLUDE_SCHEMA': False,
+        'COMPONENT_SPLIT_REQUEST': True,
+    }
+except ImportError:
+    pass
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',

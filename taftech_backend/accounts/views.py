@@ -286,6 +286,7 @@ class LogoutAPIView(APIView):
 
 class ErrorReportAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [CypressAwareThrottle]
 
     def post(self, request):
         try:

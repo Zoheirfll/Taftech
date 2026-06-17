@@ -203,6 +203,8 @@ class CVThequeView(APIView):
         else:
             candidats = candidats.order_by('-user__date_joined')
         is_premium = entreprise_user.est_premium_actif if entreprise_user else False
+        if not is_premium:
+            return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
@@ -512,7 +514,7 @@ class ChargilyWebhookAPIView(APIView):
         # Structure Chargily : event.data.metadata (pas event.data.object.metadata)
         metadata = data.get('data', {}).get('metadata', {})
         entreprise_id = metadata.get('entreprise_id')
-        nb_mois = int(metadata.get('nb_mois', 1))
+        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 12))
 
         try:
             entreprise = ProfilEntreprise.objects.get(id=entreprise_id)

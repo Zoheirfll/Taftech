@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 17/06/2026 — Code splitting, Swagger, mediaUrl, accès membres équipe, sécurité complète_
+_Dernière mise à jour : 17/06/2026 — Swagger fix DEFAULT_SCHEMA_CLASS, règle MAJ CLAUDE.md_
 
 ---
 
@@ -30,6 +30,7 @@ _Dernière mise à jour : 17/06/2026 — Code splitting, Swagger, mediaUrl, acc�
 5. **Demander confirmation avant toute action destructive** (reset, force push, suppression fichiers)
 6. **Ne jamais résoudre Cypress** sans demande explicite — les tests E2E sont déprioritisés
 7. Toujours vérifier que le build Vite passe (`npx vite build`) avant de déclarer une tâche terminée
+8. **Mettre à jour CLAUDE.md après chaque changement technique** — tout nouveau comportement, décision, ou correction doit être reflété ici avant le commit. CLAUDE.md est la source de vérité du projet pour les futures sessions.
 
 ---
 
@@ -331,6 +332,7 @@ Pages/
 | Premium paiement | Manuel CIB/EDAHABIA + email | Pas de Chargily Pay pour l'instant |
 | Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
 | Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
+| Swagger DEFAULT_SCHEMA_CLASS | Injecté dans `REST_FRAMEWORK` dict **après** sa définition (bloc try/except déplacé sous REST_FRAMEWORK) | `NameError` si injecté avant — settings.py est exécuté de haut en bas |
 | Premium expiré membres | Blocage login (403) + blocage dashboard API | PROPRIETAIRE bypasse les deux couches |
 | INVITE accès | Masquage UI des boutons d'action, pas blocage route | Candidatures en lecture seule autorisées |
 | GuestRoute | Redirect si déjà connecté depuis login/register | Évite double session ou confusion de rôle |

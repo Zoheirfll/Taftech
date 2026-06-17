@@ -12,13 +12,25 @@ const LoginRecruteur = () => {
     e.preventDefault();
     const toastId = toast.loading("Connexion en cours...");
     try {
-      await authService.login(credentials.username, credentials.password, "recruteur");
+      const data = await authService.login(credentials.username, credentials.password, "recruteur");
+      // Accepter role=RECRUTEUR ou candidat membre d'une équipe
+      if (data.role !== "RECRUTEUR" && !data.est_membre_equipe) {
+        toast.error("Ce compte n'est pas un compte recruteur.", { id: toastId });
+        authService.logout("/recruteurs/connexion");
+        return;
+      }
       toast.success("Connexion réussie !", { id: toastId });
       navigate("/dashboard");
       window.location.reload();
     } catch (err) {
-      toast.error("Email ou mot de passe incorrect.", { id: toastId });
-      reportError("ECHEC_CONNEXION_RECRUTEUR", err);
+      const code = err.response?.data?.code;
+      const detail = err.response?.data?.detail;
+      if (code === "PREMIUM_EXPIRE") {
+        toast.error(detail, { id: toastId, duration: 6000 });
+      } else {
+        toast.error("Email ou mot de passe incorrect.", { id: toastId });
+        reportError("ECHEC_CONNEXION_RECRUTEUR", err);
+      }
     }
   };
 

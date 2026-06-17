@@ -283,6 +283,17 @@ export const recruteurService = {
     }
   },
 
+  // Crée une session Chargily Pay et retourne l'URL de redirection vers la page de paiement
+  chargilyCheckout: async (nb_mois) => {
+    try {
+      const response = await api.post("jobs/premium/chargily/checkout/", { nb_mois });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CHARGILY_CHECKOUT", err);
+      throw err;
+    }
+  },
+
   demanderPremium: async (moyen_paiement, nb_mois = 1) => {
     try {
       const response = await api.post("jobs/premium/demande/", { moyen_paiement, nb_mois });
@@ -301,6 +312,63 @@ export const recruteurService = {
       reportError("ECHEC_ENVOI_RECU_PREMIUM", err);
       throw err;
     }
+  },
+
+  // ── Équipe ──────────────────────────────────────────────────────────────────
+  getEquipe: async () => {
+    try {
+      const r = await api.get("jobs/equipe/");
+      return r.data;
+    } catch (err) { reportError("ECHEC_GET_EQUIPE", err); throw err; }
+  },
+
+  inviterMembre: async (email, role) => {
+    try {
+      const r = await api.post("jobs/equipe/inviter/", { email, role });
+      return r.data;
+    } catch (err) { reportError("ECHEC_INVITER_MEMBRE", err); throw err; }
+  },
+
+  changerRoleMembre: async (membreId, role) => {
+    try {
+      const r = await api.patch(`jobs/equipe/${membreId}/`, { role });
+      return r.data;
+    } catch (err) { reportError("ECHEC_CHANGER_ROLE", err); throw err; }
+  },
+
+  retirerMembre: async (membreId) => {
+    try {
+      const r = await api.delete(`jobs/equipe/${membreId}/`);
+      return r.data;
+    } catch (err) { reportError("ECHEC_RETIRER_MEMBRE", err); throw err; }
+  },
+
+  annulerInvitation: async (invitationId) => {
+    try {
+      const r = await api.delete(`jobs/equipe/invitations/${invitationId}/`);
+      return r.data;
+    } catch (err) { reportError("ECHEC_ANNULER_INVITATION", err); throw err; }
+  },
+
+  validerTokenInvitation: async (token) => {
+    try {
+      const r = await api.get(`jobs/equipe/invitation/${token}/`);
+      return r.data;
+    } catch (err) { reportError("ECHEC_VALIDER_TOKEN", err); throw err; }
+  },
+
+  accepterInvitation: async (token, payload) => {
+    try {
+      const r = await api.post(`jobs/equipe/invitation/${token}/`, payload);
+      return r.data;
+    } catch (err) { reportError("ECHEC_ACCEPTER_INVITATION", err); throw err; }
+  },
+
+  getEquipeAuditLog: async () => {
+    try {
+      const r = await api.get("jobs/equipe/audit/");
+      return r.data;
+    } catch (err) { reportError("ECHEC_GET_EQUIPE_AUDIT", err); throw err; }
   },
 
 };

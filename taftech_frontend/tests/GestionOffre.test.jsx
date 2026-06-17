@@ -27,6 +27,15 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+vi.mock("../src/Services/authService", () => ({
+  authService: {
+    getUserRole: vi.fn(() => "RECRUTEUR"),
+    getEstMembreEquipe: vi.fn(() => false),
+    getMembreRole: vi.fn(() => null),
+    peutFaire: vi.fn(() => true),
+  },
+}));
+
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),

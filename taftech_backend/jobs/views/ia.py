@@ -160,7 +160,7 @@ class SuggestionsCarriereAPIView(APIView):
             seed = hash(f"{request.user.id}_{profil.specialite or ''}")
             random.seed(seed)
             random.shuffle(metiers_qs)
-            metiers = metiers_qs[:10]
+            metiers = metiers_qs[:20]
         if len(metiers) < 5 and profil.titre_professionnel:
             q = Q()
             for mot in profil.titre_professionnel.strip().split():
@@ -168,10 +168,10 @@ class SuggestionsCarriereAPIView(APIView):
                     q |= Q(titre__icontains=mot)
             metiers_extra = list(MetierReferentiel.objects.filter(
                 q, est_actif=True
-            ).exclude(titre=profil.titre_professionnel)[:10])
+            ).exclude(titre=profil.titre_professionnel)[:20])
             metiers = metiers + metiers_extra
         return Response({
-            'metiers': metiers[:10],
+            'metiers': metiers[:20],
             'profil_titre': profil.titre_professionnel,
             'profil_secteur': profil.specialite,
         })

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
+import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
@@ -51,10 +52,9 @@ const DashboardRecruteur = () => {
         setIsPremium(dashData.est_premium || false);
         setPremiumExpire(dashData.premium_expire_at || null);
       } catch (err) {
-        if (
-          err.response &&
-          (err.response.status === 404 || err.response.status === 403)
-        ) {
+        if (err.response?.data?.code === "PREMIUM_EXPIRE") {
+          setError("PREMIUM_EXPIRE");
+        } else if (err.response?.status === 404) {
           navigate("/register-entreprise");
         } else {
           reportError("ECHEC_CHARGEMENT_DASHBOARD", err);
@@ -127,6 +127,17 @@ const DashboardRecruteur = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+      </div>
+    );
+
+  if (error === "PREMIUM_EXPIRE")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl">⭐</div>
+        <h2 className="text-xl font-bold text-slate-800">Abonnement Premium expiré</h2>
+        <p className="text-sm text-slate-500 max-w-sm">
+          L'abonnement Premium de votre entreprise a expiré. Votre accès est suspendu jusqu'au renouvellement. Contactez le propriétaire du compte.
+        </p>
       </div>
     );
 
@@ -205,7 +216,7 @@ const DashboardRecruteur = () => {
                   ⭐ Premium
                   {premiumExpire && (
                     <span className="text-xs font-normal text-teal-600 opacity-80">
-                      — expire le {new Date(premiumExpire).toLocaleDateString("fr-DZ")}
+                      — expire le {premiumExpire}
                     </span>
                   )}
                 </span>
@@ -217,36 +228,38 @@ const DashboardRecruteur = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {entreprise?.est_approuvee ? (
-            <>
-              <button
-                onClick={() => navigate("/cvtheque")}
-                className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
-              >
-                <Search size={16} /> Chercher un CV
-              </button>
-              <button
-                onClick={() => navigate("/creer-offre")}
-                className="flex items-center gap-2 px-4 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
-              >
-                <Plus size={16} /> Publier une offre
-              </button>
-            </>
-          ) : (
-            <div className="text-right">
-              <button
-                disabled
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed"
-              >
-                <Plus size={16} /> Publier une offre
-              </button>
-              <p className="text-xs text-amber-600 font-medium mt-1.5">
-                Validation admin requise
-              </p>
-            </div>
-          )}
-        </div>
+        {authService.peutFaire("UTILISATEUR") && (
+          <div className="flex items-center gap-3">
+            {entreprise?.est_approuvee ? (
+              <>
+                <button
+                  onClick={() => navigate("/cvtheque")}
+                  className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  <Search size={16} /> Chercher un CV
+                </button>
+                <button
+                  onClick={() => navigate("/creer-offre")}
+                  className="flex items-center gap-2 px-4 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+                >
+                  <Plus size={16} /> Publier une offre
+                </button>
+              </>
+            ) : (
+              <div className="text-right">
+                <button
+                  disabled
+                  className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed"
+                >
+                  <Plus size={16} /> Publier une offre
+                </button>
+                <p className="text-xs text-amber-600 font-medium mt-1.5">
+                  Validation admin requise
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
@@ -375,7 +388,7 @@ const DashboardRecruteur = () => {
               <p className="text-sm font-medium text-slate-900">
                 Aucune offre dans cette catégorie
               </p>
-              {activeTab === "ouvertes" && entreprise?.est_approuvee && (
+              {activeTab === "ouvertes" && entreprise?.est_approuvee && authService.peutFaire("UTILISATEUR") && (
                 <button
                   onClick={() => navigate("/creer-offre")}
                   className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-teal-700 text-white text-sm font-medium rounded-lg hover:bg-teal-800 transition-colors"
@@ -523,14 +536,18 @@ const DashboardRecruteur = () => {
                             {/* Bouton action */}
                             <div className="ml-2">
                               {offre.statut_moderation === "REJETEE" ? (
-                                <button
-                                  onClick={() =>
-                                    handleOuvrirModification(offre)
-                                  }
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
-                                >
-                                  Corriger <ChevronRight size={13} />
-                                </button>
+                                authService.peutFaire("UTILISATEUR") ? (
+                                  <button
+                                    onClick={() => handleOuvrirModification(offre)}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                                  >
+                                    Corriger <ChevronRight size={13} />
+                                  </button>
+                                ) : (
+                                  <span className="px-3 py-2 bg-red-50 text-red-600 text-xs font-semibold rounded-xl border border-red-100">
+                                    Rejetée
+                                  </span>
+                                )
                               ) : offre.statut_moderation === "EN_ATTENTE" ? (
                                 <button
                                   disabled

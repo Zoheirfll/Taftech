@@ -5,7 +5,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
-from ..models import OffreEmploi, Candidature
+from ..models import OffreEmploi, Candidature, EquipeActionLog
+from .equipe import get_entreprise_for_user, _log
 from ..serializers import (
     OffreEmploiSerializer,
     OffreEmploiCreateDTO,
@@ -66,7 +67,8 @@ class JobCreateAPIView(APIView):
             return Response({"error": "Votre entreprise doit être validée par TafTech avant de publier."}, status=status.HTTP_403_FORBIDDEN)
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
-            serializer.save(entreprise=request.user.profil_entreprise)
+            offre = serializer.save(entreprise=request.user.profil_entreprise)
+            _log(request.user, request.user.profil_entreprise, 'CREER_OFFRE', offre.titre)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -85,6 +87,7 @@ class UpdateOffreRecruteurAPIView(APIView):
         serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(statut_moderation="EN_ATTENTE", motif_rejet="")
+            _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
             return Response({
                 "message": "Offre mise à jour et soumise pour validation.",
                 "offre": OffreDashboardDTO(offre).data
@@ -101,6 +104,7 @@ class CloturerOffreAPIView(APIView):
                 return Response({"error": "Vous n'êtes pas autorisé à modifier cette offre."}, status=status.HTTP_403_FORBIDDEN)
             offre.est_cloturee = True
             offre.save()
+            _log(request.user, offre.entreprise, 'CLOTURER_OFFRE', offre.titre)
             return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)

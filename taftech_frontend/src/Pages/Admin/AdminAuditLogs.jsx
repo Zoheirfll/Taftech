@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/axiosConfig";
 import { ShieldCheck, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { reportError } from "../../utils/errorReporter";
 
 const ACTION_LABELS = {
   APPROUVER_OFFRE: { label: "Approuver offre", color: "bg-green-100 text-green-700" },
@@ -32,7 +33,8 @@ const AdminAuditLogs = () => {
       setTotalCount(res.data.count || 0);
       setNextUrl(res.data.next);
       setPrevUrl(res.data.previous);
-    } catch {
+    } catch (err) {
+      reportError("ECHEC_GET_AUDIT_LOGS_ADMIN", err);
       setLogs([]);
     } finally {
       setLoading(false);

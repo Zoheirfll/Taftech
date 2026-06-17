@@ -121,7 +121,40 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
     });
   });
 
-  // --- 🔴 EDGE CASES (1/1) ---
+  // --- 🔴 EDGE CASES ---
+
+  it("🔴 EC0 : Premium expiré (403 PREMIUM_EXPIRE) — toast spécifique sans navigation", async () => {
+    const premiumError = {
+      response: {
+        status: 403,
+        data: {
+          code: "PREMIUM_EXPIRE",
+          detail: "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.",
+        },
+      },
+    };
+    authService.login.mockRejectedValue(premiumError);
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
+      target: { value: "membre@corp.dz" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
+
+    await waitFor(() => {
+      // Le toast d'erreur doit contenir le message backend, pas le message générique
+      expect(toast.error).toHaveBeenCalled();
+      // Pas de navigation
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
 
   it("🔴 EC1 : Échec de la connexion (Mauvais identifiants & Télémétrie)", async () => {
     authService.login.mockRejectedValue(new Error("Unauthorized"));

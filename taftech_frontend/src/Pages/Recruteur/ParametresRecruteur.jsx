@@ -15,7 +15,9 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  Users,
 } from "lucide-react";
+import MonEquipe from "./MonEquipe";
 
 const TAILLES_ENTREPRISE_OPTIONS = [
   { value: "TPE", label: "1 à 10 employés" },
@@ -31,6 +33,7 @@ const ParametresRecruteur = () => {
   const [activeTab, setActiveTab] = useState("profil");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   // Profil commun
   const [profilForm, setProfilForm] = useState({
@@ -58,12 +61,14 @@ const ParametresRecruteur = () => {
   useEffect(() => {
     const load = async () => {
       try {
+        const estMembre = authService.getEstMembreEquipe();
         if (role === "RECRUTEUR") {
           const [dash, constData, notifs] = await Promise.all([
             jobsService.getDashboard(),
             jobsService.getConstants(),
             jobsService.getParametresRecruteur(),
           ]);
+          setIsPremium(!!dash.est_premium);
           const e = dash.entreprise;
           setEntreprise(e);
           setEntrepriseForm({
@@ -85,6 +90,40 @@ const ParametresRecruteur = () => {
             message_refus_auto: notifs.message_refus_auto || "",
           });
           setConstants(constData);
+        } else if (estMembre) {
+          // Membre : charger dashboard (entreprise + premium) + profil perso + constants
+          const [dash, data, constData] = await Promise.all([
+            jobsService.getDashboard(),
+            profilService.getProfil(),
+            jobsService.getConstants(),
+          ]);
+          setConstants(constData);
+          setIsPremium(!!dash.est_premium);
+          const e = dash.entreprise;
+          if (e) {
+            setEntreprise(e);
+            setEntrepriseForm({
+              secteur_activite: e.secteur_activite || "",
+              wilaya_siege: e.wilaya_siege || "",
+              commune_siege: e.commune_siege || "",
+              taille_entreprise: e.taille_entreprise || "",
+              description: e.description || "",
+              telephone: e.telephone || "",
+            });
+          }
+          setProfilForm({
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
+            email: data.email || "",
+            telephone: data.telephone || "",
+          });
+          if (data.photo_profil) {
+            setPhotoPreview(
+              data.photo_profil.startsWith("http")
+                ? data.photo_profil
+                : `http://127.0.0.1:8000${data.photo_profil}`,
+            );
+          }
         } else {
           const data = await profilService.getProfil();
           setProfilForm({
@@ -153,17 +192,16 @@ const ParametresRecruteur = () => {
     setSaving(true);
     try {
       if (role === "RECRUTEUR") {
-        const {
-          nom_entreprise: _n,
-          registre_commerce: _r,
-          logo: _l,
-          ...dataToSend
-        } = entrepriseForm;
+        // Propriétaire : sauvegarde via updateProfilEntreprise (backend sauvegarde aussi user.first_name etc.)
+        const { nom_entreprise: _n, registre_commerce: _r, logo: _l, ...dataToSend } = entrepriseForm;
         Object.assign(dataToSend, profilForm);
-        if (logoFile) dataToSend.logo = logoFile;
+        // L'onglet profil uploade dans photoFile, pas logoFile
+        if (photoFile) dataToSend.logo = photoFile;
         await jobsService.updateProfilEntreprise(dataToSend);
+        setPhotoFile(null);
         toast.success("Profil mis à jour !");
       } else {
+        // Membres (CANDIDAT en DB) : sauvegarde du profil candidat
         const formData = new FormData();
         Object.entries(profilForm).forEach(([k, v]) => formData.append(k, v));
         if (photoFile) formData.append("photo_profil", photoFile);
@@ -212,14 +250,14 @@ const ParametresRecruteur = () => {
     }
   };
 
-  const TABS =
-    role === "RECRUTEUR"
-      ? [
-          { key: "profil", label: "Mon profil", icon: User },
-          { key: "entreprise", label: "Mon entreprise", icon: Building2 },
-          { key: "notifications", label: "Notifications", icon: Bell },
-        ]
-      : [{ key: "profil", label: "Mon profil", icon: User }];
+  const TABS = [
+    { key: "profil", label: "Mon profil", icon: User, minRole: "INVITE" },
+    { key: "entreprise", label: "Mon entreprise", icon: Building2, minRole: "ADMIN" },
+    { key: "notifications", label: "Notifications", icon: Bell, minRole: "PROPRIETAIRE" },
+    // Toujours visible pour le propriétaire (même si premium expiré — pour pouvoir supprimer les membres)
+    // Visible pour les membres uniquement si premium actif
+    ...((isPremium || role === "RECRUTEUR") ? [{ key: "equipe", label: "Mon équipe ⭐", icon: Users, minRole: "PROPRIETAIRE" }] : []),
+  ].filter(({ minRole }) => authService.peutFaire(minRole));
 
   if (loading)
     return (
@@ -279,40 +317,31 @@ const ParametresRecruteur = () => {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Photo */}
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                {role === "RECRUTEUR" ? "Photo de profil" : "Photo de profil"}
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {photoPreview ? (
-                    <img
-                      src={photoPreview}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User size={28} className="text-slate-300" />
-                  )}
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
-                    <Upload size={14} />
-                    Choisir une photo
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                  </label>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    JPG, PNG ou WEBP — 5 Mo max
-                  </p>
+            {/* Photo — uniquement pour les candidats purs (pas recruteur ni membre) */}
+            {role !== "RECRUTEUR" && !authService.getEstMembreEquipe() && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                  Photo de profil
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={28} className="text-slate-300" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <Upload size={14} />
+                      Choisir une photo
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
+                    </label>
+                    <p className="text-[10px] text-slate-400 mt-1">JPG, PNG ou WEBP — 5 Mo max</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Champs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -403,7 +432,7 @@ const ParametresRecruteur = () => {
                 <>
                   <CheckCircle
                     size={18}
-                    className="text-emerald-600 flex-shrink-0"
+                    className="text-emerald-600 shrink-0"
                   />
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -418,7 +447,7 @@ const ParametresRecruteur = () => {
                 <>
                   <AlertCircle
                     size={18}
-                    className="text-amber-600 flex-shrink-0"
+                    className="text-amber-600 shrink-0"
                   />
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -458,7 +487,7 @@ const ParametresRecruteur = () => {
                 Logo de l'entreprise
               </label>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                   {logoUrl ? (
                     <img
                       src={logoUrl}
@@ -639,7 +668,7 @@ const ParametresRecruteur = () => {
                     email_refus_auto: !notifForm.email_refus_auto,
                   })
                 }
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
                   notifForm.email_refus_auto ? "bg-teal-700" : "bg-slate-200"
                 }`}
               >
@@ -704,6 +733,9 @@ const ParametresRecruteur = () => {
           </div>
         </div>
       )}
+
+      {/* ONGLET ÉQUIPE */}
+      {activeTab === "equipe" && <MonEquipe />}
     </div>
     </div>
   );

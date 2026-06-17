@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework.test import APITestCase
 from rest_framework import status
-from jobs.models import ProfilCandidat, ProfilEntreprise
+from jobs.models import ProfilCandidat, ProfilEntreprise, MembreEquipe
 
 User = get_user_model()
 
@@ -424,3 +424,69 @@ class PasswordResetSecurityTests(APITestCase):
         })
         self.assertEqual(response.status_code, 400)
         self.assertIn("expiré", response.data['error'])
+
+
+# ==========================================
+# TESTS PREMIUM_EXPIRE — Blocage membres équipe au login
+# ==========================================
+
+class PremiumExpireLoginTests(APITestCase):
+
+    def setUp(self):
+        self.login_url = reverse('token_obtain_pair')
+
+        self.owner = User.objects.create_user(
+            username="owner_prem",
+            email="owner@prem.dz",
+            password="pwd123!",
+            is_active=True,
+            email_verifie=True,
+            role="RECRUTEUR",
+        )
+        self.entreprise = ProfilEntreprise.objects.create(
+            user=self.owner,
+            nom_entreprise="PremCorp",
+            registre_commerce="RC_PREM",
+            est_premium=True,
+            premium_expire_at=timezone.now() - timedelta(days=1),
+        )
+
+        self.membre = User.objects.create_user(
+            username="membre_prem",
+            email="membre@prem.dz",
+            password="pwd123!",
+            is_active=True,
+            email_verifie=True,
+            role="RECRUTEUR",
+        )
+        MembreEquipe.objects.create(user=self.membre, entreprise=self.entreprise, role="UTILISATEUR")
+
+    def test_membre_login_premium_expire_bloque_403(self):
+        """Un membre dont le premium est expiré reçoit 403 PREMIUM_EXPIRE."""
+        response = self.client.post(self.login_url, {
+            "username": "membre@prem.dz",
+            "password": "pwd123!",
+            "portal": "recruteur",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data.get("code"), "PREMIUM_EXPIRE")
+
+    def test_proprietaire_login_premium_expire_autorise(self):
+        """Le propriétaire peut se connecter même si le premium est expiré."""
+        response = self.client.post(self.login_url, {
+            "username": "owner@prem.dz",
+            "password": "pwd123!",
+            "portal": "recruteur",
+        })
+        self.assertEqual(response.status_code, 200)
+
+    def test_membre_login_premium_actif_autorise(self):
+        """Un membre se connecte normalement si le premium est encore actif."""
+        self.entreprise.premium_expire_at = timezone.now() + timedelta(days=30)
+        self.entreprise.save()
+        response = self.client.post(self.login_url, {
+            "username": "membre@prem.dz",
+            "password": "pwd123!",
+            "portal": "recruteur",
+        })
+        self.assertEqual(response.status_code, 200)

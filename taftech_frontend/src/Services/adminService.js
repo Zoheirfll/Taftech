@@ -237,4 +237,45 @@ export const adminService = {
       throw err;
     }
   },
+
+  // Comptes admins
+  getAdmins: async () => {
+    try {
+      const response = await api.get("jobs/admin/comptes-admins/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMINS", err);
+      throw err;
+    }
+  },
+
+  createAdmin: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/comptes-admins/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_ADMIN", err);
+      throw err;
+    }
+  },
+
+  updateAdmin: async (id, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/comptes-admins/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_ADMIN", err);
+      throw err;
+    }
+  },
+
+  deleteAdmin: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/comptes-admins/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_ADMIN", err);
+      throw err;
+    }
+  },
 };

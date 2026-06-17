@@ -15,6 +15,16 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 
+# ── NGROK (tests uniquement) ──────────────────────────────────────────────────
+# Quand tu lances ngrok, il utilise le domaine *.ngrok-free.app
+# Django vérifie le Host: header HTTP — si l'host ngrok n'est pas dans ALLOWED_HOSTS, il renvoie 400.
+# Cette ligne accepte automatiquement tous les sous-domaines ngrok-free.app SANS qu'on
+# ait à mettre l'URL exacte dans .env à chaque session ngrok.
+# En production (DEBUG=False) ngrok ne sera pas utilisé donc ça ne pose aucun risque.
+if DEBUG:
+    ALLOWED_HOSTS += ['.ngrok-free.app']
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ──────────────────────────────────────────────
 # APPLICATIONS
 # ──────────────────────────────────────────────
@@ -147,6 +157,13 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # EXTERNAL APIS
 # ──────────────────────────────────────────────
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+
+# Chargily Pay — paiement en ligne algérien (CIB + EDAHABIA)
+# Clés disponibles sur : https://pay.chargily.net/dashboard → Développeurs
+# En mode test : utiliser les clés "test" (préfixe test_sk_...)
+# En production : utiliser les clés "live" (préfixe live_sk_...)
+CHARGILY_API_KEY = os.getenv('CHARGILY_API_KEY', '')
+CHARGILY_SECRET_KEY = os.getenv('CHARGILY_SECRET_KEY', '')
 
 # URL publique du frontend (utilisée dans les emails)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:5173')

@@ -23,6 +23,8 @@ from .views import (
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
+    ChargilyCheckoutAPIView, ChargilyWebhookAPIView,
+    EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
     NotificationListAPIView, MarkNotificationReadAPIView,
@@ -36,6 +38,7 @@ from .views import (
     ExportCandidaturesCSVAPIView, ExportEntreprisesCSVAPIView,
     ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView,
     AdminMarcheAPIView, AdminAuditLogAPIView, AdminDemandesPremiumAPIView,
+    AdminCompteAdminsAPIView,
 
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
@@ -115,12 +118,24 @@ urlpatterns = [
     path('admin/demandes-premium/<int:demande_id>/activer/', AdminDemandesPremiumAPIView.as_view(), name='admin-activer-premium'),
     path('premium/demande/', DemanderActivationPremiumAPIView.as_view(), name='demande-premium'),
     path('premium/envoyer-recu/', EnvoyerRecuPremiumAPIView.as_view(), name='envoyer-recu-premium'),
+    # Chargily Pay — paiement en ligne
+    path('premium/chargily/checkout/', ChargilyCheckoutAPIView.as_view(), name='chargily-checkout'),
+    path('premium/chargily/webhook/', ChargilyWebhookAPIView.as_view(), name='chargily-webhook'),
+    # Équipe
+    path('equipe/', EquipeAPIView.as_view(), name='equipe-list'),
+    path('equipe/inviter/', InviterMembreAPIView.as_view(), name='equipe-inviter'),
+    path('equipe/invitations/<int:invitation_id>/', InviterMembreAPIView.as_view(), name='equipe-invitation-supprimer'),
+    path('equipe/<int:membre_id>/', EquipeAPIView.as_view(), name='equipe-membre'),
+    path('equipe/invitation/<str:token>/', AccepterInvitationAPIView.as_view(), name='equipe-accepter'),
+    path('equipe/audit/', EquipeAuditLogAPIView.as_view(), name='equipe-audit'),
     path('admin/export/candidatures/', ExportCandidaturesCSVAPIView.as_view(), name='export-candidatures'),
     path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='export-entreprises'),
     path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='export-offres'),
     path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='export-utilisateurs'),
     path('admin/metiers/', MetierReferentielAdminAPIView.as_view(), name='admin-metiers'),
     path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view(), name='admin-metier-detail'),
+    path('admin/comptes-admins/', AdminCompteAdminsAPIView.as_view(), name='admin-comptes-admins'),
+    path('admin/comptes-admins/<int:admin_id>/', AdminCompteAdminsAPIView.as_view(), name='admin-compte-admin-detail'),
 
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),

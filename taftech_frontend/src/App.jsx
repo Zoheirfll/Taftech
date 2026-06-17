@@ -1,8 +1,43 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ShieldOff } from "lucide-react";
 
 import ErrorBoundary from "./utils/ErrorBoundary";
+import { authService } from "./Services/authService";
+
+const RoleGuard = ({ minRole, children }) => {
+  if (!authService.peutFaire(minRole)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <ShieldOff size={40} className="text-slate-300" />
+        <h2 className="text-xl font-bold text-slate-700">Accès restreint</h2>
+        <p className="text-sm text-slate-500">
+          Votre rôle dans cette équipe ne vous permet pas d'accéder à cette page.
+        </p>
+      </div>
+    );
+  }
+  return children;
+};
+
+// Redirige les utilisateurs déjà connectés hors des pages guest (login, register…)
+const GuestRoute = ({ children, portal = "candidat" }) => {
+  const role = authService.getUserRole();
+  const estMembre = authService.getEstMembreEquipe();
+  if (!role) return children;
+  if (role === "ADMIN") {
+    return <Navigate to="/admin-taftech" replace />;
+  }
+  if (role === "RECRUTEUR" || estMembre) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  // CANDIDAT sur portail recruteur → renvoyer au bon portail
+  if (portal === "recruteur") {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to="/profil" replace />;
+};
 
 // Components & Layouts
 import Navbar from "./Components/Navbar";
@@ -29,6 +64,8 @@ import ResetPassword from "./Pages/Auth/ResetPassword";
 import LandingRecruteur from "./Pages/Recruteur/Portal/LandingRecruteur";
 import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
 import PremiumPage from "./Pages/Recruteur/Portal/PremiumPage";
+import PremiumSuccessPage from "./Pages/Recruteur/Portal/PremiumSuccessPage";
+import AccepterInvitation from "./Pages/Recruteur/AccepterInvitation";
 
 // Pages Recruteur (espace connecté)
 import CreateJob from "./Pages/Recruteur/CreateJob";
@@ -58,6 +95,7 @@ import AdminUsers from "./Pages/Admin/AdminUsers";
 import AdminBroadcast from "./Pages/admin/AdminBroadcast";
 import AdminMetiers from "./Pages/Admin/AdminMetiers";
 import AdminAuditLogs from "./Pages/Admin/AdminAuditLogs";
+import AdminComptes from "./Pages/Admin/AdminComptes";
 
 if (import.meta.env.MODE === "production") {
   const noop = () => {};
@@ -109,27 +147,29 @@ function AppContent() {
           <Route path="/entreprises" element={<Entreprises />} />
           <Route path="/regions" element={<OffresParRegion />} />
           <Route path="/secteurs" element={<OffresParSecteur />} />
-          <Route path="/register" element={<RegisterCandidat />} />
-          <Route path="/register-entreprise" element={<RegisterRecruteur />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<GuestRoute><RegisterCandidat /></GuestRoute>} />
+          <Route path="/register-entreprise" element={<GuestRoute><RegisterRecruteur /></GuestRoute>} />
+          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
           <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/entreprise/:id" element={<EntreprisePublic />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+          <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
 
           {/* PORTAIL RECRUTEUR */}
           <Route path="/recruteurs" element={<LandingRecruteur />} />
-          <Route path="/recruteurs/connexion" element={<LoginRecruteur />} />
+          <Route path="/recruteurs/connexion" element={<GuestRoute portal="recruteur"><LoginRecruteur /></GuestRoute>} />
           <Route path="/recruteurs/premium" element={<PremiumPage />} />
-          <Route path="/recruteurs/inscription" element={<RegisterRecruteur />} />
+          <Route path="/recruteurs/premium/success" element={<PremiumSuccessPage />} />
+          <Route path="/invitation/equipe/:token" element={<AccepterInvitation />} />
+          <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />
 
           {/* ESPACE RECRUTEUR CONNECTÉ */}
-          <Route path="/creer-offre" element={<CreateJob />} />
+          <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard>} />
           <Route path="/dashboard" element={<DashboardRecruteur />} />
           <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
-          <Route path="/cvtheque" element={<CVTheque />} />
+          <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
           <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
-          <Route path="/questionnaires" element={<Questionnaires />} />
+          <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
           <Route path="/parametres" element={<ParametresRecruteur />} />
 
           {/* ESPACE CANDIDAT */}
@@ -155,6 +195,7 @@ function AppContent() {
             <Route path="candidatures" element={<AdminCandidatures />} />
             <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
             <Route path="audit" element={<AdminAuditLogs />} />
+            <Route path="comptes-admins" element={<AdminComptes />} />
           </Route>
         </Routes>
       </main>

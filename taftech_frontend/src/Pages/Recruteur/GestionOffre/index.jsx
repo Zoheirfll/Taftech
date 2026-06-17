@@ -14,6 +14,7 @@ import {
 import { useGestionOffre } from "./useGestionOffre";
 import { DetailCandidature } from "./DetailCandidature";
 import { Modals } from "./Modals";
+import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 
 const STATUTS_DOTS = {
@@ -116,7 +117,7 @@ const GestionOffre = () => {
             {offre.candidatures.length > 1 ? "s" : ""}
           </p>
         </div>
-        {!offre.est_cloturee && (
+        {!offre.est_cloturee && authService.peutFaire("UTILISATEUR") && (
           <button
             onClick={handleCloturer}
             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"

@@ -4,7 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import communesAlgerie from "../../data/communes.json";
-import { reportError } from "../../utils/errorReporter"; // ✅ Import ajouté
+import { reportError } from "../../utils/errorReporter";
 import { selectStyles } from "../../theme";
 
 const CreateJob = () => {

@@ -142,8 +142,10 @@ describe("🔧 Logique Métier - Service <authService />", () => {
 
     await authService.login("test@test.dz", "pwd");
 
-    // Le localStorage ne doit pas avoir été appelé
-    expect(localStorage.setItem).not.toHaveBeenCalled();
+    // userRole ne doit pas être sauvé (pas de rôle dans la réponse)
+    expect(localStorage.setItem).not.toHaveBeenCalledWith("userRole", expect.anything());
+    // estMembreEquipe est toujours sauvé (valeur par défaut false)
+    expect(localStorage.setItem).toHaveBeenCalledWith("estMembreEquipe", "false");
   });
 
   it("🔴 EC3 : Échec de la récupération du profil (Télémétrie API GET)", async () => {
@@ -158,5 +160,78 @@ describe("🔧 Logique Métier - Service <authService />", () => {
       "ECHEC_GET_PROFIL_API",
       fakeError,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests peutFaire() — hiérarchie des rôles membres
+// ---------------------------------------------------------------------------
+
+describe("🔑 Permissions - peutFaire()", () => {
+  beforeEach(() => {
+    mockStore = {};
+    vi.clearAllMocks();
+  });
+
+  // Cas : RECRUTEUR (propriétaire) — toujours autorisé
+  it("🟢 RECRUTEUR (propriétaire) passe n'importe quelle action", () => {
+    mockStore["userRole"] = "RECRUTEUR";
+    expect(authService.peutFaire("PROPRIETAIRE")).toBe(true);
+    expect(authService.peutFaire("ADMIN")).toBe(true);
+    expect(authService.peutFaire("UTILISATEUR")).toBe(true);
+    expect(authService.peutFaire("INVITE")).toBe(true);
+  });
+
+  // Cas : membre ADMIN — autorisé pour tout via shortcut
+  it("🟢 Membre ADMIN passe toutes les actions", () => {
+    mockStore["userRole"] = null;
+    mockStore["membreRole"] = "ADMIN";
+    expect(authService.peutFaire("ADMIN")).toBe(true);
+    expect(authService.peutFaire("UTILISATEUR")).toBe(true);
+    expect(authService.peutFaire("INVITE")).toBe(true);
+  });
+
+  // Cas : membre UTILISATEUR — autorisé UTILISATEUR et INVITE, pas ADMIN ni PROPRIETAIRE
+  it("🟢 Membre UTILISATEUR passe UTILISATEUR et INVITE", () => {
+    mockStore["membreRole"] = "UTILISATEUR";
+    expect(authService.peutFaire("UTILISATEUR")).toBe(true);
+    expect(authService.peutFaire("INVITE")).toBe(true);
+  });
+
+  it("🔴 Membre UTILISATEUR bloqué pour ADMIN", () => {
+    mockStore["membreRole"] = "UTILISATEUR";
+    expect(authService.peutFaire("ADMIN")).toBe(false);
+  });
+
+  // Cas : membre INVITE — autorisé uniquement INVITE
+  it("🟢 Membre INVITE passe INVITE seulement", () => {
+    mockStore["membreRole"] = "INVITE";
+    expect(authService.peutFaire("INVITE")).toBe(true);
+  });
+
+  it("🔴 Membre INVITE bloqué pour UTILISATEUR", () => {
+    mockStore["membreRole"] = "INVITE";
+    expect(authService.peutFaire("UTILISATEUR")).toBe(false);
+  });
+
+  it("🔴 Membre INVITE bloqué pour ADMIN", () => {
+    mockStore["membreRole"] = "INVITE";
+    expect(authService.peutFaire("ADMIN")).toBe(false);
+  });
+
+  // Cas edge : pas de rôle membre stocké → défaut INVITE
+  it("🔴 Sans membreRole stocké, défaut INVITE — bloqué pour UTILISATEUR", () => {
+    // Aucune clé dans le store
+    expect(authService.peutFaire("UTILISATEUR")).toBe(false);
+  });
+
+  it("🟢 Sans membreRole stocké, défaut INVITE — autorisé pour INVITE", () => {
+    expect(authService.peutFaire("INVITE")).toBe(true);
+  });
+
+  // Bug corrigé : ADMIN était absent de ORDRE → indexOf=-1 → INVITE passait ADMIN check
+  it("🛡️ Régression : INVITE ne doit pas passer peutFaire('ADMIN')", () => {
+    mockStore["membreRole"] = "INVITE";
+    expect(authService.peutFaire("ADMIN")).toBe(false);
   });
 });

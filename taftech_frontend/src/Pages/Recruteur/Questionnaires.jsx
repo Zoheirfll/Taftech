@@ -255,7 +255,7 @@ const Questionnaires = () => {
                     <div className="flex items-center gap-2">
                       <GripVertical
                         size={16}
-                        className="text-slate-300 flex-shrink-0"
+                        className="text-slate-300 shrink-0"
                       />
                       <p className="text-xs font-semibold text-slate-600">
                         Question {i + 1}
@@ -275,7 +275,7 @@ const Questionnaires = () => {
                         onChange={(e) =>
                           updateQuestion(i, "type_question", e.target.value)
                         }
-                        className={inputClass + " flex-shrink-0 w-48"}
+                        className={inputClass + " shrink-0 w-48"}
                       >
                         {TYPE_OPTIONS.map((t) => (
                           <option key={t.value} value={t.value}>
@@ -313,7 +313,7 @@ const Questionnaires = () => {
                               <button
                                 type="button"
                                 onClick={() => removeChoix(i, ci)}
-                                className="p-2 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+                                className="p-2 text-slate-400 hover:text-red-500 transition-colors shrink-0"
                               >
                                 <X size={14} />
                               </button>

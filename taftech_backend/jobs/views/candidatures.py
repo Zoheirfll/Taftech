@@ -12,8 +12,9 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from ..models import OffreEmploi, Candidature, Notification
+from ..models import OffreEmploi, Candidature, Notification, EquipeActionLog
 from ..models import QuestionQuestionnaire, ReponseCandidat
+from .equipe import get_entreprise_for_user, _log
 from ..serializers import (
     PostulerDTO, PostulerRapideDTO,
     MesCandidaturesDTO, CandidatureRecruteurDTO
@@ -299,6 +300,12 @@ class UpdateCandidatureStatusAPIView(APIView):
                     message=message_notif
                 )
 
+        entreprise = get_entreprise_for_user(request.user)
+        if entreprise:
+            nom_candidat = candidature.candidat.get_full_name() if candidature.candidat else 'Candidat rapide'
+            _log(request.user, entreprise, 'STATUT_CANDIDATURE',
+                 f"{nom_candidat} — {candidature.offre.titre} → {nouveau_statut}")
+
         return Response({"message": "Statut mis à jour !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
 
 
@@ -340,6 +347,11 @@ class EvaluerCandidatureAPIView(APIView):
         candidature.commentaire_evaluation = request.data.get('commentaire_evaluation', '')
         candidature.note_globale = n_tech + n_comm + n_mot + n_exp
         candidature.save()
+        entreprise = get_entreprise_for_user(request.user)
+        if entreprise:
+            nom_candidat = candidature.candidat.get_full_name() if candidature.candidat else 'Candidat rapide'
+            _log(request.user, entreprise, 'EVALUER_CANDIDATURE',
+                 f"{nom_candidat} — {candidature.offre.titre} — note {candidature.note_globale}/20")
         serializer = CandidatureRecruteurDTO(candidature)
         return Response({"message": "Évaluation enregistrée !", "candidature": serializer.data}, status=status.HTTP_200_OK)
 

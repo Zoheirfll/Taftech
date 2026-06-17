@@ -48,6 +48,8 @@ from .recruteur import (
     QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView,
     EnvoyerRecuPremiumAPIView,
+    ChargilyCheckoutAPIView,
+    ChargilyWebhookAPIView,
 )
 from .admin import (
     AdminPagination,
@@ -67,6 +69,7 @@ from .admin import (
     AdminMarcheAPIView,
     AdminAuditLogAPIView,
     AdminDemandesPremiumAPIView,
+    AdminCompteAdminsAPIView,
 )
 from .ia import (
     OffresRecommandeesAPIView,
@@ -78,3 +81,9 @@ from .ia import (
     AnalyseGroqRecruteurAPIView,
 )
 from .bulletin import GenererBulletinPDFAPIView
+from .equipe import (
+    EquipeAPIView,
+    InviterMembreAPIView,
+    AccepterInvitationAPIView,
+    EquipeAuditLogAPIView,
+)

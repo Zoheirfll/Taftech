@@ -24,6 +24,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, EmailTokenObtainSerializer, RecruteurRegisterSerializer
 from django.contrib.auth import get_user_model
 from .models import SystemErrorLog
+from jobs.views.equipe import get_entreprise_for_user, _log
 from rest_framework.permissions import IsAdminUser
 from .serializers import SystemErrorLogSerializer
 from datetime import timedelta
@@ -176,7 +177,7 @@ class CookieTokenObtainView(TokenObtainPairView):
         # Validation du portail : candidat ne peut pas se connecter sur l'espace recruteur et vice-versa
         portal = request.data.get('portal')
         role = data.get('role')
-        if portal == 'recruteur' and role not in ('RECRUTEUR', 'ADMIN'):
+        if portal == 'recruteur' and role not in ('RECRUTEUR', 'ADMIN') and not data.get('est_membre_equipe'):
             return Response(
                 {"detail": "Ce compte n'est pas un compte recruteur."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -195,7 +196,31 @@ class CookieTokenObtainView(TokenObtainPairView):
         except Exception:
             pass
 
-        response = Response({"role": data['role']}, status=status.HTTP_200_OK)
+        # Bloquer les membres si le premium a expiré (le propriétaire garde toujours l'accès)
+        if data.get('est_membre_equipe'):
+            try:
+                email = request.data.get('email') or request.data.get('username')
+                user_obj = User.objects.get(email=email)
+                entreprise = get_entreprise_for_user(user_obj)
+                if entreprise and not entreprise.est_premium_actif:
+                    return Response(
+                        {"detail": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            except Exception:
+                pass
+
+        # Log de connexion pour les membres d'équipe et recruteurs
+        try:
+            email = request.data.get('email') or request.data.get('username')
+            user_for_log = User.objects.get(email=email)
+            entreprise_for_log = get_entreprise_for_user(user_for_log)
+            if entreprise_for_log:
+                _log(user_for_log, entreprise_for_log, 'CONNEXION', f"via portail {portal or 'direct'}")
+        except Exception:
+            pass
+
+        response = Response({"role": data['role'], "est_membre_equipe": data.get('est_membre_equipe', False)}, status=status.HTTP_200_OK)
         response.set_cookie(
             key=settings.SIMPLE_JWT['AUTH_COOKIE'],
             value=data['access'],

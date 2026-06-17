@@ -14,6 +14,7 @@ export const authService = {
       if (response.data.role) {
         localStorage.setItem("userRole", response.data.role);
       }
+      localStorage.setItem("estMembreEquipe", response.data.est_membre_equipe ? "true" : "false");
       return response.data;
     } catch (err) {
       reportError("ECHEC_LOGIN_API", err);
@@ -28,11 +29,14 @@ export const authService = {
     try {
       await api.post("accounts/logout/");
     } catch (err) {
-      // On ignore l'erreur réseau — on nettoie quand même côté client
+      reportError("ECHEC_LOGOUT_API", err);
     } finally {
       const role = localStorage.getItem("userRole");
+      const estMembre = localStorage.getItem("estMembreEquipe") === "true";
       localStorage.removeItem("userRole");
-      const dest = redirectTo || (role === "RECRUTEUR" ? "/recruteurs/connexion" : "/login");
+      localStorage.removeItem("estMembreEquipe");
+      localStorage.removeItem("membreRole");
+      const dest = redirectTo || (role === "RECRUTEUR" || estMembre ? "/recruteurs/connexion" : "/login");
       window.location.href = dest;
     }
   },
@@ -46,6 +50,34 @@ export const authService = {
 
   getUserRole: () => {
     return localStorage.getItem("userRole");
+  },
+
+  getEstMembreEquipe: () => {
+    return localStorage.getItem("estMembreEquipe") === "true";
+  },
+
+  isRecruteurOuMembre: () => {
+    const role = localStorage.getItem("userRole");
+    const estMembre = localStorage.getItem("estMembreEquipe") === "true";
+    return role === "RECRUTEUR" || estMembre;
+  },
+
+  // Rôle dans l'équipe : PROPRIETAIRE | ADMIN | UTILISATEUR | INVITE
+  getMembreRole: () => localStorage.getItem("membreRole") || null,
+  setMembreRole: (role) => {
+    if (role) localStorage.setItem("membreRole", role);
+    else localStorage.removeItem("membreRole");
+  },
+
+  // Vérifie si le membre a au moins le niveau de rôle requis
+  // Ordre de priorité : PROPRIETAIRE > ADMIN > UTILISATEUR > INVITE
+  peutFaire: (actionRole) => {
+    // RECRUTEUR (propriétaire) et ADMIN ont tous les droits
+    if (localStorage.getItem("userRole") === "RECRUTEUR") return true;
+    const monRole = localStorage.getItem("membreRole") || "INVITE";
+    if (monRole === "ADMIN") return true;
+    const ORDRE = ["INVITE", "UTILISATEUR", "ADMIN", "PROPRIETAIRE"];
+    return ORDRE.indexOf(monRole) >= ORDRE.indexOf(actionRole);
   },
 
   // --------------------------------------------------------
@@ -141,6 +173,7 @@ export const authService = {
       if (response.data.role) {
         localStorage.setItem("userRole", response.data.role);
       }
+      localStorage.setItem("estMembreEquipe", response.data.est_membre_equipe ? "true" : "false");
       return response.data;
     } catch (err) {
       reportError("ECHEC_GOOGLE_LOGIN", err);

@@ -1,7 +1,13 @@
 import axios from "axios";
 import { reportError } from "../utils/errorReporter";
 
-const API_URL = "http://localhost:8000/api/";
+// Si VITE_API_URL est défini dans .env → axios appelle directement ce serveur
+// Si VITE_API_URL est vide → axios utilise une URL relative (/api/)
+// et le proxy Vite (vite.config.js) redirige vers localhost:8000
+// C'est le mode utilisé avec ngrok : un seul tunnel sur le port 5173 suffit
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api/`
+  : "/api/";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -44,10 +50,12 @@ api.interceptors.response.use(
 
       // Si c'est déjà le rafraîchissement qui échoue, on arrête tout
       const role = localStorage.getItem("userRole");
-      const loginRedirect = role === "RECRUTEUR" ? "/recruteurs/connexion" : "/login";
+      const estMembre = localStorage.getItem("estMembreEquipe") === "true";
+      const loginRedirect = (role === "RECRUTEUR" || estMembre) ? "/recruteurs/connexion" : "/login";
 
       if (originalRequest.url.includes("token/refresh/")) {
         localStorage.removeItem("userRole");
+        localStorage.removeItem("estMembreEquipe");
         window.location.href = loginRedirect;
         return Promise.reject(error);
       }
@@ -62,6 +70,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("userRole");
+        localStorage.removeItem("estMembreEquipe");
         window.location.href = loginRedirect;
         return Promise.reject(refreshError);
       }

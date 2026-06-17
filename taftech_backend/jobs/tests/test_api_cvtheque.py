@@ -1,16 +1,26 @@
+from datetime import timedelta
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from jobs.models import ProfilCandidat, ExperienceCandidat
+from jobs.models import ProfilCandidat, ExperienceCandidat, ProfilEntreprise
 import datetime
 
 User = get_user_model()
 
 class CVthequeAndAdvancedTests(APITestCase):
     def setUp(self):
-        # CORRECTION : Ajout des adresses emails pour respecter la contrainte d'unicité (UniqueConstraint)
         self.rh = User.objects.create_user(username="rh_cv", email="rh_cv@test.com", role="RECRUTEUR")
+        # ProfilEntreprise requis — CVThèque retourne 403 si pas d'entreprise
+        ProfilEntreprise.objects.create(
+            user=self.rh,
+            nom_entreprise="CVCorp",
+            registre_commerce="RC_CV",
+            est_approuvee=True,
+            est_premium=True,
+            premium_expire_at=timezone.now() + timedelta(days=30),
+        )
         self.cand = User.objects.create_user(username="cand_ia", email="cand_ia@test.com", role="CANDIDAT")
         
         self.profil_cand = ProfilCandidat.objects.create(

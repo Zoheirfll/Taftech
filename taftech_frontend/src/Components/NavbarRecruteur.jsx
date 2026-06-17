@@ -12,6 +12,7 @@ import {
 const NavbarRecruteur = () => {
   const isLogged = authService.isAuthenticated();
   const role = authService.getUserRole();
+  const estRecruteurOuMembre = authService.isRecruteurOuMembre();
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -21,7 +22,7 @@ const NavbarRecruteur = () => {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (isLogged && role === "RECRUTEUR") {
+    if (isLogged && estRecruteurOuMembre) {
       const load = async () => {
         try {
           const dash = await jobsService.getDashboard();
@@ -31,6 +32,7 @@ const NavbarRecruteur = () => {
           }
           if (dash.est_premium) setIsPremium(true);
           if (dash.premium_expire_at) setPremiumExpire(dash.premium_expire_at);
+          if (dash.membre_role) authService.setMembreRole(dash.membre_role);
         } catch (err) {
           reportError("ECHEC_PHOTO_NAVBAR_RECRUTEUR", err);
         }
@@ -77,17 +79,21 @@ const NavbarRecruteur = () => {
           )}
 
           {/* LIENS NAVIGATION (connecté) */}
-          {isLogged && role === "RECRUTEUR" && (
+          {isLogged && estRecruteurOuMembre && (
             <div className="hidden lg:flex items-center gap-6">
               <Link to="/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5">
                 <LayoutDashboard size={14} /> Tableau de bord
               </Link>
-              <Link to="/creer-offre" className="text-sm font-medium text-teal-700 hover:text-teal-800 transition-colors flex items-center gap-1.5">
-                <Briefcase size={14} /> Publier une offre
-              </Link>
-              <Link to="/cvtheque" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5">
-                <Search size={14} /> CVthèque
-              </Link>
+              {authService.peutFaire("UTILISATEUR") && (
+                <Link to="/creer-offre" className="text-sm font-medium text-teal-700 hover:text-teal-800 transition-colors flex items-center gap-1.5">
+                  <Briefcase size={14} /> Publier une offre
+                </Link>
+              )}
+              {authService.peutFaire("UTILISATEUR") && (
+                <Link to="/cvtheque" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5">
+                  <Search size={14} /> CVthèque
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -108,7 +114,7 @@ const NavbarRecruteur = () => {
             </>
           )}
 
-          {isLogged && role === "RECRUTEUR" && (
+          {isLogged && estRecruteurOuMembre && (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -121,7 +127,7 @@ const NavbarRecruteur = () => {
                       <span className="text-amber-600 font-semibold">
                         ⭐ Premium
                         {premiumExpire && (
-                          <span className="text-amber-500 font-normal"> · {new Date(premiumExpire).toLocaleDateString("fr-DZ")}</span>
+                          <span className="text-amber-500 font-normal"> · {premiumExpire}</span>
                         )}
                       </span>
                     ) : (
@@ -141,14 +147,15 @@ const NavbarRecruteur = () => {
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
                   {[
-                    { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-                    { to: "/cvtheque", icon: Search, label: "CVthèque" },
-                    { to: "/candidatures-spontanees", icon: Inbox, label: "Candidatures spontanées" },
-                    { to: "/creer-offre", icon: Briefcase, label: "Publier une offre" },
-                    { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires" },
-                    { to: "/parametres", icon: Settings, label: "Paramètres" },
-                    { to: "/recruteurs/premium", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true },
-                  ].map(({ to, icon: Icon, label, accent }) => (
+                    { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", minRole: "INVITE" },
+                    { to: "/cvtheque", icon: Search, label: "CVthèque", minRole: "UTILISATEUR" },
+                    { to: "/candidatures-spontanees", icon: Inbox, label: "Candidatures spontanées", minRole: "INVITE" },
+                    { to: "/creer-offre", icon: Briefcase, label: "Publier une offre", minRole: "UTILISATEUR" },
+                    { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires", minRole: "UTILISATEUR" },
+                    { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
+                    ...(authService.peutFaire("PROPRIETAIRE") ? [{ to: "/recruteurs/premium", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }] : []),
+                  ].filter(({ minRole }) => authService.peutFaire(minRole))
+                  .map(({ to, icon: Icon, label, accent }) => (
                     <Link
                       key={to}
                       to={to}
@@ -209,16 +216,17 @@ const NavbarRecruteur = () => {
               </Link>
             </>
           )}
-          {isLogged && role === "RECRUTEUR" && (
+          {isLogged && estRecruteurOuMembre && (
             <>
               {[
-                { to: "/dashboard", label: "Tableau de bord" },
-                { to: "/creer-offre", label: "Publier une offre" },
-                { to: "/cvtheque", label: "CVthèque" },
-                { to: "/candidatures-spontanees", label: "Candidatures spontanées" },
-                { to: "/questionnaires", label: "Questionnaires" },
-                { to: "/parametres", label: "Paramètres" },
-              ].map(({ to, label }) => (
+                { to: "/dashboard", label: "Tableau de bord", minRole: "INVITE" },
+                { to: "/creer-offre", label: "Publier une offre", minRole: "UTILISATEUR" },
+                { to: "/cvtheque", label: "CVthèque", minRole: "UTILISATEUR" },
+                { to: "/candidatures-spontanees", label: "Candidatures spontanées", minRole: "INVITE" },
+                { to: "/questionnaires", label: "Questionnaires", minRole: "UTILISATEUR" },
+                { to: "/parametres", label: "Paramètres", minRole: "INVITE" },
+              ].filter(({ minRole }) => authService.peutFaire(minRole))
+              .map(({ to, label }) => (
                 <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors">
                   {label}
                 </Link>

@@ -60,7 +60,7 @@ describe("⚙️ Système - Intercepteurs Axios & Télémétrie", () => {
   it("🟡 Edge Case : Refresh success -> Rejoue la requête", async () => {
     mockApi.onGet("/me/").replyOnce(401);
     mockGlobalAxios
-      .onPost("http://localhost:8000/api/token/refresh/")
+      .onPost(/token\/refresh\//)
       .reply(200);
     mockApi.onGet("/me/").replyOnce(200, { name: "Alaa" });
 

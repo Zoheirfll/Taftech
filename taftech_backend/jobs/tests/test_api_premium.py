@@ -97,7 +97,8 @@ class DemanderPremiumAPITest(APITestCase):
         )
         self.client.force_authenticate(user=candidat)
         response = self.client.post(self.url, {"moyen_paiement": "CIB", "nb_mois": 1})
-        self.assertIn(response.status_code, [403, 400])
+        # Un CANDIDAT n'a pas de ProfilEntreprise → 404 (entreprise introuvable)
+        self.assertIn(response.status_code, [403, 400, 404])
 
     def test_non_authentifie_refuse(self):
         response = self.client.post(self.url, {"moyen_paiement": "CIB", "nb_mois": 1})

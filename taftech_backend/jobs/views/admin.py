@@ -443,3 +443,101 @@ class AdminDemandesPremiumAPIView(APIView):
             'message': 'Premium activé.',
             'premium_expire_at': entreprise.premium_expire_at.strftime('%d/%m/%Y'),
         })
+
+
+class AdminCompteAdminsAPIView(APIView):
+    """Gestion des comptes administrateurs (liste, créer, modifier, supprimer)."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        admins = User.objects.filter(is_staff=True).order_by('-date_joined')
+        data = [
+            {
+                'id': u.id,
+                'email': u.email,
+                'first_name': u.first_name,
+                'last_name': u.last_name,
+                'telephone': u.telephone or '',
+                'is_superuser': u.is_superuser,
+                'is_active': u.is_active,
+                'date_joined': u.date_joined.strftime('%d/%m/%Y'),
+            }
+            for u in admins
+        ]
+        return Response(data)
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        password = request.data.get('password', '').strip()
+        first_name = request.data.get('first_name', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+        telephone = request.data.get('telephone', '').strip()
+
+        if not email or not password:
+            return Response({'error': 'Email et mot de passe obligatoires.'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'Un compte avec cet email existe déjà.'}, status=400)
+        if len(password) < 8:
+            return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            telephone=telephone,
+            is_active=True,
+        )
+        user.is_staff = True
+        user.role = 'ADMIN'
+        user.save(update_fields=['is_staff', 'role'])
+        _audit(request, 'AUTRE', f"Nouveau compte admin créé : {email}")
+        return Response({'message': 'Compte admin créé.', 'id': user.id}, status=201)
+
+    def patch(self, request, admin_id):
+        try:
+            user = User.objects.get(id=admin_id, is_staff=True)
+        except User.DoesNotExist:
+            return Response({'error': 'Admin introuvable.'}, status=404)
+
+        if user.is_superuser and not request.user.is_superuser:
+            return Response({'error': 'Impossible de modifier un superutilisateur.'}, status=403)
+
+        email = request.data.get('email', user.email).strip()
+        first_name = request.data.get('first_name', user.first_name).strip()
+        last_name = request.data.get('last_name', user.last_name).strip()
+        telephone = request.data.get('telephone', '').strip()
+        password = request.data.get('password', '').strip()
+
+        if email != user.email and User.objects.filter(email=email).exclude(id=admin_id).exists():
+            return Response({'error': 'Cet email est déjà utilisé.'}, status=400)
+
+        user.email = email
+        user.username = email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.telephone = telephone
+        if password:
+            if len(password) < 8:
+                return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
+            user.set_password(password)
+        user.save()
+        _audit(request, 'AUTRE', f"Compte admin modifié : {email}")
+        return Response({'message': 'Compte mis à jour.'})
+
+    def delete(self, request, admin_id):
+        try:
+            user = User.objects.get(id=admin_id, is_staff=True)
+        except User.DoesNotExist:
+            return Response({'error': 'Admin introuvable.'}, status=404)
+
+        if user.id == request.user.id:
+            return Response({'error': 'Impossible de supprimer votre propre compte.'}, status=400)
+        if user.is_superuser:
+            return Response({'error': 'Impossible de supprimer un superutilisateur.'}, status=403)
+
+        email = user.email
+        user.delete()
+        _audit(request, 'AUTRE', f"Compte admin supprimé : {email}")
+        return Response({'message': 'Compte admin supprimé.'}, status=204)

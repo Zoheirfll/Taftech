@@ -110,6 +110,8 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
             user.save(update_fields=['failed_login_attempts', 'locked_until'])
 
         data['role'] = self.user.role
+        from jobs.models import MembreEquipe
+        data['est_membre_equipe'] = MembreEquipe.objects.filter(user=self.user).exists()
         return data
 class RecruteurRegisterSerializer(serializers.ModelSerializer):
     """

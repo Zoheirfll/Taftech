@@ -68,3 +68,70 @@ class GestionAvanceeRecruteurTests(APITestCase):
         
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+# =======================================================
+# TESTS EquipeActionLog — logs créés par offres/candidatures
+# =======================================================
+
+from jobs.models import EquipeActionLog
+
+
+class EquipeActionLogIntegrationTests(APITestCase):
+
+    def setUp(self):
+        self.rh = User.objects.create_user(
+            username="rh_log", email="rh_log@test.com", password="pwd", role="RECRUTEUR"
+        )
+        self.ent = ProfilEntreprise.objects.create(
+            user=self.rh, nom_entreprise="LogCorp", registre_commerce="RC_LOG", est_approuvee=True
+        )
+        self.offre = OffreEmploi.objects.create(entreprise=self.ent, titre="Dev Log")
+
+        self.candidat = User.objects.create_user(
+            username="cand_log", email="cand_log@test.com", password="pwd", role="CANDIDAT"
+        )
+        self.candidature = Candidature.objects.create(
+            offre=self.offre, candidat=self.candidat, statut="RECUE"
+        )
+
+    def test_creer_offre_cree_log(self):
+        """POST /creer-offre crée un EquipeActionLog CREER_OFFRE."""
+        self.client.force_authenticate(user=self.rh)
+        self.client.post(
+            reverse('creer-offre'),
+            {"titre": "Nouvelle offre", "wilaya": "31 - Oran", "type_contrat": "CDI", "experience_requise": "CONFIRME"}
+        )
+        self.assertTrue(
+            EquipeActionLog.objects.filter(entreprise=self.ent, action="CREER_OFFRE").exists()
+        )
+
+    def test_cloturer_offre_cree_log(self):
+        """PATCH /cloturer-offre crée un EquipeActionLog CLOTURER_OFFRE."""
+        self.client.force_authenticate(user=self.rh)
+        self.client.patch(reverse('cloturer-offre', kwargs={'offre_id': self.offre.id}))
+        self.assertTrue(
+            EquipeActionLog.objects.filter(entreprise=self.ent, action="CLOTURER_OFFRE").exists()
+        )
+
+    def test_modifier_statut_candidature_cree_log(self):
+        """PATCH statut candidature crée un EquipeActionLog STATUT_CANDIDATURE."""
+        self.client.force_authenticate(user=self.rh)
+        self.client.patch(
+            reverse('update-statut', kwargs={'candidature_id': self.candidature.id}),
+            {"statut": "ENTRETIEN"}
+        )
+        self.assertTrue(
+            EquipeActionLog.objects.filter(entreprise=self.ent, action="STATUT_CANDIDATURE").exists()
+        )
+
+    def test_evaluer_candidature_cree_log(self):
+        """PATCH evaluer crée un EquipeActionLog EVALUER_CANDIDATURE."""
+        self.client.force_authenticate(user=self.rh)
+        self.client.patch(
+            reverse('evaluer-candidature', kwargs={'candidature_id': self.candidature.id}),
+            {"note_technique": 4, "note_communication": 4, "note_motivation": 4, "note_experience": 4}
+        )
+        self.assertTrue(
+            EquipeActionLog.objects.filter(entreprise=self.ent, action="EVALUER_CANDIDATURE").exists()
+        )

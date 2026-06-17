@@ -217,7 +217,7 @@ class CandidaturesSpontaneesAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_EC7_recruteur_sans_entreprise_liste_vide(self):
-        """EC7 : Un recruteur sans entreprise reçoit une liste vide."""
+        """EC7 : Un recruteur sans entreprise est refusé (403 ou 404)."""
         recruteur_sans_ent = User.objects.create_user(
             username="recruteur_no_ent",
             email="noent@test.dz",
@@ -228,5 +228,4 @@ class CandidaturesSpontaneesAPITestCase(TestCase):
         response = self.client.get(
             "/api/jobs/dashboard/candidatures-spontanees/"
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])

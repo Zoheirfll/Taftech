@@ -237,7 +237,6 @@ const MesCandidatures = () => {
       try {
         const data = await jobsService.getMesCandidatures();
         setCandidatures(data);
-        console.log("details_matching:", data[0]?.details_matching);
       } catch (error) {
         reportError("ECHEC_RECUPERATION_CANDIDATURES", error);
       } finally {

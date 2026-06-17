@@ -25,6 +25,15 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+vi.mock("../src/Services/authService", () => ({
+  authService: {
+    getUserRole: vi.fn(() => "RECRUTEUR"),
+    getEstMembreEquipe: vi.fn(() => false),
+    getMembreRole: vi.fn(() => null),
+    peutFaire: vi.fn(() => true),
+  },
+}));
+
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
@@ -172,6 +181,24 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
   });
 
   // --- 🔴 EDGE CASES (4/4) ---
+
+  it("🔴 EC0 : Membre bloqué si premium expiré (403 PREMIUM_EXPIRE)", async () => {
+    jobsService.getDashboard.mockRejectedValue({
+      response: {
+        status: 403,
+        data: { code: "PREMIUM_EXPIRE", error: "L'abonnement Premium a expiré." },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <DashboardRecruteur />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Abonnement Premium expiré/i)).toBeInTheDocument();
+    });
+  });
 
   it("🔴 EC1 : Redirection forcée (404/403) si non inscrit", async () => {
     jobsService.getDashboard.mockRejectedValue({ response: { status: 404 } });

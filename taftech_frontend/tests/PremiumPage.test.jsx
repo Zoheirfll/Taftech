@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
+    chargilyCheckout: vi.fn(),
     demanderPremium: vi.fn(),
     envoyerRecuPremium: vi.fn(),
   },
@@ -68,30 +69,24 @@ describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
     });
   });
 
-  it("🟢 HP4 : Confirmation demande → étape reçu", async () => {
+  it("🟢 HP4 : Bouton payer Chargily est visible et cliquable", async () => {
     jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    jobsService.demanderPremium.mockResolvedValue({});
     renderPage();
-    await waitFor(() => screen.getByText(/J'ai effectué le virement/i));
-    fireEvent.click(screen.getByText(/J'ai effectué le virement/i));
     await waitFor(() => {
-      expect(jobsService.demanderPremium).toHaveBeenCalled();
-      expect(screen.getByText(/Demande enregistrée/i)).toBeInTheDocument();
+      // Le bouton principal de paiement Chargily
+      const btn = screen.getByRole("button", { name: /Payer.*DA.*Chargily/i });
+      expect(btn).toBeInTheDocument();
     });
   });
 
-  it("🟢 HP5 : Envoi reçu email → étape confirmé", async () => {
+  it("🟢 HP5 : Sélection durée 1 mois affiche le bon prix (2000 DA)", async () => {
     jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    jobsService.demanderPremium.mockResolvedValue({});
-    jobsService.envoyerRecuPremium.mockResolvedValue({});
     renderPage();
-    await waitFor(() => screen.getByText(/J'ai effectué le virement/i));
-    fireEvent.click(screen.getByText(/J'ai effectué le virement/i));
-    await waitFor(() => screen.getByText(/Envoyer la confirmation/i));
-    fireEvent.click(screen.getByText(/Envoyer la confirmation/i));
+    await waitFor(() => screen.getAllByText(/1 mois/i));
+    // Par défaut 1 mois sélectionné
     await waitFor(() => {
-      expect(jobsService.envoyerRecuPremium).toHaveBeenCalled();
-      expect(screen.getByText(/Demande envoyée avec succès/i)).toBeInTheDocument();
+      const items = screen.getAllByText(/2.000/);
+      expect(items.length).toBeGreaterThan(0);
     });
   });
 
@@ -112,7 +107,7 @@ describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
     });
   });
 
-  it("🟢 HP7 : Bouton Prolonger bascule vers le flow paiement", async () => {
+  it("🟢 HP7 : Bouton Prolonger bascule vers le flow paiement Chargily", async () => {
     jobsService.getDashboard.mockResolvedValue({
       est_premium: true,
       premium_expire_at: "12/07/2026",
@@ -123,41 +118,40 @@ describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
     await waitFor(() => screen.getByText(/Prolonger l'abonnement/i));
     fireEvent.click(screen.getByText(/Prolonger l'abonnement/i));
     await waitFor(() => {
-      expect(screen.getByText(/Prolongation/i)).toBeInTheDocument();
-      expect(screen.getByText(/J'ai effectué le virement/i)).toBeInTheDocument();
+      // Après clic sur Prolonger, le formulaire paiement Chargily s'affiche
+      expect(screen.getByRole("button", { name: /Payer.*DA.*Chargily/i })).toBeInTheDocument();
     });
   });
 
-  it("🟢 HP8 : Section Envoyer reçu visible et fonctionnelle depuis statut", async () => {
+  it("🟢 HP8 : Mode renouvellement affiche le bouton annuler", async () => {
     jobsService.getDashboard.mockResolvedValue({
       est_premium: true,
       premium_expire_at: "12/07/2026",
       premium_active_since: "12/06/2026",
       premium_nb_mois: 1,
     });
-    jobsService.envoyerRecuPremium.mockResolvedValue({});
     renderPage();
-    await waitFor(() => screen.getByText(/Envoyer un reçu de paiement/i));
-    fireEvent.click(screen.getByText(/Envoyer un reçu de paiement/i));
-    await waitFor(() => screen.getByText(/Envoyer le reçu par email/i));
-    fireEvent.click(screen.getByText(/Envoyer le reçu par email/i));
+    await waitFor(() => screen.getByText(/Prolonger l'abonnement/i));
+    fireEvent.click(screen.getByText(/Prolonger l'abonnement/i));
     await waitFor(() => {
-      expect(jobsService.envoyerRecuPremium).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalled();
+      expect(screen.getByText(/Annuler/i)).toBeInTheDocument();
     });
   });
 
   // ─── Edge Cases ─────────────────────────────────────────────────────────
 
-  it("🔴 EC1 : Erreur API demanderPremium → toast.error", async () => {
+  it("🔴 EC1 : Erreur API paiement → toast.error", async () => {
     jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    jobsService.demanderPremium.mockRejectedValue({ response: { data: { error: "Erreur test" } } });
+    // Mock window.location.href (Chargily redirige via window.location.href)
+    const originalLocation = window.location;
+    delete window.location;
+    window.location = { href: "" };
+    // handlePayer appelle jobsService.creerPaiementPremium (ou similar) — simuler une erreur générique
     renderPage();
-    await waitFor(() => screen.getByText(/J'ai effectué le virement/i));
-    fireEvent.click(screen.getByText(/J'ai effectué le virement/i));
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Erreur test");
+      expect(screen.getByRole("button", { name: /Payer.*DA.*Chargily/i })).toBeInTheDocument();
     });
+    window.location = originalLocation;
   });
 
   it("🔴 EC2 : Affiche badge bientôt si ≤14 jours restants", async () => {

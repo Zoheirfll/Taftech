@@ -26,13 +26,14 @@ class ProfilCandidatAPIView(APIView):
     def put(self, request):
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
         user = request.user
-        nin = request.data.get('nin')
-        telephone = request.data.get('telephone')
-        if nin is not None:
-            user.nin = nin
-        if telephone is not None:
-            user.telephone = telephone
-        user.save()
+        user_fields = []
+        for field in ('first_name', 'last_name', 'telephone', 'nin'):
+            val = request.data.get(field)
+            if val is not None:
+                setattr(user, field, val)
+                user_fields.append(field)
+        if user_fields:
+            user.save(update_fields=user_fields)
         serializer = ProfilCandidatDTO(profil, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

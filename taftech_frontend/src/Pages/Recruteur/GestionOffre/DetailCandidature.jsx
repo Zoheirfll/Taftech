@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Sparkles,
 } from "lucide-react";
+import { authService } from "../../../Services/authService";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -205,7 +206,8 @@ export const DetailCandidature = ({
             onChange={(e) =>
               handleStatusChange(selectedCandidature.id, e.target.value)
             }
-            className={`text-xs font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer ${STATUTS_STYLES[selectedCandidature.statut]}`}
+            disabled={!authService.peutFaire("UTILISATEUR")}
+            className={`text-xs font-semibold px-3 py-2 rounded-lg border outline-none ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"} ${STATUTS_STYLES[selectedCandidature.statut]}`}
           >
             {Object.entries(STATUTS_LABELS).map(([key, label]) => (
               <option key={key} value={key} className="bg-white text-slate-900">
@@ -293,7 +295,7 @@ export const DetailCandidature = ({
               <Zap size={12} /> CV Rapide
             </a>
           )}
-          {selectedCandidature.statut === "REFUSE" && (
+          {selectedCandidature.statut === "REFUSE" && authService.peutFaire("UTILISATEUR") && (
             <button
               onClick={() => supprimerCandidature(selectedCandidature.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors"
@@ -817,24 +819,26 @@ export const DetailCandidature = ({
               <p className="text-xs text-slate-500 mb-4">
                 Notez ce candidat après l'entretien.
               </p>
-              <button
-                onClick={() => {
-                  setEvalForm({
-                    note_technique: 0,
-                    note_communication: 0,
-                    note_motivation: 0,
-                    note_experience: 0,
-                    commentaire_evaluation: "",
-                  });
-                  setModalEval({
-                    isOpen: true,
-                    candidature: selectedCandidature,
-                  });
-                }}
-                className="px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
-              >
-                Évaluer ce candidat
-              </button>
+              {authService.peutFaire("UTILISATEUR") && (
+                <button
+                  onClick={() => {
+                    setEvalForm({
+                      note_technique: 0,
+                      note_communication: 0,
+                      note_motivation: 0,
+                      note_experience: 0,
+                      commentaire_evaluation: "",
+                    });
+                    setModalEval({
+                      isOpen: true,
+                      candidature: selectedCandidature,
+                    });
+                  }}
+                  className="px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                >
+                  Évaluer ce candidat
+                </button>
+              )}
             </div>
           )}
         </div>

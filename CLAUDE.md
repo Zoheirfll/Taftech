@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 12/06/2026 — US11 portail recruteur + US12 système Premium_
+_Dernière mise à jour : 16/06/2026 — Équipe : accès INVITE, audit log, GuestRoute, bloc premium expiré_
 
 ---
 
@@ -99,10 +99,11 @@ Ne jamais commencer un grid directement à `grid-cols-2` sans breakpoint mobile.
 - `offres.py` — JobListAPIView, JobDetailAPIView, JobCreateAPIView, UpdateOffreRecruteurAPIView, CloturerOffreAPIView, ConstantsAPIView
 - `profils.py` — ProfilCandidatAPIView, ExperienceAPIView, FormationAPIView, alertes, favoris, paramètres
 - `candidatures.py` — PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView, UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView, EvaluerCandidatureAPIView, Top5CandidatsAPIView
-- `recruteur.py` — DashboardRecruteurAPIView (retourne `est_premium`, `premium_expire_at`, `premium_active_since`, `premium_nb_mois`), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
+- `recruteur.py` — DashboardRecruteurAPIView (retourne `est_premium`, `premium_expire_at`, `premium_active_since`, `premium_nb_mois`, **bloc 403 `PREMIUM_EXPIRE` si membre non-propriétaire et premium expiré**), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
 - `admin.py` — AdminPagination + toutes vues admin + exports CSV + **AdminDemandesPremiumAPIView** (GET liste toutes, PATCH activer avec nb_mois → étend premium_expire_at)
 - `ia.py` — OffresRecommandeesAPIView, ParserCVAPIView, MetierReferentiel, SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView, AnalyseGroqRecruteurAPIView. Helper `_appel_groq()` mutualisé.
 - `bulletin.py` — GenererBulletinPDFAPIView
+- `equipe.py` — EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, **EquipeAuditLogAPIView** (`GET jobs/equipe/audit/` — 100 derniers logs, PROPRIETAIRE/ADMIN seulement). Helper `_log(user, entreprise, action, detail)` — appelé dans equipe, offres, candidatures, accounts/views.
 
 ### jobs/serializers/ (package)
 - `questionnaires.py` — ReponseChoixSerializer, QuestionnaireSerializer, ReponseCandidatSerializer
@@ -118,7 +119,7 @@ Centralise toutes les constantes métier — importer depuis là, pas depuis mod
 WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT, TAILLES_ENTREPRISE_CHOICES, WILAYAS_MAPPING, DIPLOMES_MAPPING, SPECIALITES_MAPPING, SYNONYMES_SPECIALITE
 
 ### accounts/
-- `views.py` — rate limiting (`AnonRateThrottle`), hack Cypress isolé (`if settings.DEBUG`), expiry code reset (10 min)
+- `views.py` — rate limiting (`AnonRateThrottle`), hack Cypress isolé (`if settings.DEBUG`), expiry code reset (10 min), **bloc login membre si premium expiré** (code `PREMIUM_EXPIRE`)
 - `models.py` — CustomUser + champ `code_verification_created_at`
 
 ### jobs/management/commands/
@@ -174,6 +175,7 @@ Pages/
 - Inscription candidat/recruteur, login JWT, déconnexion, mot de passe oublié, vérification email
 - Rôles : CANDIDAT / RECRUTEUR / ADMIN
 - Verrouillage compte (5 échecs → verrou 15 min)
+- `GuestRoute` : redirige les utilisateurs déjà connectés hors des pages login/inscription (ADMIN → /admin-taftech, RECRUTEUR/membre → /dashboard, CANDIDAT → /profil)
 
 ### 💼 Offres & Candidatures
 - CRUD offres recruteur, modération admin (APPROUVEE / EN_ATTENTE / REJETEE)
@@ -212,6 +214,17 @@ Pages/
 ### 📝 Candidatures Spontanées
 - Envoi sans compte, anti-doublon, vue recruteur filtrable, marquer lue / supprimer
 
+### 👥 Gestion d'Équipe Recruteur
+- Rôles membres : PROPRIETAIRE / ADMIN / UTILISATEUR / INVITE
+- `authService.peutFaire(minRole)` : hiérarchie `["INVITE","UTILISATEUR","ADMIN","PROPRIETAIRE"]`
+- INVITE : accès lecture seule (candidatures, dashboard stats) — boutons d'action masqués (UI level, pas route level)
+- ADMIN uniquement pour onglet "Mon entreprise" dans ParametresRecruteur
+- `EquipeActionLog` : journal d'activité complet — log automatique sur CONNEXION, CREER_OFFRE, MODIFIER_OFFRE, CLOTURER_OFFRE, STATUT_CANDIDATURE, EVALUER_CANDIDATURE, INVITER_MEMBRE, RETIRER_MEMBRE, CHANGER_ROLE
+- `EquipeAuditLogAPIView` : endpoint `GET /api/equipe/audit/` — visible PROPRIETAIRE/ADMIN, 100 derniers logs
+- Journal accordéon lazy-load dans MonEquipe.jsx (ne charge qu'à l'ouverture)
+- **Premium expiré → membres bloqués** : blocage au login (403 PREMIUM_EXPIRE) + blocage dashboard API ; PROPRIETAIRE toujours autorisé
+- Onglet "Mon équipe" toujours visible pour PROPRIETAIRE même si premium expiré (pour gérer/supprimer membres)
+
 ### ⭐ Système Premium (US11/12)
 - `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement)
 - `ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`
@@ -244,6 +257,7 @@ Pages/
 - `Candidature` (offre, candidat, statut, score_matching, details_matching, profil_snapshot, est_rapide, date_entretien, note_technique/communication/motivation/experience, note_globale, commentaire_evaluation)
 - `CandidatureSpontanee`, `Notification`, `MetierReferentiel`, `Questionnaire`, `QuestionQuestionnaire`, `ReponseChoix`, `ReponseCandidat`, `ProfilCandidatFavori`
 - **`DemandeActivationPremium`** (entreprise FK, moyen_paiement, nb_mois, est_traitee, date_demande, date_traitement) — migration 0040/0041
+- **`EquipeActionLog`** (entreprise FK, membre FK User nullable, action CharField, detail, date auto) — migration 0043. Actions : CONNEXION, CREER_OFFRE, MODIFIER_OFFRE, CLOTURER_OFFRE, STATUT_CANDIDATURE, EVALUER_CANDIDATURE, INVITER_MEMBRE, RETIRER_MEMBRE, CHANGER_ROLE, AUTRE
 
 ---
 
@@ -297,8 +311,14 @@ Pages/
 | Premium paiement | Manuel CIB/EDAHABIA + email | Pas de Chargily Pay pour l'instant |
 | Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
 | Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
+| Premium expiré membres | Blocage login (403) + blocage dashboard API | PROPRIETAIRE bypasse les deux couches |
+| INVITE accès | Masquage UI des boutons d'action, pas blocage route | Candidatures en lecture seule autorisées |
+| GuestRoute | Redirect si déjà connecté depuis login/register | Évite double session ou confusion de rôle |
+| EquipeActionLog | Nouveau modèle migration 0043 | Traçabilité complète équipe recruteur |
+| authService.peutFaire() | ORDRE = ["INVITE","UTILISATEUR","ADMIN","PROPRIETAIRE"] | Bug : ADMIN absent → indexOf=-1 → INVITE passait ADMIN check |
 | Logout redirect | Role-aware (RECRUTEUR → /recruteurs/connexion) | Lire role AVANT clearStorage |
 | Déploiement | Serveur algérien .dz | Conformité ANPDP + latence |
+| ngrok tests | Proxy Vite + 1 seul tunnel | Compte gratuit ngrok = 1 tunnel max. Vite proxy redirige /api vers Django côté serveur |
 
 ---
 
@@ -312,12 +332,12 @@ Pages/
 
 ---
 
-## ✅ ÉTAT TESTS (dernière vérification — US12)
+## ✅ ÉTAT TESTS (dernière vérification — Audit complet + équipe)
 
-- Backend : 211/211 ✅ (dont 18 nouveaux tests US12 premium + 5 tests throttle refactorisés)
-- Frontend Vitest : 283/283 ✅ (dont 10 nouveaux tests PremiumPage + 2 tests AdminEntreprises)
+- Backend : ~275/275 ✅ (dont 49 nouveaux tests équipe/audit, +10 tests PREMIUM_EXPIRE/logs)
+- Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe, +corrections mocks)
 - Cypress E2E : 7 fichiers — tests 1/2/3 stables, 4/5 instables (déprioritisé)
-- Vite build : propre ✅ (1923 modules)
+- Vite build : propre ✅ (1927 modules)
 
 ---
 
@@ -407,6 +427,26 @@ npm test -- --run
 npx cypress open
 
 # PostgreSQL port 5433
+
+# ── NGROK (partage pour tests externes) ──────────────────────────────────────
+# ngrok est installé dans : C:\Users\filali\Downloads\ngrok-v3-stable-windows-amd64\ngrok.exe
+# (ajouté au PATH utilisateur — ouvrir un nouveau terminal si non reconnu)
+#
+# Procédure complète (3 terminaux) :
+#   Terminal 1 : python manage.py runserver          (backend Django port 8000)
+#   Terminal 2 : npm run dev                         (frontend Vite port 5173)
+#   Terminal 3 : ngrok http 5173                     (tunnel public → port 5173)
+#
+# → Envoyer l'URL ngrok affichée (https://xxx.ngrok-free.app) aux testeurs
+#
+# Fonctionnement : Vite proxy intercepte /api et /media et les redirige vers
+# localhost:8000 côté serveur — les testeurs n'ont besoin que d'une seule URL.
+#
+# Rien à changer dans .env ni settings.py — tout est déjà configuré :
+#   - vite.config.js : proxy /api + /media → 127.0.0.1:8000, allowedHosts: true
+#   - axiosConfig.js : VITE_API_URL vide → URLs relatives → proxy Vite
+#   - settings.py    : ALLOWED_HOSTS += ['.ngrok-free.app'] si DEBUG=True
+# ─────────────────────────────────────────────────────────────────────────────
 ```
 
 ---

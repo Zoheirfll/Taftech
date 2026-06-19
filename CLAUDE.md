@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 19/06/2026 — Cypress 4/5 résolus, Cypress 13 downgrade, vite host:true_
+_Dernière mise à jour : 19/06/2026 — Dashboard erreurs système, Cypress 4/5 résolus, vite host:true_
 
 ---
 
@@ -222,6 +222,13 @@ Pages/
 - Multicritères avec debounce 400ms, pagination, offres recommandées IA
 - KPIs dashboard recruteur, Top 5 shortlist IA, archives, correction offre rejetée
 
+### 🔴 Dashboard Erreurs Système (Admin)
+- Page `/admin-taftech/erreurs-systeme` → `AdminSystemLogs.jsx`
+- API `GET /api/accounts/admin/system-logs/?page=N` — pagination 50/page
+- API `DELETE /api/accounts/admin/system-logs/` — tout effacer
+- Liste : date, message, URL, user + modal détail avec stack trace
+- Lien dans sidebar AdminLayout avec icône AlertTriangle
+
 ### 📬 Notifications, Alertes, Admin
 - Cloche navbar avec badge, boîte de réception, alertes emploi par email
 - Panel admin : stats, journal d'audit (`AuditLog`), broadcast, données marché
@@ -338,6 +345,7 @@ Pages/
 | Cypress ECONNREFUSED GUI | `host: true` dans vite.config.js server | Windows résout `localhost` en IPv6 mais Vite écoutait IPv4 seulement |
 | Cypress mock questionnaire | Utiliser `requis: true` (pas `obligatoire: true`) dans les mocks | Le composant JobDetail.jsx vérifie `q.requis`, pas `q.obligatoire` |
 | Cypress intercept jobDetail | Regex `/\/api\/jobs\/\d+\/$/` au lieu de `**/jobs/*/` | Le glob matchait aussi `/api/jobs/recommandations/` — race condition sur `cy.wait("@jobDetail")` |
+| AdminSystemLogs pagination | Pagination manuelle 50/page dans la vue (pas PageNumberPagination DRF) | Vue APIView simple, pas un ListAPIView — pagination injectée directement dans le GET |
 | Premium expiré membres | Blocage login (403) + blocage dashboard API | PROPRIETAIRE bypasse les deux couches |
 | INVITE accès | Masquage UI des boutons d'action, pas blocage route | Candidatures en lecture seule autorisées |
 | GuestRoute | Redirect si déjà connecté depuis login/register | Évite double session ou confusion de rôle |

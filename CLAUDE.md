@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 17/06/2026 — Swagger fix DEFAULT_SCHEMA_CLASS, règle MAJ CLAUDE.md_
+_Dernière mise à jour : 19/06/2026 — Cypress 4/5 résolus, Cypress 13 downgrade, vite host:true_
 
 ---
 
@@ -48,7 +48,7 @@ Plateforme de recrutement en ligne ciblant le marché algérien.
 - **Email**: Django SMTP Gmail
 - **Tests Backend**: Django TestCase + APIClient — ~268/268 ✅
 - **Tests Frontend**: Vitest + @testing-library/react — 312/312 ✅
-- **Tests E2E**: Cypress — 7 fichiers (1/2/3 stables, 4/5 instables — déprioritisés)
+- **Tests E2E**: Cypress 13.17.0 — 7 fichiers tous stables ✅
 - **GitHub**: https://github.com/Zoheirfll/Taftech
 
 **Attention** : SOMIZ tourne aussi sur port 8000 — vérifier le bon backend.
@@ -333,6 +333,11 @@ Pages/
 | Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
 | Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
 | Swagger DEFAULT_SCHEMA_CLASS | Injecté dans `REST_FRAMEWORK` dict **après** sa définition (bloc try/except déplacé sous REST_FRAMEWORK) | `NameError` si injecté avant — settings.py est exécuté de haut en bas |
+| Cypress version | Downgrade 15 → 13.17.0 | Cypress 15 binaire cassé sur Windows 10 (`--smoke-test` option non reconnue) |
+| Cypress login recruteur | `cy.login("recruteur")` visite `/recruteurs/connexion` (placeholder `votre@entreprise.com`) | Portail séparé — login candidat via `/login` retourne 403 pour rôle RECRUTEUR |
+| Cypress ECONNREFUSED GUI | `host: true` dans vite.config.js server | Windows résout `localhost` en IPv6 mais Vite écoutait IPv4 seulement |
+| Cypress mock questionnaire | Utiliser `requis: true` (pas `obligatoire: true`) dans les mocks | Le composant JobDetail.jsx vérifie `q.requis`, pas `q.obligatoire` |
+| Cypress intercept jobDetail | Regex `/\/api\/jobs\/\d+\/$/` au lieu de `**/jobs/*/` | Le glob matchait aussi `/api/jobs/recommandations/` — race condition sur `cy.wait("@jobDetail")` |
 | Premium expiré membres | Blocage login (403) + blocage dashboard API | PROPRIETAIRE bypasse les deux couches |
 | INVITE accès | Masquage UI des boutons d'action, pas blocage route | Candidatures en lecture seule autorisées |
 | GuestRoute | Redirect si déjà connecté depuis login/register | Évite double session ou confusion de rôle |
@@ -361,14 +366,12 @@ Pages/
 
 - Backend : ~268/268 ✅ (dont 49 tests équipe/audit, +10 tests PREMIUM_EXPIRE/logs)
 - Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe)
-- Cypress E2E : 7 fichiers — tests 1/2/3 stables, 4/5 instables (déprioritisé)
+- Cypress E2E : 7 fichiers — tous stables ✅
 - Vite build : propre ✅ (1928 modules)
 
 ---
 
 ## 🔲 TÂCHES REPORTÉES (ne pas faire sans demande)
-
-- Corriger tests Cypress 4 et 5
 - Sentry error tracking
 - Remplacer Groq par Ollama local (après déploiement)
 - RAG avec pgvector (roadmap 3-6 mois)

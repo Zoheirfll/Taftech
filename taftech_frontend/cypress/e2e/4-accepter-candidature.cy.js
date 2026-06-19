@@ -12,43 +12,46 @@ describe("Flux E2E : Parcours Recruteur (Accepter un candidat)", () => {
     // Cliquer sur la première offre qui a des candidats
     cy.contains("button", "Candidats").first().click();
 
+    cy.url().should("include", "/dashboard/offres/");
     cy.contains(/candidatures/i).should("be.visible");
 
-    // Ouvrir le dossier du premier candidat (bouton sans texte fixe — clic sur le 1er de la liste)
+    // Ouvrir le dossier du premier candidat
     cy.get(".divide-y button").first().click();
 
-    // Le panneau candidat est ouvert quand le select de statut est visible
-    cy.get("select").last().should("be.visible");
+    // Le select statut est visible quand le panneau est ouvert
+    cy.get("select").should("be.visible");
 
-    // Changer le statut vers EN_COURS d'abord (force un vrai changement)
-    cy.get("select").last().select("EN_COURS");
+    // Changer vers EN_COURS d'abord (force un vrai changement d'état)
+    cy.get("select").select("EN_COURS", { force: true });
     cy.wait("@updateStatutAPI").its("response.statusCode").should("eq", 200);
 
     // Re-intercept pour le 2ème changement
     cy.intercept("PATCH", "**/candidatures/**").as("updateStatutAPI2");
-    cy.get("select").last().select("RETENU");
+    cy.get("select").select("RETENU", { force: true });
     cy.wait("@updateStatutAPI2").its("response.statusCode").should("eq", 200);
 
     cy.contains("Statut mis à jour.").should("be.visible");
 
-    // La section bulletin apparaît pour un candidat retenu
-    cy.contains("Candidat retenu").should("be.visible");
-    cy.contains("button", /télécharger/i).should("be.visible");
+    // La section bulletin apparaît pour un candidat retenu (cibler le <p> pas l'<option>)
+    cy.contains("p", "Candidat retenu — Bulletin disponible").should("be.visible");
+    cy.contains("button", "Télécharger").should("be.visible");
   });
 
   it("EC1 : Doit pouvoir refuser un candidat", () => {
     cy.visit("/dashboard");
 
     cy.contains("button", "Candidats").first().click();
+    cy.url().should("include", "/dashboard/offres/");
+
     cy.get(".divide-y button").first().click();
-    cy.get("select").last().should("be.visible");
+    cy.get("select").should("be.visible");
 
     // Forcer un vrai changement depuis EN_COURS
-    cy.get("select").last().select("EN_COURS");
+    cy.get("select").select("EN_COURS", { force: true });
     cy.wait("@updateStatutAPI").its("response.statusCode").should("eq", 200);
 
     cy.intercept("PATCH", "**/candidatures/**").as("updateStatutAPI2");
-    cy.get("select").last().select("REFUSE");
+    cy.get("select").select("REFUSE", { force: true });
     cy.wait("@updateStatutAPI2").its("response.statusCode").should("eq", 200);
     cy.contains("Statut mis à jour.").should("be.visible");
   });

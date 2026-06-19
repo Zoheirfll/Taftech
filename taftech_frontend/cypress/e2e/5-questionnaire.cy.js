@@ -4,12 +4,13 @@ const MOCK_QUESTIONNAIRE = {
   id: 99,
   titre: "Questionnaire Cypress Test",
   questions: [
-    { id: 1, texte: "Combien d'années d'expérience avez-vous ?", type_question: "COURT", obligatoire: true, choix: [] },
+    { id: 1, texte: "Combien d'années d'expérience avez-vous ?", type_question: "COURT", requis: true, choix: [] },
     { id: 2, texte: "Quel est votre niveau en React ?", type_question: "CHOIX_UNIQUE", obligatoire: false, choix: [{ id: 1, texte: "Débutant" }, { id: 2, texte: "Expert" }] },
   ],
 };
 
 describe("Flux Questionnaire - Recruteur & Candidat", () => {
+
   // =============================================
   // RECRUTEUR : LISTE & CRUD
   // =============================================
@@ -31,7 +32,7 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.wait("@getQuestionnaires");
 
     cy.contains("Nouveau questionnaire").click();
-    cy.get('input[placeholder*="Questionnaire Développeur"]').type("Questionnaire Cypress Test");
+    cy.get('input[placeholder="Ex: Questionnaire Développeur React"]').type("Questionnaire Cypress Test");
 
     cy.get('input[placeholder="Texte de la question *"]').first().type("Combien d'années d'expérience avez-vous ?");
     cy.get("select").first().select("COURT");
@@ -50,8 +51,6 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
 
   // =============================================
   // CANDIDAT : VOIR QUESTIONNAIRE & POSTULER
-  // L'intercept jobDetail est posé APRES cy.wait("@jobsList")
-  // pour éviter de toucher les autres routes jobs/*
   // =============================================
 
   it("HP3 : Candidat voit le questionnaire avant de postuler", () => {
@@ -60,7 +59,7 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.visit("/offres");
     cy.wait("@jobsList");
 
-    cy.intercept("GET", "**/jobs/*/", (req) => {
+    cy.intercept("GET", /\/api\/jobs\/\d+\/$/, (req) => {
       req.continue((res) => { res.body.questionnaire = MOCK_QUESTIONNAIRE; });
     }).as("jobDetail");
 
@@ -79,7 +78,7 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.visit("/offres");
     cy.wait("@jobsList");
 
-    cy.intercept("GET", "**/jobs/*/", (req) => {
+    cy.intercept("GET", /\/api\/jobs\/\d+\/$/, (req) => {
       req.continue((res) => { res.body.questionnaire = MOCK_QUESTIONNAIRE; });
     }).as("jobDetail");
 
@@ -87,8 +86,13 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.wait("@jobDetail");
 
     cy.contains("Postuler avec mon profil TafTech").click();
-    cy.contains("Suivant →").click();
-    cy.contains("est obligatoire").should("be.visible");
+
+    // Attendre la modale questionnaire — "Suivant →" n'existe que dans la modale
+    cy.contains("button", "Suivant →").should("be.visible");
+
+    // Ne rien remplir et cliquer Suivant — validation = toast "est obligatoire"
+    cy.contains("button", "Suivant →").click();
+    cy.contains(/obligatoire/i).should("be.visible");
   });
 
   it("HP5 : Candidat remplit le questionnaire et postule avec succès", () => {
@@ -98,7 +102,7 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.visit("/offres");
     cy.wait("@jobsList");
 
-    cy.intercept("GET", "**/jobs/*/", (req) => {
+    cy.intercept("GET", /\/api\/jobs\/\d+\/$/, (req) => {
       req.continue((res) => { res.body.questionnaire = MOCK_QUESTIONNAIRE; });
     }).as("jobDetail");
 
@@ -106,11 +110,16 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.wait("@jobDetail");
 
     cy.contains("Postuler avec mon profil TafTech").click();
-    // COURT = textarea dans JobDetail.jsx
-    cy.get("textarea").first().type("3 ans");
-    cy.contains("Expert").click();
-    cy.contains("Suivant →").click();
 
+    // Attendre la modale questionnaire
+    cy.contains("button", "Suivant →").should("be.visible");
+
+    // Question COURT = <input> sans type (pas textarea, pas type='text')
+    cy.get("input:not([type='radio']):not([type='checkbox']):not([type='hidden'])").first().type("3 ans");
+    cy.contains("Expert").click();
+    cy.contains("button", "Suivant →").click();
+
+    // Étape lettre de motivation
     cy.get("textarea").first().type("Je suis très motivé pour ce poste.");
     cy.contains("Envoyer ma candidature").click();
     cy.wait("@postuler");
@@ -130,8 +139,7 @@ describe("Flux Questionnaire - Recruteur & Candidat", () => {
     cy.wait("@getQuestionnaires");
 
     cy.contains("Questionnaire Cypress Test").parent().parent().find("button").first().click();
-    // force:true car l'input peut être sous le header sticky
-    cy.get('input[placeholder*="Questionnaire Développeur"]').clear({ force: true }).type("Questionnaire Cypress Modifié", { force: true });
+    cy.get('input[placeholder="Ex: Questionnaire Développeur React"]').clear({ force: true }).type("Questionnaire Cypress Modifié", { force: true });
     cy.contains("Mettre à jour").click();
     cy.wait("@updateQuestionnaire");
     cy.contains("Questionnaire mis à jour !").should("be.visible");

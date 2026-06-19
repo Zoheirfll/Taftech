@@ -10,12 +10,22 @@ Cypress.Commands.add("login", (role = "candidat") => {
       : Cypress.env("CANDIDAT_PASSWORD");
 
   cy.intercept("POST", "**/accounts/login/").as("loginCmd");
-  cy.visit("/login");
-  cy.get('input[placeholder="votre@email.com"]').type(email);
-  cy.get('input[placeholder="••••••••"]').type(password);
-  cy.contains("button", "Se connecter").click();
-  cy.wait("@loginCmd").its("response.statusCode").should("eq", 200);
-  cy.url().should("not.include", "/login");
+
+  if (role === "recruteur") {
+    cy.visit("/recruteurs/connexion");
+    cy.get('input[placeholder="votre@entreprise.com"]').type(email);
+    cy.get('input[placeholder="••••••••"]').type(password);
+    cy.contains("button", "Se connecter").click();
+    cy.wait("@loginCmd").its("response.statusCode").should("eq", 200);
+    cy.url().should("not.include", "/recruteurs/connexion");
+  } else {
+    cy.visit("/login");
+    cy.get('input[placeholder="votre@email.com"]').type(email);
+    cy.get('input[placeholder="••••••••"]').type(password);
+    cy.contains("button", "Se connecter").click();
+    cy.wait("@loginCmd").its("response.statusCode").should("eq", 200);
+    cy.url().should("not.include", "/login");
+  }
 });
 
 // Sélection d'une option react-select par texte

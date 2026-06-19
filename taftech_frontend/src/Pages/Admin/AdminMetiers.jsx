@@ -140,7 +140,7 @@ const AdminMetiers = () => {
           <h1 className="text-2xl font-bold text-slate-900">
             Référentiel métiers
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             {totalCount} métiers au total
           </p>
         </div>
@@ -169,7 +169,7 @@ const AdminMetiers = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Titre</th>
               <th className="px-5 py-3">Secteur</th>
               <th className="px-5 py-3">Niveau</th>
@@ -191,7 +191,7 @@ const AdminMetiers = () => {
               <tr>
                 <td
                   colSpan="5"
-                  className="py-12 text-center text-sm text-slate-400 italic"
+                  className="py-12 text-center text-sm text-slate-600 italic"
                 >
                   Aucun métier trouvé.
                 </td>
@@ -209,7 +209,7 @@ const AdminMetiers = () => {
                       {m.secteur}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-500">
+                  <td className="px-5 py-3 text-xs text-slate-600">
                     {m.niveau_experience || "—"}
                   </td>
                   <td className="px-5 py-3 text-center">
@@ -288,7 +288,7 @@ const AdminMetiers = () => {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Titre *
                 </label>
                 <input
@@ -300,7 +300,7 @@ const AdminMetiers = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Secteur *
                 </label>
                 <select
@@ -318,7 +318,7 @@ const AdminMetiers = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Niveau d'expérience
                 </label>
                 <input
@@ -331,7 +331,7 @@ const AdminMetiers = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Mots-clés
                 </label>
                 <input

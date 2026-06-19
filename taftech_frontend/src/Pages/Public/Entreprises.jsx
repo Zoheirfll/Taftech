@@ -166,7 +166,7 @@ const Entreprises = () => {
                       {nbOffres} offre{nbOffres > 1 ? "s" : ""} active{nbOffres > 1 ? "s" : ""}
                     </span>
                     <Link
-                      to={`/entreprise/${e.id}`}
+                      to={`/entreprise/${e.slug}`}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
                     >
                       Consulter

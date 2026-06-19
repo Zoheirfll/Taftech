@@ -163,7 +163,7 @@ function AppContent() {
             <Route path="/register-entreprise" element={<GuestRoute><RegisterRecruteur /></GuestRoute>} />
             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
             <Route path="/jobs/:id" element={<JobDetail />} />
-            <Route path="/entreprise/:id" element={<EntreprisePublic />} />
+            <Route path="/entreprise/:slug" element={<EntreprisePublic />} />
             <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
             <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
 

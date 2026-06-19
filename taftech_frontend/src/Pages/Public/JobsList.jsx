@@ -408,7 +408,7 @@ const JobsList = () => {
                         <div className="mt-0.5">
                           {job.entreprise ? (
                             <Link
-                              to={`/entreprise/${job.entreprise.id}`}
+                              to={`/entreprise/${job.entreprise.slug}`}
                               className="text-sm text-indigo-600 hover:underline font-semibold"
                             >
                               {job.entreprise.nom_entreprise}

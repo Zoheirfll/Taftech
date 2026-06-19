@@ -8,6 +8,7 @@ import logoTafTech from "../assets/logo-taftech.png";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
+  LogIn, Zap, HelpCircle,
 } from "lucide-react";
 
 const NavbarRecruteur = () => {
@@ -56,12 +57,12 @@ const NavbarRecruteur = () => {
   };
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
+    <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-15">
         {/* LOGO */}
         <div className="flex items-center gap-8">
           <Link to="/recruteurs" className="flex items-center gap-2 shrink-0">
-            <img src={logoTafTech} alt="TafTech" className="h-10 w-auto object-contain" />
+            <img src={logoTafTech} alt="TafTech" className="h-16 w-auto object-contain" />
             <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
               Recruteurs
             </span>
@@ -69,29 +70,29 @@ const NavbarRecruteur = () => {
 
           {/* LIENS NAVIGATION (non connecté) */}
           {!isLogged && (
-            <div className="hidden lg:flex items-center gap-6">
-              <a href="/recruteurs#fonctionnalites" className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
-                Fonctionnalités
+            <div className="hidden lg:flex items-center gap-1">
+              <a href="/recruteurs#fonctionnalites" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
+                <Zap size={14} /> Fonctionnalités
               </a>
-              <a href="/recruteurs#comment-ca-marche" className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
-                Comment ça marche
+              <a href="/recruteurs#comment-ca-marche" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
+                <HelpCircle size={14} /> Comment ça marche
               </a>
             </div>
           )}
 
           {/* LIENS NAVIGATION (connecté) */}
           {isLogged && estRecruteurOuMembre && (
-            <div className="hidden lg:flex items-center gap-6">
-              <Link to="/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5">
+            <div className="hidden lg:flex items-center gap-1">
+              <Link to="/dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
                 <LayoutDashboard size={14} /> Tableau de bord
               </Link>
               {authService.peutFaire("UTILISATEUR") && (
-                <Link to="/creer-offre" className="text-sm font-medium text-teal-700 hover:text-teal-800 transition-colors flex items-center gap-1.5">
+                <Link to="/creer-offre" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 hover:text-teal-800 hover:bg-teal-50 rounded-lg transition-all duration-150">
                   <Briefcase size={14} /> Publier une offre
                 </Link>
               )}
               {authService.peutFaire("UTILISATEUR") && (
-                <Link to="/cvtheque" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5">
+                <Link to="/cvtheque" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
                   <Search size={14} /> CVthèque
                 </Link>
               )}
@@ -103,13 +104,13 @@ const NavbarRecruteur = () => {
         <div className="flex items-center gap-3">
           {!isLogged && (
             <>
-              <Link to="/" className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors hidden md:block">
-                Espace candidat
+              <Link to="/" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-150">
+                <User size={14} /> Espace candidat
               </Link>
-              <Link to="/recruteurs/connexion" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors hidden md:block">
-                Connexion
+              <Link to="/recruteurs/connexion" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
+                <LogIn size={14} /> Connexion
               </Link>
-              <Link to="/recruteurs/inscription" className="px-4 py-2 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 transition-colors shadow-sm">
+              <Link to="/recruteurs/inscription" className="px-4 py-2 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 active:scale-95 transition-all duration-150 shadow-md shadow-teal-200">
                 S'inscrire
               </Link>
             </>

@@ -65,12 +65,12 @@ class PublicAndAdminListsTests(APITestCase):
     def test_entreprise_detail_bloque_entreprise_en_attente(self):
         """ US-PUB-05 (EDGE CASE): Impossible de voir la page d'une entreprise non validée """
         # Test Happy Path (OK Corp)
-        url_ok = reverse('entreprise-public', kwargs={'entreprise_id': self.ent_approuvee.id})
+        url_ok = reverse('entreprise-public', kwargs={'slug': self.ent_approuvee.slug})
         res_ok = self.client.get(url_ok)
         self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
-        
+
         # Test Edge Case (Wait Corp)
-        url_wait = reverse('entreprise-public', kwargs={'entreprise_id': self.ent_attente.id})
+        url_wait = reverse('entreprise-public', kwargs={'slug': self.ent_attente.slug})
         res_wait = self.client.get(url_wait)
         self.assertEqual(res_wait.status_code, status.HTTP_404_NOT_FOUND)
 

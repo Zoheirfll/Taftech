@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
+from django.utils.text import slugify
 from .validators import validate_document_mime, validate_image_mime, validate_file_size
 from .constants import (
     WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES,
@@ -14,6 +15,7 @@ class ProfilEntreprise(models.Model):
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_entreprise')
     nom_entreprise = models.CharField(max_length=150, verbose_name="Nom de l'entreprise")
+    slug = models.SlugField(max_length=180, unique=True, blank=True, verbose_name="Slug URL")
     est_approuvee = models.BooleanField(default=False, verbose_name="Entreprise approuvée")
     
     # Listes appliquées ici :
@@ -59,6 +61,17 @@ class ProfilEntreprise(models.Model):
     blank=True,
     default="Bonjour {prenom},\n\nNous avons bien étudié votre candidature pour le poste de {titre_offre} et nous avons le regret de vous informer qu'elle n'a pas été retenue.\n\nNous vous remercions de l'intérêt que vous portez à {nom_entreprise} et vous souhaitons bonne chance dans vos recherches.\n\nCordialement,\nL'équipe {nom_entreprise}"
 )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.nom_entreprise)
+            slug = base
+            n = 1
+            while ProfilEntreprise.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nom_entreprise

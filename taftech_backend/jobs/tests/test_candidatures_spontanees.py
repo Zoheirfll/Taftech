@@ -140,7 +140,7 @@ class CandidaturesSpontaneesAPITestCase(TestCase):
             "cv": cv_factice,
         }
         response = self.client.post(
-            f"/api/jobs/entreprises/{self.entreprise.id}/candidature-spontanee/",
+            f"/api/jobs/entreprises/{self.entreprise.slug}/candidature-spontanee/",
             data=data,
             format="multipart"
         )

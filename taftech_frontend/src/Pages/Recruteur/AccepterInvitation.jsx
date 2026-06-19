@@ -81,7 +81,7 @@ const AccepterInvitation = () => {
               <span className="text-2xl">❌</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 mb-2">Lien invalide</h1>
-            <p className="text-sm text-slate-500 mb-6">{erreur}</p>
+            <p className="text-sm text-slate-700 mb-6">{erreur}</p>
             <Link to="/recruteurs/connexion" className="text-sm text-indigo-600 font-semibold hover:underline">
               Retour à la connexion
             </Link>
@@ -94,7 +94,7 @@ const AccepterInvitation = () => {
               <CheckCircle2 size={28} className="text-emerald-600" />
             </div>
             <h1 className="text-xl font-bold text-slate-900 mb-2">Invitation acceptée !</h1>
-            <p className="text-sm text-slate-500">Redirection vers votre tableau de bord...</p>
+            <p className="text-sm text-slate-700">Redirection vers votre tableau de bord...</p>
           </div>
         )}
 
@@ -109,20 +109,20 @@ const AccepterInvitation = () => {
                 <Building2 size={14} className="text-slate-400" />
                 <p className="text-sm text-slate-600 font-semibold">{info.entreprise}</p>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 Vous serez ajouté(e) en tant que <span className="font-semibold text-slate-600">{info.role_display}</span>
               </p>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs text-slate-500">Invitation pour</p>
+              <p className="text-xs text-slate-600">Invitation pour</p>
               <p className="text-sm font-semibold text-slate-900">{info.email}</p>
             </div>
 
             <div className="space-y-4">
               {!info.compte_existant && (
                 <>
-                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Créer votre compte</p>
+                  <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Créer votre compte</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-slate-600 mb-1 block">Prénom</label>
@@ -147,7 +147,7 @@ const AccepterInvitation = () => {
               )}
 
               {info.compte_existant && (
-                <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                   Un compte TafTech existe déjà avec cet email. Entrez votre mot de passe pour confirmer et rejoindre l'équipe.
                 </p>
               )}

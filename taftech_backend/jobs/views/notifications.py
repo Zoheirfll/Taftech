@@ -72,9 +72,9 @@ class EntrepriseListAPIView(APIView):
 
 class EntrepriseDetailAPIView(APIView):
     permission_classes = [AllowAny]
-    def get(self, request, entreprise_id):
+    def get(self, request, slug):
         try:
-            entreprise = ProfilEntreprise.objects.get(id=entreprise_id, est_approuvee=True)
+            entreprise = ProfilEntreprise.objects.get(slug=slug, est_approuvee=True)
             serializer = EntreprisePublicSerializer(entreprise)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ProfilEntreprise.DoesNotExist:

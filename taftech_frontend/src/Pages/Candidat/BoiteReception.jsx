@@ -103,7 +103,7 @@ const BoiteReception = () => {
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <Inbox size={32} className="text-slate-300 mb-3" />
               <p className="text-sm font-medium text-slate-900">Boîte vide</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-700 mt-1">
                 Aucun message pour le moment.
               </p>
             </div>
@@ -139,10 +139,10 @@ const BoiteReception = () => {
                             <span className="w-2 h-2 bg-indigo-600 rounded-full flex-shrink-0 mt-1.5 ml-2" />
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-xs text-slate-600 truncate">
                           {notif.message}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        <p className="text-[10px] text-slate-600 mt-1">
                           {new Date(notif.date_creation).toLocaleDateString(
                             "fr-FR",
                             {
@@ -183,7 +183,7 @@ const BoiteReception = () => {
                   <h2 className="text-xl font-extrabold text-slate-900">
                     {selectedNotif.titre}
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-600 mt-0.5">
                     Reçu le{" "}
                     {new Date(selectedNotif.date_creation).toLocaleDateString(
                       "fr-FR",
@@ -209,7 +209,7 @@ const BoiteReception = () => {
               <p className="text-sm font-medium text-slate-900">
                 Sélectionnez un message
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-700 mt-1">
                 Cliquez sur un message à gauche pour le lire.
               </p>
             </div>

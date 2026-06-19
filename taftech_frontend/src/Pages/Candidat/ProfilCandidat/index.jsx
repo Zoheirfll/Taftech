@@ -135,7 +135,7 @@ const ProfilCandidat = () => {
             <p className="text-sm font-semibold text-indigo-600 mt-1">
               {profil.titre_professionnel || "Titre à définir"}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               {profil.cv_pdf
                 ? profil.cv_pdf.split("/").pop()
                 : "Aucun fichier joint"}
@@ -152,7 +152,7 @@ const ProfilCandidat = () => {
           >
             <Sparkles size={16} /> Remplir automatiquement depuis mon CV
           </button>
-          <p className="text-xs text-slate-400 mt-2 text-center">
+          <p className="text-xs text-slate-600 mt-2 text-center">
             Notre IA analyse votre CV et remplit vos infos en quelques secondes.
           </p>
         </div>
@@ -240,11 +240,11 @@ const ProfilCandidat = () => {
             <h3 className="text-lg font-bold text-slate-900">
               {profil.first_name} {profil.last_name}
             </h3>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-slate-600 mt-0.5">
               {profil.wilaya || "Wilaya non renseignée"}
               {profil.commune ? ` · ${profil.commune}` : ""}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               {formatText(profil.diplome)} · {formatText(profil.specialite)}
             </p>
           </div>
@@ -302,7 +302,7 @@ const ProfilCandidat = () => {
               key={label}
               className="bg-slate-50 p-3 rounded-lg border border-slate-100"
             >
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
+              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
                 {label}
               </p>
               <p className="text-sm font-semibold text-indigo-600">{value}</p>
@@ -334,7 +334,7 @@ const ProfilCandidat = () => {
         </div>
         <div className="space-y-5">
           {profil.experiences_detail?.length === 0 && (
-            <p className="text-sm text-slate-400 italic">
+            <p className="text-sm text-slate-600 italic">
               Aucune expérience ajoutée.
             </p>
           )}
@@ -352,7 +352,7 @@ const ProfilCandidat = () => {
                   <p className="text-xs text-indigo-600 font-medium">
                     {exp.entreprise}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     {formatDate(exp.date_debut)} —{" "}
                     {exp.date_fin ? formatDate(exp.date_fin) : "Aujourd'hui"}
                   </p>
@@ -405,7 +405,7 @@ const ProfilCandidat = () => {
         </div>
         <div className="space-y-5">
           {profil.formations_detail?.length === 0 && (
-            <p className="text-sm text-slate-400 italic">
+            <p className="text-sm text-slate-600 italic">
               Aucune formation ajoutée.
             </p>
           )}
@@ -428,7 +428,7 @@ const ProfilCandidat = () => {
                   <p className="text-xs text-slate-600 font-medium">
                     {f.etablissement}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     {formatDate(f.date_debut)} —{" "}
                     {f.date_fin ? formatDate(f.date_fin) : "En cours"}
                   </p>

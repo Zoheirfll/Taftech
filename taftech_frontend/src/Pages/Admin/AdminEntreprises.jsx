@@ -102,7 +102,7 @@ const AdminEntreprises = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Validation des entreprises</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Approuvez ou suspendez les entreprises inscrites. Les paiements Premium sont gérés automatiquement via Chargily Pay — consultez le journal d'audit.
           </p>
         </div>
@@ -129,7 +129,7 @@ const AdminEntreprises = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Entreprise</th>
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3">Statut</th>
@@ -149,8 +149,8 @@ const AdminEntreprises = () => {
                 <tr key={ent.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-4">
                     <p className="text-sm font-semibold text-slate-900">{ent.nom_entreprise}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{ent.secteur_activite}</p>
-                    <p className="text-xs font-mono text-slate-400 mt-0.5">RC: {ent.registre_commerce}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{ent.secteur_activite}</p>
+                    <p className="text-xs font-mono text-slate-600 mt-0.5">RC: {ent.registre_commerce}</p>
                   </td>
                   <td className="px-5 py-4">
                     <p className="text-sm font-medium text-slate-800">{ent.last_name} {ent.first_name}</p>
@@ -167,7 +167,7 @@ const AdminEntreprises = () => {
                     {ent.est_premium ? (
                       <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full">⭐ Premium</span>
                     ) : (
-                      <span className="px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 text-[10px] font-semibold rounded-full">Standard</span>
+                      <span className="px-2.5 py-1 bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-semibold rounded-full">Standard</span>
                     )}
                   </td>
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
@@ -221,21 +221,21 @@ const AdminEntreprises = () => {
             </div>
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Informations légales</p>
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">Informations légales</p>
                 <p className="text-xs font-mono text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded">
                   RC: {selectedEntreprise.registre_commerce}
                 </p>
                 <p className="text-xs font-medium text-slate-600 mt-2">{selectedEntreprise.secteur_activite}</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Contact recruteur</p>
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">Contact recruteur</p>
                 <p className="text-sm font-semibold text-slate-900">{selectedEntreprise.last_name} {selectedEntreprise.first_name}</p>
                 <p className="text-xs text-indigo-600 mt-1">{selectedEntreprise.email}</p>
-                <p className="text-xs text-slate-500 mt-1">{selectedEntreprise.telephone}</p>
+                <p className="text-xs text-slate-700 mt-1">{selectedEntreprise.telephone}</p>
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Présentation</p>
+              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">Présentation</p>
               <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 leading-relaxed max-h-36 overflow-y-auto whitespace-pre-line">
                 {selectedEntreprise.description || "Aucune présentation fournie."}
               </p>

@@ -102,7 +102,7 @@ const AdminComptes = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Comptes administrateurs</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Créez, modifiez ou supprimez les comptes admin TafTech.
           </p>
         </div>
@@ -117,7 +117,7 @@ const AdminComptes = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Administrateur</th>
               <th className="px-5 py-3">Email</th>
               <th className="px-5 py-3">Téléphone</th>
@@ -135,7 +135,7 @@ const AdminComptes = () => {
               </tr>
             ) : admins.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-12 text-center text-sm text-slate-400">
+                <td colSpan="6" className="py-12 text-center text-sm text-slate-600">
                   Aucun administrateur trouvé.
                 </td>
               </tr>
@@ -158,7 +158,7 @@ const AdminComptes = () => {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-sm text-indigo-600">{a.email}</td>
-                  <td className="px-5 py-4 text-sm text-slate-500">{a.telephone || "—"}</td>
+                  <td className="px-5 py-4 text-sm text-slate-700">{a.telephone || "—"}</td>
                   <td className="px-5 py-4">
                     {a.is_superuser ? (
                       <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold rounded-full">
@@ -170,7 +170,7 @@ const AdminComptes = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-sm text-slate-500">{a.date_joined}</td>
+                  <td className="px-5 py-4 text-sm text-slate-700">{a.date_joined}</td>
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
                     <button
                       onClick={() => ouvrirModifier(a)}
@@ -305,7 +305,7 @@ const AdminComptes = () => {
               <Trash2 size={20} className="text-red-600" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-2">Supprimer ce compte ?</h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-slate-700 mb-6">
               Le compte de <span className="font-semibold text-slate-700">{modal.data.email}</span> sera définitivement supprimé.
             </p>
             <div className="flex gap-3">

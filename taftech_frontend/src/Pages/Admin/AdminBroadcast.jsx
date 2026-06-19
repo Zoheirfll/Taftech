@@ -44,7 +44,7 @@ const AdminBroadcast = () => {
         <h1 className="text-2xl font-bold text-slate-900">
           Diffusion d'emails
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-700 mt-0.5">
           Envoyez des communications ciblées aux candidats.
         </p>
       </div>
@@ -52,7 +52,7 @@ const AdminBroadcast = () => {
       <div className="bg-white border border-slate-200 rounded-xl p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-2 block">
+            <label className="text-xs font-medium text-slate-600 mb-2 block">
               Audience cible *
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -86,7 +86,7 @@ const AdminBroadcast = () => {
                     <p className="text-sm font-semibold text-slate-900">
                       {label}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{desc}</p>
                   </div>
                 </label>
               ))}
@@ -94,7 +94,7 @@ const AdminBroadcast = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
               Sujet *
             </label>
             <input
@@ -110,7 +110,7 @@ const AdminBroadcast = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
               Corps du message *
             </label>
             <textarea
@@ -123,7 +123,7 @@ const AdminBroadcast = () => {
                 setFormData({ ...formData, message: e.target.value })
               }
             />
-            <p className="text-xs text-slate-400 mt-1.5">
+            <p className="text-xs text-slate-600 mt-1.5">
               Les emails seront envoyés en copie cachée (BCC) pour protéger la
               vie privée.
             </p>

@@ -233,7 +233,7 @@ const JobDetail = () => {
               </h1>
               {job.entreprise && (
                 <Link
-                  to={`/entreprise/${job.entreprise.id}`}
+                  to={`/entreprise/${job.entreprise.slug}`}
                   className="text-indigo-200 hover:text-white text-sm font-medium transition-colors mt-1 inline-block"
                 >
                   {job.entreprise.nom_entreprise}

@@ -62,7 +62,7 @@ const AdminAuditLogs = () => {
           <ShieldCheck size={22} className="text-indigo-500" />
           <h1 className="text-xl font-bold text-slate-800">Journal d'audit</h1>
           {totalCount > 0 && (
-            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
               {totalCount} entrées
             </span>
           )}
@@ -84,14 +84,14 @@ const AdminAuditLogs = () => {
       />
 
       {loading ? (
-        <p className="text-slate-400 text-sm">Chargement...</p>
+        <p className="text-slate-600 text-sm">Chargement...</p>
       ) : filtered.length === 0 ? (
-        <p className="text-slate-400 text-sm">Aucun log trouvé.</p>
+        <p className="text-slate-600 text-sm">Aucun log trouvé.</p>
       ) : (
         <>
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+              <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Admin</th>
@@ -105,7 +105,7 @@ const AdminAuditLogs = () => {
                   const meta = ACTION_LABELS[log.action] || ACTION_LABELS.AUTRE;
                   return (
                     <tr key={log.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{log.date}</td>
+                      <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{log.date}</td>
                       <td className="px-4 py-3 font-medium text-slate-700">{log.admin}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>
@@ -113,7 +113,7 @@ const AdminAuditLogs = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{log.detail}</td>
-                      <td className="px-4 py-3 text-slate-400 font-mono text-xs">{log.ip || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600 font-mono text-xs">{log.ip || "—"}</td>
                     </tr>
                   );
                 })}
@@ -123,7 +123,7 @@ const AdminAuditLogs = () => {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-700">
                 Page {page} sur {totalPages}
               </p>
               <div className="flex gap-2">

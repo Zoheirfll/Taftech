@@ -13,7 +13,7 @@ const StatCard = ({ icon, label, value, colorClass }) => (
       {icon}
     </div>
     <div>
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+      <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
         {label}
       </p>
       <p className="text-3xl font-bold text-slate-900 mt-0.5">{value}</p>
@@ -84,7 +84,7 @@ const AdminStatistiques = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Contrôle global TafTech
           </p>
         </div>
@@ -217,7 +217,7 @@ const AdminStatistiques = () => {
                     <TrendingUp size={24} className="text-indigo-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Score matching moyen global
                     </p>
                     <p className="text-3xl font-bold text-indigo-600">
@@ -234,14 +234,14 @@ const AdminStatistiques = () => {
                     <h2 className="text-sm font-bold text-slate-900">
                       Salaires par secteur
                     </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-600 mt-0.5">
                       Comparaison offres publiées vs attentes candidats
                     </p>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-slate-50 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                        <tr className="bg-slate-50 text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
                           <th className="px-5 py-3 text-left">Secteur</th>
                           <th className="px-5 py-3 text-right">Moy. offres</th>
                           <th className="px-5 py-3 text-right">
@@ -265,7 +265,7 @@ const AdminStatistiques = () => {
                                 <p className="text-sm font-semibold text-slate-900">
                                   {s.secteur}
                                 </p>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-slate-600">
                                   {s.nb_offres} offres · {s.nb_candidats}{" "}
                                   candidats
                                 </p>
@@ -293,7 +293,7 @@ const AdminStatistiques = () => {
                                     {formatSalaire(ecart)}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-400 text-xs">
+                                  <span className="text-slate-600 text-xs">
                                     —
                                   </span>
                                 )}
@@ -364,7 +364,7 @@ const AdminStatistiques = () => {
                                 {i + 1}. {s.specialite}
                               </span>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <span className="text-xs text-slate-600 flex items-center gap-1">
                                   <Users size={10} /> {s.nb_candidats}
                                 </span>
                                 <span className="text-xs font-bold text-indigo-600">

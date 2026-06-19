@@ -50,7 +50,7 @@ const OffresSauvegardees = () => {
         <h1 className="text-2xl font-extrabold text-slate-900">
           Offres sauvegardées
         </h1>
-        <p className="text-base text-slate-500 mt-0.5">
+        <p className="text-base text-slate-700 mt-0.5">
           Retrouvez toutes les offres que vous avez enregistrées.
         </p>
       </div>
@@ -64,7 +64,7 @@ const OffresSauvegardees = () => {
             <h3 className="text-sm font-semibold text-slate-900 mb-1">
               Aucune offre sauvegardée
             </h3>
-            <p className="text-xs text-slate-500 mb-4 max-w-xs">
+            <p className="text-xs text-slate-600 mb-4 max-w-xs">
               Parcourez les offres et cliquez sur l'icône de sauvegarde pour les
               retrouver ici.
             </p>
@@ -93,12 +93,12 @@ const OffresSauvegardees = () => {
                     <span className="text-xs font-medium text-indigo-600">
                       {favori.offre_detail.entreprise?.nom_entreprise}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                    <span className="flex items-center gap-1 text-xs text-slate-600">
                       <MapPin size={11} />
                       {favori.offre_detail.wilaya}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     Sauvegardée le{" "}
                     {new Date(favori.date_sauvegarde).toLocaleDateString(
                       "fr-FR",

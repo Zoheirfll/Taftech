@@ -22,6 +22,9 @@ import {
   Menu,
   X,
   Sparkles,
+  MapPin,
+  Building2,
+  LogIn,
 } from "lucide-react";
 
 const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
@@ -120,8 +123,8 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
+    <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-15">
         {/* GAUCHE : LOGO + LIENS */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center shrink-0">
@@ -131,60 +134,46 @@ const Navbar = () => {
               className="h-16 w-auto object-contain"
             />
           </Link>
-          <div className="hidden lg:flex items-center gap-6">
-            <Link
-              to="/"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Offres d'emploi
-            </Link>
-            <Link
-              to="/offres"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Recherche avancée
-            </Link>
-            <Link
-              to="/secteurs"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Par secteur
-            </Link>
-            <Link
-              to="/regions"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Par région
-            </Link>
-            <Link
-              to="/entreprises"
-              className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Entreprises
-            </Link>
+          <div className="hidden lg:flex items-center gap-1">
+            {[
+              { to: "/", label: "Accueil", icon: LayoutDashboard },
+              { to: "/offres", label: "Recherche avancée", icon: Search },
+              { to: "/secteurs", label: "Par secteur", icon: Briefcase },
+              { to: "/regions", label: "Par région", icon: MapPin },
+              { to: "/entreprises", label: "Entreprises", icon: Building2 },
+            ].map(({ to, label, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-150"
+              >
+                <Icon size={14} className="shrink-0" />
+                {label}
+              </Link>
+            ))}
           </div>
         </div>
 
         {/* DROITE */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* NON CONNECTÉ */}
           {!isLogged && (
             <>
               <Link
                 to="/recruteurs"
-                className="hidden md:block text-sm font-medium text-slate-600 hover:text-teal-700 transition-colors"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-all duration-150"
               >
-                Espace recruteur
+                <Briefcase size={14} /> Espace recruteur
               </Link>
               <Link
                 to="/login"
-                className="text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all duration-150"
               >
-                Se connecter
+                <LogIn size={14} /> Se connecter
               </Link>
               <Link
                 to="/register"
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200"
               >
                 S'inscrire
               </Link>

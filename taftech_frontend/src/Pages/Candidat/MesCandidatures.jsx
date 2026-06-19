@@ -269,7 +269,7 @@ const MesCandidatures = () => {
         <h1 className="text-2xl font-extrabold text-slate-900">
           Suivi de mes candidatures
         </h1>
-        <p className="text-base text-slate-500 mt-1">
+        <p className="text-base text-slate-700 mt-1">
           Suivez l'avancement de toutes vos candidatures.
         </p>
       </div>
@@ -280,7 +280,7 @@ const MesCandidatures = () => {
           <p className="text-base font-semibold text-slate-900">
             Aucune candidature
           </p>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-700 mt-1">
             Vous n'avez postulé à aucune offre pour le moment.
           </p>
         </div>
@@ -301,7 +301,7 @@ const MesCandidatures = () => {
                       <span className="text-base font-bold leading-tight">{parseInt(cand.score_matching)}%</span>
                     </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-medium text-slate-400 shrink-0">
+                    <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 shrink-0">
                       N/A
                     </div>
                   )}
@@ -319,7 +319,7 @@ const MesCandidatures = () => {
                     <p className="text-sm font-semibold text-indigo-600 mt-0.5">
                       {cand.entreprise_nom}
                     </p>
-                    <p className="text-sm text-slate-400 mt-1 flex items-center gap-1.5">
+                    <p className="text-sm text-slate-600 mt-1 flex items-center gap-1.5">
                       <Calendar size={13} />
                       Postulé le{" "}
                       {new Date(cand.date_postulation).toLocaleDateString("fr-FR")}

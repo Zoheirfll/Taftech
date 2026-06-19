@@ -54,11 +54,11 @@ const JobCard = ({ job }) => {
         </div>
 
         <div className="flex flex-wrap gap-2 mt-3 mb-4">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-500 text-xs rounded-md">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-600 text-xs rounded-md">
             <MapPin size={11} />
             {job.wilaya?.split(" - ")[1] || job.wilaya}
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-500 text-xs rounded-md">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-600 text-xs rounded-md">
             <Briefcase size={11} />
             {job.experience_requise}
           </span>
@@ -84,7 +84,7 @@ const JobCard = ({ job }) => {
         )}
 
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <span className="flex items-center gap-1 text-xs text-slate-400">
+          <span className="flex items-center gap-1 text-xs text-slate-600">
             <Calendar size={11} />
             {new Date(job.date_publication).toLocaleDateString("fr-FR")}
           </span>
@@ -105,7 +105,7 @@ const JobCard = ({ job }) => {
             ) : (
               <Link
                 to="/login"
-                className="px-3 py-1.5 border border-slate-200 text-slate-500 text-xs rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-3 py-1.5 border border-slate-200 text-slate-700 text-xs rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Se connecter
               </Link>

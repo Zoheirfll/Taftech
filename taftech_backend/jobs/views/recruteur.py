@@ -233,9 +233,9 @@ class ToggleFavoriCVAPIView(APIView):
 class EnvoyerCandidatureSpontaneeAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, entreprise_id):
+    def post(self, request, slug):
         try:
-            entreprise = ProfilEntreprise.objects.get(id=entreprise_id, est_approuvee=True)
+            entreprise = ProfilEntreprise.objects.get(slug=slug, est_approuvee=True)
         except ProfilEntreprise.DoesNotExist:
             return Response({'error': 'Entreprise introuvable.'}, status=404)
         if request.user.is_authenticated and request.user.role == 'CANDIDAT':

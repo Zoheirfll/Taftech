@@ -128,9 +128,9 @@ export const recruteurService = {
     }
   },
 
-  getEntreprisePublic: async (id) => {
+  getEntreprisePublic: async (slug) => {
     try {
-      const response = await api.get(`jobs/entreprises/${id}/`);
+      const response = await api.get(`jobs/entreprises/${slug}/`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ENTREPRISE_PUBLIC_API", err);
@@ -228,10 +228,10 @@ export const recruteurService = {
     }
   },
 
-  envoyerCandidatureSpontanee: async (entrepriseId, formData) => {
+  envoyerCandidatureSpontanee: async (slug, formData) => {
     try {
       const response = await api.post(
-        `jobs/entreprises/${entrepriseId}/candidature-spontanee/`,
+        `jobs/entreprises/${slug}/candidature-spontanee/`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } },
       );

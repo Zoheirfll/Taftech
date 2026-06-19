@@ -80,7 +80,7 @@ export const Modals = ({
             >
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Prénom
                   </label>
                   <input
@@ -93,7 +93,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Nom
                   </label>
                   <input
@@ -107,7 +107,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Téléphone
                 </label>
                 <input
@@ -122,7 +122,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Wilaya
                   </label>
                   <Select
@@ -144,7 +144,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Commune
                   </label>
                   <Select
@@ -170,7 +170,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Diplôme
                   </label>
                   <Select
@@ -191,7 +191,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Spécialité
                   </label>
                   <Select
@@ -213,7 +213,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Situation militaire
                 </label>
                 <select
@@ -286,7 +286,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Secteur souhaité
                 </label>
                 <Select
@@ -307,7 +307,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Salaire mensuel attendu
                 </label>
                 <input
@@ -324,7 +324,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Mobilité
                   </label>
                   <select
@@ -342,7 +342,7 @@ export const Modals = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Statut actuel
                   </label>
                   <select
@@ -389,7 +389,7 @@ export const Modals = ({
             </h3>
             <form onSubmit={handleUpdateLinks} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Bio / Résumé de profil
                 </label>
                 <textarea
@@ -403,7 +403,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Lien LinkedIn
                 </label>
                 <input
@@ -417,7 +417,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Lien GitHub
                 </label>
                 <input
@@ -456,7 +456,7 @@ export const Modals = ({
             </h3>
             <form onSubmit={handleUpdateCV} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Titre professionnel
                 </label>
                 <div className="relative">
@@ -485,7 +485,7 @@ export const Modals = ({
                             <p className="text-sm font-medium text-slate-900">
                               {m.titre}
                             </p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-slate-600">
                               {m.secteur}
                             </p>
                           </button>
@@ -543,7 +543,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Titre du poste *
                 </label>
                 <input
@@ -557,7 +557,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Entreprise *
                 </label>
                 <input
@@ -572,7 +572,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Date de début *
                   </label>
                   <input
@@ -586,7 +586,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Date de fin (optionnel)
                   </label>
                   <input
@@ -600,7 +600,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Description
                 </label>
                 <textarea
@@ -656,7 +656,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Niveau de diplôme
                 </label>
                 <Select
@@ -675,7 +675,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Spécialité / Domaine
                 </label>
                 <input
@@ -688,7 +688,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Établissement *
                 </label>
                 <input
@@ -703,7 +703,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Début *
                   </label>
                   <input
@@ -717,7 +717,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Fin (ou prévue)
                   </label>
                   <input
@@ -767,7 +767,7 @@ export const Modals = ({
                   <Sparkles size={18} className="text-violet-600" /> Remplissage
                   automatique
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-600 mt-1">
                   Notre système extrait les informations de votre CV
                 </p>
               </div>
@@ -797,7 +797,7 @@ export const Modals = ({
                       <p className="text-sm font-semibold text-violet-700">
                         Analyse en cours...
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-600 mt-1">
                         Cela peut prendre 30 à 60 secondes
                       </p>
                     </div>
@@ -806,7 +806,7 @@ export const Modals = ({
                       <p className="text-sm font-semibold text-slate-700 group-hover:text-violet-600 transition-colors">
                         Cliquez ou glissez votre CV ici
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-slate-600 mt-1">
                         PDF, Word (.docx, .doc) — Max 5 Mo
                       </p>
                     </>
@@ -862,12 +862,12 @@ export const Modals = ({
                   parsedData.linkedin ||
                   parsedData.github) && (
                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Résumé & Réseaux Sociaux
                     </p>
                     {parsedData.bio && (
                       <div>
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                        <p className="text-[10px] font-semibold text-slate-600 uppercase">
                           Bio
                         </p>
                         <p className="text-sm font-medium text-slate-700 italic mt-0.5">
@@ -890,7 +890,7 @@ export const Modals = ({
                   </div>
                 )}
                 <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Informations détectées
                   </p>
                   <div className="grid grid-cols-2 gap-3">
@@ -911,7 +911,7 @@ export const Modals = ({
                       },
                     ].map(({ label, value }) => (
                       <div key={label}>
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                        <p className="text-[10px] font-semibold text-slate-600 uppercase">
                           {label}
                         </p>
                         <p className="text-sm font-medium text-slate-800">
@@ -962,7 +962,7 @@ export const Modals = ({
                           <p className="text-xs text-indigo-600">
                             {exp.entreprise}
                           </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className="text-xs text-slate-600 mt-0.5">
                             {exp.date_debut_raw} — {exp.date_fin_raw}
                           </p>
                           {exp.description && (
@@ -992,7 +992,7 @@ export const Modals = ({
                           <p className="text-xs text-slate-600">
                             {f.etablissement}
                           </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className="text-xs text-slate-600 mt-0.5">
                             {f.date_debut_raw} — {f.date_fin_raw}
                           </p>
                         </div>

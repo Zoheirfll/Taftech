@@ -8,7 +8,7 @@ class EntrepriseSimpleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfilEntreprise
-        fields = ('id', 'nom_entreprise', 'wilaya_siege', 'logo_url')
+        fields = ('id', 'slug', 'nom_entreprise', 'wilaya_siege', 'logo_url')
 
     def get_logo_url(self, obj):
         if not obj.logo:
@@ -49,7 +49,7 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilEntreprise
         fields = (
-            'id', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
+            'id', 'slug', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
             'taille_entreprise', 'description', 'logo_url', 'offres_actives'
         )
 

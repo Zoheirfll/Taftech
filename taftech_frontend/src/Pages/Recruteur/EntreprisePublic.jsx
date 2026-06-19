@@ -26,7 +26,7 @@ const TAILLES_ENTREPRISE_LABELS = {
 };
 
 const EntreprisePublic = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [entreprise, setEntreprise] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -52,7 +52,7 @@ const EntreprisePublic = () => {
   useEffect(() => {
     const fetchEntreprise = async () => {
       try {
-        const data = await jobsService.getEntreprisePublic(id);
+        const data = await jobsService.getEntreprisePublic(slug);
         setEntreprise(data);
         const constData = await jobsService.getConstants();
         setConstants(constData);
@@ -64,7 +64,7 @@ const EntreprisePublic = () => {
       }
     };
     fetchEntreprise();
-  }, [id]);
+  }, [slug]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,7 +75,7 @@ const EntreprisePublic = () => {
       Object.keys(form).forEach((key) => {
         if (form[key]) formData.append(key, form[key]);
       });
-      await jobsService.envoyerCandidatureSpontanee(id, formData);
+      await jobsService.envoyerCandidatureSpontanee(slug, formData);
       toast.success("Candidature spontanée envoyée !");
       setShowModal(false);
       setForm({

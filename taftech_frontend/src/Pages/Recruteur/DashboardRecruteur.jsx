@@ -136,7 +136,7 @@ const DashboardRecruteur = () => {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
         <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl">⭐</div>
         <h2 className="text-xl font-bold text-slate-800">Abonnement Premium expiré</h2>
-        <p className="text-sm text-slate-500 max-w-sm">
+        <p className="text-sm text-slate-700 max-w-sm">
           L'abonnement Premium de votre entreprise a expiré. Votre accès est suspendu jusqu'au renouvellement. Contactez le propriétaire du compte.
         </p>
       </div>
@@ -266,7 +266,7 @@ const DashboardRecruteur = () => {
             <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center">
               <Users size={18} className="text-slate-600" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">Total candidatures</p>
+            <p className="text-sm font-semibold text-slate-700">Total candidatures</p>
           </div>
           <p className="text-4xl font-bold text-slate-600 tabular-nums">{stats.total}</p>
         </div>
@@ -275,7 +275,7 @@ const DashboardRecruteur = () => {
             <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
               <Inbox size={18} className="text-emerald-600" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">Nouvelles</p>
+            <p className="text-sm font-semibold text-slate-700">Nouvelles</p>
           </div>
           <p className="text-4xl font-bold text-emerald-600 tabular-nums">{stats.nouvelles}</p>
         </div>
@@ -284,7 +284,7 @@ const DashboardRecruteur = () => {
             <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center">
               <Sparkles size={18} className="text-teal-700" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">Pertinentes +80%</p>
+            <p className="text-sm font-semibold text-slate-700">Pertinentes +80%</p>
           </div>
           <p className="text-4xl font-bold text-teal-700 tabular-nums">{stats.pertinentes}</p>
         </div>
@@ -293,7 +293,7 @@ const DashboardRecruteur = () => {
             <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
               <Clock size={18} className="text-amber-600" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">En traitement</p>
+            <p className="text-sm font-semibold text-slate-700">En traitement</p>
           </div>
           <p className="text-4xl font-bold text-amber-600 tabular-nums">{stats.enTraitement}</p>
         </div>
@@ -442,7 +442,7 @@ const DashboardRecruteur = () => {
                                 {badge.label}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                               <span className="flex items-center gap-1">
                                 <MapPin size={11} />{" "}
                                 {offre.wilaya?.split(" - ")[1] || offre.wilaya}
@@ -482,7 +482,7 @@ const DashboardRecruteur = () => {
                                 <p className="text-xl font-bold text-slate-700 tabular-nums">
                                   {nbCandidatures}
                                 </p>
-                                <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                <p className="text-[10px] text-slate-600 uppercase tracking-wide">
                                   Total
                                 </p>
                               </div>
@@ -491,7 +491,7 @@ const DashboardRecruteur = () => {
                                   <p className="text-xl font-bold text-emerald-600 tabular-nums">
                                     {nbNouvelles}
                                   </p>
-                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                  <p className="text-[10px] text-slate-600 uppercase tracking-wide">
                                     Nouvelles
                                   </p>
                                 </div>
@@ -501,7 +501,7 @@ const DashboardRecruteur = () => {
                                   <p className="text-xl font-bold text-orange-500 tabular-nums">
                                     {nbEntretiens}
                                   </p>
-                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                  <p className="text-[10px] text-slate-600 uppercase tracking-wide">
                                     Entretiens
                                   </p>
                                 </div>
@@ -511,7 +511,7 @@ const DashboardRecruteur = () => {
                                   <p className="text-xl font-bold text-teal-700 tabular-nums">
                                     {nbRetenus}
                                   </p>
-                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                  <p className="text-[10px] text-slate-600 uppercase tracking-wide">
                                     Retenus
                                   </p>
                                 </div>
@@ -523,7 +523,7 @@ const DashboardRecruteur = () => {
                                   >
                                     {meilleurScore}%
                                   </p>
-                                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                                  <p className="text-[10px] text-slate-600 uppercase tracking-wide">
                                     Top IA
                                   </p>
                                 </div>
@@ -582,7 +582,7 @@ const DashboardRecruteur = () => {
           <p className="text-sm font-medium text-slate-900 mb-1">
             Paramètres de l'entreprise
           </p>
-          <p className="text-xs text-slate-500 mb-4">
+          <p className="text-xs text-slate-600 mb-4">
             Gérez votre profil, logo et préférences depuis la page Paramètres.
           </p>
           <button
@@ -603,7 +603,7 @@ const DashboardRecruteur = () => {
                 <h3 className="text-base font-bold text-slate-900">
                   Corriger l'offre
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-600 mt-0.5">
                   L'offre sera soumise à revalidation après modification.
                 </p>
               </div>
@@ -626,7 +626,7 @@ const DashboardRecruteur = () => {
             )}
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                   Titre *
                 </label>
                 <input
@@ -640,7 +640,7 @@ const DashboardRecruteur = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                     Wilaya
                   </label>
                   <Select
@@ -660,7 +660,7 @@ const DashboardRecruteur = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                     Spécialité
                   </label>
                   <Select
@@ -682,7 +682,7 @@ const DashboardRecruteur = () => {
               </div>
               {["description", "missions", "profil_recherche"].map((field) => (
                 <div key={field}>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                     {field === "profil_recherche"
                       ? "Profil recherché"
                       : field.charAt(0).toUpperCase() + field.slice(1)}

@@ -8,6 +8,7 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
 import { selectStyles } from "../../theme";
 import communesAlgerie from "../../data/communes.json";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   User,
   Building2,
@@ -17,6 +18,8 @@ import {
   CheckCircle,
   AlertCircle,
   Users,
+  Download,
+  QrCode,
 } from "lucide-react";
 import MonEquipe from "./MonEquipe";
 
@@ -614,6 +617,48 @@ const ParametresRecruteur = () => {
                 />
               </div>
             </div>
+
+            {/* QR CODE */}
+            {entreprise.slug && entreprise.est_approuvee && (
+              <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
+                <div className="flex items-center gap-2 mb-4">
+                  <QrCode size={16} className="text-teal-700" />
+                  <h3 className="text-sm font-semibold text-slate-900">QR Code de votre entreprise</h3>
+                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+                    <QRCodeCanvas
+                      id="entreprise-qr"
+                      value={`${window.location.origin}/entreprise/${entreprise.slug}`}
+                      size={140}
+                      bgColor="#ffffff"
+                      fgColor="#0f172a"
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-700 font-medium">Partagez ce QR code avec vos candidats</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      En le scannant, ils accèdent directement à votre page entreprise et peuvent envoyer une candidature spontanée.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const canvas = document.getElementById("entreprise-qr");
+                        const url = canvas.toDataURL("image/png");
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `qr-${entreprise.nom_entreprise || "entreprise"}.png`;
+                        a.click();
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                    >
+                      <Download size={14} /> Télécharger le QR
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pt-2 flex justify-end">
               <button

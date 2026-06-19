@@ -104,7 +104,7 @@ const Settings = () => {
             >
               <div>
                 <p className="text-sm font-medium text-slate-800">{label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                <p className="text-xs text-slate-600 mt-0.5">{desc}</p>
               </div>
               <Toggle
                 checked={notifications[field]}
@@ -167,7 +167,7 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-red-600">
             Supprimer mon compte
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             Cette action est irréversible.
           </p>
         </div>

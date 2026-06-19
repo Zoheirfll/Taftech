@@ -121,7 +121,7 @@ const SuggestionsCarriere = () => {
           <Sparkles size={22} className="text-indigo-600" />
           Suggestions de carrière
         </h1>
-        <p className="text-base text-slate-500 mt-1">
+        <p className="text-base text-slate-700 mt-1">
           Découvrez les métiers qui correspondent à votre profil et obtenez une
           analyse personnalisée.
         </p>
@@ -153,7 +153,7 @@ const SuggestionsCarriere = () => {
           </div>
         ) : metiers.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-slate-400 italic">
+            <p className="text-sm text-slate-600 italic">
               Complétez votre profil (titre professionnel, spécialité) pour
               obtenir des suggestions.
             </p>
@@ -171,7 +171,7 @@ const SuggestionsCarriere = () => {
                       {m.titre}
                     </p>
                     {m.niveau_experience && (
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-600 mt-0.5">
                         {m.niveau_experience}
                       </p>
                     )}
@@ -195,7 +195,7 @@ const SuggestionsCarriere = () => {
                 >
                   ← Précédent
                 </button>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-600">
                   Page {page} / {totalPages} · {metiers.length} métiers
                 </span>
                 <button
@@ -239,7 +239,7 @@ const SuggestionsCarriere = () => {
               <p className="text-sm font-medium text-slate-900 mb-1">
                 Analyse IA de votre parcours
               </p>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              <p className="text-xs text-slate-600 max-w-xs mx-auto">
                 Notre IA analyse votre profil et vous suggère des évolutions de
                 carrière adaptées au marché algérien.
               </p>

@@ -74,7 +74,7 @@ const AdminCandidatures = () => {
           <h1 className="text-2xl font-bold text-slate-900">
             Candidatures globales
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Vue d'ensemble de tous les recrutements.
           </p>
         </div>
@@ -114,7 +114,7 @@ const AdminCandidatures = () => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+              <tr className="bg-slate-50 border-b border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
                 <th className="px-4 py-3 text-left">Date & ID</th>
                 <th className="px-4 py-3 text-left">Candidat</th>
                 <th className="px-4 py-3 text-left">Offre & Entreprise</th>
@@ -137,7 +137,7 @@ const AdminCandidatures = () => {
                 <tr>
                   <td
                     colSpan="6"
-                    className="py-12 text-center text-sm text-slate-400 italic"
+                    className="py-12 text-center text-sm text-slate-600 italic"
                   >
                     Aucune candidature trouvée.
                   </td>
@@ -154,7 +154,7 @@ const AdminCandidatures = () => {
                           "fr-FR",
                         )}
                       </p>
-                      <p className="text-[10px] text-slate-400">#{cand.id}</p>
+                      <p className="text-[10px] text-slate-600">#{cand.id}</p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold text-slate-900">
@@ -170,13 +170,13 @@ const AdminCandidatures = () => {
                       <p className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">
                         {cand.offre_titre}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-700">
                         {cand.entreprise_nom}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       {cand.est_rapide ? (
-                        <span className="text-xs text-slate-400">N/A</span>
+                        <span className="text-xs text-slate-600">N/A</span>
                       ) : (
                         <span className="text-sm font-semibold text-slate-800">
                           {cand.score_matching}%
@@ -189,7 +189,7 @@ const AdminCandidatures = () => {
                           ⭐ {cand.note_globale}/20
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">
+                        <span className="text-xs text-slate-600 italic">
                           Non évalué
                         </span>
                       )}

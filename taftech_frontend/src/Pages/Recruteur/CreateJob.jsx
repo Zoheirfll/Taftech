@@ -126,7 +126,7 @@ const CreateJob = () => {
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
           Créer une <span className="text-teal-700">Offre Ciblée</span>
         </h1>
-        <p className="text-slate-500 text-base font-medium">
+        <p className="text-slate-700 text-base font-medium">
           Attirez les meilleurs talents d'Algérie avec des critères précis.
         </p>
       </div>
@@ -145,7 +145,7 @@ const CreateJob = () => {
 
               <div className="space-y-6">
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Titre du poste *
                   </label>
                   <div className="relative">
@@ -176,7 +176,7 @@ const CreateJob = () => {
                               <p className="text-sm font-medium text-slate-900">
                                 {m.titre}
                               </p>
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-slate-600">
                                 {m.secteur}
                               </p>
                             </button>
@@ -189,7 +189,7 @@ const CreateJob = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-sm font-bold text-slate-500 mb-2 block">
+                    <label className="text-sm font-bold text-slate-600 mb-2 block">
                       Type de contrat
                     </label>
                     <Select
@@ -207,7 +207,7 @@ const CreateJob = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-bold text-slate-500 mb-2 block">
+                    <label className="text-sm font-bold text-slate-600 mb-2 block">
                       Salaire proposé
                     </label>
                     <input
@@ -230,7 +230,7 @@ const CreateJob = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Wilaya *
                   </label>
                   <Select
@@ -255,7 +255,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Commune (Optionnel)
                   </label>
                   <Select
@@ -310,7 +310,7 @@ const CreateJob = () => {
                   isClearable
                   styles={selectStyles}
                 />
-                <p className="text-xs text-slate-400 mt-2">
+                <p className="text-xs text-slate-600 mt-2">
                   Les candidats devront répondre à ce questionnaire avant de
                   postuler.
                 </p>
@@ -329,7 +329,7 @@ const CreateJob = () => {
 
               <div className="space-y-5">
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Expérience requise
                   </label>
                   <Select
@@ -347,7 +347,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Diplôme attendu
                   </label>
                   <Select
@@ -366,7 +366,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Spécialité (Secteur)
                   </label>
                   <Select
@@ -397,7 +397,7 @@ const CreateJob = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Missions & Tâches
                   </label>
                   <textarea
@@ -410,7 +410,7 @@ const CreateJob = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-500 mb-2 block">
+                  <label className="text-sm font-bold text-slate-600 mb-2 block">
                     Profil Recherché (Exigences)
                   </label>
                   <textarea

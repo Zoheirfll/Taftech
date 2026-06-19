@@ -58,7 +58,7 @@ const AdminSystemLogs = () => {
             <AlertTriangle size={22} className="text-red-500" />
             Erreurs Système
           </h1>
-          <p className="text-sm text-slate-500 mt-1">{total} erreur{total > 1 ? "s" : ""} enregistrée{total > 1 ? "s" : ""}</p>
+          <p className="text-sm text-slate-700 mt-1">{total} erreur{total > 1 ? "s" : ""} enregistrée{total > 1 ? "s" : ""}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -85,7 +85,7 @@ const AdminSystemLogs = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500" />
           </div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-16 text-slate-400">
+          <div className="text-center py-16 text-slate-600">
             <AlertTriangle size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">Aucune erreur enregistrée — tout va bien !</p>
           </div>
@@ -93,20 +93,20 @@ const AdminSystemLogs = () => {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Message</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">URL</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">User</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Message</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">URL</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">User</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {logs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(log.timestamp)}</td>
+                  <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{formatDate(log.timestamp)}</td>
                   <td className="px-4 py-3 text-slate-900 font-medium max-w-xs truncate">{log.message}</td>
-                  <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{log.url}</td>
-                  <td className="px-4 py-3 text-slate-500">{log.user ? log.user : <span className="text-slate-300">Anonyme</span>}</td>
+                  <td className="px-4 py-3 text-slate-700 max-w-xs truncate">{log.url}</td>
+                  <td className="px-4 py-3 text-slate-700">{log.user ? log.user : <span className="text-slate-600">Anonyme</span>}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => setSelected(log)}
@@ -124,7 +124,7 @@ const AdminSystemLogs = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
+        <div className="flex items-center justify-between text-sm text-slate-700">
           <span>Page {page} / {totalPages}</span>
           <div className="flex gap-2">
             <button
@@ -157,30 +157,30 @@ const AdminSystemLogs = () => {
             </div>
             <div className="p-6 space-y-4 text-sm">
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Date</p>
+                <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Date</p>
                 <p className="text-slate-700">{formatDate(selected.timestamp)}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Message</p>
+                <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Message</p>
                 <p className="text-slate-900 font-medium">{selected.message}</p>
               </div>
               {selected.details && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Détails</p>
+                  <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Détails</p>
                   <p className="text-slate-700">{selected.details}</p>
                 </div>
               )}
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase mb-1">URL</p>
+                <p className="text-xs font-semibold text-slate-600 uppercase mb-1">URL</p>
                 <p className="text-slate-700 break-all">{selected.url}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Utilisateur</p>
+                <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Utilisateur</p>
                 <p className="text-slate-700">{selected.user || "Anonyme"}</p>
               </div>
               {selected.stack_trace && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Stack Trace</p>
+                  <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Stack Trace</p>
                   <pre className="bg-slate-900 text-emerald-400 text-xs p-4 rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
                     {selected.stack_trace}
                   </pre>
@@ -188,8 +188,8 @@ const AdminSystemLogs = () => {
               )}
               {selected.user_agent && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase mb-1">User Agent</p>
-                  <p className="text-slate-500 text-xs break-all">{selected.user_agent}</p>
+                  <p className="text-xs font-semibold text-slate-600 uppercase mb-1">User Agent</p>
+                  <p className="text-slate-700 text-xs break-all">{selected.user_agent}</p>
                 </div>
               )}
             </div>

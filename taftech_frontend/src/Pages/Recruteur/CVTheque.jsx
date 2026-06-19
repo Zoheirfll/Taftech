@@ -278,7 +278,7 @@ const CVTheque = () => {
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">
           Explorez le vivier de CV
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-700 mt-1">
           Recherchez parmi nos talents et trouvez le profil idéal pour votre équipe.
         </p>
       </div>
@@ -411,7 +411,7 @@ const CVTheque = () => {
 
           {/* Filtres rapides en checkboxes */}
           <div className="flex flex-wrap gap-2 items-center pt-3 border-t border-slate-100">
-            <span className="text-xs font-medium text-slate-500 mr-2">
+            <span className="text-xs font-medium text-slate-600 mr-2">
               Filtres rapides :
             </span>
             <button
@@ -463,7 +463,7 @@ const CVTheque = () => {
 
       {/* COMPTEUR */}
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-700">
           {loading ? (
             "Recherche en cours..."
           ) : (
@@ -484,7 +484,7 @@ const CVTheque = () => {
           {loading ? (
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700 mx-auto"></div>
-              <p className="text-xs text-slate-500 mt-3">Chargement...</p>
+              <p className="text-xs text-slate-600 mt-3">Chargement...</p>
             </div>
           ) : candidats.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
@@ -494,7 +494,7 @@ const CVTheque = () => {
                   <p className="text-sm font-medium text-slate-900">
                     Aucun favori pour l'instant
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     Cliquez sur l'étoile d'un profil pour l'ajouter ici
                   </p>
                 </>
@@ -504,7 +504,7 @@ const CVTheque = () => {
                   <p className="text-sm font-medium text-slate-900">
                     Aucun profil trouvé
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     Essayez d'élargir vos critères
                   </p>
                 </>
@@ -580,7 +580,7 @@ const CVTheque = () => {
                           {candidat.last_name} {candidat.first_name}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-600">
                         {candidat.wilaya && (
                           <span className="flex items-center gap-1">
                             <MapPin size={11} />
@@ -612,7 +612,7 @@ const CVTheque = () => {
                 <ChevronLeft size={16} />
                 Précédent
               </button>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-600">
                 Page {currentPage} / {totalPages}
               </span>
               <button
@@ -641,7 +641,7 @@ const CVTheque = () => {
                       <span className="text-3xl">🔒</span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 mb-2">Accès Premium requis</h3>
-                    <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                    <p className="text-sm text-slate-700 mb-6 leading-relaxed">
                       Passez en compte Premium pour accéder aux profils complets, coordonnées, CV et réseaux sociaux des candidats.
                     </p>
                     <Link
@@ -744,7 +744,7 @@ const CVTheque = () => {
 
               {/* Coordonnées */}
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Coordonnées</h3>
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Coordonnées</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Mail size={14} className="text-slate-400 shrink-0" />
@@ -759,7 +759,7 @@ const CVTheque = () => {
 
               {/* Expériences */}
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">
                   Expériences professionnelles
                 </h3>
                 {selectedCandidat.experiences_detail?.length > 0 ? (
@@ -775,7 +775,7 @@ const CVTheque = () => {
                         <p className="text-sm text-slate-600 mt-0.5">
                           {exp.entreprise}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
                           <Calendar size={11} />
                           {formatDate(exp.date_debut)} —{" "}
                           {exp.date_fin
@@ -791,7 +791,7 @@ const CVTheque = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">
+                  <p className="text-sm text-slate-600 italic">
                     Aucune expérience renseignée
                   </p>
                 )}
@@ -799,7 +799,7 @@ const CVTheque = () => {
 
               {/* Formations */}
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">
                   Formations
                 </h3>
                 {selectedCandidat.formations_detail?.length > 0 ? (
@@ -820,7 +820,7 @@ const CVTheque = () => {
                         <p className="text-sm text-slate-600 mt-0.5">
                           {form.etablissement}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
                           <Calendar size={11} />
                           {formatDate(form.date_debut)} —{" "}
                           {form.date_fin
@@ -831,7 +831,7 @@ const CVTheque = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">
+                  <p className="text-sm text-slate-600 italic">
                     Aucune formation renseignée
                   </p>
                 )}
@@ -840,7 +840,7 @@ const CVTheque = () => {
               {/* Compétences & Langues */}
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">
                     Compétences
                   </h3>
                   {selectedCandidat.competences ? (
@@ -858,13 +858,13 @@ const CVTheque = () => {
                         ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">
+                    <p className="text-sm text-slate-600 italic">
                       Non renseignées
                     </p>
                   )}
                 </div>
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">
                     Langues
                   </h3>
                   {selectedCandidat.langues ? (
@@ -881,7 +881,7 @@ const CVTheque = () => {
                             >
                               {name?.trim()}
                               {level && (
-                                <span className="text-slate-500">
+                                <span className="text-slate-600">
                                   · {level.trim()}
                                 </span>
                               )}
@@ -890,7 +890,7 @@ const CVTheque = () => {
                         })}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">
+                    <p className="text-sm text-slate-600 italic">
                       Non renseignées
                     </p>
                   )}
@@ -918,7 +918,7 @@ const CVTheque = () => {
               <p className="text-sm font-medium text-slate-900">
                 Sélectionnez un profil
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 Cliquez sur un candidat à gauche pour voir son profil détaillé
               </p>
             </div>

@@ -40,9 +40,9 @@ const getBadge = (offre) => {
 
 const renderScoreBadge = (cand) => {
   if (cand.est_rapide)
-    return <span className="text-[10px] text-slate-400 italic">Rapide ⚡</span>;
+    return <span className="text-[10px] text-slate-600 italic">Rapide ⚡</span>;
   if (!cand.score_matching || parseFloat(cand.score_matching) === 0)
-    return <span className="text-[10px] text-slate-400">En attente</span>;
+    return <span className="text-[10px] text-slate-600">En attente</span>;
   const num = parseFloat(cand.score_matching);
   const style =
     num >= 70
@@ -174,7 +174,7 @@ const AdminOffres = () => {
           <h1 className="text-2xl font-bold text-slate-900">
             Modération des offres
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Approuvez, rejetez ou corrigez les offres publiées.
           </p>
         </div>
@@ -207,7 +207,7 @@ const AdminOffres = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Offre & Entreprise</th>
               <th className="px-5 py-3">Date</th>
               <th className="px-5 py-3">Statut</th>
@@ -228,7 +228,7 @@ const AdminOffres = () => {
               <tr>
                 <td
                   colSpan="4"
-                  className="py-12 text-center text-sm text-slate-400 italic"
+                  className="py-12 text-center text-sm text-slate-600 italic"
                 >
                   Aucune offre trouvée.
                 </td>
@@ -252,7 +252,7 @@ const AdminOffres = () => {
                       </p>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-xs text-slate-500 font-medium">
+                  <td className="px-5 py-4 text-xs text-slate-700 font-medium">
                     {new Date(offre.date_publication).toLocaleDateString(
                       "fr-FR",
                     )}
@@ -364,7 +364,7 @@ const AdminOffres = () => {
                   key={label}
                   className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center"
                 >
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                  <p className="text-[10px] font-semibold text-slate-600 uppercase">
                     {label}
                   </p>
                   <p className="text-sm font-semibold text-slate-800 mt-1">
@@ -394,7 +394,7 @@ const AdminOffres = () => {
                 ({ label, value, bg }) =>
                   value && (
                     <div key={label}>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
                         {label}
                       </p>
                       <p
@@ -423,7 +423,7 @@ const AdminOffres = () => {
                 <div className="overflow-x-auto border border-slate-100 rounded-xl">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                      <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
                         <th className="px-3 py-2.5">Nom</th>
                         <th className="px-3 py-2.5 text-center">Score IA</th>
                         <th className="px-3 py-2.5 text-center">Note</th>
@@ -447,7 +447,7 @@ const AdminOffres = () => {
                             <tr>
                               <td
                                 colSpan="4"
-                                className="py-6 text-center text-slate-400 italic"
+                                className="py-6 text-center text-slate-600 italic"
                               >
                                 Aucun candidat.
                               </td>
@@ -497,7 +497,7 @@ const AdminOffres = () => {
                   </table>
                 </div>
               ) : (
-                <p className="text-xs italic text-slate-400 text-center py-4">
+                <p className="text-xs italic text-slate-600 text-center py-4">
                   Aucun candidat n'a postulé.
                 </p>
               )}
@@ -515,7 +515,7 @@ const AdminOffres = () => {
             </h2>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Titre
                 </label>
                 <input
@@ -528,7 +528,7 @@ const AdminOffres = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Description
                 </label>
                 <textarea
@@ -570,7 +570,7 @@ const AdminOffres = () => {
             <h2 className="text-lg font-bold text-red-600 mb-1">
               Rejeter l'offre
             </h2>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-700 mb-4">
               Précisez le motif pour le recruteur
             </p>
             <textarea

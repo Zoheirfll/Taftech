@@ -88,7 +88,7 @@ urlpatterns = [
     path('parametres/recruteur/', ParametresRecruteurAPIView.as_view(), name='parametres-recruteur'),
     path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque'),
     path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-favori'),
-    path('entreprises/<int:entreprise_id>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view(), name='candidature-spontanee'),
+    path('entreprises/<slug:slug>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view(), name='candidature-spontanee'),
     path('dashboard/candidatures-spontanees/', ListeCandidaturesSpontaneesAPIView.as_view(), name='liste-spontanees'),
     path('dashboard/candidatures-spontanees/<int:pk>/lire/', MarquerSpontaneeLueAPIView.as_view(), name='spontanee-lire'),
     path('dashboard/candidatures-spontanees/<int:pk>/supprimer/', SupprimerSpontaneeAPIView.as_view(), name='spontanee-supprimer'),
@@ -100,7 +100,7 @@ urlpatterns = [
     path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-lire'),
     path('stats/public/', PublicStatsAPIView.as_view(), name='stats-public'),
     path('entreprises/', EntrepriseListAPIView.as_view(), name='entreprises-list'),
-    path('entreprises/<int:entreprise_id>/', EntrepriseDetailAPIView.as_view(), name='entreprise-public'),
+    path('entreprises/<slug:slug>/', EntrepriseDetailAPIView.as_view(), name='entreprise-public'),
 
     # Admin
     path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres'),

@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 19/06/2026 — Dashboard erreurs système, Cypress 4/5 résolus, vite host:true_
+_Dernière mise à jour : 19/06/2026 — Navbar redesign, slug entreprise, QR code, textes assombris_
 
 ---
 
@@ -248,6 +248,28 @@ Pages/
 - **Premium expiré → membres bloqués** : blocage au login (403 PREMIUM_EXPIRE) + blocage dashboard API ; PROPRIETAIRE toujours autorisé
 - Onglet "Mon équipe" toujours visible pour PROPRIETAIRE même si premium expiré (pour gérer/supprimer membres)
 
+### 🔗 Slug Entreprise
+- `ProfilEntreprise.slug` — auto-généré depuis `nom_entreprise` via `slugify()` à la création (unicité garantie avec suffixe `-N` si collision)
+- Migration 0044 : data migration peuple les slugs existants puis ajoute contrainte UNIQUE via `RunSQL` (pas `AlterField` — évite double création index `_like` PostgreSQL)
+- URLs publiques : `/api/jobs/entreprises/<slug:slug>/` et `/api/jobs/entreprises/<slug:slug>/candidature-spontanee/`
+- Frontend route : `/entreprise/:slug` (plus `:id`)
+- QR code dans ParametresRecruteur encode `window.location.origin + /entreprise/{slug}`
+- `slug` exposé dans `EntrepriseSimpleSerializer`, `EntreprisePublicSerializer`, `EntrepriseDashboardDetailSerializer`
+
+### 🎨 Navbar Redesign
+- Backdrop blur `bg-white/95 backdrop-blur-md` sur les deux navbars
+- Liens nav : pill hover coloré (`hover:bg-indigo-50 rounded-lg` candidat, `hover:bg-teal-50` recruteur)
+- Icônes sur tous les liens de navigation (lucide-react)
+- Texte `text-slate-900` (noir) au lieu de `text-slate-600` (gris) sur les navbars
+- Logo `h-16` dans conteneur `h-15` (légèrement débordant — effet voulu)
+- ~80 occurrences de `text-slate-400/500` remplacées par `text-slate-600/700` sur 21 fichiers frontend
+
+### 📱 QR Code Entreprise
+- Lib : `qrcode.react` (QRCodeCanvas)
+- Visible dans **Paramètres → Mon entreprise** uniquement si entreprise approuvée
+- Encode : `window.location.origin + /entreprise/{slug}` (dynamique, pas hardcodé)
+- Bouton téléchargement PNG : `canvas.toDataURL("image/png")`
+
 ### ⭐ Système Premium (US11/12)
 - `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement)
 - `ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`
@@ -275,7 +297,7 @@ Pages/
 ### jobs/
 - `ProfilCandidat` (titre, cv_pdf, photo, bio, linkedin, github, wilaya, commune, diplome, specialite, competences, langues, mobilite, situation_actuelle, salaire_souhaite, secteur_souhaite, service_militaire, permis, passeport, niveau_experience, notif_mise_a_jour)
 - `ExperienceCandidat`, `FormationCandidat`
-- `ProfilEntreprise` (nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto, **est_premium**, **premium_expire_at**, property `est_premium_actif`)
+- `ProfilEntreprise` (nom_entreprise, **slug** auto-généré depuis nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto, **est_premium**, **premium_expire_at**, property `est_premium_actif`)
 - `OffreEmploi` (entreprise, titre, wilaya, commune, specialite, diplome, experience_requise, type_contrat, description, missions, profil_recherche, salaire_propose, est_active, est_cloturee, statut_moderation, motif_rejet, questionnaire)
 - `Candidature` (offre, candidat, statut, score_matching, details_matching, profil_snapshot, est_rapide, date_entretien, note_technique/communication/motivation/experience, note_globale, commentaire_evaluation)
 - `CandidatureSpontanee`, `Notification`, `MetierReferentiel`, `Questionnaire`, `QuestionQuestionnaire`, `ReponseChoix`, `ReponseCandidat`, `ProfilCandidatFavori`
@@ -340,6 +362,9 @@ Pages/
 | Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
 | Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
 | Swagger DEFAULT_SCHEMA_CLASS | Injecté dans `REST_FRAMEWORK` dict **après** sa définition (bloc try/except déplacé sous REST_FRAMEWORK) | `NameError` si injecté avant — settings.py est exécuté de haut en bas |
+| Slug migration PostgreSQL | Utiliser `AddField` (sans unique) + `RunPython` (populate) + `RunSQL ALTER TABLE ADD CONSTRAINT` | `AlterField` avec `unique=True` recrée l'index `_like` déjà créé par `AddField` → `DuplicateTable` |
+| QR code URL | `window.location.origin` (dynamique) | Pas hardcodé — s'adapte dev/prod automatiquement |
+| Navbar texte | `text-slate-900` sur les liens de navigation | Plus lisible, contraste WCAG |
 | Cypress version | Downgrade 15 → 13.17.0 | Cypress 15 binaire cassé sur Windows 10 (`--smoke-test` option non reconnue) |
 | Cypress login recruteur | `cy.login("recruteur")` visite `/recruteurs/connexion` (placeholder `votre@entreprise.com`) | Portail séparé — login candidat via `/login` retourne 403 pour rôle RECRUTEUR |
 | Cypress ECONNREFUSED GUI | `host: true` dans vite.config.js server | Windows résout `localhost` en IPv6 mais Vite écoutait IPv4 seulement |
@@ -372,7 +397,7 @@ Pages/
 
 ## ✅ ÉTAT TESTS (dernière vérification — Sécurité + accès membres)
 
-- Backend : ~268/268 ✅ (dont 49 tests équipe/audit, +10 tests PREMIUM_EXPIRE/logs)
+- Backend : 228/228 ✅ (dont tests slug + candidature-spontanee mis à jour)
 - Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe)
 - Cypress E2E : 7 fichiers — tous stables ✅
 - Vite build : propre ✅ (1928 modules)

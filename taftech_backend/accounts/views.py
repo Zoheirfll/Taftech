@@ -309,8 +309,23 @@ class AdminSystemLogAPIView(APIView):
 
     def get(self, request):
         logs = SystemErrorLog.objects.all().order_by('-timestamp')
-        serializer = SystemErrorLogSerializer(logs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Pagination manuelle — 50 par page
+        page = int(request.query_params.get('page', 1))
+        page_size = 50
+        start = (page - 1) * page_size
+        end = start + page_size
+        total = logs.count()
+        serializer = SystemErrorLogSerializer(logs[start:end], many=True)
+        return Response({
+            'count': total,
+            'results': serializer.data,
+            'page': page,
+            'total_pages': max(1, (total + page_size - 1) // page_size),
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        SystemErrorLog.objects.all().delete()
+        return Response({'ok': True}, status=status.HTTP_200_OK)
 
 
 class ForgotPasswordAPIView(APIView):

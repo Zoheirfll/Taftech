@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ShieldCheck,
   UserCog,
+  AlertTriangle,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -57,6 +58,9 @@ const AdminLayout = () => {
           </NavLink>
           <NavLink to="/admin-taftech/audit" className={navLinkClass}>
             <ShieldCheck size={16} className="flex-shrink-0" /> Journal d'audit
+          </NavLink>
+          <NavLink to="/admin-taftech/erreurs-systeme" className={navLinkClass}>
+            <AlertTriangle size={16} className="shrink-0" /> Erreurs système
           </NavLink>
           <NavLink to="/admin-taftech/comptes-admins" className={navLinkClass}>
             <UserCog size={16} className="shrink-0" /> Comptes admins

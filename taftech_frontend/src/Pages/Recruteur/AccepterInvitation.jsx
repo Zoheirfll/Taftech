@@ -146,15 +146,21 @@ const AccepterInvitation = () => {
                 </>
               )}
 
-              {info.compte_existant && (
+              {info.compte_existant && !info.sans_mot_de_passe && (
                 <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                   Un compte TafTech existe déjà avec cet email. Entrez votre mot de passe pour confirmer et rejoindre l'équipe.
                 </p>
               )}
 
+              {info.sans_mot_de_passe && (
+                <p className="text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                  Votre compte TafTech a été créé via Google. Définissez un mot de passe pour accéder à l'espace recruteur.
+                </p>
+              )}
+
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  {info.compte_existant ? "Votre mot de passe" : "Choisissez un mot de passe"} *
+                  {info.sans_mot_de_passe ? "Créez un mot de passe recruteur" : info.compte_existant ? "Votre mot de passe" : "Choisissez un mot de passe"} *
                 </label>
                 <div className="relative">
                   <input
@@ -162,7 +168,7 @@ const AccepterInvitation = () => {
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    placeholder={info.compte_existant ? "Votre mot de passe TafTech" : "8 caractères minimum"}
+                    placeholder={info.compte_existant && !info.sans_mot_de_passe ? "Votre mot de passe TafTech" : "8 caractères minimum"}
                     autoFocus
                   />
                   <button

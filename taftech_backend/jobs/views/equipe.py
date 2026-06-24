@@ -220,9 +220,24 @@ class InviterMembreAPIView(APIView):
         if entreprise.user.email == email:
             return Response({'error': 'Vous êtes déjà le propriétaire.'}, status=400)
 
-        # Si l'utilisateur a déjà un compte TafTech → ajout direct, pas besoin de lien
+        # Si l'utilisateur a déjà un compte TafTech
         existing_user = User.objects.filter(email=email).first()
         if existing_user:
+            if getattr(existing_user, 'est_compte_google', False):
+                # Compte Google : envoyer lien invitation pour qu'il définisse un mot de passe recruteur
+                InvitationEquipe.objects.filter(entreprise=entreprise, email=email, est_acceptee=False).delete()
+                token = secrets.token_urlsafe(32)
+                invitation = InvitationEquipe.objects.create(
+                    entreprise=entreprise,
+                    email=email,
+                    token=token,
+                    role=role,
+                    expire_at=timezone.now() + timedelta(hours=INVITATION_EXPIRY_HOURS),
+                )
+                _envoyer_email_invitation(invitation, request)
+                _log(request.user, entreprise, 'INVITER_MEMBRE', f"{email} ({role}) — invitation Google (mdp requis)")
+                return Response({'message': f'Invitation envoyée à {email} (compte Google — définition mot de passe requise).'}, status=201)
+            # Compte email classique → ajout direct
             MembreEquipe.objects.create(entreprise=entreprise, user=existing_user, role=role)
             _envoyer_email_bienvenue(existing_user, entreprise, role)
             _log(request.user, entreprise, 'INVITER_MEMBRE', f"{email} ({role}) — ajout direct")
@@ -304,7 +319,9 @@ class AccepterInvitationAPIView(APIView):
             return Response({'error': 'Ce lien a expiré. Demandez une nouvelle invitation.'}, status=400)
 
         # Vérifier si un compte existe déjà avec cet email
-        compte_existant = User.objects.filter(email=inv.email).exists()
+        existing = User.objects.filter(email=inv.email).first()
+        compte_existant = existing is not None
+        sans_mot_de_passe = compte_existant and getattr(existing, 'est_compte_google', False)
 
         return Response({
             'entreprise': inv.entreprise.nom_entreprise,
@@ -312,6 +329,7 @@ class AccepterInvitationAPIView(APIView):
             'role_display': inv.get_role_display(),
             'email': inv.email,
             'compte_existant': compte_existant,
+            'sans_mot_de_passe': sans_mot_de_passe,
         })
 
     def post(self, request, token):
@@ -329,10 +347,17 @@ class AccepterInvitationAPIView(APIView):
         user = User.objects.filter(email=inv.email).first()
 
         if user:
-            # Compte existant — on vérifie le mot de passe
             password = request.data.get('password', '')
-            if not user.check_password(password):
-                return Response({'error': 'Mot de passe incorrect.'}, status=400)
+            if getattr(user, 'est_compte_google', False):
+                # Compte Google — définir un mot de passe pour l'espace recruteur
+                if not password or len(password) < 8:
+                    return Response({'error': 'Créez un mot de passe (8 caractères minimum) pour accéder à l\'espace recruteur.'}, status=400)
+                user.set_password(password)
+                user.save(update_fields=['password'])
+            else:
+                # Compte email — vérifier le mot de passe existant
+                if not user.check_password(password):
+                    return Response({'error': 'Mot de passe incorrect.'}, status=400)
         else:
             # Nouveau compte
             password = request.data.get('password', '')

@@ -439,6 +439,46 @@ class ResetPasswordAPIView(APIView):
         return Response({'message': 'Mot de passe réinitialisé avec succès !'}, status=200)
 
 
+class ChangerMotDePasseAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        nouveau = request.data.get('nouveau_mdp', '')
+
+        if not nouveau or len(nouveau) < 8:
+            return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
+
+        if getattr(user, 'est_compte_google', False):
+            # Compte Google — pas d'ancien mot de passe requis
+            user.set_password(nouveau)
+            user.save(update_fields=['password'])
+            return Response({'message': 'Mot de passe défini avec succès !'})
+
+        # Compte email — vérifier l'ancien mot de passe
+        ancien = request.data.get('ancien_mdp', '')
+        if not user.check_password(ancien):
+            return Response({'error': 'Ancien mot de passe incorrect.'}, status=400)
+
+        user.set_password(nouveau)
+        user.save(update_fields=['password'])
+        return Response({'message': 'Mot de passe modifié avec succès !'})
+
+
+class MeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'est_compte_google': getattr(user, 'est_compte_google', False),
+        })
+
+
 class GoogleSocialAuthView(APIView):
     permission_classes = [AllowAny]
 
@@ -491,6 +531,7 @@ class GoogleSocialAuthView(APIView):
                     'email_verifie': True,
                     'is_active': True,
                     'consentement_loi_18_07': False,
+                    'est_compte_google': True,
                 }
             )
 

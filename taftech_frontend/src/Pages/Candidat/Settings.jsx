@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
+import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
+import api from "../../api/axiosConfig";
 
 const Toggle = ({ checked, onChange }) => (
   <button
@@ -21,13 +23,19 @@ const Settings = () => {
     notif_mise_a_jour: false,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [estCompteGoogle, setEstCompteGoogle] = useState(false);
   const [passwords, setPasswords] = useState({ old: "", new: "", confirm: "" });
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   useEffect(() => {
-    const fetchParametres = async () => {
+    const fetchData = async () => {
       try {
-        const data = await jobsService.getParametres();
-        setNotifications(data);
+        const [parametres, me] = await Promise.all([
+          jobsService.getParametres(),
+          api.get("accounts/me/"),
+        ]);
+        setNotifications(parametres);
+        setEstCompteGoogle(me.data.est_compte_google || false);
       } catch (error) {
         toast.error("Erreur lors du chargement.");
         reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
@@ -35,7 +43,7 @@ const Settings = () => {
         setIsLoading(false);
       }
     };
-    fetchParametres();
+    fetchData();
   }, []);
 
   const handleToggle = async (field) => {
@@ -52,11 +60,28 @@ const Settings = () => {
     }
   };
 
-  const handleUpdatePassword = (e) => {
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm)
       return toast.error("Les mots de passe ne correspondent pas.");
-    toast.success("Demande de changement envoyée.");
+    if (passwords.new.length < 8)
+      return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+    setPwdLoading(true);
+    try {
+      await api.post("accounts/changer-mot-de-passe/", {
+        ancien_mdp: passwords.old,
+        nouveau_mdp: passwords.new,
+      });
+      toast.success(estCompteGoogle ? "Mot de passe défini avec succès !" : "Mot de passe modifié avec succès !");
+      setPasswords({ old: "", new: "", confirm: "" });
+      if (estCompteGoogle) setEstCompteGoogle(false);
+    } catch (err) {
+      const msg = err.response?.data?.error || "Erreur lors du changement.";
+      toast.error(msg);
+      reportError("ECHEC_CHANGER_MDP", err);
+    } finally {
+      setPwdLoading(false);
+    }
   };
 
   if (isLoading)
@@ -76,40 +101,20 @@ const Settings = () => {
       {/* NOTIFICATIONS */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-900">
-            Notifications
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
         </div>
         <div className="divide-y divide-slate-100">
           {[
-            {
-              field: "notif_offres_exclusives",
-              label: "Offres exclusives",
-              desc: "Recevez des offres spéciales de nos partenaires.",
-            },
-            {
-              field: "notif_newsletter",
-              label: "Newsletter",
-              desc: "Tendances du marché et astuces professionnelles.",
-            },
-            {
-              field: "notif_mise_a_jour",
-              label: "Rappels de profil",
-              desc: "Email si votre CV n'a pas été actualisé.",
-            },
+            { field: "notif_offres_exclusives", label: "Offres exclusives", desc: "Recevez des offres spéciales de nos partenaires." },
+            { field: "notif_newsletter", label: "Newsletter", desc: "Tendances du marché et astuces professionnelles." },
+            { field: "notif_mise_a_jour", label: "Rappels de profil", desc: "Email si votre CV n'a pas été actualisé." },
           ].map(({ field, label, desc }) => (
-            <div
-              key={field}
-              className="flex justify-between items-center px-5 py-4"
-            >
+            <div key={field} className="flex justify-between items-center px-5 py-4">
               <div>
                 <p className="text-sm font-medium text-slate-800">{label}</p>
                 <p className="text-xs text-slate-600 mt-0.5">{desc}</p>
               </div>
-              <Toggle
-                checked={notifications[field]}
-                onChange={() => handleToggle(field)}
-              />
+              <Toggle checked={notifications[field]} onChange={() => handleToggle(field)} />
             </div>
           ))}
         </div>
@@ -119,43 +124,45 @@ const Settings = () => {
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-base font-semibold text-slate-900">
-            Modifier mon mot de passe
+            {estCompteGoogle ? "Définir un mot de passe" : "Modifier mon mot de passe"}
           </h2>
+          {estCompteGoogle && (
+            <p className="text-xs text-slate-500 mt-1">
+              Votre compte a été créé via Google. Définissez un mot de passe pour vous connecter sans Google.
+            </p>
+          )}
         </div>
         <div className="p-5">
-          <form
-            onSubmit={handleUpdatePassword}
-            className="flex flex-col md:flex-row gap-3"
-          >
+          <form onSubmit={handleUpdatePassword} className="flex flex-col md:flex-row gap-3">
+            {!estCompteGoogle && (
+              <input
+                type="password"
+                placeholder="Mot de passe actuel"
+                className={inputClass}
+                value={passwords.old}
+                onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
+              />
+            )}
             <input
               type="password"
-              placeholder="Mot de passe actuel"
+              placeholder="Nouveau mot de passe"
               className={inputClass}
-              onChange={(e) =>
-                setPasswords({ ...passwords, old: e.target.value })
-              }
-            />
-            <input
-              type="password"
-              placeholder="Nouveau"
-              className={inputClass}
-              onChange={(e) =>
-                setPasswords({ ...passwords, new: e.target.value })
-              }
+              value={passwords.new}
+              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
             />
             <input
               type="password"
               placeholder="Confirmer"
               className={inputClass}
-              onChange={(e) =>
-                setPasswords({ ...passwords, confirm: e.target.value })
-              }
+              value={passwords.confirm}
+              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
             />
             <button
               type="submit"
-              className="px-5 py-3 bg-slate-900 text-white text-base font-bold rounded-xl hover:bg-black transition-colors"
+              disabled={pwdLoading}
+              className="px-5 py-3 bg-slate-900 text-white text-base font-bold rounded-xl hover:bg-black transition-colors disabled:opacity-60"
             >
-              Modifier
+              {pwdLoading ? "..." : estCompteGoogle ? "Définir" : "Modifier"}
             </button>
           </form>
         </div>
@@ -164,12 +171,8 @@ const Settings = () => {
       {/* DANGER ZONE */}
       <div className="bg-white border border-red-100 rounded-2xl p-5 flex justify-between items-center">
         <div>
-          <h2 className="text-sm font-semibold text-red-600">
-            Supprimer mon compte
-          </h2>
-          <p className="text-xs text-slate-600 mt-0.5">
-            Cette action est irréversible.
-          </p>
+          <h2 className="text-sm font-semibold text-red-600">Supprimer mon compte</h2>
+          <p className="text-xs text-slate-600 mt-0.5">Cette action est irréversible.</p>
         </div>
         <button
           onClick={() => toast.error("Action désactivée pour l'instant.")}

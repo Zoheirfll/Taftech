@@ -570,6 +570,19 @@ export const Modals = ({
                   }
                 />
               </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  Secteur d'activité
+                </label>
+                <Select
+                  options={constants.secteurs}
+                  value={constants.secteurs?.find((s) => s.value === newExp.secteur) || null}
+                  onChange={(opt) => setNewExp({ ...newExp, secteur: opt ? opt.value : "" })}
+                  placeholder="Sélectionner un secteur..."
+                  isClearable
+                  styles={selectStyles}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
@@ -622,6 +635,7 @@ export const Modals = ({
                     setNewExp({
                       titre_poste: "",
                       entreprise: "",
+                      secteur: "",
                       date_debut: "",
                       date_fin: "",
                       description: "",

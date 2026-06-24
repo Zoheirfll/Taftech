@@ -351,6 +351,9 @@ const ProfilCandidat = () => {
                   </h4>
                   <p className="text-xs text-indigo-600 font-medium">
                     {exp.entreprise}
+                    {exp.secteur && (
+                      <span className="ml-2 text-slate-400 font-normal">· {exp.secteur}</span>
+                    )}
                   </p>
                   <p className="text-xs text-slate-600 mt-1">
                     {formatDate(exp.date_debut)} —{" "}

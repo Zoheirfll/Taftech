@@ -8,7 +8,7 @@ User = get_user_model()
 class ExperienceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExperienceCandidat
-        fields = ['id', 'titre_poste', 'entreprise', 'date_debut', 'date_fin', 'description']
+        fields = ['id', 'titre_poste', 'entreprise', 'secteur', 'date_debut', 'date_fin', 'description']
 
 
 class FormationSerializer(serializers.ModelSerializer):

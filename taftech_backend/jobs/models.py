@@ -299,7 +299,8 @@ class ExperienceCandidat(models.Model):
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='experiences_detail')
     titre_poste = models.CharField(max_length=200, verbose_name="Titre du poste (Ex: Développeur Front-End)")
     entreprise = models.CharField(max_length=200, verbose_name="Nom de l'entreprise")
-    
+    secteur = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True, verbose_name="Secteur d'activité")
+
     date_debut = models.DateField(verbose_name="Date de début")
     date_fin = models.DateField(null=True, blank=True, verbose_name="Date de fin (Vide si toujours en poste)")
     

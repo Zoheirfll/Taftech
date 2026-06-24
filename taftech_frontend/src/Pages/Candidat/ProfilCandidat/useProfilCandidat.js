@@ -30,6 +30,7 @@ export const useProfilCandidat = () => {
   const [newExp, setNewExp] = useState({
     titre_poste: "",
     entreprise: "",
+    secteur: "",
     date_debut: "",
     date_fin: "",
     description: "",
@@ -189,6 +190,7 @@ export const useProfilCandidat = () => {
       setNewExp({
         titre_poste: "",
         entreprise: "",
+        secteur: "",
         date_debut: "",
         date_fin: "",
         description: "",
@@ -216,6 +218,7 @@ export const useProfilCandidat = () => {
     setNewExp({
       titre_poste: exp.titre_poste || "",
       entreprise: exp.entreprise || "",
+      secteur: exp.secteur || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
       description: exp.description || "",
@@ -234,6 +237,7 @@ export const useProfilCandidat = () => {
       setNewExp({
         titre_poste: "",
         entreprise: "",
+        secteur: "",
         date_debut: "",
         date_fin: "",
         description: "",

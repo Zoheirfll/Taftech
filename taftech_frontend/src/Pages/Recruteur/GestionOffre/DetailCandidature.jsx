@@ -466,6 +466,7 @@ export const DetailCandidature = ({
                         </p>
                         <p className="text-sm text-teal-700">
                           {exp.entreprise}
+                          {exp.secteur && <span className="text-slate-400 font-normal ml-1">· {exp.secteur}</span>}
                         </p>
                         <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
                           <Calendar size={10} />

@@ -50,6 +50,10 @@ const ProfilCandidat = () => {
     titreSuggestions,
     showTitreSuggestions,
     setShowTitreSuggestions,
+    expTitreSuggestions,
+    showExpTitreSuggestions,
+    setShowExpTitreSuggestions,
+    handleExpTitreChange,
     parserLoading,
     parsedData,
     setParsedData,
@@ -587,6 +591,10 @@ const ProfilCandidat = () => {
         titreSuggestions={titreSuggestions}
         showTitreSuggestions={showTitreSuggestions}
         setShowTitreSuggestions={setShowTitreSuggestions}
+        expTitreSuggestions={expTitreSuggestions}
+        showExpTitreSuggestions={showExpTitreSuggestions}
+        setShowExpTitreSuggestions={setShowExpTitreSuggestions}
+        handleExpTitreChange={handleExpTitreChange}
         parserLoading={parserLoading}
         parsedData={parsedData}
         setParsedData={setParsedData}

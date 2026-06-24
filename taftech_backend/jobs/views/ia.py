@@ -82,8 +82,12 @@ class MetierReferentielAPIView(APIView):
         if secteur:
             metiers = metiers.filter(secteur=secteur)
         if search:
-            metiers = metiers.filter(titre__icontains=search)
-        return Response(MetierReferentielSerializer(metiers, many=True).data)
+            from django.db.models import Q
+            q = Q()
+            for mot in search.strip().split():
+                q &= Q(titre__icontains=mot)
+            metiers = metiers.filter(q)
+        return Response(MetierReferentielSerializer(metiers[:30], many=True).data)
 
 
 class MetierReferentielAdminAPIView(APIView):

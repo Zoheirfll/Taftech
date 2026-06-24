@@ -11,6 +11,8 @@ export const useProfilCandidat = () => {
   const [profil, setProfil] = useState(null);
   const [titreSuggestions, setTitreSuggestions] = useState([]);
   const [showTitreSuggestions, setShowTitreSuggestions] = useState(false);
+  const [expTitreSuggestions, setExpTitreSuggestions] = useState([]);
+  const [showExpTitreSuggestions, setShowExpTitreSuggestions] = useState(false);
   const [constants, setConstants] = useState({
     wilayas: [],
     secteurs: [],
@@ -118,6 +120,21 @@ export const useProfilCandidat = () => {
     return points;
   };
 
+  const handleExpTitreChange = async (value) => {
+    setNewExp((prev) => ({ ...prev, titre_poste: value }));
+    if (value.length >= 2) {
+      try {
+        const data = await jobsService.getMetiers(value);
+        setExpTitreSuggestions(data.slice(0, 20));
+        setShowExpTitreSuggestions(true);
+      } catch {
+        setExpTitreSuggestions([]);
+      }
+    } else {
+      setShowExpTitreSuggestions(false);
+    }
+  };
+
   const handleTitreProChange = async (value) => {
     setEditCV({ ...editCV, titre: value });
     if (value.length >= 2) {
@@ -181,10 +198,16 @@ export const useProfilCandidat = () => {
     }
   };
 
+  const normalizeExp = (exp) => ({
+    ...exp,
+    secteur: exp.secteur || null,
+    date_fin: exp.date_fin || null,
+  });
+
   const handleAddExperience = async (e) => {
     e.preventDefault();
     try {
-      await profilService.addExperience(newExp);
+      await profilService.addExperience(normalizeExp(newExp));
       toast.success("Expérience ajoutée");
       setShowExpForm(false);
       setNewExp({
@@ -230,7 +253,7 @@ export const useProfilCandidat = () => {
   const handleUpdateExperience = async (e) => {
     e.preventDefault();
     try {
-      await profilService.updateExperience(editingExpId, newExp);
+      await profilService.updateExperience(editingExpId, normalizeExp(newExp));
       toast.success("Expérience mise à jour");
       setShowExpForm(false);
       setEditingExpId(null);
@@ -609,6 +632,10 @@ export const useProfilCandidat = () => {
     titreSuggestions,
     showTitreSuggestions,
     setShowTitreSuggestions,
+    expTitreSuggestions,
+    showExpTitreSuggestions,
+    setShowExpTitreSuggestions,
+    handleExpTitreChange,
     showExpForm,
     setShowExpForm,
     showFormForm,

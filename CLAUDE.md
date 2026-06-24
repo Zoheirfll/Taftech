@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 24/06/2026 — Vérification email, IA CreateJob, redesign JobDetail, expiration offres, modal admin offres_
+_Dernière mise à jour : 24/06/2026 — Secteur expérience, algo matching rewrite, référentiel Emploitic, autocomplete titre_poste_
 
 ---
 
@@ -127,6 +127,9 @@ WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_C
 - `envoyer_alertes.py` — alertes emploi par email + notification. Option `--dry-run`.
 - `relance_maj_cv.py` — relance candidats inactifs 60 jours. Option `--dry-run`.
 - `archiver_offres_expirees.py` — clôture auto les offres dont `date_expiration < today`. Option `--dry-run`.
+- `scraper_emploitic.py` — scrape titres de postes depuis emploitic.com via Playwright (subprocess pour éviter bug greenlet Windows). Importe dans MetierReferentiel. Options `--pages N` `--dry-run`. Playwright requis (`pip install playwright && python -m playwright install chromium`).
+- `nettoyer_referentiel.py` — nettoie MetierReferentiel : supprime format ROME slash (masculin/féminin), reconstruit titre masculin propre, corrige H/F, noms de villes, tirets, déduplique. Option `--dry-run`.
+- `corriger_secteurs_referentiel.py` — mappe codes ROME non standard (SERVICE_PUBLIC, AGRICULTURE, COMMUNICATION, SPECTACLE, ARTS) vers nos SECTEURS_CHOICES, devine secteur pour entrées AUTRE via mots-clés. Option `--dry-run`.
 
 ---
 
@@ -218,6 +221,11 @@ Pages/
 - Score 0-100% : Spécialité (0-25) + Diplôme (0-20) + Expérience (0-20) + Région (0-20) + Compétences (0-15)
 - Radar SVG 5 critères (candidat + recruteur), comparateur 2 candidats
 - Groq séparé du scoring — classique uniquement
+- **Algo rewrite** : `matcher.py` entièrement réécrit — `_CODES_PROCHES` inter-secteurs, `_experience_pertinente()` vérifie `exp.secteur` (code SECTEURS_CHOICES), fuzzy 0.60, mots communs ≥5 lettres, synonymes. Déduplication périodes chevauchantes (`_deduire_annees_sans_chevauchement`). Score neutre 5/15 si compétences vides. Fallback `niveau_experience` 14/20.
+- **`ExperienceCandidat.secteur`** : champ ajouté (CharField choices SECTEURS_CHOICES, nullable) — migration 0046. Affiché dans ProfilCandidat, ReviewCandidature, DetailCandidature. `normalizeExp()` convertit `""` → `null` avant API.
+- **Référentiel MetierReferentiel** : 13 402 titres (11 065 ROME + ~2 337 Emploitic). Scraper Playwright via subprocess. Nettoyage format slash ROME. Secteurs corrigés (3 617 entrées).
+- **Autocomplete titre_poste expériences** : même UX que titre profil — suggestions depuis MetierReferentiel via `handleExpTitreChange`.
+- **Recherche référentiel par mots** : `MetierReferentielAPIView` utilise Q() par mot individuel → "ingenieur informatique" trouve "Ingénieur en informatique".
 
 ### 🔍 Recherche & Dashboard
 - Multicritères avec debounce 400ms, pagination, offres recommandées IA
@@ -323,7 +331,7 @@ Pages/
 
 ### jobs/
 - `ProfilCandidat` (titre, cv_pdf, photo, bio, linkedin, github, wilaya, commune, diplome, specialite, competences, langues, mobilite, situation_actuelle, salaire_souhaite, secteur_souhaite, service_militaire, permis, passeport, niveau_experience, notif_mise_a_jour)
-- `ExperienceCandidat`, `FormationCandidat`
+- `ExperienceCandidat` (**secteur** CharField choices SECTEURS_CHOICES nullable — migration 0046), `FormationCandidat`
 - `ProfilEntreprise` (nom_entreprise, **slug** auto-généré depuis nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto, **est_premium**, **premium_expire_at**, property `est_premium_actif`)
 - `OffreEmploi` (entreprise, titre, wilaya, commune, specialite, diplome, experience_requise, type_contrat, description, missions, profil_recherche, salaire_propose, **date_expiration** (DateField nullable), est_active, est_cloturee, statut_moderation, motif_rejet, questionnaire)
 - `Candidature` (offre, candidat, statut, score_matching, details_matching, profil_snapshot, est_rapide, date_entretien, note_technique/communication/motivation/experience, note_globale, commentaire_evaluation)
@@ -397,6 +405,11 @@ Pages/
 | Notification offre admin | Champ `destinataire` (pas `user`) + `titre` obligatoire | Modèle Notification a `destinataire` FK et titre requis |
 | date_expiration PATCH APPROUVEE | Autorisé si seul ce champ dans payload | Ne remet pas l'offre EN_ATTENTE pour un simple changement de date |
 | photo_profil snapshot | `.url` (pas `str()`) | `str()` retourne `photos/xxx.jpg` sans `/media/` — `.url` retourne le chemin complet |
+| ExperienceCandidat.secteur | CharField choices nullable | `normalizeExp()` convertit `""` → `null` avant PUT — Django rejette string vide sur choices field |
+| Matcher expérience pertinente | Vérifie `isinstance(secteur_exp, str)` avant usage | Mock retourne Mock object au lieu de None si pas vérifié |
+| Scraper Emploitic | Subprocess séparé + JSON tmp file | Playwright sync_playwright sur Windows bloque le greenlet à la fermeture — subprocess évite le hang |
+| Référentiel recherche | Q() par mot individuel | `icontains` substring exact ne trouve pas "Ingénieur en informatique" avec "ingenieur informatique" |
+| Playwright Windows | `python -m playwright install chromium` dans backend_env | Binaire chromium lié à l'env Python — installer dans le bon venv |
 | mediaUrl normalization | Ajoute `/media/` si absent du chemin | Snapshots anciens stockés sans `/media/` prefix |
 | JobDetail redesign | Bandeau entreprise + grille infos + 2 colonnes | Plus lisible, style Emploitic/LinkedIn |
 | Cypress version | Downgrade 15 → 13.17.0 | Cypress 15 binaire cassé sur Windows 10 (`--smoke-test` option non reconnue) |

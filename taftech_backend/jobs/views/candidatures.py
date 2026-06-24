@@ -21,7 +21,7 @@ from ..serializers import (
     PostulerDTO, PostulerRapideDTO,
     MesCandidaturesDTO, CandidatureRecruteurDTO
 )
-from ..matcher import calculer_score_matching
+from ..matcher import calculer_score_matching, normaliser
 
 User = get_user_model()
 
@@ -68,6 +68,7 @@ class PostulerAPIView(APIView):
                     {
                         "titre_poste": exp.titre_poste,
                         "entreprise": exp.entreprise,
+                        "secteur": exp.secteur,
                         "date_debut": str(exp.date_debut),
                         "date_fin": str(exp.date_fin) if exp.date_fin else None,
                         "description": exp.description,
@@ -104,12 +105,13 @@ class PostulerAPIView(APIView):
             statut='RECUE'
         )
 
-        # Réponses questionnaire
+        # Réponses questionnaire + détection disqualification
         reponses_raw = request.data.get('reponses', None)
         if reponses_raw and offre.questionnaire:
             try:
                 import json
                 reponses_dict = json.loads(reponses_raw) if isinstance(reponses_raw, str) else reponses_raw
+                disqualifie = False
                 for question_id, reponse_texte in reponses_dict.items():
                     try:
                         question = QuestionQuestionnaire.objects.get(id=int(question_id))
@@ -118,8 +120,21 @@ class PostulerAPIView(APIView):
                             question=question,
                             reponse=reponse_texte
                         )
+                        # Question disqualifiante : vérifie que la réponse correspond au choix attendu
+                        if question.disqualifiant:
+                            choix_correct = question.choix.filter(est_correct=True).first()
+                            if choix_correct and normaliser(reponse_texte) != normaliser(choix_correct.texte):
+                                disqualifie = True
                     except QuestionQuestionnaire.DoesNotExist:
                         pass
+                # Si disqualifié : score → 0, flag dans details_matching
+                if disqualifie:
+                    dm = candidature.details_matching or {}
+                    dm["disqualifie"] = True
+                    dm.setdefault("flags", []).append("Réponse disqualifiante au questionnaire.")
+                    candidature.score_matching = 0
+                    candidature.details_matching = dm
+                    candidature.save(update_fields=["score_matching", "details_matching"])
             except Exception as e:
                 logger.error("Erreur sauvegarde réponses : %s", e)
 

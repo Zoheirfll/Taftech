@@ -394,7 +394,10 @@ const ReviewCandidature = () => {
                     <p className="text-sm font-semibold text-slate-900">
                       {exp.titre_poste}
                     </p>
-                    <p className="text-xs text-teal-700">{exp.entreprise}</p>
+                    <p className="text-xs text-teal-700">
+                      {exp.entreprise}
+                      {exp.secteur && <span className="text-slate-400 font-normal ml-1">· {exp.secteur}</span>}
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
                     </p>

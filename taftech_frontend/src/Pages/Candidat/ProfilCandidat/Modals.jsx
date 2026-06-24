@@ -47,6 +47,10 @@ export const Modals = ({
   titreSuggestions,
   showTitreSuggestions,
   setShowTitreSuggestions,
+  expTitreSuggestions,
+  showExpTitreSuggestions,
+  setShowExpTitreSuggestions,
+  handleExpTitreChange,
   parserLoading,
   parsedData,
   setParsedData,
@@ -546,15 +550,33 @@ export const Modals = ({
                 <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                   Titre du poste *
                 </label>
-                <input
-                  required
-                  placeholder="Ex: Développeur Backend"
-                  className={inputClass}
-                  value={newExp.titre_poste}
-                  onChange={(e) =>
-                    setNewExp({ ...newExp, titre_poste: e.target.value })
-                  }
-                />
+                <div className="relative">
+                  <input
+                    required
+                    placeholder="Ex: Développeur Backend"
+                    className={inputClass}
+                    value={newExp.titre_poste}
+                    onChange={(e) => handleExpTitreChange(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowExpTitreSuggestions(false), 150)}
+                    autoComplete="off"
+                  />
+                  {showExpTitreSuggestions && expTitreSuggestions.length > 0 && (
+                    <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
+                      {expTitreSuggestions.map((m) => (
+                        <li
+                          key={m.id}
+                          className="px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 cursor-pointer"
+                          onMouseDown={() => {
+                            setNewExp((prev) => ({ ...prev, titre_poste: m.titre }));
+                            setShowExpTitreSuggestions(false);
+                          }}
+                        >
+                          {m.titre}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1.5 block">
@@ -632,6 +654,7 @@ export const Modals = ({
                   onClick={() => {
                     setShowExpForm(false);
                     setEditingExpId(null);
+                    setShowExpTitreSuggestions(false);
                     setNewExp({
                       titre_poste: "",
                       entreprise: "",

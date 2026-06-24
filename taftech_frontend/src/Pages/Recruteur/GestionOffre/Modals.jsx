@@ -167,7 +167,7 @@ export const Modals = ({
                 </table>
 
                 {/* Points forts & écarts */}
-                <div className="mt-5 grid grid-cols-2 gap-4">
+                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { c: c1, nom: nom1 },
                     { c: c2, nom: nom2 },

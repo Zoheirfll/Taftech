@@ -295,7 +295,7 @@ const AdminUsers = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                   Contact & Compte
@@ -337,7 +337,7 @@ const AdminUsers = () => {
                     Dossier candidat
                   </h3>
 
-                  <div className="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 grid grid-cols-2 gap-4">
+                  <div className="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">
                         Titre
@@ -491,7 +491,7 @@ const AdminUsers = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div>
                       <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         Compétences

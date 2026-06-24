@@ -219,7 +219,7 @@ const AdminEntreprises = () => {
                 <X size={18} />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">Informations légales</p>
                 <p className="text-xs font-mono text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded">

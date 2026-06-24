@@ -201,7 +201,7 @@ class MesCandidaturesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        candidatures = Candidature.objects.filter(candidat=request.user).order_by('-date_postulation')
+        candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_postulation')
         serializer = MesCandidaturesDTO(candidatures, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

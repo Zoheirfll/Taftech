@@ -150,7 +150,7 @@ class CVThequeView(APIView):
         inscrit_recent = request.GET.get('inscrit_recent', '') == 'true'
         favoris_only = request.GET.get('favoris', '') == 'true'
         tri = request.GET.get('tri', 'recents')
-        candidats = ProfilCandidat.objects.filter(user__is_active=True, user__role='CANDIDAT')
+        candidats = ProfilCandidat.objects.select_related('user').prefetch_related('experiences_detail').filter(user__is_active=True, user__role='CANDIDAT')
         if favoris_only:
             ids_favoris = ProfilCandidatFavori.objects.filter(recruteur=request.user).values_list('candidat_id', flat=True)
             candidats = candidats.filter(user__id__in=ids_favoris)

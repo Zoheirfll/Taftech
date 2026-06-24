@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 24/06/2026 — Secteur expérience, algo matching rewrite, référentiel Emploitic, autocomplete titre_poste_
+_Dernière mise à jour : 24/06/2026 — Secteur expérience, algo matching rewrite, référentiel Emploitic, autocomplete titre_poste, invitation Google, changer mot de passe_
 
 ---
 
@@ -260,6 +260,16 @@ Pages/
 ### 📝 Candidatures Spontanées
 - Envoi sans compte, anti-doublon, vue recruteur filtrable, marquer lue / supprimer
 
+### 🔑 Compte Google — Mot de passe recruteur
+- `CustomUser.est_compte_google` : BooleanField (migration 0008) — marqué `True` à la création via `GoogleSocialAuthView`
+- `MeAPIView` : `GET /api/accounts/me/` — retourne `est_compte_google`
+- `ChangerMotDePasseAPIView` : `POST /api/accounts/changer-mot-de-passe/` — sans `ancien_mdp` si `est_compte_google=True`
+- `Settings.jsx` candidat : formulaire adapté (Définir vs Modifier selon `est_compte_google`)
+- `InviterMembreAPIView` : si compte Google → envoie lien invitation (pas ajout direct) pour que l'invité définisse un mot de passe
+- `AccepterInvitationAPIView` GET : retourne `sans_mot_de_passe` (basé sur `est_compte_google`)
+- `AccepterInvitationAPIView` POST : définit le mot de passe sans changer le rôle (garde accès espace candidat)
+- Un membre d'équipe avec rôle `CANDIDAT` peut se connecter sur le portail recruteur grâce au check `est_membre_equipe` (serializer login ligne 119)
+
 ### 👥 Gestion d'Équipe Recruteur
 - Rôles membres : PROPRIETAIRE / ADMIN / UTILISATEUR / INVITE
 - `authService.peutFaire(minRole)` : hiérarchie `["INVITE","UTILISATEUR","ADMIN","PROPRIETAIRE"]`
@@ -326,7 +336,7 @@ Pages/
 ## 🏗️ MODÈLES DJANGO
 
 ### accounts/
-- `CustomUser` (email, telephone, role, code_verification, code_verification_created_at, failed_login_attempts, locked_until, date_naissance)
+- `CustomUser` (email, telephone, role, code_verification, code_verification_created_at, failed_login_attempts, locked_until, date_naissance, **est_compte_google** BooleanField default=False)
 - `SystemErrorLog` (user, message, stack_trace, url, timestamp)
 
 ### jobs/
@@ -410,6 +420,8 @@ Pages/
 | Scraper Emploitic | Subprocess séparé + JSON tmp file | Playwright sync_playwright sur Windows bloque le greenlet à la fermeture — subprocess évite le hang |
 | Référentiel recherche | Q() par mot individuel | `icontains` substring exact ne trouve pas "Ingénieur en informatique" avec "ingenieur informatique" |
 | Playwright Windows | `python -m playwright install chromium` dans backend_env | Binaire chromium lié à l'env Python — installer dans le bon venv |
+| Invitation membre Google | Envoie lien invitation (pas ajout direct) | Compte Google sans mot de passe → ne peut pas se connecter sans définir un mot de passe d'abord |
+| Rôle membre équipe Google | Ne pas changer le rôle à l'acceptation | Membre peut rester CANDIDAT — `est_membre_equipe` dans le serializer autorise le login recruteur |
 | mediaUrl normalization | Ajoute `/media/` si absent du chemin | Snapshots anciens stockés sans `/media/` prefix |
 | JobDetail redesign | Bandeau entreprise + grille infos + 2 colonnes | Plus lisible, style Emploitic/LinkedIn |
 | Cypress version | Downgrade 15 → 13.17.0 | Cypress 15 binaire cassé sur Windows 10 (`--smoke-test` option non reconnue) |

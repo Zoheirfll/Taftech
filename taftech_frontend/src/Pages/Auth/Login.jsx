@@ -18,6 +18,14 @@ const Login = () => {
       navigate("/");
       window.location.reload();
     } catch (err) {
+      const data = err.response?.data;
+      if (data?.code === "COMPTE_NON_VERIFIE") {
+        toast.dismiss(toastId);
+        localStorage.setItem("taftech_pending_verification", data.email);
+        toast("Votre compte n'est pas encore vérifié. Terminez la vérification.", { icon: "📧" });
+        navigate("/register");
+        return;
+      }
       toast.error("Email ou mot de passe incorrect.", { id: toastId });
       reportError("ECHEC_CONNEXION", err);
     }
@@ -26,7 +34,7 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     const toastId = toast.loading("Connexion Google...");
     try {
-      await authService.googleLogin(credentialResponse.credential, "CANDIDAT");
+      await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "login");
       toast.success("Connexion réussie !", { id: toastId });
       navigate("/");
       window.location.reload();

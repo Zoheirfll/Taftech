@@ -208,168 +208,18 @@ const JobDetail = () => {
     setReponses({ ...reponses, [questionId]: updated.join(",") });
   };
 
-  return (
-    <div className="bg-slate-100 min-h-screen">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-      <Link
-        to="/offres"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
-      >
-        <ArrowLeft size={16} />
-        Retour aux offres
-      </Link>
-
-      {/* EN-TÊTE */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
-        <div className="bg-linear-to-br from-indigo-700 to-indigo-500 px-8 py-10">
-          <div className="flex items-start gap-5 mb-5">
-            <LogoEntreprise
-              url={job.entreprise?.logo_url ? getMediaUrl(job.entreprise.logo_url) : null}
-              nom={job.entreprise?.nom_entreprise}
-            />
-            <div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
-                {job.titre}
-              </h1>
-              {job.entreprise && (
-                <Link
-                  to={`/entreprise/${job.entreprise.slug}`}
-                  className="text-indigo-200 hover:text-white text-sm font-medium transition-colors mt-1 inline-block"
-                >
-                  {job.entreprise.nom_entreprise}
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {!job.entreprise && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-xs font-medium rounded-full">
-                Entreprise anonyme
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-full">
-              <MapPin size={13} />
-              {job.wilaya}
-              {job.commune ? ` · ${job.commune}` : ""}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-full">
-              <Calendar size={13} />
-              {new Date(job.date_publication).toLocaleDateString("fr-FR")}
-            </span>
-          </div>
-        </div>
-
-        {/* CRITÈRES */}
-        <div className="p-6 border-b border-slate-100">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-            {job.type_contrat && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Contrat
-                </p>
-                <p className="text-base font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Briefcase size={14} className="text-slate-400" />
-                  {job.type_contrat}
-                </p>
-              </div>
-            )}
-            {job.experience_requise && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Expérience
-                </p>
-                <p className="text-base font-semibold text-slate-800">
-                  {job.experience_requise}
-                </p>
-              </div>
-            )}
-            {job.diplome && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Diplôme
-                </p>
-                <p className="text-base font-semibold text-slate-800 flex items-center gap-1.5">
-                  <GraduationCap size={14} className="text-slate-400" />
-                  {job.diplome}
-                </p>
-              </div>
-            )}
-            {job.specialite && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Spécialité
-                </p>
-                <p className="text-base font-semibold text-indigo-600">
-                  {job.specialite}
-                </p>
-              </div>
-            )}
-            {job.salaire_propose && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Salaire
-                </p>
-                <p className="text-base font-semibold text-emerald-600 flex items-center gap-1.5">
-                  <Banknote size={14} />
-                  {job.salaire_propose}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* MATCHING SCORE */}
+  const PostulationPanel = () => (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="p-5 border-b border-slate-100">
+        <h3 className="text-sm font-bold text-slate-900">Postuler à cette offre</h3>
         {matchingScore !== null && (
-          <div
-            className={`mx-6 mt-4 px-4 py-3 border rounded-lg flex items-center gap-3 ${getMatchingColor(matchingScore)}`}
-          >
-            <TrendingUp size={16} />
-            <p className="text-sm font-medium">
-              Notre IA estime que votre profil correspond à{" "}
-              <strong>{matchingScore}%</strong> aux exigences de ce poste.
-            </p>
+          <div className={`mt-3 px-3 py-2 border rounded-lg flex items-center gap-2 ${getMatchingColor(matchingScore)}`}>
+            <TrendingUp size={14} />
+            <p className="text-xs font-medium">Votre profil correspond à <strong>{matchingScore}%</strong></p>
           </div>
         )}
-
-        {/* CONTENU */}
-        <div className="p-8 space-y-8">
-          {job.description && (
-            <div>
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span className="w-2.5 h-5 bg-indigo-600 rounded-full" />
-                Description du poste
-              </h2>
-              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
-                {job.description}
-              </p>
-            </div>
-          )}
-          {job.missions && (
-            <div>
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span className="w-2.5 h-5 bg-amber-500 rounded-full" />
-                Missions principales
-              </h2>
-              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
-                {job.missions}
-              </p>
-            </div>
-          )}
-          {job.profil_recherche && (
-            <div>
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span className="w-2.5 h-5 bg-emerald-500 rounded-full" />
-                Profil recherché
-              </h2>
-              <p className="text-base text-slate-600 leading-relaxed whitespace-pre-line">
-                {job.profil_recherche}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* ZONE POSTULATION */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100">
+      </div>
+      <div className="p-5">
           {postulerStatus === "success" ? (
             <div className="text-center py-4">
               <CheckCircle
@@ -719,8 +569,175 @@ const JobDetail = () => {
               </form>
             </div>
           )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-slate-50 min-h-screen">
+
+      {/* BANDEAU ENTREPRISE */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <div className="flex items-center gap-4 py-5">
+            <div className="w-16 h-16 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+              {job.entreprise?.logo_url && !false ? (
+                <img src={getMediaUrl(job.entreprise.logo_url)} alt={job.entreprise.nom_entreprise} className="w-full h-full object-contain p-1" />
+              ) : (
+                <Building2 size={28} className="text-slate-300" />
+              )}
+            </div>
+            <div>
+              <Link to={`/entreprise/${job.entreprise?.slug}`} className="text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors">
+                {job.entreprise?.nom_entreprise}
+              </Link>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                {job.entreprise?.secteur && (
+                  <span className="text-sm text-slate-500 flex items-center gap-1"><Briefcase size={13} />{job.entreprise.secteur}</span>
+                )}
+                {job.wilaya && (
+                  <span className="text-sm text-slate-500 flex items-center gap-1"><MapPin size={13} />{job.wilaya}{job.commune ? `, ${job.commune}` : ""}</span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+        <Link to="/offres" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-5 transition-colors">
+          <ArrowLeft size={15} /> Retour aux offres
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* COLONNE GAUCHE — CONTENU */}
+          <div className="lg:col-span-2 space-y-0">
+
+            {/* TITRE + INFOS CLÉS */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 mb-5">
+              <h1 className="text-2xl font-extrabold text-slate-900 leading-tight mb-4">{job.titre}</h1>
+
+              {/* Grille d'infos */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+                {job.wilaya && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Lieu de travail</p>
+                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-1"><MapPin size={12} className="text-indigo-500" />{job.wilaya}{job.commune ? `, ${job.commune}` : ""}</p>
+                  </div>
+                )}
+                {job.type_contrat && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Type de contrat</p>
+                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-1"><Briefcase size={12} className="text-indigo-500" />{job.type_contrat}</p>
+                  </div>
+                )}
+                {job.experience_requise && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Expérience</p>
+                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-1"><TrendingUp size={12} className="text-indigo-500" />{job.experience_requise}</p>
+                  </div>
+                )}
+                {job.diplome && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Diplôme</p>
+                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-1"><GraduationCap size={12} className="text-indigo-500" />{job.diplome}</p>
+                  </div>
+                )}
+                {job.specialite && (
+                  <div className="bg-indigo-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1">Spécialité</p>
+                    <p className="text-sm font-semibold text-indigo-700">{job.specialite}</p>
+                  </div>
+                )}
+                {job.salaire_propose && (
+                  <div className="bg-emerald-50 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider mb-1">Salaire</p>
+                    <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1"><Banknote size={12} />{job.salaire_propose}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Calendar size={12} />
+                  Publié le {new Date(job.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+                {job.jours_restants !== null && job.jours_restants !== undefined && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${job.jours_restants <= 7 ? "bg-red-50 text-red-600" : job.jours_restants <= 30 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                    {job.jours_restants === 0 ? "Expire aujourd'hui" : `Expire dans ${job.jours_restants} jour${job.jours_restants > 1 ? "s" : ""}`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* SECTIONS CONTENU */}
+            {job.description && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6 mb-5">
+                <h2 className="text-base font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-100">Description du poste</h2>
+                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{job.description}</div>
+              </div>
+            )}
+            {job.missions && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6 mb-5">
+                <h2 className="text-base font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-100">Missions & Tâches</h2>
+                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{job.missions}</div>
+              </div>
+            )}
+            {job.profil_recherche && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6 mb-5">
+                <h2 className="text-base font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-100">Profil recherché</h2>
+                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{job.profil_recherche}</div>
+              </div>
+            )}
+
+            {/* QUESTIONNAIRE info */}
+            {job.questionnaire && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+                <span className="text-amber-500 text-lg shrink-0">📋</span>
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Questionnaire requis</p>
+                  <p className="text-xs text-amber-700 mt-0.5">{job.questionnaire.titre} · {job.questionnaire.questions?.length || 0} question(s) à remplir avant de postuler</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* COLONNE DROITE — POSTULATION sticky */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-4">
+              <PostulationPanel />
+
+              {/* FICHE ENTREPRISE */}
+              {job.entreprise && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">À propos de l'entreprise</h3>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg border border-slate-100 flex items-center justify-center overflow-hidden bg-slate-50 shrink-0">
+                      {job.entreprise.logo_url ? (
+                        <img src={getMediaUrl(job.entreprise.logo_url)} alt="" className="w-full h-full object-contain p-0.5" />
+                      ) : (
+                        <Building2 size={18} className="text-slate-300" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{job.entreprise.nom_entreprise}</p>
+                      {job.entreprise.secteur && <p className="text-xs text-slate-500">{job.entreprise.secteur}</p>}
+                    </div>
+                  </div>
+                  <Link
+                    to={`/entreprise/${job.entreprise.slug}`}
+                    className="block w-full text-center py-2 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                  >
+                    Voir la page entreprise →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {showQuestionnaireModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -859,7 +876,6 @@ const JobDetail = () => {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 };

@@ -21,6 +21,12 @@ const RegisterRecruteur = () => {
   });
 
   useEffect(() => {
+    const pendingEmail = sessionStorage.getItem("taftech_pending_verification_recruteur");
+    if (pendingEmail) {
+      setFormData((prev) => ({ ...prev, email: pendingEmail }));
+      setStep(2);
+    }
+
     const fetchConstants = async () => {
       try {
         const data = await jobsService.getConstants();
@@ -47,6 +53,7 @@ const RegisterRecruteur = () => {
       const usernameGenere = formData.email.split("@")[0] + "_pro_" + Math.floor(Math.random() * 999);
       const response = await authService.registerRecruteur({ ...formData, username: usernameGenere });
       toast.success(response.message || "Code envoyé à votre email.", { id: toastId });
+      sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
       setStep(2);
     } catch (err) {
       const serverError = err.response?.data;
@@ -60,6 +67,22 @@ const RegisterRecruteur = () => {
     }
   };
 
+  const handleRenvoyerCode = async () => {
+    setLoading(true);
+    const toastId = toast.loading("Envoi d'un nouveau code...");
+    try {
+      await authService.renvoyerCodeVerification(formData.email);
+      sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
+      toast.success("Nouveau code envoyé !", { id: toastId });
+      setOtpCode("");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors du renvoi.", { id: toastId });
+      reportError("ECHEC_RENVOYER_CODE_RECRUTEUR", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (otpCode.length !== 6) return toast.error("Le code doit contenir 6 chiffres.");
@@ -67,6 +90,7 @@ const RegisterRecruteur = () => {
     const toastId = toast.loading("Vérification en cours...");
     try {
       await authService.verifyEmail(formData.email, otpCode);
+      sessionStorage.removeItem("taftech_pending_verification_recruteur");
       toast.success("Email vérifié avec succès !", { id: toastId });
       setStep(3);
     } catch (err) {
@@ -215,6 +239,18 @@ const RegisterRecruteur = () => {
                   {loading ? "Vérification..." : "Valider mon email"}
                 </button>
               </form>
+              <p className="text-sm text-slate-400 mt-4">
+                Vous n'avez rien reçu ? Vérifiez vos spams ou{" "}
+                <button
+                  type="button"
+                  onClick={handleRenvoyerCode}
+                  disabled={loading}
+                  className="text-teal-700 font-semibold hover:underline disabled:opacity-50"
+                >
+                  renvoyer le code
+                </button>
+                .
+              </p>
             </div>
           )}
 

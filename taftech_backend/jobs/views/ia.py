@@ -322,3 +322,70 @@ Pas de markdown, maximum 150 mots."""
         except Exception as e:
             logger.error("Erreur Groq recruteur : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
+
+
+class GenererOffreIAAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [GroqThrottle]
+
+    def post(self, request):
+        # Vérification premium
+        from .equipe import get_entreprise_for_user
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or not entreprise.est_premium_actif:
+            return Response({'error': 'Fonctionnalité réservée aux comptes Premium.'}, status=403)
+
+        titre = request.data.get('titre', '').strip()
+        specialite = request.data.get('specialite', '').strip()
+        diplome = request.data.get('diplome', '').strip()
+        wilaya = request.data.get('wilaya', '').strip()
+        experience = request.data.get('experience_requise', '').strip()
+        contrat = request.data.get('type_contrat', '').strip()
+
+        if not titre or not specialite:
+            return Response({'error': 'Titre et spécialité requis.'}, status=400)
+
+        prompt = f"""Tu es un expert RH algérien. Génère le contenu d'une offre d'emploi professionnelle en français pour le marché algérien.
+
+Poste : {titre}
+Spécialité / Secteur : {specialite}
+Diplôme requis : {diplome or 'Non précisé'}
+Expérience : {experience or 'Non précisée'}
+Type de contrat : {contrat or 'Non précisé'}
+Wilaya : {wilaya or 'Non précisée'}
+
+Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
+{{
+  "description": "2-3 phrases présentant le contexte de ce poste et de l'entreprise.",
+  "missions": "Liste de 4 à 6 missions concrètes, une par ligne, commençant par un tiret.",
+  "profil_recherche": "Liste de 4 à 5 exigences du profil, une par ligne, commençant par un tiret."
+}}"""
+
+        try:
+            import json as _json
+            groq_key = os.environ.get('GROQ_API_KEY', '')
+            if not groq_key:
+                return Response({'error': 'GROQ_API_KEY non configurée.'}, status=503)
+
+            response = req.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
+                json={
+                    'model': 'llama-3.1-8b-instant',
+                    'messages': [{'role': 'user', 'content': prompt}],
+                    'max_tokens': 800,
+                    'temperature': 0.6,
+                    'response_format': {'type': 'json_object'},
+                },
+                timeout=20,
+            )
+            raw = response.json()['choices'][0]['message']['content']
+            data = _json.loads(raw)
+            return Response({
+                'description': data.get('description', ''),
+                'missions': data.get('missions', ''),
+                'profil_recherche': data.get('profil_recherche', ''),
+            })
+        except Exception as e:
+            logger.error("Erreur GenererOffreIA : %s", e)
+            return Response({'error': 'Service IA temporairement indisponible.'}, status=503)

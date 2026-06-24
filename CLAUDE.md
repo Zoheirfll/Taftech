@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 19/06/2026 — Navbar redesign, slug entreprise, QR code, textes assombris_
+_Dernière mise à jour : 24/06/2026 — Vérification email, IA CreateJob, redesign JobDetail, expiration offres, modal admin offres_
 
 ---
 
@@ -120,12 +120,13 @@ Centralise toutes les constantes métier — importer depuis là, pas depuis mod
 WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT, TAILLES_ENTREPRISE_CHOICES, WILAYAS_MAPPING, DIPLOMES_MAPPING, SPECIALITES_MAPPING, SYNONYMES_SPECIALITE
 
 ### accounts/
-- `views.py` — rate limiting (`AnonRateThrottle`), hack Cypress isolé (`if settings.DEBUG`), expiry code reset (10 min), **bloc login membre si premium expiré** (code `PREMIUM_EXPIRE`)
+- `views.py` — rate limiting (`AnonRateThrottle`), hack Cypress isolé (`if settings.DEBUG`), expiry code reset (10 min), **bloc login membre si premium expiré** (code `PREMIUM_EXPIRE`), **`RenvoyerCodeVerificationAPIView`** POST `/api/accounts/renvoyer-code/`
 - `models.py` — CustomUser + champ `code_verification_created_at`
 
 ### jobs/management/commands/
 - `envoyer_alertes.py` — alertes emploi par email + notification. Option `--dry-run`.
 - `relance_maj_cv.py` — relance candidats inactifs 60 jours. Option `--dry-run`.
+- `archiver_offres_expirees.py` — clôture auto les offres dont `date_expiration < today`. Option `--dry-run`.
 
 ---
 
@@ -234,6 +235,20 @@ Pages/
 - Panel admin : stats, journal d'audit (`AuditLog`), broadcast, données marché
 - Référentiel ROME 11 090 métiers, suggestions carrière Groq
 
+### 🔐 Vérification Email — Flux complet
+- `RenvoyerCodeVerificationAPIView` : POST `/api/accounts/renvoyer-code/` — génère nouveau code, reset timer, envoie email
+- `sessionStorage` clé `taftech_pending_verification` (candidat) / `taftech_pending_verification_recruteur` (recruteur) — persiste entre reloads, effacée après vérification réussie
+- Login détecte `COMPTE_NON_VERIFIE` → redirige vers `/register` ou `/recruteurs/inscription` avec email pré-rempli
+- `CookieTokenObtainView` propagation dict errors : `isinstance(detail, dict)` → retour direct sans stringify
+- Bouton "Renvoyer le code" dans step 2 inscription candidat (indigo) et recruteur (teal)
+
+### 🤖 IA Génération Offre (CreateJob)
+- `GenererOffreIAAPIView` : POST `/api/jobs/ia/generer-offre/` — Premium uniquement, appel Groq direct avec `response_format: {type: 'json_object'}`
+- Retourne `{description, missions, profil_recherche}` — pré-remplit les champs texte
+- Utilise `get_entreprise_for_user()` (pas `request.user.profilentreprise`) pour vérifier premium membres équipe
+- Frontend : bannière amber, bouton désactivé si titre/spécialité manquants, badge "Premium uniquement" si non-premium
+- `_appel_groq()` NE PAS utiliser pour ce endpoint — strip les `*` qui corrompt le JSON → appel direct Groq
+
 ### 📝 Candidatures Spontanées
 - Envoi sans compte, anti-doublon, vue recruteur filtrable, marquer lue / supprimer
 
@@ -270,6 +285,18 @@ Pages/
 - Encode : `window.location.origin + /entreprise/{slug}` (dynamique, pas hardcodé)
 - Bouton téléchargement PNG : `canvas.toDataURL("image/png")`
 
+### ⏱ Expiration Automatique des Offres
+- Champ `date_expiration` (DateField nullable) sur `OffreEmploi` — migration 0045
+- `jours_restants` calculé dans `OffreEmploiSerializer` (SerializerMethodField)
+- `OffreDashboardDTO` inclut `date_expiration` — visible dashboard recruteur, GestionOffre, admin
+- `OffreEmploiCreateDTO` inclut `date_expiration`
+- Command `archiver_offres_expirees` — clôture auto offres expirées, option `--dry-run`
+- Crontab prod : `30 0 * * * python manage.py archiver_offres_expirees`
+- CreateJob : boutons 30/60/90 jours + sélecteur date custom
+- Affichage coloré : rouge ≤7j, orange ≤30j, teal ≤60j, vert >60j
+- GestionOffre : sélecteur date inline pour modifier expiration (autorisé même si APPROUVEE)
+- `UpdateOffreRecruteurAPIView` : si seul `date_expiration` dans le PATCH → pas de remise EN_ATTENTE
+
 ### ⭐ Système Premium (US11/12)
 - `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement)
 - `ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`
@@ -298,7 +325,7 @@ Pages/
 - `ProfilCandidat` (titre, cv_pdf, photo, bio, linkedin, github, wilaya, commune, diplome, specialite, competences, langues, mobilite, situation_actuelle, salaire_souhaite, secteur_souhaite, service_militaire, permis, passeport, niveau_experience, notif_mise_a_jour)
 - `ExperienceCandidat`, `FormationCandidat`
 - `ProfilEntreprise` (nom_entreprise, **slug** auto-généré depuis nom_entreprise, registre_commerce, secteur, wilaya, commune, description, taille, logo, est_approuvee, email_refus_auto, message_refus_auto, **est_premium**, **premium_expire_at**, property `est_premium_actif`)
-- `OffreEmploi` (entreprise, titre, wilaya, commune, specialite, diplome, experience_requise, type_contrat, description, missions, profil_recherche, salaire_propose, est_active, est_cloturee, statut_moderation, motif_rejet, questionnaire)
+- `OffreEmploi` (entreprise, titre, wilaya, commune, specialite, diplome, experience_requise, type_contrat, description, missions, profil_recherche, salaire_propose, **date_expiration** (DateField nullable), est_active, est_cloturee, statut_moderation, motif_rejet, questionnaire)
 - `Candidature` (offre, candidat, statut, score_matching, details_matching, profil_snapshot, est_rapide, date_entretien, note_technique/communication/motivation/experience, note_globale, commentaire_evaluation)
 - `CandidatureSpontanee`, `Notification`, `MetierReferentiel`, `Questionnaire`, `QuestionQuestionnaire`, `ReponseChoix`, `ReponseCandidat`, `ProfilCandidatFavori`
 - **`DemandeActivationPremium`** (entreprise FK, moyen_paiement, nb_mois, est_traitee, date_demande, date_traitement) — migration 0040/0041
@@ -365,6 +392,13 @@ Pages/
 | Slug migration PostgreSQL | Utiliser `AddField` (sans unique) + `RunPython` (populate) + `RunSQL ALTER TABLE ADD CONSTRAINT` | `AlterField` avec `unique=True` recrée l'index `_like` déjà créé par `AddField` → `DuplicateTable` |
 | QR code URL | `window.location.origin` (dynamique) | Pas hardcodé — s'adapte dev/prod automatiquement |
 | Navbar texte | `text-slate-900` sur les liens de navigation | Plus lisible, contraste WCAG |
+| Vérification email persistence | sessionStorage (pas localStorage) — localStorage causait bug déconnexion admin | Clé auto-effacée à la fermeture navigateur, login redirect couvre le cas "revient le lendemain" |
+| GenererOffreIA Groq | Appel direct sans `_appel_groq()` | `_appel_groq` strip les `**`/`*` ce qui corrompt le JSON retourné |
+| Notification offre admin | Champ `destinataire` (pas `user`) + `titre` obligatoire | Modèle Notification a `destinataire` FK et titre requis |
+| date_expiration PATCH APPROUVEE | Autorisé si seul ce champ dans payload | Ne remet pas l'offre EN_ATTENTE pour un simple changement de date |
+| photo_profil snapshot | `.url` (pas `str()`) | `str()` retourne `photos/xxx.jpg` sans `/media/` — `.url` retourne le chemin complet |
+| mediaUrl normalization | Ajoute `/media/` si absent du chemin | Snapshots anciens stockés sans `/media/` prefix |
+| JobDetail redesign | Bandeau entreprise + grille infos + 2 colonnes | Plus lisible, style Emploitic/LinkedIn |
 | Cypress version | Downgrade 15 → 13.17.0 | Cypress 15 binaire cassé sur Windows 10 (`--smoke-test` option non reconnue) |
 | Cypress login recruteur | `cy.login("recruteur")` visite `/recruteurs/connexion` (placeholder `votre@entreprise.com`) | Portail séparé — login candidat via `/login` retourne 403 pour rôle RECRUTEUR |
 | Cypress ECONNREFUSED GUI | `host: true` dans vite.config.js server | Windows résout `localhost` en IPv6 mais Vite écoutait IPv4 seulement |
@@ -440,6 +474,9 @@ Crontab :
 
 # Relance CV inactifs — le 1er de chaque mois à 9h
 0 9 1 * * cd /chemin/vers/taftech_backend && python manage.py relance_maj_cv >> /var/log/taftech_relance.log 2>&1
+
+# Archivage auto offres expirées — tous les jours à 00h30
+30 0 * * * cd /chemin/vers/taftech_backend && python manage.py archiver_offres_expirees >> /var/log/taftech_archivage.log 2>&1
 ```
 
 Checklist avant déploiement :

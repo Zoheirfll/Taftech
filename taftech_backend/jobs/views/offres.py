@@ -75,7 +75,19 @@ class JobCreateAPIView(APIView):
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
             _log(request.user, entreprise, 'CREER_OFFRE', offre.titre)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Notifier tous les admins
+            from django.contrib.auth import get_user_model
+            from ..models import Notification
+            User = get_user_model()
+            admins = User.objects.filter(is_staff=True, is_active=True)
+            for admin in admins:
+                Notification.objects.create(
+                    destinataire=admin,
+                    type_notif='INFO',
+                    titre="Nouvelle offre à valider",
+                    message=f"Nouvelle offre en attente de validation : « {offre.titre} » — {entreprise.nom_entreprise}",
+                )
+            return Response(OffreEmploiSerializer(offre).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -91,14 +103,18 @@ class UpdateOffreRecruteurAPIView(APIView):
             return Response({"error": "Non autorisé."}, status=403)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Accès refusé."}, status=403)
-        if offre.statut_moderation == "APPROUVEE":
+        # date_expiration seule → autorisé même si APPROUVEE
+        if offre.statut_moderation == "APPROUVEE" and set(request.data.keys()) - {"date_expiration"}:
             return Response({"error": "Impossible de modifier une offre déjà publiée."}, status=400)
         serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(statut_moderation="EN_ATTENTE", motif_rejet="")
+            if offre.statut_moderation == "APPROUVEE":
+                serializer.save()
+            else:
+                serializer.save(statut_moderation="EN_ATTENTE", motif_rejet="")
             _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
             return Response({
-                "message": "Offre mise à jour et soumise pour validation.",
+                "message": "Offre mise à jour.",
                 "offre": OffreDashboardDTO(offre).data
             }, status=200)
         return Response(serializer.errors, status=400)

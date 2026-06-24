@@ -210,6 +210,7 @@ const AdminOffres = () => {
             <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Offre & Entreprise</th>
               <th className="px-5 py-3">Date</th>
+              <th className="px-5 py-3">Expiration</th>
               <th className="px-5 py-3">Statut</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
@@ -253,8 +254,20 @@ const AdminOffres = () => {
                     )}
                   </td>
                   <td className="px-5 py-4 text-xs text-slate-700 font-medium">
-                    {new Date(offre.date_publication).toLocaleDateString(
-                      "fr-FR",
+                    {new Date(offre.date_publication).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="px-5 py-4 text-xs">
+                    {offre.date_expiration ? (
+                      (() => {
+                        const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
+                        return (
+                          <span className={`px-2 py-1 rounded-full font-semibold ${jours <= 7 ? "bg-red-50 text-red-600" : jours <= 30 ? "bg-amber-50 text-amber-700" : jours <= 60 ? "bg-teal-50 text-teal-700" : "bg-emerald-50 text-emerald-700"}`}>
+                            {jours === 0 ? "Expire aujourd'hui" : `${jours}j`}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-slate-300">—</span>
                     )}
                   </td>
                   <td className="px-5 py-4">{getBadge(offre)}</td>
@@ -330,177 +343,218 @@ const AdminOffres = () => {
       {/* MODAL DÉTAILS */}
       {selectedOffre && (
         <div className={modalClass}>
-          <div className="bg-white rounded-2xl p-7 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-5 pb-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {selectedOffre.titre}
-                </h2>
-                <p className="text-sm text-indigo-600 mt-0.5">
-                  {selectedOffre.entreprise?.nom_entreprise} ·{" "}
-                  {selectedOffre.wilaya}
-                </p>
-              </div>
+          <div className="bg-slate-100 rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+
+            {/* BANDEAU EN-TÊTE */}
+            <div className="bg-linear-to-br from-indigo-700 to-indigo-500 rounded-t-2xl px-6 py-6 relative">
               <button
                 onClick={() => setSelectedOffre(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="absolute top-4 right-4 p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
               >
                 <X size={18} />
               </button>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              {[
-                { label: "Contrat", value: selectedOffre.type_contrat },
-                {
-                  label: "Expérience",
-                  value: selectedOffre.experience_requise,
-                },
-                {
-                  label: "Salaire",
-                  value: selectedOffre.salaire_propose || "N/P",
-                },
-              ].map(({ label, value }) => (
-                <div
-                  key={label}
-                  className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center"
-                >
-                  <p className="text-[10px] font-semibold text-slate-600 uppercase">
-                    {label}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-800 mt-1">
-                    {value}
-                  </p>
+              <div className="pr-8">
+                <div className="flex items-center gap-2 mb-1">
+                  {getBadge(selectedOffre)}
+                  {selectedOffre.est_cloturee && null}
                 </div>
-              ))}
-            </div>
-            <div className="space-y-4 mb-5">
-              {[
-                {
-                  label: "Diplôme / Spécialité",
-                  value: `${selectedOffre.diplome} - ${selectedOffre.specialite}`,
-                  bg: "bg-slate-50",
-                },
-                {
-                  label: "Description",
-                  value: selectedOffre.description,
-                  bg: "bg-slate-50",
-                },
-                {
-                  label: "Missions",
-                  value: selectedOffre.missions,
-                  bg: "bg-indigo-50",
-                },
-              ].map(
-                ({ label, value, bg }) =>
-                  value && (
-                    <div key={label}>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                        {label}
-                      </p>
-                      <p
-                        className={`text-sm ${bg} p-4 rounded-lg border border-slate-100 text-slate-600 whitespace-pre-line leading-relaxed`}
-                      >
-                        {value}
-                      </p>
-                    </div>
-                  ),
-              )}
+                <h2 className="text-xl font-extrabold text-white mt-2">{selectedOffre.titre}</h2>
+                <p className="text-indigo-200 text-sm mt-0.5">{selectedOffre.entreprise?.nom_entreprise}</p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {selectedOffre.wilaya && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                      📍 {selectedOffre.wilaya}
+                    </span>
+                  )}
+                  {selectedOffre.type_contrat && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                      💼 {selectedOffre.type_contrat}
+                    </span>
+                  )}
+                  {selectedOffre.salaire_propose && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                      💰 {selectedOffre.salaire_propose}
+                    </span>
+                  )}
+                  {selectedOffre.date_expiration && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                      ⏱ Expire le {new Date(selectedOffre.date_expiration).toLocaleDateString("fr-FR")}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* Critères */}
+              <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-white/20">
+                {selectedOffre.experience_requise && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Expérience</p>
+                    <p className="text-sm font-semibold text-white mt-0.5">{selectedOffre.experience_requise}</p>
+                  </div>
+                )}
+                {selectedOffre.diplome && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Diplôme</p>
+                    <p className="text-sm font-semibold text-white mt-0.5">{selectedOffre.diplome}</p>
+                  </div>
+                )}
+                {selectedOffre.specialite && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Spécialité</p>
+                    <p className="text-sm font-semibold text-amber-300 mt-0.5">{selectedOffre.specialite}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="border-t border-slate-200 pt-5">
-              <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  Candidatures ({selectedOffre.candidatures?.length || 0})
-                </p>
-                <button
-                  onClick={() => setShowTop5Only(!showTop5Only)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${showTop5Only ? "bg-violet-600 text-white border-violet-600" : "bg-white text-violet-700 border-violet-200 hover:bg-violet-50"}`}
-                >
-                  {showTop5Only ? "Voir tout" : "🤖 Top 5 IA"}
-                </button>
-              </div>
-              {selectedOffre.candidatures?.length > 0 ? (
-                <div className="overflow-x-auto border border-slate-100 rounded-xl">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
-                        <th className="px-3 py-2.5">Nom</th>
-                        <th className="px-3 py-2.5 text-center">Score IA</th>
-                        <th className="px-3 py-2.5 text-center">Note</th>
-                        <th className="px-3 py-2.5 text-right">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {(() => {
-                        let list = [...selectedOffre.candidatures].sort(
-                          (a, b) =>
-                            (b.score_matching || 0) - (a.score_matching || 0),
-                        );
-                        if (showTop5Only)
-                          list = list
-                            .filter(
-                              (c) => !c.est_rapide && c.score_matching !== null,
-                            )
-                            .slice(0, 5);
-                        if (list.length === 0)
-                          return (
-                            <tr>
-                              <td
-                                colSpan="4"
-                                className="py-6 text-center text-slate-600 italic"
-                              >
-                                Aucun candidat.
+            <div className="p-5 space-y-4">
+              {/* ACTIONS MODÉRATION */}
+              {!selectedOffre.est_cloturee && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Décision de modération</p>
+                  {selectedOffre.statut_moderation === "EN_ATTENTE" ? (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { handleApprouver(selectedOffre.id); setSelectedOffre(null); }}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        <CheckCircle size={15} /> Approuver
+                      </button>
+                      <button
+                        onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        <XCircle size={15} /> Rejeter
+                      </button>
+                    </div>
+                  ) : selectedOffre.statut_moderation === "APPROUVEE" ? (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <CheckCircle size={15} className="text-emerald-600" />
+                      <span className="text-sm font-medium text-emerald-700">Offre approuvée et en ligne</span>
+                      <button onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }} className="ml-auto text-xs text-red-600 hover:underline font-medium">Retirer</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg">
+                        <XCircle size={15} className="text-red-600" />
+                        <span className="text-sm font-medium text-red-700">Offre rejetée</span>
+                        {selectedOffre.motif_rejet && <span className="text-xs text-red-500 ml-1">— {selectedOffre.motif_rejet}</span>}
+                      </div>
+                      <button onClick={() => { handleApprouver(selectedOffre.id); setSelectedOffre(null); }} className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                        Approuver quand même
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CONTENU */}
+              {selectedOffre.description && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-2 h-4 bg-indigo-600 rounded-full" /> Description du poste
+                  </h3>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.description}</p>
+                </div>
+              )}
+              {selectedOffre.missions && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-2 h-4 bg-amber-500 rounded-full" /> Missions principales
+                  </h3>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.missions}</p>
+                </div>
+              )}
+              {selectedOffre.profil_recherche && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-2 h-4 bg-emerald-500 rounded-full" /> Profil recherché
+                  </h3>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.profil_recherche}</p>
+                </div>
+              )}
+
+              {/* QUESTIONNAIRE */}
+              {selectedOffre.questionnaire && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-2 h-4 bg-amber-400 rounded-full" /> Questionnaire — {selectedOffre.questionnaire.titre}
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedOffre.questionnaire.questions?.map((q, i) => (
+                      <div key={q.id} className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 flex items-start gap-2">
+                        <span className="text-xs font-bold text-amber-600 shrink-0 mt-0.5">{i + 1}.</span>
+                        <div>
+                          <p className="text-sm text-slate-800">{q.texte}</p>
+                          <div className="flex gap-2 mt-1">
+                            <span className="text-[10px] text-slate-500 font-medium">{q.type_question}</span>
+                            {q.requis && <span className="text-[10px] text-red-500 font-medium">Obligatoire</span>}
+                            {q.disqualifiant && <span className="text-[10px] text-orange-600 font-medium">⚠ Disqualifiant</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CANDIDATURES */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-4 bg-violet-500 rounded-full" /> Candidatures ({selectedOffre.candidatures?.length || 0})
+                  </h3>
+                  <button
+                    onClick={() => setShowTop5Only(!showTop5Only)}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${showTop5Only ? "bg-violet-600 text-white border-violet-600" : "bg-white text-violet-700 border-violet-200 hover:bg-violet-50"}`}
+                  >
+                    {showTop5Only ? "Voir tout" : "🤖 Top 5 IA"}
+                  </button>
+                </div>
+                {selectedOffre.candidatures?.length > 0 ? (
+                  <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+                          <th className="px-3 py-2.5">Nom</th>
+                          <th className="px-3 py-2.5 text-center">Score IA</th>
+                          <th className="px-3 py-2.5 text-center">Note</th>
+                          <th className="px-3 py-2.5 text-right">Statut</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {(() => {
+                          let list = [...selectedOffre.candidatures].sort((a, b) => (b.score_matching || 0) - (a.score_matching || 0));
+                          if (showTop5Only) list = list.filter((c) => !c.est_rapide && c.score_matching !== null).slice(0, 5);
+                          if (list.length === 0)
+                            return (
+                              <tr>
+                                <td colSpan="4" className="py-6 text-center text-slate-500 italic">Aucun candidat.</td>
+                              </tr>
+                            );
+                          return list.map((cand) => (
+                            <tr key={cand.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-3 py-2.5 font-medium text-slate-800">
+                                {cand.est_rapide ? `${cand.nom_rapide} ${cand.prenom_rapide}` : `${cand.candidat?.last_name || ""} ${cand.candidat?.first_name || ""}`}
+                              </td>
+                              <td className="px-3 py-2.5 text-center">{renderScoreBadge(cand)}</td>
+                              <td className="px-3 py-2.5 text-center text-violet-600 font-medium">
+                                {cand.note_globale ? `${cand.note_globale}/20` : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <span className={`text-[10px] font-medium ${cand.statut === "RETENU" ? "text-emerald-600" : cand.statut === "REFUSE" ? "text-red-500" : cand.statut === "ENTRETIEN" ? "text-orange-500" : cand.statut === "EN_COURS" ? "text-blue-600" : "text-amber-600"}`}>
+                                  {cand.statut.replace("_", " ")}
+                                </span>
                               </td>
                             </tr>
-                          );
-                        return list.map((cand) => (
-                          <tr
-                            key={cand.id}
-                            className="hover:bg-slate-50 transition-colors"
-                          >
-                            <td className="px-3 py-2.5 font-medium text-slate-800">
-                              {cand.est_rapide
-                                ? `${cand.nom_rapide} ${cand.prenom_rapide}`
-                                : `${cand.candidat?.last_name || ""} ${cand.candidat?.first_name || ""}`}
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              {renderScoreBadge(cand)}
-                            </td>
-                            <td className="px-3 py-2.5 text-center text-violet-600 font-medium">
-                              {cand.note_globale ? (
-                                `${cand.note_globale}/20`
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              <span
-                                className={`text-[10px] font-medium ${
-                                  cand.statut === "RETENU"
-                                    ? "text-emerald-600"
-                                    : cand.statut === "REFUSE"
-                                      ? "text-red-500"
-                                      : cand.statut === "ENTRETIEN"
-                                        ? "text-orange-500"
-                                        : cand.statut === "EN_COURS"
-                                          ? "text-blue-600"
-                                          : "text-amber-600"
-                                }`}
-                              >
-                                {cand.statut.replace("_", " ")}
-                              </span>
-                            </td>
-                          </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-xs italic text-slate-600 text-center py-4">
-                  Aucun candidat n'a postulé.
-                </p>
-              )}
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-slate-500 text-center py-4">Aucun candidat n'a postulé.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

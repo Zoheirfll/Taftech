@@ -25,7 +25,7 @@ from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, Email
 from django.contrib.auth import get_user_model
 from .models import SystemErrorLog
 from jobs.views.equipe import get_entreprise_for_user, _log
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .serializers import SystemErrorLogSerializer
 from datetime import timedelta
 
@@ -119,6 +119,39 @@ class VerifyEmailAPIView(APIView):
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
 
+class RenvoyerCodeVerificationAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [CypressAwareThrottle]
+
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.email_verifie:
+            return Response({"message": "Ce compte est déjà vérifié."}, status=status.HTTP_200_OK)
+
+        code = _generate_otp(user)
+        user.code_verification = code
+        user.code_verification_created_at = timezone.now()
+        user.save(update_fields=['code_verification', 'code_verification_created_at'])
+
+        sujet = "TafTech — Votre nouveau code de vérification"
+        ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': user.role == 'RECRUTEUR', 'annee': timezone.now().year}
+        html_body = render_to_string('emails/verification_code.html', ctx)
+        texte = f"Bonjour {user.first_name},\n\nVotre nouveau code de vérification est : {code}\n\nIl est valable 10 minutes."
+        try:
+            msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+            msg.attach_alternative(html_body, 'text/html')
+            msg.send(fail_silently=False)
+        except Exception as e:
+            logger.error("Erreur renvoi code vérification: %s", e)
+
+        return Response({"message": "Nouveau code envoyé."}, status=status.HTTP_200_OK)
+
+
 class EmailTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
 
@@ -170,7 +203,10 @@ class CookieTokenObtainView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            return Response({"detail": str(e)}, status=401)
+            detail = e.detail if hasattr(e, 'detail') else str(e)
+            if isinstance(detail, dict):
+                return Response(detail, status=401)
+            return Response({"detail": str(detail)}, status=401)
 
         data = serializer.validated_data
 
@@ -409,6 +445,7 @@ class GoogleSocialAuthView(APIView):
     def post(self, request):
         credential = request.data.get('credential')
         role = request.data.get('role', 'CANDIDAT')
+        mode = request.data.get('mode', 'register')  # 'login' ou 'register'
 
         if not credential:
             return Response({'error': 'Token Google manquant.'}, status=400)
@@ -432,18 +469,30 @@ class GoogleSocialAuthView(APIView):
         if not email:
             return Response({'error': 'Email non fourni par Google.'}, status=400)
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'username': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'role': role,
-                'email_verifie': True,
-                'is_active': True,
-                'consentement_loi_18_07': True,
-            }
-        )
+        if mode == 'login':
+            # Connexion uniquement — le compte doit déjà exister
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Aucun compte TafTech associé à cette adresse Gmail. Inscrivez-vous d\'abord.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            created = False
+        else:
+            # Inscription — créer si inexistant, consentement loi 18-07 à valider ensuite
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'role': role,
+                    'email_verifie': True,
+                    'is_active': True,
+                    'consentement_loi_18_07': False,
+                }
+            )
 
         if not created:
             # Vérifier que le rôle correspond au portail demandé
@@ -464,7 +513,10 @@ class GoogleSocialAuthView(APIView):
         refresh = RefreshToken.for_user(user)
         refresh['role'] = user.role
 
-        response = Response({'role': user.role}, status=200)
+        response = Response({
+            'role': user.role,
+            'requires_consent': created,  # True si nouveau compte Google
+        }, status=200)
         response.set_cookie(
             key=settings.SIMPLE_JWT['AUTH_COOKIE'],
             value=str(refresh.access_token),
@@ -480,3 +532,12 @@ class GoogleSocialAuthView(APIView):
             secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
         )
         return response
+
+
+class ConsentementLoi1807View(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        request.user.consentement_loi_18_07 = True
+        request.user.save(update_fields=['consentement_loi_18_07'])
+        return Response({'ok': True})

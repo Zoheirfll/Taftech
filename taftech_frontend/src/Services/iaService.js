@@ -2,6 +2,16 @@ import api from "../api/axiosConfig";
 import { reportError } from "../utils/errorReporter";
 
 export const iaService = {
+  genererOffreIA: async (payload) => {
+    try {
+      const response = await api.post("jobs/ia/generer-offre/", payload, { timeout: 30000 });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GENERER_OFFRE_IA", err);
+      throw err;
+    }
+  },
+
   // Parser CV
   parserCV: async (cvFile) => {
     try {

@@ -7,5 +7,7 @@ export const mediaUrl = (path) => {
   if (import.meta.env.DEV && !BASE && !path.startsWith("/")) {
     console.warn(`[mediaUrl] Chemin relatif sans slash initial : "${path}". Ajouter VITE_MEDIA_BASE_URL en prod.`);
   }
-  return `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const withMedia = normalized.startsWith("/media/") ? normalized : `/media${normalized}`;
+  return `${BASE}${withMedia}`;
 };

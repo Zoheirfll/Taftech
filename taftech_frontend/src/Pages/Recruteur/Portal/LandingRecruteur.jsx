@@ -66,7 +66,6 @@ const LandingRecruteur = () => {
     { value: stats ? `${stats.total_offres}` : "—", label: "Offres actives" },
     { value: stats ? `${stats.total_entreprises}` : "—", label: "Entreprises vérifiées" },
     { value: stats ? `${stats.total_candidats}` : "—", label: "Candidats inscrits" },
-    { value: stats ? `${stats.total_recrutements}` : "—", label: "Recrutements réalisés" },
   ];
 
   return (
@@ -124,7 +123,6 @@ const LandingRecruteur = () => {
                   { label: "Offres actives", value: stats?.total_offres ?? "…", color: "bg-teal-500" },
                   { label: "Entreprises vérifiées", value: stats?.total_entreprises ?? "…", color: "bg-indigo-500" },
                   { label: "Candidats inscrits", value: stats?.total_candidats ?? "…", color: "bg-emerald-500" },
-                  { label: "Recrutements réalisés", value: stats?.total_recrutements ?? "…", color: "bg-amber-500" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -146,7 +144,7 @@ const LandingRecruteur = () => {
       {/* ─── STATS ─── */}
       <section className="bg-teal-700 py-12">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {STATS.map(({ value, label }) => (
               <div key={label} className="text-center">
                 <p className="text-3xl font-extrabold text-white mb-1">{value}</p>

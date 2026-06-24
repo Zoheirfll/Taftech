@@ -44,7 +44,7 @@ from .views import (
     OffresRecommandeesAPIView, ParserCVAPIView,
     MetierReferentielAPIView, MetierReferentielAdminAPIView,
     SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView,
-    AnalyseGroqRecruteurAPIView,
+    AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView,
 
     # Bulletin PDF
     GenererBulletinPDFAPIView,
@@ -68,6 +68,7 @@ urlpatterns = [
     path('candidatures/<int:candidature_id>/evaluer/', EvaluerCandidatureAPIView.as_view(), name='evaluer-candidature'),
     path('candidatures/<int:candidature_id>/bulletin/', GenererBulletinPDFAPIView.as_view(), name='generer-bulletin'),
     path('candidatures/<int:candidature_id>/analyse-groq/', AnalyseGroqRecruteurAPIView.as_view(), name='analyse-groq'),
+    path('ia/generer-offre/', GenererOffreIAAPIView.as_view(), name='generer-offre-ia'),
     path('jobs/<int:offre_id>/top5/', Top5CandidatsAPIView.as_view(), name='offre-top5'),
 
     # Profil candidat

@@ -81,7 +81,12 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
             )
 
         if not user.is_active:
-            raise AuthenticationFailed("Votre compte n'est pas activé. Veuillez vérifier votre email avec le code à 6 chiffres.")
+            raise AuthenticationFailed({
+                "code": "COMPTE_NON_VERIFIE",
+                "email": user.email,
+                "role": user.role,
+                "detail": "Votre compte n'est pas activé. Veuillez vérifier votre email.",
+            })
 
         if user.role == 'RECRUTEUR' and hasattr(user, 'profilentreprise') and not user.profilentreprise.est_approuvee:
             pass

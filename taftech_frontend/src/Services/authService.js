@@ -143,6 +143,15 @@ export const authService = {
       throw err;
     }
   },
+  renvoyerCodeVerification: async (email) => {
+    try {
+      const response = await api.post("accounts/renvoyer-code/", { email });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_RENVOYER_CODE_VERIFICATION", err);
+      throw err;
+    }
+  },
   forgotPassword: async (email) => {
     try {
       const response = await api.post("accounts/forgot-password/", { email });
@@ -167,9 +176,9 @@ export const authService = {
     }
   },
 
-  googleLogin: async (credential, role = "CANDIDAT") => {
+  googleLogin: async (credential, role = "CANDIDAT", mode = "register") => {
     try {
-      const response = await api.post("accounts/social/google/", { credential, role });
+      const response = await api.post("accounts/social/google/", { credential, role, mode });
       if (response.data.role) {
         localStorage.setItem("userRole", response.data.role);
       }
@@ -177,6 +186,16 @@ export const authService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_GOOGLE_LOGIN", err);
+      throw err;
+    }
+  },
+
+  accepterConsentement: async () => {
+    try {
+      const response = await api.patch("accounts/consentement/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CONSENTEMENT", err);
       throw err;
     }
   },

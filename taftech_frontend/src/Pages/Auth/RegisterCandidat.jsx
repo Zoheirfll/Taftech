@@ -39,8 +39,17 @@ const RegisterCandidat = () => {
   });
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
 
   useEffect(() => {
+    const pendingEmail = sessionStorage.getItem("taftech_pending_verification");
+    if (pendingEmail) {
+      setRegisteredEmail(pendingEmail);
+      setStep(2);
+    }
+
     const fetchConstants = async () => {
       try {
         const data = await jobsService.getConstants();
@@ -85,6 +94,7 @@ const RegisterCandidat = () => {
         username: usernameGenere,
       });
       toast.success("Code envoyé à votre adresse email !", { id: toastId });
+      sessionStorage.setItem("taftech_pending_verification", formData.email);
       setRegisteredEmail(formData.email);
       setStep(2);
     } catch (err) {
@@ -120,6 +130,23 @@ const RegisterCandidat = () => {
     }
   };
 
+  const handleRenvoyerCode = async () => {
+    setLoading(true);
+    const toastId = toast.loading("Envoi d'un nouveau code...");
+    try {
+      await authService.renvoyerCodeVerification(registeredEmail);
+      sessionStorage.setItem("taftech_pending_verification", registeredEmail);
+      toast.success("Nouveau code envoyé !", { id: toastId });
+      setOtp(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors du renvoi.", { id: toastId });
+      reportError("ECHEC_RENVOYER_CODE_CANDIDAT", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleVerifyCode = async (e) => {
     e.preventDefault();
     const codeSaisi = otp.join("");
@@ -131,6 +158,7 @@ const RegisterCandidat = () => {
     const toastId = toast.loading("Vérification du code...");
     try {
       await authService.verifyEmail(registeredEmail, codeSaisi);
+      sessionStorage.removeItem("taftech_pending_verification");
       toast.success("Email vérifié avec succès !", { id: toastId });
       navigate("/login");
     } catch (err) {
@@ -356,15 +384,19 @@ const RegisterCandidat = () => {
                   onSuccess={async (credentialResponse) => {
                     const toastId = toast.loading("Inscription Google...");
                     try {
-                      await authService.googleLogin(
+                      const data = await authService.googleLogin(
                         credentialResponse.credential,
                         "CANDIDAT",
+                        "register",
                       );
-                      toast.success("Compte créé et connecté !", {
-                        id: toastId,
-                      });
-                      navigate("/");
-                      window.location.reload();
+                      toast.dismiss(toastId);
+                      if (data.requires_consent) {
+                        setShowConsentModal(true);
+                      } else {
+                        toast.success("Compte connecté !");
+                        navigate("/");
+                        window.location.reload();
+                      }
                     } catch {
                       toast.error("Échec de l'inscription Google.", {
                         id: toastId,
@@ -379,6 +411,52 @@ const RegisterCandidat = () => {
                   width="360"
                 />
               </div>
+
+              {/* Modal consentement loi 18-07 après inscription Google */}
+              {showConsentModal && (
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
+                    <h2 className="text-xl font-bold text-slate-900 mb-1">
+                      Protection des données — Loi 18-07
+                    </h2>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Avant d'accéder à TafTech, vous devez lire et accepter la politique de confidentialité.
+                    </p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-52 overflow-y-auto text-sm text-slate-700 leading-relaxed whitespace-pre-line mb-5">
+                      {TEXTE_LOI_1807.contenu}
+                    </div>
+                    <label className="flex items-start gap-3 cursor-pointer mb-6">
+                      <input
+                        type="checkbox"
+                        checked={consentChecked}
+                        onChange={(e) => setConsentChecked(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300"
+                      />
+                      <span className="text-sm text-slate-700">
+                        J'ai lu et j'accepte la politique de protection des données conformément à la Loi 18-07.
+                      </span>
+                    </label>
+                    <button
+                      disabled={!consentChecked || consentLoading}
+                      onClick={async () => {
+                        setConsentLoading(true);
+                        try {
+                          await authService.accepterConsentement();
+                          toast.success("Bienvenue sur TafTech !");
+                          navigate("/");
+                          window.location.reload();
+                        } catch {
+                          toast.error("Erreur lors de l'enregistrement du consentement.");
+                          setConsentLoading(false);
+                        }
+                      }}
+                      className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {consentLoading ? "Enregistrement..." : "J'accepte et je continue"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -421,7 +499,16 @@ const RegisterCandidat = () => {
                 </button>
               </form>
               <p className="text-sm text-slate-400 mt-4">
-                Vous n'avez rien reçu ? Vérifiez vos spams.
+                Vous n'avez rien reçu ? Vérifiez vos spams ou{" "}
+                <button
+                  type="button"
+                  onClick={handleRenvoyerCode}
+                  disabled={loading}
+                  className="text-indigo-600 font-semibold hover:underline disabled:opacity-50"
+                >
+                  renvoyer le code
+                </button>
+                .
               </p>
             </div>
           )}

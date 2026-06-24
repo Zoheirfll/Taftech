@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { jobsService } from "../../../Services/jobsService";
+import { recruteurService } from "../../../Services/recruteurService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import toast from "react-hot-toast";
@@ -206,6 +207,17 @@ export const useGestionOffre = () => {
     }
   };
 
+  const handleSetExpiration = async (date) => {
+    try {
+      const updated = await recruteurService.modifierOffre(offre.id, { date_expiration: date || null });
+      setOffre({ ...offre, date_expiration: updated.offre?.date_expiration ?? date });
+      toast.success(date ? `Expiration fixée au ${new Date(date).toLocaleDateString("fr-FR")}` : "Expiration supprimée");
+    } catch (err) {
+      toast.error("Erreur lors de la mise à jour.");
+      reportError("ECHEC_SET_EXPIRATION_OFFRE", err);
+    }
+  };
+
   const handleCloturer = async () => {
     if (!window.confirm("Voulez-vous clôturer cette offre ?")) return;
     try {
@@ -370,6 +382,7 @@ export const useGestionOffre = () => {
     validerEntretien,
     supprimerCandidature,
     handleCloturer,
+    handleSetExpiration,
     soumettreEvaluation,
     handleDownloadBulletin,
     isPremium,

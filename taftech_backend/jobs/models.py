@@ -117,6 +117,7 @@ class OffreEmploi(models.Model):
     salaire_propose = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 68 000 DA Net")
     
     date_publication = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateField(null=True, blank=True, verbose_name="Date d'expiration automatique")
     est_active = models.BooleanField(default=True, verbose_name="Offre visible")
     statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
     motif_rejet = models.TextField(blank=True, null=True)

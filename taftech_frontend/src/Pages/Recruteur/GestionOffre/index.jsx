@@ -68,6 +68,7 @@ const GestionOffre = () => {
     validerEntretien,
     supprimerCandidature,
     handleCloturer,
+    handleSetExpiration,
     soumettreEvaluation,
     handleDownloadBulletin,
     handleAnalyseGroq,
@@ -111,11 +112,31 @@ const GestionOffre = () => {
             )}
           </div>
           <p className="text-sm text-slate-400">
-            Publiée le{" "}
-            {new Date(offre.date_publication).toLocaleDateString("fr-FR")} ·{" "}
-            {offre.candidatures.length} candidature
-            {offre.candidatures.length > 1 ? "s" : ""}
+            Publiée le {new Date(offre.date_publication).toLocaleDateString("fr-FR")} · {offre.candidatures.length} candidature{offre.candidatures.length > 1 ? "s" : ""}
           </p>
+          {!offre.est_cloturee && (
+            <div className="flex items-center gap-2 mt-1">
+              {offre.date_expiration && (() => {
+                const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
+                return (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${jours <= 7 ? "bg-red-50 text-red-600" : jours <= 30 ? "bg-amber-50 text-amber-700" : jours <= 60 ? "bg-teal-50 text-teal-700" : "bg-slate-100 text-slate-600"}`}>
+                    ⏱ {jours === 0 ? "Expire aujourd'hui" : `Expire dans ${jours}j`}
+                  </span>
+                );
+              })()}
+              <input
+                type="date"
+                value={offre.date_expiration || ""}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => handleSetExpiration(e.target.value || null)}
+                className="text-xs px-2 py-1 border border-slate-200 rounded-lg bg-slate-50 text-slate-600 focus:outline-none focus:border-teal-500"
+                title="Définir la date d'expiration"
+              />
+              {offre.date_expiration && (
+                <button onClick={() => handleSetExpiration(null)} className="text-xs text-slate-400 hover:text-red-500 transition-colors" title="Supprimer l'expiration">✕</button>
+              )}
+            </div>
+          )}
         </div>
         {!offre.est_cloturee && authService.peutFaire("UTILISATEUR") && (
           <button

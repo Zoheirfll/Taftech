@@ -452,15 +452,21 @@ const DashboardRecruteur = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Calendar size={11} />{" "}
-                                {new Date(
-                                  offre.date_publication,
-                                ).toLocaleDateString("fr-FR")}
+                                {new Date(offre.date_publication).toLocaleDateString("fr-FR")}
                               </span>
                               {offre.salaire_propose && (
                                 <span className="text-emerald-600 font-medium">
                                   {offre.salaire_propose} DA
                                 </span>
                               )}
+                              {offre.date_expiration && !offre.est_cloturee && (() => {
+                                const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
+                                return (
+                                  <span className={`flex items-center gap-1 font-semibold ${jours <= 7 ? "text-red-600" : jours <= 30 ? "text-amber-600" : jours <= 60 ? "text-teal-600" : "text-slate-500"}`}>
+                                    ⏱ {jours === 0 ? "Expire aujourd'hui" : `${jours}j restants`}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             {offre.motif_rejet && (
                               <div className="mt-2 flex items-start gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">

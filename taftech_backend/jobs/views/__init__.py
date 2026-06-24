@@ -79,6 +79,7 @@ from .ia import (
     SuggestionsCarriereAPIView,
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView,
+    GenererOffreIAAPIView,
 )
 from .bulletin import GenererBulletinPDFAPIView
 from .equipe import (

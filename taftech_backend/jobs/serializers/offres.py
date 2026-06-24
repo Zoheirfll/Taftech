@@ -20,10 +20,18 @@ class EntrepriseSimpleSerializer(serializers.ModelSerializer):
 class OffreEmploiSerializer(serializers.ModelSerializer):
     entreprise = EntrepriseSimpleSerializer(read_only=True)
     questionnaire = QuestionnaireSerializer(read_only=True)
+    jours_restants = serializers.SerializerMethodField()
 
     class Meta:
         model = OffreEmploi
         fields = '__all__'
+
+    def get_jours_restants(self, obj):
+        if not obj.date_expiration or obj.est_cloturee:
+            return None
+        from django.utils import timezone
+        delta = obj.date_expiration - timezone.now().date()
+        return max(0, delta.days)
 
 
 class OffreEmploiCreateDTO(serializers.ModelSerializer):
@@ -31,8 +39,8 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
         model = OffreEmploi
         fields = (
             'titre', 'wilaya', 'commune', 'diplome', 'specialite',
-            'missions', 'profil_recherche', 'type_contrat',
-            'experience_requise', 'salaire_propose', 'questionnaire'
+            'description', 'missions', 'profil_recherche', 'type_contrat',
+            'experience_requise', 'salaire_propose', 'questionnaire', 'date_expiration'
         )
 
 

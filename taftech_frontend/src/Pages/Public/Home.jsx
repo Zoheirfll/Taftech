@@ -203,7 +203,7 @@ const Home = () => {
       </section>
       {/* STATS */}
       <section className="py-12 bg-indigo-600">
-        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {[
             {
               label: "Talents inscrits",
@@ -219,11 +219,6 @@ const Home = () => {
               label: "Offres à pourvoir",
               value: stats.total_offres,
               icon: Briefcase,
-            },
-            {
-              label: "Recrutements réalisés",
-              value: stats.total_recrutements || 0,
-              icon: Sparkles,
             },
           ].map(({ label, value }) => (
             <div key={label} className="py-4">

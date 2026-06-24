@@ -23,10 +23,16 @@ const LoginRecruteur = () => {
       navigate("/dashboard");
       window.location.reload();
     } catch (err) {
-      const code = err.response?.data?.code;
-      const detail = err.response?.data?.detail;
-      if (code === "PREMIUM_EXPIRE") {
-        toast.error(detail, { id: toastId, duration: 6000 });
+      const errData = err.response?.data;
+      if (errData?.code === "COMPTE_NON_VERIFIE") {
+        toast.dismiss(toastId);
+        localStorage.setItem("taftech_pending_verification_recruteur", errData.email);
+        toast("Votre compte n'est pas encore vérifié. Terminez la vérification.", { icon: "📧" });
+        navigate("/recruteurs/inscription");
+        return;
+      }
+      if (errData?.code === "PREMIUM_EXPIRE") {
+        toast.error(errData.detail, { id: toastId, duration: 6000 });
       } else {
         toast.error("Email ou mot de passe incorrect.", { id: toastId });
         reportError("ECHEC_CONNEXION_RECRUTEUR", err);

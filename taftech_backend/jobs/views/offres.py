@@ -24,7 +24,7 @@ class JobListAPIView(APIView):
         specialite = request.query_params.get('specialite', '')
         experience = request.query_params.get('experience', '')
         contrat = request.query_params.get('contrat', '')
-        offres = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
+        offres = OffreEmploi.objects.select_related('entreprise').filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
         if mot_cle:
             offres = offres.filter(Q(titre__icontains=mot_cle) | Q(missions__icontains=mot_cle))
         if wilaya:
@@ -51,7 +51,7 @@ class JobDetailAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, offre_id):
         try:
-            offre = OffreEmploi.objects.get(id=offre_id, est_active=True, est_cloturee=False)
+            offre = OffreEmploi.objects.select_related('entreprise').get(id=offre_id, est_active=True, est_cloturee=False)
             serializer = OffreEmploiSerializer(offre)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
@@ -141,6 +141,10 @@ class CloturerOffreAPIView(APIView):
 class ConstantsAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request):
+        from django.core.cache import cache
+        cached = cache.get('jobs_constants')
+        if cached:
+            return Response(cached, status=status.HTTP_200_OK)
         from ..constants import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
         data = {
             "wilayas": [{"value": item[0], "label": item[1]} for item in WILAYAS_CHOICES],
@@ -149,4 +153,5 @@ class ConstantsAPIView(APIView):
             "experiences": [{"value": item[0], "label": item[1]} for item in NIVEAUX_EXPERIENCE],
             "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
         }
+        cache.set('jobs_constants', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)

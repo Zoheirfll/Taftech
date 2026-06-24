@@ -236,7 +236,7 @@ const RegisterCandidat = () => {
                 Créer mon espace candidat
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Nom *
@@ -262,7 +262,7 @@ const RegisterCandidat = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Date de naissance *
@@ -289,7 +289,7 @@ const RegisterCandidat = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Téléphone *
@@ -304,7 +304,7 @@ const RegisterCandidat = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-slate-600 mb-2 block">
                       Email *

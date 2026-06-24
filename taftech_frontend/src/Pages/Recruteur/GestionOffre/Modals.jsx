@@ -246,7 +246,7 @@ export const Modals = ({
               Un email d'invitation sera envoyé automatiquement.
             </p>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
                     Date *

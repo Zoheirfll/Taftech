@@ -630,7 +630,7 @@ export const DetailCandidature = ({
                         );
                       })}
                       {DM.highlights && (
-                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
                           <div>
                             <p className="text-xs font-semibold text-emerald-700 mb-2">
                               Points forts

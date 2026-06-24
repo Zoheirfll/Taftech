@@ -47,7 +47,7 @@ class DashboardRecruteurAPIView(APIView):
                 {"error": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        offres = OffreEmploi.objects.filter(entreprise=entreprise).order_by('-date_publication')
+        offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
         derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,

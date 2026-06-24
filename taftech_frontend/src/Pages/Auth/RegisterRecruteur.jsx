@@ -135,7 +135,7 @@ const RegisterRecruteur = () => {
                 Créer un compte entreprise
               </h3>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Nom</label>
                   <input type="text" name="last_name" required onChange={handleChange} className={inputClass} />
@@ -146,7 +146,7 @@ const RegisterRecruteur = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Email pro</label>
                   <input type="email" name="email" required onChange={handleChange} className={inputClass} />
@@ -162,7 +162,7 @@ const RegisterRecruteur = () => {
                 <input type="text" name="nom_entreprise" required onChange={handleChange} className={inputClass} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Secteur d'activité</label>
                   <Select
@@ -183,7 +183,7 @@ const RegisterRecruteur = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Registre de commerce</label>
                   <input type="text" name="registre_commerce" required placeholder="Ex: 1234567A89" onChange={handleChange} className={inputClass} />

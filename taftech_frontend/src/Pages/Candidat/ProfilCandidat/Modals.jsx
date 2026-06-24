@@ -82,7 +82,7 @@ export const Modals = ({
               }
               className="space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Prénom
@@ -124,7 +124,7 @@ export const Modals = ({
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Wilaya
@@ -172,7 +172,7 @@ export const Modals = ({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Diplôme
@@ -326,7 +326,7 @@ export const Modals = ({
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Mobilité
@@ -605,7 +605,7 @@ export const Modals = ({
                   styles={selectStyles}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Date de début *
@@ -738,7 +738,7 @@ export const Modals = ({
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">
                     Début *
@@ -930,7 +930,7 @@ export const Modals = ({
                   <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Informations détectées
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       { label: "Nom complet", value: parsedData.nom_complet },
                       { label: "Email", value: parsedData.email },

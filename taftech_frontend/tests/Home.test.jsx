@@ -96,10 +96,10 @@ describe("🏠 UI & Logique - Composant <Home />", () => {
     );
 
     await waitFor(() => {
-      // Vérification des statistiques
+      // Vérification des statistiques (les 3 affichées : candidats, entreprises, offres)
       expect(screen.getByText("1500")).toBeInTheDocument(); // Candidats
       expect(screen.getByText("120")).toBeInTheDocument(); // Offres
-      expect(screen.getByText("32")).toBeInTheDocument(); // Recrutements
+      expect(screen.getByText("45")).toBeInTheDocument(); // Entreprises
 
       // Vérification des offres récentes
       expect(
@@ -107,8 +107,8 @@ describe("🏠 UI & Logique - Composant <Home />", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("Data Scientist")).toBeInTheDocument();
 
-      // Vérification de l'entreprise anonyme (Fallback)
-      expect(screen.getByText(/Entreprise Anonyme/i)).toBeInTheDocument();
+      // Vérification de l'entreprise anonyme (Fallback) — texte exact du composant
+      expect(screen.getByText(/Entreprise anonyme/i)).toBeInTheDocument();
     });
   });
 
@@ -181,13 +181,12 @@ describe("🏠 UI & Logique - Composant <Home />", () => {
     );
 
     await waitFor(() => {
-      // Le fallback de total_recrutements (|| 0) doit fonctionner
-      // 💡 Là encore, on utilise getAllByText pour éviter les confusions
-      const zeros = screen.getAllByText("0");
-      expect(zeros.length).toBeGreaterThan(0);
+      // Le composant ne doit pas crasher — stats partielles affichées
+      expect(screen.getByText("10")).toBeInTheDocument(); // total_offres
+      expect(screen.getByText("20")).toBeInTheDocument(); // total_candidats
 
       // Pas de plantage sur .slice() car conditionné par if (jobsData.results)
-      expect(screen.getByText(/Dernières Offres/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dernières offres/i)).toBeInTheDocument();
     });
   });
 });

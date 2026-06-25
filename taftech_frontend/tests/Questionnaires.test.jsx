@@ -178,8 +178,9 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     await waitFor(() => screen.getAllByRole("button"));
 
     const allButtons = screen.getAllByRole("button");
-    // bouton index 1 = pencil du premier questionnaire (0 = Nouveau questionnaire)
-    fireEvent.click(allButtons[1]);
+    // bouton index 2 = pencil du premier questionnaire
+    // (0 = Nouveau questionnaire, 1 = bouton fermeture InfoBanner)
+    fireEvent.click(allButtons[2]);
 
     await waitFor(() => {
       expect(
@@ -199,10 +200,11 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    const allButtons = screen
+    // Cibler les boutons Trash (rouge au hover) — pas les Pencil ni l'InfoBanner
+    const trashButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
-    fireEvent.click(allButtons[2]);
+      .filter((b) => b.className.includes("hover:text-red-500"));
+    fireEvent.click(trashButtons[0]);
 
     await waitFor(() => {
       expect(jobsService.deleteQuestionnaire).toHaveBeenCalled();
@@ -304,10 +306,10 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    const allButtons = screen
+    const trashButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
-    fireEvent.click(allButtons[2]);
+      .filter((b) => b.className.includes("hover:text-red-500"));
+    fireEvent.click(trashButtons[0]);
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -331,10 +333,10 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    const allButtons = screen
+    const trashButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
-    fireEvent.click(allButtons[2]);
+      .filter((b) => b.className.includes("hover:text-red-500"));
+    fireEvent.click(trashButtons[0]);
 
     await waitFor(() => {
       expect(jobsService.deleteQuestionnaire).not.toHaveBeenCalled();

@@ -20,6 +20,13 @@ vi.mock("../src/Services/jobsService", () => ({
     updateParametres: vi.fn(),
   },
 }));
+
+vi.mock("../src/api/axiosConfig", () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: { est_compte_google: false } }),
+    post: vi.fn(),
+  },
+}));
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
@@ -43,12 +50,16 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     jobsService.getParametres.mockResolvedValue(mockSettings);
     render(<Settings />);
     await waitFor(() => {
-      // Toggle est un <button> — on vérifie par classe CSS
-      const toggles = screen.getAllByRole("button");
+      // Les toggles sont des <button> avec les classes bg-indigo-600 / bg-slate-200
+      // On filtre uniquement les boutons qui ont ces classes (les Toggle buttons)
+      const allButtons = screen.getAllByRole("button");
+      const toggleButtons = allButtons.filter(
+        (b) => b.className.includes("bg-indigo-600") || b.className.includes("bg-slate-200")
+      );
       // Premier toggle (notif_offres_exclusives = true) → bg-indigo-600
-      expect(toggles[0].className).toContain("bg-indigo-600");
+      expect(toggleButtons[0].className).toContain("bg-indigo-600");
       // Deuxième toggle (notif_newsletter = false) → bg-slate-200
-      expect(toggles[1].className).toContain("bg-slate-200");
+      expect(toggleButtons[1].className).toContain("bg-slate-200");
     });
   });
 
@@ -56,8 +67,11 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     jobsService.getParametres.mockResolvedValue(mockSettings);
     jobsService.updateParametres.mockResolvedValue({});
     render(<Settings />);
-    await waitFor(() => screen.getByText(/Notifications/i));
-    const toggles = screen.getAllByRole("button");
+    await waitFor(() => screen.getByText("Notifications")); // Titre h2 exact
+    const allButtons = screen.getAllByRole("button");
+    const toggles = allButtons.filter(
+      (b) => b.className.includes("bg-indigo-600") || b.className.includes("bg-slate-200")
+    );
     fireEvent.click(toggles[1]); // Newsletter toggle
     await waitFor(() => {
       expect(jobsService.updateParametres).toHaveBeenCalled();
@@ -81,8 +95,11 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     jobsService.getParametres.mockResolvedValue(mockSettings);
     jobsService.updateParametres.mockRejectedValue(new Error("Update failed"));
     render(<Settings />);
-    await waitFor(() => screen.getByText(/Notifications/i));
-    const toggles = screen.getAllByRole("button");
+    await waitFor(() => screen.getByText("Notifications")); // Titre h2 exact
+    const allButtons = screen.getAllByRole("button");
+    const toggles = allButtons.filter(
+      (b) => b.className.includes("bg-indigo-600") || b.className.includes("bg-slate-200")
+    );
     const toggle0 = toggles[0];
     // État initial: bg-indigo-600 (true)
     expect(toggle0.className).toContain("bg-indigo-600");
@@ -102,8 +119,8 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
   it("🔴 EC3 : Validation mot de passe (Mismatch)", async () => {
     jobsService.getParametres.mockResolvedValue(mockSettings);
     render(<Settings />);
-    await waitFor(() => screen.getByPlaceholderText("Nouveau"));
-    fireEvent.change(screen.getByPlaceholderText("Nouveau"), {
+    await waitFor(() => screen.getByPlaceholderText("Nouveau mot de passe"));
+    fireEvent.change(screen.getByPlaceholderText("Nouveau mot de passe"), {
       target: { value: "Password123" },
     });
     fireEvent.change(screen.getByPlaceholderText("Confirmer"), {

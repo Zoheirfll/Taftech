@@ -28,7 +28,10 @@ vi.mock("../src/Services/profilService", () => ({
   profilService: { getProfil: vi.fn() },
 }));
 vi.mock("../src/Services/jobsService", () => ({
-  jobsService: { getNotifications: vi.fn() },
+  jobsService: {
+    getNotifications: vi.fn(),
+    getDashboard: vi.fn().mockResolvedValue({ entreprise: {} }),
+  },
 }));
 
 const mockNavigate = vi.fn();
@@ -80,7 +83,7 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
       expect(screen.getByText("2")).toBeInTheDocument();
       expect(screen.getByAltText("Profil")).toHaveAttribute(
         "src",
-        "http://127.0.0.1:8000/media/photo.jpg",
+        "/media/photo.jpg",
       );
     });
 

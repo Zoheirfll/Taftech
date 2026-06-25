@@ -28,11 +28,16 @@ vi.mock("../src/Services/authService", () => ({
   authService: {
     registerRecruteur: vi.fn(),
     verifyEmail: vi.fn(),
+    renvoyerCodeVerification: vi.fn().mockResolvedValue({}),
   },
 }));
 
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: { getConstants: vi.fn() },
+}));
+
+vi.mock("../src/theme", () => ({
+  selectStyles: {},
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -60,6 +65,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    sessionStorage.clear();
   });
 
   // Helper pour remplir l'Etape 1 (Débloque les vérifications de handleSubmit)

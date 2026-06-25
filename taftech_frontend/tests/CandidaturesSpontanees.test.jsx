@@ -144,9 +144,10 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
+    // Filtrer les boutons avec SVG ET sans title="Fermer" (exclure l'InfoBanner close)
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
+      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -167,7 +168,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Aucune candidature trouvée/i),
+        screen.getByText(/Aucune candidature spontanée/i),
       ).toBeInTheDocument();
     });
   });
@@ -225,7 +226,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     await waitFor(() => screen.getAllByRole("button"));
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
+      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -253,7 +254,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     await waitFor(() => screen.getAllByRole("button"));
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg"));
+      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {

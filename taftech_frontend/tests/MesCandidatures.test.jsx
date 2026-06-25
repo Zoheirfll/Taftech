@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import MesCandidatures from "../src/Pages/Candidat/MesCandidatures";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
@@ -51,7 +52,7 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
 
   it("🟢 HP1 : Affichage des candidatures et de leurs statuts", async () => {
     jobsService.getMesCandidatures.mockResolvedValue(mockData);
-    render(<MesCandidatures />);
+    render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     expect(
       await screen.findByText("Développeur Front-End"),
     ).toBeInTheDocument();
@@ -70,7 +71,7 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
 
   it("🟢 HP2 : Affichage de l'encart d'Entretien et Message", async () => {
     jobsService.getMesCandidatures.mockResolvedValue(mockData);
-    render(<MesCandidatures />);
+    render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     await screen.findByText("Designer UI/UX");
     expect(screen.getByText("Entretien")).toBeInTheDocument();
     expect(
@@ -84,16 +85,16 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
 
   it("🟢 HP3 : Affichage du badge pour les offres clôturées", async () => {
     jobsService.getMesCandidatures.mockResolvedValue(mockData);
-    render(<MesCandidatures />);
+    render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     await screen.findByText("Data Analyst");
     expect(screen.getByText("Clôturée")).toBeInTheDocument();
   });
 
   it("🟢 HP4 : Affichage de l'état vide", async () => {
     jobsService.getMesCandidatures.mockResolvedValue([]);
-    render(<MesCandidatures />);
+    render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     expect(
-      await screen.findByText(/Vous n'avez postulé à aucune offre/i),
+      await screen.findByText(/Aucune candidature pour l'instant/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Développeur/i)).not.toBeInTheDocument();
   });
@@ -102,9 +103,9 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
     jobsService.getMesCandidatures.mockRejectedValue(
       new Error("500 API Crash"),
     );
-    render(<MesCandidatures />);
+    render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     expect(
-      await screen.findByText(/Vous n'avez postulé à aucune offre/i),
+      await screen.findByText(/Aucune candidature pour l'instant/i),
     ).toBeInTheDocument();
     expect(reporter.reportError).toHaveBeenCalledWith(
       "ECHEC_RECUPERATION_CANDIDATURES",

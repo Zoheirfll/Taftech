@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 25/06/2026 — Onboarding contextuel (InfoBanner + Tooltip), changer MDP recruteur, matching IA CVthèque, N+1 perf, mobile grids_
+_Dernière mise à jour : 25/06/2026 — Onboarding contextuel (InfoBanner + Tooltip), changer MDP recruteur, matching IA CVthèque, N+1 perf, mobile grids, MAJ tests (InfoBanner, Tooltip, MDP recruteur, CVThèque offre_id, ChangerMotDePasse backend)_
 
 ---
 
@@ -47,8 +47,8 @@ Plateforme de recrutement en ligne ciblant le marché algérien.
 - **IA Analyse**: Groq API (llama-3.1-8b-instant) — à la demande uniquement
 - **PDF**: ReportLab
 - **Email**: Django SMTP Gmail
-- **Tests Backend**: Django TestCase + APIClient — ~268/268 ✅
-- **Tests Frontend**: Vitest + @testing-library/react — 312/312 ✅
+- **Tests Backend**: Django TestCase + APIClient — 282/282 ✅
+- **Tests Frontend**: Vitest + @testing-library/react — 338/338 ✅
 - **Tests E2E**: Cypress 13.17.0 — 7 fichiers tous stables ✅
 - **GitHub**: https://github.com/Zoheirfll/Taftech
 
@@ -478,10 +478,12 @@ Pages/
 
 ---
 
-## ✅ ÉTAT TESTS (dernière vérification — Sécurité + accès membres)
+## ✅ ÉTAT TESTS (dernière vérification — MAJ tests coverage + corrections)
 
-- Backend : 228/228 ✅ (dont tests slug + candidature-spontanee mis à jour)
-- Frontend Vitest : 312/312 ✅ (dont 12 tests peutFaire, 7 tests GuestRoute, 11 tests MonEquipe)
+- Backend : 282/282 ✅ (dont 8 tests ChangerMotDePasseAPIView + 4 tests CVThequeView offre_id nouveaux)
+- Frontend Vitest : 338/338 ✅
+  - Nouveaux tests : InfoBanner (8) + Tooltip (10) + ParametresRecruteur MDP (5) + CVTheque matching (3)
+  - Corrigés : Settings, RegisterRecruteur, Home, JobDetail, MesCandidatures, Navbar, CreateJob, CandidaturesSpontanees, EntreprisePublic, Questionnaires, ParametresRecruteur HP3/HP7/EC3
 - Cypress E2E : 7 fichiers — tous stables ✅
 - Vite build : propre ✅ (1928 modules)
 

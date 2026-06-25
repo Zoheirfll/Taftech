@@ -21,6 +21,20 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
     creerOffre: vi.fn(),
+    getQuestionnaires: vi.fn().mockResolvedValue([]),
+    getMetiers: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock("../src/Services/recruteurService", () => ({
+  recruteurService: {
+    getDashboard: vi.fn().mockResolvedValue({ est_premium: false }),
+  },
+}));
+
+vi.mock("../src/Services/iaService", () => ({
+  iaService: {
+    genererOffreIA: vi.fn(),
   },
 }));
 
@@ -30,6 +44,10 @@ vi.mock("react-hot-toast", () => ({
     error: vi.fn(),
     loading: vi.fn(() => "toast-id"),
   },
+}));
+
+vi.mock("../src/theme", () => ({
+  selectStyles: {},
 }));
 
 vi.mock("../src/data/communes.json", () => ({
@@ -124,7 +142,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
     await waitFor(() => {
       expect(jobsService.creerOffre).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        expect.stringContaining("publiée avec succès"),
+        expect.stringContaining("soumise"),
         expect.anything(),
       );
     });
@@ -158,7 +176,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez sélectionner au moins une Wilaya et une Spécialité.",
+        "Veuillez sélectionner une Wilaya et une Spécialité.",
       );
       expect(jobsService.creerOffre).not.toHaveBeenCalled();
     });

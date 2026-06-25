@@ -9,12 +9,12 @@ import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 
 // --- MOCKS ---
-// Mock de useParams pour simuler un ID d'entreprise (ex: ID "123")
+// Mock de useParams pour simuler le slug de l'entreprise
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useParams: () => ({ id: "123" }),
+    useParams: () => ({ slug: "123" }),
   };
 });
 

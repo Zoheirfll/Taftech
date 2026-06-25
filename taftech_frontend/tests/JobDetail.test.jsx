@@ -87,7 +87,8 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Lead Développeur React")).toBeInTheDocument();
-      expect(screen.getByText(/TafTech Corp/i)).toBeInTheDocument();
+      // Le nom entreprise apparaît dans le bandeau ET la fiche entreprise
+      expect(screen.getAllByText(/TafTech Corp/i).length).toBeGreaterThan(0);
       expect(screen.getByText("200k DZD")).toBeInTheDocument();
       expect(
         screen.getByText("Description de l'offre ici"),

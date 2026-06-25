@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import InfoBanner from "../../Components/InfoBanner";
 import {
   Sparkles,
   TrendingUp,
@@ -126,6 +127,12 @@ const SuggestionsCarriere = () => {
           analyse personnalisée.
         </p>
       </div>
+
+      <InfoBanner storageKey="suggestions_carriere" title="Comment fonctionnent les suggestions ?">
+        L'IA analyse votre spécialité, diplôme et expériences pour vous proposer des métiers compatibles.
+        Cliquez sur <strong>Analyser ma carrière avec l'IA</strong> pour obtenir un bilan personnalisé rédigé par Groq (llama-3.1).
+        Plus votre profil est complet, plus les suggestions sont précises.
+      </InfoBanner>
 
       {/* MÉTIERS */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">

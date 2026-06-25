@@ -374,8 +374,11 @@ const JobsList = () => {
               <p className="text-sm font-medium text-slate-900 mb-1">
                 Aucune offre trouvée
               </p>
-              <p className="text-xs text-slate-500 mb-4">
-                Essayez de modifier vos filtres.
+              <p className="text-xs text-slate-500 mb-1">
+                Aucune offre ne correspond à vos critères actuels.
+              </p>
+              <p className="text-xs text-slate-400 mb-4">
+                Essayez de supprimer un filtre ou de rechercher un terme plus général.
               </p>
               <button
                 onClick={handleReset}

@@ -173,6 +173,7 @@ export const recruteurService = {
       favoris: filters.favoris ? "true" : "",
       tri: filters.tri || "recents",
       page: page,
+      ...(filters.offre_id ? { offre_id: filters.offre_id } : {}),
     }).toString();
     try {
       const response = await api.get(`jobs/employeur/cvtheque/?${queryParams}`);

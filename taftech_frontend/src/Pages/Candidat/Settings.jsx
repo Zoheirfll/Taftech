@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
 import api from "../../api/axiosConfig";
+import InfoBanner from "../../Components/InfoBanner";
 
 const Toggle = ({ checked, onChange }) => (
   <button
@@ -97,6 +98,11 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-extrabold text-slate-900">Paramètres</h1>
+
+      <InfoBanner storageKey="settings_candidat" title="Vos préférences">
+        Gérez vos <strong>notifications email</strong> (offres exclusives, newsletter, rappels CV) et votre <strong>mot de passe</strong>.
+        Si votre compte a été créé avec Google, utilisez la section "Définir un mot de passe" pour pouvoir vous connecter sans Google.
+      </InfoBanner>
 
       {/* NOTIFICATIONS */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">

@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 24/06/2026 — Secteur expérience, algo matching rewrite, référentiel Emploitic, autocomplete titre_poste, invitation Google, changer mot de passe_
+_Dernière mise à jour : 25/06/2026 — Onboarding contextuel (InfoBanner + Tooltip), changer MDP recruteur, matching IA CVthèque, N+1 perf, mobile grids_
 
 ---
 
@@ -23,11 +23,12 @@ _Dernière mise à jour : 24/06/2026 — Secteur expérience, algo matching rewr
 
 ## 🚨 RÈGLES DE COLLABORATION — IMPÉRATIVES
 
-1. **Ne jamais merger vers `main` sans permission explicite** de l'utilisateur
-2. **Ne jamais committer `.env`** — il est dans `.gitignore` et doit y rester
-3. **Rester sur la feature branch courante** — ne pas changer de branche seul
-4. **Ne pas prendre d'initiatives non demandées** — faire seulement ce qui est demandé
-5. **Demander confirmation avant toute action destructive** (reset, force push, suppression fichiers)
+1. 🔴 **TOUJOURS afficher le code AVANT/APRÈS dans le chat avant chaque Edit** — montrer `old_string` et `new_string` en blocs de code dans la réponse. Ne jamais faire un Edit silencieux.
+2. **Ne jamais merger vers `main` sans permission explicite** de l'utilisateur
+3. **Ne jamais committer `.env`** — il est dans `.gitignore` et doit y rester
+4. **Rester sur la feature branch courante** — ne pas changer de branche seul
+5. **Ne pas prendre d'initiatives non demandées** — faire seulement ce qui est demandé
+6. **Demander confirmation avant toute action destructive** (reset, force push, suppression fichiers)
 6. **Ne jamais résoudre Cypress** sans demande explicite — les tests E2E sont déprioritisés
 7. Toujours vérifier que le build Vite passe (`npx vite build`) avant de déclarer une tâche terminée
 8. **Mettre à jour CLAUDE.md après chaque changement technique** — tout nouveau comportement, décision, ou correction doit être reflété ici avant le commit. CLAUDE.md est la source de vérité du projet pour les futures sessions.
@@ -194,6 +195,7 @@ Pages/
 ### 🔐 Authentification
 - Inscription candidat/recruteur, login JWT, déconnexion, mot de passe oublié, vérification email
 - Rôles : CANDIDAT / RECRUTEUR / ADMIN
+- Changer MDP disponible dans Settings (candidat) ET ParametresRecruteur (onglet Mon profil) — adapté compte Google
 - Verrouillage compte (5 échecs → verrou 15 min)
 - `GuestRoute` : redirige les utilisateurs déjà connectés hors des pages login/inscription (ADMIN → /admin-taftech, RECRUTEUR/membre → /dashboard, CANDIDAT → /profil)
 
@@ -296,6 +298,21 @@ Pages/
 - Texte `text-slate-900` (noir) au lieu de `text-slate-600` (gris) sur les navbars
 - Logo `h-16` dans conteneur `h-15` (légèrement débordant — effet voulu)
 - ~80 occurrences de `text-slate-400/500` remplacées par `text-slate-600/700` sur 21 fichiers frontend
+
+### 🧭 Onboarding Contextuel
+- Composant `InfoBanner` (`src/Components/InfoBanner.jsx`) — bannière dismissable, localStorage `banner_${storageKey}`, variants indigo/teal/amber/slate
+- Composant `Tooltip` + `TooltipIcon` (`src/Components/Tooltip.jsx`) — hover tooltip, prop `position` top/bottom/left/right
+- Pages avec InfoBanner : ProfilCandidat, MesCandidatures, AlertesEmploi, BoiteReception, SuggestionsCarriere, Settings (candidat), DashboardRecruteur, CreateJob, CVThèque, CandidaturesSpontanees, Questionnaires, ParametresRecruteur
+- Pages avec TooltipIcon : ProfilCandidat (complétion %), MesCandidatures (score), GestionOffre (tri score), DetailCandidature (note /20), JobDetail (score matching)
+- Empty states améliorés : MesCandidatures (CTA vers /offres), CandidaturesSpontanees, JobsList
+
+### 🤖 Matching IA CVthèque
+- Dropdown "Comparer avec une offre" dans CVThèque — filtre sur offres APPROUVEE + active + non clôturée
+- Paramètre `offre_id` dans `CVThequeView.get()` → calcule `calculer_score_matching` pour chaque candidat → trie par score desc
+- Retourne `score_offre` dans chaque résultat (indexé par `user_id`, pas `pk`)
+- Badge coloré sur chaque card : vert ≥70%, orange ≥40%, gris <40%
+- Bandeau teal "Classement par compatibilité activé" avec bouton ✕
+- `searchCVtheque` dans `recruteurService.js` passe `offre_id` dans les queryParams
 
 ### 📱 QR Code Entreprise
 - Lib : `qrcode.react` (QRCodeCanvas)
@@ -420,6 +437,10 @@ Pages/
 | Scraper Emploitic | Subprocess séparé + JSON tmp file | Playwright sync_playwright sur Windows bloque le greenlet à la fermeture — subprocess évite le hang |
 | Référentiel recherche | Q() par mot individuel | `icontains` substring exact ne trouve pas "Ingénieur en informatique" avec "ingenieur informatique" |
 | Playwright Windows | `python -m playwright install chromium` dans backend_env | Binaire chromium lié à l'env Python — installer dans le bon venv |
+| CVThèque matching | Indexer `scores_map` par `user_id` (pas `profil.pk`) | `ProfilCandidatDTO` expose `user_id` pas `id` — sinon `score_offre` absent de la réponse |
+| CVThèque offres dropdown | Filtrer `APPROUVEE + est_active + !est_cloturee` | Pas afficher les offres en attente ou rejetées dans le comparateur |
+| InfoBanner dismiss | localStorage `banner_${storageKey}` | sessionStorage se réinitialise à chaque onglet — localStorage = 1 seule dismissal |
+| Changer MDP recruteur | Dans ParametresRecruteur onglet "Mon profil" | Même logique que Settings candidat — adapté compte Google |
 | Invitation membre Google | Envoie lien invitation (pas ajout direct) | Compte Google sans mot de passe → ne peut pas se connecter sans définir un mot de passe d'abord |
 | Rôle membre équipe Google | Ne pas changer le rôle à l'acceptation | Membre peut rester CANDIDAT — `est_membre_equipe` dans le serializer autorise le login recruteur |
 | mediaUrl normalization | Ajoute `/media/` si absent du chemin | Snapshots anciens stockés sans `/media/` prefix |

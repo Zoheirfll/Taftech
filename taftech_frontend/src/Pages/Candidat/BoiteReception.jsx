@@ -1,3 +1,4 @@
+import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
@@ -95,6 +96,11 @@ const BoiteReception = () => {
           Mes candidatures →
         </Link>
       </div>
+
+      <InfoBanner storageKey="boite_reception" title="Votre boîte de réception">
+        Retrouvez ici toutes les notifications liées à vos candidatures : invitations à un entretien, décisions finales, messages du recruteur.
+        Les messages non lus apparaissent en <strong>gras</strong>. Cliquez sur un message pour le marquer comme lu.
+      </InfoBanner>
 
       <div className="flex flex-col md:flex-row gap-4 h-[600px]">
         {/* LISTE GAUCHE */}

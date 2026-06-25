@@ -24,6 +24,8 @@ import {
   UserCheck,
   AlertTriangle,
 } from "lucide-react";
+import InfoBanner from "../../Components/InfoBanner";
+import { TooltipIcon } from "../../Components/Tooltip";
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -180,6 +182,14 @@ const DashboardRecruteur = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <InfoBanner storageKey="dashboard_recruteur" title="Bienvenue sur votre tableau de bord" color="teal">
+          Publiez des offres, suivez vos candidatures et analysez vos talents depuis ici.
+          Votre entreprise doit être <strong>validée par l'équipe TafTech</strong> avant de pouvoir publier.
+          Pour accéder à la CVthèque et à l'analyse IA, passez en <strong>Premium</strong>.
+        </InfoBanner>
+      </div>
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex items-center gap-4">

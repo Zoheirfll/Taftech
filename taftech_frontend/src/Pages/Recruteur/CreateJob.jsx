@@ -7,6 +7,7 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStyles } from "../../theme";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock } from "lucide-react";
+import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 
@@ -168,7 +169,15 @@ const CreateJob = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-6 py-8 space-y-5">
+      <div className="max-w-4xl mx-auto px-6 pt-6">
+        <InfoBanner storageKey="creer_offre" title="Conseils pour une offre efficace" color="teal">
+          Un titre précis et un profil recherché détaillé améliorent la qualité du matching IA.
+          Renseignez la <strong>spécialité</strong> et le <strong>diplôme</strong> requis pour que l'algorithme propose votre offre aux candidats les plus pertinents.
+          Compte Premium : utilisez le bouton <strong>✨ Générer avec l'IA</strong> pour rédiger la description automatiquement.
+        </InfoBanner>
+      </div>
+
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-6 py-6 space-y-5">
 
         {/* Titre du poste */}
         <Section icon={Briefcase} title="Informations du poste">

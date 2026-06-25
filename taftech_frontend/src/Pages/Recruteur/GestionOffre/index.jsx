@@ -16,6 +16,7 @@ import { DetailCandidature } from "./DetailCandidature";
 import { Modals } from "./Modals";
 import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
+import { TooltipIcon } from "../../../Components/Tooltip";
 
 const STATUTS_DOTS = {
   RECUE: "bg-amber-500",
@@ -268,6 +269,7 @@ const GestionOffre = () => {
                   {triMode === "score" ? (
                     <>
                       <Sparkles size={11} /> Score
+                      <TooltipIcon text="Score de compatibilité calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts)." position="bottom" />
                     </>
                   ) : (
                     <>

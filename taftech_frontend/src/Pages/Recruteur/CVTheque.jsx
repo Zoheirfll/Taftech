@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import InfoBanner from "../../Components/InfoBanner";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import toast from "react-hot-toast";
@@ -24,6 +25,7 @@ import {
   CheckCircle2,
   Star,
   Circle,
+  Zap,
 } from "lucide-react";
 
 const OPTIONS_EXPERIENCE = [
@@ -74,17 +76,26 @@ const CVTheque = () => {
   const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
   const [isPremium, setIsPremium] = useState(false);
 
+  // Matching IA par offre
+  const [offreId, setOffreId] = useState("");
+  const [offresActives, setOffresActives] = useState([]);
+
   useEffect(() => {
-    const loadConstants = async () => {
+    const loadInit = async () => {
       try {
-        const data = await jobsService.getConstants();
+        const [data, dash] = await Promise.all([
+          jobsService.getConstants(),
+          jobsService.getDashboard(),
+        ]);
         setConstants(data);
+        const offres = (dash.offres || []).filter(o => o.est_active && !o.est_cloturee && o.statut_moderation === 'APPROUVEE');
+        setOffresActives(offres.map(o => ({ value: String(o.id), label: o.titre })));
       } catch (err) {
         toast.error("Erreur de chargement des filtres.");
         reportError("ECHEC_CHARGEMENT_FILTRES_CVTHEQUE", err);
       }
     };
-    loadConstants();
+    loadInit();
   }, []);
 
   const chargerCandidats = useCallback(async () => {
@@ -101,6 +112,7 @@ const CVTheque = () => {
         inscrit_recent: inscritRecent,
         favoris: activeTab === "favoris",
         tri,
+        ...(offreId ? { offre_id: offreId } : {}),
       };
       const data = await jobsService.searchCVtheque(filtres, currentPage);
       setCandidats(data.results || []);
@@ -133,6 +145,7 @@ const CVTheque = () => {
     tri,
     activeTab,
     currentPage,
+    offreId,
   ]);
 
   useEffect(() => {
@@ -152,6 +165,7 @@ const CVTheque = () => {
     setAvecCV(false);
     setInscritRecent(false);
     setTri("recents");
+    setOffreId("");
     setCurrentPage(1);
   };
   const handleToggleFavori = async (candidat, e) => {
@@ -283,6 +297,15 @@ const CVTheque = () => {
         </p>
       </div>
 
+      <div className="mb-4">
+        <InfoBanner storageKey="cvtheque" title="Comment utiliser la CVthèque ?" color="teal">
+          Filtrez par wilaya, diplôme, spécialité ou expérience. Cliquez sur un profil pour voir le détail, télécharger le CV et lancer une analyse IA.
+          Ajoutez des candidats à vos <strong>favoris ⭐</strong> pour les retrouver facilement dans l'onglet "Favoris".
+          Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
+          Les coordonnées (email, téléphone) sont visibles uniquement avec un compte Premium.
+        </InfoBanner>
+      </div>
+
       {/* ONGLETS */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
         <button
@@ -343,15 +366,42 @@ const CVTheque = () => {
           />
         </div>
 
+        {!offreId && (
+          <Select
+            options={OPTIONS_TRI}
+            value={OPTIONS_TRI.find((o) => o.value === tri)}
+            onChange={(val) => setTri(val.value)}
+            styles={selectStyles}
+            isSearchable={false}
+            className="md:w-56"
+          />
+        )}
+
         <Select
-          options={OPTIONS_TRI}
-          value={OPTIONS_TRI.find((o) => o.value === tri)}
-          onChange={(val) => setTri(val.value)}
+          options={[{ value: "", label: "Comparer avec une offre…" }, ...offresActives]}
+          value={offresActives.find(o => o.value === offreId) || { value: "", label: "Comparer avec une offre…" }}
+          onChange={(val) => { setOffreId(val?.value || ""); setCurrentPage(1); }}
           styles={selectStyles}
           isSearchable={false}
-          className="md:w-56"
+          className="md:w-64"
+          placeholder="Comparer avec une offre…"
         />
       </div>
+
+      {offreId && (
+        <div className="mb-4 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5">
+          <Zap size={15} className="text-teal-700 shrink-0" />
+          <span className="text-sm font-semibold text-teal-800">
+            Classement par compatibilité activé —{" "}
+            <span className="font-normal text-teal-700">
+              {offresActives.find(o => o.value === offreId)?.label}
+            </span>
+          </span>
+          <button onClick={() => setOffreId("")} className="ml-auto text-teal-500 hover:text-teal-800">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* PANNEAU FILTRES */}
       {showFiltres && (
@@ -562,12 +612,24 @@ const CVTheque = () => {
                         <h3 className="text-sm font-semibold text-slate-900 truncate">
                           {candidat.titre_professionnel || "Profil candidat"}
                         </h3>
-                        {recent && (
-                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full">
-                            <Sparkles size={10} />
-                            Nouveau
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {offreId && 'score_offre' in candidat && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                              candidat.score_offre >= 70 ? "bg-emerald-50 text-emerald-700" :
+                              candidat.score_offre >= 40 ? "bg-amber-50 text-amber-700" :
+                              "bg-slate-100 text-slate-500"
+                            }`}>
+                              <Zap size={9} />
+                              {candidat.score_offre}%
+                            </span>
+                          )}
+                          {recent && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full">
+                              <Sparkles size={10} />
+                              Nouveau
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {statutActivite && (

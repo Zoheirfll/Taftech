@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bell, Trash2, Plus, X } from "lucide-react";
+import InfoBanner from "../../Components/InfoBanner";
 
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
@@ -111,6 +112,12 @@ const AlertesEmploi = () => {
         </button>
       </div>
 
+      <InfoBanner storageKey="alertes_emploi" title="Comment fonctionnent les alertes ?">
+        Définissez des mots-clés (ex: "Comptable", "Développeur React") et optionnellement une wilaya.
+        TafTech vous envoie un email <strong>quotidien ou hebdomadaire</strong> dès qu'une nouvelle offre correspond à vos critères.
+        Vous pouvez activer/désactiver chaque alerte à tout moment.
+      </InfoBanner>
+
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         {alertes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -146,7 +153,7 @@ const AlertesEmploi = () => {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => handleToggle(alerte.id, alerte.est_active)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? "bg-indigo-600" : "bg-slate-200"}`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? "bg-indigo-600" : "bg-slate-200"}`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}

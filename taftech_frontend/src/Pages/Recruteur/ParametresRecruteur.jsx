@@ -20,8 +20,11 @@ import {
   Users,
   Download,
   QrCode,
+  Lock,
 } from "lucide-react";
+import api from "../../api/axiosConfig";
 import MonEquipe from "./MonEquipe";
+import InfoBanner from "../../Components/InfoBanner";
 
 const TAILLES_ENTREPRISE_OPTIONS = [
   { value: "TPE", label: "1 à 10 employés" },
@@ -61,6 +64,11 @@ const ParametresRecruteur = () => {
     email_refus_auto: false,
     message_refus_auto: "",
   });
+
+  // Mot de passe
+  const [estCompteGoogle, setEstCompteGoogle] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ old: "", new: "", confirm: "" });
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -140,6 +148,12 @@ const ParametresRecruteur = () => {
             );
           }
         }
+        // Charger est_compte_google
+        try {
+          const me = await api.get("accounts/me/");
+          setEstCompteGoogle(me.data.est_compte_google || false);
+        } catch { /* non bloquant */ }
+
       } catch (err) {
         reportError("ECHEC_CHARGEMENT_PARAMETRES", err);
         toast.error("Erreur de chargement.");
@@ -216,6 +230,27 @@ const ParametresRecruteur = () => {
     }
   };
 
+  const changerMotDePasse = async (e) => {
+    e.preventDefault();
+    if (pwdForm.new !== pwdForm.confirm) return toast.error("Les mots de passe ne correspondent pas.");
+    if (pwdForm.new.length < 8) return toast.error("8 caractères minimum.");
+    setPwdLoading(true);
+    try {
+      await api.post("accounts/changer-mot-de-passe/", {
+        ancien_mdp: pwdForm.old,
+        nouveau_mdp: pwdForm.new,
+      });
+      toast.success(estCompteGoogle ? "Mot de passe défini !" : "Mot de passe modifié !");
+      setPwdForm({ old: "", new: "", confirm: "" });
+      if (estCompteGoogle) setEstCompteGoogle(false);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur.");
+      reportError("ECHEC_CHANGER_MDP_RECRUTEUR", err);
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
   const sauvegarderEntreprise = async () => {
     setSaving(true);
     try {
@@ -280,6 +315,15 @@ const ParametresRecruteur = () => {
         <p className="text-base text-slate-500 mt-1">
           Gérez votre profil et vos préférences.
         </p>
+      </div>
+
+      <div className="mb-6">
+        <InfoBanner storageKey="parametres_recruteur" title="Paramètres de votre espace recruteur" color="teal">
+          <strong>Mon entreprise</strong> : modifiez le logo, la description et les infos de votre entreprise (admin uniquement). ·{" "}
+          <strong>Mon équipe</strong> : invitez des collaborateurs avec différents rôles (ADMIN, UTILISATEUR, INVITÉ). ·{" "}
+          <strong>Changer le mot de passe</strong> depuis l'onglet compte. ·{" "}
+          <strong>QR Code</strong> : disponible après validation de votre entreprise.
+        </InfoBanner>
       </div>
 
       {/* ONGLETS */}
@@ -404,6 +448,59 @@ const ParametresRecruteur = () => {
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOT DE PASSE (dans onglet profil) */}
+      {activeTab === "profil" && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+            <Lock size={16} className="text-slate-400" />
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                {estCompteGoogle ? "Définir un mot de passe" : "Changer le mot de passe"}
+              </h2>
+              {estCompteGoogle && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Votre compte a été créé via Google. Définissez un mot de passe pour vous connecter sans Google.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="p-6">
+            <form onSubmit={changerMotDePasse} className="flex flex-col sm:flex-row gap-3">
+              {!estCompteGoogle && (
+                <input
+                  type="password"
+                  placeholder="Mot de passe actuel"
+                  value={pwdForm.old}
+                  onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
+                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                />
+              )}
+              <input
+                type="password"
+                placeholder="Nouveau mot de passe"
+                value={pwdForm.new}
+                onChange={(e) => setPwdForm({ ...pwdForm, new: e.target.value })}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              />
+              <input
+                type="password"
+                placeholder="Confirmer"
+                value={pwdForm.confirm}
+                onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              />
+              <button
+                type="submit"
+                disabled={pwdLoading}
+                className="px-5 py-2.5 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-60 shrink-0"
+              >
+                {pwdLoading ? "..." : estCompteGoogle ? "Définir" : "Modifier"}
+              </button>
+            </form>
           </div>
         </div>
       )}

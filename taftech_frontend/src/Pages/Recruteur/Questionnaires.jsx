@@ -1,3 +1,4 @@
+import InfoBanner from "../../Components/InfoBanner";
 ﻿import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
@@ -161,13 +162,21 @@ const Questionnaires = () => {
         </button>
       </div>
 
+      <div className="mb-6">
+        <InfoBanner storageKey="questionnaires" title="Comment fonctionnent les questionnaires ?" color="teal">
+          Créez un questionnaire, ajoutez des questions (texte court, long, numérique, choix unique/multiple).
+          Associez-le à une offre lors de la création — les candidats devront y répondre avant de postuler.
+          Marquez une question comme <strong>disqualifiante</strong> pour éliminer automatiquement les candidats qui ne remplissent pas ce critère.
+        </InfoBanner>
+      </div>
+
       {questionnaires.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
           <p className="text-sm font-semibold text-slate-900 mb-1">
             Aucun questionnaire
           </p>
           <p className="text-sm text-slate-500">
-            Créez votre premier questionnaire pour filtrer vos candidats.
+            Créez votre premier questionnaire pour filtrer vos candidats automatiquement.
           </p>
         </div>
       ) : (

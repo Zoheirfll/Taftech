@@ -5,6 +5,7 @@ import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
+import { TooltipIcon } from "../../Components/Tooltip";
 import {
   ArrowLeft,
   MapPin,
@@ -215,7 +216,10 @@ const JobDetail = () => {
         {matchingScore !== null && (
           <div className={`mt-3 px-3 py-2 border rounded-lg flex items-center gap-2 ${getMatchingColor(matchingScore)}`}>
             <TrendingUp size={14} />
-            <p className="text-xs font-medium">Votre profil correspond à <strong>{matchingScore}%</strong></p>
+            <p className="text-xs font-medium flex items-center gap-1">
+              Votre profil correspond à <strong>{matchingScore}%</strong>
+              <TooltipIcon text="Score calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts)." position="left" />
+            </p>
           </div>
         )}
       </div>

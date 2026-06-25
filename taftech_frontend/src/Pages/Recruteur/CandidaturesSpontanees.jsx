@@ -1,3 +1,4 @@
+import InfoBanner from "../../Components/InfoBanner";
 ﻿import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
@@ -92,6 +93,13 @@ const CandidaturesSpontanees = () => {
         </p>
       </div>
 
+      <div className="mb-6">
+        <InfoBanner storageKey="candidatures_spontanees" title="Candidatures spontanées" color="teal">
+          Ce sont des candidatures envoyées directement via la <strong>page publique de votre entreprise</strong>, sans lien avec une offre précise.
+          Les nouvelles candidatures apparaissent avec un fond teal. Marquez-les comme lues après consultation. Vous pouvez filtrer par wilaya, diplôme ou secteur.
+        </InfoBanner>
+      </div>
+
       {/* FILTRES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 bg-white border border-slate-200 rounded-xl p-4">
         <Select
@@ -137,9 +145,8 @@ const CandidaturesSpontanees = () => {
 
       {spontaneesFiltrees.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
-          <p className="text-sm font-medium text-slate-900">
-            Aucune candidature trouvée
-          </p>
+          <p className="text-sm font-medium text-slate-900 mb-1">Aucune candidature spontanée</p>
+          <p className="text-xs text-slate-500">Partagez la page publique de votre entreprise pour en recevoir.</p>
         </div>
       ) : (
         <div className="space-y-3">

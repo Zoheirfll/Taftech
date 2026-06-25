@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import {
@@ -11,6 +12,8 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import InfoBanner from "../../Components/InfoBanner";
+import { TooltipIcon } from "../../Components/Tooltip";
 
 const getBadgeStyle = (statut) => {
   const styles = {
@@ -274,15 +277,26 @@ const MesCandidatures = () => {
         </p>
       </div>
 
+      <InfoBanner storageKey="mes_candidatures" title="Comprendre les statuts">
+        <span className="font-semibold">REÇUE</span> → le recruteur n'a pas encore consulté · <span className="font-semibold">EN COURS</span> → dossier en examen ·{" "}
+        <span className="font-semibold">ENTRETIEN</span> → vous êtes invité(e) · <span className="font-semibold">RETENU(E)</span> → félicitations ! · <span className="font-semibold">REFUSÉ(E)</span> → ne vous découragez pas, postulez à d'autres offres.
+      </InfoBanner>
+
       {candidatures.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
           <Briefcase size={40} className="text-slate-300 mx-auto mb-3" />
           <p className="text-base font-semibold text-slate-900">
-            Aucune candidature
+            Aucune candidature pour l'instant
           </p>
-          <p className="text-sm text-slate-700 mt-1">
-            Vous n'avez postulé à aucune offre pour le moment.
+          <p className="text-sm text-slate-500 mt-1 mb-5">
+            Parcourez les offres disponibles et postulez en quelques clics.
           </p>
+          <Link
+            to="/offres"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            <Briefcase size={15} /> Voir les offres
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">
@@ -296,9 +310,14 @@ const MesCandidatures = () => {
                 <div className="flex items-start gap-4">
                   {/* SCORE MATCHING */}
                   {cand.score_matching !== null && cand.score_matching !== undefined ? (
-                    <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shrink-0 shadow-sm ${getScoreColor(cand.score_matching)}`}>
-                      <span className="text-[10px] font-semibold uppercase opacity-80">Match</span>
-                      <span className="text-base font-bold leading-tight">{parseInt(cand.score_matching)}%</span>
+                    <div className="relative">
+                      <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shrink-0 shadow-sm ${getScoreColor(cand.score_matching)}`}>
+                        <span className="text-[10px] font-semibold uppercase opacity-80">Match</span>
+                        <span className="text-base font-bold leading-tight">{parseInt(cand.score_matching)}%</span>
+                      </div>
+                      <span className="absolute -top-1 -right-1">
+                        <TooltipIcon text="Score calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts). 80%+ = excellent match." position="right" />
+                      </span>
                     </div>
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 shrink-0">

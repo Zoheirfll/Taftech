@@ -24,6 +24,7 @@ from ..models import (
     DemandeActivationPremium, AuditLog, MembreEquipe
 )
 from .equipe import get_entreprise_for_user, get_membre_role
+from ..matcher import calculer_score_matching
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
     ProfilCandidatDTO, CandidatureSpontaneeSerializer,
@@ -187,6 +188,46 @@ class CVThequeView(APIView):
                 ).filter(duree_totale__gte=datetime.timedelta(days=min_days))
             except ValueError:
                 pass
+        offre_id = request.GET.get('offre_id', '')
+        offre_match = None
+        if offre_id:
+            try:
+                offre_match = OffreEmploi.objects.get(pk=offre_id, entreprise=entreprise_user)
+            except OffreEmploi.DoesNotExist:
+                pass
+
+        if offre_match:
+            # Tri par score matching — on évalue tous les candidats filtrés
+            candidats_list = list(candidats.select_related('user').prefetch_related('experiences_detail'))
+            scored = []
+            for profil in candidats_list:
+                result = calculer_score_matching(profil.user, offre_match)
+                scored.append((profil, round(result['total'])))
+            scored.sort(key=lambda x: x[1], reverse=True)
+            is_premium = entreprise_user.est_premium_actif if entreprise_user else False
+            if not is_premium:
+                return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
+            # Pagination manuelle
+            page_size = 10
+            page = int(request.GET.get('page', 1))
+            total = len(scored)
+            start = (page - 1) * page_size
+            end = start + page_size
+            page_items = scored[start:end]
+            profils_page = [p for p, _ in page_items]
+            scores_map = {p.user.id: s for p, s in page_items}
+            serializer = ProfilCandidatDTO(profils_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
+            results = serializer.data
+            for item in results:
+                item['score_offre'] = scores_map.get(item['user_id'], 0)
+            return Response({
+                'count': total,
+                'next': None,
+                'previous': None,
+                'results': results,
+                'is_premium': is_premium,
+            })
+
         if tri == 'nom_asc':
             candidats = candidats.order_by('user__last_name', 'user__first_name')
         elif tri == 'experience_desc':

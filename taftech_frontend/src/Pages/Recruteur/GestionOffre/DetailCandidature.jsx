@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { authService } from "../../../Services/authService";
 import { mediaUrl } from "../../../utils/mediaUrl";
+import { TooltipIcon } from "../../../Components/Tooltip";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -780,9 +781,10 @@ export const DetailCandidature = ({
         <div className="p-6 overflow-y-auto max-h-[500px]">
           {selectedCandidature.note_globale ? (
             <div className="text-center">
-              <p className="text-5xl font-bold text-teal-700 tabular-nums mb-1">
+              <p className="text-5xl font-bold text-teal-700 tabular-nums mb-1 flex items-center justify-center gap-1">
                 {selectedCandidature.note_globale}
                 <span className="text-xl text-slate-400">/20</span>
+                <TooltipIcon text="Note calculée sur 4 critères /5 chacun : Technique, Communication, Motivation, Expérience. Total = moyenne × 4." position="right" />
               </p>
               {selectedCandidature.commentaire_evaluation && (
                 <p className="text-sm text-slate-500 italic mt-2">

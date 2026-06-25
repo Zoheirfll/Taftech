@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
+import InfoBanner from "../../../Components/InfoBanner";
+import { TooltipIcon } from "../../../Components/Tooltip";
 
 const ProfilCandidat = () => {
   const hook = useProfilCandidat();
@@ -110,10 +112,19 @@ const ProfilCandidat = () => {
         Mon profil professionnel
       </h1>
 
+      <InfoBanner storageKey="profil_candidat" title="Comment fonctionne votre profil ?">
+        Votre profil est utilisé par l'algorithme de matching pour vous proposer aux recruteurs.
+        Plus il est complet, plus vos chances d'apparaître dans les résultats sont élevées.
+        Ajoutez vos expériences, formations, compétences et un CV PDF pour maximiser votre score.
+      </InfoBanner>
+
       {/* JAUGE COMPLETION */}
       <div className="bg-indigo-600 rounded-xl p-5 text-white">
         <div className="flex justify-between items-center mb-2">
-          <p className="text-sm font-semibold">Remplissage du profil</p>
+          <p className="text-sm font-semibold flex items-center gap-1">
+            Remplissage du profil
+            <TooltipIcon text="Score calculé sur 10 critères : photo, CV, bio, titre, compétences, langues, expériences, formations, wilaya et préférences." position="right" />
+          </p>
           <span className="text-sm font-bold bg-white/20 px-2.5 py-0.5 rounded-full">
             {completionPercent}%
           </span>

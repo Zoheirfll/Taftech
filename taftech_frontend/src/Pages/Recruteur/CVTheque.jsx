@@ -24,8 +24,9 @@ import {
   Sparkles,
   CheckCircle2,
   Star,
-  Circle,
   Zap,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
 const OPTIONS_EXPERIENCE = [
@@ -72,13 +73,29 @@ const CVTheque = () => {
 
   // UI
   const [selectedCandidat, setSelectedCandidat] = useState(null);
-  const [showFiltres, setShowFiltres] = useState(true);
+  const [showFiltres, setShowFiltres] = useState(false);
   const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
   const [isPremium, setIsPremium] = useState(false);
 
   // Matching IA par offre
   const [offreId, setOffreId] = useState("");
   const [offresActives, setOffresActives] = useState([]);
+  const [showMatchingPanel, setShowMatchingPanel] = useState(false);
+
+  // Accordéon détail
+  const [openSections, setOpenSections] = useState({ competences: true, langues: true });
+  const toggleSection = (key) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
+
+  // Ref pour scroll mobile vers détail
+  const detailRef = React.useRef(null);
+  const handleSelectCandidat = (candidat) => {
+    setSelectedCandidat(candidat);
+    setTimeout(() => {
+      if (window.innerWidth < 1024 && detailRef.current) {
+        detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
+  };
 
   useEffect(() => {
     const loadInit = async () => {
@@ -287,13 +304,33 @@ const CVTheque = () => {
         </div>
       )}
 
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-          Explorez le vivier de CV
-        </h1>
-        <p className="text-sm text-slate-700 mt-1">
-          Recherchez parmi nos talents et trouvez le profil idéal pour votre équipe.
+      {/* HEADER + ONGLETS fusionnés */}
+      <div className="flex items-end justify-between border-b border-slate-200 mb-5">
+        <div className="flex gap-1">
+          <button
+            onClick={() => { setActiveTab("tous"); setCurrentPage(1); }}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "tous"
+                ? "border-teal-700 text-teal-700"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Explorez le vivier de CV
+          </button>
+          <button
+            onClick={() => { setActiveTab("favoris"); setCurrentPage(1); }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "favoris"
+                ? "border-amber-500 text-amber-600"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Star size={14} className={activeTab === "favoris" ? "fill-amber-500" : ""} />
+            Favoris
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 pb-3 hidden sm:block">
+          Trouvez le profil idéal pour votre équipe
         </p>
       </div>
 
@@ -304,34 +341,6 @@ const CVTheque = () => {
           Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
           Les coordonnées (email, téléphone) sont visibles uniquement avec un compte Premium.
         </InfoBanner>
-      </div>
-
-      {/* ONGLETS */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
-        <button
-          onClick={() => { setActiveTab("tous"); setCurrentPage(1); }}
-          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "tous"
-              ? "border-teal-700 text-teal-700"
-              : "border-transparent text-slate-500 hover:text-slate-900"
-          }`}
-        >
-          CVthèque
-        </button>
-        <button
-          onClick={() => { setActiveTab("favoris"); setCurrentPage(1); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "favoris"
-              ? "border-amber-500 text-amber-600"
-              : "border-transparent text-slate-500 hover:text-slate-900"
-          }`}
-        >
-          <Star
-            size={14}
-            className={activeTab === "favoris" ? "fill-amber-500" : ""}
-          />
-          Favoris
-        </button>
       </div>
 
       {/* BARRE DE RECHERCHE + BOUTON FILTRES */}
@@ -373,33 +382,59 @@ const CVTheque = () => {
             onChange={(val) => setTri(val.value)}
             styles={selectStyles}
             isSearchable={false}
-            className="md:w-56"
+            className="md:w-48"
           />
         )}
 
-        <Select
-          options={[{ value: "", label: "Comparer avec une offre…" }, ...offresActives]}
-          value={offresActives.find(o => o.value === offreId) || { value: "", label: "Comparer avec une offre…" }}
-          onChange={(val) => { setOffreId(val?.value || ""); setCurrentPage(1); }}
-          styles={selectStyles}
-          isSearchable={false}
-          className="md:w-64"
-          placeholder="Comparer avec une offre…"
-        />
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowMatchingPanel(p => !p)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+              offreId
+                ? "bg-teal-700 text-white border-teal-700"
+                : "bg-white text-slate-700 border-slate-200 hover:border-teal-400 hover:text-teal-700"
+            }`}
+          >
+            <Zap size={15} />
+            {offreId ? "Matching actif" : "Matching IA"}
+            {offreId
+              ? <button onClick={(e) => { e.stopPropagation(); setOffreId(""); setShowMatchingPanel(false); }} className="ml-1 opacity-70 hover:opacity-100"><X size={13} /></button>
+              : <ChevronRight size={13} className={`transition-transform ${showMatchingPanel ? "rotate-90" : ""}`} />
+            }
+          </button>
+
+          {showMatchingPanel && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap size={15} className="text-teal-700" />
+                <p className="text-sm font-bold text-teal-800">Matching IA</p>
+                <button onClick={() => setShowMatchingPanel(false)} className="ml-auto text-slate-400 hover:text-slate-600"><X size={14} /></button>
+              </div>
+              <p className="text-xs text-slate-500 mb-3">Choisissez une offre pour trier les candidats par compatibilité automatique.</p>
+              <Select
+                options={[{ value: "", label: "Choisir une offre…" }, ...offresActives]}
+                value={offresActives.find(o => o.value === offreId) || null}
+                onChange={(val) => { setOffreId(val?.value || ""); setCurrentPage(1); if (val?.value) setShowMatchingPanel(false); }}
+                styles={selectStyles}
+                placeholder="Choisir une offre…"
+                menuPosition="fixed"
+              />
+              {offreId && (
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-teal-700 font-medium">
+                  <CheckCircle2 size={13} className="text-teal-600" />
+                  Actif : {offresActives.find(o => o.value === offreId)?.label}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {offreId && (
-        <div className="mb-4 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5">
-          <Zap size={15} className="text-teal-700 shrink-0" />
-          <span className="text-sm font-semibold text-teal-800">
-            Classement par compatibilité activé —{" "}
-            <span className="font-normal text-teal-700">
-              {offresActives.find(o => o.value === offreId)?.label}
-            </span>
-          </span>
-          <button onClick={() => setOffreId("")} className="ml-auto text-teal-500 hover:text-teal-800">
-            <X size={14} />
-          </button>
+        <div className="mb-4 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2">
+          <Zap size={14} className="text-teal-700 shrink-0" />
+          <span className="text-sm font-semibold text-teal-800">Matching actif — <span className="font-normal text-teal-700">{offresActives.find(o => o.value === offreId)?.label}</span></span>
+          <button onClick={() => setOffreId("")} className="ml-auto text-teal-400 hover:text-teal-800"><X size={14} /></button>
         </div>
       )}
 
@@ -511,30 +546,37 @@ const CVTheque = () => {
         </div>
       )}
 
-      {/* COMPTEUR */}
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-slate-700">
-          {loading ? (
-            "Recherche en cours..."
-          ) : (
-            <>
-              <span className="font-semibold text-slate-900">
-                {totalCandidats}
-              </span>{" "}
-              {totalCandidats > 1 ? "profils trouvés" : "profil trouvé"}
-            </>
-          )}
-        </p>
-      </div>
-
       {/* SPLIT-VIEW : LISTE À GAUCHE + DÉTAIL À DROITE */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* COLONNE GAUCHE : LISTE */}
-        <div className="lg:col-span-1 space-y-3">
+        <div className="lg:col-span-5 space-y-3">
+          {/* Compteur intégré en haut de liste */}
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs text-slate-500">
+              {loading ? "Recherche…" : <><span className="font-semibold text-slate-700">{totalCandidats}</span> {totalCandidats > 1 ? "profils" : "profil"}</>}
+            </p>
+            {!offreId && !loading && (
+              <p className="text-xs text-slate-400">Tri : {OPTIONS_TRI.find(o => o.value === tri)?.label}</p>
+            )}
+          </div>
+
           {loading ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700 mx-auto"></div>
-              <p className="text-xs text-slate-600 mt-3">Chargement...</p>
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-slate-200 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-slate-200 rounded w-3/4" />
+                      <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                      <div className="flex gap-1.5 mt-1">
+                        <div className="h-2 bg-slate-100 rounded w-16" />
+                        <div className="h-2 bg-slate-100 rounded w-20" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : candidats.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
@@ -568,96 +610,92 @@ const CVTheque = () => {
               return (
                 <div
                   key={candidat.email}
-                  onClick={() => setSelectedCandidat(candidat)}
-                  className={`relative cursor-pointer w-full text-left bg-white border rounded-xl p-4 transition-all ${
+                  onClick={() => handleSelectCandidat(candidat)}
+                  className={`relative cursor-pointer w-full text-left bg-white border rounded-xl overflow-hidden transition-all ${
                     isSelected
                       ? "border-teal-500 ring-2 ring-teal-100 shadow-sm"
-                      : "border-slate-200 hover:border-slate-300"
+                      : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
                   }`}
                 >
-                  {/* ÉTOILE FAVORI */}
-                  <button
-                    onClick={(e) => handleToggleFavori(candidat, e)}
-                    className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-slate-100 transition-colors group/star"
-                    title={
-                      candidat.is_favori
-                        ? "Retirer des favoris"
-                        : "Ajouter aux favoris"
-                    }
-                  >
-                    <Star
-                      size={16}
-                      className={
-                        candidat.is_favori
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-slate-300 group-hover/star:text-slate-500"
-                      }
-                    />
-                  </button>
+                  {/* Barre score IA à gauche */}
+                  {offreId && 'score_offre' in candidat && (
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                      candidat.score_offre >= 70 ? "bg-emerald-400" :
+                      candidat.score_offre >= 40 ? "bg-amber-400" : "bg-slate-200"
+                    }`} />
+                  )}
 
-                  <div className="flex gap-3 pr-8">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
-                      {candidat.photo_profil ? (
-                        <img
-                          src={getMediaUrl(candidat.photo_profil)}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User size={20} className="text-slate-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-slate-900 truncate">
-                          {candidat.titre_professionnel || "Profil candidat"}
-                        </h3>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {offreId && 'score_offre' in candidat && (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                              candidat.score_offre >= 70 ? "bg-emerald-50 text-emerald-700" :
-                              candidat.score_offre >= 40 ? "bg-amber-50 text-amber-700" :
-                              "bg-slate-100 text-slate-500"
-                            }`}>
-                              <Zap size={9} />
-                              {candidat.score_offre}%
-                            </span>
-                          )}
-                          {recent && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full">
-                              <Sparkles size={10} />
-                              Nouveau
-                            </span>
-                          )}
+                  <div className={`p-4 ${offreId && 'score_offre' in candidat ? "pl-5" : ""}`}>
+                    <div className="flex gap-3 pr-7">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                        {candidat.photo_profil ? (
+                          <img src={getMediaUrl(candidat.photo_profil)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={18} className="text-slate-400" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        {/* Ligne 1 : titre + badges */}
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              {statutActivite && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`} title={statutActivite.label} />}
+                              <h3 className="text-sm font-semibold text-slate-900 truncate">{candidat.titre_professionnel || "Profil candidat"}</h3>
+                            </div>
+                            <p className="text-xs text-slate-500 truncate">{candidat.last_name} {candidat.first_name}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            {offreId && 'score_offre' in candidat && (
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] font-bold rounded-md border ${
+                                candidat.score_offre >= 70 ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                candidat.score_offre >= 40 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                "bg-slate-100 text-slate-500 border-slate-200"
+                              }`}><Zap size={9} />{candidat.score_offre}%</span>
+                            )}
+                            {recent && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full"><Sparkles size={9} />Nouveau</span>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {statutActivite && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`}
-                            title={statutActivite.label}
-                          />
-                        )}
-                        <p className="text-xs text-slate-600 truncate">
-                          {candidat.last_name} {candidat.first_name}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-600">
-                        {candidat.wilaya && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={11} />
-                            {candidat.wilaya.split(" - ")[1] || candidat.wilaya}
-                          </span>
-                        )}
-                        {candidat.diplome && (
-                          <span className="flex items-center gap-1">
-                            <GraduationCap size={11} />
-                            {candidat.diplome}
-                          </span>
+
+                        {/* Ligne 2 : wilaya + diplôme + expérience */}
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                          {candidat.wilaya && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.wilaya.split(" - ")[1] || candidat.wilaya}</span>}
+                          {candidat.diplome && <span className="flex items-center gap-0.5"><GraduationCap size={10} />{constants.diplomes.find(d => d.value === candidat.diplome)?.label || candidat.diplome}</span>}
+                          {candidat.niveau_experience && <span className="flex items-center gap-0.5"><Briefcase size={10} />{candidat.niveau_experience}</span>}
+                        </div>
+
+                        {/* Ligne 3 : top 3 compétences */}
+                        {candidat.competences && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {candidat.competences.split(",").filter(c => c.trim()).slice(0, 3).map((c, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded">{c.trim()}</span>
+                            ))}
+                            {candidat.competences.split(",").filter(c => c.trim()).length > 3 && (
+                              <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded">+{candidat.competences.split(",").filter(c => c.trim()).length - 3}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Bouton "Voir le profil" visible uniquement sur mobile */}
+                  {isSelected && (
+                    <div className="px-4 pb-3 lg:hidden">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
+                        <CheckCircle2 size={12} /> Profil sélectionné — voir ci-dessous
+                      </span>
+                    </div>
+                  )}
+
+                  {/* ÉTOILE FAVORI */}
+                  <button
+                    onClick={(e) => handleToggleFavori(candidat, e)}
+                    className="absolute top-3 right-3 p-1 rounded-md hover:bg-slate-100 transition-colors group/star"
+                  >
+                    <Star size={14} className={candidat.is_favori ? "fill-amber-400 text-amber-400" : "text-slate-300 group-hover/star:text-slate-400"} />
+                  </button>
                 </div>
               );
             })
@@ -692,7 +730,7 @@ const CVTheque = () => {
         </div>
 
         {/* COLONNE DROITE : DÉTAIL */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-7" ref={detailRef}>
           {selectedCandidat ? (
             <div className="relative bg-white border border-slate-200 rounded-xl overflow-hidden">
               {/* OVERLAY PREMIUM */}
@@ -807,15 +845,45 @@ const CVTheque = () => {
               {/* Coordonnées */}
               <div className="p-6 border-b border-slate-100">
                 <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Coordonnées</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail size={14} className="text-slate-400 shrink-0" />
-                    <span className="text-slate-700 truncate">{selectedCandidat.email || "—"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone size={14} className="text-slate-400 shrink-0" />
-                    <span className="text-slate-700">{selectedCandidat.telephone || "Non renseigné"}</span>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCandidat.email && (
+                    <a
+                      href={`mailto:${selectedCandidat.email}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+                    >
+                      <Mail size={14} /> {selectedCandidat.email}
+                    </a>
+                  )}
+                  {selectedCandidat.telephone && (
+                    <a
+                      href={`tel:${selectedCandidat.telephone}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      <Phone size={14} /> {selectedCandidat.telephone}
+                    </a>
+                  )}
+                  {selectedCandidat.email && (
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(selectedCandidat.email); toast.success("Email copié !"); }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-500 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                      title="Copier l'email"
+                    >
+                      <Copy size={13} /> Copier
+                    </button>
+                  )}
+                  {selectedCandidat.linkedin && (
+                    <a
+                      href={selectedCandidat.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0A66C2]/10 border border-[#0A66C2]/20 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-[#0A66C2]/20 transition-colors"
+                    >
+                      <ExternalLink size={13} /> LinkedIn
+                    </a>
+                  )}
+                  {!selectedCandidat.email && !selectedCandidat.telephone && (
+                    <p className="text-sm text-slate-400 italic">Coordonnées non disponibles</p>
+                  )}
                 </div>
               </div>
 
@@ -899,64 +967,61 @@ const CVTheque = () => {
                 )}
               </div>
 
-              {/* Compétences & Langues */}
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">
-                    Compétences
-                  </h3>
-                  {selectedCandidat.competences ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedCandidat.competences
-                        .split(",")
-                        .filter((c) => c.trim())
-                        .map((c, i) => (
-                          <span
-                            key={i}
-                            className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
-                          >
-                            {c.trim()}
-                          </span>
-                        ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-600 italic">
-                      Non renseignées
-                    </p>
-                  )}
+              {/* Bio */}
+              {selectedCandidat.bio && (
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">À propos</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{selectedCandidat.bio}</p>
                 </div>
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">
-                    Langues
-                  </h3>
-                  {selectedCandidat.langues ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedCandidat.langues
-                        .split(",")
-                        .filter((l) => l.trim())
-                        .map((l, i) => {
+              )}
+
+              {/* Compétences — accordéon */}
+              <div className="border-b border-slate-100">
+                <button
+                  onClick={() => toggleSection("competences")}
+                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Compétences</h3>
+                  <ChevronRight size={14} className={`text-slate-400 transition-transform ${openSections.competences ? "rotate-90" : ""}`} />
+                </button>
+                {openSections.competences && (
+                  <div className="px-6 pb-4">
+                    {selectedCandidat.competences ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCandidat.competences.split(",").filter(c => c.trim()).map((c, i) => (
+                          <span key={i} className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md">{c.trim()}</span>
+                        ))}
+                      </div>
+                    ) : <p className="text-sm text-slate-400 italic">Non renseignées</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Langues — accordéon */}
+              <div className="border-b border-slate-100">
+                <button
+                  onClick={() => toggleSection("langues")}
+                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Langues</h3>
+                  <ChevronRight size={14} className={`text-slate-400 transition-transform ${openSections.langues ? "rotate-90" : ""}`} />
+                </button>
+                {openSections.langues && (
+                  <div className="px-6 pb-4">
+                    {selectedCandidat.langues ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCandidat.langues.split(",").filter(l => l.trim()).map((l, i) => {
                           const [name, level] = l.split(":");
                           return (
-                            <span
-                              key={i}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md"
-                            >
-                              {name?.trim()}
-                              {level && (
-                                <span className="text-slate-600">
-                                  · {level.trim()}
-                                </span>
-                              )}
+                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md">
+                              {name?.trim()}{level && <span className="text-slate-500">· {level.trim()}</span>}
                             </span>
                           );
                         })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-600 italic">
-                      Non renseignées
-                    </p>
-                  )}
-                </div>
+                      </div>
+                    ) : <p className="text-sm text-slate-400 italic">Non renseignées</p>}
+                  </div>
+                )}
               </div>
 
               {/* CV PDF */}

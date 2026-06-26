@@ -1,9 +1,9 @@
 import InfoBanner from "../../Components/InfoBanner";
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
-import { Plus, Trash2, Pencil, X, GripVertical } from "lucide-react";
+import { Plus, Trash2, Pencil, X, GripVertical, ClipboardList, AlertTriangle } from "lucide-react";
 
 const TYPE_OPTIONS = [
   { value: "COURT", label: "Réponse courte" },
@@ -21,12 +21,16 @@ const questionVide = () => ({
   choix: [{ texte: "" }, { texte: "" }],
 });
 
+const MAX_CHOIX = 6;
+
 const Questionnaires = () => {
   const [questionnaires, setQuestionnaires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ titre: "", questions: [questionVide()] });
+  const [errors, setErrors] = useState({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -65,9 +69,15 @@ const Questionnaires = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.titre.trim()) return toast.error("Le titre est obligatoire.");
-    if (form.questions.some((q) => !q.texte.trim()))
-      return toast.error("Toutes les questions doivent avoir un texte.");
+    const newErrors = {};
+    if (!form.titre.trim()) newErrors.titre = true;
+    form.questions.forEach((q, i) => { if (!q.texte.trim()) newErrors[`q_${i}`] = true; });
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+    setErrors({});
     try {
       if (editingId) {
         const updated = await jobsService.updateQuestionnaire(editingId, form);
@@ -88,7 +98,6 @@ const Questionnaires = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Supprimer ce questionnaire ?")) return;
     try {
       await jobsService.deleteQuestionnaire(id);
       setQuestionnaires(questionnaires.filter((q) => q.id !== id));
@@ -96,6 +105,8 @@ const Questionnaires = () => {
     } catch (err) {
       reportError("ECHEC_DELETE_QUESTIONNAIRE", err);
       toast.error("Erreur lors de la suppression.");
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -116,6 +127,7 @@ const Questionnaires = () => {
 
   const addChoix = (i) => {
     const questions = [...form.questions];
+    if (questions[i].choix.length >= MAX_CHOIX) return;
     questions[i].choix = [...questions[i].choix, { texte: "" }];
     setForm({ ...form, questions });
   };
@@ -137,8 +149,26 @@ const Questionnaires = () => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-3">
+        <div className="flex justify-between items-center mb-6">
+          <div className="space-y-2">
+            <div className="h-5 bg-slate-200 rounded w-40 animate-pulse" />
+            <div className="h-3 bg-slate-100 rounded w-64 animate-pulse" />
+          </div>
+          <div className="h-10 w-44 bg-slate-200 rounded-xl animate-pulse" />
+        </div>
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 flex justify-between items-center animate-pulse">
+            <div className="space-y-2 flex-1">
+              <div className="h-4 bg-slate-200 rounded w-1/3" />
+              <div className="h-3 bg-slate-100 rounded w-1/4" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-8 w-8 bg-slate-100 rounded-lg" />
+              <div className="h-8 w-8 bg-slate-100 rounded-lg" />
+            </div>
+          </div>
+        ))}
       </div>
     );
 
@@ -172,6 +202,7 @@ const Questionnaires = () => {
 
       {questionnaires.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
+          <ClipboardList size={36} className="text-slate-300 mx-auto mb-3" />
           <p className="text-sm font-semibold text-slate-900 mb-1">
             Aucun questionnaire
           </p>
@@ -181,35 +212,75 @@ const Questionnaires = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {questionnaires.map((q) => (
-            <div
-              key={q.id}
-              className="bg-white border border-slate-200 rounded-2xl p-6 flex items-center justify-between gap-4"
-            >
-              <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {q.titre}
-                </p>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {q.questions.length} question(s)
-                </p>
+          {questionnaires.map((q) => {
+            const aDisqualifiant = q.questions.some(qq => qq.disqualifiant);
+            const apercu = q.questions.slice(0, 2);
+            return (
+              <div
+                key={q.id}
+                className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start justify-between gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <p className="text-sm font-bold text-slate-900">{q.titre}</p>
+                    <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[10px] font-semibold rounded-md">
+                      {q.questions.length} question{q.questions.length > 1 ? "s" : ""}
+                    </span>
+                    {aDisqualifiant && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-md">
+                        <AlertTriangle size={9} /> disqualifiant
+                      </span>
+                    )}
+                  </div>
+                  {apercu.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5">
+                      {apercu.map((qq, idx) => (
+                        <li key={idx} className="text-xs text-slate-500 truncate">
+                          · {qq.texte}
+                        </li>
+                      ))}
+                      {q.questions.length > 2 && (
+                        <li className="text-xs text-slate-400 italic">
+                          · +{q.questions.length - 2} autre{q.questions.length - 2 > 1 ? "s" : ""}…
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleOpenEdit(q)}
+                    className="p-2 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  {confirmDeleteId === q.id ? (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleDelete(q.id)}
+                        className="px-2.5 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(q.id)}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenEdit(q)}
-                  className="p-2 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  onClick={() => handleDelete(q.id)}
-                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -238,11 +309,12 @@ const Questionnaires = () => {
                 </label>
                 <input
                   required
-                  className={inputClass}
+                  className={inputClass + (errors.titre ? " border-red-400 ring-2 ring-red-100 bg-red-50" : "")}
                   placeholder="Ex: Questionnaire Développeur React"
                   value={form.titre}
-                  onChange={(e) => setForm({ ...form, titre: e.target.value })}
+                  onChange={(e) => { setForm({ ...form, titre: e.target.value }); setErrors(p => ({ ...p, titre: false })); }}
                 />
+                {errors.titre && <p className="text-xs text-red-500 mt-1">Le titre est obligatoire.</p>}
                 <p className="text-[10px] text-slate-400 mt-1">
                   Le titre est utilisé comme titre du modèle, non visible par
                   les candidats.
@@ -295,13 +367,12 @@ const Questionnaires = () => {
                     </div>
 
                     <input
-                      className={inputClass}
+                      className={inputClass + (errors[`q_${i}`] ? " border-red-400 ring-2 ring-red-100 bg-red-50" : "")}
                       placeholder="Texte de la question *"
                       value={q.texte}
-                      onChange={(e) =>
-                        updateQuestion(i, "texte", e.target.value)
-                      }
+                      onChange={(e) => { updateQuestion(i, "texte", e.target.value); setErrors(p => ({ ...p, [`q_${i}`]: false })); }}
                     />
+                    {errors[`q_${i}`] && <p className="text-xs text-red-500">Le texte de la question est obligatoire.</p>}
 
                     {hasChoix(q.type_question) && (
                       <div className="space-y-2">
@@ -329,13 +400,17 @@ const Questionnaires = () => {
                             )}
                           </div>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => addChoix(i)}
-                          className="text-xs text-teal-700 font-medium hover:underline flex items-center gap-1"
-                        >
-                          <Plus size={12} /> Ajouter une option
-                        </button>
+                        {q.choix.length < MAX_CHOIX ? (
+                          <button
+                            type="button"
+                            onClick={() => addChoix(i)}
+                            className="text-xs text-teal-700 font-medium hover:underline flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Ajouter une option
+                          </button>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 italic">Maximum {MAX_CHOIX} options atteint.</p>
+                        )}
                       </div>
                     )}
 

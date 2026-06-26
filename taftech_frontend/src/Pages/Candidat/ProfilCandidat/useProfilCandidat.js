@@ -1,10 +1,63 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
+
+const INITIAL_EXP = {
+  titre_poste: "",
+  entreprise: "",
+  secteur: "",
+  date_debut: "",
+  date_fin: "",
+  description: "",
+};
+
+const INITIAL_FORM = {
+  diplome: "",
+  etablissement: "",
+  date_debut: "",
+  date_fin: "",
+  description: "",
+};
+
+const formatText = (text) => {
+  if (!text) return "Non spécifié";
+  return text
+    .replace(/_/g, " ")
+    .replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
+};
+
+const convertDateRaw = (dateStr) => {
+  if (!dateStr) return null;
+  const lower = dateStr.toLowerCase().trim();
+  if (
+    lower.includes("présent") ||
+    lower.includes("present") ||
+    lower.includes("aujourd") ||
+    lower.includes("en cours")
+  )
+    return null;
+  const mois = {
+    janvier: "01", février: "02", fevrier: "02", mars: "03", avril: "04",
+    mai: "05", juin: "06", juillet: "07", août: "08", aout: "08",
+    septembre: "09", octobre: "10", novembre: "11", décembre: "12", decembre: "12",
+  };
+  const matchMoisAnnee = lower.match(/([a-zà-ÿ]+)\s+(\d{4})/);
+  if (matchMoisAnnee)
+    return `${matchMoisAnnee[2]}-${mois[matchMoisAnnee[1]] || "01"}-01`;
+  const matchAnnee = lower.match(/(\d{4})/);
+  if (matchAnnee) return `${matchAnnee[1]}-01-01`;
+  return null;
+};
+
+const normalizeExp = (exp) => ({
+  ...exp,
+  secteur: exp.secteur || null,
+  date_fin: exp.date_fin || null,
+});
 
 export const useProfilCandidat = () => {
   const [loading, setLoading] = useState(true);
@@ -29,21 +82,8 @@ export const useProfilCandidat = () => {
   const [showParserModal, setShowParserModal] = useState(false);
 
   // Forms state
-  const [newExp, setNewExp] = useState({
-    titre_poste: "",
-    entreprise: "",
-    secteur: "",
-    date_debut: "",
-    date_fin: "",
-    description: "",
-  });
-  const [newForm, setNewForm] = useState({
-    diplome: "",
-    etablissement: "",
-    date_debut: "",
-    date_fin: "",
-    description: "",
-  });
+  const [newExp, setNewExp] = useState(INITIAL_EXP);
+  const [newForm, setNewForm] = useState(INITIAL_FORM);
   const [editingExpId, setEditingExpId] = useState(null);
   const [editingFormId, setEditingFormId] = useState(null);
   const [editInfo, setEditInfo] = useState({});
@@ -103,7 +143,7 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const calculerCompletionProfil = () => {
+  const completionPercent = useMemo(() => {
     if (!profil) return 0;
     let points = 0;
     if (profil.telephone) points += 10;
@@ -115,10 +155,9 @@ export const useProfilCandidat = () => {
     if (profil.specialite) points += 10;
     if (profil.experiences_detail?.length > 0) points += 10;
     if (profil.formations_detail?.length > 0) points += 10;
-    if (profil.competences?.split(",").filter((t) => t).length > 0)
-      points += 10;
+    if (profil.competences?.split(",").filter((t) => t).length > 0) points += 10;
     return points;
-  };
+  }, [profil]);
 
   const handleExpTitreChange = async (value) => {
     setNewExp((prev) => ({ ...prev, titre_poste: value }));
@@ -136,7 +175,7 @@ export const useProfilCandidat = () => {
   };
 
   const handleTitreProChange = async (value) => {
-    setEditCV({ ...editCV, titre: value });
+    setEditCV(prev => ({ ...prev, titre: value }));
     if (value.length >= 2) {
       try {
         const data = await jobsService.getMetiers(value);
@@ -198,26 +237,13 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const normalizeExp = (exp) => ({
-    ...exp,
-    secteur: exp.secteur || null,
-    date_fin: exp.date_fin || null,
-  });
-
   const handleAddExperience = async (e) => {
     e.preventDefault();
     try {
       await profilService.addExperience(normalizeExp(newExp));
       toast.success("Expérience ajoutée");
       setShowExpForm(false);
-      setNewExp({
-        titre_poste: "",
-        entreprise: "",
-        secteur: "",
-        date_debut: "",
-        date_fin: "",
-        description: "",
-      });
+      setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
       toast.error("Vérifiez les données.");
@@ -257,14 +283,7 @@ export const useProfilCandidat = () => {
       toast.success("Expérience mise à jour");
       setShowExpForm(false);
       setEditingExpId(null);
-      setNewExp({
-        titre_poste: "",
-        entreprise: "",
-        secteur: "",
-        date_debut: "",
-        date_fin: "",
-        description: "",
-      });
+      setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de la mise à jour");
@@ -278,13 +297,7 @@ export const useProfilCandidat = () => {
       await profilService.addFormation(newForm);
       toast.success("Formation ajoutée");
       setShowFormForm(false);
-      setNewForm({
-        diplome: "",
-        etablissement: "",
-        date_debut: "",
-        date_fin: "",
-        description: "",
-      });
+      setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de l'ajout");
@@ -323,13 +336,7 @@ export const useProfilCandidat = () => {
       toast.success("Formation mise à jour");
       setShowFormForm(false);
       setEditingFormId(null);
-      setNewForm({
-        diplome: "",
-        etablissement: "",
-        date_debut: "",
-        date_fin: "",
-        description: "",
-      });
+      setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
       toast.error("Erreur lors de la mise à jour");
@@ -396,41 +403,6 @@ export const useProfilCandidat = () => {
       toast.error("Erreur lors de la sauvegarde.");
       reportError("ECHEC_UPDATE_LINKS", err);
     }
-  };
-
-  const convertDateRaw = (dateStr) => {
-    if (!dateStr) return null;
-    const lower = dateStr.toLowerCase().trim();
-    if (
-      lower.includes("présent") ||
-      lower.includes("present") ||
-      lower.includes("aujourd") ||
-      lower.includes("en cours")
-    )
-      return null;
-    const mois = {
-      janvier: "01",
-      février: "02",
-      fevrier: "02",
-      mars: "03",
-      avril: "04",
-      mai: "05",
-      juin: "06",
-      juillet: "07",
-      août: "08",
-      aout: "08",
-      septembre: "09",
-      octobre: "10",
-      novembre: "11",
-      décembre: "12",
-      decembre: "12",
-    };
-    const matchMoisAnnee = lower.match(/([a-zà-ÿ]+)\s+(\d{4})/);
-    if (matchMoisAnnee)
-      return `${matchMoisAnnee[2]}-${mois[matchMoisAnnee[1]] || "01"}-01`;
-    const matchAnnee = lower.match(/(\d{4})/);
-    if (matchAnnee) return `${matchAnnee[1]}-01-01`;
-    return null;
   };
 
   const handleParserCVUpload = async (e) => {
@@ -581,36 +553,11 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const getPhotoUrl = mediaUrl;
-
-  const formatText = (text) => {
-    if (!text) return "Non spécifié";
-    return text
-      .replace(/_/g, " ")
-      .replace(
-        /\w\S*/g,
-        (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase(),
-      );
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return null;
     const [year, month] = dateStr.split("-");
-    const mois = [
-      "Jan",
-      "Fév",
-      "Mar",
-      "Avr",
-      "Mai",
-      "Jun",
-      "Jul",
-      "Aoû",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Déc",
-    ];
-    return `${mois[parseInt(month) - 1]} ${year}`;
+    const mois = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+    return `${mois[parseInt(month, 10) - 1]} ${year}`;
   };
 
   const getCommunesOptions = (wilaya) => {
@@ -670,10 +617,10 @@ export const useProfilCandidat = () => {
     parsedData,
     setParsedData,
     // Computed
-    completionPercent: calculerCompletionProfil(),
+    completionPercent,
     // Handlers
     fetchData,
-    getPhotoUrl,
+    getPhotoUrl: mediaUrl,
     formatText,
     formatDate,
     getCommunesOptions,

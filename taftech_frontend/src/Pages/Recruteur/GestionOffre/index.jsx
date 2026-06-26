@@ -29,6 +29,15 @@ const STATUTS_DOTS = {
 const GestionOffre = () => {
   const navigate = useNavigate();
   const hook = useGestionOffre();
+  const detailRef = React.useRef(null);
+  const handleSelectCandidature = (cand) => {
+    hook.setSelectedCandidature(cand);
+    setTimeout(() => {
+      if (window.innerWidth < 1024 && detailRef.current) {
+        detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
+  };
   const {
     offre,
     loading,
@@ -98,9 +107,9 @@ const GestionOffre = () => {
       </button>
 
       {/* HEADER OFFRE */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 flex flex-wrap justify-between items-start gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <h1 className="text-xl font-bold text-slate-900">{offre.titre}</h1>
             {offre.est_cloturee ? (
               <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-full">
@@ -116,7 +125,7 @@ const GestionOffre = () => {
             Publiée le {new Date(offre.date_publication).toLocaleDateString("fr-FR")} · {offre.candidatures.length} candidature{offre.candidatures.length > 1 ? "s" : ""}
           </p>
           {!offre.est_cloturee && (
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               {offre.date_expiration && (() => {
                 const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
                 return (
@@ -125,16 +134,19 @@ const GestionOffre = () => {
                   </span>
                 );
               })()}
-              <input
-                type="date"
-                value={offre.date_expiration || ""}
-                min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => handleSetExpiration(e.target.value || null)}
-                className="text-xs px-2 py-1 border border-slate-200 rounded-lg bg-slate-50 text-slate-600 focus:outline-none focus:border-teal-500"
-                title="Définir la date d'expiration"
-              />
+              <label className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:border-teal-400 transition-colors group">
+                <Calendar size={13} className="text-slate-400 group-hover:text-teal-600 shrink-0" />
+                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Clôture le :</span>
+                <input
+                  type="date"
+                  value={offre.date_expiration || ""}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => handleSetExpiration(e.target.value || null)}
+                  className="text-xs text-slate-700 font-semibold bg-transparent focus:outline-none cursor-pointer"
+                />
+              </label>
               {offre.date_expiration && (
-                <button onClick={() => handleSetExpiration(null)} className="text-xs text-slate-400 hover:text-red-500 transition-colors" title="Supprimer l'expiration">✕</button>
+                <button onClick={() => handleSetExpiration(null)} className="text-xs text-slate-400 hover:text-red-500 transition-colors" title="Supprimer la date de clôture">✕ Sans limite</button>
               )}
             </div>
           )}
@@ -142,7 +154,7 @@ const GestionOffre = () => {
         {!offre.est_cloturee && authService.peutFaire("UTILISATEUR") && (
           <button
             onClick={handleCloturer}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
           >
             <Lock size={14} /> Clôturer l'offre
           </button>
@@ -173,71 +185,43 @@ const GestionOffre = () => {
           </div>
         </button>
         {showJobDetails && (
-          <div className="p-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-4">
+          <div className="border-t border-slate-100">
+            {/* Critères — bande horizontale */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex flex-wrap gap-x-8 gap-y-3">
+              {[
+                { label: "Localisation", value: `${offre.wilaya}${offre.commune ? ` · ${offre.commune}` : ""}` },
+                { label: "Spécialité", value: formatText(offre.specialite) },
+                { label: "Diplôme requis", value: offre.diplome ? formatText(offre.diplome) : "Non exigé" },
+                { label: "Expérience", value: formatText(offre.experience_requise) },
+                { label: "Salaire", value: offre.salaire_propose || "À discuter" },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
+                  <p className="text-sm font-semibold text-slate-800 mt-0.5">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Sections contenu — style JobDetail */}
+            <div className="p-6 space-y-4">
               {offre.description && (
-                <div>
-                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
-                    Description
-                  </h4>
-                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                    {offre.description}
-                  </p>
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h2 className="text-base font-extrabold text-slate-900 mb-3 pb-3 border-b border-slate-100">Description du poste</h2>
+                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{offre.description}</div>
                 </div>
               )}
               {offre.missions && (
-                <div>
-                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
-                    Missions
-                  </h4>
-                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                    {offre.missions}
-                  </p>
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h2 className="text-base font-extrabold text-slate-900 mb-3 pb-3 border-b border-slate-100">Missions & Tâches</h2>
+                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{offre.missions}</div>
                 </div>
               )}
               {offre.profil_recherche && (
-                <div>
-                  <h4 className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
-                    Profil recherché
-                  </h4>
-                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                    {offre.profil_recherche}
-                  </p>
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                  <h2 className="text-base font-extrabold text-slate-900 mb-3 pb-3 border-b border-slate-100">Profil recherché</h2>
+                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{offre.profil_recherche}</div>
                 </div>
               )}
-            </div>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 h-fit space-y-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200 pb-2">
-                Critères
-              </h4>
-              {[
-                {
-                  label: "Localisation",
-                  value: `${offre.wilaya}${offre.commune ? ` · ${offre.commune}` : ""}`,
-                },
-                { label: "Spécialité", value: formatText(offre.specialite) },
-                {
-                  label: "Diplôme requis",
-                  value: formatText(offre.diplome) || "Non exigé",
-                },
-                {
-                  label: "Expérience",
-                  value: formatText(offre.experience_requise),
-                },
-                {
-                  label: "Salaire",
-                  value: offre.salaire_propose || "À discuter",
-                },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase">
-                    {label}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {value}
-                  </p>
-                </div>
-              ))}
             </div>
           </div>
         )}
@@ -247,8 +231,8 @@ const GestionOffre = () => {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* LISTE CANDIDATS */}
         <div className="lg:col-span-2">
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
                 <p className="text-sm font-semibold text-slate-900">
                   Candidatures ({offre.candidatures.length})
@@ -303,7 +287,7 @@ const GestionOffre = () => {
                 <p className="text-sm text-slate-500">Aucun candidat</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 overflow-y-auto max-h-[calc(100vh-200px)]">
                 {candidaturesTriees.map((cand) => {
                   const isSelected = selectedCandidature?.id === cand.id;
                   const candidatData = getCandidatData(cand);
@@ -316,11 +300,11 @@ const GestionOffre = () => {
                   return (
                     <div key={cand.id}>
                       <button
-                        onClick={() => setSelectedCandidature(cand)}
+                        onClick={() => handleSelectCandidature(cand)}
                         className={`w-full text-left px-4 py-3.5 transition-colors ${isSelected ? "bg-teal-50" : "hover:bg-slate-50"}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                             {cand.candidat?.photo_profil ? (
                               <img
                                 src={getMediaUrl(cand.candidat.photo_profil)}
@@ -336,10 +320,10 @@ const GestionOffre = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-sm font-semibold text-slate-900 truncate">
-                                {nomComplet}
+                                {nomComplet.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
                               </p>
                               <span
-                                className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUTS_DOTS[cand.statut]}`}
+                                className={`w-2 h-2 rounded-full shrink-0 ${STATUTS_DOTS[cand.statut]}`}
                               />
                             </div>
                             <p className="text-xs text-slate-500 truncate">
@@ -384,19 +368,19 @@ const GestionOffre = () => {
                           </div>
                         </div>
                       </button>
-                      <div className="px-4 pb-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleCompare(cand.id);
-                          }}
-                          className={`w-full py-1 text-[10px] font-semibold rounded-md transition-colors ${compareIds.includes(cand.id) ? "bg-teal-100 text-teal-800" : "bg-slate-50 text-slate-400 hover:text-teal-700"}`}
-                        >
-                          {compareIds.includes(cand.id)
-                            ? "✓ Sélectionné"
-                            : "Comparer"}
-                        </button>
-                      </div>
+                      {!cand.est_rapide && (
+                        <div className="px-4 pb-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCompare(cand.id);
+                            }}
+                            className={`w-full py-1 text-[10px] font-semibold rounded-md transition-colors ${compareIds.includes(cand.id) ? "bg-teal-100 text-teal-800" : "bg-slate-50 text-slate-400 hover:text-teal-700"}`}
+                          >
+                            {compareIds.includes(cand.id) ? "✓ Sélectionné" : "Comparer"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -406,7 +390,7 @@ const GestionOffre = () => {
         </div>
 
         {/* DÉTAIL CANDIDATURE */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3" ref={detailRef}>
           {selectedCandidature ? (
             <DetailCandidature
               selectedCandidature={selectedCandidature}

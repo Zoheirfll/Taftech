@@ -42,6 +42,7 @@ const GuestRoute = ({ children, portal = "candidat" }) => {
 import Navbar from "./Components/Navbar";
 import NavbarRecruteur from "./Components/NavbarRecruteur";
 import Footer from "./Components/Footer";
+import FooterRecruteur from "./Components/FooterRecruteur";
 
 // Layouts — chargés immédiatement (enveloppes de routes)
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
@@ -65,9 +66,10 @@ const ForgotPassword     = lazy(() => import("./Pages/Auth/ForgotPassword"));
 const ResetPassword      = lazy(() => import("./Pages/Auth/ResetPassword"));
 
 // Portail Recruteur
-const LandingRecruteur   = lazy(() => import("./Pages/Recruteur/Portal/LandingRecruteur"));
-const PremiumPage        = lazy(() => import("./Pages/Recruteur/Portal/PremiumPage"));
-const PremiumSuccessPage = lazy(() => import("./Pages/Recruteur/Portal/PremiumSuccessPage"));
+const LandingRecruteur          = lazy(() => import("./Pages/Recruteur/Portal/LandingRecruteur"));
+const PremiumPage               = lazy(() => import("./Pages/Recruteur/Portal/PremiumPage"));
+const PremiumSuccessPage        = lazy(() => import("./Pages/Recruteur/Portal/PremiumSuccessPage"));
+const ForgotPasswordRecruteur   = lazy(() => import("./Pages/Recruteur/Portal/ForgotPasswordRecruteur"));
 const AccepterInvitation = lazy(() => import("./Pages/Recruteur/AccepterInvitation"));
 
 // Espace Recruteur connecté
@@ -170,6 +172,7 @@ function AppContent() {
             {/* PORTAIL RECRUTEUR */}
             <Route path="/recruteurs" element={<LandingRecruteur />} />
             <Route path="/recruteurs/connexion" element={<GuestRoute portal="recruteur"><LoginRecruteur /></GuestRoute>} />
+            <Route path="/recruteurs/mot-de-passe-oublie" element={<GuestRoute portal="recruteur"><ForgotPasswordRecruteur /></GuestRoute>} />
             <Route path="/recruteurs/premium" element={<PremiumPage />} />
             <Route path="/recruteurs/premium/success" element={<PremiumSuccessPage />} />
             <Route path="/invitation/equipe/:token" element={<AccepterInvitation />} />
@@ -215,7 +218,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      <Footer />
+      {recruteurPortal ? <FooterRecruteur /> : <Footer />}
     </div>
   );
 }

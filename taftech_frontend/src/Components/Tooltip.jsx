@@ -26,7 +26,7 @@ const Tooltip = ({ text, children, position = "top" }) => {
     >
       {children}
       {show && (
-        <span className={`absolute ${posClasses[position]} z-50 w-56 text-xs bg-slate-800 text-white rounded-lg px-3 py-2 shadow-xl pointer-events-none`}>
+        <span role="tooltip" className={`absolute ${posClasses[position]} z-50 w-56 text-xs bg-slate-800 text-white rounded-lg px-3 py-2 shadow-xl pointer-events-none`}>
           {text}
           <span className={`absolute border-4 ${arrowClasses[position]}`} />
         </span>

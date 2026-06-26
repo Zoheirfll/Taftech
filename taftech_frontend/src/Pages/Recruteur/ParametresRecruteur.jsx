@@ -21,6 +21,8 @@ import {
   Download,
   QrCode,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import api from "../../api/axiosConfig";
 import MonEquipe from "./MonEquipe";
@@ -70,6 +72,30 @@ const ParametresRecruteur = () => {
   const [pwdForm, setPwdForm] = useState({ old: "", new: "", confirm: "" });
   const [pwdLoading, setPwdLoading] = useState(false);
 
+  // Aperçu message refus
+  const [showApercu, setShowApercu] = useState(false);
+  const textareaRef = React.useRef(null);
+
+  const insererVariable = (variable) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const before = notifForm.message_refus_auto.slice(0, start);
+    const after = notifForm.message_refus_auto.slice(end);
+    const newVal = before + variable + after;
+    setNotifForm({ ...notifForm, message_refus_auto: newVal });
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + variable.length, start + variable.length);
+    }, 0);
+  };
+
+  const apercuMessage = notifForm.message_refus_auto
+    .replace(/\{prenom\}/g, "Ahmed")
+    .replace(/\{titre_offre\}/g, "Développeur React")
+    .replace(/\{nom_entreprise\}/g, entreprise?.nom_entreprise || "Votre Entreprise");
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -90,6 +116,8 @@ const ParametresRecruteur = () => {
             taille_entreprise: e.taille_entreprise || "",
             description: e.description || "",
             telephone: e.telephone || "",
+            linkedin: e.linkedin || "",
+            site_web: e.site_web || "",
           });
           setProfilForm({
             first_name: e.first_name || "",
@@ -296,8 +324,25 @@ const ParametresRecruteur = () => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+      <div className="bg-slate-100 min-h-screen">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="mb-8 space-y-2">
+            <div className="h-7 bg-slate-200 rounded w-40 animate-pulse" />
+            <div className="h-4 bg-slate-100 rounded w-64 animate-pulse" />
+          </div>
+          <div className="flex gap-1 border-b border-slate-200 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-10 w-32 bg-slate-100 rounded-t animate-pulse mx-1" />
+            ))}
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 animate-pulse">
+            <div className="h-5 bg-slate-200 rounded w-48" />
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-xl" />)}
+            </div>
+            <div className="h-10 bg-slate-200 rounded-xl w-32 ml-auto" />
+          </div>
+        </div>
       </div>
     );
 
@@ -327,17 +372,18 @@ const ParametresRecruteur = () => {
       </div>
 
       {/* ONGLETS */}
-      <div className="flex gap-1 border-b border-slate-200 mb-8">
-        {TABS.map(({ key, label }) => (
+      <div className="flex gap-1 border-b border-slate-200 mb-8 overflow-x-auto">
+        {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-4 py-3 text-base font-semibold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === key
                 ? "border-teal-700 text-teal-700"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
+            <Icon size={15} />
             {label}
           </button>
         ))}
@@ -469,37 +515,41 @@ const ParametresRecruteur = () => {
             </div>
           </div>
           <div className="p-6">
-            <form onSubmit={changerMotDePasse} className="flex flex-col sm:flex-row gap-3">
-              {!estCompteGoogle && (
+            <form onSubmit={changerMotDePasse} className="space-y-3">
+              <div className={`grid gap-3 ${estCompteGoogle ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+                {!estCompteGoogle && (
+                  <input
+                    type="password"
+                    placeholder="Mot de passe actuel"
+                    value={pwdForm.old}
+                    onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  />
+                )}
                 <input
                   type="password"
-                  placeholder="Mot de passe actuel"
-                  value={pwdForm.old}
-                  onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
-                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  placeholder="Nouveau mot de passe (8 car. min)"
+                  value={pwdForm.new}
+                  onChange={(e) => setPwdForm({ ...pwdForm, new: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                 />
-              )}
-              <input
-                type="password"
-                placeholder="Nouveau mot de passe"
-                value={pwdForm.new}
-                onChange={(e) => setPwdForm({ ...pwdForm, new: e.target.value })}
-                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-              />
-              <input
-                type="password"
-                placeholder="Confirmer"
-                value={pwdForm.confirm}
-                onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
-                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-              />
-              <button
-                type="submit"
-                disabled={pwdLoading}
-                className="px-5 py-2.5 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-60 shrink-0"
-              >
-                {pwdLoading ? "..." : estCompteGoogle ? "Définir" : "Modifier"}
-              </button>
+                <input
+                  type="password"
+                  placeholder="Confirmer le mot de passe"
+                  value={pwdForm.confirm}
+                  onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={pwdLoading}
+                  className="px-5 py-2.5 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-60"
+                >
+                  {pwdLoading ? "Enregistrement..." : estCompteGoogle ? "Définir le mot de passe" : "Modifier le mot de passe"}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -713,6 +763,28 @@ const ParametresRecruteur = () => {
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
+
+              {/* Liens web */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">LinkedIn (URL)</label>
+                <input
+                  type="url"
+                  value={entrepriseForm.linkedin}
+                  onChange={(e) => setEntrepriseForm({ ...entrepriseForm, linkedin: e.target.value })}
+                  placeholder="https://www.linkedin.com/company/..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Site web (URL)</label>
+                <input
+                  type="url"
+                  value={entrepriseForm.site_web}
+                  onChange={(e) => setEntrepriseForm({ ...entrepriseForm, site_web: e.target.value })}
+                  placeholder="https://www.monentreprise.dz"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                />
+              </div>
             </div>
 
             {/* QR CODE */}
@@ -818,39 +890,53 @@ const ParametresRecruteur = () => {
 
             {/* Message personnalisable */}
             {notifForm.email_refus_auto && (
-              <div className="animate-fadeIn">
-                <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Message de refus
                   </label>
-                  <div className="flex gap-1.5">
-                    {["{prenom}", "{titre_offre}", "{nom_entreprise}"].map(
-                      (v) => (
-                        <span
-                          key={v}
-                          className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] font-mono rounded border border-teal-100"
-                        >
-                          {v}
-                        </span>
-                      ),
-                    )}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 mr-1">Cliquez pour insérer :</span>
+                    {["{prenom}", "{titre_offre}", "{nom_entreprise}"].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => insererVariable(v)}
+                        className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] font-mono rounded border border-teal-100 hover:bg-teal-100 hover:border-teal-300 transition-colors cursor-pointer"
+                      >
+                        {v}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <textarea
-                  rows="8"
-                  value={notifForm.message_refus_auto}
-                  onChange={(e) =>
-                    setNotifForm({
-                      ...notifForm,
-                      message_refus_auto: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none font-mono"
-                />
-                <p className="text-xs text-slate-400 mt-2">
-                  Utilisez les variables ci-dessus pour personnaliser le message
-                  automatiquement.
-                </p>
+
+                {showApercu ? (
+                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 leading-relaxed whitespace-pre-wrap min-h-[11rem]">
+                    {apercuMessage || <span className="text-slate-400 italic">Aucun message.</span>}
+                  </div>
+                ) : (
+                  <textarea
+                    ref={textareaRef}
+                    rows="8"
+                    value={notifForm.message_refus_auto}
+                    onChange={(e) => setNotifForm({ ...notifForm, message_refus_auto: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none font-mono"
+                    placeholder="Bonjour {prenom},&#10;&#10;Nous avons bien étudié votre candidature pour le poste de {titre_offre} au sein de {nom_entreprise}...&#10;&#10;Cordialement,"
+                  />
+                )}
+
+                <div className="flex items-center justify-between mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowApercu(!showApercu)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:underline"
+                  >
+                    {showApercu ? <><EyeOff size={12} /> Modifier</> : <><Eye size={12} /> Aperçu</>}
+                  </button>
+                  <span className="text-[10px] text-slate-400">
+                    {notifForm.message_refus_auto.length} caractères
+                  </span>
+                </div>
               </div>
             )}
 

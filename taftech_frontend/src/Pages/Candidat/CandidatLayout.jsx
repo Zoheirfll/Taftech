@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
@@ -28,9 +28,9 @@ const CandidatLayout = () => {
       }
     };
     fetchNotifications();
-  }, [location.pathname]);
+  }, []);
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { name: "Mon profil", path: "/profil", icon: User },
     { name: "Mes candidatures", path: "/mes-candidatures", icon: Briefcase },
     {
@@ -51,7 +51,7 @@ const CandidatLayout = () => {
       icon: Sparkles,
     },
     { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
-  ];
+  ], [unreadCount]);
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen bg-slate-100">
@@ -93,7 +93,7 @@ const CandidatLayout = () => {
             })}
             <div className="border-t border-slate-100 mt-2 pt-2">
               <button
-                onClick={() => authService.logout()}
+                onClick={authService.logout}
                 className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
               >
                 <LogOut size={17} />

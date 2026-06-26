@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
@@ -8,11 +8,62 @@ import {
   BookOpen,
   Lightbulb,
   ChevronRight,
+  ChevronLeft,
   Briefcase,
   RefreshCw,
 } from "lucide-react";
 
 const PER_PAGE = 5;
+
+const SECTIONS_CONFIG = [
+  {
+    key: "ÉVOLUTION POSSIBLE",
+    icon: TrendingUp,
+    color: "indigo",
+    regex: /(?:#{1,3})\s*ÉVOLUTION POSSIBLE\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
+  },
+  {
+    key: "COMPÉTENCES À ACQUÉRIR",
+    icon: BookOpen,
+    color: "amber",
+    regex: /(?:#{1,3})\s*COMPÉTENCES À ACQUÉRIR\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
+  },
+  {
+    key: "CONSEIL PERSONNALISÉ",
+    icon: Lightbulb,
+    color: "emerald",
+    regex: /(?:#{1,3})\s*CONSEIL PERSONNALISÉ\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
+  },
+];
+
+const COLOR_MAP = {
+  indigo: "bg-indigo-50 border-indigo-100",
+  amber: "bg-amber-50 border-amber-100",
+  emerald: "bg-emerald-50 border-emerald-100",
+};
+const ICON_COLOR_MAP = {
+  indigo: "text-indigo-600",
+  amber: "text-amber-600",
+  emerald: "text-emerald-600",
+};
+const HEADER_COLOR_MAP = {
+  indigo: "text-indigo-700",
+  amber: "text-amber-700",
+  emerald: "text-emerald-700",
+};
+
+const parseAnalyse = (text) => {
+  if (!text) return null;
+  const parsedSections = SECTIONS_CONFIG
+    .map(({ key, icon, color, regex }) => {
+      const match = text.match(regex);
+      return { label: key, content: match ? match[1].trim() : "", icon, color };
+    })
+    .filter((s) => s.content);
+  if (parsedSections.length === 0)
+    return [{ label: "ANALYSE PERSONNALISÉE", content: text.replace(/#/g, "").trim(), icon: Sparkles, color: "indigo" }];
+  return parsedSections;
+};
 
 const SuggestionsCarriere = () => {
   const [suggestions, setSuggestions] = useState(null);
@@ -56,62 +107,15 @@ const SuggestionsCarriere = () => {
     }
   };
 
-  const parseAnalyse = (text) => {
-    if (!text) return null;
-
-    const sections = [
-      { key: "ÉVOLUTION POSSIBLE", icon: TrendingUp, color: "indigo" },
-      { key: "COMPÉTENCES À ACQUÉRIR", icon: BookOpen, color: "amber" },
-      { key: "CONSEIL PERSONNALISÉ", icon: Lightbulb, color: "emerald" },
-    ];
-
-    const parsedSections = sections
-      .map(({ key, icon, color }) => {
-        // Ce regex ultra-souple intercepte les formats :
-        // ### KEY ###  OU  # KEY #  OU  ###KEY###
-        const regex = new RegExp(
-          `(?:#{1,3})\\s*${key}\\s*(?:#{1,3})\\s*([\\s\\S]*?)(?=(?:#{1,3})\\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)`,
-          "i",
-        );
-        const match = text.match(regex);
-        const content = match ? match[1].trim() : "";
-        return { label: key, content, icon, color };
-      })
-      .filter((s) => s.content);
-
-    // Fallback de sécurité si un jour le modèle change radicalement de structure
-    if (parsedSections.length === 0) {
-      return [
-        {
-          label: "ANALYSE PERSONNALISÉE",
-          content: text.replace(/#/g, "").trim(), // On nettoie les dièses
-          icon: Sparkles,
-          color: "indigo",
-        },
-      ];
-    }
-
-    return parsedSections;
-  };
+  const parsedAnalyse = useMemo(() => parseAnalyse(analyse), [analyse]);
 
   const metiers = suggestions?.metiers || [];
   const totalPages = Math.ceil(metiers.length / PER_PAGE);
   const paginated = metiers.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const colorMap = {
-    indigo: "bg-indigo-50 border-indigo-100",
-    amber: "bg-amber-50 border-amber-100",
-    emerald: "bg-emerald-50 border-emerald-100",
-  };
-  const iconColorMap = {
-    indigo: "text-indigo-600",
-    amber: "text-amber-600",
-    emerald: "text-emerald-600",
-  };
-  const headerColorMap = {
-    indigo: "text-indigo-700",
-    amber: "text-amber-700",
-    emerald: "text-emerald-700",
+  const handleReset = () => {
+    setAnalyse(null);
+    setAnalyseDemandee(false);
   };
 
   return (
@@ -198,9 +202,9 @@ const SuggestionsCarriere = () => {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
                 >
-                  ← Précédent
+                  <ChevronLeft size={13} /> Précédent
                 </button>
                 <span className="text-xs text-slate-600">
                   Page {page} / {totalPages} · {metiers.length} métiers
@@ -208,9 +212,9 @@ const SuggestionsCarriere = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
                 >
-                  Suivant →
+                  Suivant <ChevronRight size={13} />
                 </button>
               </div>
             )}
@@ -260,17 +264,17 @@ const SuggestionsCarriere = () => {
             </div>
           ) : analyse ? (
             <div className="space-y-4">
-              {parseAnalyse(analyse)?.map((section, i) => {
+              {parsedAnalyse?.map((section) => {
                 const Icon = section.icon;
                 return (
                   <div
-                    key={i}
-                    className={`border rounded-xl p-4 ${colorMap[section.color]}`}
+                    key={section.label}
+                    className={`border rounded-xl p-4 ${COLOR_MAP[section.color]}`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Icon size={15} className={iconColorMap[section.color]} />
+                      <Icon size={15} className={ICON_COLOR_MAP[section.color]} />
                       <p
-                        className={`text-xs font-bold uppercase tracking-wider ${headerColorMap[section.color]}`}
+                        className={`text-xs font-bold uppercase tracking-wider ${HEADER_COLOR_MAP[section.color]}`}
                       >
                         {section.label}
                       </p>
@@ -282,10 +286,7 @@ const SuggestionsCarriere = () => {
                 );
               })}
               <button
-                onClick={() => {
-                  setAnalyse(null);
-                  setAnalyseDemandee(false);
-                }}
+                onClick={handleReset}
                 className="w-full py-2 text-xs text-slate-500 font-medium hover:underline flex items-center justify-center gap-1"
               >
                 Réinitialiser

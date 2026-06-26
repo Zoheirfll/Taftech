@@ -56,6 +56,9 @@ class ProfilEntreprise(models.Model):
         from django.utils import timezone
         return self.premium_expire_at > timezone.now()
     
+    linkedin = models.URLField(blank=True, null=True, verbose_name="Lien LinkedIn entreprise")
+    site_web = models.URLField(blank=True, null=True, verbose_name="Site web de l'entreprise")
+
     email_refus_auto = models.BooleanField(default=False)
     message_refus_auto = models.TextField(
     blank=True,

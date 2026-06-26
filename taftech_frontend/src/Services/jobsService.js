@@ -48,6 +48,16 @@ const offresPubliquesService = {
       throw err;
     }
   },
+
+  getStatsGeo: async () => {
+    try {
+      const response = await api.get("jobs/stats/geo/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_STATS_GEO", err);
+      return { wilayas: {}, secteurs: {} };
+    }
+  },
 };
 
 // ─── FAÇADE — zéro changement dans les pages ─────────────────

@@ -19,7 +19,7 @@ const InfoBanner = ({ storageKey, title, children, icon: Icon = Info, color = "i
   };
 
   return (
-    <div className={`border rounded-xl px-4 py-3 flex items-start gap-3 ${colors[color] || colors.indigo}`}>
+    <div role="alert" className={`border rounded-xl px-4 py-3 flex items-start gap-3 animate-[fadeInDown_0.2s_ease] ${colors[color] || colors.indigo}`}>
       <Icon size={17} className="mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
         {title && <p className="text-sm font-semibold mb-0.5">{title}</p>}

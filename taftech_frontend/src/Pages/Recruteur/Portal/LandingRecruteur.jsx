@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Brain, FileSearch, ClipboardCheck, BarChart3, Zap, Shield,
-  ArrowRight, CheckCircle, Users, ChevronRight,
+  ArrowRight, CheckCircle, Users, ChevronRight, Briefcase, Building2,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import api from "../../../api/axiosConfig";
 
@@ -55,18 +56,43 @@ const AVANTAGES = [
   "Conforme ANPDP / Loi 18-07",
 ];
 
+const FAQ = [
+  {
+    q: "L'inscription est-elle gratuite ?",
+    r: "Oui, la création de compte et la publication d'offres sont gratuites au lancement. Certaines fonctionnalités avancées (CVthèque, analyse IA) nécessitent un abonnement Premium à partir de 2 000 DA/mois.",
+  },
+  {
+    q: "Combien de temps faut-il pour valider mon entreprise ?",
+    r: "La validation de votre registre de commerce prend généralement moins de 24h ouvrables. Vous recevez un email de confirmation dès que votre compte est approuvé.",
+  },
+  {
+    q: "Comment fonctionne le score de matching IA ?",
+    r: "Chaque candidature reçoit un score de 0 à 100% basé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts) et compétences (15pts). L'algorithme utilise la correspondance sémantique et les synonymes métier.",
+  },
+  {
+    q: "Mes données et celles des candidats sont-elles sécurisées ?",
+    r: "TafTech est 100% conforme à la loi algérienne 18-07 sur la protection des données personnelles. Les données sont stockées sur des serveurs localisés en Algérie. Aucune donnée n'est revendue à des tiers.",
+  },
+  {
+    q: "Puis-je inviter des collaborateurs sur mon espace recruteur ?",
+    r: "Oui, avec l'abonnement Premium vous pouvez inviter des membres avec des rôles distincts (Admin, Utilisateur, Invité) pour gérer les offres et candidatures en équipe.",
+  },
+  {
+    q: "Que se passe-t-il si une offre est rejetée par la modération ?",
+    r: "Vous recevez une notification avec le motif de rejet. Vous pouvez corriger l'offre directement depuis votre tableau de bord et la resoumettre en un clic.",
+  },
+];
+
 const LandingRecruteur = () => {
   const [stats, setStats] = useState(null);
+  const [faqOpen, setFaqOpen] = useState(null);
 
   useEffect(() => {
     api.get("jobs/stats/public/").then((r) => setStats(r.data)).catch(() => {});
   }, []);
 
-  const STATS = [
-    { value: stats ? `${stats.total_offres}` : "—", label: "Offres actives" },
-    { value: stats ? `${stats.total_entreprises}` : "—", label: "Entreprises vérifiées" },
-    { value: stats ? `${stats.total_candidats}` : "—", label: "Candidats inscrits" },
-  ];
+  // Fix 1 — valeur uniforme pendant chargement
+  const fmt = (val) => (val !== undefined && val !== null ? `${val}` : "…");
 
   return (
     <div className="bg-white">
@@ -99,7 +125,7 @@ const LandingRecruteur = () => {
               </Link>
               <Link
                 to="/recruteurs/connexion"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors border border-slate-200 text-base"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors text-base"
               >
                 Se connecter <ChevronRight size={16} />
               </Link>
@@ -114,15 +140,15 @@ const LandingRecruteur = () => {
             </div>
           </div>
 
-          {/* CARTE STATS RÉELLES */}
+          {/* CARTE STATS — Fix 4 badge responsive */}
           <div className="relative">
             <div className="bg-slate-900 rounded-3xl p-8 text-white">
               <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-6">TafTech en chiffres</p>
               <div className="space-y-4">
                 {[
-                  { label: "Offres actives", value: stats?.total_offres ?? "…", color: "bg-teal-500" },
-                  { label: "Entreprises vérifiées", value: stats?.total_entreprises ?? "…", color: "bg-indigo-500" },
-                  { label: "Candidats inscrits", value: stats?.total_candidats ?? "…", color: "bg-emerald-500" },
+                  { label: "Offres actives",        value: fmt(stats?.total_offres),      color: "bg-teal-500" },
+                  { label: "Entreprises vérifiées", value: fmt(stats?.total_entreprises), color: "bg-indigo-500" },
+                  { label: "Candidats inscrits",    value: fmt(stats?.total_candidats),   color: "bg-emerald-500" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -134,20 +160,28 @@ const LandingRecruteur = () => {
                 ))}
               </div>
             </div>
-            <div className="absolute -top-4 -right-4 bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+            {/* Fix 4 — badge repositionné pour ne pas déborder sur mobile */}
+            <div className="absolute -top-3 right-4 lg:-top-4 lg:-right-4 bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
               IA activée ✓
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── STATS ─── */}
+      {/* ─── STATS — Fix 1 + Fix 2 icônes ─── */}
       <section className="bg-teal-700 py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {STATS.map(({ value, label }) => (
-              <div key={label} className="text-center">
-                <p className="text-3xl font-extrabold text-white mb-1">{value}</p>
+            {[
+              { icon: Briefcase, value: fmt(stats?.total_offres),      label: "Offres actives" },
+              { icon: Building2, value: fmt(stats?.total_entreprises), label: "Entreprises vérifiées" },
+              { icon: Users,     value: fmt(stats?.total_candidats),   label: "Candidats inscrits" },
+            ].map(({ icon: Icon, value, label }) => (
+              <div key={label} className="text-center flex flex-col items-center gap-2">
+                <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center mb-1">
+                  <Icon size={22} className="text-teal-100" />
+                </div>
+                <p className="text-3xl font-extrabold text-white">{value}</p>
                 <p className="text-sm text-teal-200">{label}</p>
               </div>
             ))}
@@ -177,10 +211,20 @@ const LandingRecruteur = () => {
               </div>
             ))}
           </div>
+
+          {/* Fix 3 — CTA intermédiaire après fonctionnalités */}
+          <div className="text-center mt-12">
+            <Link
+              to="/recruteurs/inscription"
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-teal-700 text-white font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-md text-base"
+            >
+              Commencer gratuitement <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ─── COMMENT ÇA MARCHE ─── */}
+      {/* ─── COMMENT ÇA MARCHE — Fix 5 connecteur ─── */}
       <section id="comment-ca-marche" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -190,8 +234,9 @@ const LandingRecruteur = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {STEPS.map(({ num, title, desc }, i) => (
               <div key={num} className="relative">
+                {/* Fix 5 — connecteur centré sur l'icône, ne dépasse pas */}
                 {i < STEPS.length - 1 && (
-                  <div className="hidden lg:block absolute top-7 left-14 w-full h-px bg-slate-200 z-0" />
+                  <div className="hidden lg:block absolute top-7 left-14 -right-4 h-px bg-slate-200 z-0" />
                 )}
                 <div className="relative z-10 w-14 h-14 bg-teal-700 text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-4 shadow-md">
                   {num}
@@ -243,6 +288,46 @@ const LandingRecruteur = () => {
               className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-teal-600 text-white font-medium rounded-xl hover:bg-teal-500 transition-colors text-sm border border-teal-500"
             >
               <Users size={16} /> Voir l'espace candidats
+            </Link>
+          </div>
+        </div>
+      </section>
+
+
+{/* ─── FAQ ─── */}
+      <section id="faq" className="py-24 bg-white">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-extrabold text-slate-900 mb-4">Questions fréquentes</h2>
+            <p className="text-slate-500 text-base">Tout ce que vous devez savoir avant de vous lancer.</p>
+          </div>
+          <div className="space-y-3">
+            {FAQ.map((item, i) => (
+              <div key={i} className="border border-slate-200 rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                  className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <span className="text-sm font-semibold text-slate-800 pr-4">{item.q}</span>
+                  {faqOpen === i
+                    ? <ChevronUp size={18} className="text-teal-600 shrink-0" />
+                    : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+                </button>
+                {faqOpen === i && (
+                  <div className="px-6 pb-5 text-sm text-slate-500 leading-relaxed border-t border-slate-100 pt-4">
+                    {item.r}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <p className="text-sm text-slate-500 mb-4">Vous avez d'autres questions ?</p>
+            <Link
+              to="/recruteurs/inscription"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white font-bold rounded-xl hover:bg-teal-800 transition-colors text-sm"
+            >
+              Créer mon compte gratuitement <ArrowRight size={16} />
             </Link>
           </div>
         </div>

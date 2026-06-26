@@ -15,7 +15,10 @@ import {
   TrendingUp,
   ExternalLink,
   Sparkles,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
@@ -157,6 +160,19 @@ export const DetailCandidature = ({
   setEvalForm,
 }) => {
   const candidatData = getCandidatData(selectedCandidature);
+  const [showStatutMenu, setShowStatutMenu] = React.useState(false);
+  const statutMenuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!showStatutMenu) return;
+    const handler = (e) => {
+      if (statutMenuRef.current && !statutMenuRef.current.contains(e.target)) {
+        setShowStatutMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showStatutMenu]);
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -178,9 +194,12 @@ export const DetailCandidature = ({
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-slate-900">
-              {candidatData
-                ? `${candidatData.last_name} ${candidatData.first_name}`
-                : `${selectedCandidature.nom_rapide} ${selectedCandidature.prenom_rapide}`}
+              {(() => {
+                const n = candidatData
+                  ? `${candidatData.last_name} ${candidatData.first_name}`
+                  : `${selectedCandidature.nom_rapide} ${selectedCandidature.prenom_rapide}`;
+                return n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+              })()}
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
               {candidatData?.titre_professionnel ||
@@ -203,20 +222,30 @@ export const DetailCandidature = ({
               )}
             </div>
           </div>
-          <select
-            value={selectedCandidature.statut}
-            onChange={(e) =>
-              handleStatusChange(selectedCandidature.id, e.target.value)
-            }
-            disabled={!authService.peutFaire("UTILISATEUR")}
-            className={`text-xs font-semibold px-3 py-2 rounded-lg border outline-none ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"} ${STATUTS_STYLES[selectedCandidature.statut]}`}
-          >
-            {Object.entries(STATUTS_LABELS).map(([key, label]) => (
-              <option key={key} value={key} className="bg-white text-slate-900">
-                {label}
-              </option>
-            ))}
-          </select>
+          <div className="relative shrink-0" ref={statutMenuRef}>
+            <button
+              onClick={() => authService.peutFaire("UTILISATEUR") && setShowStatutMenu(p => !p)}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors ${STATUTS_STYLES[selectedCandidature.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"}`}
+            >
+              {STATUTS_LABELS[selectedCandidature.statut]}
+              {authService.peutFaire("UTILISATEUR") && <ChevronDown size={12} />}
+            </button>
+            {showStatutMenu && authService.peutFaire("UTILISATEUR") && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]">
+                {Object.entries(STATUTS_LABELS).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => { handleStatusChange(selectedCandidature.id, key); setShowStatutMenu(false); }}
+                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === selectedCandidature.statut ? "bg-slate-50" : ""}`}
+                  >
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${STATUTS_STYLES[key]}`}>
+                      {label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {selectedCandidature.statut === "ENTRETIEN" &&
@@ -308,7 +337,7 @@ export const DetailCandidature = ({
 
       {/* ONGLET PROFIL */}
       {activeDetailTab === "profil" && (
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[500px]">
+        <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-220px)]">
           {/* Résumé IA */}
           {candidatData && (
             <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
@@ -364,20 +393,34 @@ export const DetailCandidature = ({
 
           {/* Coordonnées */}
           <div>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Coordonnées
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 text-sm text-slate-700">
-                <Mail size={14} className="text-slate-400" />
-                {candidatData?.email || selectedCandidature.email_rapide}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-slate-700">
-                <Phone size={14} className="text-slate-400" />
-                {candidatData?.telephone ||
-                  selectedCandidature.telephone_rapide ||
-                  "Non renseigné"}
-              </div>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Coordonnées</h4>
+            <div className="flex flex-wrap gap-2">
+              {(candidatData?.email || selectedCandidature.email_rapide) && (() => {
+                const email = candidatData?.email || selectedCandidature.email_rapide;
+                return (
+                  <div className="flex items-center gap-1">
+                    <a href={`mailto:${email}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors">
+                      <Mail size={12} /> {email}
+                    </a>
+                    <button onClick={() => { navigator.clipboard.writeText(email); }} className="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-colors" title="Copier">
+                      <Copy size={11} />
+                    </button>
+                  </div>
+                );
+              })()}
+              {(candidatData?.telephone || selectedCandidature.telephone_rapide) && (() => {
+                const tel = candidatData?.telephone || selectedCandidature.telephone_rapide;
+                return (
+                  <div className="flex items-center gap-1">
+                    <a href={`tel:${tel}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors">
+                      <Phone size={12} /> {tel}
+                    </a>
+                    <button onClick={() => { navigator.clipboard.writeText(tel); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" title="Copier">
+                      <Copy size={11} />
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -549,7 +592,7 @@ export const DetailCandidature = ({
 
       {/* ONGLET IA */}
       {activeDetailTab === "ia" && (
-        <div className="p-6 overflow-y-auto max-h-[500px]">
+        <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)]">
           {!candidatData ? (
             <div className="text-center py-8">
               <TrendingUp size={28} className="text-slate-300 mx-auto mb-2" />
@@ -559,29 +602,20 @@ export const DetailCandidature = ({
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col items-center gap-3">
                 {selectedCandidature.details_matching?.scores && (
-                  <div className="flex justify-center py-2">
-                    <RadarChartRecruteur
-                      scores={selectedCandidature.details_matching.scores}
-                    />
-                  </div>
+                  <RadarChartRecruteur scores={selectedCandidature.details_matching.scores} />
                 )}
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Score de matching IA
-                  </p>
+                <div className="text-center">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Score de matching IA</p>
                   {renderScore(selectedCandidature.score_matching) ? (
-                    <span
-                      className={`inline-flex px-3 py-1 text-sm font-bold rounded-full border ${renderScore(selectedCandidature.score_matching).style}`}
-                    >
+                    <span className={`inline-flex px-4 py-1.5 text-base font-bold rounded-full border ${renderScore(selectedCandidature.score_matching).style}`}>
                       {renderScore(selectedCandidature.score_matching).label}
                     </span>
                   ) : (
                     <p className="text-sm text-slate-400 italic">Non calculé</p>
                   )}
                 </div>
-                <TrendingUp size={32} className="text-slate-300" />
               </div>
 
               {selectedCandidature.details_matching &&
@@ -701,13 +735,12 @@ export const DetailCandidature = ({
                         {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
                       </button>
                     ) : (
-                      <a
-                        href="mailto:taftech963@gmail.com?subject=Demande Premium TafTech"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 text-xs font-semibold rounded-lg cursor-not-allowed"
-                        title="Fonctionnalité Premium"
+                      <Link
+                        to="/recruteurs/premium"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors"
                       >
-                        🔒 Premium
-                      </a>
+                        ⭐ Passer Premium
+                      </Link>
                     )
                   )}
                 </div>
@@ -778,7 +811,7 @@ export const DetailCandidature = ({
 
       {/* ONGLET ÉVALUATION */}
       {activeDetailTab === "evaluation" && (
-        <div className="p-6 overflow-y-auto max-h-[500px]">
+        <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)]">
           {selectedCandidature.note_globale ? (
             <div className="text-center">
               <p className="text-5xl font-bold text-teal-700 tabular-nums mb-1 flex items-center justify-center gap-1">
@@ -795,21 +828,16 @@ export const DetailCandidature = ({
                 onClick={() => {
                   setEvalForm({
                     note_technique: selectedCandidature.note_technique || 0,
-                    note_communication:
-                      selectedCandidature.note_communication || 0,
+                    note_communication: selectedCandidature.note_communication || 0,
                     note_motivation: selectedCandidature.note_motivation || 0,
                     note_experience: selectedCandidature.note_experience || 0,
-                    commentaire_evaluation:
-                      selectedCandidature.commentaire_evaluation || "",
+                    commentaire_evaluation: selectedCandidature.commentaire_evaluation || "",
                   });
-                  setModalEval({
-                    isOpen: true,
-                    candidature: selectedCandidature,
-                  });
+                  setModalEval({ isOpen: true, candidature: selectedCandidature });
                 }}
-                className="mt-4 text-xs font-medium text-teal-700 hover:underline"
+                className="mt-4 flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors mx-auto"
               >
-                Modifier la note
+                <Star size={12} /> Modifier la note
               </button>
             </div>
           ) : (
@@ -848,7 +876,7 @@ export const DetailCandidature = ({
 
       {/* ONGLET QUESTIONNAIRE */}
       {activeDetailTab === "questionnaire" && offre.questionnaire && (
-        <div className="p-6 overflow-y-auto max-h-[500px] space-y-4">
+        <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)] space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-4 bg-teal-700 rounded-full" />
             <p className="text-sm font-semibold text-slate-900">

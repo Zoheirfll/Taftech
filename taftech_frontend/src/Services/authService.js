@@ -199,4 +199,24 @@ export const authService = {
       throw err;
     }
   },
+
+  getMe: async () => {
+    try {
+      const response = await api.get("accounts/me/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ME_API", err);
+      throw err;
+    }
+  },
+
+  changerMotDePasse: async (payload) => {
+    try {
+      const response = await api.post("accounts/changer-mot-de-passe/", payload);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CHANGER_MDP_API", err);
+      throw err;
+    }
+  },
 };

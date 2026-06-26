@@ -3,13 +3,21 @@ import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
-import api from "../../api/axiosConfig";
 import InfoBanner from "../../Components/InfoBanner";
+
+const NOTIF_FIELDS = [
+  { field: "notif_offres_exclusives", label: "Offres exclusives", desc: "Recevez des offres spéciales de nos partenaires." },
+  { field: "notif_newsletter", label: "Newsletter", desc: "Tendances du marché et astuces professionnelles." },
+  { field: "notif_mise_a_jour", label: "Rappels de profil", desc: "Email si votre CV n'a pas été actualisé." },
+];
+
+const INPUT_CLASS =
+  "flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
 const Toggle = ({ checked, onChange }) => (
   <button
     onClick={onChange}
-    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-indigo-600" : "bg-slate-200"}`}
+    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-indigo-600" : "bg-slate-200"}`}
   >
     <span
       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-0"}`}
@@ -33,10 +41,10 @@ const Settings = () => {
       try {
         const [parametres, me] = await Promise.all([
           jobsService.getParametres(),
-          api.get("accounts/me/"),
+          authService.getMe(),
         ]);
         setNotifications(parametres);
-        setEstCompteGoogle(me.data.est_compte_google || false);
+        setEstCompteGoogle(me.est_compte_google || false);
       } catch (error) {
         toast.error("Erreur lors du chargement.");
         reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
@@ -48,9 +56,9 @@ const Settings = () => {
   }, []);
 
   const handleToggle = async (field) => {
-    const previousState = { ...notifications };
-    const updated = { ...notifications, [field]: !notifications[field] };
-    setNotifications(updated);
+    const previousState = notifications;
+    const updated = { ...previousState, [field]: !previousState[field] };
+    setNotifications(prev => ({ ...prev, [field]: !prev[field] }));
     try {
       await jobsService.updateParametres(updated);
       toast.success("Préférence enregistrée !");
@@ -69,7 +77,7 @@ const Settings = () => {
       return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
     setPwdLoading(true);
     try {
-      await api.post("accounts/changer-mot-de-passe/", {
+      await authService.changerMotDePasse({
         ancien_mdp: passwords.old,
         nouveau_mdp: passwords.new,
       });
@@ -79,7 +87,7 @@ const Settings = () => {
     } catch (err) {
       const msg = err.response?.data?.error || "Erreur lors du changement.";
       toast.error(msg);
-      reportError("ECHEC_CHANGER_MDP", err);
+      reportError("ECHEC_CHANGER_MDP_SETTINGS", err);
     } finally {
       setPwdLoading(false);
     }
@@ -91,9 +99,6 @@ const Settings = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
-
-  const inputClass =
-    "flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <div className="space-y-6">
@@ -110,11 +115,7 @@ const Settings = () => {
           <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
         </div>
         <div className="divide-y divide-slate-100">
-          {[
-            { field: "notif_offres_exclusives", label: "Offres exclusives", desc: "Recevez des offres spéciales de nos partenaires." },
-            { field: "notif_newsletter", label: "Newsletter", desc: "Tendances du marché et astuces professionnelles." },
-            { field: "notif_mise_a_jour", label: "Rappels de profil", desc: "Email si votre CV n'a pas été actualisé." },
-          ].map(({ field, label, desc }) => (
+          {NOTIF_FIELDS.map(({ field, label, desc }) => (
             <div key={field} className="flex justify-between items-center px-5 py-4">
               <div>
                 <p className="text-sm font-medium text-slate-800">{label}</p>
@@ -144,24 +145,24 @@ const Settings = () => {
               <input
                 type="password"
                 placeholder="Mot de passe actuel"
-                className={inputClass}
+                className={INPUT_CLASS}
                 value={passwords.old}
-                onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
+                onChange={(e) => setPasswords(prev => ({ ...prev, old: e.target.value }))}
               />
             )}
             <input
               type="password"
               placeholder="Nouveau mot de passe"
-              className={inputClass}
+              className={INPUT_CLASS}
               value={passwords.new}
-              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+              onChange={(e) => setPasswords(prev => ({ ...prev, new: e.target.value }))}
             />
             <input
               type="password"
               placeholder="Confirmer"
-              className={inputClass}
+              className={INPUT_CLASS}
               value={passwords.confirm}
-              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+              onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
             />
             <button
               type="submit"

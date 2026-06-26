@@ -5,6 +5,9 @@ import { reportError } from "../../utils/errorReporter";
 import { Bell, Trash2, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 
+const INPUT_CLASS =
+  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
   const [wilayas, setWilayas] = useState([]);
@@ -43,7 +46,7 @@ const AlertesEmploi = () => {
     if (!payload.wilaya) delete payload.wilaya;
     try {
       const response = await jobsService.createAlerte(payload);
-      setAlertes([response, ...alertes]);
+      setAlertes(prev => [response, ...prev]);
       toast.success("Alerte créée !");
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
@@ -63,8 +66,8 @@ const AlertesEmploi = () => {
       await jobsService.toggleAlerte(alerteId, !currentState);
       toast.success(currentState ? "Alerte désactivée" : "Alerte activée");
     } catch (error) {
-      setAlertes(
-        alertes.map((a) =>
+      setAlertes(prev =>
+        prev.map((a) =>
           a.id === alerteId ? { ...a, est_active: currentState } : a,
         ),
       );
@@ -77,7 +80,7 @@ const AlertesEmploi = () => {
     if (!window.confirm("Supprimer cette alerte ?")) return;
     try {
       await jobsService.deleteAlerte(alerteId);
-      setAlertes(alertes.filter((a) => a.id !== alerteId));
+      setAlertes(prev => prev.filter((a) => a.id !== alerteId));
       toast.success("Alerte supprimée.");
     } catch (error) {
       toast.error("Erreur lors de la suppression.");
@@ -91,9 +94,6 @@ const AlertesEmploi = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
-
-  const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <div className="space-y-6">
@@ -144,7 +144,7 @@ const AlertesEmploi = () => {
                     {alerte.mots_cles}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {alerte.wilaya || "Toute l'Algérie"} ·{" "}
+                    {alerte.wilaya ? (alerte.wilaya.split(" - ")[1] || alerte.wilaya) : "Toute l'Algérie"} ·{" "}
                     {alerte.frequence === "QUOTIDIENNE"
                       ? "Quotidienne"
                       : "Hebdomadaire"}
@@ -195,7 +195,7 @@ const AlertesEmploi = () => {
                 <input
                   type="text"
                   placeholder="Ex: Développeur React, Comptable..."
-                  className={inputClass}
+                  className={INPUT_CLASS}
                   value={newAlerte.mots_cles}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, mots_cles: e.target.value })
@@ -208,15 +208,15 @@ const AlertesEmploi = () => {
                   Wilaya
                 </label>
                 <select
-                  className={inputClass}
+                  className={INPUT_CLASS}
                   value={newAlerte.wilaya}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, wilaya: e.target.value })
                   }
                 >
                   <option value="">Toute l'Algérie</option>
-                  {wilayas.map((w, i) => (
-                    <option key={i} value={w.value}>
+                  {wilayas.map((w) => (
+                    <option key={w.value} value={w.value}>
                       {w.label}
                     </option>
                   ))}
@@ -227,7 +227,7 @@ const AlertesEmploi = () => {
                   Fréquence
                 </label>
                 <select
-                  className={inputClass}
+                  className={INPUT_CLASS}
                   value={newAlerte.frequence}
                   onChange={(e) =>
                     setNewAlerte({ ...newAlerte, frequence: e.target.value })

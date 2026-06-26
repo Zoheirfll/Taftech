@@ -58,7 +58,7 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
         model = ProfilEntreprise
         fields = (
             'id', 'slug', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
-            'taille_entreprise', 'description', 'logo_url', 'offres_actives'
+            'taille_entreprise', 'description', 'logo_url', 'linkedin', 'site_web', 'offres_actives'
         )
 
     def get_offres_actives(self, obj):

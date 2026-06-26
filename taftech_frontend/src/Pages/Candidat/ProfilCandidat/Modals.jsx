@@ -67,6 +67,8 @@ export const Modals = ({
   handleValiderParsing,
   getCommunesOptions,
 }) => {
+  const communesOptions = getCommunesOptions(editInfo.wilaya);
+
   return (
     <>
       {/* MODAL INFORMATIONS PERSONNELLES */}
@@ -152,13 +154,9 @@ export const Modals = ({
                     Commune
                   </label>
                   <Select
-                    options={getCommunesOptions(editInfo.wilaya)}
+                    options={communesOptions}
                     isDisabled={!editInfo.wilaya}
-                    value={
-                      getCommunesOptions(editInfo.wilaya).find(
-                        (c) => c.value === editInfo.commune,
-                      ) || null
-                    }
+                    value={communesOptions.find((c) => c.value === editInfo.commune) || null}
                     placeholder={
                       editInfo.wilaya ? "Sélectionnez..." : "Wilaya d'abord"
                     }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Camera,
   Plus,
@@ -7,13 +7,36 @@ import {
   X,
   Sparkles,
   ExternalLink,
+  User,
+  Phone,
+  Mail,
+  Check,
+  Minus,
+  Award,
 } from "lucide-react";
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
 import { TooltipIcon } from "../../../Components/Tooltip";
 
+const INPUT_CLASS =
+  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+const MODAL_CLASS =
+  "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4";
+const MODAL_INNER_CLASS =
+  "bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl overflow-y-auto max-h-[90vh]";
+const BTN_PRIMARY =
+  "flex-1 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors";
+const BTN_CANCEL =
+  "flex-1 py-3 bg-slate-100 text-slate-600 text-base font-semibold rounded-xl hover:bg-slate-200 transition-colors";
+const SECTION_CLASS = "bg-white border border-slate-200 rounded-2xl p-6";
+const SECTION_TITLE = "text-lg font-bold text-slate-900";
+const EDIT_BTN =
+  "flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors";
+
 const ProfilCandidat = () => {
+  const [langName, setLangName] = useState("");
+  const [langLevel, setLangLevel] = useState("Débutant");
   const hook = useProfilCandidat();
   const {
     loading,
@@ -84,21 +107,6 @@ const ProfilCandidat = () => {
     handleValiderParsing,
   } = hook;
 
-  const inputClass =
-    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-  const modalClass =
-    "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4";
-  const modalInnerClass =
-    "bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl overflow-y-auto max-h-[90vh]";
-  const btnPrimary =
-    "flex-1 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors";
-  const btnCancel =
-    "flex-1 py-3 bg-slate-100 text-slate-600 text-base font-semibold rounded-xl hover:bg-slate-200 transition-colors";
-  const sectionClass = "bg-white border border-slate-200 rounded-2xl p-6";
-  const sectionTitle = "text-lg font-bold text-slate-900";
-  const editBtn =
-    "flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors";
-
   if (loading)
     return (
       <div className="flex justify-center items-center h-64">
@@ -143,10 +151,10 @@ const ProfilCandidat = () => {
       </div>
 
       {/* CV */}
-      <div className={sectionClass}>
+      <div className={SECTION_CLASS}>
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h2 className={sectionTitle}>Mon CV</h2>
+            <h2 className={SECTION_TITLE}>Mon CV</h2>
             <p className="text-sm font-semibold text-indigo-600 mt-1">
               {profil.titre_professionnel || "Titre à définir"}
             </p>
@@ -156,7 +164,7 @@ const ProfilCandidat = () => {
                 : "Aucun fichier joint"}
             </p>
           </div>
-          <button onClick={() => setShowCVForm(true)} className={editBtn}>
+          <button onClick={() => setShowCVForm(true)} className={EDIT_BTN}>
             <Pencil size={12} /> Modifier
           </button>
         </div>
@@ -221,15 +229,15 @@ const ProfilCandidat = () => {
       </div>
 
       {/* INFORMATIONS PERSONNELLES */}
-      <div className={sectionClass}>
+      <div className={SECTION_CLASS}>
         <div className="flex justify-between items-start mb-5">
-          <h2 className={sectionTitle}>Informations personnelles</h2>
-          <button onClick={() => setShowInfoForm(true)} className={editBtn}>
+          <h2 className={SECTION_TITLE}>Informations personnelles</h2>
+          <button onClick={() => setShowInfoForm(true)} className={EDIT_BTN}>
             <Pencil size={12} /> Modifier
           </button>
         </div>
         <div className="flex flex-col md:flex-row items-center md:items-start gap-5 mb-5">
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <div className="w-20 h-20 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200">
               {profil.photo_profil ? (
                 <img
@@ -238,7 +246,7 @@ const ProfilCandidat = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-2xl">👤</span>
+                <User size={28} className="text-slate-400" />
               )}
             </div>
             <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-indigo-700 transition-colors border-2 border-white">
@@ -256,12 +264,19 @@ const ProfilCandidat = () => {
               {profil.first_name} {profil.last_name}
             </h3>
             <p className="text-sm text-slate-600 mt-0.5">
-              {profil.wilaya || "Wilaya non renseignée"}
+              {profil.wilaya ? (profil.wilaya.split(" - ")[1] || profil.wilaya) : "Wilaya non renseignée"}
               {profil.commune ? ` · ${profil.commune}` : ""}
             </p>
             <p className="text-xs text-slate-600 mt-0.5">
-              {formatText(profil.diplome)} · {formatText(profil.specialite)}
+              {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
+              {" · "}
+              {constants.secteurs.find(s => s.value === profil.specialite)?.label || formatText(profil.specialite)}
             </p>
+            {profil.niveau_experience && (
+              <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full">
+                <Award size={10} /> {formatText(profil.niveau_experience)}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2 py-3 border-t border-slate-100 mb-4">
@@ -279,21 +294,21 @@ const ProfilCandidat = () => {
               key={label}
               className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
             >
-              {active ? "✓" : "✕"} {label}
+              {active ? <Check size={11} /> : <Minus size={11} />} {label}
             </span>
           ))}
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-slate-700">
-          <span>📞 {profil.telephone || "Non renseigné"}</span>
-          <span>✉️ {profil.email}</span>
+          <span className="flex items-center gap-1.5"><Phone size={13} className="text-slate-400" /> {profil.telephone || "Non renseigné"}</span>
+          <span className="flex items-center gap-1.5"><Mail size={13} className="text-slate-400" /> {profil.email}</span>
         </div>
       </div>
 
       {/* PRÉFÉRENCES */}
-      <div className={sectionClass}>
+      <div className={SECTION_CLASS}>
         <div className="flex justify-between items-start mb-4">
-          <h2 className={sectionTitle}>Préférences de recrutement</h2>
-          <button onClick={() => setShowPrefForm(true)} className={editBtn}>
+          <h2 className={SECTION_TITLE}>Préférences de recrutement</h2>
+          <button onClick={() => setShowPrefForm(true)} className={EDIT_BTN}>
             <Pencil size={12} /> Modifier
           </button>
         </div>
@@ -327,9 +342,9 @@ const ProfilCandidat = () => {
       </div>
 
       {/* EXPÉRIENCES */}
-      <div className={sectionClass}>
+      <div className={SECTION_CLASS}>
         <div className="flex justify-between items-center mb-5">
-          <h2 className={sectionTitle}>Expériences professionnelles</h2>
+          <h2 className={SECTION_TITLE}>Expériences professionnelles</h2>
           <button
             onClick={() => {
               setEditingExpId(null);
@@ -349,9 +364,15 @@ const ProfilCandidat = () => {
         </div>
         <div className="space-y-5">
           {profil.experiences_detail?.length === 0 && (
-            <p className="text-sm text-slate-600 italic">
-              Aucune expérience ajoutée.
-            </p>
+            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl">
+              <p className="text-sm text-slate-500 mb-2">Aucune expérience renseignée.</p>
+              <button
+                onClick={() => setShowExpForm(true)}
+                className="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1 mx-auto"
+              >
+                <Plus size={11} /> Ajouter une expérience
+              </button>
+            </div>
           )}
           {profil.experiences_detail?.map((exp) => (
             <div
@@ -401,9 +422,9 @@ const ProfilCandidat = () => {
       </div>
 
       {/* FORMATIONS */}
-      <div className={sectionClass}>
+      <div className={SECTION_CLASS}>
         <div className="flex justify-between items-center mb-5">
-          <h2 className={sectionTitle}>Formations et diplômes</h2>
+          <h2 className={SECTION_TITLE}>Formations et diplômes</h2>
           <button
             onClick={() => {
               setEditingFormId(null);
@@ -423,9 +444,15 @@ const ProfilCandidat = () => {
         </div>
         <div className="space-y-5">
           {profil.formations_detail?.length === 0 && (
-            <p className="text-sm text-slate-600 italic">
-              Aucune formation ajoutée.
-            </p>
+            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl">
+              <p className="text-sm text-slate-500 mb-2">Aucune formation renseignée.</p>
+              <button
+                onClick={() => setShowFormForm(true)}
+                className="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1 mx-auto"
+              >
+                <Plus size={11} /> Ajouter une formation
+              </button>
+            </div>
           )}
           {profil.formations_detail?.map((f) => (
             <div
@@ -472,15 +499,15 @@ const ProfilCandidat = () => {
       </div>
 
       {/* COMPÉTENCES */}
-      <div className={sectionClass}>
-        <h2 className={`${sectionTitle} mb-4`}>Compétences</h2>
+      <div className={SECTION_CLASS}>
+        <h2 className={`${SECTION_TITLE} mb-4`}>Compétences</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           {profil.competences
             ?.split(",")
             .filter((t) => t)
-            .map((tag, i) => (
+            .map((tag) => (
               <span
-                key={i}
+                key={tag.trim()}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg shadow-sm"
               >
                 {tag.trim()}
@@ -493,28 +520,42 @@ const ProfilCandidat = () => {
               </span>
             ))}
         </div>
-        <input
-          onKeyDown={(e) =>
-            e.key === "Enter" &&
-            (handleAddTag("competences", e.target.value), (e.target.value = ""))
-          }
-          placeholder="Tapez une compétence puis Entrée..."
-          className={inputClass}
-        />
+        <div className="flex gap-2">
+          <input
+            id="comp-input"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.target.value.trim()) {
+                handleAddTag("competences", e.target.value);
+                e.target.value = "";
+              }
+            }}
+            placeholder="Tapez une compétence puis Entrée..."
+            className={INPUT_CLASS + " flex-1"}
+          />
+          <button
+            onClick={() => {
+              const el = document.getElementById("comp-input");
+              if (el?.value.trim()) { handleAddTag("competences", el.value); el.value = ""; }
+            }}
+            className="px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
       </div>
 
       {/* LANGUES */}
-      <div className={sectionClass}>
-        <h2 className={`${sectionTitle} mb-4`}>Langues</h2>
+      <div className={SECTION_CLASS}>
+        <h2 className={`${SECTION_TITLE} mb-4`}>Langues</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           {profil.langues
             ?.split(",")
             .filter((l) => l)
-            .map((l, i) => {
+            .map((l) => {
               const [name, level] = l.split(":");
               return (
                 <div
-                  key={i}
+                  key={l}
                   className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg"
                 >
                   <span className="text-sm font-semibold text-indigo-900">
@@ -535,11 +576,16 @@ const ProfilCandidat = () => {
         </div>
         <div className="flex flex-col md:flex-row gap-2">
           <input
-            id="langName"
             placeholder="Langue (ex: Anglais)"
-            className={inputClass + " flex-1"}
+            className={INPUT_CLASS + " flex-1"}
+            value={langName}
+            onChange={(e) => setLangName(e.target.value)}
           />
-          <select id="langLevel" className={inputClass + " flex-1"}>
+          <select
+            className={INPUT_CLASS + " flex-1"}
+            value={langLevel}
+            onChange={(e) => setLangLevel(e.target.value)}
+          >
             <option>Débutant</option>
             <option>Intermédiaire</option>
             <option>Avancé</option>
@@ -547,11 +593,9 @@ const ProfilCandidat = () => {
           </select>
           <button
             onClick={() => {
-              const n = document.getElementById("langName").value;
-              const v = document.getElementById("langLevel").value;
-              if (n) {
-                handleAddLanguage(n, v);
-                document.getElementById("langName").value = "";
+              if (langName.trim()) {
+                handleAddLanguage(langName.trim(), langLevel);
+                setLangName("");
               }
             }}
             className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
@@ -563,11 +607,11 @@ const ProfilCandidat = () => {
 
       {/* MODALS */}
       <Modals
-        inputClass={inputClass}
-        modalClass={modalClass}
-        modalInnerClass={modalInnerClass}
-        btnPrimary={btnPrimary}
-        btnCancel={btnCancel}
+        inputClass={INPUT_CLASS}
+        modalClass={MODAL_CLASS}
+        modalInnerClass={MODAL_INNER_CLASS}
+        btnPrimary={BTN_PRIMARY}
+        btnCancel={BTN_CANCEL}
         constants={constants}
         showInfoForm={showInfoForm}
         setShowInfoForm={setShowInfoForm}

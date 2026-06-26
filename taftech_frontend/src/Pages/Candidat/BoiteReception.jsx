@@ -61,6 +61,7 @@ const BoiteReception = () => {
         setNotifications((prev) =>
           prev.map((n) => (n.id === notif.id ? { ...n, lue: true } : n)),
         );
+        setSelectedNotif((prev) => ({ ...prev, lue: true }));
       } catch (error) {
         reportError("ECHEC_MARK_READ_NOTIF", error);
       }
@@ -75,6 +76,7 @@ const BoiteReception = () => {
     );
 
   const unreadCount = notifications.filter((n) => !n.lue).length;
+  const selectedStyle = selectedNotif ? getStyleForType(selectedNotif.type_notif) : null;
 
   return (
     <div className="space-y-6">
@@ -130,7 +132,7 @@ const BoiteReception = () => {
                   >
                     <div className="flex gap-3">
                       <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${bg}`}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${bg}`}
                       >
                         <Icon size={16} className={color} />
                       </div>
@@ -142,7 +144,7 @@ const BoiteReception = () => {
                             {notif.titre}
                           </p>
                           {!notif.lue && (
-                            <span className="w-2 h-2 bg-indigo-600 rounded-full flex-shrink-0 mt-1.5 ml-2" />
+                            <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0 mt-1.5 ml-2" />
                           )}
                         </div>
                         <p className="text-xs text-slate-600 truncate">
@@ -173,18 +175,13 @@ const BoiteReception = () => {
           {selectedNotif ? (
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-                {(() => {
-                  const { Icon, color, bg } = getStyleForType(
-                    selectedNotif.type_notif,
-                  );
-                  return (
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bg}`}
-                    >
-                      <Icon size={22} className={color} />
-                    </div>
-                  );
-                })()}
+                {selectedStyle && (
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${selectedStyle.bg}`}
+                  >
+                    <selectedStyle.Icon size={22} className={selectedStyle.color} />
+                  </div>
+                )}
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900">
                     {selectedNotif.titre}

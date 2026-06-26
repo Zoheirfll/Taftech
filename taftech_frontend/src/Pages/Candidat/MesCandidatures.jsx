@@ -80,9 +80,9 @@ const RadarChart = ({ details }) => {
 
   return (
     <svg viewBox="0 0 220 220" className="w-full max-w-[200px] mx-auto">
-      {[0.25, 0.5, 0.75, 1].map((l, i) => (
+      {[0.25, 0.5, 0.75, 1].map((l) => (
         <polygon
-          key={i}
+          key={l}
           points={gridPoints(l)}
           fill="none"
           stroke="#e2e8f0"
@@ -156,9 +156,10 @@ const RadarChart = ({ details }) => {
 };
 
 const AnalyseIA = ({ cand }) => {
-  const details = cand.details_matching?.scores;
-  const points_forts = details?.highlights?.points_forts || [];
-  const ecarts = details?.highlights?.ecarts || [];
+  const DM = cand.details_matching;
+  const scores = DM?.scores || DM;
+  const points_forts = DM?.highlights?.points_forts || [];
+  const ecarts = DM?.highlights?.ecarts || [];
   return (
     <div className="mt-4 border-t border-slate-100 pt-4">
       <div className="flex items-center gap-2 mb-4">
@@ -169,11 +170,11 @@ const AnalyseIA = ({ cand }) => {
       </div>
       <div className="flex flex-col sm:flex-row gap-6 items-center mb-4">
         <div className="w-full sm:w-1/2">
-          <RadarChart details={details} />
+          <RadarChart details={scores} />
         </div>
         <div className="w-full sm:w-1/2 space-y-2.5">
           {CRITERES.map((c) => {
-            const pct = Math.round(((details?.[c.key] ?? 0) / c.max) * 100);
+            const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
             const bar =
               pct >= 80
                 ? "bg-emerald-500"
@@ -200,11 +201,11 @@ const AnalyseIA = ({ cand }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {points_forts.length > 0 && (
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-emerald-700 uppercase mb-2">
-              ✓ Points forts
+            <p className="text-xs font-bold text-emerald-700 uppercase mb-2 flex items-center gap-1">
+              <CheckCircle size={11} /> Points forts
             </p>
-            {points_forts.map((p, i) => (
-              <div key={i} className="flex items-start gap-1.5 mb-1">
+            {points_forts.map((p) => (
+              <div key={p} className="flex items-start gap-1.5 mb-1">
                 <CheckCircle size={13} className="text-emerald-500 mt-0.5 shrink-0" />
                 <span className="text-sm text-emerald-800">{p}</span>
               </div>
@@ -213,11 +214,11 @@ const AnalyseIA = ({ cand }) => {
         )}
         {ecarts.length > 0 && (
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-amber-700 uppercase mb-2">
-              ⚠ Axes d'amélioration
+            <p className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-1">
+              <AlertCircle size={11} /> Axes d'amélioration
             </p>
-            {ecarts.map((e, i) => (
-              <div key={i} className="flex items-start gap-1.5 mb-1">
+            {ecarts.map((e) => (
+              <div key={e} className="flex items-start gap-1.5 mb-1">
                 <AlertCircle size={13} className="text-amber-500 mt-0.5 shrink-0" />
                 <span className="text-sm text-amber-800">{e}</span>
               </div>
@@ -228,6 +229,14 @@ const AnalyseIA = ({ cand }) => {
     </div>
   );
 };
+const STATUT_LABELS = {
+  RECUE: "Reçue",
+  EN_COURS: "En cours",
+  ENTRETIEN: "Entretien",
+  RETENU: "Retenu(e)",
+  REFUSE: "Refusé(e)",
+};
+
 const MesCandidatures = () => {
   const [candidatures, setCandidatures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -236,6 +245,7 @@ const MesCandidatures = () => {
     setOpenAnalyse((prev) => ({ ...prev, [id]: !prev[id] }));
 
   useEffect(() => {
+
     const fetchCandidatures = async () => {
       try {
         const data = await jobsService.getMesCandidatures();
@@ -248,16 +258,6 @@ const MesCandidatures = () => {
     };
     fetchCandidatures();
   }, []);
-
-  const formatText = (text) => {
-    if (!text) return "Non spécifié";
-    return text
-      .replace(/_/g, " ")
-      .replace(
-        /\w\S*/g,
-        (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase(),
-      );
-  };
 
   if (loading)
     return (
@@ -313,7 +313,7 @@ const MesCandidatures = () => {
                     <div className="relative">
                       <div className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center shrink-0 shadow-sm ${getScoreColor(cand.score_matching)}`}>
                         <span className="text-[10px] font-semibold uppercase opacity-80">Match</span>
-                        <span className="text-base font-bold leading-tight">{parseInt(cand.score_matching)}%</span>
+                        <span className="text-base font-bold leading-tight">{Math.round(cand.score_matching)}%</span>
                       </div>
                       <span className="absolute -top-1 -right-1">
                         <TooltipIcon text="Score calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts). 80%+ = excellent match." position="right" />
@@ -346,7 +346,7 @@ const MesCandidatures = () => {
                   </div>
                 </div>
                 <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold border ${getBadgeStyle(cand.statut)}`}>
-                  {formatText(cand.statut)}
+                  {STATUT_LABELS[cand.statut] || cand.statut}
                 </span>
               </div>
 

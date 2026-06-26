@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import api from "../../api/axiosConfig";
+import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bookmark, MapPin, Trash2 } from "lucide-react";
 
@@ -12,8 +12,8 @@ const OffresSauvegardees = () => {
   useEffect(() => {
     const fetchFavoris = async () => {
       try {
-        const response = await api.get("jobs/sauvegardes/");
-        setFavoris(response.data);
+        const data = await jobsService.getOffresSauvegardees();
+        setFavoris(data);
       } catch (error) {
         toast.error("Erreur lors du chargement.");
         reportError("ECHEC_CHARGEMENT_FAVORIS", error);
@@ -26,9 +26,9 @@ const OffresSauvegardees = () => {
 
   const handleRemove = async (id) => {
     const previousFavoris = [...favoris];
-    setFavoris(favoris.filter((f) => f.id !== id));
+    setFavoris(prev => prev.filter((f) => f.id !== id));
     try {
-      await api.delete(`jobs/sauvegardes/${id}/`);
+      await jobsService.supprimerSauvegarde(id);
       toast.success("Offre retirée des favoris.");
     } catch (error) {
       setFavoris(previousFavoris);
@@ -95,7 +95,7 @@ const OffresSauvegardees = () => {
                     </span>
                     <span className="flex items-center gap-1 text-xs text-slate-600">
                       <MapPin size={11} />
-                      {favori.offre_detail.wilaya}
+                      {favori.offre_detail.wilaya?.split(" - ")[1] || favori.offre_detail.wilaya}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 mt-1">

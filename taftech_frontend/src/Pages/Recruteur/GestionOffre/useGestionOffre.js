@@ -12,6 +12,7 @@ export const useGestionOffre = () => {
 
   const [offre, setOffre] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [constants, setConstants] = useState({ secteurs: [], diplomes: [], experiences: [], contrats: [] });
   const [selectedCandidature, setSelectedCandidature] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [showTop5Only, setShowTop5Only] = useState(false);
@@ -48,7 +49,11 @@ export const useGestionOffre = () => {
   useEffect(() => {
     const fetchOffre = async () => {
       try {
-        const dashData = await jobsService.getDashboard();
+        const [dashData, constData] = await Promise.all([
+          jobsService.getDashboard(),
+          jobsService.getConstants().catch(() => ({})),
+        ]);
+        if (constData) setConstants(constData);
         if (dashData.est_premium) setIsPremium(true);
         const foundOffre = dashData.offres.find((o) => o.id === parseInt(id));
         if (foundOffre) {
@@ -83,15 +88,20 @@ export const useGestionOffre = () => {
 
   const getMediaUrl = mediaUrl;
 
-  const formatText = (text) =>
-    text
-      ? text
-          .replace(/_/g, " ")
-          .replace(
-            /\w\S*/g,
-            (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase(),
-          )
-      : "Non spécifié";
+  const formatText = (text) => {
+    if (!text) return "Non spécifié";
+    const allOptions = [
+      ...(constants.secteurs || []),
+      ...(constants.diplomes || []),
+      ...(constants.experiences || []),
+      ...(constants.contrats || []),
+    ];
+    const found = allOptions.find(o => o.value === text);
+    if (found) return found.label;
+    return text
+      .replace(/_/g, " ")
+      .replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase());
+  };
 
   const getCandidatData = (cand) => {
     if (cand?.profil_snapshot) {

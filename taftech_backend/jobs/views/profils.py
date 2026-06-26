@@ -20,7 +20,7 @@ class ProfilCandidatAPIView(APIView):
 
     def get(self, request):
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
-        serializer = ProfilCandidatDTO(profil)
+        serializer = ProfilCandidatDTO(profil, context={'is_premium': True})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):

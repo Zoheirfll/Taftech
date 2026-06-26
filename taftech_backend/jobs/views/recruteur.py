@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
@@ -73,7 +73,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
         if get_membre_role(request.user, profil) not in ('PROPRIETAIRE', 'ADMIN'):
             return Response({"error": "Action réservée au propriétaire ou admin."}, status=403)
         data = request.data
-        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'taille_entreprise', 'description']
+        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'taille_entreprise', 'description', 'linkedin', 'site_web']
         for champ in champs:
             if champ in data:
                 setattr(profil, champ, data[champ])
@@ -97,6 +97,8 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "commune_siege": profil.commune_siege,
             "secteur_activite": profil.secteur_activite,
             "taille_entreprise": profil.taille_entreprise,
+            "linkedin": profil.linkedin,
+            "site_web": profil.site_web,
             "logo": logo_url
         }, status=status.HTTP_200_OK)
 
@@ -272,7 +274,8 @@ class ToggleFavoriCVAPIView(APIView):
 
 
 class EnvoyerCandidatureSpontaneeAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, slug):
         try:

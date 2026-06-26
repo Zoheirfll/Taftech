@@ -12,6 +12,9 @@ import {
   Loader2,
   CreditCard,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Zap,
 } from "lucide-react";
 import { jobsService } from "../../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -39,6 +42,13 @@ const getPrix = (mois) => {
   return PRIX_MENSUEL * mois;
 };
 
+const getEconomie = (mois) => {
+  const pleinTarif = PRIX_MENSUEL * mois;
+  return pleinTarif - getPrix(mois);
+};
+
+const formatDA = (n) => n.toLocaleString("fr-FR") + " DA";
+
 const getJoursRestants = (dateStr) => {
   if (!dateStr) return null;
   const [d, m, y] = dateStr.split("/");
@@ -46,14 +56,43 @@ const getJoursRestants = (dateStr) => {
   return Math.ceil((expire - new Date()) / (1000 * 60 * 60 * 24));
 };
 
+const getDateExpiration = (mois) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + mois);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+};
+
+const FAQ_ITEMS = [
+  {
+    q: "Que se passe-t-il à l'expiration de mon abonnement ?",
+    r: "Votre accès aux fonctionnalités Premium (CVthèque, analyse IA) est suspendu. Vos données et offres restent intactes. Les membres de votre équipe ne peuvent plus se connecter jusqu'au renouvellement.",
+  },
+  {
+    q: "Puis-je prolonger mon abonnement avant qu'il expire ?",
+    r: "Oui. La durée s'ajoute à la fin de votre abonnement actuel — vous ne perdez aucun jour.",
+  },
+  {
+    q: "Le paiement est-il sécurisé ?",
+    r: "Oui. Le paiement est traité par Chargily Pay, la plateforme de paiement algérienne agréée. TafTech ne stocke aucune information bancaire.",
+  },
+  {
+    q: "Quand mon accès Premium est-il activé ?",
+    r: "L'activation est automatique après confirmation du paiement, en quelques secondes via le système webhook de Chargily.",
+  },
+];
+
 // ─── Écran Statut Premium ────────────────────────────────────────────────────
 const StatusPremium = ({ premiumData, onRenouveler }) => {
   const { premium_expire_at, premium_active_since, premium_nb_mois } = premiumData;
   const jours = getJoursRestants(premium_expire_at);
   const bientotExpire = jours !== null && jours <= 14;
+  const totalJours = (premium_nb_mois || 1) * 30;
+  const joursEcoules = Math.max(0, totalJours - (jours ?? 0));
+  const pctConsomme = Math.min(100, Math.round((joursEcoules / totalJours) * 100));
 
   return (
     <div className="space-y-5">
+      {/* Bandeau statut */}
       <div className="bg-teal-50 border-2 border-teal-300 rounded-2xl p-6 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-100 border-2 border-teal-300 rounded-2xl mb-3">
           <Star size={28} className="text-teal-700 fill-teal-200" />
@@ -66,8 +105,25 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
             {jours > 0 ? `${jours} jour${jours > 1 ? "s" : ""} restant${jours > 1 ? "s" : ""}` : "Expire aujourd'hui"}
           </div>
         )}
+        {/* Fix 2 — Barre de progression */}
+        {jours !== null && (
+          <div className="mt-4 px-2">
+            <div className="flex justify-between text-[10px] text-teal-600 mb-1">
+              <span>Début</span>
+              <span>{pctConsomme}% écoulé</span>
+              <span>Fin</span>
+            </div>
+            <div className="h-2 bg-teal-200 rounded-full overflow-hidden">
+              <div
+                className={`h-2 rounded-full transition-all ${bientotExpire ? "bg-amber-500" : "bg-teal-600"}`}
+                style={{ width: `${pctConsomme}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Détails */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6">
         <p className="text-sm font-bold text-slate-700 mb-4">Détails de l'abonnement</p>
         <div className="space-y-3">
@@ -101,6 +157,7 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
         </div>
       </div>
 
+      {/* Avantages */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6">
         <p className="text-sm font-bold text-slate-700 mb-3">Fonctionnalités incluses</p>
         <div className="space-y-2">
@@ -126,13 +183,14 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
   );
 };
 
-// ─── Flow Paiement Chargily ──────────────────────────────────────────────────
+// ─── Flow Paiement ───────────────────────────────────────────────────────────
 const PremiumPage = () => {
-  const [nbMois, setNbMois] = useState(1);
+  const [nbMois, setNbMois] = useState(3);
   const [loading, setLoading] = useState(false);
   const [premiumData, setPremiumData] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [modeRenouvellement, setModeRenouvellement] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(null);
 
   useEffect(() => {
     // Quand Chargily redirige ici après paiement, le webhook peut mettre 1-3s à arriver.
@@ -205,8 +263,21 @@ const PremiumPage = () => {
         </div>
 
         {loadingStatus && (
-          <div className="flex justify-center py-16">
-            <Loader2 size={28} className="animate-spin text-teal-600" />
+          <div className="space-y-4 animate-pulse">
+            <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-8 text-center space-y-3">
+              <div className="w-16 h-16 bg-teal-200 rounded-2xl mx-auto" />
+              <div className="h-6 bg-teal-200 rounded w-64 mx-auto" />
+              <div className="h-4 bg-teal-100 rounded w-48 mx-auto" />
+              <div className="h-2 bg-teal-200 rounded-full w-full mt-4" />
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex justify-between py-2.5 border-b border-slate-100">
+                  <div className="h-4 bg-slate-100 rounded w-32" />
+                  <div className="h-4 bg-slate-200 rounded w-24" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -257,20 +328,34 @@ const PremiumPage = () => {
                 ))}
               </div>
 
-              <div className="bg-teal-50 border border-teal-200 rounded-xl px-5 py-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">Total à payer</p>
-                  <p className="text-xs text-slate-500">
-                    {nbMois} mois × {Math.round(getPrix(nbMois) / nbMois).toLocaleString("fr-DZ")} DA/mois
-                    {(nbMois === 6 || nbMois === 12) && (
-                      <span className="ml-1 text-emerald-600 font-semibold">({nbMois === 6 ? "−8%" : "−17%"})</span>
-                    )}
-                  </p>
+              {/* Fix 3 — Économies + Fix 4 — Date expiration estimée */}
+              <div className="bg-teal-50 border border-teal-200 rounded-xl px-5 py-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Total à payer</p>
+                    <p className="text-xs text-slate-500">
+                      {nbMois} mois × {formatDA(Math.round(getPrix(nbMois) / nbMois))}/mois
+                      {(nbMois === 6 || nbMois === 12) && (
+                        <span className="ml-1 text-emerald-600 font-semibold">({nbMois === 6 ? "−8%" : "−17%"})</span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-extrabold text-teal-700">{formatDA(prix)}</p>
                 </div>
-                <p className="text-2xl font-extrabold text-teal-700">{prix.toLocaleString("fr-DZ")} DA</p>
+                {getEconomie(nbMois) > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+                    <Zap size={12} className="shrink-0" />
+                    Vous économisez {formatDA(getEconomie(nbMois))} par rapport au tarif mensuel
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-0.5">
+                  <CalendarCheck size={12} className="text-teal-500 shrink-0" />
+                  Accès Premium jusqu'au <span className="font-semibold text-slate-700 ml-1">{getDateExpiration(nbMois)}</span>
+                </div>
               </div>
             </div>
 
+            {/* Moyen de paiement */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-center shrink-0">
                 <CreditCard size={22} className="text-indigo-600" />
@@ -290,13 +375,36 @@ const PremiumPage = () => {
               {loading ? (
                 <><Loader2 size={16} className="animate-spin" /> Connexion à Chargily...</>
               ) : (
-                <><CreditCard size={16} /> Payer {prix.toLocaleString("fr-DZ")} DA avec Chargily</>
+                <><CreditCard size={16} /> Payer {formatDA(prix)} avec Chargily</>
               )}
             </button>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
               <span className="flex items-center gap-1"><Shield size={13} /> Paiement 100% sécurisé</span>
               <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Activation automatique après paiement</span>
+            </div>
+
+            {/* Fix 5 — FAQ */}
+            <div className="mt-8 border-t border-slate-200 pt-8">
+              <p className="text-sm font-bold text-slate-700 mb-3">Questions fréquentes</p>
+              <div className="space-y-2">
+                {FAQ_ITEMS.map((item, i) => (
+                  <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                    >
+                      {item.q}
+                      {faqOpen === i ? <ChevronUp size={15} className="text-slate-400 shrink-0 ml-2" /> : <ChevronDown size={15} className="text-slate-400 shrink-0 ml-2" />}
+                    </button>
+                    {faqOpen === i && (
+                      <div className="px-4 pb-4 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3">
+                        {item.r}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         )}

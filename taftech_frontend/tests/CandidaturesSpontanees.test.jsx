@@ -32,6 +32,11 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
+// navigator.clipboard non disponible en jsdom
+Object.assign(navigator, {
+  clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+});
+
 const mockConstants = {
   wilayas: [{ value: "31 - Oran", label: "31 - Oran" }],
   diplomes: [{ value: "MASTER_2", label: "Master 2" }],
@@ -144,11 +149,14 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    // Filtrer les boutons avec SVG ET sans title="Fermer" (exclure l'InfoBanner close)
+    // 1er clic → inline confirm (Confirmer/Annuler remplace la corbeille)
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
+      .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(deleteButtons[0]);
+    // 2e clic → confirme la suppression
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.supprimerCandidatureSpontanee).toHaveBeenCalled();
@@ -226,8 +234,11 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     await waitFor(() => screen.getAllByRole("button"));
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
+      .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(deleteButtons[0]);
+    // Confirme la suppression (inline confirm)
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -254,7 +265,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     await waitFor(() => screen.getAllByRole("button"));
     const deleteButtons = screen
       .getAllByRole("button")
-      .filter((b) => b.querySelector("svg") && b.title !== "Fermer");
+      .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {

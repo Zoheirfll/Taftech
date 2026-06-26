@@ -200,11 +200,14 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    // Cibler les boutons Trash (rouge au hover) — pas les Pencil ni l'InfoBanner
+    // 1er clic → inline confirm (Confirmer/Annuler remplace la corbeille)
     const trashButtons = screen
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(trashButtons[0]);
+    // 2e clic → confirme la suppression
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.deleteQuestionnaire).toHaveBeenCalled();
@@ -262,7 +265,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Le titre est obligatoire.");
+      expect(toast.error).toHaveBeenCalledWith("Veuillez remplir tous les champs obligatoires.");
       expect(jobsService.createQuestionnaire).not.toHaveBeenCalled();
     });
   });
@@ -288,7 +291,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Toutes les questions doivent avoir un texte.",
+        "Veuillez remplir tous les champs obligatoires.",
       );
     });
   });
@@ -310,6 +313,9 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(trashButtons[0]);
+    // Confirme la suppression (inline confirm)
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 25/06/2026 — Onboarding contextuel (InfoBanner + Tooltip), changer MDP recruteur, matching IA CVthèque, N+1 perf, mobile grids, MAJ tests (InfoBanner, Tooltip, MDP recruteur, CVThèque offre_id, ChangerMotDePasse backend)_
+_Dernière mise à jour : 26/06/2026 — Corrections tests frontend (338/338) : scrollIntoView?.() dans CreateJob, EC3 titre requis, dropdown statut GestionOffre, inline confirm suppression Questionnaires/CandidaturesSpontanees, navigator.clipboard mock, MetierReferentiel réalignement secteurs ~964 corrections_
 
 ---
 
@@ -441,6 +441,9 @@ Pages/
 | CVThèque offres dropdown | Filtrer `APPROUVEE + est_active + !est_cloturee` | Pas afficher les offres en attente ou rejetées dans le comparateur |
 | InfoBanner dismiss | localStorage `banner_${storageKey}` | sessionStorage se réinitialise à chaque onglet — localStorage = 1 seule dismissal |
 | Changer MDP recruteur | Dans ParametresRecruteur onglet "Mon profil" | Même logique que Settings candidat — adapté compte Google |
+| scrollIntoView en test | `?.scrollIntoView?.()` (double optional chain) | jsdom définit l'élément mais pas la méthode scrollIntoView — simple `?.` ne protège pas contre méthode absente |
+| Suppression inline confirm | Questionnaires + CandidaturesSpontanees : clic corbeille → inline Confirmer/Annuler, pas window.confirm | Pattern UX inline — les tests doivent cliquer 2 fois : corbeille puis "Confirmer" |
+| navigator.clipboard jsdom | Mock dans CandidaturesSpontanees.test.jsx : `Object.assign(navigator, { clipboard: { writeText: vi.fn() } })` | jsdom ne définit pas clipboard API |
 | N+1 queries | select_related/prefetch_related sur Dashboard, CVTheque, MesCandidatures | Dashboard 50 offres : 101 requêtes → 3 avec prefetch |
 | Cache constants | `cache.get/set('jobs_constants', timeout=3600)` dans ConstantsAPIView | Wilayas/secteurs/diplômes statiques — pas de hit DB après 1ère requête |
 | Mobile grids | Toutes les pages corrigées avec `grid-cols-1 sm:grid-cols-2` | Jamais commencer un grid directement à grid-cols-2+ sans breakpoint mobile — déjà appliqué partout |
@@ -483,7 +486,7 @@ Pages/
 - Backend : 282/282 ✅ (dont 8 tests ChangerMotDePasseAPIView + 4 tests CVThequeView offre_id nouveaux)
 - Frontend Vitest : 338/338 ✅
   - Nouveaux tests : InfoBanner (8) + Tooltip (10) + ParametresRecruteur MDP (5) + CVTheque matching (3)
-  - Corrigés : Settings, RegisterRecruteur, Home, JobDetail, MesCandidatures, Navbar, CreateJob, CandidaturesSpontanees, EntreprisePublic, Questionnaires, ParametresRecruteur HP3/HP7/EC3
+  - Corrigés : Settings, RegisterRecruteur, Home, JobDetail, MesCandidatures, Navbar, CreateJob, CandidaturesSpontanees, EntreprisePublic, Questionnaires, ParametresRecruteur HP3/HP7/EC3, GestionOffre (dropdown statut), ResetPassword, DashboardRecruteur
 - Cypress E2E : 7 fichiers — tous stables ✅
 - Vite build : propre ✅ (1928 modules)
 

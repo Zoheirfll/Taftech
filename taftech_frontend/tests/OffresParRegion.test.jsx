@@ -12,6 +12,7 @@ import * as reporter from "../src/utils/errorReporter";
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
+    getStatsGeo: vi.fn(),
   },
 }));
 
@@ -25,6 +26,7 @@ const mockConstants = {
 describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
+    jobsService.getStatsGeo = vi.fn().mockResolvedValue({ wilayas: {}, secteurs: {} });
   });
 
   afterEach(() => {
@@ -44,9 +46,9 @@ describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
     );
 
     await waitFor(() => {
-      // Les wilayas s'affichent correctement
-      expect(screen.getByText("16 - Alger")).toBeInTheDocument();
-      expect(screen.getByText("31 - Oran")).toBeInTheDocument();
+      // Le composant splitte wilaya.label sur " - " et affiche seulement la ville
+      expect(screen.getByText("Alger")).toBeInTheDocument();
+      expect(screen.getByText("Oran")).toBeInTheDocument();
     });
   });
 
@@ -60,7 +62,8 @@ describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
     );
 
     await waitFor(() => {
-      const lienOran = screen.getByRole("link", { name: /31 - Oran/i });
+      // Le lien affiché est "Oran" mais l'href contient la valeur complète encodée
+      const lienOran = screen.getByRole("link", { name: /Oran/i });
 
       // L'attribut href doit contenir la valeur encodée (ex: les espaces deviennent %20)
       expect(lienOran).toHaveAttribute("href", "/offres?wilaya=31%20-%20Oran");

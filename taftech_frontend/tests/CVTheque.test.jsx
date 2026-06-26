@@ -98,6 +98,10 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
+    // Ouvrir le panneau filtres d'abord (showFiltres est false par défaut)
+    await waitFor(() => screen.getByRole("button", { name: /Filtres/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Filtres/i }));
+
     const select = await screen.findByText("Wilaya");
     await selectEvent.select(select, "31 - Oran");
 

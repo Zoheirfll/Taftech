@@ -48,9 +48,16 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     vi.useRealTimers();
   });
 
+  // Le formulaire utilise maintenant 6 inputs OTP individuels (un chiffre chacun)
   const fillForm = (email = "test@taftech.dz", code = "123456", mdp = "newpass123", confirm = "newpass123") => {
     fireEvent.change(screen.getByPlaceholderText("votre@email.dz"), { target: { value: email } });
-    fireEvent.change(screen.getByPlaceholderText("123456"), { target: { value: code } });
+    // Remplir les 6 cases OTP individuellement
+    const otpInputs = document.querySelectorAll('input[maxLength="1"]');
+    code.split("").forEach((digit, i) => {
+      if (otpInputs[i]) {
+        fireEvent.change(otpInputs[i], { target: { value: digit } });
+      }
+    });
     fireEvent.change(screen.getByPlaceholderText("Minimum 8 caractères"), { target: { value: mdp } });
     fireEvent.change(screen.getByPlaceholderText("Répétez le mot de passe"), { target: { value: confirm } });
   };
@@ -66,7 +73,8 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
 
     expect(screen.getByText("Nouveau mot de passe")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("votre@email.dz")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("123456")).toBeInTheDocument();
+    // 6 inputs OTP individuels (maxLength="1")
+    expect(document.querySelectorAll('input[maxLength="1"]').length).toBe(6);
     expect(screen.getByPlaceholderText("Minimum 8 caractères")).toBeInTheDocument();
     expect(screen.getByText("Réinitialiser le mot de passe")).toBeInTheDocument();
   });
@@ -81,7 +89,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     expect(screen.getByPlaceholderText("votre@email.dz")).toHaveValue("prefill@taftech.dz");
   });
 
-  it("🟢 HP3 : Réinitialisation réussie → toast + redirection", async () => {
+  it("🟢 HP3 : Réinitialisation réussie → état succès + redirection", async () => {
     authService.resetPassword.mockResolvedValue({});
 
     render(
@@ -99,12 +107,11 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
         "123456",
         "newpass123",
       );
-      expect(toast.success).toHaveBeenCalledWith(
-        "Mot de passe réinitialisé avec succès !",
-      );
+      // Le composant affiche un état visuel (pas toast.success)
+      expect(screen.getByText("Mot de passe réinitialisé !")).toBeInTheDocument();
     });
 
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(3000);
     expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
@@ -118,8 +125,8 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     const inputMdp = screen.getByPlaceholderText("Minimum 8 caractères");
     expect(inputMdp).toHaveAttribute("type", "password");
 
-    // Clic sur le bouton œil
-    const toggleBtn = inputMdp.parentElement.querySelector("button");
+    // Clic sur le bouton œil (Eye/EyeOff dans le parent relatif)
+    const toggleBtn = inputMdp.closest("div.relative").querySelector("button");
     fireEvent.click(toggleBtn);
     expect(inputMdp).toHaveAttribute("type", "text");
 

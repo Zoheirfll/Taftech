@@ -12,6 +12,7 @@ import * as reporter from "../src/utils/errorReporter";
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
+    getStatsGeo: vi.fn(),
   },
 }));
 
@@ -26,6 +27,7 @@ const mockConstants = {
 describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
+    jobsService.getStatsGeo = vi.fn().mockResolvedValue({ wilayas: {}, secteurs: {} });
   });
 
   afterEach(() => {

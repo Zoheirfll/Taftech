@@ -60,7 +60,7 @@ const mockJobData = {
   wilaya: "Oran",
   type_contrat: "CDI",
   experience_requise: "5 ans",
-  salaire_propose: "200k DZD",
+  salaire_propose: 200000,
   description: "Description de l'offre ici",
   date_publication: "2026-05-10",
 };
@@ -89,7 +89,7 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       expect(screen.getByText("Lead Développeur React")).toBeInTheDocument();
       // Le nom entreprise apparaît dans le bandeau ET la fiche entreprise
       expect(screen.getAllByText(/TafTech Corp/i).length).toBeGreaterThan(0);
-      expect(screen.getByText("200k DZD")).toBeInTheDocument();
+      expect(screen.getByText(/200\s*000\s*DA|200 000 DA/i)).toBeInTheDocument();
       expect(
         screen.getByText("Description de l'offre ici"),
       ).toBeInTheDocument();
@@ -123,8 +123,10 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       .parentElement.querySelector("input");
     expect(inputNom).toBeInTheDocument();
 
-    // 4. Fermer la modale rapide
-    fireEvent.click(screen.getByText("✕"));
+    // 4. Fermer la modale rapide — bouton avec icône XCircle (pas de texte ✕)
+    const rapideHeader = screen.getByText("Postulation rapide");
+    const closeBtn = rapideHeader.closest("div").querySelector("button");
+    fireEvent.click(closeBtn);
 
     // Vérifier le retour à l'écran de sélection
     expect(

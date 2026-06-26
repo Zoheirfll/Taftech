@@ -36,7 +36,8 @@ describe("📑 UI & Logique - Composant <Footer />", () => {
     );
     expect(screen.getByText("Toutes les offres")).toBeInTheDocument();
     expect(screen.getByText("Par wilaya")).toBeInTheDocument();
-    expect(screen.getByText("Publier une annonce")).toBeInTheDocument();
+    // Le CTA recruteur est "Vous recrutez ? Espace recruteur →"
+    expect(screen.getByText(/Espace recruteur/i)).toBeInTheDocument();
   });
 
   it("🟢 HP3 : Copyright affiché", () => {

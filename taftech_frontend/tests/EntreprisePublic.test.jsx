@@ -80,8 +80,8 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       const logo = screen.getByAltText("TafTech Solutions");
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png");
 
-      // Location shows wilaya_siege with commune separated by " · "
-      expect(screen.getByText(/31 - Oran/i)).toBeInTheDocument();
+      // Le composant splitte wilaya_siege sur " - " et affiche seulement la ville
+      expect(screen.getByText(/Oran/i)).toBeInTheDocument();
     });
   });
 

@@ -77,7 +77,7 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
     expect(screen.getByText(/Page 1 \/ 2/i)).toBeInTheDocument();
     expect(screen.queryByText("Product Manager")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Suivant →"));
+    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
 
     expect(screen.getByText("Product Manager")).toBeInTheDocument();
     expect(screen.queryByText("Développeur React")).not.toBeInTheDocument();

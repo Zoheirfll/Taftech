@@ -39,6 +39,7 @@ vi.mock("../src/Services/authService", () => ({
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
+    getConstants: vi.fn().mockResolvedValue({ wilayas: [], secteurs: [], diplomes: [] }),
     updateStatutCandidature: vi.fn(),
     deleteCandidature: vi.fn(),
     cloturerOffre: vi.fn(),
@@ -134,8 +135,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const selectModal = await screen.findByRole("combobox");
-    fireEvent.change(selectModal, { target: { value: "RETENU" } });
+    // Le statut est maintenant un dropdown custom (plus de <select>)
+    fireEvent.click(await screen.findByText("Candidature reçue")); // ouvre le menu
+    fireEvent.click(await screen.findByText("Candidat retenu")); // sélectionne RETENU
 
     await waitFor(() => {
       expect(jobsService.updateStatutCandidature).toHaveBeenCalledWith(100, {
@@ -159,8 +161,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const selectModal = await screen.findByRole("combobox");
-    fireEvent.change(selectModal, { target: { value: "ENTRETIEN" } });
+    // Le statut est maintenant un dropdown custom (plus de <select>)
+    fireEvent.click(await screen.findByText("Candidature reçue")); // ouvre le menu
+    fireEvent.click(await screen.findByText("Entretien programmé")); // sélectionne ENTRETIEN
 
     await waitFor(() => screen.getByText("Programmer un entretien"));
 
@@ -317,8 +320,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const selectModal = await screen.findByRole("combobox");
-    fireEvent.change(selectModal, { target: { value: "RETENU" } });
+    // Le statut est maintenant un dropdown custom (plus de <select>)
+    fireEvent.click(await screen.findByText("Candidature reçue"));
+    fireEvent.click(await screen.findByText("Candidat retenu"));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -341,8 +345,9 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => screen.getAllByText("Belamri Meriem")[0]);
 
-    const selectModal = await screen.findByRole("combobox");
-    fireEvent.change(selectModal, { target: { value: "ENTRETIEN" } });
+    // Le statut est maintenant un dropdown custom (plus de <select>)
+    fireEvent.click(await screen.findByText("Candidature reçue"));
+    fireEvent.click(await screen.findByText("Entretien programmé"));
 
     await waitFor(() => screen.getByText("Programmer un entretien"));
 

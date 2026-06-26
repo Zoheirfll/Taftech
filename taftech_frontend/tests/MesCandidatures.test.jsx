@@ -57,13 +57,13 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
       await screen.findByText("Développeur Front-End"),
     ).toBeInTheDocument();
     expect(screen.getByText(/TafTech Corp/i)).toBeInTheDocument();
-    // formatText transforme "RECUE" → "Recue"
-    expect(screen.getByText("Recue")).toBeInTheDocument();
+    // STATUT_LABELS: RECUE → "Reçue", REFUSE → "Refusé(e)"
+    expect(screen.getByText("Reçue")).toBeInTheDocument();
     expect(
       screen.getByText(/Votre candidature a été envoyée et attend/i),
     ).toBeInTheDocument();
     expect(screen.getByText("Data Analyst")).toBeInTheDocument();
-    expect(screen.getByText("Refuse")).toBeInTheDocument();
+    expect(screen.getByText("Refusé(e)")).toBeInTheDocument();
     expect(
       screen.getByText(/votre profil n'a pas été retenu/i),
     ).toBeInTheDocument();

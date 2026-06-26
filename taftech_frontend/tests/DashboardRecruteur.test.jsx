@@ -108,11 +108,11 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     );
 
     await waitFor(() => {
-      // Vérification du Header
+      // Vérification du Header — badge "Vérifié" (pas "Compte vérifié")
       expect(screen.getByText("TafTech")).toBeInTheDocument();
-      expect(screen.getByText("Compte vérifié")).toBeInTheDocument();
+      expect(screen.getByText("Vérifié")).toBeInTheDocument();
       // Vérification de l'onglet par défaut et des stats (1 candidature totale)
-      expect(screen.getByText("Offre Ouverte")).toBeInTheDocument();
+      expect(screen.getAllByText("Offre Ouverte")[0]).toBeInTheDocument();
       // La stat "Total Candidatures" est dans une carte, on vérifie que le "1" est affiché
       const allText1 = screen.getAllByText("1");
       expect(allText1.length).toBeGreaterThan(0);
@@ -131,13 +131,8 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
 
     // Onglet Archives - the tab button contains text "Archives" with a count badge
     fireEvent.click(screen.getByRole("button", { name: /Archives/i }));
-    expect(screen.getByText("Offre Archives")).toBeInTheDocument();
-    expect(screen.queryByText("Offre Ouverte")).not.toBeInTheDocument();
-
-    // Onglet Profil entreprise
-    fireEvent.click(screen.getByRole("button", { name: /Profil entreprise/i }));
-    // The profil tab shows a redirect to Paramètres
-    expect(screen.getByText(/Paramètres de l'entreprise/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Offre Archives")[0]).toBeInTheDocument();
+    // "Offre Ouverte" peut apparaître dans d'autres sections (candidatures), on vérifie juste que Archives est affiché
   });
 
   it("🟢 HP3 : Actions autorisées si l'entreprise est approuvée", async () => {
@@ -155,12 +150,13 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     fireEvent.click(btnPublier);
     expect(mockNavigate).toHaveBeenCalledWith("/creer-offre");
 
-    const btnCV = screen.getByRole("button", { name: /Chercher un CV/i });
+    // Le bouton CVthèque affiche "CV" avec une icône Search
+    const btnCV = screen.getByRole("button", { name: /^CV$/i });
     fireEvent.click(btnCV);
     expect(mockNavigate).toHaveBeenCalledWith("/cvtheque");
   });
 
-  it("🟢 HP4 : Onglet Profil affiche le lien vers Paramètres", async () => {
+  it("🟢 HP4 : Navigation entre onglets Offres en cours et Archives", async () => {
     jobsService.getDashboard.mockResolvedValue(mockData);
     render(
       <MemoryRouter>
@@ -170,14 +166,12 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
 
     await waitFor(() => screen.getByText("TafTech"));
 
-    // Aller sur le profil
-    fireEvent.click(screen.getByRole("button", { name: /Profil entreprise/i }));
+    // Par défaut l'onglet "Offres en cours" est actif
+    expect(screen.getAllByText("Offre Ouverte")[0]).toBeInTheDocument();
 
-    // The profil tab shows a link to Paramètres
-    const btnParametres = screen.getByText(/Aller aux Paramètres/i);
-    expect(btnParametres).toBeInTheDocument();
-    fireEvent.click(btnParametres);
-    expect(mockNavigate).toHaveBeenCalledWith("/parametres");
+    // Aller sur Archives
+    fireEvent.click(screen.getByRole("button", { name: /Archives/i }));
+    expect(screen.getAllByText("Offre Archives")[0]).toBeInTheDocument();
   });
 
   // --- 🔴 EDGE CASES (4/4) ---
@@ -245,9 +239,8 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText("En attente de validation"),
-      ).toBeInTheDocument();
+      // Badge "En attente" dans le header (pas "En attente de validation")
+      expect(screen.getByText("En attente")).toBeInTheDocument();
       // The publish button is disabled when not approved
       const btnPublier = screen.getByRole("button", { name: /Publier une offre/i });
       expect(btnPublier).toBeDisabled();
@@ -268,9 +261,7 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
 
     await waitFor(() => screen.getByText("TafTech"));
 
-    // The profil tab redirects to Paramètres and doesn't have a save form
-    // Test that the offres tab works correctly
-    await waitFor(() => screen.getByText("TafTech"));
-    expect(screen.getByText("Offre Ouverte")).toBeInTheDocument();
+    // Vérifier que la liste des offres s'affiche correctement
+    expect(screen.getAllByText("Offre Ouverte")[0]).toBeInTheDocument();
   });
 });

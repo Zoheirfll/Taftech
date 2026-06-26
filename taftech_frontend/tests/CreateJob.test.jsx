@@ -176,7 +176,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez sélectionner une Wilaya et une Spécialité.",
+        "Veuillez corriger les champs manquants.",
       );
       expect(jobsService.creerOffre).not.toHaveBeenCalled();
     });
@@ -191,7 +191,11 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       </MemoryRouter>,
     );
 
-    // Remplissage pour passer le check local if(!formData.wilaya...)
+    // Remplissage pour passer la validation (titre + wilaya + specialite requis)
+    await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
+    fireEvent.change(screen.getByPlaceholderText(/Ingénieur Fullstack/i), {
+      target: { value: "Développeur Backend" },
+    });
     await selectEvent.select(
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",

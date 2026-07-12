@@ -80,8 +80,11 @@ const ProfilCandidat = () => {
     setShowExpTitreSuggestions,
     handleExpTitreChange,
     parserLoading,
+    remplissageLoading,
     parsedData,
     setParsedData,
+    parserMode,
+    setParserMode,
     constants,
     getPhotoUrl,
     formatText,
@@ -651,8 +654,11 @@ const ProfilCandidat = () => {
         setShowExpTitreSuggestions={setShowExpTitreSuggestions}
         handleExpTitreChange={handleExpTitreChange}
         parserLoading={parserLoading}
+        remplissageLoading={remplissageLoading}
         parsedData={parsedData}
         setParsedData={setParsedData}
+        parserMode={parserMode}
+        setParserMode={setParserMode}
         handleUpdateGeneric={handleUpdateGeneric}
         handleUpdateCV={handleUpdateCV}
         handleUpdateLinks={handleUpdateLinks}

@@ -139,7 +139,7 @@ WILAYAS_MAPPING = {
 DIPLOMES_MAPPING = [
     (['doctorat', 'phd', 'ph.d', 'دكتوراه'], 'DOCTORAT'),
     (['magistère', 'magistere', 'bac +7', 'bac+7', 'ماجستير'], 'MAGISTERE'),
-    (['master 2', 'master2', 'm2', 'ingéniorat', 'ingeniorat', 'ingénieur d\'état', 'bac +5', 'bac+5', 'ingénieur', 'ماستر 2'], 'MASTER_2'),
+    (['master 2', 'master2', 'm2', 'master', "master's degree", 'ingéniorat', 'ingeniorat', 'ingénieur d\'état', 'bac +5', 'bac+5', 'ingénieur', 'ماستر 2'], 'MASTER_2'),
     (['master 1', 'master1', 'm1', 'maîtrise', 'maitrise', 'bac +4', 'bac+4', 'ماستر 1'], 'MASTER_1'),
     (['licence', 'lmd', 'bachelor', 'bac +3', 'bac+3', 'ليسانس', 'إجازة'], 'LICENCE'),
     (['ts', 'technicien supérieur', 'technicien superieur', 'bac +2', 'bac+2', 'dut', 'bts', 'تقني سامي'], 'TS'),

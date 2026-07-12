@@ -913,7 +913,7 @@ const CVTheque = () => {
                             : "Aujourd'hui"}
                         </p>
                         {exp.description && (
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
                             {exp.description}
                           </p>
                         )}

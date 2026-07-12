@@ -136,6 +136,35 @@ def extract_photo_from_pdf(file_path):
         return None
 
 
+def extract_photo_from_docx(file_path):
+    """
+    Extrait la plus grande image embarquée dans le fichier Word (probablement la photo de profil).
+    Retourne une string base64 prête à envoyer au frontend.
+    """
+    try:
+        doc = Document(file_path)
+        biggest_image = None
+        biggest_size = 0
+        for rel in doc.part.rels.values():
+            if rel.is_external or "image" not in rel.reltype:
+                continue
+            image_part = rel.target_part
+            image_bytes = image_part.blob
+            if len(image_bytes) > biggest_size and len(image_bytes) > 5000:
+                ext = image_part.content_type.split("/")[-1]
+                if ext == "jpg":
+                    ext = "jpeg"
+                biggest_size = len(image_bytes)
+                biggest_image = {
+                    "data": base64.b64encode(image_bytes).decode('utf-8'),
+                    "ext": ext,
+                }
+        return biggest_image
+    except Exception as e:
+        logger.error("Erreur extraction image DOCX : %s", e)
+        return None
+
+
 # ==========================================
 # 3. CHAMPS SIMPLES (REGEX)
 # ==========================================
@@ -478,7 +507,10 @@ def extract_experiences_list(text_section):
                 continue
             description_clean.append(l)
 
-        description = " ".join(description_clean)
+        description = "\n".join(
+            l if l.lstrip().startswith(('-', '•', '*')) else f"- {l}"
+            for l in description_clean
+        )
 
         date_debut = annees_full[0] if annees_full else ""
         if date_fin_present:
@@ -531,7 +563,10 @@ def _extract_experiences_fallback(lines, annee_pattern):
 
         titre = contenu_lines[0]
         entreprise = contenu_lines[1] if len(contenu_lines) >= 2 else ""
-        description = " ".join(contenu_lines[2:]) if len(contenu_lines) > 2 else ""
+        description = "\n".join(
+            l if l.lstrip().startswith(('-', '•', '*')) else f"- {l}"
+            for l in contenu_lines[2:]
+        ) if len(contenu_lines) > 2 else ""
 
         date_debut = annees_full[0] if annees_full else ""
         date_fin = "Aujourd'hui" if date_fin_present else (annees_full[-1] if len(annees_full) >= 2 else date_debut)
@@ -615,7 +650,10 @@ def extract_formations_list(text_section):
             l for l in description_lines
             if not re.match(r'^[\s,.\-/]*\d{4}\s*[\s,.\-/à]*\d{0,4}\s*$', l)
         ]
-        description = " ".join(description_clean)
+        description = "\n".join(
+            l if l.lstrip().startswith(('-', '•', '*')) else f"- {l}"
+            for l in description_clean
+        )
 
         date_debut = annees_full[0] if annees_full else ""
         date_fin = annees_full[-1] if len(annees_full) >= 2 else date_debut
@@ -714,6 +752,10 @@ RÈGLES JSON :
 - Garde les dates dans le format brut du CV.
 - Si une info manque, mets "" (chaîne vide), pas null.
 - Si AUCUNE expérience pro trouvée, renvoie un tableau vide [].
+- Pour "description" : NE FUSIONNE PAS les points/missions en un seul paragraphe. Garde chaque point du CV sur sa propre ligne, préfixé par "- ", séparés par des retours à la ligne (\n). Ne reformule pas le contenu, garde le texte le plus proche possible de l'original.
+
+EXEMPLE de "description" attendu :
+"- Oversee end-to-end HR administration, social security, payroll processing.\n- Ensure compliance with Algerian labor laws and internal policies.\n- Supervise and coach a multidisciplinary HR team."
 
 FORMAT EXIGÉ :
 [
@@ -754,6 +796,7 @@ RÈGLES JSON :
 - Pour chaque formation : diplome, etablissement, date_debut_raw, date_fin_raw, description.
 - Garde les dates dans le format brut du CV.
 - Si une info manque, mets "" (chaîne vide), pas null.
+- Pour "description" : NE FUSIONNE PAS les points en un seul paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par des retours à la ligne (\n).
 
 FORMAT EXIGÉ :
 [
@@ -971,6 +1014,7 @@ def parse_with_groq(text):
             result["nom_complet"] = str(infos["nom_complet"]).strip()
         if infos.get("telephone"):
             tel = re.sub(r'[\s.\-]', '', str(infos["telephone"]))
+            tel = re.split(r'[/,;]', tel)[0]
             result["telephone"] = tel
         if infos.get("competences"):
             result["competences"] = str(infos["competences"]).strip()
@@ -1001,10 +1045,13 @@ def parse_cv(file_path, file_name):
 
     sections = find_sections(text)
 
-    # Extraction photo (uniquement PDF)
+    # Extraction photo
     photo = None
-    if file_name.lower().endswith(".pdf"):
+    name_lower = file_name.lower()
+    if name_lower.endswith(".pdf"):
         photo = extract_photo_from_pdf(file_path)
+    elif name_lower.endswith((".docx", ".doc")):
+        photo = extract_photo_from_docx(file_path)
 
     # === Champs simples via regex ===
     result = {

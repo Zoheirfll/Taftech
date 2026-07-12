@@ -52,8 +52,11 @@ export const Modals = ({
   setShowExpTitreSuggestions,
   handleExpTitreChange,
   parserLoading,
+  remplissageLoading,
   parsedData,
   setParsedData,
+  parserMode,
+  setParserMode,
   // Handlers
   handleUpdateGeneric,
   handleUpdateCV,
@@ -1065,21 +1068,54 @@ export const Modals = ({
                     </p>
                   </div>
                 )}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
                   <p className="text-xs font-medium text-amber-900">
-                    ⚠️ Les expériences et formations seront{" "}
-                    <strong>ajoutées</strong> sans remplacer les existantes.
+                    Que faire avec ces informations ?
                   </p>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="parserMode"
+                      checked={parserMode === "remplacer"}
+                      onChange={() => setParserMode("remplacer")}
+                      className="mt-0.5"
+                    />
+                    <span className="text-xs text-amber-900">
+                      <strong>Remplacer</strong> — écrase les données actuelles de
+                      votre profil par celles de ce CV
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="parserMode"
+                      checked={parserMode === "ajouter"}
+                      onChange={() => setParserMode("ajouter")}
+                      className="mt-0.5"
+                    />
+                    <span className="text-xs text-amber-900">
+                      <strong>Ajouter</strong> — complète votre profil sans toucher
+                      aux champs déjà remplis
+                    </span>
+                  </label>
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setParsedData(null)}
+                    disabled={remplissageLoading}
                     className={btnCancel}
                   >
                     Recommencer
                   </button>
-                  <button onClick={handleValiderParsing} className={btnPrimary}>
-                    Valider et remplir
+                  <button
+                    onClick={handleValiderParsing}
+                    disabled={remplissageLoading}
+                    className={`${btnPrimary} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                  >
+                    {remplissageLoading && (
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                    )}
+                    {remplissageLoading ? "Remplissage en cours..." : "Valider et remplir"}
                   </button>
                 </div>
               </div>

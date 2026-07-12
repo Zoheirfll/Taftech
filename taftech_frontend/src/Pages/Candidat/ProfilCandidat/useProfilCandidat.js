@@ -97,7 +97,9 @@ export const useProfilCandidat = () => {
 
   // Parser state
   const [parserLoading, setParserLoading] = useState(false);
+  const [remplissageLoading, setRemplissageLoading] = useState(false);
   const [parsedData, setParsedData] = useState(null);
+  const [parserMode, setParserMode] = useState("remplacer");
 
   useEffect(() => {
     fetchData();
@@ -438,38 +440,59 @@ export const useProfilCandidat = () => {
   };
 
   const handleValiderParsing = async () => {
-    if (!parsedData) return;
+    if (!parsedData || remplissageLoading) return;
+    setRemplissageLoading(true);
     const toastId = toast.loading("Remplissage de votre profil...");
     try {
+      const remplacer = parserMode === "remplacer";
       const formData = new FormData();
-      if (parsedData.telephone && !profil.telephone)
-        formData.append("telephone", parsedData.telephone);
-      if (parsedData.titre_professionnel && !profil.titre_professionnel)
-        formData.append("titre_professionnel", parsedData.titre_professionnel);
-      if (parsedData.wilaya && !profil.wilaya)
-        formData.append("wilaya", parsedData.wilaya);
-      if (parsedData.diplome && !profil.diplome)
-        formData.append("diplome", parsedData.diplome);
-      if (parsedData.specialite && !profil.specialite)
-        formData.append("specialite", parsedData.specialite);
-      if (parsedData.service_militaire && !profil.service_militaire)
-        formData.append("service_militaire", parsedData.service_militaire);
-      if (parsedData.permis_conduire && !profil.permis_conduire)
-        formData.append("permis_conduire", "true");
-      if (parsedData.passeport_valide && !profil.passeport_valide)
-        formData.append("passeport_valide", "true");
-      if (parsedData.vehicule_personnel && !profil.vehicule_personnel)
-        formData.append("vehicule_personnel", "true");
-      if (parsedData.bio && !profil.bio) formData.append("bio", parsedData.bio);
-      if (parsedData.linkedin && !profil.linkedin)
-        formData.append("linkedin", parsedData.linkedin);
-      if (parsedData.github && !profil.github)
-        formData.append("github", parsedData.github);
-      if (parsedData.competences) {
-        const existing = profil.competences || "";
+
+      // Remplacer : écrase toujours (vide si non détecté). Ajouter : ne remplit que si vide.
+      const setField = (key, value, profilKey = key) => {
+        if (remplacer) formData.append(key, value || "");
+        else if (value && !profil[profilKey]) formData.append(key, value);
+      };
+      const setBoolField = (key, value, profilKey = key) => {
+        if (remplacer) formData.append(key, value ? "true" : "false");
+        else if (value && !profil[profilKey]) formData.append(key, "true");
+      };
+
+      if (parsedData.nom_complet) {
+        const parts = parsedData.nom_complet.trim().split(/\s+/).filter(Boolean);
+        let prenom = "";
+        let nom = "";
+        if (parts.length >= 2) {
+          if (parts[0] === parts[0].toUpperCase()) {
+            nom = parts[0];
+            prenom = parts.slice(1).join(" ");
+          } else {
+            prenom = parts[0];
+            nom = parts.slice(1).join(" ");
+          }
+        } else {
+          prenom = parts[0] || "";
+        }
+        if (remplacer || !profil.first_name) formData.append("first_name", prenom);
+        if (remplacer || !profil.last_name) formData.append("last_name", nom);
+      }
+
+      setField("telephone", parsedData.telephone);
+      setField("titre_professionnel", parsedData.titre_professionnel);
+      setField("wilaya", parsedData.wilaya);
+      setField("diplome", parsedData.diplome);
+      setField("specialite", parsedData.specialite);
+      setField("service_militaire", parsedData.service_militaire);
+      setField("bio", parsedData.bio);
+      setField("linkedin", parsedData.linkedin);
+      setField("github", parsedData.github);
+      setBoolField("permis_conduire", parsedData.permis_conduire);
+      setBoolField("passeport_valide", parsedData.passeport_valide);
+      setBoolField("vehicule_personnel", parsedData.vehicule_personnel);
+      if (parsedData.competences || remplacer) {
+        const existing = remplacer ? "" : profil.competences || "";
         const merged = existing
-          ? `${existing},${parsedData.competences}`
-          : parsedData.competences;
+          ? `${existing},${parsedData.competences || ""}`
+          : parsedData.competences || "";
         const unique = [
           ...new Set(
             merged
@@ -480,9 +503,12 @@ export const useProfilCandidat = () => {
         ].join(",");
         formData.append("competences", unique);
       }
-      if (parsedData.langues) {
-        const existing = profil.langues || "";
-        const langsRaw = parsedData.langues.split(",").map((l) => l.trim());
+      if (parsedData.langues || remplacer) {
+        const existing = remplacer ? "" : profil.langues || "";
+        const langsRaw = (parsedData.langues || "")
+          .split(",")
+          .map((l) => l.trim())
+          .filter(Boolean);
         const newLangsFormatted = langsRaw.map((l) => {
           if (l.includes(":")) return l;
           const m = l.match(/^(.+?)\s*\((.+?)\)$/);
@@ -496,7 +522,7 @@ export const useProfilCandidat = () => {
             : newLangsFormatted.join(","),
         );
       }
-      if (parsedData.photo && !profil.photo_profil) {
+      if (parsedData.photo && (remplacer || !profil.photo_profil)) {
         const byteCharacters = atob(parsedData.photo.data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++)
@@ -510,38 +536,58 @@ export const useProfilCandidat = () => {
             type: `image/${parsedData.photo.ext}`,
           }),
         );
+      } else if (!parsedData.photo && remplacer && profil.photo_profil) {
+        formData.append("remove_photo_profil", "true");
       }
       if ([...formData.entries()].length > 0)
         await profilService.updateProfil(formData);
-      if (parsedData.experiences?.length > 0) {
-        for (const exp of parsedData.experiences) {
-          try {
-            await profilService.addExperience({
-              titre_poste: exp.titre_poste,
-              entreprise: exp.entreprise,
-              date_debut: convertDateRaw(exp.date_debut_raw),
-              date_fin: convertDateRaw(exp.date_fin_raw),
-              description: exp.description,
-            });
-          } catch (err) {
-            reportError("ECHEC_AJOUT_EXP_PARSER", err);
-          }
+      if (parsedData.experiences?.length > 0 || remplacer) {
+        if (remplacer) {
+          await Promise.allSettled(
+            (profil.experiences_detail || []).map((exp) =>
+              profilService
+                .deleteExperience(exp.id)
+                .catch((err) => reportError("ECHEC_SUPPR_EXP_PARSER", err)),
+            ),
+          );
         }
+        await Promise.allSettled(
+          (parsedData.experiences || []).map((exp) =>
+            profilService
+              .addExperience({
+                titre_poste: exp.titre_poste,
+                entreprise: exp.entreprise,
+                date_debut: convertDateRaw(exp.date_debut_raw),
+                date_fin: convertDateRaw(exp.date_fin_raw),
+                description: exp.description,
+              })
+              .catch((err) => reportError("ECHEC_AJOUT_EXP_PARSER", err)),
+          ),
+        );
       }
-      if (parsedData.formations?.length > 0) {
-        for (const form of parsedData.formations) {
-          try {
-            await profilService.addFormation({
-              diplome: form.diplome,
-              etablissement: form.etablissement,
-              date_debut: convertDateRaw(form.date_debut_raw),
-              date_fin: convertDateRaw(form.date_fin_raw),
-              description: form.description,
-            });
-          } catch (err) {
-            reportError("ECHEC_AJOUT_FORMATION_PARSER", err);
-          }
+      if (parsedData.formations?.length > 0 || remplacer) {
+        if (remplacer) {
+          await Promise.allSettled(
+            (profil.formations_detail || []).map((form) =>
+              profilService
+                .deleteFormation(form.id)
+                .catch((err) => reportError("ECHEC_SUPPR_FORMATION_PARSER", err)),
+            ),
+          );
         }
+        await Promise.allSettled(
+          (parsedData.formations || []).map((form) =>
+            profilService
+              .addFormation({
+                diplome: form.diplome,
+                etablissement: form.etablissement,
+                date_debut: convertDateRaw(form.date_debut_raw),
+                date_fin: convertDateRaw(form.date_fin_raw),
+                description: form.description,
+              })
+              .catch((err) => reportError("ECHEC_AJOUT_FORMATION_PARSER", err)),
+          ),
+        );
       }
       toast.success("Profil rempli avec succès !", { id: toastId });
       setShowParserModal(false);
@@ -550,6 +596,8 @@ export const useProfilCandidat = () => {
     } catch (err) {
       toast.error("Erreur lors du remplissage.", { id: toastId });
       reportError("ECHEC_VALIDATION_PARSING", err);
+    } finally {
+      setRemplissageLoading(false);
     }
   };
 
@@ -614,8 +662,11 @@ export const useProfilCandidat = () => {
     editLinks,
     setEditLinks,
     parserLoading,
+    remplissageLoading,
     parsedData,
     setParsedData,
+    parserMode,
+    setParserMode,
     // Computed
     completionPercent,
     // Handlers

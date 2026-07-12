@@ -322,9 +322,9 @@ class FormationCandidat(models.Model):
     """
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='formations_detail')
     diplome = models.CharField(max_length=200, verbose_name="Nom de la formation ou diplôme")
-    etablissement = models.CharField(max_length=200, verbose_name="Université ou École")
+    etablissement = models.CharField(max_length=200, blank=True, verbose_name="Université ou École")
     
-    date_debut = models.DateField(verbose_name="Date de début")
+    date_debut = models.DateField(null=True, blank=True, verbose_name="Date de début")
     date_fin = models.DateField(null=True, blank=True, verbose_name="Date de fin")
     
     description = models.TextField(blank=True, null=True, verbose_name="Description ou mention")

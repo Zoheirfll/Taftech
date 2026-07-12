@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.db.utils import DataError
 from ..models import (
     ProfilCandidat, ExperienceCandidat, FormationCandidat,
     OffreSauvegardee, AlerteEmploi, OffreEmploi
@@ -25,15 +26,27 @@ class ProfilCandidatAPIView(APIView):
 
     def put(self, request):
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
+        if str(request.data.get('remove_photo_profil', '')).lower() == 'true':
+            profil.photo_profil.delete(save=False)
+            profil.photo_profil = None
         user = request.user
         user_fields = []
         for field in ('first_name', 'last_name', 'telephone', 'nin'):
             val = request.data.get(field)
             if val is not None:
+                max_len = user._meta.get_field(field).max_length
+                if max_len and isinstance(val, str) and len(val) > max_len:
+                    val = val[:max_len]
                 setattr(user, field, val)
                 user_fields.append(field)
         if user_fields:
-            user.save(update_fields=user_fields)
+            try:
+                user.save(update_fields=user_fields)
+            except DataError:
+                return Response(
+                    {"error": "Une des valeurs envoyées est trop longue."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         serializer = ProfilCandidatDTO(profil, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

@@ -1,5 +1,6 @@
 import datetime
 import difflib
+import re
 from .constants import SYNONYMES_SPECIALITE
 
 def normaliser(texte):
@@ -120,7 +121,7 @@ def competences_score(competences_candidat, texte_offre):
     for tag in tags_candidat:
         if not tag:
             continue
-        if tag in texte:
+        if re.search(r'\b' + re.escape(tag) + r'\b', texte):
             tags_trouves.append(tag)
             continue
         for mot in mots_offre:
@@ -180,8 +181,8 @@ def _experience_pertinente(exp, offre):
         str(offre.specialite).upper() if offre.specialite else "", []
     )
     if synonymes_offre and exp.description:
-        mots_desc = _mots(exp.description)
-        if any(normaliser(s) in mots_desc for s in synonymes_offre):
+        desc_norm = normaliser(exp.description)
+        if any(re.search(r'\b' + re.escape(normaliser(s)) + r'\b', desc_norm) for s in synonymes_offre):
             return True, 0.65
 
     return False, 0.0

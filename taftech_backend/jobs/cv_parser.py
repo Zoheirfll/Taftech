@@ -223,7 +223,7 @@ def extract_diplome_max(text):
     # On parcourt dans l'ordre (du plus élevé au plus bas)
     for keywords, code in DIPLOMES_MAPPING:
         for kw in keywords:
-            if kw in text_low:
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_low):
                 return code
     return None
 
@@ -231,10 +231,12 @@ def extract_diplome_max(text):
 def extract_specialite(text):
     """Détecte la spécialité principale."""
     text_low = text.lower()
-    # On compte les occurrences pour choisir la spécialité dominante
+    # On compte les occurrences (mot entier) pour choisir la spécialité dominante
     scores = {}
     for keywords, code in SPECIALITES_MAPPING:
-        score = sum(text_low.count(kw) for kw in keywords)
+        score = 0
+        for kw in keywords:
+            score += len(re.findall(r'\b' + re.escape(kw) + r'\b', text_low))
         if score > 0:
             scores[code] = scores.get(code, 0) + score
     if scores:
@@ -246,14 +248,14 @@ def extract_service_militaire(text):
     """Détecte le statut militaire."""
     text_low = text.lower()
     mapping = {
-        'dégagé': 'DEGAGE', 'degage': 'DEGAGE',
-        'sursitaire': 'SURSITAIRE', 'sursis': 'SURSITAIRE',
-        'inapte': 'INAPTE',
-        'incorporé': 'INCORPORE', 'incorpore': 'INCORPORE',
-        'non concerné': 'NON_CONCERNE', 'non concerne': 'NON_CONCERNE',
+        'dégagé': 'DEGAGE', 'degage': 'DEGAGE', 'exempted': 'DEGAGE', 'discharged': 'DEGAGE', 'معفى': 'DEGAGE',
+        'sursitaire': 'SURSITAIRE', 'sursis': 'SURSITAIRE', 'deferred': 'SURSITAIRE', 'مؤجل': 'SURSITAIRE',
+        'inapte': 'INAPTE', 'unfit': 'INAPTE', 'غير لائق': 'INAPTE',
+        'incorporé': 'INCORPORE', 'incorpore': 'INCORPORE', 'active duty': 'INCORPORE', 'ملتحق': 'INCORPORE',
+        'non concerné': 'NON_CONCERNE', 'non concerne': 'NON_CONCERNE', 'not applicable': 'NON_CONCERNE', 'غير معني': 'NON_CONCERNE',
     }
     for keyword, code in mapping.items():
-        if keyword in text_low:
+        if re.search(r'\b' + re.escape(keyword) + r'\b', text_low):
             return code
     return None
 
@@ -261,22 +263,22 @@ def extract_service_militaire(text):
 def extract_permis(text):
     """Détecte la présence d'un permis de conduire."""
     text_low = text.lower()
-    keywords = ['permis de conduire', 'permis b', 'permis a', 'driving license', 'driver license']
-    return any(k in text_low for k in keywords)
+    keywords = ['permis de conduire', 'permis b', 'permis a', 'driving license', 'driver license', "driver's license", 'رخصة سياقة', 'رخصة قيادة']
+    return any(re.search(r'\b' + re.escape(k) + r'\b', text_low) for k in keywords)
 
 
 def extract_passeport(text):
     """Détecte la présence d'un passeport."""
     text_low = text.lower()
-    keywords = ['passeport', 'passport']
-    return any(k in text_low for k in keywords)
+    keywords = ['passeport', 'passport', 'جواز سفر']
+    return any(re.search(r'\b' + re.escape(k) + r'\b', text_low) for k in keywords)
 
 
 def extract_vehicule(text):
     """Détecte si le candidat est véhiculé."""
     text_low = text.lower()
-    keywords = ['véhicule personnel', 'vehicule personnel', 'véhiculé', 'vehicule', 'voiture personnelle']
-    return any(k in text_low for k in keywords)
+    keywords = ['véhicule personnel', 'vehicule personnel', 'véhiculé', 'vehicule', 'voiture personnelle', 'own vehicle', 'own car', 'personal vehicle', 'car owner', 'سيارة شخصية']
+    return any(re.search(r'\b' + re.escape(k) + r'\b', text_low) for k in keywords)
 
 
 # ==========================================
@@ -578,7 +580,7 @@ def extract_formations_list(text_section):
             continue
 
         is_mostly_upper = sum(1 for c in line if c.isupper()) >= max(2, len([c for c in line if c.isalpha()]) * 0.6)
-        contains_keyword = any(k in line_low for k in diplome_keywords)
+        contains_keyword = any(re.search(r'\b' + re.escape(k) + r'\b', line_low) for k in diplome_keywords)
 
         if is_mostly_upper and contains_keyword:
             titre_indices.append(i)

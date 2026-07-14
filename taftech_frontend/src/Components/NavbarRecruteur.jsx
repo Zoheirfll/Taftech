@@ -79,12 +79,12 @@ const NavbarRecruteur = () => {
 
   return (
     <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-15">
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
 
         {/* LOGO */}
         <div className="flex items-center gap-8">
           <Link to="/recruteurs" className="flex items-center gap-2 shrink-0">
-            <img src={logoTafTech} alt="TafTech" className="h-16 w-auto object-contain" />
+            <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
             <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
               Recruteurs
             </span>
@@ -135,7 +135,7 @@ const NavbarRecruteur = () => {
               <Link to="/recruteurs/connexion" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150">
                 <LogIn size={14} /> Connexion
               </Link>
-              <Link to="/recruteurs/inscription" className="px-4 py-2 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 active:scale-95 transition-all duration-150 shadow-md shadow-teal-200">
+              <Link to="/recruteurs/inscription" className="px-4 py-1.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 active:scale-95 transition-all duration-150 shadow-md shadow-teal-200">
                 S'inscrire
               </Link>
             </>

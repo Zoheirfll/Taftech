@@ -98,7 +98,7 @@ const Entreprises = () => {
       <div className="bg-linear-to-br from-indigo-700 to-indigo-500">
         <div className="max-w-6xl mx-auto px-6 py-14">
           <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">Entreprises</h1>
-          <p className="text-indigo-200 text-base">Découvrez les entreprises qui recrutent sur TafTech</p>
+          <p className="text-indigo-200 text-base">Découvrez les entreprises qui recrutent sur TAFTECH</p>
         </div>
       </div>
 

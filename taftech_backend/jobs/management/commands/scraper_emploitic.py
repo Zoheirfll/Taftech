@@ -31,7 +31,6 @@ MOTS_SECTEUR = {
     "QSE":         ["qse", "qualite", "hse", "responsable qualite"],
     "TOURISME":    ["hotellerie", "tourisme", "restauration", "chef cuisinier", "receptionniste"],
     "VENTE":       ["vendeur", "conseiller de vente", "televendeur", "pre-vendeur"],
-    "BANQUE":      ["banque", "assurance", "conseiller financier"],
     "PRODUCTION":  ["production", "operateur", "chef d'atelier", "responsable production"],
     "SECRETARIAT": ["secretaire", "assistante de direction"],
     "GRANDS_COMPTES": ["grands comptes", "key account", "chef de zone", "delegue commercial", "chef de secteur"],

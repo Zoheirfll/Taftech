@@ -26,7 +26,8 @@ class CandidatSerializerTest(TestCase):
             "nin": "123456789012345678",
             "telephone": "0555000000",
             "consentement_loi_18_07": True,
-            "wilaya": "16 - Alger"
+            "wilaya": "16 - Alger",
+            "adresse": "12 rue des Frères Bouadou, Alger"
         }
 
     def test_candidat_creation_success(self):

@@ -85,7 +85,7 @@ const AdminStatistiques = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
           <p className="text-sm text-slate-700 mt-0.5">
-            Contrôle global TafTech
+            Contrôle global TAFTECH
           </p>
         </div>
         <button

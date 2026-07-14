@@ -28,6 +28,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     situation_actuelle = serializers.SerializerMethodField()
     wilaya = serializers.SerializerMethodField()
     commune = serializers.SerializerMethodField()
+    adresse = serializers.SerializerMethodField()
     diplome = serializers.SerializerMethodField()
     specialite = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
@@ -42,7 +43,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
             'experiences', 'formations', 'competences', 'langues',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
-            'wilaya', 'commune', 'diplome', 'specialite', 'bio', 'linkedin', 'github',
+            'wilaya', 'commune', 'adresse', 'diplome', 'specialite', 'bio', 'linkedin', 'github',
         )
 
     def _profil(self, obj):
@@ -108,6 +109,9 @@ class CandidatInfoDTO(serializers.ModelSerializer):
 
     def get_commune(self, obj):
         p = self._profil(obj); return p.commune if p else None
+
+    def get_adresse(self, obj):
+        p = self._profil(obj); return p.adresse if p else None
 
     def get_diplome(self, obj):
         p = self._profil(obj); return p.diplome if p else None

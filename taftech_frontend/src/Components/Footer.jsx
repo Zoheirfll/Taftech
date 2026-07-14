@@ -10,7 +10,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/">
-              <img src={logoTafTech} alt="TafTech" className="h-9 w-auto object-contain brightness-200" />
+              <img src={logoTafTech} alt="TAFTECH" className="h-9 w-auto object-contain brightness-200" />
             </Link>
             <p className="text-indigo-300 text-sm leading-relaxed">
               La plateforme de recrutement intelligente en Algérie. L'IA au service de votre carrière.
@@ -54,6 +54,9 @@ const Footer = () => {
               <a href="mailto:taftech963@gmail.com" className="hover:text-amber-400 transition-colors block">
                 taftech963@gmail.com
               </a>
+              <a href="tel:+213770123440" className="hover:text-amber-400 transition-colors block">
+                0770 123 440
+              </a>
               <p>Conformité ANPDP</p>
               <p>Loi 18-07 — Protection des données</p>
             </div>
@@ -65,7 +68,7 @@ const Footer = () => {
       <div className="border-t border-indigo-900 py-6">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <p className="text-xs text-indigo-400">
-            © {new Date().getFullYear()} TafTech — Made for a better recruitment
+            © {new Date().getFullYear()} TAFTECH — Made for a better recruitment
           </p>
           <div className="flex gap-5">
             {["Confidentialité", "CGU", "Cookies"].map((item) => (

@@ -109,7 +109,7 @@ const AdminUsers = () => {
             Utilisateurs inscrits
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Gestion de la communauté TafTech.
+            Gestion de la communauté TAFTECH.
           </p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
@@ -316,6 +316,9 @@ const AdminUsers = () => {
                 </p>
                 <p className="text-sm text-slate-800 font-medium font-mono">
                   NIN: {selectedUser.nin || "N/A"}
+                </p>
+                <p className="text-sm text-slate-800 font-medium mt-1">
+                  Adresse : {selectedUser.profil_candidat?.adresse || "N/A"}
                 </p>
                 <p className="text-sm text-slate-800 font-medium mt-1">
                   Né(e) le : {selectedUser.date_naissance || "N/A"}

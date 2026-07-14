@@ -14,13 +14,15 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     # 👇 AJOUT : On récupère la wilaya depuis React
     wilaya = serializers.CharField(write_only=True, required=True)
+    nin = serializers.CharField(required=True)
+    adresse = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = CustomUser
         fields = (
-            'username', 'email', 'password', 'first_name', 
-            'last_name', 'nin', 'telephone', 'date_naissance', 
-            'consentement_loi_18_07', 'wilaya' # <-- Ajout de wilaya ici
+            'username', 'email', 'password', 'first_name',
+            'last_name', 'nin', 'telephone', 'date_naissance',
+            'consentement_loi_18_07', 'wilaya', 'adresse' # <-- Ajout de wilaya/adresse ici
         )
 
     # --- TES VALIDATIONS (Gardées car elles sont parfaites) ---
@@ -41,7 +43,9 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
             if not value.isdigit():
                 raise serializers.ValidationError("Le NIN ne doit contenir que des chiffres.")
             if User.objects.filter(nin=value).exists():
-                raise serializers.ValidationError("Ce Numéro d'Identification National est déjà enregistré.")
+                raise serializers.ValidationError(
+                    "Ce numéro n'a pas pu être validé. Vérifiez votre saisie ou contactez le support si le problème persiste."
+                )
         return value
 
     # --- LA MÉTHODE CREATE MISE À JOUR ---
@@ -49,7 +53,8 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
         # On extrait le mot de passe et la wilaya
         password = validated_data.pop('password')
         wilaya_saisie = validated_data.pop('wilaya')
-        
+        adresse_saisie = validated_data.pop('adresse')
+
         # On crée l'utilisateur
         user = User.objects.create_user(
             **validated_data,
@@ -62,7 +67,7 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
         
         # 👇 On crée le profil candidat et on y insère directement la wilaya !
         from jobs.models import ProfilCandidat
-        ProfilCandidat.objects.create(user=user, wilaya=wilaya_saisie)
+        ProfilCandidat.objects.create(user=user, wilaya=wilaya_saisie, adresse=adresse_saisie)
         
         return user
 class EmailTokenObtainSerializer(TokenObtainPairSerializer):

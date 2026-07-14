@@ -11,7 +11,7 @@ User = get_user_model()
 
 class CVthequeAndAdvancedTests(APITestCase):
     def setUp(self):
-        self.rh = User.objects.create_user(username="rh_cv", email="rh_cv@test.com", role="RECRUTEUR")
+        self.rh = User.objects.create_user(username="rh_cv", email="rh_cv@test.com", role="RECRUTEUR", consentement_cvtheque=True)
         # ProfilEntreprise requis — CVThèque retourne 403 si pas d'entreprise
         ProfilEntreprise.objects.create(
             user=self.rh,

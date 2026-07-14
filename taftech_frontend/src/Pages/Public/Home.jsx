@@ -42,24 +42,31 @@ const STEPS = [
 const FEATURES = [
   {
     icon: Sparkles,
-    title: "Matching IA",
-    desc: "Notre algorithme analyse les profils et les offres pour proposer les candidatures les plus pertinentes.",
+    title: "Matching intelligent",
+    desc: "Notre technologie analyse les profils des candidats et les besoins des entreprises afin de proposer les correspondances les plus pertinentes, pour un recrutement plus rapide et plus efficace.",
     color: "bg-indigo-50 text-indigo-600",
     border: "group-hover:border-indigo-300",
   },
   {
     icon: Users,
-    title: "Base de talents",
-    desc: "Accédez à une CVthèque qualifiée de profils algériens dans tous les secteurs d'activité.",
+    title: "Une CVthèque riche et qualifiée",
+    desc: "Accédez à une base de profils issus de nombreux secteurs d'activité, du débutant au cadre expérimenté, partout en Algérie.",
     color: "bg-amber-50 text-amber-600",
     border: "group-hover:border-amber-300",
   },
   {
     icon: Globe,
-    title: "Fait pour l'Algérie",
-    desc: "Conçu pour le marché local, conforme aux réglementations et adapté aux réalités du terrain.",
+    title: "Pensé pour le marché algérien",
+    desc: "Une plateforme conçue pour répondre aux réalités du recrutement en Algérie, conforme à la réglementation nationale et adaptée aux besoins des entreprises locales.",
     color: "bg-emerald-50 text-emerald-600",
     border: "group-hover:border-emerald-300",
+  },
+  {
+    icon: Zap,
+    title: "Simple, rapide et sécurisé",
+    desc: "Publiez vos offres, gérez vos candidatures et recrutez en toute simplicité depuis une plateforme intuitive et sécurisée.",
+    color: "bg-rose-50 text-rose-600",
+    border: "group-hover:border-rose-300",
   },
 ];
 
@@ -110,20 +117,15 @@ const Home = () => {
       <section className="relative pt-24 pb-28 px-4 bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
 
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full">
-            <Sparkles size={13} className="text-indigo-600" />
-            <span className="text-xs font-semibold text-indigo-700">Matching IA · Plateforme algérienne</span>
-          </div>
-
           <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Trouvez votre prochain{" "}
-            <span className="text-indigo-600">talent</span> ou votre prochaine{" "}
-            <span className="text-indigo-600">opportunité</span>
+            Le bon profil. <span className="text-indigo-600">La bonne opportunité.</span><br />
+            Au bon moment.
           </h1>
 
           <p className="text-base text-slate-500 max-w-xl mx-auto leading-relaxed">
-            TafTech connecte les entreprises algériennes aux profils qualifiés
-            grâce à un moteur de matching par intelligence artificielle.
+            Grâce à un matching intelligent, TAFTECH facilite la rencontre entre les
+            entreprises à la recherche de compétences et les candidats en quête de
+            nouvelles opportunités professionnelles.
           </p>
 
           {/* BARRE DE RECHERCHE */}
@@ -205,7 +207,7 @@ const Home = () => {
       <section className="py-12 bg-indigo-600">
         <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {[
-            { label: "Talents inscrits", icon: Users, value: stats.total_candidats },
+            { label: "Candidats inscrits", icon: Users, value: stats.total_candidats },
             { label: "Entreprises partenaires", icon: Building2, value: stats.total_entreprises },
             { label: "Offres à pourvoir", icon: Briefcase, value: stats.total_offres },
           ].map(({ label, icon: Icon, value }) => (
@@ -224,37 +226,37 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ─── COMMENT ÇA MARCHE ─── */}
-      <section className="py-20 bg-white px-4 border-b border-slate-100">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-widest mb-2">Simple & Rapide</p>
-            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Comment ça marche ?</h2>
-            <p className="text-sm text-slate-500">Trouvez un emploi en 3 étapes simples.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
-            {/* Connecteur desktop */}
-            <div className="hidden sm:block absolute top-8 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-slate-200 z-0" />
-            {STEPS.map(({ num, icon: Icon, title, desc }) => (
-              <div key={num} className="flex flex-col items-center text-center relative z-10">
-                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 shadow-md shadow-indigo-200">
-                  <Icon size={26} className="text-white" />
+      {/* ─── COMMENT ÇA MARCHE (visiteurs non connectés uniquement) ─── */}
+      {!isLogged && (
+        <section className="py-20 bg-white px-4 border-b border-slate-100">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-widest mb-2">Simple & Rapide</p>
+              <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Comment ça marche ?</h2>
+              <p className="text-sm text-slate-500">Trouvez un emploi en 3 étapes simples.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
+              {/* Connecteur desktop */}
+              <div className="hidden sm:block absolute top-8 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-slate-200 z-0" />
+              {STEPS.map(({ num, icon: Icon, title, desc }) => (
+                <div key={num} className="flex flex-col items-center text-center relative z-10">
+                  <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 shadow-md shadow-indigo-200">
+                    <Icon size={26} className="text-white" />
+                  </div>
+                  <span className="text-xs font-bold text-indigo-500 mb-1">Étape {num}</span>
+                  <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
                 </div>
-                <span className="text-xs font-bold text-indigo-500 mb-1">Étape {num}</span>
-                <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-          {!isLogged && (
+              ))}
+            </div>
             <div className="text-center mt-12">
               <Link to="/register" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200">
                 Commencer gratuitement <ArrowRight size={16} />
               </Link>
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ─── DERNIÈRES OFFRES ─── */}
       <section className="py-20 bg-slate-50 px-4">
@@ -340,10 +342,10 @@ const Home = () => {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <p className="text-xs font-semibold text-indigo-600 uppercase tracking-widest mb-2">Nos atouts</p>
-            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Pourquoi TafTech ?</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Pourquoi choisir TAFTECH?</h2>
             <p className="text-sm text-slate-500">La plateforme de recrutement intelligente en Algérie.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {FEATURES.map(({ icon: Icon, title, desc, color, border }) => (
               <div key={title} className={`bg-slate-50 border border-slate-200 ${border} rounded-xl p-6 hover:shadow-md transition-all group`}>
                 <div className={`w-11 h-11 ${color} rounded-xl flex items-center justify-center mb-4`}>
@@ -357,40 +359,28 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ─── CTA FINAL ─── */}
-      <section className="py-20 bg-indigo-600 px-4">
-        <div className="max-w-3xl mx-auto text-center space-y-6">
-          <p className="text-xs font-semibold text-indigo-300 uppercase tracking-widest">Rejoignez TafTech</p>
-          <h2 className="text-3xl font-extrabold text-white leading-tight">
-            Prêt à trouver votre prochaine opportunité ?
-          </h2>
-          <p className="text-indigo-200 text-sm leading-relaxed max-w-xl mx-auto">
-            Des milliers de candidats et d'entreprises font confiance à TafTech pour leurs recrutements en Algérie.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-            {!isLogged ? (
-              <>
-                <Link to="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-indigo-700 text-sm font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md">
-                  <CheckCircle size={16} /> Créer un compte candidat
-                </Link>
-                <Link to="/recruteurs/inscription" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500 text-white text-sm font-bold rounded-xl hover:bg-indigo-400 transition-colors border border-indigo-400">
-                  <Building2 size={16} /> Publier une offre
-                </Link>
-              </>
-            ) : (
-              <Link to={role === "CANDIDAT" ? "/profil" : "/dashboard"} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-indigo-700 text-sm font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md">
-                Accéder à mon espace <ArrowRight size={16} />
+      {/* ─── CTA FINAL (visiteurs non connectés uniquement) ─── */}
+      {!isLogged && (
+        <section className="py-20 bg-indigo-600 px-4">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <p className="text-xs font-semibold text-indigo-300 uppercase tracking-widest">Rejoignez TAFTECH</p>
+            <h2 className="text-3xl font-extrabold text-white leading-tight">
+              Prêt à trouver votre prochaine opportunité ?
+            </h2>
+            <p className="text-indigo-200 text-sm leading-relaxed max-w-xl mx-auto">
+              Candidats et entreprises font confiance à TAFTECH pour leurs recrutements en Algérie.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+              <Link to="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-indigo-700 text-sm font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md">
+                <CheckCircle size={16} /> Créer un compte candidat
               </Link>
-            )}
+              <Link to="/recruteurs/inscription" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500 text-white text-sm font-bold rounded-xl hover:bg-indigo-400 transition-colors border border-indigo-400">
+                <Building2 size={16} /> Publier une offre
+              </Link>
+            </div>
           </div>
-          <div className="pt-6 border-t border-indigo-500 flex flex-col sm:flex-row justify-center gap-6 text-sm text-indigo-300">
-            <a href="mailto:taftech963@gmail.com" className="hover:text-white transition-colors">
-              taftech963@gmail.com
-            </a>
-            <span>Oran, Algérie 🇩🇿</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
     </div>
   );

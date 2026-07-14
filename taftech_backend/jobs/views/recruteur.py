@@ -143,6 +143,11 @@ class CVThequeView(APIView):
         entreprise_user = get_entreprise_for_user(request.user)
         if not entreprise_user:
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        if not request.user.consentement_cvtheque:
+            return Response(
+                {"error": "Vous devez accepter les conditions de traitement des données candidats.", "code": "CVTHEQUE_CONSENT_REQUIRED"},
+                status=403,
+            )
         search = request.GET.get('search', '')
         wilaya = request.GET.get('wilaya', '')
         diplome = request.GET.get('diplome', '')

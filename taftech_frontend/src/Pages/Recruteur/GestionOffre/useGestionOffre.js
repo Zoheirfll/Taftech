@@ -6,6 +6,8 @@ import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import toast from "react-hot-toast";
 
+const apiErrMsg = (err, fallback) => err.response?.data?.error || fallback;
+
 export const useGestionOffre = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -177,7 +179,7 @@ export const useGestionOffre = () => {
           : "Statut mis à jour.",
       );
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour.");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
       reportError("ECHEC_MISE_A_JOUR_STATUT", err);
     }
   };
@@ -212,7 +214,7 @@ export const useGestionOffre = () => {
         setSelectedCandidature(null);
       toast.success("Candidature supprimée.");
     } catch (err) {
-      toast.error("Erreur lors de la suppression.");
+      toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       reportError("ECHEC_SUPPRESSION_CANDIDATURE", err);
     }
   };
@@ -223,7 +225,7 @@ export const useGestionOffre = () => {
       setOffre({ ...offre, date_expiration: updated.offre?.date_expiration ?? date });
       toast.success(date ? `Expiration fixée au ${new Date(date).toLocaleDateString("fr-FR")}` : "Expiration supprimée");
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour.");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
       reportError("ECHEC_SET_EXPIRATION_OFFRE", err);
     }
   };
@@ -235,7 +237,7 @@ export const useGestionOffre = () => {
       setOffre({ ...offre, est_cloturee: true });
       toast.success("Offre clôturée !");
     } catch (err) {
-      toast.error("Erreur lors de la clôture.");
+      toast.error(apiErrMsg(err, "Erreur lors de la clôture."));
       reportError("ECHEC_CLOTURE_OFFRE", err);
     }
   };
@@ -267,7 +269,7 @@ export const useGestionOffre = () => {
       toast.success("Évaluation sauvegardée !");
       setModalEval({ isOpen: false, candidature: null });
     } catch (err) {
-      toast.error("Erreur lors de l'évaluation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'évaluation."));
       reportError("ECHEC_EVALUATION_CANDIDAT", err);
     } finally {
       toast.dismiss(toastId);
@@ -281,7 +283,7 @@ export const useGestionOffre = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Bulletin_TafTech_${candidatureId}.pdf`);
+      link.setAttribute("download", `Bulletin_TAFTECH_${candidatureId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);

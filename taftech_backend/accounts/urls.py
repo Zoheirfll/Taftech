@@ -1,7 +1,7 @@
 # accounts/urls.py
 from django.urls import path
 from .views import CandidatRegistrationAPIView, RecruteurRegisterAPIView, CookieTokenObtainView, VerifyEmailAPIView, ErrorReportAPIView
-from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView, GoogleSocialAuthView, AdminSystemLogAPIView, ConsentementLoi1807View, RenvoyerCodeVerificationAPIView, ChangerMotDePasseAPIView, MeAPIView
+from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView, GoogleSocialAuthView, AdminSystemLogAPIView, ConsentementLoi1807View, ConsentementCVThequeView, RenvoyerCodeVerificationAPIView, ChangerMotDePasseAPIView, MeAPIView
 from django.conf import settings
 
 
@@ -20,6 +20,7 @@ urlpatterns = [
     path('social/google/', GoogleSocialAuthView.as_view(), name='social-google'),
     path('admin/system-logs/', AdminSystemLogAPIView.as_view(), name='admin-system-logs'),
     path('consentement/', ConsentementLoi1807View.as_view(), name='consentement-loi'),
+    path('consentement-cvtheque/', ConsentementCVThequeView.as_view(), name='consentement-cvtheque'),
     path('changer-mot-de-passe/', ChangerMotDePasseAPIView.as_view(), name='changer-mot-de-passe'),
     path('me/', MeAPIView.as_view(), name='me'),
 ]

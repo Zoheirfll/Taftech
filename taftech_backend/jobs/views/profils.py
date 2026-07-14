@@ -20,18 +20,22 @@ class ProfilCandidatAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
-        serializer = ProfilCandidatDTO(profil, context={'is_premium': True})
+        serializer = ProfilCandidatDTO(profil, context={'is_premium': True, 'include_nin': True})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
         if str(request.data.get('remove_photo_profil', '')).lower() == 'true':
             profil.photo_profil.delete(save=False)
             profil.photo_profil = None
         user = request.user
         user_fields = []
-        for field in ('first_name', 'last_name', 'telephone', 'nin'):
+        for field in ('first_name', 'last_name', 'telephone'):
             val = request.data.get(field)
             if val is not None:
                 max_len = user._meta.get_field(field).max_length
@@ -61,6 +65,8 @@ class ExperienceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil = request.user.profil_candidat
         serializer = ExperienceSerializer(data=request.data)
         if serializer.is_valid():
@@ -73,6 +79,8 @@ class ExperienceDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             experience = ExperienceCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
         except ExperienceCandidat.DoesNotExist:
@@ -84,6 +92,8 @@ class ExperienceDetailAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             experience = ExperienceCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
             experience.delete()
@@ -96,6 +106,8 @@ class FormationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil = request.user.profil_candidat
         serializer = FormationSerializer(data=request.data)
         if serializer.is_valid():
@@ -108,6 +120,8 @@ class FormationDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             formation = FormationCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
         except FormationCandidat.DoesNotExist:
@@ -119,6 +133,8 @@ class FormationDetailAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             formation = FormationCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
             formation.delete()
@@ -131,11 +147,15 @@ class OffreSauvegardeeListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         favoris = OffreSauvegardee.objects.filter(candidat=request.user)
         serializer = OffreSauvegardeeSerializer(favoris, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         offre_id = request.data.get('offre')
         try:
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
@@ -152,6 +172,8 @@ class OffreSauvegardeeDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             favori = OffreSauvegardee.objects.get(id=pk, candidat=request.user)
             favori.delete()
@@ -164,11 +186,15 @@ class AlerteEmploiListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         alertes = AlerteEmploi.objects.filter(candidat=request.user)
         serializer = AlerteEmploiSerializer(alertes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         serializer = AlerteEmploiSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(candidat=request.user)
@@ -180,6 +206,8 @@ class AlerteEmploiDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
         except AlerteEmploi.DoesNotExist:
@@ -191,6 +219,8 @@ class AlerteEmploiDetailAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         try:
             alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
             alerte.delete()

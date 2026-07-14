@@ -113,12 +113,12 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-15">
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
 
         {/* GAUCHE : LOGO + LIENS */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center shrink-0">
-            <img src={logoTafTech} alt="TafTech" className="h-16 w-auto object-contain" />
+            <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
           </Link>
           <div className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(({ to, label, icon: Icon }) => (
@@ -131,7 +131,7 @@ const Navbar = () => {
         </div>
 
         {/* DROITE */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
 
           {/* NON CONNECTÉ */}
           {!isLogged && (
@@ -142,7 +142,7 @@ const Navbar = () => {
               <Link to="/login" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all duration-150">
                 <LogIn size={14} /> Se connecter
               </Link>
-              <Link to="/register" className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200">
+              <Link to="/register" className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200">
                 S'inscrire
               </Link>
             </>

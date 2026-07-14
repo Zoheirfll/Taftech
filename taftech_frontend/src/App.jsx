@@ -21,21 +21,60 @@ const RoleGuard = ({ minRole, children }) => {
   return children;
 };
 
-// Redirige les utilisateurs déjà connectés hors des pages guest (login, register…)
+// Redirige hors des pages guest (login, register…) seulement si déjà connecté
+// SUR CE MÊME portail — sinon on laisse la page de login s'afficher, pour
+// permettre à un membre d'équipe connecté côté candidat de s'authentifier
+// explicitement côté recruteur (et vice versa).
 const GuestRoute = ({ children, portal = "candidat" }) => {
   const role = authService.getUserRole();
-  const estMembre = authService.getEstMembreEquipe();
+  const loginPortal = authService.getLoginPortal();
   if (!role) return children;
   if (role === "ADMIN") {
     return <Navigate to="/admin-taftech" replace />;
   }
-  if (role === "RECRUTEUR" || estMembre) {
-    return <Navigate to="/dashboard" replace />;
+  if (loginPortal === portal) {
+    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/profil"} replace />;
   }
-  if (portal === "recruteur") {
-    return <Navigate to="/login" replace />;
+  return children;
+};
+
+// Réserve l'espace candidat aux comptes connectés VIA le portail candidat.
+// Un membre d'équipe (compte CANDIDAT) connecté via le portail recruteur n'y a pas accès :
+// l'accès dépend du portail de connexion choisi, pas seulement du rôle.
+// Important : si loginPortal est absent (session ouverte avant cette fonctionnalité,
+// ou données corrompues), on renvoie vers /login pour forcer une reconnexion propre —
+// jamais vers /dashboard, sous peine de boucle infinie avec RecruteurRoute.
+const CandidatRoute = ({ children }) => {
+  const role = authService.getUserRole();
+  const portal = authService.getLoginPortal();
+  if (!role) return <Navigate to="/login" replace />;
+  if (role === "ADMIN") return <Navigate to="/admin-taftech" replace />;
+  if (portal === "recruteur") return <Navigate to="/dashboard" replace />;
+  if (portal !== "candidat") return <Navigate to="/login" replace />;
+  return children;
+};
+
+// Réserve l'espace recruteur aux comptes connectés VIA le portail recruteur.
+// Même précaution que CandidatRoute : portail absent → /recruteurs/connexion, jamais /profil.
+const RecruteurRoute = ({ children }) => {
+  const role = authService.getUserRole();
+  const portal = authService.getLoginPortal();
+  if (!role) return <Navigate to="/recruteurs/connexion" replace />;
+  if (role === "ADMIN") return <Navigate to="/admin-taftech" replace />;
+  if (portal === "candidat") return <Navigate to="/profil" replace />;
+  if (portal !== "recruteur") return <Navigate to="/recruteurs/connexion" replace />;
+  return children;
+};
+
+// Réserve la zone admin — n'existait pas du tout côté frontend jusqu'ici.
+const AdminRoute = ({ children }) => {
+  const role = authService.getUserRole();
+  if (!role) return <Navigate to="/login" replace />;
+  if (role !== "ADMIN") {
+    const portal = authService.getLoginPortal();
+    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/profil"} replace />;
   }
-  return <Navigate to="/profil" replace />;
+  return children;
 };
 
 // Components & Layouts — chargés immédiatement (présents sur toutes les pages)
@@ -135,9 +174,24 @@ const isRecruteurRoute = (pathname) =>
   RECRUTEUR_EXACT_PATHS.includes(pathname) ||
   RECRUTEUR_PREFIX_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
+// Routes partagées (accessibles aux candidats ET recruteurs) : le navbar affiché
+// dépend alors de qui consulte la page, pas du chemin seul (ex: /offres, /jobs/:id,
+// /entreprise/:slug, /entreprises, /regions, /secteurs, /).
+const isAdminRoute = (pathname) => pathname.startsWith("/admin-taftech");
+
 function AppContent() {
   const location = useLocation();
-  const recruteurPortal = isRecruteurRoute(location.pathname);
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  const role = authService.getUserRole();
+  const portal = authService.getLoginPortal();
+  const estRecruteurConnecte = role === "ADMIN" || portal === "recruteur";
+  const recruteurPortal =
+    !isAdminRoute(location.pathname) &&
+    (isRecruteurRoute(location.pathname) || estRecruteurConnecte);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -173,23 +227,23 @@ function AppContent() {
             <Route path="/recruteurs" element={<LandingRecruteur />} />
             <Route path="/recruteurs/connexion" element={<GuestRoute portal="recruteur"><LoginRecruteur /></GuestRoute>} />
             <Route path="/recruteurs/mot-de-passe-oublie" element={<GuestRoute portal="recruteur"><ForgotPasswordRecruteur /></GuestRoute>} />
-            <Route path="/recruteurs/premium" element={<PremiumPage />} />
-            <Route path="/recruteurs/premium/success" element={<PremiumSuccessPage />} />
+            <Route path="/recruteurs/premium" element={<RecruteurRoute><PremiumPage /></RecruteurRoute>} />
+            <Route path="/recruteurs/premium/success" element={<RecruteurRoute><PremiumSuccessPage /></RecruteurRoute>} />
             <Route path="/invitation/equipe/:token" element={<AccepterInvitation />} />
             <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />
 
             {/* ESPACE RECRUTEUR CONNECTÉ */}
-            <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard>} />
-            <Route path="/dashboard" element={<DashboardRecruteur />} />
-            <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
-            <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
-            <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
-            <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
-            <Route path="/parametres" element={<ParametresRecruteur />} />
-            <Route path="/mon-equipe" element={<MonEquipe />} />
+            <Route path="/creer-offre" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard></RecruteurRoute>} />
+            <Route path="/dashboard" element={<RecruteurRoute><DashboardRecruteur /></RecruteurRoute>} />
+            <Route path="/dashboard/offres/:id" element={<RecruteurRoute><GestionOffre /></RecruteurRoute>} />
+            <Route path="/cvtheque" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard></RecruteurRoute>} />
+            <Route path="/candidatures-spontanees" element={<RecruteurRoute><CandidaturesSpontanees /></RecruteurRoute>} />
+            <Route path="/questionnaires" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard></RecruteurRoute>} />
+            <Route path="/parametres" element={<RecruteurRoute><ParametresRecruteur /></RecruteurRoute>} />
+            <Route path="/mon-equipe" element={<RecruteurRoute><MonEquipe /></RecruteurRoute>} />
 
             {/* ESPACE CANDIDAT */}
-            <Route element={<CandidatLayout />}>
+            <Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>
               <Route path="/profil" element={<ProfilCandidat />} />
               <Route path="/mes-candidatures" element={<MesCandidatures />} />
               <Route path="/inbox" element={<BoiteReception />} />
@@ -201,7 +255,7 @@ function AppContent() {
             </Route>
 
             {/* ZONE ADMINISTRATION */}
-            <Route path="/admin-taftech" element={<AdminLayout />}>
+            <Route path="/admin-taftech" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminEntreprises />} />
               <Route path="entreprises" element={<AdminEntreprises />} />
               <Route path="offres" element={<AdminOffres />} />

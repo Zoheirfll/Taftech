@@ -5,9 +5,9 @@ export const authService = {
   // --------------------------------------------------------
   // 1. LOGIN : Plus de stockage de token ici !
   // --------------------------------------------------------
-  login: async (email, password, portal = null) => {
+  login: async (email, password, portal = null, rememberMe = false) => {
     try {
-      const payload = { username: email, password };
+      const payload = { username: email, password, remember_me: rememberMe };
       if (portal) payload.portal = portal;
       const response = await api.post("accounts/login/", payload);
 
@@ -15,6 +15,10 @@ export const authService = {
         localStorage.setItem("userRole", response.data.role);
       }
       localStorage.setItem("estMembreEquipe", response.data.est_membre_equipe ? "true" : "false");
+      // Portail utilisé pour se connecter — détermine l'espace accessible,
+      // indépendamment du rôle (un membre d'équipe candidat doit re-choisir
+      // explicitement le portail recruteur pour y accéder).
+      localStorage.setItem("loginPortal", portal || "candidat");
       return response.data;
     } catch (err) {
       reportError("ECHEC_LOGIN_API", err);
@@ -36,6 +40,7 @@ export const authService = {
       localStorage.removeItem("userRole");
       localStorage.removeItem("estMembreEquipe");
       localStorage.removeItem("membreRole");
+      localStorage.removeItem("loginPortal");
       const dest = redirectTo || (role === "RECRUTEUR" || estMembre ? "/recruteurs/connexion" : "/login");
       window.location.href = dest;
     }
@@ -54,6 +59,10 @@ export const authService = {
 
   getEstMembreEquipe: () => {
     return localStorage.getItem("estMembreEquipe") === "true";
+  },
+
+  getLoginPortal: () => {
+    return localStorage.getItem("loginPortal");
   },
 
   isRecruteurOuMembre: () => {
@@ -183,6 +192,7 @@ export const authService = {
         localStorage.setItem("userRole", response.data.role);
       }
       localStorage.setItem("estMembreEquipe", response.data.est_membre_equipe ? "true" : "false");
+      localStorage.setItem("loginPortal", role === "RECRUTEUR" ? "recruteur" : "candidat");
       return response.data;
     } catch (err) {
       reportError("ECHEC_GOOGLE_LOGIN", err);
@@ -196,6 +206,16 @@ export const authService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_CONSENTEMENT", err);
+      throw err;
+    }
+  },
+
+  accepterConsentementCVTheque: async () => {
+    try {
+      const response = await api.patch("accounts/consentement-cvtheque/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CONSENTEMENT_CVTHEQUE", err);
       throw err;
     }
   },

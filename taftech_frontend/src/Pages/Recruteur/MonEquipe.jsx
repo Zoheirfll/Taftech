@@ -445,7 +445,7 @@ const MonEquipe = () => {
               </div>
               <p className="text-xs text-slate-400">
                 Un email d'invitation valable 72h sera envoyé. La personne peut
-                avoir un compte TafTech existant ou en créer un.
+                avoir un compte TAFTECH existant ou en créer un.
               </p>
             </div>
             <div className="flex gap-3 mt-6">

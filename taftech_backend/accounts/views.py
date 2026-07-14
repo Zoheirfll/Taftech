@@ -21,7 +21,7 @@ class CypressAwareThrottle(AnonRateThrottle):
         return super().allow_request(request, view)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny
-from .serializers import RegisterCandidatDTO, MyTokenObtainPairSerializer, EmailTokenObtainSerializer, RecruteurRegisterSerializer
+from .serializers import RegisterCandidatDTO, EmailTokenObtainSerializer, RecruteurRegisterSerializer
 from django.contrib.auth import get_user_model
 from .models import SystemErrorLog
 from jobs.views.equipe import get_entreprise_for_user, _log
@@ -256,6 +256,9 @@ class CookieTokenObtainView(TokenObtainPairView):
         except Exception:
             pass
 
+        remember_me = str(request.data.get('remember_me', False)).lower() == 'true'
+        cookie_max_age = 60 * 60 * 24 if remember_me else None  # 1 jour — limite le risque sur poste partagé
+
         response = Response({"role": data['role'], "est_membre_equipe": data.get('est_membre_equipe', False)}, status=status.HTTP_200_OK)
         response.set_cookie(
             key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -263,6 +266,7 @@ class CookieTokenObtainView(TokenObtainPairView):
             httponly=True,
             samesite='Lax',
             secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            max_age=cookie_max_age,
         )
         response.set_cookie(
             key='refreshToken',
@@ -270,17 +274,30 @@ class CookieTokenObtainView(TokenObtainPairView):
             httponly=True,
             samesite='Lax',
             secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            max_age=cookie_max_age,
         )
+        # Marqueur non-sensible (lisible) pour que CookieTokenRefreshView sache
+        # s'il doit reconduire la persistance du cookie sur le refresh token roté.
+        if remember_me:
+            response.set_cookie(
+                key='rememberMe',
+                value='1',
+                httponly=True,
+                samesite='Lax',
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                max_age=cookie_max_age,
+            )
+        else:
+            response.delete_cookie('rememberMe')
         return response
 
 
 class CookieTokenRefreshView(TokenRefreshView):
-    serializer_class = MyTokenObtainPairSerializer
-
     def post(self, request, *args, **kwargs):
-        refresh_token = getattr(request, 'COOKIES', {}).get('refreshToken')
-        if not refresh_token and hasattr(request, '_request'):
-            refresh_token = request._request.COOKIES.get('refreshToken')
+        cookies = getattr(request, 'COOKIES', {}) or getattr(getattr(request, '_request', None), 'COOKIES', {})
+        refresh_token = cookies.get('refreshToken')
+        remember_me = cookies.get('rememberMe') == '1'
+        cookie_max_age = 60 * 60 * 24 if remember_me else None
 
         if refresh_token:
             request.data['refresh'] = refresh_token
@@ -294,8 +311,31 @@ class CookieTokenRefreshView(TokenRefreshView):
                     httponly=True,
                     samesite='Lax',
                     secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                    max_age=cookie_max_age,
                 )
                 del response.data['access']
+                # ROTATE_REFRESH_TOKENS=True renvoie un nouveau refresh token à
+                # chaque appel et blackliste l'ancien : le cookie doit être remplacé
+                # sous peine que la session se casse au refresh suivant.
+                new_refresh = response.data.pop('refresh', None)
+                if new_refresh:
+                    response.set_cookie(
+                        key='refreshToken',
+                        value=new_refresh,
+                        httponly=True,
+                        samesite='Lax',
+                        secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                        max_age=cookie_max_age,
+                    )
+                    if remember_me:
+                        response.set_cookie(
+                            key='rememberMe',
+                            value='1',
+                            httponly=True,
+                            samesite='Lax',
+                            secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                            max_age=cookie_max_age,
+                        )
             return response
         except Exception:
             return Response({"detail": "Session expirée, veuillez vous reconnecter."}, status=401)
@@ -317,6 +357,7 @@ class LogoutAPIView(APIView):
         response = Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
         response.delete_cookie('accessToken')
         response.delete_cookie('refreshToken')
+        response.delete_cookie('rememberMe')
         return response
 
 
@@ -476,6 +517,7 @@ class MeAPIView(APIView):
             'last_name': user.last_name,
             'role': user.role,
             'est_compte_google': getattr(user, 'est_compte_google', False),
+            'consentement_cvtheque': user.consentement_cvtheque,
         })
 
 
@@ -581,4 +623,15 @@ class ConsentementLoi1807View(APIView):
     def patch(self, request):
         request.user.consentement_loi_18_07 = True
         request.user.save(update_fields=['consentement_loi_18_07'])
+        return Response({'ok': True})
+
+
+class ConsentementCVThequeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        if not get_entreprise_for_user(request.user):
+            return Response({"error": "Réservé aux recruteurs."}, status=status.HTTP_403_FORBIDDEN)
+        request.user.consentement_cvtheque = True
+        request.user.save(update_fields=['consentement_cvtheque'])
         return Response({'ok': True})

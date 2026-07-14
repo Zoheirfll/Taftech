@@ -581,7 +581,7 @@ const ParametresRecruteur = () => {
                       Compte vérifié
                     </p>
                     <p className="text-xs text-slate-500">
-                      Votre entreprise a été validée par TafTech.
+                      Votre entreprise a été validée par TAFTECH.
                     </p>
                   </div>
                 </>

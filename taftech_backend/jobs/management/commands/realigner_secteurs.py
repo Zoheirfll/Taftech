@@ -484,23 +484,6 @@ REGLES = [
         ],
         "exclude": [],
     },
-
-    # ── AUTRE -> BANQUE (gestionnaire clientèle banque) ──────────
-    {
-        "from": "AUTRE",
-        "to": "BANQUE",
-        "include": [
-            "charge.*portefeuille.*particuliers",
-            "charge.*portefeuille.*professionnels",
-            "gestionnaire.*clientele.*particuliers",
-            "gestionnaire.*clientele.*professionnels",
-            "gestionnaire middle office",
-            "gestionnaire.*comptes",
-            "gestionnaire.*produits.*bancaires",
-            "charge de clientele.*banque",
-        ],
-        "exclude": [],
-    },
 ]
 
 

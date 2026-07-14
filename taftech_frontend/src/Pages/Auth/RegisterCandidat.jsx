@@ -7,23 +7,23 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { selectStyles } from "../../theme";
-import { Rocket, Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react";
 
 const TEXTE_LOI_1807 = {
   titre: "Protection des données à caractère personnel (Loi 18-07)",
-  contenu: `Conformément à la loi n° 18-07 du 10 juin 2018 relative à la protection des personnes physiques dans le traitement des données à caractère personnel, TafTech s'engage à :
+  contenu: `Conformément à la loi n° 18-07 du 10 juin 2018 relative à la protection des personnes physiques dans le traitement des données à caractère personnel, TAFTECH s'engage à :
 
 1. Finalité : Vos données (Téléphone, CV) sont collectées exclusivement pour faciliter votre mise en relation avec des recruteurs.
 2. Droits de l'utilisateur : Vous disposez d'un droit d'accès, de rectification et de suppression de vos données depuis votre espace personnel.
-3. Sécurité : TafTech met en œuvre des mesures de sécurité techniques pour prévenir toute fuite ou utilisation frauduleuse de vos informations.
+3. Sécurité : TAFTECH met en œuvre des mesures de sécurité techniques pour prévenir toute fuite ou utilisation frauduleuse de vos informations.
 
 En cochant la case de consentement, vous acceptez que vos informations professionnelles soient visibles par les entreprises enregistrées sur la plateforme.`,
 };
 
 const AVANTAGES = [
-  { icon: Rocket, title: "Candidature rapide", desc: "Postulez en un clic" },
-  { icon: Eye, title: "Visibilité maximale", desc: "Soyez vu par les recruteurs" },
-  { icon: Lock, title: "Données sécurisées", desc: "Conforme Loi 18-07" },
+  { icon: CheckCircle2, title: "Candidature simplifiée", desc: "Postulez rapidement à vos offres préférées." },
+  { icon: Eye, title: "Plus de visibilité", desc: "Votre profil est accessible aux entreprises en recherche de candidats." },
+  { icon: Lock, title: "Vos données en sécurité", desc: "Vos informations personnelles sont protégées conformément à la loi n° 18-07 relative à la protection des données à caractère personnel." },
 ];
 
 const STEPS = [
@@ -43,13 +43,17 @@ const RegisterCandidat = () => {
     last_name: "",
     date_naissance: "",
     telephone: "",
+    nin: "",
     wilaya: "",
+    adresse: "",
     email: "",
     password: "",
+    confirmPassword: "",
     consentement_loi_18_07: false,
   });
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
@@ -91,11 +95,20 @@ const RegisterCandidat = () => {
       toast.error("Veuillez sélectionner votre wilaya.");
       return;
     }
+    if (!/^\d{18}$/.test(formData.nin)) {
+      toast.error("Le NIN doit contenir exactement 18 chiffres.");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas.");
+      return;
+    }
     setLoading(true);
     const toastId = toast.loading("Création de votre profil...");
     try {
       const usernameGenere = formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
-      await authService.registerCandidat({ ...formData, username: usernameGenere });
+      const { confirmPassword, ...payload } = formData;
+      await authService.registerCandidat({ ...payload, username: usernameGenere });
       toast.success("Code envoyé à votre adresse email !", { id: toastId });
       sessionStorage.setItem("taftech_pending_verification", formData.email);
       setRegisteredEmail(formData.email);
@@ -177,7 +190,9 @@ const RegisterCandidat = () => {
               Propulsez votre <span className="text-indigo-200">carrière</span>
             </h2>
             <p className="text-indigo-100 text-sm leading-relaxed mb-8">
-              Rejoignez TafTech et accédez à des milliers d'opportunités à travers toute l'Algérie.
+              Rejoignez TAFTECH et accédez à des milliers d'opportunités professionnelles
+              partout en Algérie. Créez votre profil, postulez facilement et laissez les
+              recruteurs vous trouver.
             </p>
             <div className="space-y-4">
               {AVANTAGES.map(({ icon: Icon, title, desc }) => (
@@ -254,6 +269,18 @@ const RegisterCandidat = () => {
                   <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Wilaya *</label>
                   <Select name="wilaya" options={wilayasList} onChange={handleSelectChange} placeholder="Sélectionnez votre wilaya..." styles={selectStyles} classNamePrefix="wilaya-select" />
                 </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Adresse *</label>
+                  <input type="text" name="adresse" required value={formData.adresse} onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">NIN (Numéro d'Identification Nationale) *</label>
+                  <input type="text" name="nin" required maxLength={18} pattern="\d{18}" title="Le NIN doit contenir exactement 18 chiffres."
+                    placeholder="18 chiffres" value={formData.nin}
+                    onChange={(e) => setFormData({ ...formData, nin: e.target.value.replace(/\D/g, "") })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Email *</label>
@@ -271,23 +298,35 @@ const RegisterCandidat = () => {
                     </div>
                   </div>
                 </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Confirmer le mot de passe *</label>
+                  <div className="relative">
+                    <input type={showConfirmPass ? "text" : "password"} name="confirmPassword" required minLength="8" value={formData.confirmPassword} onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 pr-10" />
+                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                      {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
 
                 {/* Consentement */}
                 <div className="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
                   <input type="checkbox" id="consentement" name="consentement_loi_18_07" required checked={formData.consentement_loi_18_07} onChange={handleChange}
                     className="mt-0.5 w-4 h-4 cursor-pointer rounded text-indigo-600 border-slate-300" />
                   <label htmlFor="consentement" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
-                    J'autorise l'utilisation de mes données pour le recrutement conformément à la{" "}
+                    J'accepte que mes données personnelles soient traitées par TAFTECH dans le cadre
+                    des services de recrutement, conformément à la{" "}
                     <button type="button" onClick={() => setShowModal(true)} className="text-indigo-600 font-semibold hover:underline">
-                      Loi 18-07
-                    </button>. *
+                      loi n° 18-07
+                    </button>{" "}
+                    relative à la protection des données à caractère personnel. *
                   </label>
                 </div>
 
                 <button type="submit" disabled={loading || !formData.consentement_loi_18_07}
                   className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                  {loading ? "Création en cours..." : "S'inscrire"}
+                  {loading ? "Création en cours..." : "Créer mon compte"}
                 </button>
               </form>
 
@@ -319,11 +358,18 @@ const RegisterCandidat = () => {
                 />
               </div>
 
+              <p className="text-sm text-slate-500 text-center mt-6">
+                Vous avez déjà un compte ?{" "}
+                <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
+                  Se connecter
+                </Link>
+              </p>
+
               {showConsentModal && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center px-4">
                   <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
                     <h2 className="text-xl font-bold text-slate-900 mb-1">Protection des données — Loi 18-07</h2>
-                    <p className="text-sm text-slate-500 mb-4">Avant d'accéder à TafTech, vous devez lire et accepter la politique de confidentialité.</p>
+                    <p className="text-sm text-slate-500 mb-4">Avant d'accéder à TAFTECH, vous devez lire et accepter la politique de confidentialité.</p>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-52 overflow-y-auto text-sm text-slate-700 leading-relaxed whitespace-pre-line mb-5">
                       {TEXTE_LOI_1807.contenu}
                     </div>
@@ -336,7 +382,7 @@ const RegisterCandidat = () => {
                         setConsentLoading(true);
                         try {
                           await authService.accepterConsentement();
-                          toast.success("Bienvenue sur TafTech !");
+                          toast.success("Bienvenue sur TAFTECH !");
                           navigate("/");
                           window.location.reload();
                         } catch {

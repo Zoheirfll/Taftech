@@ -60,7 +60,7 @@ const AdminBroadcast = () => {
                 {
                   value: "NEWSLETTER",
                   label: "Newsletter",
-                  desc: "Conseils, actus TafTech et événements.",
+                  desc: "Conseils, actus TAFTECH et événements.",
                 },
                 {
                   value: "EXCLUSIF",

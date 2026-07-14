@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import InfoBanner from "../../Components/InfoBanner";
 import { jobsService } from "../../Services/jobsService";
+import { authService } from "../../Services/authService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
@@ -76,6 +77,9 @@ const CVTheque = () => {
   const [showFiltres, setShowFiltres] = useState(false);
   const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
   const [isPremium, setIsPremium] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
 
   // Matching IA par offre
   const [offreId, setOffreId] = useState("");
@@ -98,6 +102,32 @@ const CVTheque = () => {
   };
 
   useEffect(() => {
+    const checkConsent = async () => {
+      try {
+        const me = await authService.getMe();
+        setConsentGiven(!!me.consentement_cvtheque);
+      } catch (err) {
+        reportError("ECHEC_CHECK_CONSENTEMENT_CVTHEQUE", err);
+        setConsentGiven(false);
+      }
+    };
+    checkConsent();
+  }, []);
+
+  const handleAccepterConsentement = async () => {
+    setConsentLoading(true);
+    try {
+      await authService.accepterConsentementCVTheque();
+      setConsentGiven(true);
+    } catch (err) {
+      toast.error("Erreur lors de l'enregistrement du consentement.");
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!consentGiven) return;
     const loadInit = async () => {
       try {
         const [data, dash] = await Promise.all([
@@ -113,7 +143,7 @@ const CVTheque = () => {
       }
     };
     loadInit();
-  }, []);
+  }, [consentGiven]);
 
   const chargerCandidats = useCallback(async () => {
     setLoading(true);
@@ -166,11 +196,12 @@ const CVTheque = () => {
   ]);
 
   useEffect(() => {
+    if (!consentGiven) return;
     const delayDebounce = setTimeout(() => {
       chargerCandidats();
     }, 400);
     return () => clearTimeout(delayDebounce);
-  }, [chargerCandidats]);
+  }, [chargerCandidats, consentGiven]);
 
   const handleReset = () => {
     setSearch("");
@@ -280,6 +311,49 @@ const CVTheque = () => {
     inscritRecent,
   ].filter(Boolean).length;
 
+  if (consentGiven === null) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-20 flex justify-center">
+        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (consentGiven === false) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Avant d'accéder à la CVthèque</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            La CVthèque vous donne accès aux données personnelles de candidats. Merci de confirmer votre engagement avant de continuer.
+          </p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+                className="mt-0.5 w-4 h-4 cursor-pointer rounded text-teal-700 border-slate-300"
+              />
+              <span className="text-sm text-slate-700 leading-relaxed">
+                Je m'engage à traiter les données personnelles des candidats consultées dans la CVthèque
+                uniquement dans le cadre du recrutement, et à ne pas les utiliser à d'autres fins,
+                conformément à la loi n° 18-07 relative à la protection des données à caractère personnel.
+              </span>
+            </label>
+          </div>
+          <button
+            disabled={!consentChecked || consentLoading}
+            onClick={handleAccepterConsentement}
+            className="w-full py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {consentLoading ? "Enregistrement..." : "J'accepte et je continue"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* BANNIÈRE PREMIUM */}
@@ -340,6 +414,7 @@ const CVTheque = () => {
           Ajoutez des candidats à vos <strong>favoris ⭐</strong> pour les retrouver facilement dans l'onglet "Favoris".
           Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
           Les coordonnées (email, téléphone) sont visibles uniquement avec un compte Premium.
+          L'accès à la CVthèque implique votre engagement à traiter les données des candidats <strong>uniquement dans le cadre du recrutement</strong>, conformément à la loi n° 18-07.
         </InfoBanner>
       </div>
 
@@ -661,6 +736,7 @@ const CVTheque = () => {
                         {/* Ligne 2 : wilaya + diplôme + expérience */}
                         <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                           {candidat.wilaya && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.wilaya.split(" - ")[1] || candidat.wilaya}</span>}
+                          {candidat.adresse && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.adresse}</span>}
                           {candidat.diplome && <span className="flex items-center gap-0.5"><GraduationCap size={10} />{constants.diplomes.find(d => d.value === candidat.diplome)?.label || candidat.diplome}</span>}
                           {candidat.niveau_experience && <span className="flex items-center gap-0.5"><Briefcase size={10} />{candidat.niveau_experience}</span>}
                         </div>

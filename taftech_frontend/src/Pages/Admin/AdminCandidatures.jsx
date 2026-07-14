@@ -163,7 +163,7 @@ const AdminCandidatures = () => {
                           : `${cand.nom_rapide} ${cand.prenom_rapide}`}
                       </p>
                       <p className="text-xs text-indigo-600 font-medium">
-                        {cand.est_rapide ? "⚡ Rapide" : "Compte TafTech"}
+                        {cand.est_rapide ? "⚡ Rapide" : "Compte TAFTECH"}
                       </p>
                     </td>
                     <td className="px-4 py-3">

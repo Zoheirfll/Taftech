@@ -295,7 +295,7 @@ const GestionOffre = () => {
                     ? `${candidatData.last_name} ${candidatData.first_name}`
                     : `${cand.nom_rapide} ${cand.prenom_rapide}`;
                   const titre = candidatData
-                    ? candidatData.titre_professionnel || "Candidat TafTech"
+                    ? candidatData.titre_professionnel || "Candidat TAFTECH"
                     : "Candidature rapide";
                   return (
                     <div key={cand.id}>

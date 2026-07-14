@@ -71,7 +71,7 @@ const FAQ = [
   },
   {
     q: "Mes données et celles des candidats sont-elles sécurisées ?",
-    r: "TafTech est 100% conforme à la loi algérienne 18-07 sur la protection des données personnelles. Les données sont stockées sur des serveurs localisés en Algérie. Aucune donnée n'est revendue à des tiers.",
+    r: "TAFTECH est 100% conforme à la loi algérienne 18-07 sur la protection des données personnelles. Les données sont stockées sur des serveurs localisés en Algérie. Aucune donnée n'est revendue à des tiers.",
   },
   {
     q: "Puis-je inviter des collaborateurs sur mon espace recruteur ?",
@@ -114,7 +114,7 @@ const LandingRecruteur = () => {
               talents en un temps record.
             </h1>
             <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-lg">
-              TafTech connecte les entreprises algériennes aux profils qualifiés grâce à l'intelligence artificielle. Matching automatique, CVthèque nationale, gestion complète.
+              TAFTECH connecte les entreprises algériennes aux profils qualifiés grâce à l'intelligence artificielle. Matching automatique, CVthèque nationale, gestion complète.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
               <Link
@@ -143,7 +143,7 @@ const LandingRecruteur = () => {
           {/* CARTE STATS — Fix 4 badge responsive */}
           <div className="relative">
             <div className="bg-slate-900 rounded-3xl p-8 text-white">
-              <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-6">TafTech en chiffres</p>
+              <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-6">TAFTECH en chiffres</p>
               <div className="space-y-4">
                 {[
                   { label: "Offres actives",        value: fmt(stats?.total_offres),      color: "bg-teal-500" },
@@ -254,7 +254,7 @@ const LandingRecruteur = () => {
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-3xl font-extrabold text-slate-900 mb-4">
-              Pourquoi choisir TafTech ?
+              Pourquoi choisir TAFTECH ?
             </h2>
             <p className="text-slate-500 text-base leading-relaxed mb-8">
               La seule plateforme de recrutement algérienne avec matching par IA, conforme ANPDP, pensée pour les entreprises locales.

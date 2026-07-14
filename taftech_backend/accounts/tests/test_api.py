@@ -25,9 +25,10 @@ class RegistrationAPIIntegrationTest(APITestCase):
             "nin": "111122223333444455",
             "telephone": "0555000000",
             "consentement_loi_18_07": True,
-            "wilaya": "16 - Alger"
+            "wilaya": "16 - Alger",
+            "adresse": "1 rue Didouche Mourad, Alger"
         }
-        
+
         # On simule la requête HTTP
         response = self.client.post(url, payload)
         

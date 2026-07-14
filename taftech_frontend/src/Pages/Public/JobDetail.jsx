@@ -345,7 +345,7 @@ const JobDetail = () => {
                 onClick={() => { if (job.questionnaire) setShowQuestionnaireModal(true); else setPostulationMode("taftech"); }}
                 className="w-full flex flex-col items-center py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors shadow-sm"
               >
-                <span className="text-sm font-semibold">Postuler avec mon profil TafTech</span>
+                <span className="text-sm font-semibold">Postuler avec mon profil TAFTECH</span>
                 <span className="text-xs text-indigo-200 mt-0.5">
                   {job.questionnaire ? `Questionnaire requis · ${job.questionnaire.questions?.length || 0} questions` : "Recommandé — analysé par notre IA"}
                 </span>

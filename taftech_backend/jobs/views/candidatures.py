@@ -55,6 +55,7 @@ class PostulerAPIView(APIView):
                 "titre_professionnel": profil.titre_professionnel,
                 "wilaya": profil.wilaya,
                 "commune": profil.commune,
+                "adresse": profil.adresse,
                 "diplome": profil.diplome,
                 "specialite": profil.specialite,
                 "competences": profil.competences,

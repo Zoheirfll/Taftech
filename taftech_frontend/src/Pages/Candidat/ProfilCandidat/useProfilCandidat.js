@@ -117,8 +117,10 @@ export const useProfilCandidat = () => {
         first_name: pData.first_name,
         last_name: pData.last_name,
         telephone: pData.telephone || "",
+        nin: pData.nin || "",
         wilaya: pData.wilaya || "",
         commune: pData.commune || "",
+        adresse: pData.adresse || "",
         diplome: pData.diplome || "",
         specialite: pData.specialite || "",
         service_militaire: pData.service_militaire || "",
@@ -195,9 +197,9 @@ export const useProfilCandidat = () => {
     e.preventDefault();
     try {
       const formData = new FormData();
-      Object.keys(dataState).forEach((key) =>
-        formData.append(key, dataState[key]),
-      );
+      Object.keys(dataState)
+        .filter((key) => key !== "nin")
+        .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
       setModalState(false);

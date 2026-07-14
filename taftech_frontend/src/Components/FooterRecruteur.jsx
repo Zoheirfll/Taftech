@@ -11,7 +11,7 @@ const FooterRecruteur = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/recruteurs" className="flex items-center gap-2">
-              <img src={logoTafTech} alt="TafTech" className="h-9 w-auto object-contain brightness-200" />
+              <img src={logoTafTech} alt="TAFTECH" className="h-9 w-auto object-contain brightness-200" />
               <span className="text-xs font-semibold text-teal-400 bg-teal-900 border border-teal-700 px-2 py-0.5 rounded-md">
                 Recruteurs
               </span>
@@ -73,6 +73,9 @@ const FooterRecruteur = () => {
               <a href="mailto:taftech963@gmail.com" className="hover:text-teal-400 transition-colors block">
                 taftech963@gmail.com
               </a>
+              <a href="tel:+213770123440" className="hover:text-teal-400 transition-colors block">
+                0770 123 440
+              </a>
               <p>Conformité ANPDP</p>
               <p>Loi 18-07 — Protection des données</p>
             </div>
@@ -84,7 +87,7 @@ const FooterRecruteur = () => {
       <div className="border-t border-slate-800 py-6">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} TafTech — Tous droits réservés
+            © {new Date().getFullYear()} TAFTECH — Tous droits réservés
           </p>
           <div className="flex gap-5">
             {["Confidentialité", "CGU", "Cookies"].map((item) => (

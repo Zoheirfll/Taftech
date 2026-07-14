@@ -33,7 +33,8 @@ class RegistrationAndAuthTests(APITestCase):
             "nin": "123456789012345678",
             "telephone": "0550112233",
             "consentement_loi_18_07": True,
-            "wilaya": "31 - Oran"
+            "wilaya": "31 - Oran",
+            "adresse": "5 avenue de la République, Oran"
         }
 
         # 1. Appel de l'API

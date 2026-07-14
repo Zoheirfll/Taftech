@@ -205,13 +205,19 @@ export const DetailCandidature = ({
               {candidatData?.titre_professionnel ||
                 (selectedCandidature.est_rapide
                   ? "Candidature rapide"
-                  : "Candidat TafTech")}
+                  : "Candidat TAFTECH")}
             </p>
             <div className="flex flex-wrap gap-2 mt-2">
               {candidatData?.wilaya && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
                   <MapPin size={11} />
                   {candidatData.wilaya}
+                </span>
+              )}
+              {candidatData?.adresse && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                  <MapPin size={11} />
+                  {candidatData.adresse}
                 </span>
               )}
               {candidatData?.diplome && (
@@ -583,7 +589,7 @@ export const DetailCandidature = ({
                 Candidature rapide
               </p>
               <p className="text-xs text-amber-700 mt-1">
-                Pas de profil TafTech — consultez le CV joint.
+                Pas de profil TAFTECH — consultez le CV joint.
               </p>
             </div>
           )}

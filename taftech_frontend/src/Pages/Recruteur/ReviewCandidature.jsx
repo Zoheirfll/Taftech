@@ -262,6 +262,12 @@ const ReviewCandidature = () => {
                     {profil.commune ? ` · ${profil.commune}` : ""}
                   </span>
                 )}
+                {profil.adresse && (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                    <MapPin size={11} />
+                    {profil.adresse}
+                  </span>
+                )}
                 {profil.diplome && (
                   <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                     <GraduationCap size={11} />

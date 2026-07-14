@@ -16,6 +16,7 @@ const LoginRecruteur = () => {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,7 +24,7 @@ const LoginRecruteur = () => {
     setLoading(true);
     const toastId = toast.loading("Connexion en cours...");
     try {
-      const data = await authService.login(credentials.username, credentials.password, "recruteur");
+      const data = await authService.login(credentials.username, credentials.password, "recruteur", rememberMe);
       if (data.role !== "RECRUTEUR" && !data.est_membre_equipe) {
         toast.error("Ce compte n'est pas un compte recruteur.", { id: toastId });
         authService.logout("/recruteurs/connexion");
@@ -87,7 +88,7 @@ const LoginRecruteur = () => {
         <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
           <div className="mb-8">
             <h3 className="text-xl font-bold text-slate-900">Connexion Recruteur</h3>
-            <p className="text-sm text-slate-500 mt-1">Accédez à votre espace employeur TafTech</p>
+            <p className="text-sm text-slate-500 mt-1">Accédez à votre espace employeur TAFTECH</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -106,12 +107,7 @@ const LoginRecruteur = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-slate-600">Mot de passe</label>
-                <Link to="/recruteurs/mot-de-passe-oublie" className="text-xs text-teal-700 hover:underline">
-                  Mot de passe oublié ?
-                </Link>
-              </div>
+              <label className="text-sm font-semibold text-slate-600 mb-2 block">Mot de passe</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -129,6 +125,21 @@ const LoginRecruteur = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer rounded text-teal-700 border-slate-300"
+                />
+                <span className="text-sm text-slate-600">Se souvenir de moi</span>
+              </label>
+              <Link to="/recruteurs/mot-de-passe-oublie" className="text-xs text-teal-700 hover:underline font-medium">
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             <button

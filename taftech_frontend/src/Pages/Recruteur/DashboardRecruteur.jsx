@@ -311,7 +311,7 @@ const DashboardRecruteur = () => {
       <div className="mb-4">
         <InfoBanner storageKey="dashboard_recruteur" title="Bienvenue sur votre tableau de bord" color="teal">
           Publiez des offres, suivez vos candidatures et analysez vos talents depuis ici.
-          Votre entreprise doit être <strong>validée par l'équipe TafTech</strong> avant de pouvoir publier.
+          Votre entreprise doit être <strong>validée par l'équipe TAFTECH</strong> avant de pouvoir publier.
           Pour accéder à la CVthèque et à l'analyse IA, passez en <strong>Premium</strong>.
         </InfoBanner>
       </div>
@@ -384,7 +384,7 @@ const DashboardRecruteur = () => {
               <p className="text-sm text-slate-400 mb-6 max-w-xs mx-auto">
                 {entreprise?.est_approuvee
                   ? "Commencez à recruter en publiant votre première offre d'emploi."
-                  : "Votre entreprise est en cours de validation par l'équipe TafTech avant de pouvoir publier."}
+                  : "Votre entreprise est en cours de validation par l'équipe TAFTECH avant de pouvoir publier."}
               </p>
               {entreprise?.est_approuvee && authService.peutFaire("UTILISATEUR") && (
                 <button

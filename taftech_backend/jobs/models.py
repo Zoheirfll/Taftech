@@ -267,6 +267,7 @@ class ProfilCandidat(models.Model):
     # --- NOUVEAU : INFOS LOCALISATION (Samira) ---
     wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, blank=True, null=True, verbose_name="Wilaya de résidence")
     commune = models.CharField(max_length=100, blank=True, null=True, verbose_name="Commune")
+    adresse = models.CharField(max_length=255, blank=True, null=True, verbose_name="Adresse")
 
     # --- INFOS ADMINISTRATIVES ---
     service_militaire = models.CharField(max_length=50, choices=SERVICE_MILITAIRE_CHOICES, blank=True, null=True)

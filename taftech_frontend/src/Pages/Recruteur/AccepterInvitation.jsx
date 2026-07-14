@@ -47,7 +47,7 @@ const AccepterInvitation = () => {
 
       // Connecter automatiquement
       try {
-        await authService.login(info.email, form.password);
+        await authService.login(info.email, form.password, "recruteur");
         setTimeout(() => navigate("/dashboard"), 1500);
       } catch {
         // Si login échoue (ex: candidat existant), rediriger vers connexion recruteur
@@ -70,7 +70,7 @@ const AccepterInvitation = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
       <Link to="/" className="mb-8">
-        <img src={logoTafTech} alt="TafTech" className="h-12 w-auto object-contain" />
+        <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
       </Link>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 max-w-md w-full">
@@ -148,13 +148,13 @@ const AccepterInvitation = () => {
 
               {info.compte_existant && !info.sans_mot_de_passe && (
                 <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                  Un compte TafTech existe déjà avec cet email. Entrez votre mot de passe pour confirmer et rejoindre l'équipe.
+                  Un compte TAFTECH existe déjà avec cet email. Entrez votre mot de passe pour confirmer et rejoindre l'équipe.
                 </p>
               )}
 
               {info.sans_mot_de_passe && (
                 <p className="text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-                  Votre compte TafTech a été créé via Google. Définissez un mot de passe pour accéder à l'espace recruteur.
+                  Votre compte TAFTECH a été créé via Google. Définissez un mot de passe pour accéder à l'espace recruteur.
                 </p>
               )}
 
@@ -168,7 +168,7 @@ const AccepterInvitation = () => {
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    placeholder={info.compte_existant && !info.sans_mot_de_passe ? "Votre mot de passe TafTech" : "8 caractères minimum"}
+                    placeholder={info.compte_existant && !info.sans_mot_de_passe ? "Votre mot de passe TAFTECH" : "8 caractères minimum"}
                     autoFocus
                   />
                   <button

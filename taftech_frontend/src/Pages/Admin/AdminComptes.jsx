@@ -103,7 +103,7 @@ const AdminComptes = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Comptes administrateurs</h1>
           <p className="text-sm text-slate-700 mt-0.5">
-            Créez, modifiez ou supprimez les comptes admin TafTech.
+            Créez, modifiez ou supprimez les comptes admin TAFTECH.
           </p>
         </div>
         <button

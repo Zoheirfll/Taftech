@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.db import models
 from django.conf import settings # 👈 L'import manquant est ici !
 
@@ -20,8 +21,16 @@ class CustomUser(AbstractUser):
     # Nouveaux champs personnalisés
     email = models.EmailField(unique=True, verbose_name="Adresse Email")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CANDIDAT')
-    nin = models.CharField(max_length=18, unique=True, null=True, blank=True, verbose_name="Numéro d'Identification National")
+    nin = models.CharField(
+        max_length=18, unique=True, null=True, blank=True,
+        verbose_name="Numéro d'Identification National",
+        validators=[RegexValidator(r'^\d{18}$', "Le NIN doit contenir exactement 18 chiffres.")],
+    )
     consentement_loi_18_07 = models.BooleanField(default=False, verbose_name="Consentement RGPD Algérie (Loi 18-07)")
+    consentement_cvtheque = models.BooleanField(
+        default=False,
+        verbose_name="Consentement traitement des données candidats (CVthèque)"
+    )
     telephone = models.CharField(max_length=15, null=True, blank=True)
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
     email_verifie = models.BooleanField(default=False)

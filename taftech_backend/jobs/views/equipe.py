@@ -353,7 +353,8 @@ class AccepterInvitationAPIView(APIView):
                 if not password or len(password) < 8:
                     return Response({'error': 'Créez un mot de passe (8 caractères minimum) pour accéder à l\'espace recruteur.'}, status=400)
                 user.set_password(password)
-                user.save(update_fields=['password'])
+                user.est_compte_google = False
+                user.save(update_fields=['password', 'est_compte_google'])
             else:
                 # Compte email — vérifier le mot de passe existant
                 if not user.check_password(password):

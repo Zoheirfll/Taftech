@@ -73,7 +73,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Le paiement est-il sécurisé ?",
-    r: "Oui. Le paiement est traité par Chargily Pay, la plateforme de paiement algérienne agréée. TafTech ne stocke aucune information bancaire.",
+    r: "Oui. Le paiement est traité par Chargily Pay, la plateforme de paiement algérienne agréée. TAFTECH ne stocke aucune information bancaire.",
   },
   {
     q: "Quand mon accès Premium est-il activé ?",

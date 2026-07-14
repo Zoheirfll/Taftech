@@ -39,7 +39,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'experiences_detail', 'formations_detail',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
-            'wilaya', 'commune', 'date_joined', 'is_favori', 'last_login', 'user_id',
+            'wilaya', 'commune', 'adresse', 'date_joined', 'is_favori', 'last_login', 'user_id',
             'bio', 'linkedin', 'github'
         )
 
@@ -50,7 +50,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     def get_last_name(self, obj): return obj.user.last_name
     def get_email(self, obj): return obj.user.email if self._is_premium() else None
     def get_telephone(self, obj): return obj.user.telephone if self._is_premium() else None
-    def get_nin(self, obj): return obj.user.nin if self._is_premium() else None
+    def get_nin(self, obj): return obj.user.nin if self.context.get('include_nin') else None
     def get_date_joined(self, obj): return obj.user.date_joined
     def get_last_login(self, obj): return obj.user.last_login
     def get_user_id(self, obj): return obj.user.id

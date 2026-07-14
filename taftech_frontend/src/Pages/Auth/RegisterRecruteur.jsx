@@ -17,7 +17,7 @@ const STEPS = [
 const LEFT_CONTENT = {
   1: {
     title: "Créez votre espace employeur",
-    desc: "Rejoignez TafTech pour accéder aux meilleurs talents d'Algérie. Votre compte sera actif après vérification de vos documents.",
+    desc: "Rejoignez TAFTECH pour accéder aux meilleurs talents d'Algérie. Votre compte sera actif après vérification de vos documents.",
     items: ["Publication illimitée d'offres", "Score IA sur chaque candidat", "CVthèque intelligente", "Gestion d'équipe multi-rôles"],
   },
   2: {
@@ -28,7 +28,7 @@ const LEFT_CONTENT = {
   3: {
     title: "Compte créé avec succès !",
     desc: "Votre email est validé. Nos administrateurs vont vérifier votre Registre de Commerce avant d'activer votre compte.",
-    items: ["Email vérifié ✓", "Dossier transmis à l'équipe TafTech", "Activation sous 24-48h"],
+    items: ["Email vérifié ✓", "Dossier transmis à l'équipe TAFTECH", "Activation sous 24-48h"],
   },
 };
 
@@ -40,10 +40,11 @@ const RegisterRecruteur = () => {
   const [step, setStep] = useState(1);
   const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [secondes, setSecondes] = useState(REDIRECT_DELAY);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
   const [formData, setFormData] = useState({
-    first_name: "", last_name: "", email: "", password: "",
+    first_name: "", last_name: "", email: "", password: "", confirmPassword: "",
     telephone: "", nom_entreprise: "", secteur_activite: "",
     registre_commerce: "", wilaya_siege: "",
   });
@@ -84,11 +85,15 @@ const RegisterRecruteur = () => {
     if (!formData.secteur_activite || !formData.wilaya_siege) {
       return toast.error("Veuillez sélectionner un secteur et une wilaya.");
     }
+    if (formData.password !== formData.confirmPassword) {
+      return toast.error("Les mots de passe ne correspondent pas.");
+    }
     setLoading(true);
     const toastId = toast.loading("Création de votre compte entreprise...");
     try {
       const usernameGenere = formData.email.split("@")[0] + "_pro_" + Math.floor(Math.random() * 999);
-      const response = await authService.registerRecruteur({ ...formData, username: usernameGenere });
+      const { confirmPassword, ...payload } = formData;
+      const response = await authService.registerRecruteur({ ...payload, username: usernameGenere });
       toast.success(response.message || "Code envoyé à votre email.", { id: toastId });
       sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
       setStep(2);
@@ -294,6 +299,28 @@ const RegisterRecruteur = () => {
                 </div>
               </div>
 
+              <div>
+                <label className={labelClass}>Confirmer le mot de passe</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    minLength="8"
+                    required
+                    onChange={handleChange}
+                    placeholder="8 caractères minimum"
+                    className={`${inputClass} pr-11`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -365,7 +392,7 @@ const RegisterRecruteur = () => {
                 <p className="text-sm text-slate-700 leading-relaxed">
                   <strong>Bravo {formData.first_name} !</strong> Votre email est validé.
                   <br /><br />
-                  Pour garantir la qualité des entreprises sur TafTech, votre compte est en cours de vérification par nos administrateurs (analyse du Registre de Commerce).
+                  Pour garantir la qualité des entreprises sur TAFTECH, votre compte est en cours de vérification par nos administrateurs (analyse du Registre de Commerce).
                   <br /><br />
                   Vous pourrez publier vos offres dès que votre compte sera approuvé <span className="font-semibold text-teal-700">(sous 24-48h)</span>.
                 </p>

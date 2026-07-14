@@ -114,7 +114,7 @@ const AlertesEmploi = () => {
 
       <InfoBanner storageKey="alertes_emploi" title="Comment fonctionnent les alertes ?">
         Définissez des mots-clés (ex: "Comptable", "Développeur React") et optionnellement une wilaya.
-        TafTech vous envoie un email <strong>quotidien ou hebdomadaire</strong> dès qu'une nouvelle offre correspond à vos critères.
+        TAFTECH vous envoie un email <strong>quotidien ou hebdomadaire</strong> dès qu'une nouvelle offre correspond à vos critères.
         Vous pouvez activer/désactiver chaque alerte à tout moment.
       </InfoBanner>
 

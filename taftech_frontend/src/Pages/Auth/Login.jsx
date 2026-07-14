@@ -16,6 +16,7 @@ const Login = () => {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,7 +24,7 @@ const Login = () => {
     setLoading(true);
     const toastId = toast.loading("Connexion en cours...");
     try {
-      await authService.login(credentials.username, credentials.password, "candidat");
+      await authService.login(credentials.username, credentials.password, "candidat", rememberMe);
       toast.success("Connexion réussie !", { id: toastId });
       navigate("/");
       window.location.reload();
@@ -64,7 +65,7 @@ const Login = () => {
         <div className="md:w-5/12 bg-linear-to-br from-indigo-700 to-indigo-500 p-10 text-white flex flex-col justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
-              Bon retour sur <span className="text-indigo-200">TafTech</span>
+              Bon retour sur <span className="text-indigo-200">TAFTECH</span>
             </h2>
             <p className="text-indigo-100 text-sm leading-relaxed mb-8">
               Retrouvez vos candidatures, alertes et opportunités au même endroit.
@@ -91,7 +92,10 @@ const Login = () => {
 
         {/* COLONNE DROITE */}
         <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
-          <h3 className="text-xl font-bold text-slate-900 mb-6">Connexion candidat</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-1">Accédez à votre espace TAFTECH</h3>
+          <p className="text-sm text-slate-500 mb-6">
+            Retrouvez vos candidatures, gérez votre profil et suivez vos opportunités professionnelles en toute simplicité.
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -106,12 +110,7 @@ const Login = () => {
               />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-semibold text-slate-600">Mot de passe</label>
-                <Link to="/forgot-password" className="text-xs text-indigo-600 hover:underline font-medium">
-                  Mot de passe oublié ?
-                </Link>
-              </div>
+              <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Mot de passe</label>
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}
@@ -129,6 +128,20 @@ const Login = () => {
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer rounded text-indigo-600 border-slate-300"
+                />
+                <span className="text-sm text-slate-600">Se souvenir de moi</span>
+              </label>
+              <Link to="/forgot-password" className="text-xs text-indigo-600 hover:underline font-medium">
+                Mot de passe oublié ?
+              </Link>
             </div>
             <button
               type="submit"
@@ -162,6 +175,12 @@ const Login = () => {
           </div>
 
           <p className="text-sm text-slate-500 text-center mt-6">
+            Vous n'avez pas encore de compte ?{" "}
+            <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
+              S'inscrire
+            </Link>
+          </p>
+          <p className="text-sm text-slate-500 text-center mt-2">
             Vous recrutez ?{" "}
             <Link to="/recruteurs/connexion" className="text-indigo-600 font-semibold hover:underline">
               Espace recruteur →

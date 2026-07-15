@@ -100,6 +100,7 @@ export const useProfilCandidat = () => {
   const [remplissageLoading, setRemplissageLoading] = useState(false);
   const [parsedData, setParsedData] = useState(null);
   const [parserMode, setParserMode] = useState("remplacer");
+  const [parserFile, setParserFile] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -427,6 +428,7 @@ export const useProfilCandidat = () => {
       const result = await jobsService.parserCV(file);
       if (result.success) {
         setParsedData(result);
+        setParserFile(file);
         toast.success("CV analysé !", { id: toastId });
       } else {
         toast.error(result.error || "Impossible d'analyser ce CV.", {
@@ -439,6 +441,11 @@ export const useProfilCandidat = () => {
     } finally {
       setParserLoading(false);
     }
+  };
+
+  const resetParser = () => {
+    setParsedData(null);
+    setParserFile(null);
   };
 
   const handleValiderParsing = async () => {
@@ -541,6 +548,9 @@ export const useProfilCandidat = () => {
       } else if (!parsedData.photo && remplacer && profil.photo_profil) {
         formData.append("remove_photo_profil", "true");
       }
+      if (parserFile && (remplacer || !profil.cv_pdf)) {
+        formData.append("cv_pdf", parserFile);
+      }
       if ([...formData.entries()].length > 0)
         await profilService.updateProfil(formData);
       if (parsedData.experiences?.length > 0 || remplacer) {
@@ -562,6 +572,7 @@ export const useProfilCandidat = () => {
                 date_debut: convertDateRaw(exp.date_debut_raw),
                 date_fin: convertDateRaw(exp.date_fin_raw),
                 description: exp.description,
+                secteur: exp.secteur || null,
               })
               .catch((err) => reportError("ECHEC_AJOUT_EXP_PARSER", err)),
           ),
@@ -594,6 +605,7 @@ export const useProfilCandidat = () => {
       toast.success("Profil rempli avec succès !", { id: toastId });
       setShowParserModal(false);
       setParsedData(null);
+      setParserFile(null);
       fetchData();
     } catch (err) {
       toast.error("Erreur lors du remplissage.", { id: toastId });
@@ -667,6 +679,7 @@ export const useProfilCandidat = () => {
     remplissageLoading,
     parsedData,
     setParsedData,
+    resetParser,
     parserMode,
     setParserMode,
     // Computed

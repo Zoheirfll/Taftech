@@ -24,6 +24,7 @@ class ProfilEntreprise(models.Model):
     
     # 👇 NOUVEAU : Ajout du champ pour la commune du siège 👇
     commune_siege = models.CharField(max_length=150, blank=True, null=True, verbose_name="Commune du siège")
+    adresse_complete = models.CharField(max_length=255, blank=True, null=True, verbose_name="Adresse complète (pour la carte)")
     
     registre_commerce = models.CharField(max_length=50, unique=True, verbose_name="Numéro de Registre de Commerce (RC)")
     description = models.TextField(blank=True, null=True, verbose_name="Présentation de l'entreprise")
@@ -113,6 +114,7 @@ class OffreEmploi(models.Model):
     specialite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True, verbose_name="Spécialité / Secteur")
     type_contrat = models.CharField(max_length=50, choices=TYPES_CONTRAT, default='CDI')
     experience_requise = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
+    nombre_postes = models.PositiveIntegerField(default=1, verbose_name="Nombre de postes à pourvoir")
     
     description = models.TextField(blank=True, null=True, verbose_name="Description générale")
     missions = models.TextField(blank=True, null=True, verbose_name="Missions du poste")

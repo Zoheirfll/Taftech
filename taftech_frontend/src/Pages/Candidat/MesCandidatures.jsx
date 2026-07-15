@@ -262,8 +262,25 @@ const MesCandidatures = () => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className={`h-8 w-64 ${tw.surfaceSubtle} rounded-lg animate-pulse`} />
+          <div className={`h-4 w-80 ${tw.surfaceSubtle} rounded animate-pulse`} />
+        </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className={`${tw.card} rounded-2xl p-6 animate-pulse`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-16 h-16 rounded-xl ${tw.surfaceSubtle} shrink-0`} />
+                <div className="flex-1 space-y-2">
+                  <div className={`h-4 w-1/3 ${tw.surfaceSubtle} rounded`} />
+                  <div className={`h-3 w-1/4 ${tw.surfaceSubtle} rounded`} />
+                  <div className={`h-3 w-1/5 ${tw.surfaceSubtle} rounded`} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
 

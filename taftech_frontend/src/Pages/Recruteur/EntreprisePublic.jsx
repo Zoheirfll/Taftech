@@ -10,7 +10,6 @@ import {
   Briefcase,
   Users,
   Building2,
-  ArrowLeft,
   Send,
   FileText,
   X,
@@ -88,7 +87,7 @@ const EntreprisePublic = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
       </div>
     );
 
@@ -96,18 +95,13 @@ const EntreprisePublic = () => {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <p className="text-slate-700 font-medium">{error}</p>
-        <Link to="/offres" className="text-sm text-teal-700 font-semibold hover:underline">Voir toutes les offres</Link>
+        <Link to="/offres" className="text-sm text-indigo-600 font-semibold hover:underline">Voir toutes les offres</Link>
       </div>
     );
 
   if (!entreprise) return null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const role = localStorage.getItem("userRole");
-  const backLink = role === "RECRUTEUR"
-    ? { to: "/dashboard", label: "Retour au dashboard" }
-    : { to: "/offres", label: "Retour aux offres" };
-
   const secteurLabel = constants.secteurs.find((s) => s.value === entreprise.secteur_activite)?.label
     || entreprise.secteur_activite || "Secteur non défini";
 
@@ -123,7 +117,7 @@ const EntreprisePublic = () => {
     constants.experiences?.find((e) => e.value === val)?.label || val;
 
   const CONTRAT_BADGES = {
-    CDI:    "bg-teal-50 text-teal-700 border-teal-200",
+    CDI:    "bg-indigo-50 text-indigo-600 border-indigo-200",
     CDD:    "bg-amber-50 text-amber-700 border-amber-200",
     STAGE:  "bg-indigo-50 text-indigo-700 border-indigo-200",
     FREELANCE: "bg-slate-100 text-slate-700 border-slate-200",
@@ -141,23 +135,15 @@ const EntreprisePublic = () => {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
 
-      {/* ── RETOUR ──────────────────────────────────────────────────────────── */}
-      <Link
-        to={backLink.to}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900 mb-6 transition-colors"
-      >
-        <ArrowLeft size={16} /> {backLink.label}
-      </Link>
-
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
-        {/* Bandeau teal : logo + nom + bouton */}
-        <div className="bg-linear-to-br from-teal-700 to-teal-900 px-6 md:px-8 py-6">
+        {/* Bandeau indigo : logo + nom + bouton */}
+        <div className="bg-linear-to-br from-indigo-600 to-indigo-900 px-6 md:px-8 py-6">
           <div className="flex items-center gap-5">
             <div className="w-20 h-20 bg-white rounded-2xl border-2 border-white/30 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
               {entreprise.logo_url
@@ -166,13 +152,13 @@ const EntreprisePublic = () => {
             </div>
             <div className="text-white min-w-0 flex-1">
               <h1 className="text-2xl font-extrabold leading-tight truncate">{entreprise.nom_entreprise}</h1>
-              <div className="flex items-center gap-2 mt-1.5 text-teal-100 text-sm overflow-hidden">
+              <div className="flex items-center gap-2 mt-1.5 text-indigo-100 text-sm overflow-hidden">
                 <span className="flex items-center gap-1 shrink-0"><Briefcase size={13} /> {secteurCourt}</span>
-                <span className="text-teal-400 shrink-0">·</span>
+                <span className="text-indigo-400 shrink-0">·</span>
                 <span className="flex items-center gap-1 shrink-0"><MapPin size={13} /> {lieuAffiche}</span>
                 {tailleLabel && (
                   <>
-                    <span className="text-teal-400 shrink-0">·</span>
+                    <span className="text-indigo-400 shrink-0">·</span>
                     <span className="flex items-center gap-1 shrink-0"><Users size={13} /> {tailleLabel}</span>
                   </>
                 )}
@@ -194,7 +180,7 @@ const EntreprisePublic = () => {
           <div className="sm:hidden mb-5">
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-800 transition-colors shadow-sm"
             >
               <Send size={14} /> Candidature spontanée
             </button>
@@ -228,13 +214,41 @@ const EntreprisePublic = () => {
 
           {/* Présentation */}
           {entreprise.description && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
               <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Présentation</p>
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 {entreprise.description}
               </p>
             </div>
           )}
+
+          {/* Localisation */}
+          {(entreprise.adresse_complete || wilayaVille) && (() => {
+            const lieuRecherche = entreprise.adresse_complete || [communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ");
+            return (
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Localisation</p>
+                <div className="rounded-lg overflow-hidden border border-slate-200">
+                  <iframe
+                    title="Localisation de l'entreprise"
+                    width="100%"
+                    height="220"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(lieuRecherche)}&z=12&output=embed`}
+                  />
+                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lieuRecherche)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center mt-2 text-xs font-semibold text-indigo-600 hover:underline"
+                >
+                  Ouvrir dans Google Maps →
+                </a>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -242,7 +256,7 @@ const EntreprisePublic = () => {
       <div>
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-lg font-bold text-slate-900">Offres disponibles</h2>
-          <span className="px-2.5 py-0.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-full">
+          <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-full">
             {entreprise.offres_actives?.length || 0}
           </span>
         </div>
@@ -252,12 +266,12 @@ const EntreprisePublic = () => {
             {entreprise.offres_actives.map((offre) => (
               <div
                 key={offre.id}
-                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-teal-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <Link
                     to={`/jobs/${offre.id}`}
-                    className="text-sm font-semibold text-slate-900 hover:text-teal-700 transition-colors"
+                    className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
                   >
                     {offre.titre}
                   </Link>
@@ -282,7 +296,7 @@ const EntreprisePublic = () => {
                 </div>
                 <Link
                   to={`/jobs/${offre.id}`}
-                  className="shrink-0 px-4 py-2 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-700 hover:text-white transition-colors"
+                  className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
                 >
                   Voir l'offre →
                 </Link>
@@ -298,7 +312,7 @@ const EntreprisePublic = () => {
             <p className="text-xs text-slate-600 mb-4">L'entreprise ne recrute pas en ce moment.</p>
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
             >
               <Send size={13} /> Envoyer une candidature spontanée
             </button>
@@ -356,10 +370,10 @@ const EntreprisePublic = () => {
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-700 mb-1.5 block">CV (PDF, DOC) *</label>
-                <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-teal-400 transition-colors group">
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
                   <input type="file" accept=".pdf,.doc,.docx" required onChange={(e) => setForm({ ...form, cv: e.target.files[0] })} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <FileText size={22} className="text-slate-300 mx-auto mb-1.5" />
-                  <p className="text-sm font-medium text-slate-600 group-hover:text-teal-700 transition-colors">
+                  <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
                     {form.cv ? form.cv.name : "Cliquez ou glissez votre CV"}
                   </p>
                 </div>
@@ -376,7 +390,7 @@ const EntreprisePublic = () => {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">Annuler</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={isSubmitting} className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {isSubmitting ? "Envoi..." : <><Send size={14} /> Envoyer</>}
                 </button>
               </div>

@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { selectStyles, tw } from "../../theme";
+import { selectStylesTeal, tw } from "../../theme";
 import {
   Plus,
   Search,
@@ -21,6 +21,8 @@ import {
   Inbox,
   Sparkles,
   Clock,
+  Trash2,
+  X,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 
@@ -43,6 +45,8 @@ const DashboardRecruteur = () => {
   const [error, setError] = useState("");
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
   const [sortConfig, setSortConfig] = useState({ col: null, dir: "asc" });
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -82,6 +86,7 @@ const DashboardRecruteur = () => {
       specialite: offre.specialite || "",
       type_contrat: offre.type_contrat || "",
       experience_requise: offre.experience_requise || "",
+      nombre_postes: offre.nombre_postes || 1,
       description: offre.description || "",
       missions: offre.missions || "",
       profil_recherche: offre.profil_recherche || "",
@@ -104,11 +109,43 @@ const DashboardRecruteur = () => {
     }
   };
 
+  const handleSupprimerOffre = async (offre) => {
+    setDeletingId(offre.id);
+    try {
+      await jobsService.supprimerOffre(offre.id);
+      setOffres(offres.filter((o) => o.id !== offre.id));
+      setConfirmDeleteId(null);
+      toast.success("Offre supprimée.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de la suppression.");
+      reportError("ECHEC_SUPPRIMER_OFFRE", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // ─── États de chargement/erreur ──────────────────────────────────────────
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.spinnerTealB}`} />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`${tw.card} rounded-2xl p-5 animate-pulse space-y-2`}>
+              <div className={`h-3 w-1/2 ${tw.surfaceSubtle} rounded`} />
+              <div className={`h-6 w-1/3 ${tw.surfaceSubtle} rounded`} />
+            </div>
+          ))}
+        </div>
+        <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className={`flex items-center gap-4 px-5 py-4 animate-pulse ${i > 0 ? `border-t ${tw.borderBase}` : ""}`}>
+              <div className={`h-4 flex-1 ${tw.surfaceSubtle} rounded`} />
+              <div className={`h-4 w-16 ${tw.surfaceSubtle} rounded`} />
+              <div className={`h-4 w-12 ${tw.surfaceSubtle} rounded`} />
+              <div className={`h-4 w-14 ${tw.surfaceSubtle} rounded`} />
+            </div>
+          ))}
+        </div>
       </div>
     );
 
@@ -452,14 +489,49 @@ const DashboardRecruteur = () => {
               : jours <= 60 ? tw.textTeal600
               : tw.textMuted700;
 
+            const canDelete = authService.peutFaire("UTILISATEUR");
+            const isConfirmingDelete = confirmDeleteId === offre.id;
+            const DeleteControl = () => {
+              if (!canDelete) return null;
+              if (isConfirmingDelete) {
+                return (
+                  <span className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleSupprimerOffre(offre)}
+                      disabled={deletingId === offre.id}
+                      className={`px-2 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap ${tw.buttonDangerSolid} disabled:opacity-50`}
+                    >
+                      {deletingId === offre.id ? "..." : "Confirmer"}
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(null)} className={`p-1.5 rounded-lg ${tw.iconButton}`}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                );
+              }
+              return (
+                <button onClick={() => setConfirmDeleteId(offre.id)} className={`p-1.5 rounded-lg ${tw.iconButton}`} title="Supprimer l'offre">
+                  <Trash2 size={13} />
+                </button>
+              );
+            };
+
             const ActionBtn = () => {
               if (offre.statut_moderation === "REJETEE") {
                 return authService.peutFaire("UTILISATEUR")
-                  ? <button onClick={() => handleOuvrirModification(offre)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.buttonDangerSolid}`}>Corriger <ChevronRight size={12} /></button>
+                  ? <span className="flex items-center gap-1.5">
+                      <button onClick={() => handleOuvrirModification(offre)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.buttonDangerSolid}`}>Corriger <ChevronRight size={12} /></button>
+                      <DeleteControl />
+                    </span>
                   : <span className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border ${tw.badgeErrorLight100} ${tw.borderError}`}>Rejetée</span>;
               }
               if (offre.statut_moderation === "EN_ATTENTE") {
-                return <span className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap ${tw.tagSlateSoft}`}>En attente</span>;
+                return (
+                  <span className="flex items-center gap-1.5">
+                    <span className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap ${tw.tagSlateSoft}`}>En attente</span>
+                    <DeleteControl />
+                  </span>
+                );
               }
               return (
                 <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.bgTealSolid}`}>
@@ -597,7 +669,7 @@ const DashboardRecruteur = () => {
                     options={constants.wilayas}
                     value={constants.wilayas.find((w) => w.value === modifierForm.wilaya) || null}
                     onChange={(s) => setModifierForm({ ...modifierForm, wilaya: s ? s.value : "" })}
-                    styles={selectStyles}
+                    styles={selectStylesTeal}
                   />
                 </div>
                 <div>
@@ -606,7 +678,17 @@ const DashboardRecruteur = () => {
                     options={constants.secteurs}
                     value={constants.secteurs.find((s) => s.value === modifierForm.specialite) || null}
                     onChange={(s) => setModifierForm({ ...modifierForm, specialite: s ? s.value : "" })}
-                    styles={selectStyles}
+                    styles={selectStylesTeal}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Nombre de postes</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={modifierForm.nombre_postes || 1}
+                    onChange={(e) => setModifierForm({ ...modifierForm, nombre_postes: e.target.value ? parseInt(e.target.value, 10) : 1 })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>

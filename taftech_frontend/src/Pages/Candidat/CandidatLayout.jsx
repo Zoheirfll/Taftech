@@ -90,7 +90,7 @@ const CandidatLayout = () => {
             })}
             <div className={`${tw.sidebarDivider} mt-2 pt-2`}>
               <button
-                onClick={authService.logout}
+                onClick={() => authService.logout()}
                 className={`w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${tw.sidebarLogoutButton}`}
               >
                 <LogOut size={17} />

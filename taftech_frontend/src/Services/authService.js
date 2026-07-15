@@ -35,13 +35,12 @@ export const authService = {
     } catch (err) {
       reportError("ECHEC_LOGOUT_API", err);
     } finally {
-      const role = localStorage.getItem("userRole");
-      const estMembre = localStorage.getItem("estMembreEquipe") === "true";
+      const portal = localStorage.getItem("loginPortal");
       localStorage.removeItem("userRole");
       localStorage.removeItem("estMembreEquipe");
       localStorage.removeItem("membreRole");
       localStorage.removeItem("loginPortal");
-      const dest = redirectTo || (role === "RECRUTEUR" || estMembre ? "/recruteurs/connexion" : "/login");
+      const dest = redirectTo || (portal === "recruteur" ? "/recruteurs/connexion" : "/login");
       window.location.href = dest;
     }
   },
@@ -161,6 +160,16 @@ export const authService = {
       throw err;
     }
   },
+  envoyerContact: async (data) => {
+    try {
+      const response = await api.post("accounts/contact/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_ENVOI_CONTACT", err);
+      throw err;
+    }
+  },
+
   forgotPassword: async (email) => {
     try {
       const response = await api.post("accounts/forgot-password/", { email });

@@ -7,7 +7,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
-import { selectStyles, tw } from "../../theme";
+import { selectStylesTeal, tw } from "../../theme";
 import {
   Search,
   SlidersHorizontal,
@@ -313,8 +313,20 @@ const CVTheque = () => {
 
   if (consentGiven === null) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-20 flex justify-center">
-        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${tw.spinnerTeal}`} />
+      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className={`${tw.cardColors} rounded-xl p-5 animate-pulse space-y-3`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full ${tw.surfaceSubtle}`} />
+              <div className="flex-1 space-y-1.5">
+                <div className={`h-3.5 w-2/3 ${tw.surfaceSubtle} rounded`} />
+                <div className={`h-3 w-1/2 ${tw.surfaceSubtle} rounded`} />
+              </div>
+            </div>
+            <div className={`h-3 w-full ${tw.surfaceSubtle} rounded`} />
+            <div className={`h-3 w-3/4 ${tw.surfaceSubtle} rounded`} />
+          </div>
+        ))}
       </div>
     );
   }
@@ -455,7 +467,7 @@ const CVTheque = () => {
             options={OPTIONS_TRI}
             value={OPTIONS_TRI.find((o) => o.value === tri)}
             onChange={(val) => setTri(val.value)}
-            styles={selectStyles}
+            styles={selectStylesTeal}
             isSearchable={false}
             className="md:w-48"
           />
@@ -490,7 +502,7 @@ const CVTheque = () => {
                 options={[{ value: "", label: "Choisir une offre…" }, ...offresActives]}
                 value={offresActives.find(o => o.value === offreId) || null}
                 onChange={(val) => { setOffreId(val?.value || ""); setCurrentPage(1); if (val?.value) setShowMatchingPanel(false); }}
-                styles={selectStyles}
+                styles={selectStylesTeal}
                 placeholder="Choisir une offre…"
                 menuPosition="fixed"
               />
@@ -526,7 +538,7 @@ const CVTheque = () => {
                 setWilaya(val ? val.value : "");
                 setCurrentPage(1);
               }}
-              styles={selectStyles}
+              styles={selectStylesTeal}
             />
             <Select
               options={constants.secteurs}
@@ -539,7 +551,7 @@ const CVTheque = () => {
                 setSpecialite(val ? val.value : "");
                 setCurrentPage(1);
               }}
-              styles={selectStyles}
+              styles={selectStylesTeal}
             />
             <Select
               options={constants.diplomes}
@@ -552,7 +564,7 @@ const CVTheque = () => {
                 setDiplome(val ? val.value : "");
                 setCurrentPage(1);
               }}
-              styles={selectStyles}
+              styles={selectStylesTeal}
             />
             <Select
               options={OPTIONS_EXPERIENCE}
@@ -565,7 +577,7 @@ const CVTheque = () => {
                 setExperience(val ? val.value : "");
                 setCurrentPage(1);
               }}
-              styles={selectStyles}
+              styles={selectStylesTeal}
             />
           </div>
 
@@ -671,9 +683,26 @@ const CVTheque = () => {
                   <p className={`text-sm font-medium ${tw.textStrong}`}>
                     Aucun profil trouvé
                   </p>
-                  <p className={`text-xs mt-1 ${tw.textMuted}`}>
+                  <p className={`text-xs mt-1 mb-4 ${tw.textMuted}`}>
                     Essayez d'élargir vos critères
                   </p>
+                  {filtresActifs > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWilaya("");
+                        setSpecialite("");
+                        setDiplome("");
+                        setExperience("");
+                        setAvecPhoto(false);
+                        setAvecCV(false);
+                        setInscritRecent(false);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg ${tw.buttonSecondary}`}
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -980,6 +1009,11 @@ const CVTheque = () => {
                         </p>
                         <p className={`text-sm mt-0.5 ${tw.textMuted}`}>
                           {exp.entreprise}
+                          {exp.secteur && (
+                            <span className={`font-normal ${tw.textMuted}`}>
+                              {" "}· {constants.secteurs?.find((s) => s.value === exp.secteur)?.label || exp.secteur}
+                            </span>
+                          )}
                         </p>
                         <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textMuted}`}>
                           <Calendar size={11} />

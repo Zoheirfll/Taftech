@@ -126,7 +126,7 @@ const NavbarRecruteur = () => {
         <div className="flex items-center gap-3">
           {!isLogged && (
             <>
-              <Link to="/" className={tw.navLinkActive}>
+              <Link to="/" className={tw.navLinkIndigoActive}>
                 <User size={14} /> Espace candidat
               </Link>
               <Link to="/recruteurs/connexion" className={tw.navLinkTealActive}>

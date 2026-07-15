@@ -138,6 +138,31 @@ class CloturerOffreAPIView(APIView):
         return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)
 
 
+class SupprimerOffreAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, offre_id):
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or offre.entreprise != entreprise:
+            return Response({"error": "Vous n'êtes pas autorisé à supprimer cette offre."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
+        # Verrou métier : seule une offre jamais publiée (en attente ou rejetée) peut être supprimée.
+        # Une offre déjà approuvée doit être clôturée, jamais supprimée (historique/candidatures à préserver).
+        if offre.statut_moderation not in ("EN_ATTENTE", "REJETEE"):
+            return Response({"error": "Seule une offre en attente ou rejetée peut être supprimée."}, status=400)
+        if offre.candidatures.exists():
+            return Response({"error": "Impossible de supprimer une offre ayant déjà reçu des candidatures."}, status=400)
+        titre = offre.titre
+        offre.delete()
+        _log(request.user, entreprise, 'SUPPRIMER_OFFRE', titre)
+        return Response({"message": "Offre supprimée avec succès."}, status=status.HTTP_200_OK)
+
+
 class ConstantsAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request):

@@ -9,7 +9,7 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
 import {
-  MapPin, Briefcase, Banknote, Bookmark, Sparkles, Search,
+  MapPin, Briefcase, Bookmark, Sparkles, Search,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
 
@@ -25,11 +25,6 @@ const tempsDepuis = (dateStr) => {
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
   if (diff < 2592000) return `il y a ${Math.floor(diff / 86400)}j`;
   return `il y a ${Math.floor(diff / 2592000)} mois`;
-};
-
-const formatSalaire = (val) => {
-  if (!val) return null;
-  return Number(val).toLocaleString("fr-DZ") + " DA";
 };
 
 const LogoEntreprise = ({ url }) => {
@@ -202,7 +197,7 @@ const JobsList = () => {
     filters.diplome && { key: "diplome", label: constants.diplomes.find((d) => d.value === filters.diplome)?.label || filters.diplome },
   ].filter(Boolean);
 
-  const FiltersPanel = () => (
+  const filtersPanel = (
     <div className={`${tw.cardColors} rounded-2xl p-5 sticky top-20`}>
       <div className="flex justify-between items-center mb-5">
         <h2 className={`text-sm font-bold ${tw.textStrong}`}>Filtres</h2>
@@ -281,12 +276,12 @@ const JobsList = () => {
         </div>
 
         {/* Filtres mobile dépliables */}
-        {showFilters && <div className="mb-4 md:hidden"><FiltersPanel /></div>}
+        {showFilters && <div className="mb-4 md:hidden">{filtersPanel}</div>}
 
         <div className="flex flex-col md:flex-row gap-6">
           {/* FILTRES desktop */}
           <aside className="hidden md:block w-72 shrink-0">
-            <FiltersPanel />
+            {filtersPanel}
           </aside>
 
           {/* RÉSULTATS */}
@@ -416,9 +411,9 @@ const JobsList = () => {
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg`}>
                                 {CONTRAT_LABELS[job.type_contrat] || job.type_contrat}
                               </span>
-                              {job.salaire_propose && (
+                              {job.nombre_postes > 1 && (
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgSuccessSoft} ${tw.textSuccess} text-xs font-semibold rounded-lg`}>
-                                  <Banknote size={11} /> {formatSalaire(job.salaire_propose)}
+                                  {job.nombre_postes} postes
                                 </span>
                               )}
                               <Link to={`/jobs/${job.id}`} className={`ml-auto px-4 py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>

@@ -6,6 +6,36 @@ _Dernière mise à jour : 15/07/2026 — Migration en cours des couleurs Tailwin
 
 ---
 
+## 🆕 SESSION UI/UX + PAGES LÉGALES + NOMBRE DE POSTES (15/07/2026, tard)
+
+**Footers refaits (candidat + recruteur)** : structure identique aux deux (Marque / Contact / Réseaux sociaux / Légal), même hauteur/espacement, fond `bg-slate-950`, police Poppins (chargée dans `index.html`) appliquée uniquement au footer via `style={{fontFamily}}`. Colonne "Espace candidat"/"Espace recruteur"/"Plateforme" retirées — jugées redondantes avec la navbar. Réseaux sociaux réels : Facebook `Taftechemploi`, Instagram `taftechemploi`, LinkedIn `oranemploi`, WhatsApp `+213770123440`.
+
+**Nouvelles pages publiques** (routes ajoutées dans `App.jsx`, liées depuis les footers en `target="_blank"`) :
+- `/confidentialite` — Politique de confidentialité (sommaire sticky, catégories de données réelles incl. NIN, durée conservation 5 ans candidats / 10 ans recruteurs — valeurs provisoires faute de mieux, à confirmer)
+- `/cgu` — CGU, marquées **version provisoire** (bandeau d'alerte) tant que raison sociale/immatriculation ne sont pas fournies par l'utilisateur
+- `/contact` — formulaire de contact fonctionnel (envoie un email réel, voir `ContactMessageAPIView`) + FAQ accordéon + horaires (Dim-Jeu 08h-17h, choisi par défaut)
+- `/qui-sommes-nous` — mission/valeurs/services + **stats réelles en direct** (`jobs/stats/public/`, jamais de chiffres inventés)
+
+**Portail recruteur vs candidat sur pages partagées** : `App.jsx` lit un paramètre `?portail=recruteur` (en plus du rôle connecté) pour forcer la navbar recruteur sur ces 4 pages quand on y arrive depuis le footer recruteur, même déconnecté. Voir `forcePortalParam` dans `AppContent()`.
+
+**Fix bug navbar recruteur fantôme** : `estRecruteurConnecte` vérifiait seulement `portal === "recruteur"` sans vérifier qu'un rôle actif existe → si `loginPortal` restait à "recruteur" en localStorage (session expirée) alors que `userRole` était vide, la navbar recruteur s'affichait sur les pages candidat même déconnecté. Fix : `role === "ADMIN" || (!!role && portal === "recruteur")`.
+
+**Fix bug déconnexion candidat → recruteur** : `authService.logout()` et l'intercepteur 401 (`axiosConfig.js`) décidaient de la redirection selon `estMembreEquipe` au lieu du portail de connexion réel (`loginPortal`) — un candidat membre d'une équipe recruteur atterrissait sur `/recruteurs/connexion` en se déconnectant du portail candidat. Fix : redirection basée sur `loginPortal` uniquement.
+
+**Fix bug focus perdu — champ "Mots-clés" (JobsList)** : `FiltersPanel` était un composant défini à l'intérieur de `JobsList`, donc recréé à chaque frappe → React démontait/remontait tout le panneau de filtres, perdant le focus après chaque lettre. Fix : converti en variable JSX (`filtersPanel`) au lieu d'un composant-fonction.
+
+**Token `tw.bgPrimarySolid` manquant** : utilisé à 11 endroits (Home, JobsList, Entreprises, JobDetail) mais jamais défini dans `theme.js` → boutons sans aucun style (texte brut). Ajouté dans `theme.js`.
+
+**Nouveau champ `nombre_postes`** sur `OffreEmploi` (migration `0052`, défaut 1) — visible/éditable dans CreateJob, DashboardRecruteur (modale modifier), GestionOffre, JobDetail (tuile info), JobsList (badge si >1). Exposé dans `OffreEmploiSerializer` (`__all__`), `OffreEmploiCreateDTO`, `OffreEmploiPublicSerializer`, `OffreDashboardDTO`.
+
+**Nouveau champ `adresse_complete`** sur `ProfilEntreprise` (migration `0051`, texte libre, indépendant de `wilaya_siege`) — configurable dans ParametresRecruteur → Mon entreprise, affiché en carte Google Maps embed sur **EntreprisePublic uniquement** (pas sur JobDetail : la localisation d'une offre doit toujours suivre le wilaya/commune de l'offre elle-même, pas le siège de l'entreprise — un siège à Alger avec une offre à Oran doit afficher Oran).
+
+**Suppression d'offre recruteur** : nouvel endpoint `DELETE /api/jobs/dashboard/offres/<id>/supprimer/` (`SupprimerOffreAPIView`) — autorisé uniquement sur offres `EN_ATTENTE`/`REJETEE`, jamais sur une offre `APPROUVEE` (clôturer seulement), refuse si des candidatures existent déjà. Bouton corbeille + confirmation inline dans DashboardRecruteur, réservé aux rôles UTILISATEUR+.
+
+**Sécurité** : CSP (`middleware.py`) n'avait pas de `frame-src` → bloquait silencieusement les iframes Google Maps en prod (`DEBUG=False`), fonctionnait par accident en dev (CSP Report-Only). Ajouté `frame-src https://www.google.com https://maps.google.com`. `ContactMessageAPIView` durci : validation format email + troncature de tous les champs à leur longueur max. `UpdateProfilEntrepriseAPIView` tronque désormais chaque champ à son `max_length` modèle avant `save()` (évitait un 500 Postgres sur une valeur trop longue).
+
+---
+
 ## 🎨 MIGRATION THEME.JS — EN PAUSE (statut au 15/07/2026)
 
 **Contexte** : chantier de centralisation de toutes les couleurs Tailwind (`text-*`, `bg-*`, `border-*`, `ring-*`, `placeholder-*`) vers des tokens `tw.*` dans `taftech_frontend/src/theme.js`, au lieu de classes écrites en dur dans chaque composant. Mis en pause car trop long (plusieurs passes d'agents ont échoué sur limite de quota Claude) — **ne pas relancer de migration automatique en masse sans demande explicite**.

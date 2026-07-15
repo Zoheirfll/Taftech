@@ -13,6 +13,8 @@ import {
   Check,
   Minus,
   Award,
+  FileText,
+  AlertCircle,
 } from "lucide-react";
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
@@ -78,6 +80,7 @@ const ProfilCandidat = () => {
     remplissageLoading,
     parsedData,
     setParsedData,
+    resetParser,
     parserMode,
     setParserMode,
     constants,
@@ -151,16 +154,32 @@ const ProfilCandidat = () => {
       {/* CV */}
       <div className={SECTION_CLASS}>
         <div className="flex justify-between items-start mb-3">
-          <div>
+          <div className="flex-1">
             <h2 className={SECTION_TITLE}>Mon CV</h2>
             <p className={`text-sm font-semibold ${tw.textPrimary} mt-1`}>
               {profil.titre_professionnel || "Titre à définir"}
             </p>
-            <p className={`text-xs ${tw.textMuted} mt-1`}>
-              {profil.cv_pdf
-                ? profil.cv_pdf.split("/").pop()
-                : "Aucun fichier joint"}
-            </p>
+            {profil.cv_pdf ? (
+              <a
+                href={getPhotoUrl(profil.cv_pdf)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border ${tw.bgSuccessSoft} border-emerald-200 hover:border-emerald-300 transition-colors group`}
+              >
+                <FileText size={18} className={`${tw.textSuccess} shrink-0`} />
+                <span className={`text-sm font-medium truncate flex-1 ${tw.textSuccess}`}>
+                  {profil.cv_pdf.split("/").pop()}
+                </span>
+                <ExternalLink size={14} className={`${tw.textSuccess} shrink-0 opacity-60 group-hover:opacity-100 transition-opacity`} />
+              </a>
+            ) : (
+              <div className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border ${tw.bgWarningSoft} border-amber-200`}>
+                <AlertCircle size={18} className={`${tw.textWarning} shrink-0`} />
+                <span className={`text-sm font-medium ${tw.textWarning}`}>
+                  Aucun fichier joint — ajoutez votre CV
+                </span>
+              </div>
+            )}
           </div>
           <button onClick={() => setShowCVForm(true)} className={EDIT_BTN}>
             <Pencil size={12} /> Modifier
@@ -535,7 +554,7 @@ const ProfilCandidat = () => {
               const el = document.getElementById("comp-input");
               if (el?.value.trim()) { handleAddTag("competences", el.value); el.value = ""; }
             }}
-            className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${tw.buttonDark}`}
+            className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${tw.bgPrimarySolidHover} text-white`}
           >
             <Plus size={14} />
           </button>
@@ -596,7 +615,7 @@ const ProfilCandidat = () => {
                 setLangName("");
               }
             }}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg ${tw.buttonDark}`}
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg ${tw.bgPrimarySolidHover} text-white`}
           >
             Ajouter
           </button>
@@ -652,6 +671,7 @@ const ProfilCandidat = () => {
         remplissageLoading={remplissageLoading}
         parsedData={parsedData}
         setParsedData={setParsedData}
+        resetParser={resetParser}
         parserMode={parserMode}
         setParserMode={setParserMode}
         handleUpdateGeneric={handleUpdateGeneric}

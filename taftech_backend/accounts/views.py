@@ -2,6 +2,8 @@ import random
 import logging
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail, EmailMultiAlternatives
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
@@ -635,3 +637,38 @@ class ConsentementCVThequeView(APIView):
         request.user.consentement_cvtheque = True
         request.user.save(update_fields=['consentement_cvtheque'])
         return Response({'ok': True})
+
+
+class ContactMessageAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [CypressAwareThrottle]
+
+    def post(self, request):
+        data = request.data
+        nom = (data.get('nom') or '').strip()[:150]
+        email = (data.get('email') or '').strip()[:254]
+        motif = (data.get('motif') or '').strip()[:100]
+        objet = (data.get('objet') or '').strip()[:200]
+        message = (data.get('message') or '').strip()[:5000]
+        entreprise = (data.get('entreprise') or '').strip()[:150]
+        if not nom or not email or not motif or not objet or not message:
+            return Response({"error": "Veuillez remplir tous les champs obligatoires."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_email(email)
+        except DjangoValidationError:
+            return Response({"error": "Adresse e-mail invalide."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            texte = (
+                f"Nouveau message via le formulaire de contact TafTech\n\n"
+                f"Nom : {nom}\nEmail : {email}\nEntreprise : {entreprise or 'Non renseignée'}\n"
+                f"Motif : {motif}\nObjet : {objet}\n\nMessage :\n{message}"
+            )
+            msg = EmailMultiAlternatives(
+                f"[Contact TafTech] {objet}", texte, settings.EMAIL_HOST_USER,
+                [settings.EMAIL_HOST_USER], reply_to=[email],
+            )
+            msg.send(fail_silently=False)
+        except Exception as e:
+            logger.error(f"Erreur envoi email contact : {e}")
+            return Response({"error": "Erreur lors de l'envoi. Réessayez plus tard."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"message": "Votre message a bien été envoyé."}, status=status.HTTP_200_OK)

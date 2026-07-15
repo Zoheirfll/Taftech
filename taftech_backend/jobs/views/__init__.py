@@ -12,6 +12,7 @@ from .offres import (
     JobCreateAPIView,
     UpdateOffreRecruteurAPIView,
     CloturerOffreAPIView,
+    SupprimerOffreAPIView,
     ConstantsAPIView,
 )
 from .profils import (

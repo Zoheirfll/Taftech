@@ -12,7 +12,7 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
         model = ProfilEntreprise
         fields = (
             'id', 'slug', 'nom_entreprise', 'secteur_activite', 'registre_commerce',
-            'wilaya_siege', 'commune_siege', 'taille_entreprise', 'logo',
+            'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'logo',
             'description', 'est_approuvee', 'est_premium',
             'first_name', 'last_name', 'email', 'telephone'
         )

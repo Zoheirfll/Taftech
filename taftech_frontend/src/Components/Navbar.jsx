@@ -133,7 +133,7 @@ const Navbar = () => {
           {/* NON CONNECTÉ */}
           {!isLogged && (
             <>
-              <Link to="/recruteurs" className={tw.navLinkTealActive}>
+              <Link to="/recruteurs" target="_blank" rel="noopener noreferrer" className={tw.navLinkTealActive}>
                 <Briefcase size={14} /> Espace recruteur
               </Link>
               <Link to="/login" className={tw.navLink}>
@@ -220,7 +220,7 @@ const Navbar = () => {
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors"
+            className="lg:hidden p-2 text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors"
           >
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -246,7 +246,7 @@ const Navbar = () => {
               <Link to="/register" onClick={closeMobile} className={mobileLinkClass("/register")}>
                 <User size={16} className="shrink-0" /> S'inscrire
               </Link>
-              <Link to="/recruteurs" onClick={closeMobile} className={tw.dropdownItemTeal}>
+              <Link to="/recruteurs" onClick={closeMobile} target="_blank" rel="noopener noreferrer" className={tw.dropdownItemTeal}>
                 <Briefcase size={16} className="shrink-0" /> Espace recruteur
               </Link>
             </>

@@ -1,4 +1,6 @@
 import logging
+import re
+from collections import Counter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,9 +18,28 @@ import requests as req
 from ..models import OffreEmploi, ProfilCandidat, Candidature, MetierReferentiel
 from ..serializers import OffreEmploiSerializer, MetierReferentielSerializer
 from ..matcher import calculer_score_matching
-from ..cv_parser import parse_cv
+from ..cv_parser import parse_cv, extract_specialite
 
 User = get_user_model()
+
+
+def _deviner_secteur_experience(titre_poste, description=""):
+    """Devine le secteur d'une expérience : référentiel métiers en priorité
+    (plus précis, 11 000+ intitulés déjà rattachés à un secteur), mots-clés
+    en repli, 'AUTRE' en dernier recours pour toujours proposer une valeur."""
+    if titre_poste:
+        mots = [m for m in re.findall(r"\w+", titre_poste.lower()) if len(m) >= 4]
+        if mots:
+            q = Q()
+            for mot in mots:
+                q |= Q(titre__icontains=mot)
+            secteurs = list(
+                MetierReferentiel.objects.filter(q, est_actif=True).values_list('secteur', flat=True)[:50]
+            )
+            if secteurs:
+                return Counter(secteurs).most_common(1)[0][0]
+    secteur_mots_cles = extract_specialite(f"{titre_poste or ''} {description or ''}")
+    return secteur_mots_cles or 'AUTRE'
 
 
 class GroqThrottle(UserRateThrottle):
@@ -64,6 +85,9 @@ class ParserCVAPIView(APIView):
                 tmp_file.write(chunk)
             tmp_file.close()
             result = parse_cv(tmp_file.name, cv_file.name)
+            for exp in result.get('experiences', []):
+                if isinstance(exp, dict):
+                    exp['secteur'] = _deviner_secteur_experience(exp.get('titre_poste'), exp.get('description'))
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,7 +1,6 @@
 import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
-import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
@@ -92,12 +91,6 @@ const BoiteReception = () => {
             </span>
           )}
         </div>
-        <Link
-          to="/mes-candidatures"
-          className={`text-sm font-medium hover:underline ${tw.textPrimary}`}
-        >
-          Mes candidatures →
-        </Link>
       </div>
 
       <InfoBanner storageKey="boite_reception" title="Votre boîte de réception">

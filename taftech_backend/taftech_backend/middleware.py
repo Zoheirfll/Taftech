@@ -23,6 +23,7 @@ class SecurityHeadersMiddleware:
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob:; "
             "connect-src 'self'; "
+            "frame-src https://www.google.com https://maps.google.com; "
             "object-src 'none'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "

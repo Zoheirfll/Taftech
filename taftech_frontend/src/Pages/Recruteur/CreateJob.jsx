@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
-import { selectStyles, tw } from "../../theme";
+import { selectStylesTeal, tw } from "../../theme";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
@@ -54,6 +54,7 @@ const CreateJob = () => {
     diplome: "",
     specialite: "",
     experience_requise: "DEBUTANT",
+    nombre_postes: 1,
     description: "",
     missions: "",
     profil_recherche: "",
@@ -240,7 +241,7 @@ const CreateJob = () => {
               </Field>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Type de contrat">
                 <Select
                   name="type_contrat"
@@ -248,7 +249,17 @@ const CreateJob = () => {
                   onChange={handleSelectChange}
                   value={constants.contrats.find((c) => c.value === formData.type_contrat) || null}
                   placeholder="Sélectionner..."
-                  styles={selectStyles}
+                  styles={selectStylesTeal}
+                />
+              </Field>
+              <Field label="Nombre de postes">
+                <input
+                  type="number"
+                  min="1"
+                  name="nombre_postes"
+                  value={formData.nombre_postes}
+                  onChange={(e) => setFormData({ ...formData, nombre_postes: e.target.value ? parseInt(e.target.value, 10) : 1 })}
+                  className={inputClass}
                 />
               </Field>
               <Field label="Salaire proposé">
@@ -274,7 +285,7 @@ const CreateJob = () => {
                 onChange={handleSelectChange}
                 value={constants.experiences.find((e) => e.value === formData.experience_requise) || null}
                 placeholder="Sélectionner..."
-                styles={selectStyles}
+                styles={selectStylesTeal}
               />
             </Field>
             <Field label="Diplôme attendu">
@@ -285,7 +296,7 @@ const CreateJob = () => {
                 value={constants.diplomes.find((d) => d.value === formData.diplome) || null}
                 placeholder="Sélectionner..."
                 isClearable
-                styles={selectStyles}
+                styles={selectStylesTeal}
               />
             </Field>
             {/* Fix 3 : validation spécialité */}
@@ -299,9 +310,9 @@ const CreateJob = () => {
                   placeholder="Sélectionner..."
                   isClearable
                   styles={{
-                    ...selectStyles,
+                    ...selectStylesTeal,
                     control: (base, state) => ({
-                      ...(selectStyles.control ? selectStyles.control(base, state) : base),
+                      ...(selectStylesTeal.control ? selectStylesTeal.control(base, state) : base),
                       ...(errors.specialite ? { borderColor: "#f87171", boxShadow: "0 0 0 2px #fee2e2" } : {}),
                     }),
                   }}
@@ -326,9 +337,9 @@ const CreateJob = () => {
                   placeholder="Sélectionner..."
                   isClearable
                   styles={{
-                    ...selectStyles,
+                    ...selectStylesTeal,
                     control: (base, state) => ({
-                      ...(selectStyles.control ? selectStyles.control(base, state) : base),
+                      ...(selectStylesTeal.control ? selectStylesTeal.control(base, state) : base),
                       ...(errors.wilaya ? { borderColor: "#f87171", boxShadow: "0 0 0 2px #fee2e2" } : {}),
                     }),
                   }}
@@ -345,7 +356,7 @@ const CreateJob = () => {
                 onChange={handleSelectChange}
                 placeholder={formData.wilaya ? "Sélectionner..." : "Wilaya d'abord"}
                 isClearable
-                styles={selectStyles}
+                styles={selectStylesTeal}
               />
             </Field>
           </div>
@@ -438,7 +449,7 @@ const CreateJob = () => {
                 value={questionnaires.map((q) => ({ value: q.id, label: `${q.titre} (${q.questions.length} questions)` })).find((o) => o.value === formData.questionnaire) || null}
                 placeholder="Associer un questionnaire à cette offre..."
                 isClearable
-                styles={selectStyles}
+                styles={selectStylesTeal}
               />
               <p className={`text-xs mt-2 ${tw.textMuted700}`}>Les candidats devront répondre avant de postuler.</p>
             </>

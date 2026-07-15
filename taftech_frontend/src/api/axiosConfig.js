@@ -49,13 +49,13 @@ api.interceptors.response.use(
       // 👆 FIN DE LA CORRECTION 👆
 
       // Si c'est déjà le rafraîchissement qui échoue, on arrête tout
-      const role = localStorage.getItem("userRole");
-      const estMembre = localStorage.getItem("estMembreEquipe") === "true";
-      const loginRedirect = (role === "RECRUTEUR" || estMembre) ? "/recruteurs/connexion" : "/login";
+      const portal = localStorage.getItem("loginPortal");
+      const loginRedirect = portal === "recruteur" ? "/recruteurs/connexion" : "/login";
 
       if (originalRequest.url.includes("token/refresh/")) {
         localStorage.removeItem("userRole");
         localStorage.removeItem("estMembreEquipe");
+        localStorage.removeItem("loginPortal");
         window.location.href = loginRedirect;
         return Promise.reject(error);
       }

@@ -9,7 +9,7 @@ import { TooltipIcon } from "../../Components/Tooltip";
 import {
   ArrowLeft, MapPin, Calendar, Briefcase, GraduationCap,
   Banknote, TrendingUp, FileText, Zap, CheckCircle, XCircle,
-  Building2, ChevronDown,
+  Building2, ChevronDown, Users,
 } from "lucide-react";
 import { tw } from "../../theme";
 
@@ -186,7 +186,7 @@ const JobDetail = () => {
     if (isSubmitting) return;
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
       toast.error("Vous devez être connecté en tant que candidat.");
-      navigate("/login");
+      navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
       return;
     }
     setIsSubmitting(true);
@@ -205,7 +205,7 @@ const JobDetail = () => {
   const handleReviewClick = () => {
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
       toast.error("Connectez-vous pour voir votre profil.");
-      navigate("/login");
+      navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
       return;
     }
     navigate(`/jobs/${id}/postuler`);
@@ -343,12 +343,22 @@ const JobDetail = () => {
             <h3 className={`text-base font-bold ${tw.textStrong} mb-4 text-center`}>Prêt à postuler ?</h3>
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => { if (job.questionnaire) setShowQuestionnaireModal(true); else setPostulationMode("taftech"); }}
-                className={`w-full flex flex-col items-center py-4 px-6 ${tw.bgPrimarySolid} rounded-xl transition-colors shadow-sm`}
+                onClick={() => {
+                  if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
+                    navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
+                    return;
+                  }
+                  if (job.questionnaire) setShowQuestionnaireModal(true); else setPostulationMode("taftech");
+                }}
+                className={`w-full flex flex-col items-center py-4 px-6 ${tw.bgPrimarySolidHover} text-white rounded-xl transition-colors shadow-sm`}
               >
-                <span className="text-sm font-semibold">Postuler avec mon profil TAFTECH</span>
+                <span className="text-sm font-semibold">
+                  {authService.isAuthenticated() && authService.getUserRole() === "CANDIDAT" ? "Postuler avec mon profil TAFTECH" : "Se connecter pour postuler"}
+                </span>
                 <span className={`text-xs ${tw.textPrimaryOnDark} mt-0.5`}>
-                  {job.questionnaire ? `Questionnaire requis · ${job.questionnaire.questions?.length || 0} questions` : "Recommandé — analysé par notre IA"}
+                  {authService.isAuthenticated() && authService.getUserRole() === "CANDIDAT"
+                    ? (job.questionnaire ? `Questionnaire requis · ${job.questionnaire.questions?.length || 0} questions` : "Recommandé — analysé par notre IA")
+                    : "Connexion requise pour ce mode de candidature"}
                 </span>
               </button>
               <div className="flex items-center gap-3">
@@ -358,10 +368,10 @@ const JobDetail = () => {
               </div>
               <button
                 onClick={() => setPostulationMode("rapide")}
-                className={`w-full flex flex-col items-center py-4 px-6 ${tw.buttonDark} rounded-xl transition-colors`}
+                className={`w-full flex flex-col items-center py-4 px-6 border-2 ${tw.borderPrimary200} hover:bg-indigo-50 rounded-xl transition-colors`}
               >
-                <span className="text-sm font-semibold flex items-center gap-2">
-                  <Zap size={15} className={tw.textAmber400} /> Postulation rapide (sans compte)
+                <span className={`text-sm font-semibold flex items-center gap-2 ${tw.textStrong}`}>
+                  <Zap size={15} className={tw.textPrimary} /> Postulation rapide (sans compte)
                 </span>
                 <span className={`text-xs ${tw.textMuted} mt-0.5`}>Envoyez juste votre CV en quelques secondes</span>
               </button>
@@ -383,7 +393,7 @@ const JobDetail = () => {
               <button
                 onClick={handlePostulerTafTech}
                 disabled={isSubmitting}
-                className={`w-full py-2.5 ${tw.bgPrimarySolid} text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
+                className={`w-full py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
               >
                 {isSubmitting && <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />}
                 {isSubmitting ? "Envoi en cours..." : "Envoyer ma candidature"}
@@ -517,6 +527,12 @@ const JobDetail = () => {
                   <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
                     <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Expérience</p>
                     <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><TrendingUp size={12} className={tw.iconPrimary500} />{EXPERIENCE_LABELS[job.experience_requise] || job.experience_requise}</p>
+                  </div>
+                )}
+                {job.nombre_postes && (
+                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
+                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Postes</p>
+                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><Users size={12} className={tw.iconPrimary500} />{job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""}</p>
                   </div>
                 )}
                 {job.diplome && (

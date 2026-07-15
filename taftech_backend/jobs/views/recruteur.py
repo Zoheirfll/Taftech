@@ -73,10 +73,14 @@ class UpdateProfilEntrepriseAPIView(APIView):
         if get_membre_role(request.user, profil) not in ('PROPRIETAIRE', 'ADMIN'):
             return Response({"error": "Action réservée au propriétaire ou admin."}, status=403)
         data = request.data
-        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'taille_entreprise', 'description', 'linkedin', 'site_web']
+        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'description', 'linkedin', 'site_web']
         for champ in champs:
             if champ in data:
-                setattr(profil, champ, data[champ])
+                valeur = data[champ]
+                max_length = ProfilEntreprise._meta.get_field(champ).max_length
+                if isinstance(valeur, str) and max_length:
+                    valeur = valeur[:max_length]
+                setattr(profil, champ, valeur)
         if 'logo' in request.FILES:
             profil.logo = request.FILES['logo']
         profil.save()
@@ -95,6 +99,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "description": profil.description,
             "wilaya_siege": profil.wilaya_siege,
             "commune_siege": profil.commune_siege,
+            "adresse_complete": profil.adresse_complete,
             "secteur_activite": profil.secteur_activite,
             "taille_entreprise": profil.taille_entreprise,
             "linkedin": profil.linkedin,

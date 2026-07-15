@@ -2,47 +2,39 @@ import React from "react";
 import { Link } from "react-router-dom";
 import logoTafTech from "../assets/logo-taftech.png";
 import { tw } from "../theme";
+import { Mail, MapPin, Phone } from "lucide-react";
+
+const RESEAUX_SOCIAUX = [
+  { name: "Facebook", href: "https://www.facebook.com/Taftechemploi" },
+  { name: "Instagram", href: "https://www.instagram.com/taftechemploi" },
+  { name: "LinkedIn", href: "https://www.linkedin.com/company/oranemploi/" },
+  { name: "WhatsApp", href: "https://wa.me/213770123440" },
+];
+
+const LIENS_LEGAUX = [
+  { name: "Confidentialité", to: "/confidentialite" },
+  { name: "CGU", to: "/cgu" },
+];
+
+const CONTACTS = [
+  { label: "E-mail", value: "taftech963@gmail.com", href: "mailto:taftech963@gmail.com", icon: Mail },
+  { label: "Adresse", value: "Oran, Algérie", href: null, icon: MapPin },
+  { label: "Téléphone", value: "0770 123 440", href: "tel:+213770123440", icon: Phone },
+];
 
 const Footer = () => {
   return (
-    <footer className={tw.footerShell}>
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+    <footer className={tw.footerShell} style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Brand */}
-          <div className="space-y-4">
-            <Link to="/">
-              <img src={logoTafTech} alt="TAFTECH" className="h-9 w-auto object-contain brightness-200" />
+          <div className="space-y-3">
+            <Link to="/" className="inline-block bg-white rounded-2xl p-2.5 w-fit shadow-lg ring-1 ring-white/10">
+              <img src={logoTafTech} alt="TAFTECH" className="h-8 w-auto object-contain" />
             </Link>
             <p className={tw.footerBrandText}>
               La plateforme de recrutement intelligente en Algérie. L'IA au service de votre carrière.
             </p>
-            <Link to="/recruteurs" className={`inline-block ${tw.footerCopyrightLink} border border-indigo-800 rounded-lg px-3 py-1.5 mt-1`}>
-              Vous recrutez ? Espace recruteur →
-            </Link>
-          </div>
-
-          {/* Candidats */}
-          <div>
-            <h4 className={tw.footerHeading}>
-              Espace candidat
-            </h4>
-            <ul className="space-y-3">
-              {[
-                { name: "Toutes les offres", to: "/offres" },
-                { name: "Par wilaya", to: "/regions" },
-                { name: "Par secteur", to: "/secteurs" },
-                { name: "Entreprises", to: "/entreprises" },
-                { name: "Mon profil", to: "/profil" },
-                { name: "Mes candidatures", to: "/mes-candidatures" },
-                { name: "Alertes emploi", to: "/alertes" },
-              ].map((link) => (
-                <li key={link.name}>
-                  <Link to={link.to} className={tw.footerLinkAmber}>
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Contact */}
@@ -50,38 +42,75 @@ const Footer = () => {
             <h4 className={tw.footerHeading}>
               Contact
             </h4>
-            <div className="space-y-3 text-sm text-indigo-300">
-              <p>Oran, Algérie 🇩🇿</p>
-              <a href="mailto:taftech963@gmail.com" className={tw.footerLinkAmberBlock}>
-                taftech963@gmail.com
-              </a>
-              <a href="tel:+213770123440" className={tw.footerLinkAmberBlock}>
-                0770 123 440
-              </a>
-              <p>Conformité ANPDP</p>
-              <p>Loi 18-07 — Protection des données</p>
+            <div className="flex flex-col gap-2.5">
+              {CONTACTS.map(({ label, value, href, icon: Icon }) => {
+                const Tag = href ? "a" : "div";
+                return (
+                  <Tag
+                    key={label}
+                    {...(href ? { href } : {})}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full w-fit shrink-0">
+                      <Icon size={12} /> {label}
+                    </span>
+                    <span className="text-indigo-300 text-sm">{value}</span>
+                  </Tag>
+                );
+              })}
             </div>
+          </div>
+
+          {/* Réseaux sociaux */}
+          <div>
+            <h4 className={tw.footerHeading}>
+              Réseaux sociaux
+            </h4>
+            <ul className="space-y-2">
+              {RESEAUX_SOCIAUX.map((r) => (
+                <li key={r.name}>
+                  <a href={r.href} target="_blank" rel="noopener noreferrer" className={tw.footerLinkAmber}>
+                    {r.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Légal */}
+          <div>
+            <h4 className={tw.footerHeading}>
+              Légal
+            </h4>
+            <ul className="space-y-2">
+              {LIENS_LEGAUX.map((l) => (
+                <li key={l.name}>
+                  <Link to={l.to} target="_blank" rel="noopener noreferrer" className={tw.footerLinkAmber}>
+                    {l.name}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link to="/contact" target="_blank" rel="noopener noreferrer" className={tw.footerLinkAmber}>
+                  Nous contacter
+                </Link>
+              </li>
+              <li>
+                <Link to="/qui-sommes-nous" target="_blank" rel="noopener noreferrer" className={tw.footerLinkAmber}>
+                  Qui sommes-nous ?
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
 
       {/* COPYRIGHT */}
-      <div className={`border-t border-indigo-900 py-6`}>
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-3">
+      <div className="border-t border-slate-800 py-4">
+        <div className="max-w-6xl mx-auto px-6 text-center">
           <p className={tw.footerCopyright}>
             © {new Date().getFullYear()} TAFTECH — Made for a better recruitment
           </p>
-          <div className="flex gap-5">
-            {["Confidentialité", "CGU", "Cookies"].map((item) => (
-              <Link
-                key={item}
-                to="/"
-                className={tw.footerCopyrightLink}
-              >
-                {item}
-              </Link>
-            ))}
-          </div>
         </div>
       </div>
     </footer>

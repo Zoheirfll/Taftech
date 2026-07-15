@@ -45,21 +45,27 @@ const ReviewCandidature = () => {
     fetchData();
   }, [id]);
 
+  const CHAMPS_PROFIL = [
+    { label: "Téléphone", test: (p) => !!p.telephone },
+    { label: "Photo de profil", test: (p) => !!p.photo_profil },
+    { label: "CV", test: (p) => !!p.cv_pdf },
+    { label: "Titre professionnel", test: (p) => !!p.titre_professionnel },
+    { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
+    { label: "Diplôme", test: (p) => !!p.diplome },
+    { label: "Spécialité", test: (p) => !!p.specialite },
+    { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
+    { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
+    { label: "Compétences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
+  ];
+
   const calculerCompletionProfil = () => {
     if (!profil) return 0;
-    let points = 0;
-    if (profil.telephone) points += 10;
-    if (profil.photo_profil) points += 10;
-    if (profil.cv_pdf) points += 10;
-    if (profil.titre_professionnel) points += 10;
-    if (profil.wilaya && profil.commune) points += 10;
-    if (profil.diplome) points += 10;
-    if (profil.specialite) points += 10;
-    if (profil.experiences_detail?.length > 0) points += 10;
-    if (profil.formations_detail?.length > 0) points += 10;
-    if (profil.competences?.split(",").filter((t) => t).length > 0)
-      points += 10;
-    return points;
+    return CHAMPS_PROFIL.filter((c) => c.test(profil)).length * 10;
+  };
+
+  const getChampsManquants = () => {
+    if (!profil) return [];
+    return CHAMPS_PROFIL.filter((c) => !c.test(profil)).map((c) => c.label);
   };
 
   const handleConfirm = async () => {
@@ -108,7 +114,7 @@ const ReviewCandidature = () => {
           .map((item, idx) => (
             <span
               key={idx}
-              className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
+              className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md"
             >
               {item.trim()}
             </span>
@@ -120,7 +126,7 @@ const ReviewCandidature = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
 
@@ -133,40 +139,56 @@ const ReviewCandidature = () => {
 
   const profileCompletion = calculerCompletionProfil();
   const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
+  const champsManquants = getChampsManquants();
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8 mb-24">
+    <div className="max-w-2xl mx-auto px-6 py-8 pb-28">
       {/* EN-TÊTE */}
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold text-slate-900">
-          Postuler pour : <span className="text-teal-700">{job.titre}</span>
+          Postuler pour : <span className="text-indigo-600">{job.titre}</span>
         </h1>
         <p className="text-sm text-slate-700 mt-1">
           {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
         </p>
       </div>
 
-      {/* AVERTISSEMENT COMPLETION */}
-      {profileCompletion < 100 && (
-        <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
-          <AlertTriangle size={18} className="text-amber-600 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-900">
-              Profil rempli à {profileCompletion}%
-            </p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              Un profil incomplet diminue la précision du matching IA.
-            </p>
-          </div>
-          <Link
-            to="/profil"
-            className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors"
-          >
-            Compléter
-          </Link>
+      {/* COMPLÉTION DU PROFIL */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-slate-900">
+            Profil complété à {profileCompletion}%
+          </p>
+          {profileCompletion < 100 && (
+            <Link
+              to="/profil"
+              className="text-xs font-semibold text-indigo-600 hover:underline"
+            >
+              Compléter
+            </Link>
+          )}
         </div>
-      )}
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${profileCompletion === 100 ? "bg-emerald-500" : "bg-indigo-600"}`}
+            style={{ width: `${profileCompletion}%` }}
+          />
+        </div>
+        {champsManquants.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {champsManquants.map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-800 text-xs font-medium rounded-md"
+              >
+                <AlertTriangle size={11} /> {label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* LETTRE DE MOTIVATION */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-4">
@@ -180,7 +202,7 @@ const ReviewCandidature = () => {
               <button
                 key={mode}
                 onClick={() => setMotivationMode(mode)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-teal-700 shadow-sm" : "text-slate-700 hover:text-slate-800"}`}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-indigo-600 shadow-sm" : "text-slate-700 hover:text-slate-800"}`}
               >
                 {mode === "texte" ? "Texte" : "Fichier"}
               </button>
@@ -197,7 +219,7 @@ const ReviewCandidature = () => {
               onChange={(e) => setLettreTexte(e.target.value)}
             />
           ) : (
-            <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center relative cursor-pointer hover:border-teal-400 transition-colors group">
+            <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
@@ -205,7 +227,7 @@ const ReviewCandidature = () => {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <FileText size={28} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-600 group-hover:text-teal-700 transition-colors">
+              <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
                 {lettreFile
                   ? lettreFile.name
                   : "Cliquez ou glissez votre fichier (PDF/Word)"}
@@ -228,7 +250,7 @@ const ReviewCandidature = () => {
           </h2>
           <Link
             to="/profil"
-            className="text-xs font-medium text-teal-700 hover:underline"
+            className="text-xs font-medium text-indigo-600 hover:underline"
           >
             Modifier
           </Link>
@@ -251,7 +273,7 @@ const ReviewCandidature = () => {
               <p className="text-sm font-bold text-slate-900">
                 {profil.first_name} {profil.last_name}
               </p>
-              <p className="text-xs text-teal-700 font-medium">
+              <p className="text-xs text-indigo-600 font-medium">
                 {profil.titre_professionnel || "Aucun titre"}
               </p>
               <div className="flex flex-wrap gap-2 mt-1.5">
@@ -368,7 +390,7 @@ const ReviewCandidature = () => {
                   href={profil.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
                 >
                   <ExternalLink size={13} /> LinkedIn
                 </a>
@@ -395,12 +417,12 @@ const ReviewCandidature = () => {
                 {profil.experiences_detail.map((exp) => (
                   <div
                     key={exp.id}
-                    className="pl-4 border-l-2 border-teal-100"
+                    className="pl-4 border-l-2 border-indigo-100"
                   >
                     <p className="text-sm font-semibold text-slate-900">
                       {exp.titre_poste}
                     </p>
-                    <p className="text-xs text-teal-700">
+                    <p className="text-xs text-indigo-600">
                       {exp.entreprise}
                       {exp.secteur && <span className="text-slate-600 font-normal ml-1">· {exp.secteur}</span>}
                     </p>
@@ -429,7 +451,7 @@ const ReviewCandidature = () => {
                       {form.diplome || "Diplôme non précisé"}
                     </p>
                     {form.description && (
-                      <p className="text-xs text-teal-700 font-medium">
+                      <p className="text-xs text-indigo-600 font-medium">
                         {form.description}
                       </p>
                     )}
@@ -466,7 +488,7 @@ const ReviewCandidature = () => {
       </div>
 
       {/* BARRE FIXE BAS */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-lg">
+      <div className="sticky bottom-0 -mx-6 mt-6 bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center shadow-lg">
         <Link
           to={`/jobs/${id}`}
           className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
@@ -476,7 +498,7 @@ const ReviewCandidature = () => {
         <button
           onClick={handleConfirm}
           disabled={submitting}
-          className="flex items-center gap-2 px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Rocket size={16} />
           {submitting ? "Envoi en cours..." : "Confirmer & postuler"}

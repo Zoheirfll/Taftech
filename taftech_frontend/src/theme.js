@@ -110,7 +110,7 @@ export const tw = {
 
   // === TEXTE / NEUTRES ===
   textMuted: "text-slate-600",
-  textMuted700: "text-slate-700",
+  textMuted700: "text-slate-900",
   textStrong: "text-slate-900",
   textSubtle: "text-slate-300",
   textLight: "text-slate-400",
@@ -133,6 +133,7 @@ export const tw = {
   textPrimaryStrong: "text-indigo-700",
   linkPrimary: "text-indigo-600 hover:text-indigo-700",
   bgPrimary: "bg-indigo-600",
+  bgPrimarySolid: "bg-indigo-600 hover:bg-indigo-700 text-white",
   bgPrimarySolidHover: "bg-indigo-600 hover:bg-indigo-700",
   bgPrimarySoft: "bg-indigo-50",
   bgPrimaryHover: "hover:bg-indigo-50",
@@ -170,6 +171,8 @@ export const tw = {
     "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-150",
   navLinkTealActive:
     "hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-all duration-150",
+  navLinkIndigoActive:
+    "hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all duration-150",
   dropdownItem:
     "flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors",
   dropdownItemTeal:
@@ -211,22 +214,22 @@ export const tw = {
   navLinkMobileInactiveTeal: "text-slate-600 hover:text-slate-900 hover:bg-slate-50",
 
   // === FOOTER (candidat — fond indigo-950) ===
-  footerShell: "bg-indigo-950 border-t border-indigo-900",
+  footerShell: "bg-slate-950 border-t border-slate-800",
   footerBrandText: "text-indigo-300 text-sm leading-relaxed",
-  footerLinkAmber: "text-indigo-300 hover:text-amber-400 text-sm font-medium transition-colors",
-  footerLinkAmberBlock: "hover:text-amber-400 transition-colors block",
-  footerHeading: "text-white font-semibold text-xs uppercase tracking-wider mb-4 border-l-2 border-amber-400 pl-3",
+  footerLinkAmber: "text-indigo-300 hover:text-white text-sm font-medium transition-colors",
+  footerLinkAmberBlock: "hover:text-white transition-colors block",
+  footerHeading: "text-white font-semibold text-xs uppercase tracking-wider mb-2.5 border-l-2 border-indigo-400 pl-3",
   footerCopyright: "text-xs text-indigo-400",
-  footerCopyrightLink: "text-xs text-indigo-400 hover:text-amber-400 transition-colors",
+  footerCopyrightLink: "text-xs text-indigo-400 hover:text-white transition-colors",
 
   // === FOOTER RECRUTEUR (fond slate-900 / accent teal) ===
-  footerShellTeal: "bg-slate-900 border-t border-slate-800",
-  footerBrandTextTeal: "text-slate-600 text-sm leading-relaxed",
-  footerLinkTeal: "text-slate-600 hover:text-teal-400 text-sm font-medium transition-colors",
+  footerShellTeal: "bg-slate-950 border-t border-slate-800",
+  footerBrandTextTeal: "text-slate-300 text-sm leading-relaxed",
+  footerLinkTeal: "text-slate-300 hover:text-teal-400 text-sm font-medium transition-colors",
   footerLinkTealBlock: "hover:text-teal-400 transition-colors block",
-  footerHeadingTeal: "text-white font-semibold text-xs uppercase tracking-wider mb-4 border-l-2 border-teal-500 pl-3",
-  footerCopyrightTeal: "text-xs text-slate-700",
-  footerCopyrightLinkTeal: "text-xs text-slate-700 hover:text-teal-400 transition-colors",
+  footerHeadingTeal: "text-white font-semibold text-xs uppercase tracking-wider mb-2.5 border-l-2 border-teal-500 pl-3",
+  footerCopyrightTeal: "text-xs text-slate-400",
+  footerCopyrightLinkTeal: "text-xs text-slate-400 hover:text-teal-400 transition-colors",
 
   // === JOBCARD ===
   jobCardShell: "bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all",
@@ -847,5 +850,34 @@ export const selectStyles = {
     borderRadius: "0.5rem",
     boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
     border: `1px solid ${colors.neutral[200]}`,
+  }),
+};
+
+// Variante teal — portail recruteur (couleur de marque recruteur, pas le bleu candidat)
+const tealScale = { 50: "#f0f9ec", 100: "#ddf2cf", 500: "#5cad3f", 600: "#3a8226" };
+export const selectStylesTeal = {
+  ...selectStyles,
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: "#fff",
+    borderColor: state.isFocused ? tealScale[500] : colors.neutral[200],
+    borderWidth: "1px",
+    boxShadow: state.isFocused ? `0 0 0 3px ${tealScale[100]}` : "none",
+    borderRadius: "0.5rem",
+    padding: "2px",
+    fontSize: "0.875rem",
+    minHeight: "42px",
+    "&:hover": { borderColor: tealScale[500] },
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? tealScale[600]
+      : state.isFocused
+        ? tealScale[50]
+        : "transparent",
+    color: state.isSelected ? "#fff" : colors.neutral[900],
+    fontSize: "0.875rem",
+    cursor: "pointer",
   }),
 };

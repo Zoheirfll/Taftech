@@ -96,6 +96,10 @@ import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
 
 // Pages lazy — chargées à la demande
 const Entreprises        = lazy(() => import("./Pages/Public/Entreprises"));
+const PolitiqueConfidentialite = lazy(() => import("./Pages/Public/PolitiqueConfidentialite"));
+const ContactezNous = lazy(() => import("./Pages/Public/ContactezNous"));
+const CGU = lazy(() => import("./Pages/Public/CGU"));
+const QuiSommesNous = lazy(() => import("./Pages/Public/QuiSommesNous"));
 const EntreprisePublic   = lazy(() => import("./Pages/Recruteur/EntreprisePublic"));
 const OffresParRegion    = lazy(() => import("./Pages/Public/OffresParRegion"));
 const OffresParSecteur   = lazy(() => import("./Pages/Public/OffresParSecteur"));
@@ -188,10 +192,11 @@ function AppContent() {
 
   const role = authService.getUserRole();
   const portal = authService.getLoginPortal();
-  const estRecruteurConnecte = role === "ADMIN" || portal === "recruteur";
+  const estRecruteurConnecte = role === "ADMIN" || (!!role && portal === "recruteur");
+  const forcePortalParam = new URLSearchParams(location.search).get("portail");
   const recruteurPortal =
     !isAdminRoute(location.pathname) &&
-    (isRecruteurRoute(location.pathname) || estRecruteurConnecte);
+    (isRecruteurRoute(location.pathname) || estRecruteurConnecte || forcePortalParam === "recruteur");
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -213,6 +218,10 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/offres" element={<JobsList />} />
             <Route path="/entreprises" element={<Entreprises />} />
+            <Route path="/confidentialite" element={<PolitiqueConfidentialite />} />
+            <Route path="/contact" element={<ContactezNous />} />
+            <Route path="/cgu" element={<CGU />} />
+            <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
             <Route path="/regions" element={<OffresParRegion />} />
             <Route path="/secteurs" element={<OffresParSecteur />} />
             <Route path="/register" element={<GuestRoute><RegisterCandidat /></GuestRoute>} />
@@ -247,12 +256,12 @@ function AppContent() {
               <Route path="/profil" element={<ProfilCandidat />} />
               <Route path="/mes-candidatures" element={<MesCandidatures />} />
               <Route path="/inbox" element={<BoiteReception />} />
-              <Route path="/jobs/:id/postuler" element={<ReviewCandidature />} />
               <Route path="/parametres/candidat" element={<Settings />} />
               <Route path="/suggestions-carriere" element={<SuggestionsCarriere />} />
               <Route path="/alertes" element={<AlertesEmploi />} />
               <Route path="/offres-sauvegardees" element={<OffresSauvegardees />} />
             </Route>
+            <Route path="/jobs/:id/postuler" element={<CandidatRoute><ReviewCandidature /></CandidatRoute>} />
 
             {/* ZONE ADMINISTRATION */}
             <Route path="/admin-taftech" element={<AdminRoute><AdminLayout /></AdminRoute>}>

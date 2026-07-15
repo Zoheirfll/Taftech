@@ -49,6 +49,18 @@ export const recruteurService = {
     }
   },
 
+  supprimerOffre: async (offreId) => {
+    try {
+      const response = await api.delete(
+        `jobs/dashboard/offres/${offreId}/supprimer/`,
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_supprimer-offre_API", err);
+      throw err;
+    }
+  },
+
   // Candidatures
   updateStatutCandidature: async (candidatureId, payload) => {
     try {

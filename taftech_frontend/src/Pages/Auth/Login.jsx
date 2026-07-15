@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
@@ -19,6 +19,8 @@ const Login = () => {
   const [showPass, setShowPass] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = searchParams.get("next");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ const Login = () => {
     try {
       await authService.login(credentials.username, credentials.password, "candidat", rememberMe);
       toast.success("Connexion réussie !", { id: toastId });
-      navigate("/");
+      navigate(next || "/");
       window.location.reload();
     } catch (err) {
       const data = err.response?.data;
@@ -50,7 +52,7 @@ const Login = () => {
     try {
       await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "login");
       toast.success("Connexion réussie !", { id: toastId });
-      navigate("/");
+      navigate(next || "/");
       window.location.reload();
     } catch (err) {
       const msg = err.response?.data?.error || "Échec de la connexion Google.";
@@ -183,7 +185,7 @@ const Login = () => {
           </p>
           <p className={`${tw.bodyText} text-center mt-2`}>
             Vous recrutez ?{" "}
-            <Link to="/recruteurs/connexion" className={`${tw.linkPrimary} font-semibold hover:underline`}>
+            <Link to="/recruteurs/connexion" target="_blank" rel="noopener noreferrer" className={`${tw.linkPrimary} font-semibold hover:underline`}>
               Espace recruteur →
             </Link>
           </p>

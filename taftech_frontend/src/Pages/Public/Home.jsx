@@ -119,7 +119,7 @@ const Home = () => {
             Au bon moment.
           </h1>
 
-          <p className={`text-base ${tw.textMuted700} max-w-xl mx-auto leading-relaxed`}>
+          <p className={`text-base ${tw.textStrong} max-w-xl mx-auto leading-relaxed`}>
             Grâce à un matching intelligent, TAFTECH facilite la rencontre entre les
             entreprises à la recherche de compétences et les candidats en quête de
             nouvelles opportunités professionnelles.
@@ -165,7 +165,7 @@ const Home = () => {
           {/* CTA non connecté */}
           {!isLogged && (
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
-              <Link to="/register" className={`w-full sm:w-auto px-6 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg shadow-sm`}>
+              <Link to="/register" className={`w-full sm:w-auto px-6 py-2.5 ${tw.buttonPrimary} shadow-sm`}>
                 Je cherche un emploi
               </Link>
               <Link to="/recruteurs/inscription" className={`w-full sm:w-auto px-6 py-2.5 ${tw.surface} ${tw.textPrimary} border ${tw.borderPrimary200} text-sm font-semibold rounded-lg ${tw.bgPrimaryHover} transition-colors`}>
@@ -357,28 +357,6 @@ const Home = () => {
       </section>
 
       {/* ─── CTA FINAL (visiteurs non connectés uniquement) ─── */}
-      {!isLogged && (
-        <section className={`py-20 ${tw.bgPrimary} px-4`}>
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <p className={`text-xs font-semibold ${tw.heroTextFaint} uppercase tracking-widest`}>Rejoignez TAFTECH</p>
-            <h2 className={`text-3xl font-extrabold ${tw.textOnDark} leading-tight`}>
-              Prêt à trouver votre prochaine opportunité ?
-            </h2>
-            <p className={`${tw.textPrimaryOnDark} text-sm leading-relaxed max-w-xl mx-auto`}>
-              Candidats et entreprises font confiance à TAFTECH pour leurs recrutements en Algérie.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-              <Link to="/register" className={`inline-flex items-center justify-center gap-2 px-6 py-3 ${tw.surface} ${tw.textPrimaryStrong} text-sm font-bold rounded-xl ${tw.bgPrimaryHover} transition-colors shadow-md`}>
-                <CheckCircle size={16} /> Créer un compte candidat
-              </Link>
-              <Link to="/recruteurs/inscription" className={`inline-flex items-center justify-center gap-2 px-6 py-3 ${tw.bgPrimaryLightSolid} text-sm font-bold rounded-xl transition-colors`}>
-                <Building2 size={16} /> Publier une offre
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
     </div>
   );
 };

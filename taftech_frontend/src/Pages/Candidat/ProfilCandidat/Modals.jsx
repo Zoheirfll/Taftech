@@ -55,7 +55,7 @@ export const Modals = ({
   parserLoading,
   remplissageLoading,
   parsedData,
-  setParsedData,
+  resetParser,
   parserMode,
   setParserMode,
   // Handlers
@@ -616,7 +616,7 @@ export const Modals = ({
               </div>
               <div>
                 <label className={tw.formLabel}>
-                  Secteur d'activité
+                  Secteur du poste
                 </label>
                 <Select
                   options={constants.secteurs}
@@ -833,7 +833,7 @@ export const Modals = ({
               <button
                 onClick={() => {
                   setShowParserModal(false);
-                  setParsedData(null);
+                  resetParser();
                 }}
                 className={`p-1.5 rounded-lg transition-colors ${tw.modalCloseButton}`}
               >
@@ -1023,6 +1023,11 @@ export const Modals = ({
                           </p>
                           <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                             {exp.date_debut_raw} — {exp.date_fin_raw}
+                            {exp.secteur && (
+                              <span className={tw.textPrimary}>
+                                {" "}· {constants.secteurs?.find((s) => s.value === exp.secteur)?.label || exp.secteur}
+                              </span>
+                            )}
                           </p>
                           {exp.description && (
                             <p className={`text-xs ${tw.textMuted} mt-1 line-clamp-2`}>
@@ -1122,7 +1127,7 @@ export const Modals = ({
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setParsedData(null)}
+                    onClick={() => resetParser()}
                     disabled={remplissageLoading}
                     className={btnCancel}
                   >

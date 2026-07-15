@@ -6,7 +6,7 @@ import { mediaUrl } from "../../utils/mediaUrl";
 import toast from "react-hot-toast";
 import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
 import Select from "react-select";
-import { selectStyles, tw } from "../../theme";
+import { selectStylesTeal, tw } from "../../theme";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
@@ -127,7 +127,7 @@ const CandidaturesSpontanees = () => {
       <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 ${tw.surface} border ${tw.borderBase} rounded-xl p-4`}>
         <Select
           options={constants.wilayas}
-          styles={selectStyles}
+          styles={selectStylesTeal}
           isClearable
           placeholder="Wilaya..."
           onChange={(opt) =>
@@ -136,7 +136,7 @@ const CandidaturesSpontanees = () => {
         />
         <Select
           options={constants.diplomes}
-          styles={selectStyles}
+          styles={selectStylesTeal}
           isClearable
           placeholder="Diplôme..."
           onChange={(opt) =>
@@ -145,7 +145,7 @@ const CandidaturesSpontanees = () => {
         />
         <Select
           options={constants.secteurs}
-          styles={selectStyles}
+          styles={selectStylesTeal}
           isClearable
           placeholder="Spécialité..."
           onChange={(opt) =>
@@ -157,7 +157,7 @@ const CandidaturesSpontanees = () => {
             { value: "lue", label: "Lues" },
             { value: "non_lue", label: "Non lues" },
           ]}
-          styles={selectStyles}
+          styles={selectStylesTeal}
           isClearable
           placeholder="Statut..."
           onChange={(opt) =>

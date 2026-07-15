@@ -6,7 +6,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { selectStyles, tw } from "../../theme";
+import { selectStylesTeal, tw } from "../../theme";
 import communesAlgerie from "../../data/communes.json";
 import { QRCodeCanvas } from "qrcode.react";
 import {
@@ -113,6 +113,7 @@ const ParametresRecruteur = () => {
             secteur_activite: e.secteur_activite || "",
             wilaya_siege: e.wilaya_siege || "",
             commune_siege: e.commune_siege || "",
+            adresse_complete: e.adresse_complete || "",
             taille_entreprise: e.taille_entreprise || "",
             description: e.description || "",
             telephone: e.telephone || "",
@@ -677,7 +678,7 @@ const ParametresRecruteur = () => {
                       secteur_activite: s ? s.value : "",
                     })
                   }
-                  styles={selectStyles}
+                  styles={selectStylesTeal}
                   placeholder="Sélectionnez un secteur"
                 />
               </div>
@@ -699,7 +700,7 @@ const ParametresRecruteur = () => {
                       commune_siege: "",
                     })
                   }
-                  styles={selectStyles}
+                  styles={selectStylesTeal}
                   placeholder="Sélectionnez une wilaya"
                 />
               </div>
@@ -721,8 +722,20 @@ const ParametresRecruteur = () => {
                       commune_siege: s ? s.value : "",
                     })
                   }
-                  styles={selectStyles}
+                  styles={selectStylesTeal}
                   placeholder="Sélectionnez une commune"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
+                  Adresse complète <span className={tw.textMuted}>(affichée sur la carte de votre page entreprise)</span>
+                </label>
+                <input
+                  type="text"
+                  value={entrepriseForm.adresse_complete || ""}
+                  onChange={(e) => setEntrepriseForm({ ...entrepriseForm, adresse_complete: e.target.value })}
+                  placeholder="Ex : 12 Rue Larbi Ben M'hidi, Oran"
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
                 />
               </div>
               <div className="md:col-span-2">
@@ -742,7 +755,7 @@ const ParametresRecruteur = () => {
                       taille_entreprise: s ? s.value : "",
                     })
                   }
-                  styles={selectStyles}
+                  styles={selectStylesTeal}
                   placeholder="Sélectionnez une taille"
                 />
               </div>

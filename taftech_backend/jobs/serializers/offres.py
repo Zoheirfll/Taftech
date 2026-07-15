@@ -8,7 +8,7 @@ class EntrepriseSimpleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfilEntreprise
-        fields = ('id', 'slug', 'nom_entreprise', 'wilaya_siege', 'logo_url')
+        fields = ('id', 'slug', 'nom_entreprise', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'logo_url')
 
     def get_logo_url(self, obj):
         if not obj.logo:
@@ -40,14 +40,14 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
         fields = (
             'titre', 'wilaya', 'commune', 'diplome', 'specialite',
             'description', 'missions', 'profil_recherche', 'type_contrat',
-            'experience_requise', 'salaire_propose', 'questionnaire', 'date_expiration'
+            'experience_requise', 'nombre_postes', 'salaire_propose', 'questionnaire', 'date_expiration'
         )
 
 
 class OffreEmploiPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
-        fields = ('id', 'titre', 'wilaya', 'commune', 'type_contrat', 'experience_requise', 'date_publication')
+        fields = ('id', 'titre', 'wilaya', 'commune', 'type_contrat', 'experience_requise', 'nombre_postes', 'date_publication')
 
 
 class EntreprisePublicSerializer(serializers.ModelSerializer):
@@ -58,7 +58,7 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
         model = ProfilEntreprise
         fields = (
             'id', 'slug', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
-            'taille_entreprise', 'description', 'logo_url', 'linkedin', 'site_web', 'offres_actives'
+            'adresse_complete', 'taille_entreprise', 'description', 'logo_url', 'linkedin', 'site_web', 'offres_actives'
         )
 
     def get_offres_actives(self, obj):

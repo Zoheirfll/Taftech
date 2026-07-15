@@ -189,6 +189,7 @@ const GestionOffre = () => {
                 { label: "Spécialité", value: formatText(offre.specialite) },
                 { label: "Diplôme requis", value: offre.diplome ? formatText(offre.diplome) : "Non exigé" },
                 { label: "Expérience", value: formatText(offre.experience_requise) },
+                { label: "Postes", value: `${offre.nombre_postes || 1} poste${(offre.nombre_postes || 1) > 1 ? "s" : ""}` },
                 { label: "Salaire", value: offre.salaire_propose || "À discuter" },
               ].map(({ label, value }) => (
                 <div key={label}>

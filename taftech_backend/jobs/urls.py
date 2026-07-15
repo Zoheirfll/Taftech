@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
-    ConstantsAPIView, CloturerOffreAPIView, UpdateOffreRecruteurAPIView,
+    ConstantsAPIView, CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
 
     # Candidatures
     PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView,
@@ -58,6 +58,7 @@ urlpatterns = [
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
+    path('dashboard/offres/<int:offre_id>/supprimer/', SupprimerOffreAPIView.as_view(), name='supprimer-offre'),
 
     # Candidatures
     path('<int:offre_id>/postuler/', PostulerAPIView.as_view(), name='postuler-offre'),

@@ -80,7 +80,7 @@ const AdminUsers = () => {
   const renderTags = (data) => {
     if (!data)
       return (
-        <span className="text-slate-400 italic text-xs">Non renseigné</span>
+        <span className="text-slate-600 italic text-xs">Non renseigné</span>
       );
     return (
       <div className="flex flex-wrap gap-1.5">
@@ -108,7 +108,7 @@ const AdminUsers = () => {
           <h1 className="text-2xl font-bold text-slate-900">
             Utilisateurs inscrits
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-700 mt-0.5">
             Gestion de la communauté TAFTECH.
           </p>
         </div>
@@ -122,7 +122,7 @@ const AdminUsers = () => {
           <div className="relative flex-1 md:w-72">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
             />
             <input
               type="text"
@@ -141,7 +141,7 @@ const AdminUsers = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
               <th className="px-5 py-3">Identité</th>
               <th className="px-5 py-3">Rôle</th>
               <th className="px-5 py-3">Inscription</th>
@@ -162,7 +162,7 @@ const AdminUsers = () => {
               <tr>
                 <td
                   colSpan="4"
-                  className="py-12 text-center text-sm text-slate-400 italic"
+                  className="py-12 text-center text-sm text-slate-600 italic"
                 >
                   Aucun utilisateur trouvé.
                 </td>
@@ -175,7 +175,7 @@ const AdminUsers = () => {
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0 border border-white shadow-sm">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 overflow-hidden flex-shrink-0 border border-white shadow-sm">
                         {user.profil_candidat?.photo_profil ? (
                           <img
                             src={mediaUrl(user.profil_candidat.photo_profil)}
@@ -204,7 +204,7 @@ const AdminUsers = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-xs text-slate-500 font-medium">
+                  <td className="px-5 py-4 text-xs text-slate-700 font-medium">
                     {new Date(user.date_joined).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-5 py-4">
@@ -276,7 +276,7 @@ const AdminUsers = () => {
                     {selectedUser.last_name} {selectedUser.first_name}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-slate-500">
+                    <span className="text-sm text-slate-700">
                       @{selectedUser.username}
                     </span>
                     <span
@@ -289,7 +289,7 @@ const AdminUsers = () => {
               </div>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 <X size={18} />
               </button>
@@ -297,7 +297,7 @@ const AdminUsers = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
                   Contact & Compte
                 </p>
                 <p className="text-sm text-slate-800 font-medium">
@@ -311,7 +311,7 @@ const AdminUsers = () => {
                 </p>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
                   Légal & Identité
                 </p>
                 <p className="text-sm text-slate-800 font-medium font-mono">
@@ -387,7 +387,7 @@ const AdminUsers = () => {
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
                       Préférences
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -421,7 +421,7 @@ const AdminUsers = () => {
                           key={label}
                           className="bg-slate-50 p-3 rounded-lg border border-slate-100"
                         >
-                          <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                          <p className="text-[10px] font-semibold text-slate-600 uppercase">
                             {label}
                           </p>
                           <p className="text-xs font-semibold text-slate-800 mt-1">
@@ -435,7 +435,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.experiences_detail?.length >
                     0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
                         Expériences
                       </p>
                       <div className="space-y-3">
@@ -451,7 +451,7 @@ const AdminUsers = () => {
                                   @ {exp.entreprise}
                                 </span>
                               </p>
-                              <p className="text-xs text-slate-400 mt-0.5">
+                              <p className="text-xs text-slate-600 mt-0.5">
                                 {exp.date_debut} —{" "}
                                 {exp.date_fin || "Aujourd'hui"}
                               </p>
@@ -470,7 +470,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.formations_detail?.length >
                     0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
                         Formations
                       </p>
                       <div className="space-y-3">
@@ -483,7 +483,7 @@ const AdminUsers = () => {
                               <p className="text-sm font-semibold text-slate-900">
                                 {form.diplome}
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-slate-700">
                                 {form.etablissement} · {form.date_debut} —{" "}
                                 {form.date_fin}
                               </p>
@@ -496,13 +496,13 @@ const AdminUsers = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
                         Compétences
                       </p>
                       {renderTags(selectedUser.profil_candidat.competences)}
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
                         Langues
                       </p>
                       {renderTags(selectedUser.profil_candidat.langues)}

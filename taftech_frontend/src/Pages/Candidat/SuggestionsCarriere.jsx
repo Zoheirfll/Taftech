@@ -12,6 +12,7 @@ import {
   Briefcase,
   RefreshCw,
 } from "lucide-react";
+import { tw } from "../../theme";
 
 const PER_PAGE = 5;
 
@@ -37,19 +38,19 @@ const SECTIONS_CONFIG = [
 ];
 
 const COLOR_MAP = {
-  indigo: "bg-indigo-50 border-indigo-100",
-  amber: "bg-amber-50 border-amber-100",
-  emerald: "bg-emerald-50 border-emerald-100",
+  indigo: tw.analyseSectionColors.indigo.card,
+  amber: tw.analyseSectionColors.amber.card,
+  emerald: tw.analyseSectionColors.emerald.card,
 };
 const ICON_COLOR_MAP = {
-  indigo: "text-indigo-600",
-  amber: "text-amber-600",
-  emerald: "text-emerald-600",
+  indigo: tw.analyseSectionColors.indigo.icon,
+  amber: tw.analyseSectionColors.amber.icon,
+  emerald: tw.analyseSectionColors.emerald.icon,
 };
 const HEADER_COLOR_MAP = {
-  indigo: "text-indigo-700",
-  amber: "text-amber-700",
-  emerald: "text-emerald-700",
+  indigo: tw.analyseSectionColors.indigo.header,
+  amber: tw.analyseSectionColors.amber.header,
+  emerald: tw.analyseSectionColors.emerald.header,
 };
 
 const parseAnalyse = (text) => {
@@ -122,11 +123,11 @@ const SuggestionsCarriere = () => {
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       {/* HEADER */}
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-          <Sparkles size={22} className="text-indigo-600" />
+        <h1 className={`${tw.pageTitleGrand} flex items-center gap-2`}>
+          <Sparkles size={22} className={tw.textPrimary} />
           Suggestions de carrière
         </h1>
-        <p className="text-base text-slate-700 mt-1">
+        <p className={`${tw.bodyTextGrand} mt-1`}>
           Découvrez les métiers qui correspondent à votre profil et obtenez une
           analyse personnalisée.
         </p>
@@ -139,20 +140,20 @@ const SuggestionsCarriere = () => {
       </InfoBanner>
 
       {/* MÉTIERS */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <Briefcase size={16} className="text-indigo-600" />
-          <h2 className="text-sm font-bold text-slate-900">
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+        <div className={`px-5 py-4 border-b ${tw.borderSubtle} flex items-center gap-2`}>
+          <Briefcase size={16} className={tw.textPrimary} />
+          <h2 className={`text-sm font-bold ${tw.textStrong}`}>
             Métiers correspondant à votre profil
           </h2>
           {suggestions?.profil_secteur && (
-            <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
+            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
               {suggestions.profil_secteur}
             </span>
           )}
           <button
             onClick={fetchSuggestions}
-            className="ml-auto flex items-center gap-1 text-xs text-indigo-600 font-medium hover:underline"
+            className={`ml-auto flex items-center gap-1 text-xs font-medium hover:underline ${tw.textPrimary}`}
           >
             <RefreshCw size={12} /> Actualiser
           </button>
@@ -160,59 +161,59 @@ const SuggestionsCarriere = () => {
 
         {loadingSuggestions ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <div className={`animate-spin rounded-full h-6 w-6 border-b-2 ${tw.borderPrimary}`}></div>
           </div>
         ) : metiers.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-slate-600 italic">
+            <p className={`text-sm ${tw.textMuted} italic`}>
               Complétez votre profil (titre professionnel, spécialité) pour
               obtenir des suggestions.
             </p>
           </div>
         ) : (
           <>
-            <div className="divide-y divide-slate-100">
+            <div className={`divide-y ${tw.divideBase}`}>
               {paginated.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
+                  className={`flex items-center justify-between px-5 py-3 ${tw.hoverSurfaceMuted} transition-colors`}
                 >
                   <div>
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className={`text-sm font-medium ${tw.textStrong}`}>
                       {m.titre}
                     </p>
                     {m.niveau_experience && (
-                      <p className="text-xs text-slate-600 mt-0.5">
+                      <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                         {m.niveau_experience}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">
+                    <span className={`px-2.5 py-0.5 text-xs rounded-full ${tw.tagNeutralSolid}`}>
                       {m.secteur}
                     </span>
-                    <ChevronRight size={14} className="text-slate-300" />
+                    <ChevronRight size={14} className={tw.textSubtle} />
                   </div>
                 </div>
               ))}
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
+              <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle} ${tw.surfaceMuted}`}>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium ${tw.surface} border ${tw.borderBase} rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
                 >
                   <ChevronLeft size={13} /> Précédent
                 </button>
-                <span className="text-xs text-slate-600">
+                <span className={`text-xs ${tw.textMuted}`}>
                   Page {page} / {totalPages} · {metiers.length} métiers
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium ${tw.surface} border ${tw.borderBase} rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
                 >
                   Suivant <ChevronRight size={13} />
                 </button>
@@ -223,18 +224,18 @@ const SuggestionsCarriere = () => {
       </div>
 
       {/* ANALYSE IA */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+        <div className={`px-5 py-4 border-b ${tw.borderSubtle} flex items-center justify-between`}>
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-indigo-600" />
-            <h2 className="text-sm font-bold text-slate-900">
+            <Sparkles size={16} className={tw.textPrimary} />
+            <h2 className={`text-sm font-bold ${tw.textStrong}`}>
               Analyse IA personnalisée
             </h2>
           </div>
           {(!analysedemandee || (!loadingAnalyse && !analyse)) && (
             <button
               onClick={handleAnalyseIA}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors`}
             >
               <Sparkles size={13} /> Analyser mon profil
             </button>
@@ -244,21 +245,21 @@ const SuggestionsCarriere = () => {
         <div className="p-5">
           {!analysedemandee ? (
             <div className="text-center py-8">
-              <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Sparkles size={24} className="text-indigo-600" />
+              <div className={`w-14 h-14 ${tw.bgPrimarySoft} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                <Sparkles size={24} className={tw.textPrimary} />
               </div>
-              <p className="text-sm font-medium text-slate-900 mb-1">
+              <p className={`text-sm font-medium ${tw.textStrong} mb-1`}>
                 Analyse IA de votre parcours
               </p>
-              <p className="text-xs text-slate-600 max-w-xs mx-auto">
+              <p className={`text-xs ${tw.textMuted} max-w-xs mx-auto`}>
                 Notre IA analyse votre profil et vous suggère des évolutions de
                 carrière adaptées au marché algérien.
               </p>
             </div>
           ) : loadingAnalyse ? (
             <div className="text-center py-8 space-y-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="text-sm text-indigo-600 font-medium animate-pulse">
+              <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary} mx-auto`}></div>
+              <p className={`text-sm ${tw.textPrimary} font-medium animate-pulse`}>
                 L'IA analyse votre profil...
               </p>
             </div>
@@ -279,7 +280,7 @@ const SuggestionsCarriere = () => {
                         {section.label}
                       </p>
                     </div>
-                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                    <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                       {section.content}
                     </p>
                   </div>
@@ -287,7 +288,7 @@ const SuggestionsCarriere = () => {
               })}
               <button
                 onClick={handleReset}
-                className="w-full py-2 text-xs text-slate-500 font-medium hover:underline flex items-center justify-center gap-1"
+                className={`w-full py-2 text-xs ${tw.textMuted700} font-medium hover:underline flex items-center justify-center gap-1`}
               >
                 Réinitialiser
               </button>

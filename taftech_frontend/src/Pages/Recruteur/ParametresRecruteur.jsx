@@ -6,7 +6,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import communesAlgerie from "../../data/communes.json";
 import { QRCodeCanvas } from "qrcode.react";
 import {
@@ -324,23 +324,23 @@ const ParametresRecruteur = () => {
 
   if (loading)
     return (
-      <div className="bg-slate-100 min-h-screen">
+      <div className={`${tw.surfaceSubtle} min-h-screen`}>
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="mb-8 space-y-2">
-            <div className="h-7 bg-slate-200 rounded w-40 animate-pulse" />
-            <div className="h-4 bg-slate-100 rounded w-64 animate-pulse" />
+            <div className={`h-7 ${tw.surfaceSubtle} rounded w-40 animate-pulse`} />
+            <div className={`h-4 ${tw.surfaceSubtle} rounded w-64 animate-pulse`} />
           </div>
-          <div className="flex gap-1 border-b border-slate-200 mb-8">
+          <div className={`flex gap-1 border-b ${tw.borderBase} mb-8`}>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-10 w-32 bg-slate-100 rounded-t animate-pulse mx-1" />
+              <div key={i} className={`h-10 w-32 ${tw.surfaceSubtle} rounded-t animate-pulse mx-1`} />
             ))}
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 animate-pulse">
-            <div className="h-5 bg-slate-200 rounded w-48" />
+          <div className={`${tw.card} rounded-2xl p-6 space-y-4 animate-pulse`}>
+            <div className={`h-5 ${tw.surfaceSubtle} rounded w-48`} />
             <div className="grid grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-xl" />)}
+              {[...Array(4)].map((_, i) => <div key={i} className={`h-12 ${tw.surfaceSubtle} rounded-xl`} />)}
             </div>
-            <div className="h-10 bg-slate-200 rounded-xl w-32 ml-auto" />
+            <div className={`h-10 ${tw.surfaceSubtle} rounded-xl w-32 ml-auto`} />
           </div>
         </div>
       </div>
@@ -350,14 +350,14 @@ const ParametresRecruteur = () => {
     logoPreview || mediaUrl(entreprise?.logo);
 
   return (
-    <div className="bg-slate-100 min-h-screen">
+    <div className={`${tw.surfaceSubtle} min-h-screen`}>
     <div className="max-w-4xl mx-auto px-6 py-8">
       {/* HEADER */}
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className={`text-2xl font-extrabold ${tw.textStrong} tracking-tight`}>
           Paramètres
         </h1>
-        <p className="text-base text-slate-500 mt-1">
+        <p className={`text-base ${tw.textMuted700} mt-1`}>
           Gérez votre profil et vos préférences.
         </p>
       </div>
@@ -372,15 +372,15 @@ const ParametresRecruteur = () => {
       </div>
 
       {/* ONGLETS */}
-      <div className="flex gap-1 border-b border-slate-200 mb-8 overflow-x-auto">
+      <div className={`flex gap-1 border-b ${tw.borderBase} mb-8 overflow-x-auto`}>
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === key
-                ? "border-teal-700 text-teal-700"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? `border-teal-700 ${tw.textTeal}`
+                : `border-transparent ${tw.textMuted700} hover:text-slate-900`
             }`}
           >
             <Icon size={15} />
@@ -391,12 +391,12 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET MON PROFIL */}
       {activeTab === "profil" && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">
+        <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+          <div className={`px-6 py-4 border-b ${tw.borderSubtle}`}>
+            <h2 className={`text-base font-semibold ${tw.textStrong}`}>
               Informations personnelles
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
               Ces informations sont visibles sur votre profil public.
             </p>
           </div>
@@ -405,24 +405,24 @@ const ParametresRecruteur = () => {
             {/* Photo — uniquement pour les candidats purs (pas recruteur ni membre) */}
             {role !== "RECRUTEUR" && !authService.getEstMembreEquipe() && (
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                <p className={`text-xs font-semibold ${tw.textMuted700} uppercase tracking-wider mb-3`}>
                   Photo de profil
                 </p>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className={`w-20 h-20 rounded-xl ${tw.surfaceSubtle} border ${tw.borderBase} flex items-center justify-center overflow-hidden shrink-0`}>
                     {photoPreview ? (
                       <img src={photoPreview} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <User size={28} className="text-slate-300" />
+                      <User size={28} className={tw.textSubtle} />
                     )}
                   </div>
                   <div>
-                    <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${tw.uploadLabelPill}`}>
                       <Upload size={14} />
                       Choisir une photo
                       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
                     </label>
-                    <p className="text-[10px] text-slate-400 mt-1">JPG, PNG ou WEBP — 5 Mo max</p>
+                    <p className={`text-[10px] ${tw.textMuted} mt-1`}>JPG, PNG ou WEBP — 5 Mo max</p>
                   </div>
                 </div>
               </div>
@@ -431,7 +431,7 @@ const ParametresRecruteur = () => {
             {/* Champs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Nom
                 </label>
                 <input
@@ -440,11 +440,11 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, last_name: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Prénom
                 </label>
                 <input
@@ -453,11 +453,11 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, first_name: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Email
                 </label>
                 <input
@@ -466,11 +466,11 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Téléphone
                 </label>
                 <input
@@ -479,7 +479,7 @@ const ParametresRecruteur = () => {
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, telephone: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
             </div>
@@ -488,7 +488,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderProfil}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
+                className={`flex items-center gap-2 px-5 py-3 ${tw.bgTealSolid} text-base font-bold rounded-xl transition-colors disabled:opacity-50`}
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -500,15 +500,15 @@ const ParametresRecruteur = () => {
 
       {/* MOT DE PASSE (dans onglet profil) */}
       {activeTab === "profil" && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-            <Lock size={16} className="text-slate-400" />
+        <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+          <div className={`px-6 py-4 border-b ${tw.borderSubtle} flex items-center gap-2`}>
+            <Lock size={16} className={tw.textMuted} />
             <div>
-              <h2 className="text-base font-semibold text-slate-900">
+              <h2 className={`text-base font-semibold ${tw.textStrong}`}>
                 {estCompteGoogle ? "Définir un mot de passe" : "Changer le mot de passe"}
               </h2>
               {estCompteGoogle && (
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
                   Votre compte a été créé via Google. Définissez un mot de passe pour vous connecter sans Google.
                 </p>
               )}
@@ -523,7 +523,7 @@ const ParametresRecruteur = () => {
                     placeholder="Mot de passe actuel"
                     value={pwdForm.old}
                     onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
                   />
                 )}
                 <input
@@ -531,21 +531,21 @@ const ParametresRecruteur = () => {
                   placeholder="Nouveau mot de passe (8 car. min)"
                   value={pwdForm.new}
                   onChange={(e) => setPwdForm({ ...pwdForm, new: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
                 />
                 <input
                   type="password"
                   placeholder="Confirmer le mot de passe"
                   value={pwdForm.confirm}
                   onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
                 />
               </div>
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={pwdLoading}
-                  className="px-5 py-2.5 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-60"
+                  className={`px-5 py-2.5 ${tw.bgTealSolid} text-sm font-bold rounded-xl transition-colors disabled:opacity-60`}
                 >
                   {pwdLoading ? "Enregistrement..." : estCompteGoogle ? "Définir le mot de passe" : "Modifier le mot de passe"}
                 </button>
@@ -557,30 +557,30 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET MON ENTREPRISE */}
       {activeTab === "entreprise" && entreprise && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">
+        <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+          <div className={`px-6 py-4 border-b ${tw.borderSubtle}`}>
+            <h2 className={`text-base font-semibold ${tw.textStrong}`}>
               Informations de l'entreprise
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
               Visibles sur votre page entreprise publique.
             </p>
           </div>
 
           <div className="p-6 space-y-6">
             {/* Statut */}
-            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div className={`flex items-center gap-3 p-4 ${tw.surfaceMuted} rounded-xl border ${tw.borderSubtle}`}>
               {entreprise.est_approuvee ? (
                 <>
                   <CheckCircle
                     size={18}
-                    className="text-emerald-600 shrink-0"
+                    className={`${tw.scoreTextSuccess} shrink-0`}
                   />
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       Compte vérifié
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className={`text-xs ${tw.textMuted700}`}>
                       Votre entreprise a été validée par TAFTECH.
                     </p>
                   </div>
@@ -589,13 +589,13 @@ const ParametresRecruteur = () => {
                 <>
                   <AlertCircle
                     size={18}
-                    className="text-amber-600 shrink-0"
+                    className={`${tw.scoreTextWarning} shrink-0`}
                   />
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       En attente de validation
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className={`text-xs ${tw.textMuted700}`}>
                       Notre équipe vérifie votre registre de commerce.
                     </p>
                   </div>
@@ -606,18 +606,18 @@ const ParametresRecruteur = () => {
             {/* Champs verrouillés */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Dénomination sociale
                 </label>
-                <p className="px-4 py-2.5 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-sm text-slate-400 cursor-not-allowed">
+                <p className={`px-4 py-2.5 rounded-lg text-sm cursor-not-allowed ${tw.readonlyFieldDashed}`}>
                   {entreprise.nom_entreprise}
                 </p>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Registre de commerce
                 </label>
-                <p className="px-4 py-2.5 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-sm font-mono text-slate-400 cursor-not-allowed">
+                <p className={`px-4 py-2.5 rounded-lg text-sm font-mono cursor-not-allowed ${tw.readonlyFieldDashed}`}>
                   {entreprise.registre_commerce}
                 </p>
               </div>
@@ -625,11 +625,11 @@ const ParametresRecruteur = () => {
 
             {/* Logo */}
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-3 block">
+              <label className={`text-xs font-medium ${tw.textMuted700} mb-3 block`}>
                 Logo de l'entreprise
               </label>
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                <div className={`w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${tw.readonlyFieldDashed}`}>
                   {logoUrl ? (
                     <img
                       src={logoUrl}
@@ -637,11 +637,11 @@ const ParametresRecruteur = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Building2 size={28} className="text-slate-300" />
+                    <Building2 size={28} className={tw.textSubtle} />
                   )}
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <label className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${tw.uploadLabelPill}`}>
                     <Upload size={14} />
                     Changer le logo
                     <input
@@ -651,7 +651,7 @@ const ParametresRecruteur = () => {
                       className="hidden"
                     />
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className={`text-[10px] ${tw.textMuted} mt-1`}>
                     JPG, PNG ou WEBP — 2 Mo max
                   </p>
                 </div>
@@ -661,7 +661,7 @@ const ParametresRecruteur = () => {
             {/* Infos éditables */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Secteur d'activité
                 </label>
                 <Select
@@ -682,7 +682,7 @@ const ParametresRecruteur = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Wilaya du siège
                 </label>
                 <Select
@@ -704,7 +704,7 @@ const ParametresRecruteur = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Commune du siège
                 </label>
                 <Select
@@ -726,7 +726,7 @@ const ParametresRecruteur = () => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Taille de l'entreprise
                 </label>
                 <Select
@@ -747,7 +747,7 @@ const ParametresRecruteur = () => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Description
                 </label>
                 <textarea
@@ -759,43 +759,43 @@ const ParametresRecruteur = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none"
+                  className={`w-full px-4 py-3 rounded-xl text-base resize-none ${tw.inputTeal}`}
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
 
               {/* Liens web */}
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">LinkedIn (URL)</label>
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>LinkedIn (URL)</label>
                 <input
                   type="url"
                   value={entrepriseForm.linkedin}
                   onChange={(e) => setEntrepriseForm({ ...entrepriseForm, linkedin: e.target.value })}
                   placeholder="https://www.linkedin.com/company/..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Site web (URL)</label>
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Site web (URL)</label>
                 <input
                   type="url"
                   value={entrepriseForm.site_web}
                   onChange={(e) => setEntrepriseForm({ ...entrepriseForm, site_web: e.target.value })}
                   placeholder="https://www.monentreprise.dz"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
             </div>
 
             {/* QR CODE */}
             {entreprise.slug && entreprise.est_approuvee && (
-              <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
+              <div className={`border ${tw.borderBase} rounded-xl p-5 ${tw.surfaceMuted}`}>
                 <div className="flex items-center gap-2 mb-4">
-                  <QrCode size={16} className="text-teal-700" />
-                  <h3 className="text-sm font-semibold text-slate-900">QR Code de votre entreprise</h3>
+                  <QrCode size={16} className={tw.textTeal} />
+                  <h3 className={`text-sm font-semibold ${tw.textStrong}`}>QR Code de votre entreprise</h3>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                  <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+                  <div className={`p-3 ${tw.surface} rounded-xl border ${tw.borderBase} shadow-sm shrink-0`}>
                     <QRCodeCanvas
                       id="entreprise-qr"
                       value={`${window.location.origin}/entreprise/${entreprise.slug}`}
@@ -807,8 +807,8 @@ const ParametresRecruteur = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-slate-700 font-medium">Partagez ce QR code avec vos candidats</p>
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className={`text-sm ${tw.textMuted700} font-medium`}>Partagez ce QR code avec vos candidats</p>
+                    <p className={`text-xs ${tw.textMuted700} leading-relaxed`}>
                       En le scannant, ils accèdent directement à votre page entreprise et peuvent envoyer une candidature spontanée.
                     </p>
                     <button
@@ -820,7 +820,7 @@ const ParametresRecruteur = () => {
                         a.download = `qr-${entreprise.nom_entreprise || "entreprise"}.png`;
                         a.click();
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                      className={`flex items-center gap-2 px-4 py-2 ${tw.bgTealSolid} text-sm font-semibold rounded-lg transition-colors`}
                     >
                       <Download size={14} /> Télécharger le QR
                     </button>
@@ -833,7 +833,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderEntreprise}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
+                className={`flex items-center gap-2 px-5 py-3 ${tw.bgTealSolid} text-base font-bold rounded-xl transition-colors disabled:opacity-50`}
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -845,24 +845,24 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET NOTIFICATIONS */}
       {activeTab === "notifications" && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">
+        <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+          <div className={`px-6 py-4 border-b ${tw.borderSubtle}`}>
+            <h2 className={`text-base font-semibold ${tw.textStrong}`}>
               Notifications aux candidats
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
               Configurez les emails automatiques envoyés à vos candidats.
             </p>
           </div>
 
           <div className="p-6 space-y-6">
             {/* Toggle */}
-            <div className="flex items-start justify-between gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div className={`flex items-start justify-between gap-4 p-4 ${tw.surfaceMuted} rounded-xl border ${tw.borderSubtle}`}>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">
+                <p className={`text-sm font-semibold ${tw.textStrong}`}>
                   Email de refus automatique
                 </p>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                <p className={`text-xs ${tw.textMuted700} mt-1 leading-relaxed`}>
                   Un email est envoyé automatiquement aux candidats refusés. Une
                   réponse, même négative, améliore votre image employeur.
                 </p>
@@ -875,11 +875,11 @@ const ParametresRecruteur = () => {
                   })
                 }
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                  notifForm.email_refus_auto ? "bg-teal-700" : "bg-slate-200"
+                  notifForm.email_refus_auto ? tw.toggleTrackOn : tw.toggleTrackOff
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
+                  className={`inline-block h-5 w-5 transform rounded-full ${tw.surface} shadow transition duration-200 ${
                     notifForm.email_refus_auto
                       ? "translate-x-5"
                       : "translate-x-0"
@@ -892,17 +892,17 @@ const ParametresRecruteur = () => {
             {notifForm.email_refus_auto && (
               <div>
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <label className={tw.sectionLabel}>
                     Message de refus
                   </label>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400 mr-1">Cliquez pour insérer :</span>
+                    <span className={`text-[10px] ${tw.textMuted} mr-1`}>Cliquez pour insérer :</span>
                     {["{prenom}", "{titre_offre}", "{nom_entreprise}"].map((v) => (
                       <button
                         key={v}
                         type="button"
                         onClick={() => insererVariable(v)}
-                        className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] font-mono rounded border border-teal-100 hover:bg-teal-100 hover:border-teal-300 transition-colors cursor-pointer"
+                        className={`px-2 py-0.5 text-[10px] font-mono rounded transition-colors cursor-pointer ${tw.variablePillTeal}`}
                       >
                         {v}
                       </button>
@@ -911,8 +911,8 @@ const ParametresRecruteur = () => {
                 </div>
 
                 {showApercu ? (
-                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 leading-relaxed whitespace-pre-wrap min-h-[11rem]">
-                    {apercuMessage || <span className="text-slate-400 italic">Aucun message.</span>}
+                  <div className={`w-full px-4 py-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap min-h-[11rem] ${tw.surfaceMuted} border ${tw.borderBase} ${tw.textMuted700}`}>
+                    {apercuMessage || <span className={`${tw.textMuted} italic`}>Aucun message.</span>}
                   </div>
                 ) : (
                   <textarea
@@ -920,7 +920,7 @@ const ParametresRecruteur = () => {
                     rows="8"
                     value={notifForm.message_refus_auto}
                     onChange={(e) => setNotifForm({ ...notifForm, message_refus_auto: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none font-mono"
+                    className={`w-full px-4 py-3 rounded-xl text-sm resize-none font-mono ${tw.inputTeal}`}
                     placeholder="Bonjour {prenom},&#10;&#10;Nous avons bien étudié votre candidature pour le poste de {titre_offre} au sein de {nom_entreprise}...&#10;&#10;Cordialement,"
                   />
                 )}
@@ -929,11 +929,11 @@ const ParametresRecruteur = () => {
                   <button
                     type="button"
                     onClick={() => setShowApercu(!showApercu)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:underline"
+                    className={`flex items-center gap-1.5 text-xs font-medium ${tw.textTeal} hover:underline`}
                   >
                     {showApercu ? <><EyeOff size={12} /> Modifier</> : <><Eye size={12} /> Aperçu</>}
                   </button>
-                  <span className="text-[10px] text-slate-400">
+                  <span className={`text-[10px] ${tw.textMuted}`}>
                     {notifForm.message_refus_auto.length} caractères
                   </span>
                 </div>
@@ -944,7 +944,7 @@ const ParametresRecruteur = () => {
               <button
                 onClick={sauvegarderNotifs}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 bg-teal-700 text-white text-base font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
+                className={`flex items-center gap-2 px-5 py-3 ${tw.bgTealSolid} text-base font-bold rounded-xl transition-colors disabled:opacity-50`}
               >
                 <Save size={15} />
                 {saving ? "Sauvegarde..." : "Sauvegarder"}

@@ -14,23 +14,24 @@ import {
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { TooltipIcon } from "../../Components/Tooltip";
+import { tw } from "../../theme";
 
 const getBadgeStyle = (statut) => {
   const styles = {
-    RECUE: "bg-amber-50 text-amber-700 border-amber-200",
-    EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
-    ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
-    RETENU: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    REFUSE: "bg-red-50 text-red-700 border-red-200",
+    RECUE: tw.scoreMid,
+    EN_COURS: tw.statusBlueSoft,
+    ENTRETIEN: tw.statusOrangeSoft,
+    RETENU: tw.scoreHigh,
+    REFUSE: tw.scoreLow,
   };
-  return styles[statut] || "bg-slate-100 text-slate-700";
+  return styles[statut] || tw.statusNeutralSoft;
 };
 
 const getScoreColor = (score) => {
   const num = parseFloat(score);
-  if (num >= 80) return "bg-emerald-500 text-white";
-  if (num >= 60) return "bg-amber-500 text-white";
-  return "bg-red-500 text-white";
+  if (num >= 80) return tw.scoreBadgeHigh;
+  if (num >= 60) return tw.scoreBadgeMid;
+  return tw.scoreBadgeLow;
 };
 
 const getMessageStatut = (statut) => {
@@ -161,10 +162,10 @@ const AnalyseIA = ({ cand }) => {
   const points_forts = DM?.highlights?.points_forts || [];
   const ecarts = DM?.highlights?.ecarts || [];
   return (
-    <div className="mt-4 border-t border-slate-100 pt-4">
+    <div className={`mt-4 border-t ${tw.borderSubtle} pt-4`}>
       <div className="flex items-center gap-2 mb-4">
-        <Sparkles size={14} className="text-indigo-500" />
-        <span className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">
+        <Sparkles size={14} className={tw.iconPrimary500} />
+        <span className={`text-sm font-semibold ${tw.textPrimaryStrong} uppercase tracking-wide`}>
           Analyse IA
         </span>
       </div>
@@ -177,17 +178,17 @@ const AnalyseIA = ({ cand }) => {
             const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
             const bar =
               pct >= 80
-                ? "bg-emerald-500"
+                ? tw.analyseBarHigh
                 : pct >= 50
-                  ? "bg-amber-500"
-                  : "bg-red-400";
+                  ? tw.analyseBarMid
+                  : tw.analyseBarLow;
             return (
               <div key={c.key}>
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-slate-600">{c.label}</span>
-                  <span className="text-sm font-bold text-slate-700">{pct}%</span>
+                  <span className={`text-sm font-medium ${tw.textMuted}`}>{c.label}</span>
+                  <span className={`text-sm font-bold ${tw.textMuted700}`}>{pct}%</span>
                 </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-1.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
                   <div
                     className={`h-full rounded-full ${bar}`}
                     style={{ width: `${pct}%` }}
@@ -200,27 +201,27 @@ const AnalyseIA = ({ cand }) => {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {points_forts.length > 0 && (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-emerald-700 uppercase mb-2 flex items-center gap-1">
+          <div className={`${tw.analyseCardSuccess} rounded-xl p-3`}>
+            <p className={`text-xs font-bold ${tw.analyseTextSuccessStrong} uppercase mb-2 flex items-center gap-1`}>
               <CheckCircle size={11} /> Points forts
             </p>
             {points_forts.map((p) => (
               <div key={p} className="flex items-start gap-1.5 mb-1">
-                <CheckCircle size={13} className="text-emerald-500 mt-0.5 shrink-0" />
-                <span className="text-sm text-emerald-800">{p}</span>
+                <CheckCircle size={13} className={`${tw.analyseIconSuccess} mt-0.5 shrink-0`} />
+                <span className={`text-sm ${tw.analyseTextSuccessBody}`}>{p}</span>
               </div>
             ))}
           </div>
         )}
         {ecarts.length > 0 && (
-          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-1">
+          <div className={`${tw.analyseCardWarning} rounded-xl p-3`}>
+            <p className={`text-xs font-bold ${tw.analyseTextWarningStrong} uppercase mb-2 flex items-center gap-1`}>
               <AlertCircle size={11} /> Axes d'amélioration
             </p>
             {ecarts.map((e) => (
               <div key={e} className="flex items-start gap-1.5 mb-1">
-                <AlertCircle size={13} className="text-amber-500 mt-0.5 shrink-0" />
-                <span className="text-sm text-amber-800">{e}</span>
+                <AlertCircle size={13} className={`${tw.analyseIconWarning} mt-0.5 shrink-0`} />
+                <span className={`text-sm ${tw.analyseTextWarningBody}`}>{e}</span>
               </div>
             ))}
           </div>
@@ -262,17 +263,17 @@ const MesCandidatures = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">
+        <h1 className={tw.pageTitleGrand}>
           Suivi de mes candidatures
         </h1>
-        <p className="text-base text-slate-700 mt-1">
+        <p className={`${tw.bodyTextGrand} mt-1`}>
           Suivez l'avancement de toutes vos candidatures.
         </p>
       </div>
@@ -283,17 +284,17 @@ const MesCandidatures = () => {
       </InfoBanner>
 
       {candidatures.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
-          <Briefcase size={40} className="text-slate-300 mx-auto mb-3" />
-          <p className="text-base font-semibold text-slate-900">
+        <div className={`${tw.surface} border border-dashed ${tw.borderBase} rounded-2xl p-14 text-center`}>
+          <Briefcase size={40} className={`${tw.textSubtle} mx-auto mb-3`} />
+          <p className={`text-base font-semibold ${tw.textStrong}`}>
             Aucune candidature pour l'instant
           </p>
-          <p className="text-sm text-slate-500 mt-1 mb-5">
+          <p className={`text-sm ${tw.textMuted700} mt-1 mb-5`}>
             Parcourez les offres disponibles et postulez en quelques clics.
           </p>
           <Link
             to="/offres"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+            className={`inline-flex items-center gap-2 px-5 py-2.5 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-semibold rounded-xl transition-colors`}
           >
             <Briefcase size={15} /> Voir les offres
           </Link>
@@ -303,7 +304,7 @@ const MesCandidatures = () => {
           {candidatures.map((cand) => (
             <div
               key={cand.id}
-              className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-sm transition-all"
+              className={`${tw.card} rounded-2xl p-6 hover:shadow-sm transition-all`}
             >
               {/* EN-TÊTE */}
               <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-5">
@@ -320,25 +321,25 @@ const MesCandidatures = () => {
                       </span>
                     </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 shrink-0">
+                    <div className={`w-16 h-16 rounded-xl ${tw.surfaceSubtle} border ${tw.borderBase} flex items-center justify-center text-sm font-medium ${tw.textMuted} shrink-0`}>
                       N/A
                     </div>
                   )}
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-base font-bold text-slate-900">
+                      <h2 className={`text-base font-bold ${tw.textStrong}`}>
                         {cand.offre_titre}
                       </h2>
                       {cand.offre_est_cloturee && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 text-white text-xs font-medium rounded-full">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${tw.badgeClosedSolid}`}>
                           <Lock size={10} /> Clôturée
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-indigo-600 mt-0.5">
+                    <p className={`text-sm font-semibold ${tw.textPrimary} mt-0.5`}>
                       {cand.entreprise_nom}
                     </p>
-                    <p className="text-sm text-slate-600 mt-1 flex items-center gap-1.5">
+                    <p className={`text-sm ${tw.textMuted} mt-1 flex items-center gap-1.5`}>
                       <Calendar size={13} />
                       Postulé le{" "}
                       {new Date(cand.date_postulation).toLocaleDateString("fr-FR")}
@@ -351,30 +352,30 @@ const MesCandidatures = () => {
               </div>
 
               {/* MESSAGE STATUT */}
-              <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
-                <p className="text-sm text-slate-600">
+              <div className={`${tw.surfaceMuted} px-4 py-3 rounded-xl border ${tw.borderSubtle}`}>
+                <p className={`text-sm ${tw.textMuted}`}>
                   {getMessageStatut(cand.statut)}
                 </p>
               </div>
 
               {/* ENTRETIEN */}
               {cand.statut === "ENTRETIEN" && cand.date_entretien && (
-                <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                  <h4 className="text-xs font-semibold text-orange-900 flex items-center gap-1.5 mb-2">
+                <div className={`mt-3 p-4 rounded-lg ${tw.interviewCard}`}>
+                  <h4 className={`text-xs font-semibold ${tw.interviewHeading} flex items-center gap-1.5 mb-2`}>
                     <Calendar size={13} /> Convocation à un entretien
                   </h4>
-                  <p className="text-sm font-bold text-orange-800">
+                  <p className={`text-sm font-bold ${tw.interviewDate}`}>
                     {new Date(cand.date_entretien).toLocaleString("fr-FR", {
                       dateStyle: "full",
                       timeStyle: "short",
                     })}
                   </p>
                   {cand.message_entretien && (
-                    <div className="mt-2 px-3 py-2 bg-white/80 rounded-lg border border-orange-100 text-xs italic text-slate-700">
+                    <div className={`mt-2 px-3 py-2 rounded-lg text-xs italic ${tw.interviewNote}`}>
                       "{cand.message_entretien}"
                     </div>
                   )}
-                  <p className="text-xs text-orange-700 font-medium mt-2">
+                  <p className={`text-xs font-medium mt-2 ${tw.interviewFootnote}`}>
                     Ces détails vous ont été envoyés par email.
                   </p>
                 </div>
@@ -383,7 +384,7 @@ const MesCandidatures = () => {
                 <>
                   <button
                     onClick={() => toggleAnalyse(cand.id)}
-                    className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 text-sm font-semibold transition-colors"
+                    className={`mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${tw.toggleAnalyseButton}`}
                   >
                     <Sparkles size={13} />
                     {openAnalyse[cand.id]

@@ -131,6 +131,14 @@ try:
         'VERSION': '1.0.0',
         'SERVE_INCLUDE_SCHEMA': False,
         'COMPONENT_SPLIT_REQUEST': True,
+        'SWAGGER_UI_SETTINGS': {
+            'deepLinking': True,
+            'persistAuthorization': True,
+            'displayRequestDuration': True,
+            'filter': True,
+            'docExpansion': 'none',
+            'defaultModelsExpandDepth': -1,
+        },
     }
 except ImportError:
     pass

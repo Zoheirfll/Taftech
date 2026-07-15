@@ -129,16 +129,16 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
         <div className="space-y-3">
           {premium_active_since && (
             <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                <CalendarDays size={15} className="text-slate-400" /> Date d'activation
+              <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                <CalendarDays size={15} className="text-slate-600" /> Date d'activation
               </div>
               <span className="text-sm font-semibold text-slate-800">{premium_active_since}</span>
             </div>
           )}
           {premium_expire_at && (
             <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                <CalendarCheck size={15} className="text-slate-400" /> Expire le
+              <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                <CalendarCheck size={15} className="text-slate-600" /> Expire le
               </div>
               <span className={`text-sm font-semibold ${bientotExpire ? "text-amber-600" : "text-slate-800"}`}>
                 {premium_expire_at}
@@ -148,8 +148,8 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
           )}
           {premium_nb_mois && (
             <div className="flex items-center justify-between py-2.5">
-              <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                <RefreshCw size={15} className="text-slate-400" /> Durée souscrite
+              <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                <RefreshCw size={15} className="text-slate-600" /> Durée souscrite
               </div>
               <span className="text-sm font-semibold text-slate-800">{premium_nb_mois} mois</span>
             </div>
@@ -246,7 +246,7 @@ const PremiumPage = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors mb-8">
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors mb-8">
           <ArrowLeft size={15} /> Retour au tableau de bord
         </Link>
 
@@ -257,7 +257,7 @@ const PremiumPage = () => {
           <h1 className="text-3xl font-extrabold text-slate-900">
             {showStatut ? "Mon abonnement Premium" : "Passer en Premium"}
           </h1>
-          <p className="text-slate-500 mt-2 text-base">
+          <p className="text-slate-700 mt-2 text-base">
             {showStatut ? "Consultez l'état de votre abonnement." : "Payez en ligne par CIB ou EDAHABIA via Chargily Pay."}
           </p>
         </div>
@@ -291,7 +291,7 @@ const PremiumPage = () => {
               <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
                 <RefreshCw size={15} className="shrink-0" />
                 Prolongation — la durée s'ajoutera à la fin de votre abonnement actuel.
-                <button onClick={() => setModeRenouvellement(false)} className="ml-auto text-slate-400 hover:text-slate-600 text-xs underline">
+                <button onClick={() => setModeRenouvellement(false)} className="ml-auto text-slate-600 hover:text-slate-600 text-xs underline">
                   Annuler
                 </button>
               </div>
@@ -323,7 +323,7 @@ const PremiumPage = () => {
                     )}
                     <p className="text-sm font-bold text-slate-900">{label}</p>
                     <p className="text-xs text-teal-700 font-semibold mt-1">{getPrix(mois).toLocaleString("fr-DZ")} DA</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{Math.round(getPrix(mois) / mois).toLocaleString("fr-DZ")} DA/mois</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{Math.round(getPrix(mois) / mois).toLocaleString("fr-DZ")} DA/mois</p>
                   </button>
                 ))}
               </div>
@@ -333,7 +333,7 @@ const PremiumPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-700">Total à payer</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-700">
                       {nbMois} mois × {formatDA(Math.round(getPrix(nbMois) / nbMois))}/mois
                       {(nbMois === 6 || nbMois === 12) && (
                         <span className="ml-1 text-emerald-600 font-semibold">({nbMois === 6 ? "−8%" : "−17%"})</span>
@@ -348,7 +348,7 @@ const PremiumPage = () => {
                     Vous économisez {formatDA(getEconomie(nbMois))} par rapport au tarif mensuel
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-slate-700 pt-0.5">
                   <CalendarCheck size={12} className="text-teal-500 shrink-0" />
                   Accès Premium jusqu'au <span className="font-semibold text-slate-700 ml-1">{getDateExpiration(nbMois)}</span>
                 </div>
@@ -362,7 +362,7 @@ const PremiumPage = () => {
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900">Paiement sécurisé via Chargily Pay</p>
-                <p className="text-xs text-slate-500 mt-0.5">CIB · EDAHABIA — vous serez redirigé vers la plateforme de paiement algérienne</p>
+                <p className="text-xs text-slate-700 mt-0.5">CIB · EDAHABIA — vous serez redirigé vers la plateforme de paiement algérienne</p>
               </div>
               <ExternalLink size={15} className="text-slate-300 ml-auto shrink-0" />
             </div>
@@ -379,7 +379,7 @@ const PremiumPage = () => {
               )}
             </button>
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600">
               <span className="flex items-center gap-1"><Shield size={13} /> Paiement 100% sécurisé</span>
               <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Activation automatique après paiement</span>
             </div>
@@ -395,10 +395,10 @@ const PremiumPage = () => {
                       className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
                     >
                       {item.q}
-                      {faqOpen === i ? <ChevronUp size={15} className="text-slate-400 shrink-0 ml-2" /> : <ChevronDown size={15} className="text-slate-400 shrink-0 ml-2" />}
+                      {faqOpen === i ? <ChevronUp size={15} className="text-slate-600 shrink-0 ml-2" /> : <ChevronDown size={15} className="text-slate-600 shrink-0 ml-2" />}
                     </button>
                     {faqOpen === i && (
-                      <div className="px-4 pb-4 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3">
+                      <div className="px-4 pb-4 text-xs text-slate-700 leading-relaxed border-t border-slate-100 pt-3">
                         {item.r}
                       </div>
                     )}

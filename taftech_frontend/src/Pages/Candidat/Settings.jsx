@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
+import { tw } from "../../theme";
 
 const NOTIF_FIELDS = [
   { field: "notif_offres_exclusives", label: "Offres exclusives", desc: "Recevez des offres spéciales de nos partenaires." },
@@ -11,16 +12,15 @@ const NOTIF_FIELDS = [
   { field: "notif_mise_a_jour", label: "Rappels de profil", desc: "Email si votre CV n'a pas été actualisé." },
 ];
 
-const INPUT_CLASS =
-  "flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+const INPUT_CLASS = `flex-1 px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
 const Toggle = ({ checked, onChange }) => (
   <button
     onClick={onChange}
-    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-indigo-600" : "bg-slate-200"}`}
+    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? tw.toggleTrackOn : tw.toggleTrackOff}`}
   >
     <span
-      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-0"}`}
+      className={`inline-block h-5 w-5 transform rounded-full transition ${tw.toggleThumb} ${checked ? "translate-x-5" : "translate-x-0"}`}
     />
   </button>
 );
@@ -96,13 +96,13 @@ const Settings = () => {
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-extrabold text-slate-900">Paramètres</h1>
+      <h1 className={tw.pageTitleGrand}>Paramètres</h1>
 
       <InfoBanner storageKey="settings_candidat" title="Vos préférences">
         Gérez vos <strong>notifications email</strong> (offres exclusives, newsletter, rappels CV) et votre <strong>mot de passe</strong>.
@@ -110,16 +110,16 @@ const Settings = () => {
       </InfoBanner>
 
       {/* NOTIFICATIONS */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+        <div className={`px-5 py-4 border-b ${tw.borderSubtle}`}>
+          <h2 className={`text-base font-semibold ${tw.textStrong}`}>Notifications</h2>
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className={`divide-y ${tw.divideBase}`}>
           {NOTIF_FIELDS.map(({ field, label, desc }) => (
             <div key={field} className="flex justify-between items-center px-5 py-4">
               <div>
-                <p className="text-sm font-medium text-slate-800">{label}</p>
-                <p className="text-xs text-slate-600 mt-0.5">{desc}</p>
+                <p className={`text-sm font-medium ${tw.textSlate800}`}>{label}</p>
+                <p className={`text-xs ${tw.textMuted} mt-0.5`}>{desc}</p>
               </div>
               <Toggle checked={notifications[field]} onChange={() => handleToggle(field)} />
             </div>
@@ -128,13 +128,13 @@ const Settings = () => {
       </div>
 
       {/* MOT DE PASSE */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-900">
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
+        <div className={`px-5 py-4 border-b ${tw.borderSubtle}`}>
+          <h2 className={`text-base font-semibold ${tw.textStrong}`}>
             {estCompteGoogle ? "Définir un mot de passe" : "Modifier mon mot de passe"}
           </h2>
           {estCompteGoogle && (
-            <p className="text-xs text-slate-500 mt-1">
+            <p className={`text-xs ${tw.textMuted700} mt-1`}>
               Votre compte a été créé via Google. Définissez un mot de passe pour vous connecter sans Google.
             </p>
           )}
@@ -167,7 +167,7 @@ const Settings = () => {
             <button
               type="submit"
               disabled={pwdLoading}
-              className="px-5 py-3 bg-slate-900 text-white text-base font-bold rounded-xl hover:bg-black transition-colors disabled:opacity-60"
+              className={`px-5 py-3 text-base font-bold rounded-xl ${tw.buttonDark}`}
             >
               {pwdLoading ? "..." : estCompteGoogle ? "Définir" : "Modifier"}
             </button>
@@ -176,14 +176,14 @@ const Settings = () => {
       </div>
 
       {/* DANGER ZONE */}
-      <div className="bg-white border border-red-100 rounded-2xl p-5 flex justify-between items-center">
+      <div className={`${tw.surface} border ${tw.dangerCardBorder} rounded-2xl p-5 flex justify-between items-center`}>
         <div>
-          <h2 className="text-sm font-semibold text-red-600">Supprimer mon compte</h2>
-          <p className="text-xs text-slate-600 mt-0.5">Cette action est irréversible.</p>
+          <h2 className={`text-sm font-semibold ${tw.textError}`}>Supprimer mon compte</h2>
+          <p className={`text-xs ${tw.textMuted} mt-0.5`}>Cette action est irréversible.</p>
         </div>
         <button
           onClick={() => toast.error("Action désactivée pour l'instant.")}
-          className="text-sm font-medium text-red-500 hover:underline"
+          className={`text-sm font-medium hover:underline ${tw.textErrorMuted}`}
         >
           Supprimer
         </button>

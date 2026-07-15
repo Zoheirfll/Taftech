@@ -6,7 +6,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import { Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react";
 
 const TEXTE_LOI_1807 = {
@@ -180,16 +180,16 @@ const RegisterCandidat = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-5xl w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
+    <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center p-4`}>
+      <div className={`max-w-5xl w-full ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
 
         {/* COLONNE GAUCHE */}
-        <div className="md:w-5/12 bg-linear-to-br from-indigo-700 to-indigo-500 p-10 text-white flex flex-col justify-between">
+        <div className={`md:w-5/12 ${tw.bannerGradientPrimary} p-10 ${tw.textOnDark} flex flex-col justify-between`}>
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
-              Propulsez votre <span className="text-indigo-200">carrière</span>
+              Propulsez votre <span className={tw.textPrimaryOnDark}>carrière</span>
             </h2>
-            <p className="text-indigo-100 text-sm leading-relaxed mb-8">
+            <p className={`${tw.heroTextMuted} text-sm leading-relaxed mb-8`}>
               Rejoignez TAFTECH et accédez à des milliers d'opportunités professionnelles
               partout en Algérie. Créez votre profil, postulez facilement et laissez les
               recruteurs vous trouver.
@@ -197,20 +197,20 @@ const RegisterCandidat = () => {
             <div className="space-y-4">
               {AVANTAGES.map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-500/50 rounded-lg flex items-center justify-center shrink-0 border border-indigo-400/30">
-                    <Icon size={16} className="text-indigo-100" />
+                  <div className={`w-8 h-8 ${tw.heroIconBoxIndigo} rounded-lg flex items-center justify-center shrink-0`}>
+                    <Icon size={16} className={tw.heroTextMuted} />
                   </div>
                   <div>
                     <p className="text-sm font-semibold">{title}</p>
-                    <p className="text-xs text-indigo-200">{desc}</p>
+                    <p className={`text-xs ${tw.textPrimaryOnDark}`}>{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-sm text-indigo-100 mt-8 pt-6 border-t border-indigo-500/50">
+          <p className={`text-sm ${tw.heroTextMuted} mt-8 pt-6 border-t ${tw.heroBorderDivider}`}>
             Déjà membre ?{" "}
-            <Link to="/login" className="text-white font-semibold hover:underline">
+            <Link to="/login" className={`${tw.textOnDark} font-semibold hover:underline`}>
               Connectez-vous
             </Link>
           </p>
@@ -224,13 +224,13 @@ const RegisterCandidat = () => {
             {STEPS.map((s, i) => (
               <React.Fragment key={s.n}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step > s.n ? "bg-emerald-500 text-white" : step === s.n ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step > s.n ? tw.progressBadgeDone : step === s.n ? `${tw.bgPrimary} ${tw.textOnDark}` : `${tw.surfaceSubtle} ${tw.textMuted}`}`}>
                     {step > s.n ? <CheckCircle2 size={14} /> : s.n}
                   </div>
-                  <span className={`text-xs font-semibold ${step >= s.n ? "text-slate-800" : "text-slate-400"}`}>{s.label}</span>
+                  <span className={`text-xs font-semibold ${step >= s.n ? tw.textEmphasis800 : tw.textMuted}`}>{s.label}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-px transition-colors ${step > 1 ? "bg-emerald-400" : "bg-slate-200"}`} />
+                  <div className={`flex-1 h-px transition-colors ${step > 1 ? tw.progressConnectorDone : tw.bgSlate200}`} />
                 )}
               </React.Fragment>
             ))}
@@ -239,84 +239,84 @@ const RegisterCandidat = () => {
           {/* ÉTAPE 1 */}
           {step === 1 && (
             <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-5">Créer mon espace candidat</h3>
+              <h3 className={`${tw.pageTitlePetit} mb-5`}>Créer mon espace candidat</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Nom *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Nom *</label>
                     <input type="text" name="last_name" required value={formData.last_name} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                      className={tw.authInput} />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Prénom *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Prénom *</label>
                     <input type="text" name="first_name" required value={formData.first_name} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                      className={tw.authInput} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Date de naissance *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Date de naissance *</label>
                     <input type="date" name="date_naissance" required value={formData.date_naissance} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                      className={tw.authInput} />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Téléphone *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Téléphone *</label>
                     <input type="tel" name="telephone" required placeholder="0555..." value={formData.telephone} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                      className={tw.authInput} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Wilaya *</label>
+                  <label className={`${tw.authLabel} mb-1.5`}>Wilaya *</label>
                   <Select name="wilaya" options={wilayasList} onChange={handleSelectChange} placeholder="Sélectionnez votre wilaya..." styles={selectStyles} classNamePrefix="wilaya-select" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Adresse *</label>
+                  <label className={`${tw.authLabel} mb-1.5`}>Adresse *</label>
                   <input type="text" name="adresse" required value={formData.adresse} onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                    className={tw.authInput} />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">NIN (Numéro d'Identification Nationale) *</label>
+                  <label className={`${tw.authLabel} mb-1.5`}>NIN (Numéro d'Identification Nationale) *</label>
                   <input type="text" name="nin" required maxLength={18} pattern="\d{18}" title="Le NIN doit contenir exactement 18 chiffres."
                     placeholder="18 chiffres" value={formData.nin}
                     onChange={(e) => setFormData({ ...formData, nin: e.target.value.replace(/\D/g, "") })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                    className={tw.authInput} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Email *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Email *</label>
                     <input type="email" name="email" required value={formData.email} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                      className={tw.authInput} />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Mot de passe *</label>
+                    <label className={`${tw.authLabel} mb-1.5`}>Mot de passe *</label>
                     <div className="relative">
                       <input type={showPass ? "text" : "password"} name="password" required minLength="8" value={formData.password} onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 pr-10" />
-                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                        className={`${tw.authInput} pr-10`} />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                         {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Confirmer le mot de passe *</label>
+                  <label className={`${tw.authLabel} mb-1.5`}>Confirmer le mot de passe *</label>
                   <div className="relative">
                     <input type={showConfirmPass ? "text" : "password"} name="confirmPassword" required minLength="8" value={formData.confirmPassword} onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 pr-10" />
-                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                      className={`${tw.authInput} pr-10`} />
+                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                       {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
                 {/* Consentement */}
-                <div className="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                <div className={`flex items-start gap-3 p-4 ${tw.bgPrimarySoft} border ${tw.borderPrimarySoft} rounded-lg`}>
                   <input type="checkbox" id="consentement" name="consentement_loi_18_07" required checked={formData.consentement_loi_18_07} onChange={handleChange}
-                    className="mt-0.5 w-4 h-4 cursor-pointer rounded text-indigo-600 border-slate-300" />
-                  <label htmlFor="consentement" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
+                    className={`mt-0.5 w-4 h-4 cursor-pointer rounded ${tw.textPrimary} ${tw.borderStrong}`} />
+                  <label htmlFor="consentement" className={`text-sm ${tw.textMuted} leading-relaxed cursor-pointer`}>
                     J'accepte que mes données personnelles soient traitées par TAFTECH dans le cadre
                     des services de recrutement, conformément à la{" "}
-                    <button type="button" onClick={() => setShowModal(true)} className="text-indigo-600 font-semibold hover:underline">
+                    <button type="button" onClick={() => setShowModal(true)} className={`${tw.linkPrimary} font-semibold hover:underline`}>
                       loi n° 18-07
                     </button>{" "}
                     relative à la protection des données à caractère personnel. *
@@ -324,15 +324,15 @@ const RegisterCandidat = () => {
                 </div>
 
                 <button type="submit" disabled={loading || !formData.consentement_loi_18_07}
-                  className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  className={`w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}>
+                  {loading && <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />}
                   {loading ? "Création en cours..." : "Créer mon compte"}
                 </button>
               </form>
 
               <div className="relative my-5">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
-                <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-slate-400 font-medium">ou</span></div>
+                <div className="absolute inset-0 flex items-center"><div className={`w-full border-t ${tw.borderBase}`} /></div>
+                <div className="relative flex justify-center"><span className={`${tw.surface} px-3 text-xs ${tw.textMuted} font-medium`}>ou</span></div>
               </div>
 
               <div className="flex justify-center">
@@ -358,24 +358,24 @@ const RegisterCandidat = () => {
                 />
               </div>
 
-              <p className="text-sm text-slate-500 text-center mt-6">
+              <p className={`${tw.bodyText} text-center mt-6`}>
                 Vous avez déjà un compte ?{" "}
-                <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
+                <Link to="/login" className={`${tw.linkPrimary} font-semibold hover:underline`}>
                   Se connecter
                 </Link>
               </p>
 
               {showConsentModal && (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
-                    <h2 className="text-xl font-bold text-slate-900 mb-1">Protection des données — Loi 18-07</h2>
-                    <p className="text-sm text-slate-500 mb-4">Avant d'accéder à TAFTECH, vous devez lire et accepter la politique de confidentialité.</p>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-52 overflow-y-auto text-sm text-slate-700 leading-relaxed whitespace-pre-line mb-5">
+                <div className={`${tw.modalOverlayStrong} px-4`}>
+                  <div className={`${tw.surface} rounded-2xl shadow-xl w-full max-w-lg p-8`}>
+                    <h2 className={`text-xl font-bold ${tw.textStrong} mb-1`}>Protection des données — Loi 18-07</h2>
+                    <p className={`${tw.bodyText} mb-4`}>Avant d'accéder à TAFTECH, vous devez lire et accepter la politique de confidentialité.</p>
+                    <div className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-xl p-4 max-h-52 overflow-y-auto ${tw.bodyText} leading-relaxed whitespace-pre-line mb-5`}>
                       {TEXTE_LOI_1807.contenu}
                     </div>
                     <label className="flex items-start gap-3 cursor-pointer mb-6">
-                      <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300" />
-                      <span className="text-sm text-slate-700">J'ai lu et j'accepte la politique de protection des données conformément à la Loi 18-07.</span>
+                      <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} className={`mt-0.5 w-4 h-4 rounded ${tw.textPrimary} ${tw.borderStrong}`} />
+                      <span className={tw.bodyText}>J'ai lu et j'accepte la politique de protection des données conformément à la Loi 18-07.</span>
                     </label>
                     <button disabled={!consentChecked || consentLoading}
                       onClick={async () => {
@@ -390,7 +390,7 @@ const RegisterCandidat = () => {
                           setConsentLoading(false);
                         }
                       }}
-                      className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      className={`w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}>
                       {consentLoading ? "Enregistrement..." : "J'accepte et je continue"}
                     </button>
                   </div>
@@ -402,30 +402,30 @@ const RegisterCandidat = () => {
           {/* ÉTAPE 2 — OTP */}
           {step === 2 && (
             <div className="text-center">
-              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className={`w-16 h-16 ${tw.bgPrimarySoft} rounded-full flex items-center justify-center mx-auto mb-4`}>
                 <span className="text-3xl">📧</span>
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Vérifiez votre email</h3>
-              <p className="text-sm text-slate-500 mb-8">
-                Code envoyé à <span className="font-semibold text-slate-900">{registeredEmail}</span>
+              <h3 className={`${tw.pageTitlePetit} mb-2`}>Vérifiez votre email</h3>
+              <p className={`${tw.bodyText} mb-8`}>
+                Code envoyé à <span className={`font-semibold ${tw.textStrong}`}>{registeredEmail}</span>
               </p>
               <form onSubmit={handleVerifyCode} className="space-y-6">
                 <div className="flex justify-center gap-2">
                   {otp.map((digit, index) => (
                     <input key={index} type="text" maxLength="1" ref={(el) => (inputRefs.current[index] = el)}
                       value={digit} onChange={(e) => handleOtpChange(index, e)} onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-11 h-13 text-center text-xl font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                      className={`w-11 h-13 text-xl ${tw.otpBoxInput}`} />
                   ))}
                 </div>
                 <button type="submit" disabled={loading || otp.join("").length !== 6}
-                  className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  className={`w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}>
+                  {loading && <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />}
                   {loading ? "Vérification..." : "Confirmer mon compte"}
                 </button>
               </form>
-              <p className="text-sm text-slate-400 mt-4">
+              <p className={`text-sm ${tw.textMuted} mt-4`}>
                 Vous n'avez rien reçu ? Vérifiez vos spams ou{" "}
-                <button type="button" onClick={handleRenvoyerCode} disabled={loading} className="text-indigo-600 font-semibold hover:underline disabled:opacity-50">
+                <button type="button" onClick={handleRenvoyerCode} disabled={loading} className={`${tw.linkPrimary} font-semibold hover:underline disabled:opacity-50`}>
                   renvoyer le code
                 </button>.
               </p>
@@ -436,15 +436,15 @@ const RegisterCandidat = () => {
 
       {/* MODAL LOI 18-07 */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl max-w-lg w-full p-8 shadow-2xl`}>
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-4 flex items-center gap-2`}>
               <span>⚖️</span> {TEXTE_LOI_1807.titre}
             </h3>
-            <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-line overflow-y-auto max-h-56 mb-6">
+            <div className={`${tw.textMuted} text-sm leading-relaxed whitespace-pre-line overflow-y-auto max-h-56 mb-6`}>
               {TEXTE_LOI_1807.contenu}
             </div>
-            <button onClick={() => setShowModal(false)} className="w-full bg-slate-900 text-white font-semibold py-2.5 rounded-lg hover:bg-black transition-colors">
+            <button onClick={() => setShowModal(false)} className={`w-full ${tw.buttonDark} font-semibold py-2.5 rounded-lg`}>
               J'ai compris
             </button>
           </div>

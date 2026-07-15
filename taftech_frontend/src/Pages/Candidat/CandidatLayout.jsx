@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { tw } from "../../theme";
 import {
   User,
   Briefcase,
@@ -54,9 +55,9 @@ const CandidatLayout = () => {
   ], [unreadCount]);
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen bg-slate-100">
+    <div className={`max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen ${tw.surfaceSubtle}`}>
       <aside className="w-full md:w-60 shrink-0">
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden sticky top-20">
+        <div className={`${tw.sidebarShell} rounded-2xl overflow-hidden sticky top-20`}>
           <nav className="p-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -65,24 +66,20 @@ const CandidatLayout = () => {
                   key={item.path}
                   to={item.path}
                   className={`flex items-center justify-between px-3 py-3 rounded-xl font-medium transition-colors mb-0.5 ${
-                    isActive
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                    isActive ? tw.sidebarLinkActive : tw.sidebarLinkInactive
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <item.icon
                       size={17}
-                      className={isActive ? "text-white" : "text-slate-400"}
+                      className={isActive ? tw.sidebarLinkIconActive : tw.sidebarLinkIconInactive}
                     />
                     <span className="text-sm font-semibold">{item.name}</span>
                   </div>
                   {item.badge && (
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                        isActive
-                          ? "bg-white text-indigo-600"
-                          : "bg-red-500 text-white"
+                        isActive ? tw.sidebarBadgeActive : tw.sidebarBadgeInactive
                       }`}
                     >
                       {item.badge}
@@ -91,10 +88,10 @@ const CandidatLayout = () => {
                 </Link>
               );
             })}
-            <div className="border-t border-slate-100 mt-2 pt-2">
+            <div className={`${tw.sidebarDivider} mt-2 pt-2`}>
               <button
                 onClick={authService.logout}
-                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                className={`w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${tw.sidebarLogoutButton}`}
               >
                 <LogOut size={17} />
                 Déconnexion

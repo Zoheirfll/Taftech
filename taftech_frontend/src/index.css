@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
 
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-6px); }

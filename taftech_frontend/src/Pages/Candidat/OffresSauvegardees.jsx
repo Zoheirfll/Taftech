@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bookmark, MapPin, Trash2 } from "lucide-react";
+import { tw } from "../../theme";
 
 const OffresSauvegardees = () => {
   const [favoris, setFavoris] = useState([]);
@@ -40,65 +41,65 @@ const OffresSauvegardees = () => {
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">
+        <h1 className={tw.pageTitleGrand}>
           Offres sauvegardées
         </h1>
-        <p className="text-base text-slate-700 mt-0.5">
+        <p className={`${tw.bodyTextGrand} mt-0.5`}>
           Retrouvez toutes les offres que vous avez enregistrées.
         </p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
         {favoris.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <Bookmark size={24} className="text-slate-300" />
+            <div className={`w-14 h-14 ${tw.surfaceMuted} rounded-full flex items-center justify-center mb-4`}>
+              <Bookmark size={24} className={tw.textSubtle} />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">
+            <h3 className={`text-sm font-semibold ${tw.textStrong} mb-1`}>
               Aucune offre sauvegardée
             </h3>
-            <p className="text-xs text-slate-600 mb-4 max-w-xs">
+            <p className={`text-xs ${tw.textMuted} mb-4 max-w-xs`}>
               Parcourez les offres et cliquez sur l'icône de sauvegarde pour les
               retrouver ici.
             </p>
             <Link
               to="/offres"
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              className={`px-4 py-2 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-semibold rounded-lg transition-colors`}
             >
               Explorer les offres
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className={`divide-y ${tw.divideBase}`}>
             {favoris.map((favori) => (
               <div
                 key={favori.id}
-                className="flex flex-col md:flex-row justify-between items-start md:items-center px-5 py-4 hover:bg-slate-50 transition-colors gap-4"
+                className={`flex flex-col md:flex-row justify-between items-start md:items-center px-5 py-4 ${tw.hoverSurfaceMuted} transition-colors gap-4`}
               >
                 <div className="flex-1 min-w-0">
                   <Link
                     to={`/jobs/${favori.offre_detail.id}`}
-                    className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+                    className={`text-sm font-semibold ${tw.textStrong} ${tw.hoverTextPrimary} transition-colors`}
                   >
                     {favori.offre_detail.titre}
                   </Link>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs font-medium text-indigo-600">
+                    <span className={`text-xs font-medium ${tw.textPrimary}`}>
                       {favori.offre_detail.entreprise?.nom_entreprise}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-600">
+                    <span className={`flex items-center gap-1 text-xs ${tw.textMuted}`}>
                       <MapPin size={11} />
                       {favori.offre_detail.wilaya?.split(" - ")[1] || favori.offre_detail.wilaya}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className={`text-xs ${tw.textMuted} mt-1`}>
                     Sauvegardée le{" "}
                     {new Date(favori.date_sauvegarde).toLocaleDateString(
                       "fr-FR",
@@ -108,13 +109,13 @@ const OffresSauvegardees = () => {
                 <div className="flex items-center gap-2">
                   <Link
                     to={`/jobs/${favori.offre_detail.id}`}
-                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.pillLinkPrimarySoft}`}
                   >
                     Consulter
                   </Link>
                   <button
                     onClick={() => handleRemove(favori.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
                   >
                     <Trash2 size={15} />
                   </button>

@@ -21,6 +21,32 @@ export default {
           900: '#020617',
           950: '#020617',
         },
+        // === TAFTECH BRAND — Bleu logo exact #204883 (candidat/public, remplace indigo) ===
+        indigo: {
+          50: '#eef2f9',
+          100: '#dbe4f2',
+          200: '#b3c6e3',
+          300: '#82a1d0',
+          400: '#4f76b2',
+          500: '#2f5798',
+          600: '#204883', // bleu TafTech — couleur exacte du logo
+          700: '#1a3a6a',
+          800: '#152e54',
+          900: '#102240',
+        },
+        // === TAFTECH BRAND — Vert vif (recruteur, remplace teal) ===
+        teal: {
+          50: '#f0f9ec',
+          100: '#ddf2cf',
+          200: '#bce69f',
+          300: '#98d873',
+          400: '#7ac94e',
+          500: '#5cad3f',
+          600: '#3a8226', // vert vif TafTech — AA-safe (contraste 4.77:1)
+          700: '#307020', // nuance principale boutons/texte (bg/text-teal-700) — AA-safe (6:1)
+          800: '#255417', // hover
+          900: '#1a3812',
+        },
       },
     },
   },

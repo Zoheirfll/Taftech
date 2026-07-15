@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { tw } from "../../theme";
 import {
   Inbox,
   Mail,
@@ -17,19 +18,19 @@ import {
 const getStyleForType = (type) => {
   switch (type) {
     case "ENTRETIEN":
-      return { Icon: Calendar, color: "text-orange-600", bg: "bg-orange-50" };
+      return { Icon: Calendar, color: tw.textOrangeStrong, bg: tw.bgOrangeSoft };
     case "RETENU":
       return {
         Icon: CheckCircle,
-        color: "text-emerald-600",
-        bg: "bg-emerald-50",
+        color: tw.textSuccessIcon,
+        bg: tw.bgSuccessSoft,
       };
     case "REFUS":
-      return { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" };
+      return { Icon: XCircle, color: tw.textError, bg: tw.bgErrorSoft };
     case "ALERTE":
-      return { Icon: Bell, color: "text-indigo-600", bg: "bg-indigo-50" };
+      return { Icon: Bell, color: tw.textPrimary, bg: tw.bgPrimarySoft };
     default:
-      return { Icon: Info, color: "text-blue-600", bg: "bg-blue-50" };
+      return { Icon: Info, color: tw.textBlue600, bg: tw.bgBlueSoft };
   }
 };
 
@@ -71,7 +72,7 @@ const BoiteReception = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
@@ -82,18 +83,18 @@ const BoiteReception = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-extrabold text-slate-900">
+          <h1 className={tw.pageTitleGrand}>
             Boîte de réception
           </h1>
           {unreadCount > 0 && (
-            <span className="px-2.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+            <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${tw.badgeDangerSolid}`}>
               {unreadCount} non lus
             </span>
           )}
         </div>
         <Link
           to="/mes-candidatures"
-          className="text-sm font-medium text-indigo-600 hover:underline"
+          className={`text-sm font-medium hover:underline ${tw.textPrimary}`}
         >
           Mes candidatures →
         </Link>
@@ -106,17 +107,17 @@ const BoiteReception = () => {
 
       <div className="flex flex-col md:flex-row gap-4 h-[600px]">
         {/* LISTE GAUCHE */}
-        <div className="w-full md:w-2/5 bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
+        <div className={`w-full md:w-2/5 ${tw.card} rounded-2xl overflow-hidden flex flex-col`}>
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <Inbox size={32} className="text-slate-300 mb-3" />
-              <p className="text-sm font-medium text-slate-900">Boîte vide</p>
-              <p className="text-xs text-slate-700 mt-1">
+              <Inbox size={32} className={`${tw.textSubtle} mb-3`} />
+              <p className={`text-sm font-medium ${tw.textStrong}`}>Boîte vide</p>
+              <p className={`text-xs ${tw.textMuted700} mt-1`}>
                 Aucun message pour le moment.
               </p>
             </div>
           ) : (
-            <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
+            <div className={`overflow-y-auto flex-1 divide-y ${tw.divideBase}`}>
               {notifications.map((notif) => {
                 const { Icon, color, bg } = getStyleForType(notif.type_notif);
                 const isSelected = selectedNotif?.id === notif.id;
@@ -124,9 +125,9 @@ const BoiteReception = () => {
                   <div
                     key={notif.id}
                     onClick={() => handleReadMessage(notif)}
-                    className={`p-4 cursor-pointer transition-colors hover:bg-slate-50 border-l-2 ${
+                    className={`p-4 cursor-pointer transition-colors ${tw.hoverSurfaceMuted} border-l-2 ${
                       isSelected
-                        ? "bg-indigo-50 border-indigo-500"
+                        ? `${tw.bgPrimarySoft} ${tw.borderPrimary}`
                         : "border-transparent"
                     }`}
                   >
@@ -139,18 +140,18 @@ const BoiteReception = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-0.5">
                           <p
-                            className={`text-sm truncate ${!notif.lue ? "font-semibold text-slate-900" : "font-medium text-slate-600"}`}
+                            className={`text-sm truncate ${!notif.lue ? `font-semibold ${tw.textStrong}` : `font-medium ${tw.textMuted}`}`}
                           >
                             {notif.titre}
                           </p>
                           {!notif.lue && (
-                            <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0 mt-1.5 ml-2" />
+                            <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ml-2 ${tw.bgPrimary}`} />
                           )}
                         </div>
-                        <p className="text-xs text-slate-600 truncate">
+                        <p className={`text-xs ${tw.textMuted} truncate`}>
                           {notif.message}
                         </p>
-                        <p className="text-[10px] text-slate-600 mt-1">
+                        <p className={`text-[10px] ${tw.textMuted} mt-1`}>
                           {new Date(notif.date_creation).toLocaleDateString(
                             "fr-FR",
                             {
@@ -171,10 +172,10 @@ const BoiteReception = () => {
         </div>
 
         {/* DÉTAIL DROITE */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-2xl overflow-y-auto">
+        <div className={`flex-1 ${tw.card} rounded-2xl overflow-y-auto`}>
           {selectedNotif ? (
             <div className="p-6">
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+              <div className={`flex items-center gap-4 mb-6 pb-6 border-b ${tw.borderSubtle}`}>
                 {selectedStyle && (
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${selectedStyle.bg}`}
@@ -183,10 +184,10 @@ const BoiteReception = () => {
                   </div>
                 )}
                 <div>
-                  <h2 className="text-xl font-extrabold text-slate-900">
+                  <h2 className={`text-xl font-extrabold ${tw.textStrong}`}>
                     {selectedNotif.titre}
                   </h2>
-                  <p className="text-xs text-slate-600 mt-0.5">
+                  <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                     Reçu le{" "}
                     {new Date(selectedNotif.date_creation).toLocaleDateString(
                       "fr-FR",
@@ -202,17 +203,17 @@ const BoiteReception = () => {
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                 {selectedNotif.message}
               </p>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">
-              <Mail size={36} className="text-slate-300 mb-3" />
-              <p className="text-sm font-medium text-slate-900">
+              <Mail size={36} className={`${tw.textSubtle} mb-3`} />
+              <p className={`text-sm font-medium ${tw.textStrong}`}>
                 Sélectionnez un message
               </p>
-              <p className="text-xs text-slate-700 mt-1">
+              <p className={`text-xs ${tw.textMuted700} mt-1`}>
                 Cliquez sur un message à gauche pour le lire.
               </p>
             </div>

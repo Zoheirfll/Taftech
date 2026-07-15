@@ -125,8 +125,8 @@ const EntreprisePublic = () => {
   const CONTRAT_BADGES = {
     CDI:    "bg-teal-50 text-teal-700 border-teal-200",
     CDD:    "bg-amber-50 text-amber-700 border-amber-200",
-    STAGE:  "bg-violet-50 text-violet-700 border-violet-200",
-    FREELANCE: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    STAGE:  "bg-indigo-50 text-indigo-700 border-indigo-200",
+    FREELANCE: "bg-slate-100 text-slate-700 border-slate-200",
     INTERIM:"bg-orange-50 text-orange-700 border-orange-200",
   };
 
@@ -149,7 +149,7 @@ const EntreprisePublic = () => {
       {/* ── RETOUR ──────────────────────────────────────────────────────────── */}
       <Link
         to={backLink.to}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900 mb-6 transition-colors"
       >
         <ArrowLeft size={16} /> {backLink.label}
       </Link>
@@ -229,7 +229,7 @@ const EntreprisePublic = () => {
           {/* Présentation */}
           {entreprise.description && (
             <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Présentation</p>
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Présentation</p>
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 {entreprise.description}
               </p>
@@ -265,16 +265,16 @@ const EntreprisePublic = () => {
                     <span className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${CONTRAT_BADGES[offre.type_contrat] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
                       {offre.type_contrat}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 text-xs text-slate-700">
                       <MapPin size={11} /> {offre.wilaya?.split(" - ")[1] || offre.wilaya}
                     </span>
                     {offre.experience_requise && (
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
+                      <span className="flex items-center gap-1 text-xs text-slate-700">
                         <Clock size={11} /> {expLabel(offre.experience_requise)}
                       </span>
                     )}
                     {offre.date_publication && (
-                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1 text-xs text-slate-600">
                         <Calendar size={11} /> {formatDate(offre.date_publication)}
                       </span>
                     )}
@@ -295,7 +295,7 @@ const EntreprisePublic = () => {
               <Briefcase size={20} className="text-slate-300" />
             </div>
             <p className="text-sm font-semibold text-slate-700 mb-1">Aucune offre ouverte</p>
-            <p className="text-xs text-slate-400 mb-4">L'entreprise ne recrute pas en ce moment.</p>
+            <p className="text-xs text-slate-600 mb-4">L'entreprise ne recrute pas en ce moment.</p>
             <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
@@ -313,49 +313,49 @@ const EntreprisePublic = () => {
             <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Candidature spontanée</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{entreprise.nom_entreprise}</p>
+                <p className="text-xs text-slate-700 mt-0.5">{entreprise.nom_entreprise}</p>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+              <button onClick={() => setShowModal(false)} className="p-1.5 text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Nom *</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Nom *</label>
                   <input required className={inputClass} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Prénom *</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Prénom *</label>
                   <input required className={inputClass} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Email *</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Email *</label>
                   <input required type="email" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Téléphone</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Téléphone</label>
                   <input type="tel" className={inputClass} value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Wilaya</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Wilaya</label>
                   <Select options={constants.wilayas} styles={selectStyles} placeholder="Wilaya..." onChange={(opt) => setForm({ ...form, wilaya: opt ? opt.value : "" })} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Diplôme</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Diplôme</label>
                   <Select options={constants.diplomes} styles={selectStyles} placeholder="Diplôme..." onChange={(opt) => setForm({ ...form, diplome: opt ? opt.value : "" })} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Spécialité</label>
+                  <label className="text-xs font-medium text-slate-700 mb-1.5 block">Spécialité</label>
                   <Select options={constants.secteurs} styles={selectStyles} placeholder="Secteur..." onChange={(opt) => setForm({ ...form, specialite: opt ? opt.value : "" })} />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">CV (PDF, DOC) *</label>
+                <label className="text-xs font-medium text-slate-700 mb-1.5 block">CV (PDF, DOC) *</label>
                 <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-teal-400 transition-colors group">
                   <input type="file" accept=".pdf,.doc,.docx" required onChange={(e) => setForm({ ...form, cv: e.target.files[0] })} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <FileText size={22} className="text-slate-300 mx-auto mb-1.5" />
@@ -365,7 +365,7 @@ const EntreprisePublic = () => {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Lettre de motivation (optionnelle)</label>
+                <label className="text-xs font-medium text-slate-700 mb-1.5 block">Lettre de motivation (optionnelle)</label>
                 <textarea
                   rows="3"
                   className={inputClass + " resize-none"}

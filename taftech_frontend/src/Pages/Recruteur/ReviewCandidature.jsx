@@ -99,7 +99,7 @@ const ReviewCandidature = () => {
 
   const renderTags = (data) => {
     if (!data)
-      return <p className="text-slate-400 italic text-xs">Non renseigné</p>;
+      return <p className="text-slate-600 italic text-xs">Non renseigné</p>;
     return (
       <div className="flex flex-wrap gap-1.5">
         {data
@@ -126,7 +126,7 @@ const ReviewCandidature = () => {
 
   if (!job || !profil)
     return (
-      <div className="text-center p-12 text-slate-500">
+      <div className="text-center p-12 text-slate-700">
         Erreur de chargement.
       </div>
     );
@@ -142,7 +142,7 @@ const ReviewCandidature = () => {
         <h1 className="text-xl font-bold text-slate-900">
           Postuler pour : <span className="text-teal-700">{job.titre}</span>
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-700 mt-1">
           {job.entreprise?.nom_entreprise || "Entreprise anonyme"}
         </p>
       </div>
@@ -173,14 +173,14 @@ const ReviewCandidature = () => {
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">
             Lettre de motivation{" "}
-            <span className="text-slate-400 font-normal">(optionnel)</span>
+            <span className="text-slate-600 font-normal">(optionnel)</span>
           </h2>
           <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
             {["texte", "fichier"].map((mode) => (
               <button
                 key={mode}
                 onClick={() => setMotivationMode(mode)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${motivationMode === mode ? "bg-white text-teal-700 shadow-sm" : "text-slate-700 hover:text-slate-800"}`}
               >
                 {mode === "texte" ? "Texte" : "Fichier"}
               </button>
@@ -256,20 +256,20 @@ const ReviewCandidature = () => {
               </p>
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {profil.wilaya && (
-                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <MapPin size={11} />
                     {profil.wilaya}
                     {profil.commune ? ` · ${profil.commune}` : ""}
                   </span>
                 )}
                 {profil.adresse && (
-                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <MapPin size={11} />
                     {profil.adresse}
                   </span>
                 )}
                 {profil.diplome && (
-                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <GraduationCap size={11} />
                     {formatText(profil.diplome)}
                   </span>
@@ -294,7 +294,7 @@ const ReviewCandidature = () => {
                 ].map(({ label, active }) => (
                   <span
                     key={label}
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-700"}`}
                   >
                     {label}
                   </span>
@@ -305,7 +305,7 @@ const ReviewCandidature = () => {
 
           {/* PRÉFÉRENCES */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
               Préférences
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -328,7 +328,7 @@ const ReviewCandidature = () => {
                   key={label}
                   className="bg-slate-50 p-2.5 rounded-lg border border-slate-100"
                 >
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                  <p className="text-[10px] font-semibold text-slate-600 uppercase">
                     {label}
                   </p>
                   <p className="text-xs font-semibold text-slate-800 mt-0.5">
@@ -341,11 +341,11 @@ const ReviewCandidature = () => {
 
           {/* CV */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
               CV joint
             </p>
             <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
-              <FileText size={16} className="text-slate-400" />
+              <FileText size={16} className="text-slate-600" />
               <span className="text-xs font-medium text-slate-700">
                 {profil.cv_pdf
                   ? profil.cv_pdf.split("/").pop()
@@ -388,7 +388,7 @@ const ReviewCandidature = () => {
           {/* EXPÉRIENCES */}
           {profil.experiences_detail?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
                 Expériences
               </p>
               <div className="space-y-3">
@@ -402,9 +402,9 @@ const ReviewCandidature = () => {
                     </p>
                     <p className="text-xs text-teal-700">
                       {exp.entreprise}
-                      {exp.secteur && <span className="text-slate-400 font-normal ml-1">· {exp.secteur}</span>}
+                      {exp.secteur && <span className="text-slate-600 font-normal ml-1">· {exp.secteur}</span>}
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-600 mt-0.5">
                       {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
                     </p>
                   </div>
@@ -416,7 +416,7 @@ const ReviewCandidature = () => {
           {/* FORMATIONS */}
           {profil.formations_detail?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
                 Formations
               </p>
               <div className="space-y-3">
@@ -433,11 +433,11 @@ const ReviewCandidature = () => {
                         {form.description}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-700">
                       {form.etablissement}
                     </p>
                     {form.date_debut && (
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-600 mt-0.5">
                         {form.date_debut} — {form.date_fin || "En cours"}
                       </p>
                     )}
@@ -450,13 +450,13 @@ const ReviewCandidature = () => {
           {/* COMPÉTENCES + LANGUES */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Compétences
               </p>
               {renderTags(profil.competences)}
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Langues
               </p>
               {renderTags(profil.langues)}
@@ -469,7 +469,7 @@ const ReviewCandidature = () => {
       <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-lg">
         <Link
           to={`/jobs/${id}`}
-          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft size={16} /> Annuler
         </Link>

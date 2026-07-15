@@ -3,6 +3,7 @@ import { adminService } from "../../Services/adminService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, Shield } from "lucide-react";
+import { tw } from "../../theme";
 
 const FORM_VIDE = { email: "", first_name: "", last_name: "", telephone: "", password: "" };
 
@@ -101,23 +102,23 @@ const AdminComptes = () => {
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Comptes administrateurs</h1>
-          <p className="text-sm text-slate-700 mt-0.5">
+          <h1 className={tw.pageTitle}>Comptes administrateurs</h1>
+          <p className={`${tw.pageSubtitle} mt-0.5`}>
             Créez, modifiez ou supprimez les comptes admin TAFTECH.
           </p>
         </div>
         <button
           onClick={ouvrirCreer}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
         >
           <Plus size={15} /> Nouvel admin
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+          <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
+            <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-5 py-3">Administrateur</th>
               <th className="px-5 py-3">Email</th>
               <th className="px-5 py-3">Téléphone</th>
@@ -126,55 +127,55 @@ const AdminComptes = () => {
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className={tw.divideBase}>
             {loading ? (
               <tr>
-                <td colSpan="6" className="py-12 text-center text-sm text-indigo-600 animate-pulse font-medium">
+                <td colSpan="6" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>
                   Chargement...
                 </td>
               </tr>
             ) : admins.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-12 text-center text-sm text-slate-600">
+                <td colSpan="6" className={`py-12 text-center text-sm ${tw.textMuted}`}>
                   Aucun administrateur trouvé.
                 </td>
               </tr>
             ) : (
               admins.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={a.id} className={tw.rowHover}>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
-                        <Shield size={14} className="text-indigo-600" />
+                      <div className={`w-8 h-8 rounded-full ${tw.bgPrimarySoft} border ${tw.borderPrimarySoft} flex items-center justify-center shrink-0`}>
+                        <Shield size={14} className={tw.textPrimary} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {a.last_name} {a.first_name}
                         </p>
                         {!a.is_active && (
-                          <span className="text-[10px] text-red-500 font-semibold">Désactivé</span>
+                          <span className={`text-[10px] ${tw.textErrorMuted} font-semibold`}>Désactivé</span>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-sm text-indigo-600">{a.email}</td>
-                  <td className="px-5 py-4 text-sm text-slate-700">{a.telephone || "—"}</td>
+                  <td className={`px-5 py-4 text-sm ${tw.textPrimary}`}>{a.email}</td>
+                  <td className={`px-5 py-4 text-sm ${tw.textMuted700}`}>{a.telephone || "—"}</td>
                   <td className="px-5 py-4">
                     {a.is_superuser ? (
-                      <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold rounded-full">
+                      <span className={`px-2.5 py-1 ${tw.bgPurpleSoft} ${tw.textPurple} border ${tw.borderPurple} text-[10px] font-semibold rounded-full`}>
                         Superutilisateur
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold rounded-full">
+                      <span className={`px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} border ${tw.borderPrimary200} text-[10px] font-semibold rounded-full`}>
                         Admin
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-sm text-slate-700">{a.date_joined}</td>
+                  <td className={`px-5 py-4 text-sm ${tw.textMuted700}`}>{a.date_joined}</td>
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
                     <button
                       onClick={() => ouvrirModifier(a)}
-                      className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                      className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
                       title="Modifier"
                     >
                       <Edit2 size={13} />
@@ -182,7 +183,7 @@ const AdminComptes = () => {
                     {!a.is_superuser && (
                       <button
                         onClick={() => ouvrirSupprimer(a)}
-                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        className={`p-2 ${tw.bgErrorSoft} ${tw.textError} rounded-lg ${tw.hoverErrorSoft} transition-colors`}
                         title="Supprimer"
                       >
                         <Trash2 size={13} />
@@ -198,13 +199,13 @@ const AdminComptes = () => {
 
       {/* Modal Créer / Modifier */}
       {modal && modal.mode !== "delete" && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl">
-            <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">
+        <div className={tw.modalOverlay}>
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
+            <div className={`flex justify-between items-center mb-5 pb-4 border-b ${tw.borderSubtle}`}>
+              <h2 className={`text-lg font-bold ${tw.textStrong}`}>
                 {modal.mode === "create" ? "Créer un compte admin" : "Modifier le compte"}
               </h2>
-              <button onClick={fermer} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+              <button onClick={fermer} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg`}>
                 <X size={18} />
               </button>
             </div>
@@ -212,51 +213,51 @@ const AdminComptes = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Prénom</label>
+                  <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Prénom</label>
                   <input
                     type="text"
                     value={form.first_name}
                     onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
                     placeholder="Prénom"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Nom</label>
+                  <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Nom</label>
                   <input
                     type="text"
                     value={form.last_name}
                     onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
                     placeholder="Nom"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Email *</label>
+                <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Email *</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
                   placeholder="admin@taftech.dz"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Téléphone</label>
+                <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Téléphone</label>
                 <input
                   type="text"
                   value={form.telephone}
                   onChange={(e) => setForm({ ...form, telephone: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
                   placeholder="0550 000 000"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>
                   {modal.mode === "create" ? "Mot de passe *" : "Nouveau mot de passe (laisser vide pour ne pas changer)"}
                 </label>
                 <div className="relative">
@@ -264,13 +265,13 @@ const AdminComptes = () => {
                     type={showPassword ? "text" : "password"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-3 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className={`w-full px-3 py-2.5 pr-10 ${tw.inputColorsMuted} rounded-lg text-sm`}
                     placeholder="8 caractères minimum"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -281,14 +282,14 @@ const AdminComptes = () => {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={fermer}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-semibold rounded-xl ${tw.hoverSurfaceSubtleStrong} transition-colors`}
               >
                 Annuler
               </button>
               <button
                 onClick={handleSauvegarder}
                 disabled={saving}
-                className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60`}
               >
                 {saving ? "Enregistrement..." : modal.mode === "create" ? "Créer le compte" : "Enregistrer"}
               </button>
@@ -299,26 +300,26 @@ const AdminComptes = () => {
 
       {/* Modal Supprimer */}
       {modal?.mode === "delete" && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-7 max-w-sm w-full shadow-2xl text-center">
-            <div className="w-12 h-12 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={20} className="text-red-600" />
+        <div className={tw.modalOverlay}>
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-sm w-full shadow-2xl text-center`}>
+            <div className={`w-12 h-12 ${tw.bgErrorSoft} border ${tw.borderError} rounded-full flex items-center justify-center mx-auto mb-4`}>
+              <Trash2 size={20} className={tw.textError} />
             </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-2">Supprimer ce compte ?</h2>
-            <p className="text-sm text-slate-700 mb-6">
-              Le compte de <span className="font-semibold text-slate-700">{modal.data.email}</span> sera définitivement supprimé.
+            <h2 className={`text-lg font-bold ${tw.textStrong} mb-2`}>Supprimer ce compte ?</h2>
+            <p className={`text-sm ${tw.textMuted700} mb-6`}>
+              Le compte de <span className={`font-semibold ${tw.textMuted700}`}>{modal.data.email}</span> sera définitivement supprimé.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={fermer}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-semibold rounded-xl ${tw.hoverSurfaceSubtleStrong} transition-colors`}
               >
                 Annuler
               </button>
               <button
                 onClick={handleSupprimer}
                 disabled={saving}
-                className="flex-1 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-60"
+                className={`flex-1 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-xl transition-colors disabled:opacity-60`}
               >
                 {saving ? "Suppression..." : "Supprimer"}
               </button>

@@ -12,7 +12,7 @@ const RoleGuard = ({ minRole, children }) => {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
         <ShieldOff size={40} className="text-slate-300" />
         <h2 className="text-xl font-bold text-slate-700">Accès restreint</h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-700">
           Votre rôle dans cette équipe ne vous permet pas d'accéder à cette page.
         </p>
       </div>

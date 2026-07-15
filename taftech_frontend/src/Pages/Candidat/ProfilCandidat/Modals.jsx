@@ -2,6 +2,7 @@ import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
 import { Pencil, X, Sparkles, ExternalLink } from "lucide-react";
+import { tw } from "../../../theme";
 
 export const Modals = ({
   // Styles
@@ -78,7 +79,7 @@ export const Modals = ({
       {showInfoForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               Informations personnelles
             </h3>
             <form
@@ -89,7 +90,7 @@ export const Modals = ({
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Prénom
                   </label>
                   <input
@@ -102,7 +103,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Nom
                   </label>
                   <input
@@ -116,7 +117,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Téléphone
                 </label>
                 <input
@@ -131,7 +132,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Wilaya
                   </label>
                   <Select
@@ -153,7 +154,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Commune
                   </label>
                   <Select
@@ -174,7 +175,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Adresse
                 </label>
                 <input
@@ -186,16 +187,16 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   NIN (Numéro d'Identification Nationale)
                 </label>
-                <p className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 font-mono">
+                <p className={`w-full px-4 py-2.5 rounded-xl text-sm font-mono ${tw.ninDisplayBox}`}>
                   {editInfo.nin || "Non renseigné"}
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Diplôme
                   </label>
                   <Select
@@ -216,7 +217,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Spécialité
                   </label>
                   <Select
@@ -238,7 +239,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Situation militaire
                 </label>
                 <select
@@ -266,11 +267,11 @@ export const Modals = ({
                 ].map(({ label, field }) => (
                   <label
                     key={field}
-                    className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700"
+                    className={`flex items-center gap-2 cursor-pointer text-sm font-medium ${tw.textMuted700}`}
                   >
                     <input
                       type="checkbox"
-                      className="w-4 h-4 accent-indigo-600"
+                      className={`w-4 h-4 ${tw.accentPrimary}`}
                       checked={editInfo[field]}
                       onChange={(e) =>
                         setEditInfo({ ...editInfo, [field]: e.target.checked })
@@ -301,7 +302,7 @@ export const Modals = ({
       {showPrefForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               Préférences de recrutement
             </h3>
             <form
@@ -311,7 +312,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Secteur souhaité
                 </label>
                 <Select
@@ -332,7 +333,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Salaire mensuel attendu
                 </label>
                 <input
@@ -349,7 +350,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Mobilité
                   </label>
                   <select
@@ -367,7 +368,7 @@ export const Modals = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Statut actuel
                   </label>
                   <select
@@ -409,12 +410,12 @@ export const Modals = ({
       {showLinksForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               Bio & Réseaux sociaux
             </h3>
             <form onSubmit={handleUpdateLinks} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Bio / Résumé de profil
                 </label>
                 <textarea
@@ -428,7 +429,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Lien LinkedIn
                 </label>
                 <input
@@ -442,7 +443,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Lien GitHub
                 </label>
                 <input
@@ -476,12 +477,12 @@ export const Modals = ({
       {showCVForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               Mettre à jour mon CV
             </h3>
             <form onSubmit={handleUpdateCV} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Titre professionnel
                 </label>
                 <div className="relative">
@@ -495,7 +496,7 @@ export const Modals = ({
                     }
                   />
                   {showTitreSuggestions && titreSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 mt-1 overflow-hidden">
+                    <div className={`absolute top-full left-0 right-0 rounded-xl shadow-lg z-50 mt-1 overflow-hidden ${tw.autocompleteDropdown}`}>
                       <div className="max-h-48 overflow-y-auto">
                         {titreSuggestions.map((m) => (
                           <button
@@ -505,12 +506,12 @@ export const Modals = ({
                               setEditCV({ ...editCV, titre: m.titre });
                               setShowTitreSuggestions(false);
                             }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0"
+                            className={`w-full text-left px-4 py-2.5 transition-colors ${tw.autocompleteItem}`}
                           >
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className={`text-sm font-medium ${tw.autocompleteItemTitle}`}>
                               {m.titre}
                             </p>
-                            <p className="text-xs text-slate-600">
+                            <p className={`text-xs ${tw.autocompleteItemSubtitle}`}>
                               {m.secteur}
                             </p>
                           </button>
@@ -520,7 +521,7 @@ export const Modals = ({
                   )}
                 </div>
               </div>
-              <div className="border-2 border-dashed border-slate-200 p-8 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
+              <div className={`p-8 text-center relative cursor-pointer transition-colors group ${tw.dropzoneNeutral}`}>
                 <input
                   type="file"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -529,7 +530,7 @@ export const Modals = ({
                     setEditCV({ ...editCV, file: e.target.files[0] })
                   }
                 />
-                <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+                <p className={`text-sm font-medium transition-colors ${tw.dropzoneNeutralText}`}>
                   {editCV.file
                     ? editCV.file.name
                     : "Cliquez ou glissez un PDF ici"}
@@ -556,7 +557,7 @@ export const Modals = ({
       {showExpForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               {editingExpId
                 ? "Modifier l'expérience"
                 : "Ajouter une expérience"}
@@ -568,7 +569,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Titre du poste *
                 </label>
                 <div className="relative">
@@ -582,11 +583,11 @@ export const Modals = ({
                     autoComplete="off"
                   />
                   {showExpTitreSuggestions && expTitreSuggestions.length > 0 && (
-                    <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
+                    <ul className={`absolute z-50 w-full rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1 ${tw.autocompleteDropdown}`}>
                       {expTitreSuggestions.map((m) => (
                         <li
                           key={m.id}
-                          className="px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 cursor-pointer"
+                          className={`px-4 py-2 text-sm cursor-pointer ${tw.textMuted700} ${tw.bgPrimaryHover}`}
                           onMouseDown={() => {
                             setNewExp((prev) => ({ ...prev, titre_poste: m.titre }));
                             setShowExpTitreSuggestions(false);
@@ -600,7 +601,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Entreprise *
                 </label>
                 <input
@@ -614,7 +615,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Secteur d'activité
                 </label>
                 <Select
@@ -628,7 +629,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Date de début *
                   </label>
                   <input
@@ -642,7 +643,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Date de fin (optionnel)
                   </label>
                   <input
@@ -656,7 +657,7 @@ export const Modals = ({
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Description
                 </label>
                 <textarea
@@ -702,7 +703,7 @@ export const Modals = ({
       {showFormForm && (
         <div className={modalClass}>
           <div className={modalInnerClass}>
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className={tw.modalHeading}>
               {editingFormId
                 ? "Modifier la formation"
                 : "Ajouter une formation"}
@@ -714,7 +715,7 @@ export const Modals = ({
               className="space-y-4"
             >
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Niveau de diplôme
                 </label>
                 <Select
@@ -733,7 +734,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Spécialité / Domaine
                 </label>
                 <input
@@ -746,7 +747,7 @@ export const Modals = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={tw.formLabel}>
                   Établissement *
                 </label>
                 <input
@@ -761,7 +762,7 @@ export const Modals = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Début *
                   </label>
                   <input
@@ -775,7 +776,7 @@ export const Modals = ({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  <label className={tw.formLabel}>
                     Fin (ou prévue)
                   </label>
                   <input
@@ -818,14 +819,14 @@ export const Modals = ({
       {/* MODAL PARSING CV */}
       {showParserModal && (
         <div className={modalClass}>
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+          <div className={`${tw.surface} rounded-2xl p-8 max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]`}>
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Sparkles size={18} className="text-violet-600" /> Remplissage
+                <h3 className={`text-lg font-bold ${tw.textStrong} flex items-center gap-2`}>
+                  <Sparkles size={18} className={tw.textPrimary} /> Remplissage
                   automatique
                 </h3>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className={`text-xs ${tw.textMuted} mt-1`}>
                   Notre système extrait les informations de votre CV
                 </p>
               </div>
@@ -834,14 +835,14 @@ export const Modals = ({
                   setShowParserModal(false);
                   setParsedData(null);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                className={`p-1.5 rounded-lg transition-colors ${tw.modalCloseButton}`}
               >
                 <X size={18} />
               </button>
             </div>
             {!parsedData ? (
               <div className="space-y-4">
-                <div className="border-2 border-dashed border-violet-200 rounded-xl p-10 text-center relative cursor-pointer hover:border-violet-500 transition-colors group bg-violet-50/30">
+                <div className={`rounded-xl p-10 text-center relative cursor-pointer transition-colors group ${tw.dropzonePrimary}`}>
                   <input
                     type="file"
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -851,26 +852,26 @@ export const Modals = ({
                   />
                   {parserLoading ? (
                     <div>
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto mb-3"></div>
-                      <p className="text-sm font-semibold text-violet-700">
+                      <div className={`animate-spin rounded-full h-10 w-10 border-b-2 ${tw.borderPrimary} mx-auto mb-3`}></div>
+                      <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>
                         Analyse en cours...
                       </p>
-                      <p className="text-xs text-slate-600 mt-1">
+                      <p className={`text-xs ${tw.textMuted} mt-1`}>
                         Cela peut prendre 30 à 60 secondes
                       </p>
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm font-semibold text-slate-700 group-hover:text-violet-600 transition-colors">
+                      <p className={`text-sm font-semibold transition-colors ${tw.textMuted700} group-hover:text-indigo-600`}>
                         Cliquez ou glissez votre CV ici
                       </p>
-                      <p className="text-xs text-slate-600 mt-1">
+                      <p className={`text-xs ${tw.textMuted} mt-1`}>
                         PDF, Word (.docx, .doc) — Max 5 Mo
                       </p>
                     </>
                   )}
                 </div>
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-xs text-indigo-800 space-y-1">
+                <div className={`rounded-xl p-4 text-xs space-y-1 ${tw.parserInfoBox}`}>
                   <p className="font-semibold mb-1.5">Comment ça marche :</p>
                   <p>
                     • Le système lit votre CV et détecte vos infos
@@ -885,32 +886,32 @@ export const Modals = ({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                  <p className="text-sm font-semibold text-emerald-800">
+                <div className={`flex items-center justify-between p-3 rounded-xl ${tw.parserSuccessBox}`}>
+                  <p className={`text-sm font-semibold ${tw.parserSuccessText}`}>
                     ✅ Analyse terminée — vérifiez les données
                   </p>
                   {parsedData.parsing_method?.includes(":ai") ? (
-                    <span className="px-2.5 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-semibold rounded-full">
+                    <span className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.badgeAiCloud}`}>
                       🤖 IA Cloud
                     </span>
                   ) : (
-                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-full">
+                    <span className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.badgeRegex}`}>
                       📐 Regex
                     </span>
                   )}
                 </div>
                 {parsedData.photo && (
-                  <div className="flex items-center gap-4 p-4 bg-pink-50 border border-pink-100 rounded-xl">
+                  <div className={`flex items-center gap-4 p-4 rounded-xl ${tw.photoDetectedBox}`}>
                     <img
                       src={`data:image/${parsedData.photo.ext};base64,${parsedData.photo.data}`}
                       alt="Photo"
-                      className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm"
+                      className={`w-16 h-16 rounded-xl object-cover border-2 ${tw.surface} shadow-sm`}
                     />
                     <div>
-                      <p className="text-xs font-semibold text-pink-900">
+                      <p className={`text-xs font-semibold ${tw.photoDetectedTitle}`}>
                         Photo détectée
                       </p>
-                      <p className="text-xs text-pink-700 mt-0.5">
+                      <p className={`text-xs ${tw.photoDetectedSubtitle} mt-0.5`}>
                         Sera ajoutée à votre profil
                       </p>
                     </div>
@@ -919,36 +920,36 @@ export const Modals = ({
                 {(parsedData.bio ||
                   parsedData.linkedin ||
                   parsedData.github) && (
-                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <div className={`rounded-xl p-4 space-y-3 ${tw.parserSectionBox}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${tw.parserSectionLabel}`}>
                       Résumé & Réseaux Sociaux
                     </p>
                     {parsedData.bio && (
                       <div>
-                        <p className="text-[10px] font-semibold text-slate-600 uppercase">
+                        <p className={`text-[10px] font-semibold uppercase ${tw.parserSectionLabel}`}>
                           Bio
                         </p>
-                        <p className="text-sm font-medium text-slate-700 italic mt-0.5">
+                        <p className={`text-sm font-medium italic mt-0.5 ${tw.parserBioText}`}>
                           "{parsedData.bio}"
                         </p>
                       </div>
                     )}
                     <div className="flex gap-4 pt-1">
                       {parsedData.linkedin && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold ${tw.detectedLinkedin}`}>
                           <ExternalLink size={14} /> LinkedIn détecté
                         </div>
                       )}
                       {parsedData.github && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold ${tw.detectedGithub}`}>
                           <ExternalLink size={14} /> GitHub détecté
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-                <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <div className={`rounded-xl p-4 space-y-3 ${tw.surfaceMuted}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-wider ${tw.parserSectionLabel}`}>
                     Informations détectées
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -969,12 +970,12 @@ export const Modals = ({
                       },
                     ].map(({ label, value }) => (
                       <div key={label}>
-                        <p className="text-[10px] font-semibold text-slate-600 uppercase">
+                        <p className={`text-[10px] font-semibold uppercase ${tw.parserSectionLabel}`}>
                           {label}
                         </p>
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className={`text-sm font-medium ${tw.detectedFieldValue}`}>
                           {value || (
-                            <span className="text-slate-300 italic text-xs">
+                            <span className={`italic text-xs ${tw.detectedFieldEmpty}`}>
                               Non détecté
                             </span>
                           )}
@@ -982,7 +983,7 @@ export const Modals = ({
                       </div>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+                  <div className={`flex flex-wrap gap-2 pt-2 border-t ${tw.borderBase}`}>
                     {[
                       { label: "Permis", active: parsedData.permis_conduire },
                       {
@@ -996,7 +997,7 @@ export const Modals = ({
                     ].map(({ label, active }) => (
                       <span
                         key={label}
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${active ? tw.chipActiveGreen : tw.chipInactiveSlate}`}
                       >
                         {active ? "✓" : "✕"} {label}
                       </span>
@@ -1004,27 +1005,27 @@ export const Modals = ({
                   </div>
                 </div>
                 {parsedData.experiences?.length > 0 && (
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-3">
+                  <div className={`rounded-xl p-4 ${tw.parserExpBox}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.parserExpTitle}`}>
                       Expériences ({parsedData.experiences.length})
                     </p>
                     <div className="space-y-2">
                       {parsedData.experiences.map((exp, i) => (
                         <div
                           key={i}
-                          className="bg-white p-3 rounded-lg border border-indigo-100"
+                          className={`p-3 rounded-lg ${tw.parserExpItem}`}
                         >
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className={`text-sm font-semibold ${tw.textStrong}`}>
                             {exp.titre_poste}
                           </p>
-                          <p className="text-xs text-indigo-600">
+                          <p className={`text-xs ${tw.textPrimary}`}>
                             {exp.entreprise}
                           </p>
-                          <p className="text-xs text-slate-600 mt-0.5">
+                          <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                             {exp.date_debut_raw} — {exp.date_fin_raw}
                           </p>
                           {exp.description && (
-                            <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            <p className={`text-xs ${tw.textMuted} mt-1 line-clamp-2`}>
                               {exp.description}
                             </p>
                           )}
@@ -1034,23 +1035,23 @@ export const Modals = ({
                   </div>
                 )}
                 {parsedData.formations?.length > 0 && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">
+                  <div className={`rounded-xl p-4 ${tw.parserFormBox}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.parserFormTitle}`}>
                       Formations ({parsedData.formations.length})
                     </p>
                     <div className="space-y-2">
                       {parsedData.formations.map((f, i) => (
                         <div
                           key={i}
-                          className="bg-white p-3 rounded-lg border border-slate-200"
+                          className={`p-3 rounded-lg ${tw.parserFormItem}`}
                         >
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className={`text-sm font-semibold ${tw.textStrong}`}>
                             {f.diplome}
                           </p>
-                          <p className="text-xs text-slate-600">
+                          <p className={`text-xs ${tw.textMuted}`}>
                             {f.etablissement}
                           </p>
-                          <p className="text-xs text-slate-600 mt-0.5">
+                          <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                             {f.date_debut_raw} — {f.date_fin_raw}
                           </p>
                         </div>
@@ -1059,8 +1060,8 @@ export const Modals = ({
                   </div>
                 )}
                 {parsedData.competences && (
-                  <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-violet-900 uppercase tracking-wider mb-2">
+                  <div className={`rounded-xl p-4 ${tw.parserExpBox}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${tw.parserExpTitle}`}>
                       Compétences
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -1070,7 +1071,7 @@ export const Modals = ({
                         .map((c, i) => (
                           <span
                             key={i}
-                            className="px-2.5 py-1 bg-white border border-violet-200 text-violet-800 text-xs font-medium rounded-md"
+                            className={`px-2.5 py-1 text-xs font-medium rounded-md ${tw.parserCompChip}`}
                           >
                             {c.trim()}
                           </span>
@@ -1079,17 +1080,17 @@ export const Modals = ({
                   </div>
                 )}
                 {parsedData.langues && (
-                  <div className="bg-pink-50 border border-pink-100 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-pink-900 uppercase tracking-wider mb-2">
+                  <div className={`rounded-xl p-4 ${tw.parserLangueBox}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${tw.parserLangueTitle}`}>
                       Langues
                     </p>
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className={`text-sm font-medium ${tw.textMuted700}`}>
                       {parsedData.langues}
                     </p>
                   </div>
                 )}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-medium text-amber-900">
+                <div className={`rounded-xl p-3 space-y-2 ${tw.parserModeBox}`}>
+                  <p className={`text-xs font-medium ${tw.parserModeText}`}>
                     Que faire avec ces informations ?
                   </p>
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -1100,7 +1101,7 @@ export const Modals = ({
                       onChange={() => setParserMode("remplacer")}
                       className="mt-0.5"
                     />
-                    <span className="text-xs text-amber-900">
+                    <span className={`text-xs ${tw.parserModeText}`}>
                       <strong>Remplacer</strong> — écrase les données actuelles de
                       votre profil par celles de ce CV
                     </span>
@@ -1113,7 +1114,7 @@ export const Modals = ({
                       onChange={() => setParserMode("ajouter")}
                       className="mt-0.5"
                     />
-                    <span className="text-xs text-amber-900">
+                    <span className={`text-xs ${tw.parserModeText}`}>
                       <strong>Ajouter</strong> — complète votre profil sans toucher
                       aux champs déjà remplis
                     </span>
@@ -1133,7 +1134,7 @@ export const Modals = ({
                     className={`${btnPrimary} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                   >
                     {remplissageLoading && (
-                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                      <span className={`h-4 w-4 ${tw.spinnerWhiteSolid}`}></span>
                     )}
                     {remplissageLoading ? "Remplissage en cours..." : "Valider et remplir"}
                   </button>

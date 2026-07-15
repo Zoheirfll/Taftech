@@ -11,28 +11,29 @@ import {
   XCircle,
   X,
 } from "lucide-react";
+import { tw } from "../../theme";
 
 const getBadge = (offre) => {
   if (offre.est_cloturee)
     return (
-      <span className="px-2.5 py-1 bg-slate-800 text-white text-[10px] font-semibold rounded-full">
+      <span className={`px-2.5 py-1 ${tw.bgSlate800} text-white text-[10px] font-semibold rounded-full`}>
         🔒 Clôturée
       </span>
     );
   if (offre.statut_moderation === "APPROUVEE")
     return (
-      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold rounded-full">
+      <span className={`px-2.5 py-1 ${tw.scoreHigh} border text-[10px] font-semibold rounded-full`}>
         En ligne
       </span>
     );
   if (offre.statut_moderation === "REJETEE")
     return (
-      <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 text-[10px] font-semibold rounded-full">
+      <span className={`px-2.5 py-1 ${tw.scoreLow} border text-[10px] font-semibold rounded-full`}>
         Rejetée
       </span>
     );
   return (
-    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full">
+    <span className={`px-2.5 py-1 ${tw.scoreMid} border text-[10px] font-semibold rounded-full`}>
       En attente
     </span>
   );
@@ -40,16 +41,11 @@ const getBadge = (offre) => {
 
 const renderScoreBadge = (cand) => {
   if (cand.est_rapide)
-    return <span className="text-[10px] text-slate-600 italic">Rapide ⚡</span>;
+    return <span className={`text-[10px] ${tw.textMuted} italic`}>Rapide ⚡</span>;
   if (!cand.score_matching || parseFloat(cand.score_matching) === 0)
-    return <span className="text-[10px] text-slate-600">En attente</span>;
+    return <span className={`text-[10px] ${tw.textMuted}`}>En attente</span>;
   const num = parseFloat(cand.score_matching);
-  const style =
-    num >= 70
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : num >= 40
-        ? "bg-amber-50 text-amber-700 border-amber-200"
-        : "bg-red-50 text-red-700 border-red-200";
+  const style = num >= 70 ? tw.scoreHigh : num >= 40 ? tw.scoreMid : tw.scoreLow;
   return (
     <span
       className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${style}`}
@@ -162,38 +158,36 @@ const AdminOffres = () => {
     }
   };
 
-  const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500";
-  const modalClass =
-    "fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+  const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
+  const modalClass = `${tw.modalOverlay} p-4`;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className={tw.pageTitle}>
             Modération des offres
           </h1>
-          <p className="text-sm text-slate-700 mt-0.5">
+          <p className={`${tw.pageSubtitle} mt-0.5`}>
             Approuvez, rejetez ou corrigez les offres publiées.
           </p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+            className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
           >
             <Download size={15} /> Exporter
           </button>
           <div className="relative flex-1 md:w-72">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
             />
             <input
               type="text"
               placeholder="Rechercher un poste..."
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+              className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-lg text-sm`}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -204,10 +198,10 @@ const AdminOffres = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+          <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
+            <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-5 py-3">Offre & Entreprise</th>
               <th className="px-5 py-3">Date</th>
               <th className="px-5 py-3">Expiration</th>
@@ -215,12 +209,12 @@ const AdminOffres = () => {
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className={`divide-y ${tw.divideBase}`}>
             {loading && offres.length === 0 ? (
               <tr>
                 <td
                   colSpan="4"
-                  className="py-12 text-center text-sm text-indigo-600 animate-pulse font-medium"
+                  className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}
                 >
                   Chargement...
                 </td>
@@ -229,7 +223,7 @@ const AdminOffres = () => {
               <tr>
                 <td
                   colSpan="4"
-                  className="py-12 text-center text-sm text-slate-600 italic"
+                  className={`py-12 text-center text-sm ${tw.textMuted} italic`}
                 >
                   Aucune offre trouvée.
                 </td>
@@ -238,36 +232,37 @@ const AdminOffres = () => {
               offres.map((offre) => (
                 <tr
                   key={offre.id}
-                  className="hover:bg-slate-50 transition-colors"
+                  className={tw.rowHover}
                 >
                   <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       {offre.titre}
                     </p>
-                    <p className="text-xs text-indigo-600 mt-0.5">
+                    <p className={`text-xs ${tw.textPrimary} mt-0.5`}>
                       {offre.entreprise?.nom_entreprise || "Inconnue"}
                     </p>
                     {offre.motif_rejet && (
-                      <p className="text-[10px] text-red-500 mt-1 bg-red-50 inline-block px-2 py-0.5 rounded italic">
+                      <p className={`text-[10px] ${tw.textErrorMuted} mt-1 ${tw.bgErrorSoft} inline-block px-2 py-0.5 rounded italic`}>
                         Motif : {offre.motif_rejet}
                       </p>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-xs text-slate-700 font-medium">
+                  <td className={`px-5 py-4 text-xs ${tw.textMuted700} font-medium`}>
                     {new Date(offre.date_publication).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-5 py-4 text-xs">
                     {offre.date_expiration ? (
                       (() => {
                         const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
+                        const style = jours <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : jours <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : jours <= 60 ? `${tw.bgTealSoft} ${tw.textTeal}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`;
                         return (
-                          <span className={`px-2 py-1 rounded-full font-semibold ${jours <= 7 ? "bg-red-50 text-red-600" : jours <= 30 ? "bg-amber-50 text-amber-700" : jours <= 60 ? "bg-teal-50 text-teal-700" : "bg-emerald-50 text-emerald-700"}`}>
+                          <span className={`px-2 py-1 rounded-full font-semibold ${style}`}>
                             {jours === 0 ? "Expire aujourd'hui" : `${jours}j`}
                           </span>
                         );
                       })()
                     ) : (
-                      <span className="text-slate-300">—</span>
+                      <span className={tw.textSubtle}>—</span>
                     )}
                   </td>
                   <td className="px-5 py-4">{getBadge(offre)}</td>
@@ -278,14 +273,14 @@ const AdminOffres = () => {
                           setSelectedOffre(offre);
                           setShowTop5Only(false);
                         }}
-                        className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                        className={`p-2 ${tw.bgPrimarySoft} ${tw.textPrimary} rounded-lg ${tw.bgIndigoHover100} transition-colors`}
                         title="Voir"
                       >
                         <Eye size={14} />
                       </button>
                       <button
                         onClick={() => setEditingOffre(offre)}
-                        className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                        className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
                         title="Corriger"
                       >
                         <Pencil size={14} />
@@ -294,7 +289,7 @@ const AdminOffres = () => {
                         !offre.est_cloturee && (
                           <button
                             onClick={() => handleApprouver(offre.id)}
-                            className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                            className={`p-2 ${tw.bgSuccessSoft} ${tw.textSuccess} rounded-lg ${tw.hoverSuccessSoft} transition-colors`}
                             title="Approuver"
                           >
                             <CheckCircle size={14} />
@@ -304,7 +299,7 @@ const AdminOffres = () => {
                         !offre.est_cloturee && (
                           <button
                             onClick={() => setRejectingOffre(offre)}
-                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                            className={`p-2 ${tw.bgErrorSoft} ${tw.textError} rounded-lg ${tw.hoverErrorSoft} transition-colors`}
                             title="Rejeter"
                           >
                             <XCircle size={14} />
@@ -318,21 +313,21 @@ const AdminOffres = () => {
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1 || loading}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               ← Précédent
             </button>
-            <span className="text-xs font-medium text-slate-600">
+            <span className={`text-xs font-medium ${tw.textMuted}`}>
               Page {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages || loading}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               Suivant →
             </button>
@@ -343,13 +338,13 @@ const AdminOffres = () => {
       {/* MODAL DÉTAILS */}
       {selectedOffre && (
         <div className={modalClass}>
-          <div className="bg-slate-100 rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className={`${tw.surfaceSubtle} rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
 
             {/* BANDEAU EN-TÊTE */}
-            <div className="bg-linear-to-br from-indigo-700 to-indigo-500 rounded-t-2xl px-6 py-6 relative">
+            <div className={`${tw.bannerGradientPrimary} rounded-t-2xl px-6 py-6 relative`}>
               <button
                 onClick={() => setSelectedOffre(null)}
-                className="absolute top-4 right-4 p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                className={`absolute top-4 right-4 p-1.5 ${tw.closeButtonOnDark} rounded-lg transition-colors`}
               >
                 <X size={18} />
               </button>
@@ -358,49 +353,49 @@ const AdminOffres = () => {
                   {getBadge(selectedOffre)}
                   {selectedOffre.est_cloturee && null}
                 </div>
-                <h2 className="text-xl font-extrabold text-white mt-2">{selectedOffre.titre}</h2>
-                <p className="text-indigo-200 text-sm mt-0.5">{selectedOffre.entreprise?.nom_entreprise}</p>
+                <h2 className={`text-xl font-extrabold ${tw.textOnDark} mt-2`}>{selectedOffre.titre}</h2>
+                <p className={`${tw.textPrimaryOnDark} text-sm mt-0.5`}>{selectedOffre.entreprise?.nom_entreprise}</p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {selectedOffre.wilaya && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       📍 {selectedOffre.wilaya}
                     </span>
                   )}
                   {selectedOffre.type_contrat && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       💼 {selectedOffre.type_contrat}
                     </span>
                   )}
                   {selectedOffre.salaire_propose && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       💰 {selectedOffre.salaire_propose}
                     </span>
                   )}
                   {selectedOffre.date_expiration && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       ⏱ Expire le {new Date(selectedOffre.date_expiration).toLocaleDateString("fr-FR")}
                     </span>
                   )}
                 </div>
               </div>
               {/* Critères */}
-              <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-white/20">
+              <div className={`flex flex-wrap gap-6 mt-4 pt-4 border-t ${tw.borderOnDark20}`}>
                 {selectedOffre.experience_requise && (
                   <div>
-                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Expérience</p>
-                    <p className="text-sm font-semibold text-white mt-0.5">{selectedOffre.experience_requise}</p>
+                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Expérience</p>
+                    <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{selectedOffre.experience_requise}</p>
                   </div>
                 )}
                 {selectedOffre.diplome && (
                   <div>
-                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Diplôme</p>
-                    <p className="text-sm font-semibold text-white mt-0.5">{selectedOffre.diplome}</p>
+                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Diplôme</p>
+                    <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{selectedOffre.diplome}</p>
                   </div>
                 )}
                 {selectedOffre.specialite && (
                   <div>
-                    <p className="text-[10px] font-semibold text-indigo-200 uppercase tracking-wider">Spécialité</p>
-                    <p className="text-sm font-semibold text-amber-300 mt-0.5">{selectedOffre.specialite}</p>
+                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Spécialité</p>
+                    <p className={`text-sm font-semibold ${tw.textAmberOnDark} mt-0.5`}>{selectedOffre.specialite}</p>
                   </div>
                 )}
               </div>
@@ -409,37 +404,37 @@ const AdminOffres = () => {
             <div className="p-5 space-y-4">
               {/* ACTIONS MODÉRATION */}
               {!selectedOffre.est_cloturee && (
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Décision de modération</p>
+                <div className={`${tw.card} p-4`}>
+                  <p className={`text-xs font-bold ${tw.textMuted700} uppercase tracking-wider mb-3`}>Décision de modération</p>
                   {selectedOffre.statut_moderation === "EN_ATTENTE" ? (
                     <div className="flex gap-3">
                       <button
                         onClick={() => { handleApprouver(selectedOffre.id); setSelectedOffre(null); }}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors`}
                       >
                         <CheckCircle size={15} /> Approuver
                       </button>
                       <button
                         onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-lg transition-colors`}
                       >
                         <XCircle size={15} /> Rejeter
                       </button>
                     </div>
                   ) : selectedOffre.statut_moderation === "APPROUVEE" ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-                      <CheckCircle size={15} className="text-emerald-600" />
-                      <span className="text-sm font-medium text-emerald-700">Offre approuvée et en ligne</span>
-                      <button onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }} className="ml-auto text-xs text-red-600 hover:underline font-medium">Retirer</button>
+                    <div className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgSuccessSoft} border ${tw.borderSuccess} rounded-lg`}>
+                      <CheckCircle size={15} className={tw.textSuccessIcon} />
+                      <span className={`text-sm font-medium ${tw.textSuccess}`}>Offre approuvée et en ligne</span>
+                      <button onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }} className={`ml-auto text-xs ${tw.textError} hover:underline font-medium`}>Retirer</button>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg">
-                        <XCircle size={15} className="text-red-600" />
-                        <span className="text-sm font-medium text-red-700">Offre rejetée</span>
-                        {selectedOffre.motif_rejet && <span className="text-xs text-red-500 ml-1">— {selectedOffre.motif_rejet}</span>}
+                      <div className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgErrorSoft} border ${tw.borderError} rounded-lg`}>
+                        <XCircle size={15} className={tw.textError} />
+                        <span className={`text-sm font-medium ${tw.textErrorStrong}`}>Offre rejetée</span>
+                        {selectedOffre.motif_rejet && <span className={`text-xs ${tw.textErrorMuted} ml-1`}>— {selectedOffre.motif_rejet}</span>}
                       </div>
-                      <button onClick={() => { handleApprouver(selectedOffre.id); setSelectedOffre(null); }} className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                      <button onClick={() => { handleApprouver(selectedOffre.id); setSelectedOffre(null); }} className={`w-full py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors`}>
                         Approuver quand même
                       </button>
                     </div>
@@ -449,46 +444,46 @@ const AdminOffres = () => {
 
               {/* CONTENU */}
               {selectedOffre.description && (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-2 h-4 bg-indigo-600 rounded-full" /> Description du poste
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.bgPrimary} rounded-full`} /> Description du poste
                   </h3>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.description}</p>
+                  <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>{selectedOffre.description}</p>
                 </div>
               )}
               {selectedOffre.missions && (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-2 h-4 bg-amber-500 rounded-full" /> Missions principales
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotAmber500} rounded-full`} /> Missions principales
                   </h3>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.missions}</p>
+                  <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>{selectedOffre.missions}</p>
                 </div>
               )}
               {selectedOffre.profil_recherche && (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-2 h-4 bg-emerald-500 rounded-full" /> Profil recherché
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotEmerald500} rounded-full`} /> Profil recherché
                   </h3>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{selectedOffre.profil_recherche}</p>
+                  <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>{selectedOffre.profil_recherche}</p>
                 </div>
               )}
 
               {/* QUESTIONNAIRE */}
               {selectedOffre.questionnaire && (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-2 h-4 bg-amber-400 rounded-full" /> Questionnaire — {selectedOffre.questionnaire.titre}
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotAmber400} rounded-full`} /> Questionnaire — {selectedOffre.questionnaire.titre}
                   </h3>
                   <div className="space-y-2">
                     {selectedOffre.questionnaire.questions?.map((q, i) => (
-                      <div key={q.id} className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 flex items-start gap-2">
-                        <span className="text-xs font-bold text-amber-600 shrink-0 mt-0.5">{i + 1}.</span>
+                      <div key={q.id} className={`${tw.bgWarningSoft} border ${tw.borderWarningLight} rounded-lg px-4 py-2.5 flex items-start gap-2`}>
+                        <span className={`text-xs font-bold ${tw.textWarningStrong2} shrink-0 mt-0.5`}>{i + 1}.</span>
                         <div>
-                          <p className="text-sm text-slate-800">{q.texte}</p>
+                          <p className={`text-sm ${tw.textSlate800}`}>{q.texte}</p>
                           <div className="flex gap-2 mt-1">
-                            <span className="text-[10px] text-slate-500 font-medium">{q.type_question}</span>
-                            {q.requis && <span className="text-[10px] text-red-500 font-medium">Obligatoire</span>}
-                            {q.disqualifiant && <span className="text-[10px] text-orange-600 font-medium">⚠ Disqualifiant</span>}
+                            <span className={`text-[10px] ${tw.textMuted700} font-medium`}>{q.type_question}</span>
+                            {q.requis && <span className={`text-[10px] ${tw.textErrorMuted} font-medium`}>Obligatoire</span>}
+                            {q.disqualifiant && <span className={`text-[10px] ${tw.textOrangeStrong} font-medium`}>⚠ Disqualifiant</span>}
                           </div>
                         </div>
                       </div>
@@ -498,50 +493,50 @@ const AdminOffres = () => {
               )}
 
               {/* CANDIDATURES */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5">
+              <div className={`${tw.card} p-5`}>
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-2 h-4 bg-violet-500 rounded-full" /> Candidatures ({selectedOffre.candidatures?.length || 0})
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotViolet500} rounded-full`} /> Candidatures ({selectedOffre.candidatures?.length || 0})
                   </h3>
                   <button
                     onClick={() => setShowTop5Only(!showTop5Only)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${showTop5Only ? "bg-violet-600 text-white border-violet-600" : "bg-white text-violet-700 border-violet-200 hover:bg-violet-50"}`}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${showTop5Only ? tw.chipVioletActive : tw.chipVioletInactive}`}
                   >
                     {showTop5Only ? "Voir tout" : "🤖 Top 5 IA"}
                   </button>
                 </div>
                 {selectedOffre.candidatures?.length > 0 ? (
-                  <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                  <div className={`overflow-x-auto border ${tw.borderSubtle} rounded-xl`}>
                     <table className="w-full text-xs text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+                      <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
+                        <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                           <th className="px-3 py-2.5">Nom</th>
                           <th className="px-3 py-2.5 text-center">Score IA</th>
                           <th className="px-3 py-2.5 text-center">Note</th>
                           <th className="px-3 py-2.5 text-right">Statut</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className={`divide-y ${tw.divideSubtle}`}>
                         {(() => {
                           let list = [...selectedOffre.candidatures].sort((a, b) => (b.score_matching || 0) - (a.score_matching || 0));
                           if (showTop5Only) list = list.filter((c) => !c.est_rapide && c.score_matching !== null).slice(0, 5);
                           if (list.length === 0)
                             return (
                               <tr>
-                                <td colSpan="4" className="py-6 text-center text-slate-500 italic">Aucun candidat.</td>
+                                <td colSpan="4" className={`py-6 text-center ${tw.textMuted700} italic`}>Aucun candidat.</td>
                               </tr>
                             );
                           return list.map((cand) => (
-                            <tr key={cand.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-3 py-2.5 font-medium text-slate-800">
+                            <tr key={cand.id} className={tw.rowHover}>
+                              <td className={`px-3 py-2.5 font-medium ${tw.textSlate800}`}>
                                 {cand.est_rapide ? `${cand.nom_rapide} ${cand.prenom_rapide}` : `${cand.candidat?.last_name || ""} ${cand.candidat?.first_name || ""}`}
                               </td>
                               <td className="px-3 py-2.5 text-center">{renderScoreBadge(cand)}</td>
-                              <td className="px-3 py-2.5 text-center text-violet-600 font-medium">
-                                {cand.note_globale ? `${cand.note_globale}/20` : <span className="text-slate-300">—</span>}
+                              <td className={`px-3 py-2.5 text-center ${tw.textVioletStrong2} font-medium`}>
+                                {cand.note_globale ? `${cand.note_globale}/20` : <span className={tw.textSubtle}>—</span>}
                               </td>
                               <td className="px-3 py-2.5 text-right">
-                                <span className={`text-[10px] font-medium ${cand.statut === "RETENU" ? "text-emerald-600" : cand.statut === "REFUSE" ? "text-red-500" : cand.statut === "ENTRETIEN" ? "text-orange-500" : cand.statut === "EN_COURS" ? "text-blue-600" : "text-amber-600"}`}>
+                                <span className={`text-[10px] font-medium ${tw.candStatutColors[cand.statut] || tw.candStatutColors.DEFAULT}`}>
                                   {cand.statut.replace("_", " ")}
                                 </span>
                               </td>
@@ -552,7 +547,7 @@ const AdminOffres = () => {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-xs italic text-slate-500 text-center py-4">Aucun candidat n'a postulé.</p>
+                  <p className={`text-xs italic ${tw.textMuted700} text-center py-4`}>Aucun candidat n'a postulé.</p>
                 )}
               </div>
             </div>
@@ -563,13 +558,13 @@ const AdminOffres = () => {
       {/* MODAL ÉDITION */}
       {editingOffre && (
         <div className={modalClass}>
-          <div className="bg-white rounded-2xl p-7 max-w-xl w-full shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900 mb-5">
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl`}>
+            <h2 className={`text-lg font-bold ${tw.textStrong} mb-5`}>
               Corriger l'offre
             </h2>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Titre
                 </label>
                 <input
@@ -582,7 +577,7 @@ const AdminOffres = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Description
                 </label>
                 <textarea
@@ -601,13 +596,13 @@ const AdminOffres = () => {
                 <button
                   type="button"
                   onClick={() => setEditingOffre(null)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}
                 >
                   Sauvegarder
                 </button>
@@ -620,11 +615,11 @@ const AdminOffres = () => {
       {/* MODAL REJET */}
       {rejectingOffre && (
         <div className={modalClass}>
-          <div className="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl">
-            <h2 className="text-lg font-bold text-red-600 mb-1">
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
+            <h2 className={`text-lg font-bold ${tw.textError} mb-1`}>
               Rejeter l'offre
             </h2>
-            <p className="text-xs text-slate-700 mb-4">
+            <p className={`text-xs ${tw.textMuted700} mb-4`}>
               Précisez le motif pour le recruteur
             </p>
             <textarea
@@ -637,13 +632,13 @@ const AdminOffres = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setRejectingOffre(null)}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
               >
                 Annuler
               </button>
               <button
                 onClick={handleRefuserSubmit}
-                className="flex-1 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                className={`flex-1 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-lg transition-colors`}
               >
                 Confirmer le rejet
               </button>

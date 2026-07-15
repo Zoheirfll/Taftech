@@ -2,15 +2,16 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axiosConfig";
 import { ShieldCheck, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { reportError } from "../../utils/errorReporter";
+import { tw } from "../../theme";
 
 const ACTION_LABELS = {
-  APPROUVER_OFFRE: { label: "Approuver offre", color: "bg-green-100 text-green-700" },
-  REFUSER_OFFRE: { label: "Refuser offre", color: "bg-red-100 text-red-700" },
-  APPROUVER_ENTREPRISE: { label: "Approuver entreprise", color: "bg-green-100 text-green-700" },
-  REFUSER_ENTREPRISE: { label: "Refuser entreprise", color: "bg-red-100 text-red-700" },
-  SUPPRIMER_USER: { label: "Bloquer/Débloquer user", color: "bg-orange-100 text-orange-700" },
-  SUPPRIMER_OFFRE: { label: "Supprimer offre", color: "bg-red-100 text-red-700" },
-  AUTRE: { label: "Autre", color: "bg-slate-100 text-slate-600" },
+  APPROUVER_OFFRE: { label: "Approuver offre", color: tw.auditActionSuccess },
+  REFUSER_OFFRE: { label: "Refuser offre", color: tw.auditActionDanger },
+  APPROUVER_ENTREPRISE: { label: "Approuver entreprise", color: tw.auditActionSuccess },
+  REFUSER_ENTREPRISE: { label: "Refuser entreprise", color: tw.auditActionDanger },
+  SUPPRIMER_USER: { label: "Bloquer/Débloquer user", color: tw.auditActionWarning },
+  SUPPRIMER_OFFRE: { label: "Supprimer offre", color: tw.auditActionDanger },
+  AUTRE: { label: "Autre", color: tw.auditActionNeutral },
 };
 
 const AdminAuditLogs = () => {
@@ -59,17 +60,17 @@ const AdminAuditLogs = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <ShieldCheck size={22} className="text-indigo-500" />
-          <h1 className="text-xl font-bold text-slate-800">Journal d'audit</h1>
+          <ShieldCheck size={22} className={tw.textPrimary} />
+          <h1 className={`${tw.pageTitlePetit}`}>Journal d'audit</h1>
           {totalCount > 0 && (
-            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
+            <span className={`text-xs ${tw.badgeNeutral} rounded-full`}>
               {totalCount} entrées
             </span>
           )}
         </div>
         <button
           onClick={() => { setPage(1); fetchLogs(); }}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition"
+          className={`flex items-center gap-2 text-sm ${tw.textMutedHoverPrimary} transition`}
         >
           <RefreshCw size={14} /> Actualiser
         </button>
@@ -80,18 +81,18 @@ const AdminAuditLogs = () => {
         placeholder="Rechercher par admin, action, détail..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full mb-4 px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className={`w-full mb-4 ${tw.input} px-4 py-2`}
       />
 
       {loading ? (
-        <p className="text-slate-600 text-sm">Chargement...</p>
+        <p className={`${tw.textMuted} text-sm`}>Chargement...</p>
       ) : filtered.length === 0 ? (
-        <p className="text-slate-600 text-sm">Aucun log trouvé.</p>
+        <p className={`${tw.textMuted} text-sm`}>Aucun log trouvé.</p>
       ) : (
         <>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className={`${tw.surface} rounded-xl shadow-sm ${tw.borderSubtle} border overflow-hidden`}>
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
+              <thead className={`${tw.surfaceMuted} ${tw.textMuted} text-xs uppercase tracking-wide`}>
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Admin</th>
@@ -100,20 +101,20 @@ const AdminAuditLogs = () => {
                   <th className="px-4 py-3 text-left">IP</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={tw.divideBase}>
                 {filtered.map((log) => {
                   const meta = ACTION_LABELS[log.action] || ACTION_LABELS.AUTRE;
                   return (
-                    <tr key={log.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{log.date}</td>
-                      <td className="px-4 py-3 font-medium text-slate-700">{log.admin}</td>
+                    <tr key={log.id} className={tw.rowHover}>
+                      <td className={`px-4 py-3 ${tw.textMuted700} whitespace-nowrap`}>{log.date}</td>
+                      <td className={`px-4 py-3 font-medium ${tw.textMuted700}`}>{log.admin}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>
                           {meta.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{log.detail}</td>
-                      <td className="px-4 py-3 text-slate-600 font-mono text-xs">{log.ip || "—"}</td>
+                      <td className={`px-4 py-3 ${tw.textMuted}`}>{log.detail}</td>
+                      <td className={`px-4 py-3 ${tw.textMuted} font-mono text-xs`}>{log.ip || "—"}</td>
                     </tr>
                   );
                 })}
@@ -123,21 +124,21 @@ const AdminAuditLogs = () => {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-slate-700">
+              <p className={`text-sm ${tw.textMuted700}`}>
                 Page {page} sur {totalPages}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={handlePrev}
                   disabled={!prevUrl}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50 transition"
+                  className={`flex items-center gap-1 px-3 py-1.5 text-sm ${tw.borderBase} border rounded-lg disabled:opacity-40 ${tw.rowHover}`}
                 >
                   <ChevronLeft size={14} /> Précédent
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={!nextUrl}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50 transition"
+                  className={`flex items-center gap-1 px-3 py-1.5 text-sm ${tw.borderBase} border rounded-lg disabled:opacity-40 ${tw.rowHover}`}
                 >
                   Suivant <ChevronRight size={14} />
                 </button>

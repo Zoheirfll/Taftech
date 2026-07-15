@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import { tw } from "../../../theme";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -128,13 +129,7 @@ const STATUTS_LABELS = {
   RETENU: "Candidat retenu",
   REFUSE: "Candidat refusé",
 };
-const STATUTS_STYLES = {
-  RECUE: "bg-amber-50 text-amber-700 border-amber-200",
-  EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
-  ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
-  RETENU: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  REFUSE: "bg-red-50 text-red-700 border-red-200",
-};
+const STATUTS_STYLES = tw.candidatureStatutStyles;
 
 export const DetailCandidature = ({
   selectedCandidature,
@@ -175,11 +170,11 @@ export const DetailCandidature = ({
   }, [showStatutMenu]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div className={`${tw.card} overflow-hidden`}>
       {/* EN-TÊTE */}
-      <div className="p-6 border-b border-slate-100">
+      <div className={`p-6 border-b ${tw.borderSubtle}`}>
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className={`w-16 h-16 rounded-xl ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden flex-shrink-0`}>
             {candidatData?.photo_profil ? (
               <img
                 src={getMediaUrl(candidatData.photo_profil)}
@@ -187,13 +182,13 @@ export const DetailCandidature = ({
                 className="w-full h-full object-cover"
               />
             ) : selectedCandidature.est_rapide ? (
-              <Zap size={24} className="text-amber-500" />
+              <Zap size={24} className={tw.textAmber500} />
             ) : (
-              <User size={24} className="text-slate-400" />
+              <User size={24} className={tw.textMuted} />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className={`text-lg font-bold ${tw.textStrong}`}>
               {(() => {
                 const n = candidatData
                   ? `${candidatData.last_name} ${candidatData.first_name}`
@@ -201,7 +196,7 @@ export const DetailCandidature = ({
                 return n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
               })()}
             </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className={`text-sm ${tw.textMuted700} mt-0.5`}>
               {candidatData?.titre_professionnel ||
                 (selectedCandidature.est_rapide
                   ? "Candidature rapide"
@@ -209,19 +204,19 @@ export const DetailCandidature = ({
             </p>
             <div className="flex flex-wrap gap-2 mt-2">
               {candidatData?.wilaya && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                   <MapPin size={11} />
                   {candidatData.wilaya}
                 </span>
               )}
               {candidatData?.adresse && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                   <MapPin size={11} />
                   {candidatData.adresse}
                 </span>
               )}
               {candidatData?.diplome && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-md">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                   <GraduationCap size={11} />
                   {candidatData.diplome}
                 </span>
@@ -237,12 +232,12 @@ export const DetailCandidature = ({
               {authService.peutFaire("UTILISATEUR") && <ChevronDown size={12} />}
             </button>
             {showStatutMenu && authService.peutFaire("UTILISATEUR") && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]">
+              <div className={`absolute right-0 top-full mt-1 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]`}>
                 {Object.entries(STATUTS_LABELS).map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => { handleStatusChange(selectedCandidature.id, key); setShowStatutMenu(false); }}
-                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === selectedCandidature.statut ? "bg-slate-50" : ""}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === selectedCandidature.statut ? tw.surfaceMuted : ""}`}
                   >
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${STATUTS_STYLES[key]}`}>
                       {label}
@@ -256,9 +251,9 @@ export const DetailCandidature = ({
 
         {selectedCandidature.statut === "ENTRETIEN" &&
           selectedCandidature.date_entretien && (
-            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-100">
-              <Calendar size={14} className="text-orange-600" />
-              <p className="text-xs font-medium text-orange-700">
+            <div className={`mt-3 flex items-center gap-2 px-3 py-2 ${tw.bgOrangeSoft} rounded-lg border ${tw.borderOrange100}`}>
+              <Calendar size={14} className={tw.textOrangeStrong} />
+              <p className={`text-xs font-medium ${tw.textOrange}`}>
                 Entretien le{" "}
                 {new Date(selectedCandidature.date_entretien).toLocaleString(
                   "fr-FR",
@@ -274,13 +269,13 @@ export const DetailCandidature = ({
           )}
 
         {selectedCandidature.statut === "RETENU" && (
-          <div className="mt-3 flex items-center justify-between px-4 py-3 bg-emerald-50 rounded-lg border border-emerald-200">
-            <p className="text-xs font-semibold text-emerald-800">
+          <div className={`mt-3 flex items-center justify-between px-4 py-3 ${tw.bgSuccessSoft} rounded-lg border ${tw.borderSuccess}`}>
+            <p className={`text-xs font-semibold ${tw.textSuccessStrong}`}>
               Candidat retenu — Bulletin disponible
             </p>
             <button
               onClick={() => handleDownloadBulletin(selectedCandidature.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.buttonSuccessSolid} text-xs font-medium rounded-lg transition-colors`}
             >
               <Download size={12} /> Télécharger
             </button>
@@ -289,7 +284,7 @@ export const DetailCandidature = ({
       </div>
 
       {/* ONGLETS */}
-      <div className="flex border-b border-slate-100">
+      <div className={`flex border-b ${tw.borderSubtle}`}>
         {[
           "profil",
           "ia",
@@ -299,7 +294,7 @@ export const DetailCandidature = ({
           <button
             key={tab}
             onClick={() => setActiveDetailTab(tab)}
-            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeDetailTab === tab ? "border-teal-700 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeDetailTab === tab ? `border-teal-700 ${tw.textTeal}` : `border-transparent ${tw.textMuted700} hover:text-slate-900`}`}
           >
             {tab === "profil" && "Profil"}
             {tab === "ia" && "Analyse IA"}
@@ -315,7 +310,7 @@ export const DetailCandidature = ({
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-medium rounded-lg hover:bg-teal-100 transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-medium rounded-lg transition-colors`}
             >
               <FileText size={12} /> CV PDF
             </a>
@@ -325,7 +320,7 @@ export const DetailCandidature = ({
               href={selectedCandidature.cv_rapide_url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-lg hover:bg-amber-100 transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillAmberSoft} text-xs font-medium rounded-lg transition-colors`}
             >
               <Zap size={12} /> CV Rapide
             </a>
@@ -333,7 +328,7 @@ export const DetailCandidature = ({
           {selectedCandidature.statut === "REFUSE" && authService.peutFaire("UTILISATEUR") && (
             <button
               onClick={() => supprimerCandidature(selectedCandidature.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.dangerPillSoft} text-xs font-medium rounded-lg transition-colors`}
             >
               <Trash2 size={12} />
             </button>
@@ -349,7 +344,7 @@ export const DetailCandidature = ({
             <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={13} className="text-teal-700" />
+                  <Sparkles size={13} className={tw.textTeal} />
                   <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
                     Résumé IA
                   </span>
@@ -358,39 +353,39 @@ export const DetailCandidature = ({
                   isPremium ? (
                     <button
                       onClick={handleResumeIA}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors`}
                     >
                       <Sparkles size={11} /> Générer
                     </button>
                   ) : (
-                    <span className="text-xs text-slate-400 font-semibold">🔒 Premium</span>
+                    <span className={`text-xs ${tw.textMuted} font-semibold`}>🔒 Premium</span>
                   )
                 )}
                 {resumeIA && (
                   <button
                     onClick={() => setResumeIA(null)}
-                    className="text-xs text-teal-400 hover:underline"
+                    className={`text-xs ${tw.clearLinkTeal}`}
                   >
                     Effacer
                   </button>
                 )}
               </div>
               {loadingResume ? (
-                <div className="flex items-center gap-2 text-teal-700">
+                <div className={`flex items-center gap-2 ${tw.textTeal}`}>
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-teal-700"></div>
                   <span className="text-xs animate-pulse">
                     Analyse en cours...
                   </span>
                 </div>
               ) : resumeIA ? (
-                <p className="text-xs text-slate-700 leading-relaxed">
+                <p className={`text-xs ${tw.textMuted700} leading-relaxed`}>
                   {resumeIA
                     .replace(/#{1,3}[A-ZÀ-Ÿ\s]+#{1,3}/g, "")
                     .replace(/\n{2,}/g, " ")
                     .trim()}
                 </p>
               ) : (
-                <p className="text-xs text-slate-400 italic">
+                <p className={`text-xs ${tw.textMuted} italic`}>
                   Cliquez sur "Générer" pour obtenir un résumé IA.
                 </p>
               )}
@@ -399,16 +394,16 @@ export const DetailCandidature = ({
 
           {/* Coordonnées */}
           <div>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Coordonnées</h4>
+            <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Coordonnées</h4>
             <div className="flex flex-wrap gap-2">
               {(candidatData?.email || selectedCandidature.email_rapide) && (() => {
                 const email = candidatData?.email || selectedCandidature.email_rapide;
                 return (
                   <div className="flex items-center gap-1">
-                    <a href={`mailto:${email}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors">
+                    <a href={`mailto:${email}`} className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-semibold rounded-lg transition-colors`}>
                       <Mail size={12} /> {email}
                     </a>
-                    <button onClick={() => { navigator.clipboard.writeText(email); }} className="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-colors" title="Copier">
+                    <button onClick={() => { navigator.clipboard.writeText(email); }} className={`p-1.5 ${tw.iconButtonHoverTeal} rounded-md transition-colors`} title="Copier">
                       <Copy size={11} />
                     </button>
                   </div>
@@ -418,10 +413,10 @@ export const DetailCandidature = ({
                 const tel = candidatData?.telephone || selectedCandidature.telephone_rapide;
                 return (
                   <div className="flex items-center gap-1">
-                    <a href={`tel:${tel}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors">
+                    <a href={`tel:${tel}`} className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillSlate} text-xs font-semibold rounded-lg transition-colors`}>
                       <Phone size={12} /> {tel}
                     </a>
-                    <button onClick={() => { navigator.clipboard.writeText(tel); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" title="Copier">
+                    <button onClick={() => { navigator.clipboard.writeText(tel); }} className={`p-1.5 ${tw.iconButtonHoverSlate} rounded-md transition-colors`} title="Copier">
                       <Copy size={11} />
                     </button>
                   </div>
@@ -431,7 +426,7 @@ export const DetailCandidature = ({
           </div>
 
           {candidatData?.bio && (
-            <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg italic">
+            <p className={`text-sm leading-relaxed p-3 rounded-lg italic ${tw.quoteBoxMuted}`}>
               "{candidatData.bio}"
             </p>
           )}
@@ -442,7 +437,7 @@ export const DetailCandidature = ({
                   href={candidatData.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-semibold rounded-lg transition-colors`}
                 >
                   <ExternalLink size={13} /> LinkedIn
                 </a>
@@ -452,7 +447,7 @@ export const DetailCandidature = ({
                   href={candidatData.github}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${tw.pillSlate} text-xs font-semibold rounded-lg transition-colors`}
                 >
                   <ExternalLink size={13} /> GitHub
                 </a>
@@ -463,7 +458,7 @@ export const DetailCandidature = ({
           {candidatData ? (
             <>
               <div>
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                <h4 className={`${tw.sectionLabel} mb-3`}>
                   Préférences
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -487,9 +482,9 @@ export const DetailCandidature = ({
                   ].map(({ label, value }) => (
                     <div
                       key={label}
-                      className="bg-slate-50 p-3 rounded-lg border border-slate-100"
+                      className={`${tw.surfaceMuted} p-3 rounded-lg border ${tw.borderSubtle}`}
                     >
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase mb-1`}>
                         {label}
                       </p>
                       <p className="text-xs font-semibold text-slate-800">
@@ -502,7 +497,7 @@ export const DetailCandidature = ({
 
               {candidatData.experiences?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <h4 className={`${tw.sectionLabel} mb-3 flex items-center gap-2`}>
                     <Briefcase size={12} /> Expériences
                   </h4>
                   <div className="space-y-3">
@@ -511,14 +506,14 @@ export const DetailCandidature = ({
                         key={exp.id}
                         className="pl-4 border-l-2 border-teal-100"
                       >
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {exp.titre_poste}
                         </p>
-                        <p className="text-sm text-teal-700">
+                        <p className={`text-sm ${tw.textTeal}`}>
                           {exp.entreprise}
-                          {exp.secteur && <span className="text-slate-400 font-normal ml-1">· {exp.secteur}</span>}
+                          {exp.secteur && <span className={`${tw.textMuted} font-normal ml-1`}>· {exp.secteur}</span>}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                        <p className={`text-xs ${tw.textMuted} mt-0.5 flex items-center gap-1`}>
                           <Calendar size={10} />
                           {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
                         </p>
@@ -530,28 +525,28 @@ export const DetailCandidature = ({
 
               {candidatData.formations?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <h4 className={`${tw.sectionLabel} mb-3 flex items-center gap-2`}>
                     <GraduationCap size={12} /> Formations
                   </h4>
                   <div className="space-y-3">
                     {candidatData.formations.map((form) => (
                       <div
                         key={form.id}
-                        className="pl-4 border-l-2 border-slate-200"
+                        className={`pl-4 border-l-2 ${tw.borderBase}`}
                       >
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {form.diplome || "Diplôme non précisé"}
                         </p>
                         {form.description && (
-                          <p className="text-xs text-teal-700 font-medium">
+                          <p className={`text-xs ${tw.textTeal} font-medium`}>
                             {form.description}
                           </p>
                         )}
-                        <p className="text-sm text-slate-500">
+                        <p className={`text-sm ${tw.textMuted700}`}>
                           {form.etablissement}
                         </p>
                         {(form.date_debut || form.date_fin) && (
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                             {form.date_debut} — {form.date_fin || "En cours"}
                           </p>
                         )}
@@ -563,7 +558,7 @@ export const DetailCandidature = ({
 
               {candidatData.competences && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                  <h4 className={`${tw.sectionLabel} mb-3`}>
                     Compétences
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
@@ -573,7 +568,7 @@ export const DetailCandidature = ({
                       .map((c, i) => (
                         <span
                           key={i}
-                          className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md"
+                          className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md`}
                         >
                           {c.trim()}
                         </span>
@@ -583,12 +578,12 @@ export const DetailCandidature = ({
               )}
             </>
           ) : (
-            <div className="text-center py-8 bg-amber-50 rounded-xl border border-amber-100">
-              <Zap size={28} className="text-amber-500 mx-auto mb-2" />
+            <div className={`text-center py-8 rounded-xl border ${tw.emptyStateAmberBox}`}>
+              <Zap size={28} className={`${tw.textAmber500} mx-auto mb-2`} />
               <p className="text-sm font-semibold text-amber-900">
                 Candidature rapide
               </p>
-              <p className="text-xs text-amber-700 mt-1">
+              <p className={`text-xs ${tw.textWarning} mt-1`}>
                 Pas de profil TAFTECH — consultez le CV joint.
               </p>
             </div>
@@ -601,25 +596,25 @@ export const DetailCandidature = ({
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)]">
           {!candidatData ? (
             <div className="text-center py-8">
-              <TrendingUp size={28} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">
+              <TrendingUp size={28} className={`${tw.textSubtle} mx-auto mb-2`} />
+              <p className={`text-sm ${tw.textMuted700}`}>
                 Analyse IA indisponible pour les candidatures rapides.
               </p>
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col items-center gap-3">
+              <div className={`p-4 ${tw.surfaceMuted} rounded-xl border ${tw.borderSubtle} flex flex-col items-center gap-3`}>
                 {selectedCandidature.details_matching?.scores && (
                   <RadarChartRecruteur scores={selectedCandidature.details_matching.scores} />
                 )}
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Score de matching IA</p>
+                  <p className={`${tw.sectionLabel} mb-1.5`}>Score de matching IA</p>
                   {renderScore(selectedCandidature.score_matching) ? (
                     <span className={`inline-flex px-4 py-1.5 text-base font-bold rounded-full border ${renderScore(selectedCandidature.score_matching).style}`}>
                       {renderScore(selectedCandidature.score_matching).label}
                     </span>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">Non calculé</p>
+                    <p className={`text-sm ${tw.textMuted} italic`}>Non calculé</p>
                   )}
                 </div>
               </div>
@@ -642,28 +637,28 @@ export const DetailCandidature = ({
                         const pct = (val / max) * 100;
                         const color =
                           pct >= 100
-                            ? "bg-emerald-500"
+                            ? tw.progressBarSuccess
                             : pct >= 50
-                              ? "bg-amber-400"
-                              : "bg-red-400";
+                              ? tw.progressBarWarning
+                              : tw.progressBarDanger;
                         return (
                           <div key={key}>
                             <div className="flex justify-between items-center mb-1.5">
-                              <span className="text-xs font-semibold text-slate-700">
+                              <span className={`text-xs font-semibold ${tw.textMuted700}`}>
                                 {label}
                               </span>
-                              <span className="text-xs font-bold text-slate-900">
+                              <span className={`text-xs font-bold ${tw.textStrong}`}>
                                 {val}/{max}
                               </span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5">
+                            <div className={`w-full ${tw.progressTrack}`}>
                               <div
-                                className={`${color} h-1.5 rounded-full transition-all duration-700`}
+                                className={`${color} duration-700`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
                             {explics[key] && (
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className={`text-xs ${tw.textMuted700} mt-1`}>
                                 {explics[key]}
                               </p>
                             )}
@@ -673,7 +668,7 @@ export const DetailCandidature = ({
                       {DM.highlights && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
                           <div>
-                            <p className="text-xs font-semibold text-emerald-700 mb-2">
+                            <p className={`text-xs font-semibold ${tw.textSuccess} mb-2`}>
                               Points forts
                             </p>
                             {DM.highlights.points_forts?.length > 0 ? (
@@ -681,7 +676,7 @@ export const DetailCandidature = ({
                                 {DM.highlights.points_forts.map((pf, i) => (
                                   <li
                                     key={i}
-                                    className="text-xs text-slate-600 flex items-start gap-1.5"
+                                    className={`text-xs ${tw.textMuted} flex items-start gap-1.5`}
                                   >
                                     <span className="text-emerald-500 mt-0.5">
                                       •
@@ -691,13 +686,13 @@ export const DetailCandidature = ({
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-xs text-slate-400 italic">
+                              <p className={`text-xs ${tw.textMuted} italic`}>
                                 Aucun.
                               </p>
                             )}
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-red-600 mb-2">
+                            <p className={`text-xs font-semibold ${tw.textError} mb-2`}>
                               Écarts détectés
                             </p>
                             {DM.highlights.ecarts?.length > 0 ? (
@@ -705,7 +700,7 @@ export const DetailCandidature = ({
                                 {DM.highlights.ecarts.map((ec, i) => (
                                   <li
                                     key={i}
-                                    className="text-xs text-slate-600 flex items-start gap-1.5"
+                                    className={`text-xs ${tw.textMuted} flex items-start gap-1.5`}
                                   >
                                     <span className="text-red-400 mt-0.5">
                                       •
@@ -715,7 +710,7 @@ export const DetailCandidature = ({
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-xs text-slate-400 italic">
+                              <p className={`text-xs ${tw.textMuted} italic`}>
                                 Aucun.
                               </p>
                             )}
@@ -728,14 +723,14 @@ export const DetailCandidature = ({
 
               <div className="mt-5 pt-5 border-t border-slate-100">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <p className={tw.sectionLabel}>
                     Analyse approfondie IA
                   </p>
                   {!loadingGroq && (
                     isPremium ? (
                       <button
                         onClick={handleAnalyseGroq}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors`}
                       >
                         <Sparkles size={12} />{" "}
                         {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
@@ -743,7 +738,7 @@ export const DetailCandidature = ({
                     ) : (
                       <Link
                         to="/recruteurs/premium"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-semibold rounded-lg transition-colors ${tw.premiumLockBadge}`}
                       >
                         ⭐ Passer Premium
                       </Link>
@@ -751,7 +746,7 @@ export const DetailCandidature = ({
                   )}
                 </div>
                 {loadingGroq ? (
-                  <div className="flex items-center gap-2 py-4 text-teal-700">
+                  <div className={`flex items-center gap-2 py-4 ${tw.textTeal}`}>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-700"></div>
                     <p className="text-xs font-medium animate-pulse">
                       Analyse en cours...
@@ -760,18 +755,18 @@ export const DetailCandidature = ({
                 ) : analyseGroq ? (
                   <div className="space-y-3">
                     {[
-                      { id: "VERDICT", label: "Verdict", color: "indigo" },
+                      { id: "VERDICT", label: "Verdict", box: tw.analyseVerdictBox },
                       {
                         id: "POINTS FORTS",
                         label: "Points forts",
-                        color: "emerald",
+                        box: tw.analyseFortsBox,
                       },
                       {
                         id: "RECOMMANDATION",
                         label: "Recommandation",
-                        color: "amber",
+                        box: tw.analyseRecommandationBox,
                       },
-                    ].map(({ id, label, color }) => {
+                    ].map(({ id, label, box }) => {
                       const regex = new RegExp(
                         `#{1,3}${id}#{1,3}\\s*([\\s\\S]*?)(?=#{1,3}|$)`,
                         "i",
@@ -779,24 +774,18 @@ export const DetailCandidature = ({
                       const match = analyseGroq.match(regex);
                       const content = match ? match[1].trim() : "";
                       if (!content) return null;
-                      const colorMap = {
-                        indigo:
-                          "bg-teal-50 border-teal-100 text-teal-800",
-                        emerald:
-                          "bg-emerald-50 border-emerald-100 text-emerald-700",
-                        amber: "bg-amber-50 border-amber-100 text-amber-700",
-                      };
+                      const parts = box.split(" ");
                       return (
                         <div
                           key={id}
-                          className={`border rounded-xl p-3 ${colorMap[color].split(" ").slice(0, 2).join(" ")}`}
+                          className={`border rounded-xl p-3 ${parts.slice(0, 2).join(" ")}`}
                         >
                           <p
-                            className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${colorMap[color].split(" ")[2]}`}
+                            className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${parts[2]}`}
                           >
                             {label}
                           </p>
-                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
+                          <p className={`text-xs ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                             {content}
                           </p>
                         </div>
@@ -804,7 +793,7 @@ export const DetailCandidature = ({
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">
+                  <p className={`text-xs ${tw.textMuted} italic`}>
                     Cliquez sur "Analyser avec l'IA" pour obtenir une analyse
                     approfondie.
                   </p>
@@ -820,13 +809,13 @@ export const DetailCandidature = ({
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)]">
           {selectedCandidature.note_globale ? (
             <div className="text-center">
-              <p className="text-5xl font-bold text-teal-700 tabular-nums mb-1 flex items-center justify-center gap-1">
+              <p className={`text-5xl font-bold ${tw.textTeal} tabular-nums mb-1 flex items-center justify-center gap-1`}>
                 {selectedCandidature.note_globale}
-                <span className="text-xl text-slate-400">/20</span>
+                <span className={`text-xl ${tw.textMuted}`}>/20</span>
                 <TooltipIcon text="Note calculée sur 4 critères /5 chacun : Technique, Communication, Motivation, Expérience. Total = moyenne × 4." position="right" />
               </p>
               {selectedCandidature.commentaire_evaluation && (
-                <p className="text-sm text-slate-500 italic mt-2">
+                <p className={`text-sm ${tw.textMuted700} italic mt-2`}>
                   "{selectedCandidature.commentaire_evaluation}"
                 </p>
               )}
@@ -841,18 +830,18 @@ export const DetailCandidature = ({
                   });
                   setModalEval({ isOpen: true, candidature: selectedCandidature });
                 }}
-                className="mt-4 flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors mx-auto"
+                className={`mt-4 flex items-center gap-1.5 px-4 py-2 ${tw.surfaceSubtle} ${tw.textMuted700} text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors mx-auto`}
               >
                 <Star size={12} /> Modifier la note
               </button>
             </div>
           ) : (
             <div className="text-center py-4">
-              <Star size={32} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-900 mb-1">
+              <Star size={32} className={`${tw.textSubtle} mx-auto mb-3`} />
+              <p className={`text-sm font-medium ${tw.textStrong} mb-1`}>
                 Aucune évaluation
               </p>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className={`text-xs ${tw.textMuted700} mb-4`}>
                 Notez ce candidat après l'entretien.
               </p>
               {authService.peutFaire("UTILISATEUR") && (
@@ -870,7 +859,7 @@ export const DetailCandidature = ({
                       candidature: selectedCandidature,
                     });
                   }}
-                  className="px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                  className={`px-4 py-2.5 ${tw.bgTealSolid} text-sm font-semibold rounded-lg transition-colors`}
                 >
                   Évaluer ce candidat
                 </button>
@@ -884,8 +873,8 @@ export const DetailCandidature = ({
       {activeDetailTab === "questionnaire" && offre.questionnaire && (
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-220px)] space-y-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-4 bg-teal-700 rounded-full" />
-            <p className="text-sm font-semibold text-slate-900">
+            <div className={`w-2 h-4 ${tw.bgTeal} rounded-full`} />
+            <p className={`text-sm font-semibold ${tw.textStrong}`}>
               {offre.questionnaire.titre}
             </p>
           </div>
@@ -896,13 +885,13 @@ export const DetailCandidature = ({
             return (
               <div
                 key={q.id}
-                className="bg-slate-50 border border-slate-200 rounded-lg p-4"
+                className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-lg p-4`}
               >
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                <p className={`${tw.sectionLabel} mb-1`}>
                   {q.texte}
-                  {q.requis && <span className="text-red-500 ml-1">*</span>}
+                  {q.requis && <span className={`${tw.textErrorMuted} ml-1`}>*</span>}
                   {q.disqualifiant && (
-                    <span className="ml-2 px-1.5 py-0.5 bg-red-50 text-red-600 text-[10px] rounded">
+                    <span className={`ml-2 px-1.5 py-0.5 ${tw.badgeErrorLight} text-[10px] rounded`}>
                       Disqualifiant
                     </span>
                   )}
@@ -912,7 +901,7 @@ export const DetailCandidature = ({
                     {reponse.reponse || "—"}
                   </p>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">
+                  <p className={`text-sm ${tw.textMuted} italic`}>
                     Pas de réponse
                   </p>
                 )}

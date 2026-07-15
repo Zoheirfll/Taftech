@@ -35,7 +35,7 @@ const ForgotPasswordRecruteur = () => {
           <h2 className="text-xl font-extrabold leading-snug mb-3">
             Réinitialisez votre <span className="text-teal-400">mot de passe</span>
           </h2>
-          <p className="text-slate-400 text-sm leading-relaxed mb-8">
+          <p className="text-slate-600 text-sm leading-relaxed mb-8">
             Entrez l'email associé à votre compte recruteur. Vous recevrez un code de réinitialisation valable 10 minutes.
           </p>
           <div className="space-y-3">
@@ -53,7 +53,7 @@ const ForgotPasswordRecruteur = () => {
           <div className="mt-10 pt-8 border-t border-slate-800">
             <Link
               to="/recruteurs/connexion"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-white transition-colors"
             >
               <ArrowLeft size={14} /> Retour à la connexion
             </Link>
@@ -69,7 +69,7 @@ const ForgotPasswordRecruteur = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-900">Email envoyé !</h3>
-                <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                <p className="text-sm text-slate-700 mt-2 leading-relaxed">
                   Si l'email <span className="font-semibold text-slate-800">{email}</span> est associé à un compte recruteur, vous recevrez un code de réinitialisation.
                 </p>
               </div>
@@ -91,7 +91,7 @@ const ForgotPasswordRecruteur = () => {
                   <Mail size={22} className="text-teal-700" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">Mot de passe oublié ?</h3>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-700 mt-1">
                   Entrez votre email professionnel pour recevoir un code.
                 </p>
               </div>
@@ -124,7 +124,7 @@ const ForgotPasswordRecruteur = () => {
                 </button>
               </form>
 
-              <p className="text-center text-sm text-slate-500 mt-6">
+              <p className="text-center text-sm text-slate-700 mt-6">
                 Vous vous souvenez de votre mot de passe ?{" "}
                 <Link to="/recruteurs/connexion" className="text-teal-700 font-semibold hover:underline">
                   Se connecter

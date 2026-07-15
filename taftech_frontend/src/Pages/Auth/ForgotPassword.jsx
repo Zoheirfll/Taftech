@@ -4,6 +4,7 @@ import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Mail, ArrowLeft } from "lucide-react";
+import { tw } from "../../theme";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -25,40 +26,37 @@ const ForgotPassword = () => {
     }
   };
 
-  const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
+    <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center px-4`}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Mail size={26} className="text-indigo-600" />
+          <div className={`w-14 h-14 ${tw.bgPrimarySoft} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+            <Mail size={26} className={tw.textPrimary} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className={tw.pageTitlePetit}>
             Mot de passe oublié
           </h1>
-          <p className="text-sm text-slate-500 mt-2">
+          <p className={`${tw.bodyText} mt-2`}>
             Entrez votre email pour recevoir un code de réinitialisation.
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-8">
+        <div className={`${tw.authCardShell} p-8`}>
           {sent ? (
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-                <Mail size={28} className="text-emerald-600" />
+              <div className={`w-16 h-16 ${tw.bgSuccessSoft} rounded-full flex items-center justify-center mx-auto`}>
+                <Mail size={28} className={tw.textSuccessIcon} />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className={`text-lg font-bold ${tw.textStrong}`}>
                 Email envoyé !
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className={tw.bodyText}>
                 Si cet email existe, vous recevrez un code de réinitialisation.
               </p>
               <Link
                 to="/reset-password"
                 state={{ email }}
-                className="block w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-center mt-4"
+                className={`block w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors text-center mt-4`}
               >
                 Entrer mon code →
               </Link>
@@ -66,7 +64,7 @@ const ForgotPassword = () => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
+                <label className={`${tw.authLabel} mb-1.5`}>
                   Adresse email *
                 </label>
                 <input
@@ -75,15 +73,15 @@ const ForgotPassword = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="votre@email.dz"
-                  className={inputClass}
+                  className={tw.authInput}
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className={`w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
               >
-                {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {loading && <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />}
                 {loading ? "Envoi en cours..." : "Envoyer le code"}
               </button>
             </form>
@@ -93,7 +91,7 @@ const ForgotPassword = () => {
         <div className="text-center mt-4">
           <Link
             to="/login"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className={`inline-flex items-center gap-1 text-sm ${tw.linkMutedHover}`}
           >
             <ArrowLeft size={14} /> Retour à la connexion
           </Link>

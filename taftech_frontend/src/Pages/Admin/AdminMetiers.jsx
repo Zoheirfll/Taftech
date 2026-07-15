@@ -3,6 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { tw } from "../../theme";
 
 const SECTEURS = [
   "IT",
@@ -130,23 +131,22 @@ const AdminMetiers = () => {
     }
   };
 
-  const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+  const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className={tw.pageTitle}>
             Référentiel métiers
           </h1>
-          <p className="text-sm text-slate-700 mt-0.5">
+          <p className={`${tw.pageSubtitle} mt-0.5`}>
             {totalCount} métiers au total
           </p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
         >
           <Plus size={16} /> Ajouter un métier
         </button>
@@ -155,21 +155,21 @@ const AdminMetiers = () => {
       <div className="relative">
         <Search
           size={15}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
         />
         <input
           type="text"
           placeholder="Rechercher un métier..."
           value={search}
           onChange={handleSearch}
-          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500"
+          className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-xl text-sm`}
         />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+          <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
+            <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-5 py-3">Titre</th>
               <th className="px-5 py-3">Secteur</th>
               <th className="px-5 py-3">Niveau</th>
@@ -177,12 +177,12 @@ const AdminMetiers = () => {
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className={`divide-y ${tw.divideBase}`}>
             {loading ? (
               <tr>
                 <td
                   colSpan="5"
-                  className="py-12 text-center text-sm text-indigo-600 animate-pulse font-medium"
+                  className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}
                 >
                   Chargement...
                 </td>
@@ -191,30 +191,30 @@ const AdminMetiers = () => {
               <tr>
                 <td
                   colSpan="5"
-                  className="py-12 text-center text-sm text-slate-600 italic"
+                  className={`py-12 text-center text-sm ${tw.textMuted} italic`}
                 >
                   Aucun métier trouvé.
                 </td>
               </tr>
             ) : (
               metiers.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={m.id} className={tw.rowHover}>
                   <td className="px-5 py-3">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className={`text-sm font-medium ${tw.textStrong}`}>
                       {m.titre}
                     </p>
                   </td>
                   <td className="px-5 py-3">
-                    <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
+                    <span className={`px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full`}>
                       {m.secteur}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-600">
+                  <td className={`px-5 py-3 text-xs ${tw.textMuted}`}>
                     {m.niveau_experience || "—"}
                   </td>
                   <td className="px-5 py-3 text-center">
                     <span
-                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${m.est_actif ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}
+                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${m.est_actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}
                     >
                       {m.est_actif ? "Actif" : "Inactif"}
                     </span>
@@ -223,13 +223,13 @@ const AdminMetiers = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleOpenEdit(m)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors`}
                       >
                         <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(m.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className={`p-2 ${tw.textMuted} hover:${tw.textError} hover:${tw.bgErrorSoft} rounded-lg transition-colors`}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -242,7 +242,7 @@ const AdminMetiers = () => {
         </table>
 
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
               onClick={() => {
                 const p = page - 1;
@@ -250,11 +250,11 @@ const AdminMetiers = () => {
                 fetchMetiers(search, p);
               }}
               disabled={page === 1}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               ← Précédent
             </button>
-            <span className="text-xs font-medium text-slate-600">
+            <span className={`text-xs font-medium ${tw.textMuted}`}>
               Page {page} / {totalPages} · {totalCount} métiers
             </span>
             <button
@@ -264,7 +264,7 @@ const AdminMetiers = () => {
                 fetchMetiers(search, p);
               }}
               disabled={page === totalPages}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               Suivant →
             </button>
@@ -273,22 +273,22 @@ const AdminMetiers = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-7 max-w-lg w-full shadow-2xl">
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className={`text-base font-bold ${tw.textStrong}`}>
                 {editingId ? "Modifier le métier" : "Ajouter un métier"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}
               >
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Titre *
                 </label>
                 <input
@@ -300,7 +300,7 @@ const AdminMetiers = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Secteur *
                 </label>
                 <select
@@ -318,7 +318,7 @@ const AdminMetiers = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Niveau d'expérience
                 </label>
                 <input
@@ -331,7 +331,7 @@ const AdminMetiers = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
                   Mots-clés
                 </label>
                 <input
@@ -347,7 +347,7 @@ const AdminMetiers = () => {
                 <input
                   type="checkbox"
                   id="est_actif"
-                  className="accent-indigo-600 w-4 h-4"
+                  className={`${tw.accentPrimary} w-4 h-4`}
                   checked={form.est_actif}
                   onChange={(e) =>
                     setForm({ ...form, est_actif: e.target.checked })
@@ -355,7 +355,7 @@ const AdminMetiers = () => {
                 />
                 <label
                   htmlFor="est_actif"
-                  className="text-sm font-medium text-slate-700 cursor-pointer"
+                  className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}
                 >
                   Métier actif
                 </label>
@@ -364,13 +364,13 @@ const AdminMetiers = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}
                 >
                   {editingId ? "Mettre à jour" : "Ajouter"}
                 </button>

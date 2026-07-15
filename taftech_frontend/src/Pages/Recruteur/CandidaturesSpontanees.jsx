@@ -6,7 +6,7 @@ import { mediaUrl } from "../../utils/mediaUrl";
 import toast from "react-hot-toast";
 import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
 import Select from "react-select";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
@@ -76,19 +76,19 @@ const CandidaturesSpontanees = () => {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 animate-pulse flex gap-4">
+          <div key={i} className={`${tw.surface} border ${tw.borderBase} rounded-xl p-5 animate-pulse flex gap-4`}>
             <div className="flex-1 space-y-2">
-              <div className="h-4 bg-slate-200 rounded w-1/3" />
-              <div className="h-3 bg-slate-100 rounded w-1/2" />
+              <div className={`h-4 ${tw.surfaceSubtle} rounded w-1/3`} />
+              <div className={`h-3 ${tw.surfaceSubtle} rounded w-1/2`} />
               <div className="flex gap-2 mt-2">
-                <div className="h-4 bg-slate-100 rounded w-16" />
-                <div className="h-4 bg-slate-100 rounded w-20" />
+                <div className={`h-4 ${tw.surfaceSubtle} rounded w-16`} />
+                <div className={`h-4 ${tw.surfaceSubtle} rounded w-20`} />
               </div>
-              <div className="h-3 bg-slate-100 rounded w-3/4 mt-2" />
+              <div className={`h-3 ${tw.surfaceSubtle} rounded w-3/4 mt-2`} />
             </div>
             <div className="space-y-2 w-20">
-              <div className="h-8 bg-slate-200 rounded-lg" />
-              <div className="h-8 bg-slate-100 rounded-lg" />
+              <div className={`h-8 ${tw.surfaceSubtle} rounded-lg`} />
+              <div className={`h-8 ${tw.surfaceSubtle} rounded-lg`} />
             </div>
           </div>
         ))}
@@ -107,10 +107,10 @@ const CandidaturesSpontanees = () => {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">
+        <h1 className={tw.pageTitlePetit}>
           Candidatures spontanées
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <p className={`${tw.bodyTextPetit} mt-0.5`}>
           {spontanees.filter((s) => !s.lue).length} non lue(s) ·{" "}
           {spontaneesFiltrees.length} affichée(s)
         </p>
@@ -124,7 +124,7 @@ const CandidaturesSpontanees = () => {
       </div>
 
       {/* FILTRES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 bg-white border border-slate-200 rounded-xl p-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 ${tw.surface} border ${tw.borderBase} rounded-xl p-4`}>
         <Select
           options={constants.wilayas}
           styles={selectStyles}
@@ -167,10 +167,10 @@ const CandidaturesSpontanees = () => {
       </div>
 
       {spontaneesFiltrees.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
-          <User size={32} className="text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-medium text-slate-900 mb-1">Aucune candidature spontanée</p>
-          <p className="text-xs text-slate-500">Partagez la page publique de votre entreprise pour en recevoir.</p>
+        <div className={`${tw.surface} border border-dashed ${tw.borderBase} rounded-xl p-12 text-center`}>
+          <User size={32} className={`${tw.textSubtle} mx-auto mb-3`} />
+          <p className={`text-sm font-medium ${tw.textStrong} mb-1`}>Aucune candidature spontanée</p>
+          <p className={`text-xs ${tw.bodyText}`}>Partagez la page publique de votre entreprise pour en recevoir.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -183,21 +183,21 @@ const CandidaturesSpontanees = () => {
             return (
               <div
                 key={c.id}
-                className={`bg-white border rounded-xl overflow-hidden transition-all ${!c.lue ? "border-teal-200" : "border-slate-200"}`}
+                className={`${tw.surface} border rounded-xl overflow-hidden transition-all ${!c.lue ? tw.borderTeal200 : tw.borderBase}`}
               >
                 {/* Bande non lue */}
-                {!c.lue && <div className="h-1 bg-teal-500" />}
+                {!c.lue && <div className={`h-1 ${tw.barTeal500}`} />}
 
                 <div className="p-5 flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     {/* Fix 4 — Nom normalisé + Fix 7 — date longue */}
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className={`text-sm font-semibold ${tw.textStrong}`}>
                         {toTitleCase(`${c.nom} ${c.prenom}`)}
                       </p>
-                      {!c.lue && <span className="w-2 h-2 bg-teal-600 rounded-full shrink-0" />}
+                      {!c.lue && <span className={`w-2 h-2 ${tw.dotTeal600} rounded-full shrink-0`} />}
                     </div>
-                    <p className="text-[10px] text-slate-400 mb-2">
+                    <p className={`text-[10px] ${tw.textMuted} mb-2`}>
                       {new Date(c.date_envoi).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                     </p>
 
@@ -205,20 +205,20 @@ const CandidaturesSpontanees = () => {
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {c.email && (
                         <div className="flex items-center gap-1">
-                          <a href={`mailto:${c.email}`} className="flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-800 text-xs font-medium rounded-lg hover:bg-teal-100 transition-colors">
+                          <a href={`mailto:${c.email}`} className={`flex items-center gap-1 px-2.5 py-1 ${tw.pillTeal} text-xs font-medium rounded-lg transition-colors`}>
                             <Mail size={11} /> {c.email}
                           </a>
-                          <button onClick={() => navigator.clipboard.writeText(c.email)} className="p-1 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors" title="Copier">
+                          <button onClick={() => navigator.clipboard.writeText(c.email)} className={`p-1 ${tw.iconButtonHoverSlate} rounded transition-colors`} title="Copier">
                             <Copy size={10} />
                           </button>
                         </div>
                       )}
                       {c.telephone && (
                         <div className="flex items-center gap-1">
-                          <a href={`tel:${c.telephone}`} className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors">
+                          <a href={`tel:${c.telephone}`} className={`flex items-center gap-1 px-2.5 py-1 ${tw.pillSlate} text-xs font-medium rounded-lg transition-colors`}>
                             <Phone size={11} /> {c.telephone}
                           </a>
-                          <button onClick={() => navigator.clipboard.writeText(c.telephone)} className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors" title="Copier">
+                          <button onClick={() => navigator.clipboard.writeText(c.telephone)} className={`p-1 ${tw.iconButtonHoverSlate} rounded transition-colors`} title="Copier">
                             <Copy size={10} />
                           </button>
                         </div>
@@ -228,26 +228,26 @@ const CandidaturesSpontanees = () => {
                     {/* Fix 3 — Labels diplôme / spécialité */}
                     <div className="flex flex-wrap gap-1.5">
                       {c.wilaya && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-md">{c.wilaya.split(" - ")[1] || c.wilaya}</span>
+                        <span className={`px-2 py-0.5 ${tw.surfaceSubtle} ${tw.textMuted} text-[10px] font-medium rounded-md`}>{c.wilaya.split(" - ")[1] || c.wilaya}</span>
                       )}
                       {c.diplome && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-md">{diplomeLabel}</span>
+                        <span className={`px-2 py-0.5 ${tw.surfaceSubtle} ${tw.textMuted} text-[10px] font-medium rounded-md`}>{diplomeLabel}</span>
                       )}
                       {c.specialite && (
-                        <span className="px-2 py-0.5 bg-teal-50 text-teal-800 text-[10px] font-medium rounded-md">{specialiteLabel}</span>
+                        <span className={`px-2 py-0.5 ${tw.badgeTealSoft} text-[10px] font-medium rounded-md`}>{specialiteLabel}</span>
                       )}
                     </div>
 
                     {/* Fix 5 — Lettre expandable */}
                     {c.lettre_motivation && (
                       <div className="mt-3">
-                        <p className={`text-xs text-slate-600 italic leading-relaxed ${!isExpanded && lettreEstLongue ? "line-clamp-2" : ""}`}>
+                        <p className={`text-xs ${tw.textMuted} italic leading-relaxed ${!isExpanded && lettreEstLongue ? "line-clamp-2" : ""}`}>
                           "{c.lettre_motivation}"
                         </p>
                         {lettreEstLongue && (
                           <button
                             onClick={() => toggleExpand(c.id)}
-                            className="flex items-center gap-1 text-[10px] text-teal-700 font-semibold mt-1 hover:underline"
+                            className={`flex items-center gap-1 text-[10px] ${tw.textTeal} font-semibold mt-1 hover:underline`}
                           >
                             {isExpanded ? <><ChevronUp size={11} /> Voir moins</> : <><ChevronDown size={11} /> Voir plus</>}
                           </button>
@@ -263,7 +263,7 @@ const CandidaturesSpontanees = () => {
                         href={mediaUrl(c.cv)}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors`}
                       >
                         <FileText size={12} /> CV
                       </a>
@@ -271,7 +271,7 @@ const CandidaturesSpontanees = () => {
                     {!c.lue && (
                       <button
                         onClick={() => handleMarquerLue(c.id)}
-                        className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap"
+                        className={`px-3 py-1.5 ${tw.buttonNeutralSoft} text-xs font-medium rounded-lg transition-colors whitespace-nowrap`}
                       >
                         Marquer lue
                       </button>
@@ -281,13 +281,13 @@ const CandidaturesSpontanees = () => {
                       <div className="flex flex-col gap-1">
                         <button
                           onClick={() => handleSupprimer(c.id)}
-                          className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                          className={`px-3 py-1.5 ${tw.buttonDangerSolid} text-xs font-semibold rounded-lg transition-colors`}
                         >
                           Confirmer
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                          className={`px-3 py-1.5 ${tw.buttonNeutralSoft} text-xs font-medium rounded-lg transition-colors`}
                         >
                           Annuler
                         </button>
@@ -295,7 +295,7 @@ const CandidaturesSpontanees = () => {
                     ) : (
                       <button
                         onClick={() => setConfirmDeleteId(c.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                        className={`p-1.5 ${tw.iconButtonHoverDanger} rounded-lg transition-colors flex items-center justify-center`}
                       >
                         <Trash2 size={14} />
                       </button>

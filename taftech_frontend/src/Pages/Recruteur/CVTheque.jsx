@@ -7,7 +7,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import {
   Search,
   SlidersHorizontal,
@@ -272,22 +272,22 @@ const CVTheque = () => {
     if (heures < 24) {
       return {
         label: "Actif aujourd'hui",
-        color: "bg-emerald-50 text-emerald-700",
-        dot: "bg-emerald-500",
+        color: `${tw.bgSuccessSoft} ${tw.textSuccess}`,
+        dot: tw.dotEmerald500,
       };
     }
     if (heures < 24 * 7) {
       return {
         label: "Actif cette semaine",
-        color: "bg-blue-50 text-blue-700",
-        dot: "bg-blue-500",
+        color: `${tw.bgBlueSoft} ${tw.textBlue}`,
+        dot: tw.dotBlue500,
       };
     }
     if (heures < 24 * 30) {
       return {
         label: "Actif ce mois",
-        color: "bg-slate-100 text-slate-600",
-        dot: "bg-slate-400",
+        color: `${tw.surfaceSubtle} ${tw.textMuted}`,
+        dot: tw.dotSlate400,
       };
     }
     return null;
@@ -314,7 +314,7 @@ const CVTheque = () => {
   if (consentGiven === null) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-20 flex justify-center">
-        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${tw.spinnerTeal}`} />
       </div>
     );
   }
@@ -322,20 +322,20 @@ const CVTheque = () => {
   if (consentGiven === false) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-16">
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Avant d'accéder à la CVthèque</h2>
-          <p className="text-sm text-slate-500 mb-6">
+        <div className={`${tw.cardColors} rounded-2xl shadow-sm p-8`}>
+          <h2 className={`text-xl font-bold mb-2 ${tw.textStrong}`}>Avant d'accéder à la CVthèque</h2>
+          <p className={`text-sm mb-6 ${tw.bodyText}`}>
             La CVthèque vous donne accès aux données personnelles de candidats. Merci de confirmer votre engagement avant de continuer.
           </p>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+          <div className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-xl p-4 mb-6`}>
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={consentChecked}
                 onChange={(e) => setConsentChecked(e.target.checked)}
-                className="mt-0.5 w-4 h-4 cursor-pointer rounded text-teal-700 border-slate-300"
+                className={`mt-0.5 w-4 h-4 cursor-pointer rounded ${tw.checkboxTeal}`}
               />
-              <span className="text-sm text-slate-700 leading-relaxed">
+              <span className={`text-sm leading-relaxed ${tw.bodyText}`}>
                 Je m'engage à traiter les données personnelles des candidats consultées dans la CVthèque
                 uniquement dans le cadre du recrutement, et à ne pas les utiliser à d'autres fins,
                 conformément à la loi n° 18-07 relative à la protection des données à caractère personnel.
@@ -345,7 +345,7 @@ const CVTheque = () => {
           <button
             disabled={!consentChecked || consentLoading}
             onClick={handleAccepterConsentement}
-            className="w-full py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full py-2.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${tw.bgTealSolid}`}
           >
             {consentLoading ? "Enregistrement..." : "J'accepte et je continue"}
           </button>
@@ -358,35 +358,35 @@ const CVTheque = () => {
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* BANNIÈRE PREMIUM */}
       {!isPremium && (
-        <div className="mb-6 bg-linear-to-br from-teal-700 to-teal-900 rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className={`mb-6 ${tw.bannerGradientTeal} rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔒</span>
             <div>
-              <p className="text-white font-bold text-sm">Accès limité — Coordonnées masquées</p>
-              <p className="text-teal-200 text-xs mt-0.5">Passez en Premium pour accéder aux emails, téléphones et réseaux sociaux des candidats.</p>
+              <p className={`font-bold text-sm ${tw.textOnDark}`}>Accès limité — Coordonnées masquées</p>
+              <p className={`text-xs mt-0.5 ${tw.textTeal200}`}>Passez en Premium pour accéder aux emails, téléphones et réseaux sociaux des candidats.</p>
             </div>
           </div>
-          <Link to="/recruteurs/premium" className="shrink-0 px-4 py-2 bg-white text-teal-700 text-sm font-bold rounded-xl hover:bg-teal-50 transition-colors">
+          <Link to="/recruteurs/premium" className={`shrink-0 px-4 py-2 text-sm font-bold rounded-xl transition-colors ${tw.linkOnTealGradient}`}>
             Passer Premium →
           </Link>
         </div>
       )}
       {isPremium && (
-        <div className="mb-6 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5 w-fit">
-          <span className="text-teal-700 text-sm font-bold">⭐ Compte Premium actif</span>
-          <span className="text-teal-600 text-xs">— Accès complet aux coordonnées</span>
+        <div className={`mb-6 flex items-center gap-2 ${tw.bgTealSoft} border ${tw.borderTeal200} rounded-xl px-4 py-2.5 w-fit`}>
+          <span className={`text-sm font-bold ${tw.textTeal}`}>⭐ Compte Premium actif</span>
+          <span className={`text-xs ${tw.textTeal600}`}>— Accès complet aux coordonnées</span>
         </div>
       )}
 
       {/* HEADER + ONGLETS fusionnés */}
-      <div className="flex items-end justify-between border-b border-slate-200 mb-5">
+      <div className={`flex items-end justify-between border-b ${tw.borderBase} mb-5`}>
         <div className="flex gap-1">
           <button
             onClick={() => { setActiveTab("tous"); setCurrentPage(1); }}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "tous"
-                ? "border-teal-700 text-teal-700"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? tw.segmentTabActiveTeal
+                : tw.segmentTabInactive
             }`}
           >
             Explorez le vivier de CV
@@ -395,15 +395,15 @@ const CVTheque = () => {
             onClick={() => { setActiveTab("favoris"); setCurrentPage(1); }}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "favoris"
-                ? "border-amber-500 text-amber-600"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? tw.segmentTabActiveAmber
+                : tw.segmentTabInactive
             }`}
           >
-            <Star size={14} className={activeTab === "favoris" ? "fill-amber-500" : ""} />
+            <Star size={14} className={activeTab === "favoris" ? tw.fillAmber500 : ""} />
             Favoris
           </button>
         </div>
-        <p className="text-xs text-slate-400 pb-3 hidden sm:block">
+        <p className={`text-xs pb-3 hidden sm:block ${tw.textMuted}`}>
           Trouvez le profil idéal pour votre équipe
         </p>
       </div>
@@ -422,12 +422,12 @@ const CVTheque = () => {
       <div className="flex flex-col md:flex-row gap-3 mb-4">
         <button
           onClick={() => setShowFiltres(!showFiltres)}
-          className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors border ${tw.buttonFilterOutline}`}
         >
           <SlidersHorizontal size={16} />
           Filtres
           {filtresActifs > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-teal-700 text-white text-xs font-semibold rounded-full">
+            <span className={`ml-1 px-2 py-0.5 text-xs font-semibold rounded-full ${tw.bgTeal} ${tw.textOnDark}`}>
               {filtresActifs}
             </span>
           )}
@@ -436,12 +436,12 @@ const CVTheque = () => {
         <div className="flex-1 relative">
           <Search
             size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            className={`absolute left-4 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
           />
           <input
             type="text"
             placeholder="Mots clés, métier, poste..."
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+            className={`w-full pl-11 pr-4 py-2.5 rounded-xl text-sm ${tw.inputColorsWhiteTeal}`}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -466,8 +466,8 @@ const CVTheque = () => {
             onClick={() => setShowMatchingPanel(p => !p)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
               offreId
-                ? "bg-teal-700 text-white border-teal-700"
-                : "bg-white text-slate-700 border-slate-200 hover:border-teal-400 hover:text-teal-700"
+                ? tw.chipTealActive
+                : tw.chipTealInactive
             }`}
           >
             <Zap size={15} />
@@ -479,13 +479,13 @@ const CVTheque = () => {
           </button>
 
           {showMatchingPanel && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 p-4">
+            <div className={`absolute right-0 top-full mt-2 w-80 rounded-2xl shadow-xl z-30 p-4 ${tw.cardColors}`}>
               <div className="flex items-center gap-2 mb-2">
-                <Zap size={15} className="text-teal-700" />
-                <p className="text-sm font-bold text-teal-800">Matching IA</p>
-                <button onClick={() => setShowMatchingPanel(false)} className="ml-auto text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                <Zap size={15} className={tw.textTeal} />
+                <p className={`text-sm font-bold ${tw.textTeal800}`}>Matching IA</p>
+                <button onClick={() => setShowMatchingPanel(false)} className={`ml-auto ${tw.textMuted}`}><X size={14} /></button>
               </div>
-              <p className="text-xs text-slate-500 mb-3">Choisissez une offre pour trier les candidats par compatibilité automatique.</p>
+              <p className={`text-xs mb-3 ${tw.bodyText}`}>Choisissez une offre pour trier les candidats par compatibilité automatique.</p>
               <Select
                 options={[{ value: "", label: "Choisir une offre…" }, ...offresActives]}
                 value={offresActives.find(o => o.value === offreId) || null}
@@ -495,8 +495,8 @@ const CVTheque = () => {
                 menuPosition="fixed"
               />
               {offreId && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-teal-700 font-medium">
-                  <CheckCircle2 size={13} className="text-teal-600" />
+                <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${tw.textTeal}`}>
+                  <CheckCircle2 size={13} className={tw.textTeal600} />
                   Actif : {offresActives.find(o => o.value === offreId)?.label}
                 </div>
               )}
@@ -506,16 +506,16 @@ const CVTheque = () => {
       </div>
 
       {offreId && (
-        <div className="mb-4 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-2">
-          <Zap size={14} className="text-teal-700 shrink-0" />
-          <span className="text-sm font-semibold text-teal-800">Matching actif — <span className="font-normal text-teal-700">{offresActives.find(o => o.value === offreId)?.label}</span></span>
-          <button onClick={() => setOffreId("")} className="ml-auto text-teal-400 hover:text-teal-800"><X size={14} /></button>
+        <div className={`mb-4 flex items-center gap-2 ${tw.bgTealSoft} border ${tw.borderTeal200} rounded-xl px-4 py-2`}>
+          <Zap size={14} className={`${tw.textTeal} shrink-0`} />
+          <span className={`text-sm font-semibold ${tw.textTeal800}`}>Matching actif — <span className={`font-normal ${tw.textTeal}`}>{offresActives.find(o => o.value === offreId)?.label}</span></span>
+          <button onClick={() => setOffreId("")} className={`ml-auto ${tw.closeLinkTeal}`}><X size={14} /></button>
         </div>
       )}
 
       {/* PANNEAU FILTRES */}
       {showFiltres && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
+        <div className={`${tw.cardColors} rounded-2xl p-5 mb-6`}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <Select
               options={constants.wilayas}
@@ -570,16 +570,16 @@ const CVTheque = () => {
           </div>
 
           {/* Filtres rapides en checkboxes */}
-          <div className="flex flex-wrap gap-2 items-center pt-3 border-t border-slate-100">
-            <span className="text-xs font-medium text-slate-600 mr-2">
+          <div className={`flex flex-wrap gap-2 items-center pt-3 border-t ${tw.borderSubtle}`}>
+            <span className={`text-xs font-medium mr-2 ${tw.textMuted}`}>
               Filtres rapides :
             </span>
             <button
               onClick={() => setAvecPhoto(!avecPhoto)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 avecPhoto
-                  ? "bg-teal-50 border-blue-300 text-teal-800"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
               }`}
             >
               {avecPhoto && <CheckCircle2 size={14} />}
@@ -589,8 +589,8 @@ const CVTheque = () => {
               onClick={() => setAvecCV(!avecCV)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 avecCV
-                  ? "bg-teal-50 border-blue-300 text-teal-800"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
               }`}
             >
               {avecCV && <CheckCircle2 size={14} />}
@@ -600,8 +600,8 @@ const CVTheque = () => {
               onClick={() => setInscritRecent(!inscritRecent)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 inscritRecent
-                  ? "bg-teal-50 border-blue-300 text-teal-800"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
               }`}
             >
               {inscritRecent && <CheckCircle2 size={14} />}
@@ -612,7 +612,7 @@ const CVTheque = () => {
             {filtresActifs > 0 && (
               <button
                 onClick={handleReset}
-                className="ml-auto text-xs font-medium text-slate-500 hover:text-teal-700 transition-colors"
+                className={`ml-auto text-xs font-medium transition-colors ${tw.textMuted700HoverTeal}`}
               >
                 Réinitialiser
               </button>
@@ -627,26 +627,26 @@ const CVTheque = () => {
         <div className="lg:col-span-5 space-y-3">
           {/* Compteur intégré en haut de liste */}
           <div className="flex items-center justify-between px-1">
-            <p className="text-xs text-slate-500">
-              {loading ? "Recherche…" : <><span className="font-semibold text-slate-700">{totalCandidats}</span> {totalCandidats > 1 ? "profils" : "profil"}</>}
+            <p className={`text-xs ${tw.bodyText}`}>
+              {loading ? "Recherche…" : <><span className={`font-semibold ${tw.bodyText}`}>{totalCandidats}</span> {totalCandidats > 1 ? "profils" : "profil"}</>}
             </p>
             {!offreId && !loading && (
-              <p className="text-xs text-slate-400">Tri : {OPTIONS_TRI.find(o => o.value === tri)?.label}</p>
+              <p className={`text-xs ${tw.textMuted}`}>Tri : {OPTIONS_TRI.find(o => o.value === tri)?.label}</p>
             )}
           </div>
 
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
+                <div key={i} className={`${tw.cardColors} rounded-xl p-4 animate-pulse`}>
                   <div className="flex gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-200 shrink-0" />
+                    <div className={`w-10 h-10 rounded-lg shrink-0 ${tw.bgSlate200}`} />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 bg-slate-200 rounded w-3/4" />
-                      <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                      <div className={`h-3 rounded w-3/4 ${tw.bgSlate200}`} />
+                      <div className={`h-2.5 rounded w-1/2 ${tw.surfaceSubtle}`} />
                       <div className="flex gap-1.5 mt-1">
-                        <div className="h-2 bg-slate-100 rounded w-16" />
-                        <div className="h-2 bg-slate-100 rounded w-20" />
+                        <div className={`h-2 rounded w-16 ${tw.surfaceSubtle}`} />
+                        <div className={`h-2 rounded w-20 ${tw.surfaceSubtle}`} />
                       </div>
                     </div>
                   </div>
@@ -654,24 +654,24 @@ const CVTheque = () => {
               ))}
             </div>
           ) : candidats.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
+            <div className={`${tw.cardColors} rounded-xl p-8 text-center`}>
               {activeTab === "favoris" ? (
                 <>
-                  <Star size={32} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-slate-900">
+                  <Star size={32} className={`${tw.textSubtle} mx-auto mb-3`} />
+                  <p className={`text-sm font-medium ${tw.textStrong}`}>
                     Aucun favori pour l'instant
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className={`text-xs mt-1 ${tw.textMuted}`}>
                     Cliquez sur l'étoile d'un profil pour l'ajouter ici
                   </p>
                 </>
               ) : (
                 <>
-                  <User size={32} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-slate-900">
+                  <User size={32} className={`${tw.textSubtle} mx-auto mb-3`} />
+                  <p className={`text-sm font-medium ${tw.textStrong}`}>
                     Aucun profil trouvé
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className={`text-xs mt-1 ${tw.textMuted}`}>
                     Essayez d'élargir vos critères
                   </p>
                 </>
@@ -686,28 +686,28 @@ const CVTheque = () => {
                 <div
                   key={candidat.email}
                   onClick={() => handleSelectCandidat(candidat)}
-                  className={`relative cursor-pointer w-full text-left bg-white border rounded-xl overflow-hidden transition-all ${
+                  className={`relative cursor-pointer w-full text-left ${tw.surface} border rounded-xl overflow-hidden transition-all ${
                     isSelected
-                      ? "border-teal-500 ring-2 ring-teal-100 shadow-sm"
-                      : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                      ? tw.borderTealSelected
+                      : tw.borderNeutralHover
                   }`}
                 >
                   {/* Barre score IA à gauche */}
                   {offreId && 'score_offre' in candidat && (
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                      candidat.score_offre >= 70 ? "bg-emerald-400" :
-                      candidat.score_offre >= 40 ? "bg-amber-400" : "bg-slate-200"
+                      candidat.score_offre >= 70 ? tw.scoreBarHigh :
+                      candidat.score_offre >= 40 ? tw.scoreFillWarning : tw.scoreBarLowNeutral
                     }`} />
                   )}
 
                   <div className={`p-4 ${offreId && 'score_offre' in candidat ? "pl-5" : ""}`}>
                     <div className="flex gap-3 pr-7">
                       {/* Avatar */}
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
                         {candidat.photo_profil ? (
                           <img src={getMediaUrl(candidat.photo_profil)} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <User size={18} className="text-slate-400" />
+                          <User size={18} className={tw.textMuted} />
                         )}
                       </div>
 
@@ -717,24 +717,24 @@ const CVTheque = () => {
                           <div className="min-w-0">
                             <div className="flex items-center gap-1">
                               {statutActivite && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`} title={statutActivite.label} />}
-                              <h3 className="text-sm font-semibold text-slate-900 truncate">{candidat.titre_professionnel || "Profil candidat"}</h3>
+                              <h3 className={`text-sm font-semibold truncate ${tw.textStrong}`}>{candidat.titre_professionnel || "Profil candidat"}</h3>
                             </div>
-                            <p className="text-xs text-slate-500 truncate">{candidat.last_name} {candidat.first_name}</p>
+                            <p className={`text-xs truncate ${tw.textMuted700}`}>{candidat.last_name} {candidat.first_name}</p>
                           </div>
                           <div className="flex flex-col items-end gap-0.5 shrink-0">
                             {offreId && 'score_offre' in candidat && (
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] font-bold rounded-md border ${
-                                candidat.score_offre >= 70 ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                candidat.score_offre >= 40 ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                "bg-slate-100 text-slate-500 border-slate-200"
+                                candidat.score_offre >= 70 ? tw.scoreHigh :
+                                candidat.score_offre >= 40 ? tw.scoreMid :
+                                tw.badgeNeutral
                               }`}><Zap size={9} />{candidat.score_offre}%</span>
                             )}
-                            {recent && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full"><Sparkles size={9} />Nouveau</span>}
+                            {recent && <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgWarningSoft} ${tw.textWarning}`}><Sparkles size={9} />Nouveau</span>}
                           </div>
                         </div>
 
                         {/* Ligne 2 : wilaya + diplôme + expérience */}
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
+                        <div className={`flex flex-wrap items-center gap-2 mt-1.5 text-xs ${tw.textMuted700}`}>
                           {candidat.wilaya && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.wilaya.split(" - ")[1] || candidat.wilaya}</span>}
                           {candidat.adresse && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.adresse}</span>}
                           {candidat.diplome && <span className="flex items-center gap-0.5"><GraduationCap size={10} />{constants.diplomes.find(d => d.value === candidat.diplome)?.label || candidat.diplome}</span>}
@@ -745,10 +745,10 @@ const CVTheque = () => {
                         {candidat.competences && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {candidat.competences.split(",").filter(c => c.trim()).slice(0, 3).map((c, i) => (
-                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded">{c.trim()}</span>
+                              <span key={i} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{c.trim()}</span>
                             ))}
                             {candidat.competences.split(",").filter(c => c.trim()).length > 3 && (
-                              <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded">+{candidat.competences.split(",").filter(c => c.trim()).length - 3}</span>
+                              <span className={`px-1.5 py-0.5 text-[10px] rounded ${tw.surfaceMuted} ${tw.textMuted}`}>+{candidat.competences.split(",").filter(c => c.trim()).length - 3}</span>
                             )}
                           </div>
                         )}
@@ -759,7 +759,7 @@ const CVTheque = () => {
                   {/* Bouton "Voir le profil" visible uniquement sur mobile */}
                   {isSelected && (
                     <div className="px-4 pb-3 lg:hidden">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tw.textTeal}`}>
                         <CheckCircle2 size={12} /> Profil sélectionné — voir ci-dessous
                       </span>
                     </div>
@@ -768,9 +768,9 @@ const CVTheque = () => {
                   {/* ÉTOILE FAVORI */}
                   <button
                     onClick={(e) => handleToggleFavori(candidat, e)}
-                    className="absolute top-3 right-3 p-1 rounded-md hover:bg-slate-100 transition-colors group/star"
+                    className={`absolute top-3 right-3 p-1 rounded-md transition-colors group/star ${tw.hoverSurfaceSubtle}`}
                   >
-                    <Star size={14} className={candidat.is_favori ? "fill-amber-400 text-amber-400" : "text-slate-300 group-hover/star:text-slate-400"} />
+                    <Star size={14} className={candidat.is_favori ? tw.starFavoriActive : tw.starFavoriInactiveGroupHover} />
                   </button>
                 </div>
               );
@@ -783,12 +783,12 @@ const CVTheque = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed ${tw.textMutedHoverStrong}`}
               >
                 <ChevronLeft size={16} />
                 Précédent
               </button>
-              <span className="text-xs text-slate-600">
+              <span className={`text-xs ${tw.textMuted}`}>
                 Page {currentPage} / {totalPages}
               </span>
               <button
@@ -796,7 +796,7 @@ const CVTheque = () => {
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed ${tw.textMutedHoverStrong}`}
               >
                 Suivant
                 <ChevronRight size={16} />
@@ -808,21 +808,21 @@ const CVTheque = () => {
         {/* COLONNE DROITE : DÉTAIL */}
         <div className="lg:col-span-7" ref={detailRef}>
           {selectedCandidat ? (
-            <div className="relative bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className={`relative ${tw.cardColors} rounded-xl overflow-hidden`}>
               {/* OVERLAY PREMIUM */}
               {!isPremium && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl">
                   <div className="text-center px-8 max-w-sm">
-                    <div className="w-16 h-16 bg-teal-50 border-2 border-teal-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div className={`w-16 h-16 ${tw.bgTealSoft} border-2 ${tw.borderTeal200} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
                       <span className="text-3xl">🔒</span>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">Accès Premium requis</h3>
-                    <p className="text-sm text-slate-700 mb-6 leading-relaxed">
+                    <h3 className={`text-lg font-bold mb-2 ${tw.textStrong}`}>Accès Premium requis</h3>
+                    <p className={`text-sm mb-6 leading-relaxed ${tw.bodyText}`}>
                       Passez en compte Premium pour accéder aux profils complets, coordonnées, CV et réseaux sociaux des candidats.
                     </p>
                     <Link
                       to="/recruteurs/premium"
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+                      className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl transition-colors shadow-sm ${tw.bgTealSolid}`}
                     >
                       ⭐ Passer Premium
                     </Link>
@@ -830,9 +830,9 @@ const CVTheque = () => {
                 </div>
               )}
               {/* En-tête détail */}
-              <div className="p-6 border-b border-slate-100">
+              <div className={`p-6 border-b ${tw.borderSubtle}`}>
                 <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className={`w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
                     {selectedCandidat.photo_profil ? (
                       <img
                         src={getMediaUrl(selectedCandidat.photo_profil)}
@@ -840,17 +840,17 @@ const CVTheque = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={32} className="text-slate-400" />
+                      <User size={32} className={tw.textMuted} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h2 className="text-xl font-bold text-slate-900">
+                        <h2 className={`text-xl font-bold ${tw.textStrong}`}>
                           {selectedCandidat.titre_professionnel ||
                             "Profil candidat"}
                         </h2>
-                        <p className="text-sm text-slate-600 mt-1">
+                        <p className={`text-sm mt-1 ${tw.textMuted}`}>
                           {selectedCandidat.last_name}{" "}
                           {selectedCandidat.first_name}
                         </p>
@@ -858,14 +858,14 @@ const CVTheque = () => {
                       {/* BOUTON FAVORI */}
                       <button
                         onClick={(e) => handleToggleFavori(selectedCandidat, e)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 border ${tw.borderBase} rounded-lg text-xs font-medium transition-colors ${tw.hoverSurfaceMuted}`}
                       >
                         <Star
                           size={14}
                           className={
                             selectedCandidat.is_favori
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-slate-400"
+                              ? tw.starFavoriActive
+                              : tw.textMuted
                           }
                         />
                         {selectedCandidat.is_favori ? "En favori" : "Favori"}
@@ -894,7 +894,7 @@ const CVTheque = () => {
                     )}
                     <div className="flex flex-wrap gap-2 mt-3">
                       {selectedCandidat.wilaya && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <MapPin size={12} />
                           {selectedCandidat.wilaya}
                           {selectedCandidat.commune &&
@@ -902,13 +902,13 @@ const CVTheque = () => {
                         </span>
                       )}
                       {selectedCandidat.diplome && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <GraduationCap size={12} />
                           {selectedCandidat.diplome}
                         </span>
                       )}
                       {selectedCandidat.specialite && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <Briefcase size={12} />
                           {selectedCandidat.specialite}
                         </span>
@@ -919,13 +919,13 @@ const CVTheque = () => {
               </div>
 
               {/* Coordonnées */}
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Coordonnées</h3>
+              <div className={`p-6 border-b ${tw.borderSubtle}`}>
+                <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${tw.textMuted}`}>Coordonnées</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedCandidat.email && (
                     <a
                       href={`mailto:${selectedCandidat.email}`}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+                      className={`inline-flex items-center gap-2 px-3 py-2 border ${tw.borderTeal200} text-sm font-semibold rounded-lg transition-colors ${tw.pillTeal}`}
                     >
                       <Mail size={14} /> {selectedCandidat.email}
                     </a>
@@ -933,7 +933,7 @@ const CVTheque = () => {
                   {selectedCandidat.telephone && (
                     <a
                       href={`tel:${selectedCandidat.telephone}`}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+                      className={`inline-flex items-center gap-2 px-3 py-2 border ${tw.borderBase} text-sm font-semibold rounded-lg transition-colors ${tw.pillSlate}`}
                     >
                       <Phone size={14} /> {selectedCandidat.telephone}
                     </a>
@@ -941,7 +941,7 @@ const CVTheque = () => {
                   {selectedCandidat.email && (
                     <button
                       onClick={() => { navigator.clipboard.writeText(selectedCandidat.email); toast.success("Email copié !"); }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-500 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-xs font-medium rounded-lg transition-colors ${tw.surface} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
                       title="Copier l'email"
                     >
                       <Copy size={13} /> Copier
@@ -952,20 +952,20 @@ const CVTheque = () => {
                       href={selectedCandidat.linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0A66C2]/10 border border-[#0A66C2]/20 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-[#0A66C2]/20 transition-colors"
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${tw.linkedinChip}`}
                     >
                       <ExternalLink size={13} /> LinkedIn
                     </a>
                   )}
                   {!selectedCandidat.email && !selectedCandidat.telephone && (
-                    <p className="text-sm text-slate-400 italic">Coordonnées non disponibles</p>
+                    <p className={`text-sm italic ${tw.textMuted}`}>Coordonnées non disponibles</p>
                   )}
                 </div>
               </div>
 
               {/* Expériences */}
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">
+              <div className={`p-6 border-b ${tw.borderSubtle}`}>
+                <h3 className={`text-xs font-semibold uppercase tracking-wide mb-4 ${tw.textMuted}`}>
                   Expériences professionnelles
                 </h3>
                 {selectedCandidat.experiences_detail?.length > 0 ? (
@@ -973,15 +973,15 @@ const CVTheque = () => {
                     {selectedCandidat.experiences_detail.map((exp) => (
                       <div
                         key={exp.id}
-                        className="pl-4 border-l-2 border-teal-100"
+                        className={`pl-4 border-l-2 ${tw.borderTeal100}`}
                       >
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {exp.titre_poste}
                         </p>
-                        <p className="text-sm text-slate-600 mt-0.5">
+                        <p className={`text-sm mt-0.5 ${tw.textMuted}`}>
                           {exp.entreprise}
                         </p>
-                        <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
+                        <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textMuted}`}>
                           <Calendar size={11} />
                           {formatDate(exp.date_debut)} —{" "}
                           {exp.date_fin
@@ -989,7 +989,7 @@ const CVTheque = () => {
                             : "Aujourd'hui"}
                         </p>
                         {exp.description && (
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
+                          <p className={`text-xs mt-2 leading-relaxed whitespace-pre-line ${tw.textMuted}`}>
                             {exp.description}
                           </p>
                         )}
@@ -997,15 +997,15 @@ const CVTheque = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-600 italic">
+                  <p className={`text-sm italic ${tw.textMuted}`}>
                     Aucune expérience renseignée
                   </p>
                 )}
               </div>
 
               {/* Formations */}
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">
+              <div className={`p-6 border-b ${tw.borderSubtle}`}>
+                <h3 className={`text-xs font-semibold uppercase tracking-wide mb-4 ${tw.textMuted}`}>
                   Formations
                 </h3>
                 {selectedCandidat.formations_detail?.length > 0 ? (
@@ -1013,20 +1013,20 @@ const CVTheque = () => {
                     {selectedCandidat.formations_detail.map((form) => (
                       <div
                         key={form.id}
-                        className="pl-4 border-l-2 border-teal-100"
+                        className={`pl-4 border-l-2 ${tw.borderTeal100}`}
                       >
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {form.diplome || "Diplôme non précisé"}
                         </p>
                         {form.description && (
-                          <p className="text-xs text-teal-700 font-medium">
+                          <p className={`text-xs font-medium ${tw.textTeal}`}>
                             {form.description}
                           </p>
                         )}
-                        <p className="text-sm text-slate-600 mt-0.5">
+                        <p className={`text-sm mt-0.5 ${tw.textMuted}`}>
                           {form.etablissement}
                         </p>
-                        <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
+                        <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textMuted}`}>
                           <Calendar size={11} />
                           {formatDate(form.date_debut)} —{" "}
                           {form.date_fin
@@ -1037,7 +1037,7 @@ const CVTheque = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-600 italic">
+                  <p className={`text-sm italic ${tw.textMuted}`}>
                     Aucune formation renseignée
                   </p>
                 )}
@@ -1045,42 +1045,42 @@ const CVTheque = () => {
 
               {/* Bio */}
               {selectedCandidat.bio && (
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">À propos</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{selectedCandidat.bio}</p>
+                <div className={`px-6 py-4 border-b ${tw.borderSubtle} ${tw.surfaceMutedLight}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>À propos</p>
+                  <p className={`text-sm leading-relaxed ${tw.bodyText}`}>{selectedCandidat.bio}</p>
                 </div>
               )}
 
               {/* Compétences — accordéon */}
-              <div className="border-b border-slate-100">
+              <div className={`border-b ${tw.borderSubtle}`}>
                 <button
                   onClick={() => toggleSection("competences")}
-                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center justify-between px-6 py-3 transition-colors ${tw.hoverSurfaceMuted}`}
                 >
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Compétences</h3>
-                  <ChevronRight size={14} className={`text-slate-400 transition-transform ${openSections.competences ? "rotate-90" : ""}`} />
+                  <h3 className={`text-xs font-semibold uppercase tracking-wide ${tw.textMuted}`}>Compétences</h3>
+                  <ChevronRight size={14} className={`${tw.textMuted} transition-transform ${openSections.competences ? "rotate-90" : ""}`} />
                 </button>
                 {openSections.competences && (
                   <div className="px-6 pb-4">
                     {selectedCandidat.competences ? (
                       <div className="flex flex-wrap gap-1.5">
                         {selectedCandidat.competences.split(",").filter(c => c.trim()).map((c, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-teal-50 text-teal-800 text-xs rounded-md">{c.trim()}</span>
+                          <span key={i} className={`px-2.5 py-1 text-xs rounded-md ${tw.chipTealSoft}`}>{c.trim()}</span>
                         ))}
                       </div>
-                    ) : <p className="text-sm text-slate-400 italic">Non renseignées</p>}
+                    ) : <p className={`text-sm italic ${tw.textMuted}`}>Non renseignées</p>}
                   </div>
                 )}
               </div>
 
               {/* Langues — accordéon */}
-              <div className="border-b border-slate-100">
+              <div className={`border-b ${tw.borderSubtle}`}>
                 <button
                   onClick={() => toggleSection("langues")}
-                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center justify-between px-6 py-3 transition-colors ${tw.hoverSurfaceMuted}`}
                 >
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Langues</h3>
-                  <ChevronRight size={14} className={`text-slate-400 transition-transform ${openSections.langues ? "rotate-90" : ""}`} />
+                  <h3 className={`text-xs font-semibold uppercase tracking-wide ${tw.textMuted}`}>Langues</h3>
+                  <ChevronRight size={14} className={`${tw.textMuted} transition-transform ${openSections.langues ? "rotate-90" : ""}`} />
                 </button>
                 {openSections.langues && (
                   <div className="px-6 pb-4">
@@ -1089,13 +1089,13 @@ const CVTheque = () => {
                         {selectedCandidat.langues.split(",").filter(l => l.trim()).map((l, i) => {
                           const [name, level] = l.split(":");
                           return (
-                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md">
-                              {name?.trim()}{level && <span className="text-slate-500">· {level.trim()}</span>}
+                            <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
+                              {name?.trim()}{level && <span className={tw.textMuted700}>· {level.trim()}</span>}
                             </span>
                           );
                         })}
                       </div>
-                    ) : <p className="text-sm text-slate-400 italic">Non renseignées</p>}
+                    ) : <p className={`text-sm italic ${tw.textMuted}`}>Non renseignées</p>}
                   </div>
                 )}
               </div>
@@ -1107,7 +1107,7 @@ const CVTheque = () => {
                     href={getMediaUrl(selectedCandidat.cv_pdf)}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${tw.buttonDark}`}
                   >
                     <FileText size={16} />
                     Télécharger le CV complet
@@ -1116,12 +1116,12 @@ const CVTheque = () => {
               )}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
-              <User size={40} className="text-slate-300 mx-auto mb-4" />
-              <p className="text-sm font-medium text-slate-900">
+            <div className={`${tw.cardColors} rounded-xl p-12 text-center`}>
+              <User size={40} className={`${tw.textSubtle} mx-auto mb-4`} />
+              <p className={`text-sm font-medium ${tw.textStrong}`}>
                 Sélectionnez un profil
               </p>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className={`text-xs mt-1 ${tw.textMuted}`}>
                 Cliquez sur un candidat à gauche pour voir son profil détaillé
               </p>
             </div>

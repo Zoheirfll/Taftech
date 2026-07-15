@@ -6,6 +6,7 @@ import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { mediaUrl } from "../utils/mediaUrl";
 import logoTafTech from "../assets/logo-taftech.png";
+import { tw } from "../theme";
 import {
   User, Bookmark, Briefcase, Bell, Settings, LayoutDashboard,
   Search, Mail, LogOut, Inbox, ClipboardList, Shield, Menu, X,
@@ -16,9 +17,9 @@ const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
   <Link
     onClick={onClick}
     to={to}
-    className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+    className={tw.dropdownItem}
   >
-    {IconComp && <IconComp size={16} className="text-slate-400 shrink-0" />}
+    {IconComp && <IconComp size={16} className={`${tw.iconMuted} shrink-0`} />}
     {children}
   </Link>
 );
@@ -39,16 +40,12 @@ const Navbar = () => {
 
   const navLinkClass = (path) =>
     `flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 ${
-      isActive(path)
-        ? "text-indigo-600 bg-indigo-50 font-semibold"
-        : "text-slate-900 hover:text-indigo-600 hover:bg-indigo-50"
+      isActive(path) ? tw.navLinkDesktopActive : tw.navLinkDesktopInactive
     }`;
 
   const mobileLinkClass = (path) =>
     `flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-      isActive(path)
-        ? "text-indigo-600 bg-indigo-50 font-semibold"
-        : "text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+      isActive(path) ? tw.navLinkMobileActive : tw.navLinkMobileInactive
     }`;
 
   useEffect(() => {
@@ -112,7 +109,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm">
+    <nav className={tw.navbarShell}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center h-16">
 
         {/* GAUCHE : LOGO + LIENS */}
@@ -136,13 +133,13 @@ const Navbar = () => {
           {/* NON CONNECTÉ */}
           {!isLogged && (
             <>
-              <Link to="/recruteurs" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-all duration-150">
+              <Link to="/recruteurs" className={tw.navLinkTealActive}>
                 <Briefcase size={14} /> Espace recruteur
               </Link>
-              <Link to="/login" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-900 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all duration-150">
+              <Link to="/login" className={tw.navLink}>
                 <LogIn size={14} /> Se connecter
               </Link>
-              <Link to="/register" className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200">
+              <Link to="/register" className={`${tw.bgPrimary} px-4 py-1.5 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200`}>
                 S'inscrire
               </Link>
             </>
@@ -152,7 +149,7 @@ const Navbar = () => {
           {isLogged && (
             <div className="flex items-center gap-2">
               {role === "CANDIDAT" && (
-                <Link to="/inbox" className="relative p-2 text-slate-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-50" title="Boîte de réception">
+                <Link to="/inbox" className={tw.iconButton} title="Boîte de réception">
                   <Mail size={20} />
                   {unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
@@ -169,14 +166,14 @@ const Navbar = () => {
                 >
                   <div className="hidden md:block text-right">
                     <p className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">Mon compte</p>
-                    <p className="text-xs text-slate-400 capitalize leading-tight">{role?.toLowerCase()}</p>
+                    <p className={`text-xs ${tw.textMuted} capitalize leading-tight`}>{role?.toLowerCase()}</p>
                   </div>
                   <div className="relative">
                     <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-colors">
                       {userPhoto ? (
                         <img src={userPhoto} alt="Profil" className="w-full h-full object-cover" />
                       ) : (
-                        <User size={18} className="text-slate-400" />
+                        <User size={18} className={tw.iconMuted} />
                       )}
                     </div>
                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
@@ -184,7 +181,7 @@ const Navbar = () => {
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50">
+                  <div className={tw.dropdownPanel}>
                     {role === "CANDIDAT" && (
                       <>
                         <DropdownLink to="/profil" icon={User} onClick={closeDropdown}>Mon profil</DropdownLink>
@@ -201,7 +198,7 @@ const Navbar = () => {
                         <DropdownLink to="/cvtheque" icon={Search} onClick={closeDropdown}>CVthèque</DropdownLink>
                         <DropdownLink to="/candidatures-spontanees" icon={Inbox} onClick={closeDropdown}>Candidatures spontanées</DropdownLink>
                         <DropdownLink to="/creer-offre" icon={Briefcase} onClick={closeDropdown}>
-                          <span className="text-indigo-600 font-semibold">Publier une offre</span>
+                          <span className={tw.textPrimaryStrong}>Publier une offre</span>
                         </DropdownLink>
                         <DropdownLink to="/questionnaires" icon={ClipboardList} onClick={closeDropdown}>Questionnaires</DropdownLink>
                         <DropdownLink to="/parametres" icon={Settings} onClick={closeDropdown}>Paramètres</DropdownLink>
@@ -210,8 +207,8 @@ const Navbar = () => {
                     {role === "ADMIN" && (
                       <DropdownLink to="/admin-taftech" icon={Shield} onClick={closeDropdown}>Tour de contrôle</DropdownLink>
                     )}
-                    <div className="border-t border-slate-100 mt-1 pt-1">
-                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+                    <div className={`${tw.borderSubtle} border-t mt-1 pt-1`}>
+                      <button onClick={handleLogout} className={tw.dropdownItemDanger}>
                         <LogOut size={16} className="shrink-0" /> Déconnexion
                       </button>
                     </div>
@@ -232,7 +229,7 @@ const Navbar = () => {
 
       {/* MENU MOBILE */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
+        <div className={`lg:hidden ${tw.borderSubtle} border-t bg-white px-4 py-3 space-y-1`}>
           {NAV_LINKS.map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to)}>
               <Icon size={16} className="shrink-0" />
@@ -242,14 +239,14 @@ const Navbar = () => {
 
           {!isLogged && (
             <>
-              <div className="border-t border-slate-100 pt-2 mt-2" />
+              <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               <Link to="/login" onClick={closeMobile} className={mobileLinkClass("/login")}>
                 <LogIn size={16} className="shrink-0" /> Se connecter
               </Link>
               <Link to="/register" onClick={closeMobile} className={mobileLinkClass("/register")}>
                 <User size={16} className="shrink-0" /> S'inscrire
               </Link>
-              <Link to="/recruteurs" onClick={closeMobile} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">
+              <Link to="/recruteurs" onClick={closeMobile} className={tw.dropdownItemTeal}>
                 <Briefcase size={16} className="shrink-0" /> Espace recruteur
               </Link>
             </>
@@ -257,7 +254,7 @@ const Navbar = () => {
 
           {isLogged && (
             <>
-              <div className="border-t border-slate-100 pt-2 mt-2" />
+              <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               {role === "CANDIDAT" && (
                 <>
                   <Link to="/profil" onClick={closeMobile} className={mobileLinkClass("/profil")}><User size={16} className="shrink-0" /> Mon profil</Link>
@@ -282,8 +279,8 @@ const Navbar = () => {
               {role === "ADMIN" && (
                 <Link to="/admin-taftech" onClick={closeMobile} className={mobileLinkClass("/admin-taftech")}><Shield size={16} className="shrink-0" /> Tour de contrôle</Link>
               )}
-              <div className="border-t border-slate-100 pt-2 mt-2">
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+              <div className={`${tw.borderSubtle} border-t pt-2 mt-2`}>
+                <button onClick={handleLogout} className={`${tw.dropdownItemDanger} rounded-lg`}>
                   <LogOut size={16} className="shrink-0" /> Déconnexion
                 </button>
               </div>

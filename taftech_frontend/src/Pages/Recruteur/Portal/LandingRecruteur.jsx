@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp,
 } from "lucide-react";
 import api from "../../../api/axiosConfig";
+import { tw } from "../../../theme";
 
 const FEATURES = [
   {
@@ -103,9 +104,6 @@ const LandingRecruteur = () => {
 
           {/* TEXTE */}
           <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 border border-teal-200 rounded-full text-teal-700 text-xs font-semibold mb-6">
-              🇩🇿 Plateforme de recrutement algérienne
-            </span>
             <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-6">
               Publiez vos annonces.
               <br />
@@ -113,7 +111,7 @@ const LandingRecruteur = () => {
               <br />
               talents en un temps record.
             </h1>
-            <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-lg">
+            <p className="text-slate-700 text-lg leading-relaxed mb-8 max-w-lg">
               TAFTECH connecte les entreprises algériennes aux profils qualifiés grâce à l'intelligence artificielle. Matching automatique, CVthèque nationale, gestion complète.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -132,7 +130,7 @@ const LandingRecruteur = () => {
             </div>
             <div className="flex flex-wrap gap-4">
               {["Gratuit au lancement", "Sans engagement", "Validé ANPDP"].map((item) => (
-                <div key={item} className="flex items-center gap-1.5 text-sm text-slate-500">
+                <div key={item} className="flex items-center gap-1.5 text-sm text-slate-700">
                   <CheckCircle size={14} className="text-teal-600" />
                   {item}
                 </div>
@@ -159,10 +157,6 @@ const LandingRecruteur = () => {
                   </div>
                 ))}
               </div>
-            </div>
-            {/* Fix 4 — badge repositionné pour ne pas déborder sur mobile */}
-            <div className="absolute -top-3 right-4 lg:-top-4 lg:-right-4 bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
-              IA activée ✓
             </div>
           </div>
         </div>
@@ -196,7 +190,7 @@ const LandingRecruteur = () => {
             <h2 className="text-3xl font-extrabold text-slate-900 mb-4">
               Tout ce dont vous avez besoin pour recruter
             </h2>
-            <p className="text-slate-500 text-lg max-w-2xl mx-auto">
+            <p className="text-slate-700 text-lg max-w-2xl mx-auto">
               Des outils professionnels pensés pour le marché algérien.
             </p>
           </div>
@@ -207,7 +201,7 @@ const LandingRecruteur = () => {
                   <Icon size={22} className="text-teal-700" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -229,7 +223,7 @@ const LandingRecruteur = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-extrabold text-slate-900 mb-4">Recrutez en 4 étapes</h2>
-            <p className="text-slate-500 text-lg">Simple, rapide, efficace.</p>
+            <p className="text-slate-700 text-lg">Simple, rapide, efficace.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {STEPS.map(({ num, title, desc }, i) => (
@@ -242,7 +236,7 @@ const LandingRecruteur = () => {
                   {num}
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -256,7 +250,7 @@ const LandingRecruteur = () => {
             <h2 className="text-3xl font-extrabold text-slate-900 mb-4">
               Pourquoi choisir TAFTECH ?
             </h2>
-            <p className="text-slate-500 text-base leading-relaxed mb-8">
+            <p className="text-slate-700 text-base leading-relaxed mb-8">
               La seule plateforme de recrutement algérienne avec matching par IA, conforme ANPDP, pensée pour les entreprises locales.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -299,7 +293,7 @@ const LandingRecruteur = () => {
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-extrabold text-slate-900 mb-4">Questions fréquentes</h2>
-            <p className="text-slate-500 text-base">Tout ce que vous devez savoir avant de vous lancer.</p>
+            <p className="text-slate-700 text-base">Tout ce que vous devez savoir avant de vous lancer.</p>
           </div>
           <div className="space-y-3">
             {FAQ.map((item, i) => (
@@ -311,10 +305,10 @@ const LandingRecruteur = () => {
                   <span className="text-sm font-semibold text-slate-800 pr-4">{item.q}</span>
                   {faqOpen === i
                     ? <ChevronUp size={18} className="text-teal-600 shrink-0" />
-                    : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+                    : <ChevronDown size={18} className="text-slate-600 shrink-0" />}
                 </button>
                 {faqOpen === i && (
-                  <div className="px-6 pb-5 text-sm text-slate-500 leading-relaxed border-t border-slate-100 pt-4">
+                  <div className="px-6 pb-5 text-sm text-slate-700 leading-relaxed border-t border-slate-100 pt-4">
                     {item.r}
                   </div>
                 )}
@@ -322,7 +316,7 @@ const LandingRecruteur = () => {
             ))}
           </div>
           <div className="text-center mt-10">
-            <p className="text-sm text-slate-500 mb-4">Vous avez d'autres questions ?</p>
+            <p className="text-sm text-slate-700 mb-4">Vous avez d'autres questions ?</p>
             <Link
               to="/recruteurs/inscription"
               className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white font-bold rounded-xl hover:bg-teal-800 transition-colors text-sm"

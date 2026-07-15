@@ -151,7 +151,7 @@ const AdminSystemLogs = () => {
           <div className="bg-white rounded-xl border border-slate-200 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <h2 className="font-bold text-slate-900">Détail de l'erreur</h2>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-700">
+              <button onClick={() => setSelected(null)} className="text-slate-600 hover:text-slate-700">
                 <X size={18} />
               </button>
             </div>

@@ -44,7 +44,7 @@ const PremiumSuccessPage = () => {
         </div>
 
         <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Paiement confirmé !</h1>
-        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+        <p className="text-slate-700 text-sm mb-6 leading-relaxed">
           Votre paiement a bien été reçu. L'activation Premium est en cours — cela prend quelques secondes.
         </p>
 
@@ -66,7 +66,7 @@ const PremiumSuccessPage = () => {
         </div>
 
         {/* Compte à rebours */}
-        <p className="text-xs text-slate-400 mb-4">
+        <p className="text-xs text-slate-600 mb-4">
           Redirection automatique dans{" "}
           <span className="font-bold text-teal-700">{secondes}s</span>…
         </p>

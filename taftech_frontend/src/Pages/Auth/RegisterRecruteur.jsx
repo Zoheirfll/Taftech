@@ -5,7 +5,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import { CheckCircle, CheckCircle2, Eye, EyeOff, Info, ArrowRight } from "lucide-react";
 
 const STEPS = [
@@ -143,34 +143,34 @@ const RegisterRecruteur = () => {
     }
   };
 
-  const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
-  const labelClass = "text-sm font-semibold text-slate-600 mb-2 block";
+  const inputClass = tw.authInputTeal;
+  const labelClass = `${tw.authLabel} mb-2`;
   const left = LEFT_CONTENT[step];
 
   return (
-    <div className="min-h-screen bg-slate-100 py-10 px-4">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
+    <div className={`min-h-screen ${tw.authPageBg} py-10 px-4`}>
+      <div className={`max-w-5xl mx-auto ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
 
         {/* COLONNE GAUCHE */}
-        <div className="md:w-5/12 bg-slate-900 p-10 text-white flex flex-col justify-between">
+        <div className={`md:w-5/12 ${tw.heroPanelDark} p-10 flex flex-col justify-between`}>
           <div>
-            <p className="text-xs font-semibold text-teal-400 uppercase tracking-widest mb-6">Espace Recruteur</p>
+            <p className={`text-xs font-semibold ${tw.textTealLight} uppercase tracking-widest mb-6`}>Espace Recruteur</p>
             <h2 className="text-xl font-extrabold leading-snug mb-3 transition-all duration-300">
               {left.title}
             </h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">{left.desc}</p>
+            <p className={`${tw.textMuted} text-sm leading-relaxed mb-6`}>{left.desc}</p>
             <div className="space-y-3">
               {left.items.map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm text-slate-300">
-                  <CheckCircle size={15} className="text-teal-400 shrink-0" />
+                <div key={item} className={`flex items-center gap-3 text-sm ${tw.textSubtle}`}>
+                  <CheckCircle size={15} className={`${tw.textTealLight} shrink-0`} />
                   {item}
                 </div>
               ))}
             </div>
           </div>
-          <div className="mt-10 pt-8 border-t border-slate-800 text-xs text-slate-500">
+          <div className={`mt-10 pt-8 border-t ${tw.borderNeutral800} text-xs ${tw.textMuted700}`}>
             Déjà un compte ?{" "}
-            <Link to="/recruteurs/connexion" className="text-teal-400 font-semibold hover:underline">
+            <Link to="/recruteurs/connexion" className={`${tw.textTealLight} font-semibold hover:underline`}>
               Se connecter →
             </Link>
           </div>
@@ -185,18 +185,18 @@ const RegisterRecruteur = () => {
               <React.Fragment key={s.num}>
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    step > s.num ? "bg-emerald-500 text-white" :
-                    step === s.num ? "bg-teal-700 text-white" :
-                    "bg-slate-100 text-slate-400"
+                    step > s.num ? tw.progressBadgeDone :
+                    step === s.num ? `${tw.bgTeal} ${tw.textOnDark}` :
+                    `${tw.surfaceSubtle} ${tw.textMuted}`
                   }`}>
                     {step > s.num ? <CheckCircle2 size={14} /> : s.num}
                   </div>
-                  <span className={`text-xs font-semibold hidden sm:block ${step === s.num ? "text-teal-700" : "text-slate-400"}`}>
+                  <span className={`text-xs font-semibold hidden sm:block ${step === s.num ? tw.textTeal : tw.textMuted}`}>
                     {s.label}
                   </span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-px transition-all ${step > s.num ? "bg-emerald-400" : "bg-slate-200"}`} />
+                  <div className={`flex-1 h-px transition-all ${step > s.num ? tw.progressConnectorDone : tw.bgSlate200}`} />
                 )}
               </React.Fragment>
             ))}
@@ -205,8 +205,8 @@ const RegisterRecruteur = () => {
           {/* ÉTAPE 1 */}
           {step === 1 && (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Créer un compte entreprise</h3>
-              <p className="text-sm text-slate-500 mb-4">Remplissez les informations de votre entreprise</p>
+              <h3 className={`${tw.pageTitlePetit} mb-1`}>Créer un compte entreprise</h3>
+              <p className={`${tw.bodyText} mb-4`}>Remplissez les informations de votre entreprise</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -230,7 +230,7 @@ const RegisterRecruteur = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
+              <div className={`border-t ${tw.borderSubtle} pt-4`}>
                 <label className={labelClass}>Nom de l'entreprise</label>
                 <input type="text" name="nom_entreprise" required onChange={handleChange} className={inputClass} />
               </div>
@@ -259,10 +259,10 @@ const RegisterRecruteur = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <label className="text-sm font-semibold text-slate-600">Registre de commerce</label>
+                    <label className={`text-sm font-semibold ${tw.textMuted}`}>Registre de commerce</label>
                     <div className="group relative">
-                      <Info size={13} className="text-slate-400 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed">
+                      <Info size={13} className={`${tw.textMuted} cursor-help`} />
+                      <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 ${tw.tooltipPanelDark900} text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed`}>
                         Numéro figurant sur votre extrait de registre de commerce (RC). Exemple : 1234567B89. Requis pour valider votre compte employeur.
                       </div>
                     </div>
@@ -291,7 +291,7 @@ const RegisterRecruteur = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}
                     >
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -314,7 +314,7 @@ const RegisterRecruteur = () => {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}
                   >
                     {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -324,10 +324,10 @@ const RegisterRecruteur = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-60 mt-2"
+                className={`w-full flex items-center justify-center gap-2 ${tw.bgTealSolid} font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-60 mt-2`}
               >
                 {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />
                 ) : <ArrowRight size={15} />}
                 {loading ? "Création en cours..." : "S'inscrire comme employeur"}
               </button>
@@ -337,10 +337,10 @@ const RegisterRecruteur = () => {
           {/* ÉTAPE 2 — OTP */}
           {step === 2 && (
             <div className="text-center max-w-sm mx-auto w-full">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Vérifiez votre email</h3>
-              <p className="text-sm text-slate-500 mb-6">
+              <h3 className={`${tw.pageTitlePetit} mb-2`}>Vérifiez votre email</h3>
+              <p className={`${tw.bodyText} mb-6`}>
                 Code envoyé à{" "}
-                <span className="font-bold text-slate-800">{formData.email}</span>
+                <span className={`font-bold ${tw.textEmphasis800}`}>{formData.email}</span>
               </p>
               <form onSubmit={handleOtpSubmit} className="space-y-4">
                 <input
@@ -349,27 +349,27 @@ const RegisterRecruteur = () => {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="______"
-                  className="w-48 mx-auto block text-center text-2xl tracking-[0.5em] px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none font-bold text-slate-900"
+                  className={`w-48 mx-auto block text-center text-2xl tracking-[0.5em] px-4 py-3 ${tw.inputColorsTeal} rounded-xl outline-none font-bold ${tw.textStrong}`}
                   required
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60"
+                  className={`w-full flex items-center justify-center gap-2 ${tw.bgTealSolid} font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60`}
                 >
                   {loading ? (
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />
                   ) : <CheckCircle2 size={15} />}
                   {loading ? "Vérification..." : "Valider mon email"}
                 </button>
               </form>
-              <p className="text-sm text-slate-400 mt-5">
+              <p className={`text-sm ${tw.textMuted} mt-5`}>
                 Vous n'avez rien reçu ? Vérifiez vos spams ou{" "}
                 <button
                   type="button"
                   onClick={handleRenvoyerCode}
                   disabled={loading}
-                  className="text-teal-700 font-semibold hover:underline disabled:opacity-50"
+                  className={`${tw.textTeal} font-semibold hover:underline disabled:opacity-50`}
                 >
                   renvoyer le code
                 </button>
@@ -381,29 +381,29 @@ const RegisterRecruteur = () => {
           {/* ÉTAPE 3 — SUCCÈS */}
           {step === 3 && (
             <div className="text-center space-y-5 max-w-sm mx-auto w-full">
-              <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-200 rounded-2xl flex items-center justify-center mx-auto animate-bounce" style={{ animationDuration: "1.5s", animationIterationCount: 3 }}>
-                <CheckCircle2 size={36} className="text-emerald-600" />
+              <div className={`w-20 h-20 ${tw.bgSuccessSoft} border-2 ${tw.borderSuccess} rounded-2xl flex items-center justify-center mx-auto animate-bounce`} style={{ animationDuration: "1.5s", animationIterationCount: 3 }}>
+                <CheckCircle2 size={36} className={tw.textSuccessIcon} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Compte sécurisé !</h3>
-                <p className="text-sm text-slate-500 mt-1">Email vérifié avec succès</p>
+                <h3 className={`${tw.pageTitlePetit}`}>Compte sécurisé !</h3>
+                <p className={`${tw.bodyText} mt-1`}>Email vérifié avec succès</p>
               </div>
-              <div className="bg-teal-50 border border-teal-100 rounded-2xl p-5 text-left">
-                <p className="text-sm text-slate-700 leading-relaxed">
+              <div className={`${tw.bgTealSoft} border ${tw.borderTeal100} rounded-2xl p-5 text-left`}>
+                <p className={`${tw.bodyText} leading-relaxed`}>
                   <strong>Bravo {formData.first_name} !</strong> Votre email est validé.
                   <br /><br />
                   Pour garantir la qualité des entreprises sur TAFTECH, votre compte est en cours de vérification par nos administrateurs (analyse du Registre de Commerce).
                   <br /><br />
-                  Vous pourrez publier vos offres dès que votre compte sera approuvé <span className="font-semibold text-teal-700">(sous 24-48h)</span>.
+                  Vous pourrez publier vos offres dès que votre compte sera approuvé <span className={`font-semibold ${tw.textTeal}`}>(sous 24-48h)</span>.
                 </p>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className={`text-xs ${tw.textMuted}`}>
                 Redirection automatique dans{" "}
-                <span className="font-bold text-teal-700">{secondes}s</span>…
+                <span className={`font-bold ${tw.textTeal}`}>{secondes}s</span>…
               </p>
               <button
                 onClick={() => navigate("/recruteurs/connexion")}
-                className="w-full flex items-center justify-center gap-2 bg-teal-700 text-white font-semibold py-2.5 rounded-xl hover:bg-teal-800 transition-colors text-sm"
+                className={`w-full flex items-center justify-center gap-2 ${tw.bgTealSolid} font-semibold py-2.5 rounded-xl transition-colors text-sm`}
               >
                 Aller à la connexion <ArrowRight size={15} />
               </button>

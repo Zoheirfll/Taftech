@@ -4,9 +4,9 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bell, Trash2, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
+import { tw } from "../../theme";
 
-const INPUT_CLASS =
-  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
 const AlertesEmploi = () => {
   const [alertes, setAlertes] = useState([]);
@@ -91,7 +91,7 @@ const AlertesEmploi = () => {
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
@@ -99,14 +99,14 @@ const AlertesEmploi = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Alertes d'emploi</h1>
-          <p className="text-base text-slate-500 mt-0.5">
+          <h1 className={tw.pageTitleGrand}>Alertes d'emploi</h1>
+          <p className={`${tw.bodyTextGrand} mt-0.5`}>
             Recevez les offres qui correspondent à vos critères.
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          className={`flex items-center gap-2 px-4 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-bold rounded-xl transition-colors shadow-sm`}
         >
           <Plus size={16} /> Créer une alerte
         </button>
@@ -118,32 +118,32 @@ const AlertesEmploi = () => {
         Vous pouvez activer/désactiver chaque alerte à tout moment.
       </InfoBanner>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className={`${tw.card} rounded-2xl overflow-hidden`}>
         {alertes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-              <Bell size={24} className="text-indigo-400" />
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${tw.emptyStateIconCircle}`}>
+              <Bell size={24} />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">
+            <h3 className={`text-sm font-semibold ${tw.textStrong} mb-1`}>
               Aucune alerte
             </h3>
-            <p className="text-xs text-slate-500 max-w-xs">
+            <p className={`text-xs ${tw.textMuted700} max-w-xs`}>
               Créez une alerte pour recevoir les opportunités correspondant à
               vos critères.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className={`divide-y ${tw.divideBase}`}>
             {alertes.map((alerte) => (
               <div
                 key={alerte.id}
                 className="flex justify-between items-center px-5 py-4"
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className={`text-sm font-semibold ${tw.textStrong}`}>
                     {alerte.mots_cles}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
                     {alerte.wilaya ? (alerte.wilaya.split(" - ")[1] || alerte.wilaya) : "Toute l'Algérie"} ·{" "}
                     {alerte.frequence === "QUOTIDIENNE"
                       ? "Quotidienne"
@@ -153,15 +153,15 @@ const AlertesEmploi = () => {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => handleToggle(alerte.id, alerte.est_active)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? "bg-indigo-600" : "bg-slate-200"}`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? tw.toggleTrackOn : tw.toggleTrackOff}`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}
+                      className={`inline-block h-5 w-5 transform rounded-full transition ${tw.toggleThumb} ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}
                     />
                   </button>
                   <button
                     onClick={() => handleDelete(alerte.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -174,22 +174,22 @@ const AlertesEmploi = () => {
 
       {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${tw.modalOverlayLight}`}>
+          <div className={`${tw.surface} rounded-2xl shadow-2xl w-full max-w-md overflow-hidden`}>
+            <div className={`flex justify-between items-center px-6 py-4 border-b ${tw.borderSubtle}`}>
+              <h3 className={`text-base font-bold ${tw.textStrong}`}>
                 Créer une alerte
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                className={`p-1.5 rounded-lg transition-colors ${tw.modalCloseButton}`}
               >
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleCreateAlerte} className="p-6 space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Mots-clés *
                 </label>
                 <input
@@ -204,7 +204,7 @@ const AlertesEmploi = () => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Wilaya
                 </label>
                 <select
@@ -223,7 +223,7 @@ const AlertesEmploi = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Fréquence
                 </label>
                 <select
@@ -241,13 +241,13 @@ const AlertesEmploi = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 text-base font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                  className={`flex-1 py-3 text-base font-semibold rounded-xl transition-colors ${tw.buttonCancelSoft}`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors"
+                  className={`flex-1 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-base font-bold rounded-xl transition-colors`}
                 >
                   Enregistrer
                 </button>

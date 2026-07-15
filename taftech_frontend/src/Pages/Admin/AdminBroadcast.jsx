@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
 import { Send } from "lucide-react";
+import { tw } from "../../theme";
 
 const AdminBroadcast = () => {
   const [formData, setFormData] = useState({
@@ -35,24 +36,23 @@ const AdminBroadcast = () => {
     }
   };
 
-  const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+  const inputClass = tw.input;
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className={tw.pageTitle}>
           Diffusion d'emails
         </h1>
-        <p className="text-sm text-slate-700 mt-0.5">
+        <p className={`${tw.pageSubtitle} mt-0.5`}>
           Envoyez des communications ciblées aux candidats.
         </p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className={`${tw.card} p-6`}>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-2 block">
+            <label className={`text-xs font-medium ${tw.textMuted} mb-2 block`}>
               Audience cible *
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -70,7 +70,7 @@ const AdminBroadcast = () => {
               ].map(({ value, label, desc }) => (
                 <label
                   key={value}
-                  className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${formData.type_envoi === value ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-200"}`}
+                  className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${formData.type_envoi === value ? `${tw.borderPrimary} ${tw.bgPrimarySoft}` : tw.borderBaseHoverPrimary}`}
                 >
                   <input
                     type="radio"
@@ -80,13 +80,13 @@ const AdminBroadcast = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, type_envoi: e.target.value })
                     }
-                    className="mt-0.5 accent-indigo-600"
+                    className={`mt-0.5 ${tw.accentPrimary}`}
                   />
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       {label}
                     </p>
-                    <p className="text-xs text-slate-600 mt-0.5">{desc}</p>
+                    <p className={`text-xs ${tw.textMuted} mt-0.5`}>{desc}</p>
                   </div>
                 </label>
               ))}
@@ -94,7 +94,7 @@ const AdminBroadcast = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+            <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
               Sujet *
             </label>
             <input
@@ -110,7 +110,7 @@ const AdminBroadcast = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+            <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
               Corps du message *
             </label>
             <textarea
@@ -123,21 +123,21 @@ const AdminBroadcast = () => {
                 setFormData({ ...formData, message: e.target.value })
               }
             />
-            <p className="text-xs text-slate-600 mt-1.5">
+            <p className={`text-xs ${tw.textMuted} mt-1.5`}>
               Les emails seront envoyés en copie cachée (BCC) pour protéger la
               vie privée.
             </p>
           </div>
 
-          <div className="flex justify-end pt-2 border-t border-slate-100">
+          <div className={`flex justify-end pt-2 border-t ${tw.borderSubtle}`}>
             <button
               type="submit"
               disabled={isSending}
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg`}
             >
               {isSending ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>{" "}
+                  <div className={`w-4 h-4 ${tw.spinnerWhiteSolid}`}></div>{" "}
                   Envoi...
                 </>
               ) : (

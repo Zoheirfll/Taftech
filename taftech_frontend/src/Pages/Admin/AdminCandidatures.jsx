@@ -3,16 +3,17 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Search, Download } from "lucide-react";
+import { tw } from "../../theme";
 
 const getBadgeStyle = (statut) => {
   const styles = {
-    RECUE: "bg-amber-50 text-amber-700 border-amber-200",
-    EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
-    ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
-    RETENU: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    REFUSE: "bg-red-50 text-red-700 border-red-200",
+    RECUE: `${tw.bgWarningSoft} ${tw.textWarning} ${tw.borderWarning}`,
+    EN_COURS: `${tw.bgBlueSoft} ${tw.textBlue} ${tw.borderBlue}`,
+    ENTRETIEN: `${tw.bgOrangeSoft} ${tw.textOrange} ${tw.borderOrange}`,
+    RETENU: `${tw.bgSuccessSoft} ${tw.textSuccess} ${tw.borderSuccess}`,
+    REFUSE: `${tw.bgErrorSoft} ${tw.textError} ${tw.borderError}`,
   };
-  return styles[statut] || "bg-slate-100 text-slate-700";
+  return styles[statut] || `${tw.badgeNeutral}`;
 };
 
 const AdminCandidatures = () => {
@@ -71,50 +72,50 @@ const AdminCandidatures = () => {
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className={tw.pageTitle}>
             Candidatures globales
           </h1>
-          <p className="text-sm text-slate-700 mt-0.5">
+          <p className={`${tw.pageSubtitle} mt-0.5`}>
             Vue d'ensemble de tous les recrutements.
           </p>
         </div>
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+          className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors`}
         >
           <Download size={15} /> Exporter CSV
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className={`${tw.card} p-4`}>
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
             />
             <input
               type="text"
               placeholder="Candidat, offre, entreprise..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+              className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
             />
           </div>
           <button
             type="submit"
-            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+            className={`px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}
           >
             Chercher
           </button>
         </form>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+              <tr className={`${tw.surfaceMuted} border-b ${tw.borderSubtle} text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                 <th className="px-4 py-3 text-left">Date & ID</th>
                 <th className="px-4 py-3 text-left">Candidat</th>
                 <th className="px-4 py-3 text-left">Offre & Entreprise</th>
@@ -123,12 +124,12 @@ const AdminCandidatures = () => {
                 <th className="px-4 py-3 text-center">Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className={tw.divideBase}>
               {loading ? (
                 <tr>
                   <td
                     colSpan="6"
-                    className="py-12 text-center text-sm font-medium text-indigo-600 animate-pulse"
+                    className={`py-12 text-center text-sm font-medium ${tw.textPrimary} animate-pulse`}
                   >
                     Chargement...
                   </td>
@@ -137,7 +138,7 @@ const AdminCandidatures = () => {
                 <tr>
                   <td
                     colSpan="6"
-                    className="py-12 text-center text-sm text-slate-600 italic"
+                    className={`py-12 text-center text-sm ${tw.textMuted} italic`}
                   >
                     Aucune candidature trouvée.
                   </td>
@@ -146,50 +147,50 @@ const AdminCandidatures = () => {
                 candidatures.map((cand) => (
                   <tr
                     key={cand.id}
-                    className="hover:bg-slate-50 transition-colors"
+                    className={tw.rowHover}
                   >
                     <td className="px-4 py-3">
-                      <p className="text-xs font-semibold text-slate-900">
+                      <p className={`text-xs font-semibold ${tw.textStrong}`}>
                         {new Date(cand.date_postulation).toLocaleDateString(
                           "fr-FR",
                         )}
                       </p>
-                      <p className="text-[10px] text-slate-600">#{cand.id}</p>
+                      <p className={`text-[10px] ${tw.textMuted}`}>#{cand.id}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className={`text-sm font-semibold ${tw.textStrong}`}>
                         {cand.candidat
                           ? `${cand.candidat.last_name} ${cand.candidat.first_name}`
                           : `${cand.nom_rapide} ${cand.prenom_rapide}`}
                       </p>
-                      <p className="text-xs text-indigo-600 font-medium">
+                      <p className={`text-xs ${tw.textPrimary} font-medium`}>
                         {cand.est_rapide ? "⚡ Rapide" : "Compte TAFTECH"}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">
+                      <p className={`text-sm font-semibold ${tw.textStrong} truncate max-w-[200px]`}>
                         {cand.offre_titre}
                       </p>
-                      <p className="text-xs text-slate-700">
+                      <p className={`text-xs ${tw.textMuted700}`}>
                         {cand.entreprise_nom}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       {cand.est_rapide ? (
-                        <span className="text-xs text-slate-600">N/A</span>
+                        <span className={`text-xs ${tw.textMuted}`}>N/A</span>
                       ) : (
-                        <span className="text-sm font-semibold text-slate-800">
+                        <span className={`text-sm font-semibold ${tw.textSlate800}`}>
                           {cand.score_matching}%
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {cand.note_globale ? (
-                        <span className="px-2.5 py-1 bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold rounded-full">
+                        <span className={`px-2.5 py-1 ${tw.bgVioletSoft} ${tw.textViolet} border ${tw.borderViolet} text-xs font-semibold rounded-full`}>
                           ⭐ {cand.note_globale}/20
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-600 italic">
+                        <span className={`text-xs ${tw.textMuted} italic`}>
                           Non évalué
                         </span>
                       )}
@@ -208,21 +209,21 @@ const AdminCandidatures = () => {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} ${tw.textMuted} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               ← Précédent
             </button>
-            <span className="text-xs font-medium text-slate-600">
+            <span className={`text-xs font-medium ${tw.textMuted}`}>
               Page {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} ${tw.textMuted} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               Suivant →
             </button>

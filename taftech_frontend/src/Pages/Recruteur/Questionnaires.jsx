@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Plus, Trash2, Pencil, X, GripVertical, ClipboardList, AlertTriangle } from "lucide-react";
+import { tw } from "../../theme";
 
 const TYPE_OPTIONS = [
   { value: "COURT", label: "Réponse courte" },
@@ -152,41 +153,40 @@ const Questionnaires = () => {
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-3">
         <div className="flex justify-between items-center mb-6">
           <div className="space-y-2">
-            <div className="h-5 bg-slate-200 rounded w-40 animate-pulse" />
-            <div className="h-3 bg-slate-100 rounded w-64 animate-pulse" />
+            <div className={`h-5 ${tw.surfaceSubtle} rounded w-40 animate-pulse`} />
+            <div className={`h-3 ${tw.surfaceMuted} rounded w-64 animate-pulse`} />
           </div>
-          <div className="h-10 w-44 bg-slate-200 rounded-xl animate-pulse" />
+          <div className={`h-10 w-44 ${tw.surfaceSubtle} rounded-xl animate-pulse`} />
         </div>
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 flex justify-between items-center animate-pulse">
+          <div key={i} className={`${tw.card} rounded-2xl p-6 flex justify-between items-center animate-pulse`}>
             <div className="space-y-2 flex-1">
-              <div className="h-4 bg-slate-200 rounded w-1/3" />
-              <div className="h-3 bg-slate-100 rounded w-1/4" />
+              <div className={`h-4 ${tw.surfaceSubtle} rounded w-1/3`} />
+              <div className={`h-3 ${tw.surfaceMuted} rounded w-1/4`} />
             </div>
             <div className="flex gap-2">
-              <div className="h-8 w-8 bg-slate-100 rounded-lg" />
-              <div className="h-8 w-8 bg-slate-100 rounded-lg" />
+              <div className={`h-8 w-8 ${tw.surfaceSubtle} rounded-lg`} />
+              <div className={`h-8 w-8 ${tw.surfaceSubtle} rounded-lg`} />
             </div>
           </div>
         ))}
       </div>
     );
 
-  const inputClass =
-    "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
+  const inputClass = `w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Questionnaires</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className={`text-xl font-bold ${tw.textStrong}`}>Questionnaires</h1>
+          <p className={`text-sm ${tw.textMuted700} mt-1`}>
             Créez des questionnaires à associer à vos offres.
           </p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-3 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+          className={`flex items-center gap-2 px-4 py-3 ${tw.bgTealSolid} text-sm font-bold rounded-xl transition-colors shadow-sm`}
         >
           <Plus size={16} /> Nouveau questionnaire
         </button>
@@ -201,12 +201,12 @@ const Questionnaires = () => {
       </div>
 
       {questionnaires.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
-          <ClipboardList size={36} className="text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-900 mb-1">
+        <div className={`${tw.surface} border border-dashed ${tw.borderBase} rounded-2xl p-14 text-center`}>
+          <ClipboardList size={36} className={`${tw.textSubtle} mx-auto mb-3`} />
+          <p className={`text-sm font-semibold ${tw.textStrong} mb-1`}>
             Aucun questionnaire
           </p>
-          <p className="text-sm text-slate-500">
+          <p className={`text-sm ${tw.textMuted700}`}>
             Créez votre premier questionnaire pour filtrer vos candidats automatiquement.
           </p>
         </div>
@@ -218,16 +218,16 @@ const Questionnaires = () => {
             return (
               <div
                 key={q.id}
-                className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start justify-between gap-4"
+                className={`${tw.card} rounded-2xl p-5 flex items-start justify-between gap-4`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="text-sm font-bold text-slate-900">{q.titre}</p>
-                    <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-[10px] font-semibold rounded-md">
+                    <p className={`text-sm font-bold ${tw.textStrong}`}>{q.titre}</p>
+                    <span className={`px-2 py-0.5 ${tw.badgeTealSolidSmall} text-[10px] font-semibold rounded-md`}>
                       {q.questions.length} question{q.questions.length > 1 ? "s" : ""}
                     </span>
                     {aDisqualifiant && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-md">
+                      <span className={`flex items-center gap-1 px-2 py-0.5 ${tw.badgeErrorSolidSmall} text-[10px] font-semibold rounded-md`}>
                         <AlertTriangle size={9} /> disqualifiant
                       </span>
                     )}
@@ -235,12 +235,12 @@ const Questionnaires = () => {
                   {apercu.length > 0 && (
                     <ul className="mt-1.5 space-y-0.5">
                       {apercu.map((qq, idx) => (
-                        <li key={idx} className="text-xs text-slate-500 truncate">
+                        <li key={idx} className={`text-xs ${tw.textMuted700} truncate`}>
                           · {qq.texte}
                         </li>
                       ))}
                       {q.questions.length > 2 && (
-                        <li className="text-xs text-slate-400 italic">
+                        <li className={`text-xs ${tw.textMuted} italic`}>
                           · +{q.questions.length - 2} autre{q.questions.length - 2 > 1 ? "s" : ""}…
                         </li>
                       )}
@@ -250,7 +250,7 @@ const Questionnaires = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleOpenEdit(q)}
-                    className="p-2 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
+                    className={`p-2 ${tw.iconButtonHoverTeal} rounded-lg transition-colors`}
                   >
                     <Pencil size={15} />
                   </button>
@@ -258,13 +258,13 @@ const Questionnaires = () => {
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleDelete(q.id)}
-                        className="px-2.5 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                        className={`px-2.5 py-1.5 ${tw.buttonDangerSolid} text-xs font-semibold rounded-lg transition-colors`}
                       >
                         Confirmer
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                        className={`px-2.5 py-1.5 ${tw.cancelPillGray} text-xs font-medium rounded-lg transition-colors`}
                       >
                         Annuler
                       </button>
@@ -272,7 +272,7 @@ const Questionnaires = () => {
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(q.id)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className={`p-2 ${tw.deleteIconButton} rounded-lg transition-colors`}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -286,17 +286,17 @@ const Questionnaires = () => {
 
       {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-              <h3 className="text-base font-bold text-slate-900">
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl`}>
+            <div className={`px-6 py-4 border-b ${tw.borderSubtle} flex justify-between items-center sticky top-0 ${tw.surface} z-10`}>
+              <h3 className={`text-base font-bold ${tw.textStrong}`}>
                 {editingId
                   ? "Modifier le questionnaire"
                   : "Nouveau questionnaire"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className={`p-1.5 ${tw.modalCloseButton} rounded-lg transition-colors`}
               >
                 <X size={18} />
               </button>
@@ -304,18 +304,18 @@ const Questionnaires = () => {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-2 block">
+                <label className={`text-sm font-semibold ${tw.textMuted} mb-2 block`}>
                   Titre du questionnaire *
                 </label>
                 <input
                   required
-                  className={inputClass + (errors.titre ? " border-red-400 ring-2 ring-red-100 bg-red-50" : "")}
+                  className={inputClass + (errors.titre ? ` ${tw.inputErrorRing}` : "")}
                   placeholder="Ex: Questionnaire Développeur React"
                   value={form.titre}
                   onChange={(e) => { setForm({ ...form, titre: e.target.value }); setErrors(p => ({ ...p, titre: false })); }}
                 />
-                {errors.titre && <p className="text-xs text-red-500 mt-1">Le titre est obligatoire.</p>}
-                <p className="text-[10px] text-slate-400 mt-1">
+                {errors.titre && <p className={`text-xs ${tw.textErrorMuted} mt-1`}>Le titre est obligatoire.</p>}
+                <p className={`text-[10px] ${tw.textMuted} mt-1`}>
                   Le titre est utilisé comme titre du modèle, non visible par
                   les candidats.
                 </p>
@@ -323,7 +323,7 @@ const Questionnaires = () => {
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <p className={tw.sectionLabel}>
                     Questions ({form.questions.length}/10)
                   </p>
                 </div>
@@ -331,20 +331,20 @@ const Questionnaires = () => {
                 {form.questions.map((q, i) => (
                   <div
                     key={i}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3"
+                    className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-xl p-4 space-y-3`}
                   >
                     <div className="flex items-center gap-2">
                       <GripVertical
                         size={16}
-                        className="text-slate-300 shrink-0"
+                        className={`${tw.textSubtle} shrink-0`}
                       />
-                      <p className="text-xs font-semibold text-slate-600">
+                      <p className={`text-xs font-semibold ${tw.textMuted}`}>
                         Question {i + 1}
                       </p>
                       <button
                         type="button"
                         onClick={() => removeQuestion(i)}
-                        className="ml-auto p-1 text-slate-400 hover:text-red-500 transition-colors"
+                        className={`ml-auto p-1 ${tw.textMuted} hover:text-red-500 transition-colors`}
                       >
                         <X size={14} />
                       </button>
@@ -367,16 +367,16 @@ const Questionnaires = () => {
                     </div>
 
                     <input
-                      className={inputClass + (errors[`q_${i}`] ? " border-red-400 ring-2 ring-red-100 bg-red-50" : "")}
+                      className={inputClass + (errors[`q_${i}`] ? ` ${tw.inputErrorRing}` : "")}
                       placeholder="Texte de la question *"
                       value={q.texte}
                       onChange={(e) => { updateQuestion(i, "texte", e.target.value); setErrors(p => ({ ...p, [`q_${i}`]: false })); }}
                     />
-                    {errors[`q_${i}`] && <p className="text-xs text-red-500">Le texte de la question est obligatoire.</p>}
+                    {errors[`q_${i}`] && <p className={`text-xs ${tw.textErrorMuted}`}>Le texte de la question est obligatoire.</p>}
 
                     {hasChoix(q.type_question) && (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase">
+                        <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase`}>
                           Réponses possibles
                         </p>
                         {q.choix.map((c, ci) => (
@@ -393,7 +393,7 @@ const Questionnaires = () => {
                               <button
                                 type="button"
                                 onClick={() => removeChoix(i, ci)}
-                                className="p-2 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                                className={`p-2 ${tw.textMuted} hover:text-red-500 transition-colors shrink-0`}
                               >
                                 <X size={14} />
                               </button>
@@ -404,21 +404,21 @@ const Questionnaires = () => {
                           <button
                             type="button"
                             onClick={() => addChoix(i)}
-                            className="text-xs text-teal-700 font-medium hover:underline flex items-center gap-1"
+                            className={`text-xs ${tw.textTeal} font-medium hover:underline flex items-center gap-1`}
                           >
                             <Plus size={12} /> Ajouter une option
                           </button>
                         ) : (
-                          <p className="text-[10px] text-slate-400 italic">Maximum {MAX_CHOIX} options atteint.</p>
+                          <p className={`text-[10px] ${tw.textMuted} italic`}>Maximum {MAX_CHOIX} options atteint.</p>
                         )}
                       </div>
                     )}
 
                     <div className="flex gap-4 pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+                      <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium ${tw.textMuted700}`}>
                         <input
                           type="checkbox"
-                          className="accent-teal-700"
+                          className={tw.accentTeal}
                           checked={q.requis}
                           onChange={(e) =>
                             updateQuestion(i, "requis", e.target.checked)
@@ -426,10 +426,10 @@ const Questionnaires = () => {
                         />
                         Requis
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+                      <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium ${tw.textMuted700}`}>
                         <input
                           type="checkbox"
-                          className="accent-red-500"
+                          className={tw.accentRed}
                           checked={q.disqualifiant}
                           onChange={(e) =>
                             updateQuestion(i, "disqualifiant", e.target.checked)
@@ -445,24 +445,24 @@ const Questionnaires = () => {
                   <button
                     type="button"
                     onClick={addQuestion}
-                    className="w-full py-2.5 border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium rounded-xl hover:border-teal-400 hover:text-teal-700 transition-colors flex items-center justify-center gap-2"
+                    className={`w-full py-2.5 border-2 border-dashed ${tw.borderBase} ${tw.textMuted700} text-sm font-medium rounded-xl hover:border-teal-400 hover:text-teal-700 transition-colors flex items-center justify-center gap-2`}
                   >
                     <Plus size={16} /> Ajouter une question
                   </button>
                 )}
               </div>
 
-              <div className="flex gap-3 pt-2 border-t border-slate-100">
+              <div className={`flex gap-3 pt-2 border-t ${tw.borderSubtle}`}>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.cancelPillGray} text-sm font-semibold rounded-xl transition-colors`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors"
+                  className={`flex-1 py-2.5 ${tw.bgTealSolid} text-sm font-semibold rounded-xl transition-colors`}
                 >
                   {editingId ? "Mettre à jour" : "Créer le questionnaire"}
                 </button>

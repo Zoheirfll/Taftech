@@ -5,17 +5,17 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 
 const Section = ({ icon: Icon, title, children }) => (
-  <div className="bg-white border border-slate-200 rounded-xl p-6">
+  <div className={`${tw.card} p-6`}>
     <div className="flex items-center gap-2 mb-5">
-      <Icon size={16} className="text-teal-700 shrink-0" />
-      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{title}</h3>
+      <Icon size={16} className={`${tw.textTeal} shrink-0`} />
+      <h3 className={`text-sm font-bold ${tw.textStrong} uppercase tracking-wider`}>{title}</h3>
     </div>
     {children}
   </div>
@@ -23,15 +23,15 @@ const Section = ({ icon: Icon, title, children }) => (
 
 const Field = ({ label, required, children }) => (
   <div>
-    <label className="text-sm font-semibold text-slate-600 mb-1.5 block">
-      {label} {required && <span className="text-red-500">*</span>}
+    <label className={`text-sm font-semibold ${tw.textMuted} mb-1.5 block`}>
+      {label} {required && <span className={tw.textErrorMuted}>*</span>}
     </label>
     {children}
   </div>
 );
 
-const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-colors";
-const textareaClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-colors resize-none leading-relaxed";
+const inputClass = `w-full px-4 py-2.5 rounded-lg text-sm transition-colors ${tw.inputColorsMutedTeal}`;
+const textareaClass = `w-full px-4 py-3 rounded-lg text-sm transition-colors resize-none leading-relaxed ${tw.inputColorsMutedTeal}`;
 
 const CreateJob = () => {
   const navigate = useNavigate();
@@ -163,24 +163,27 @@ const CreateJob = () => {
       setTimeout(() => navigate("/dashboard"), 2500);
     } catch (error) {
       reportError("ECHEC_PUBLICATION_OFFRE", error);
-      toast.error("Erreur lors de la publication. Vérifiez vos informations.", { id: toastId });
+      const message =
+        error.response?.data?.error ||
+        "Erreur lors de la publication. Vérifiez vos informations.";
+      toast.error(message, { id: toastId, duration: 6000 });
       setLoading(false);
     }
   };
 
   const iaReady = isPremium && formData.titre && formData.specialite;
-  const errClass = (key) => errors[key] ? " border-red-400 ring-2 ring-red-100 bg-red-50" : "";
+  const errClass = (key) => errors[key] ? ` ${tw.inputErrorRing}` : "";
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-24 sm:pb-0">
+    <div className={`min-h-screen ${tw.surfaceSubtle} pb-24 sm:pb-0`}>
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
+      <div className={`${tw.surface} border-b ${tw.borderBase} px-6 py-4`}>
         <div className="max-w-4xl mx-auto">
-          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-teal-700 transition-colors mb-2">
+          <Link to="/dashboard" className={`inline-flex items-center gap-1.5 text-sm font-medium mb-2 transition-colors ${tw.textMutedHoverTeal}`}>
             <ArrowLeft size={15} /> Retour au dashboard
           </Link>
-          <h1 className="text-xl font-bold text-slate-900">Publier une offre d'emploi</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Remplissez les informations pour attirer les bons candidats.</p>
+          <h1 className={`text-xl font-bold ${tw.textStrong}`}>Publier une offre d'emploi</h1>
+          <p className={`text-sm mt-0.5 ${tw.bodyText}`}>Remplissez les informations pour attirer les bons candidats.</p>
         </div>
       </div>
 
@@ -192,6 +195,13 @@ const CreateJob = () => {
           Renseignez la <strong>spécialité</strong> et le <strong>diplôme</strong> requis pour que l'algorithme propose votre offre aux candidats les plus pertinents.
           {isPremium && <> Utilisez le bouton <strong>✨ Générer avec l'IA</strong> pour rédiger la description automatiquement.</>}
         </InfoBanner>
+
+        <div className={`${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl p-4`}>
+          <p className={`text-sm ${tw.textWarning900}`}>
+            ⚠️ Cette offre sera <strong>examinée par l'équipe TafTech</strong> avant d'être visible publiquement.
+            Vous serez informé par email dès sa validation.
+          </p>
+        </div>
 
         {/* Section 1 — Informations du poste */}
         <Section icon={Briefcase} title="Informations du poste">
@@ -209,24 +219,24 @@ const CreateJob = () => {
                     placeholder="Ex: Ingénieur Fullstack Django/React"
                   />
                   {showSuggestions && metierSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 mt-1 overflow-hidden">
+                    <div className={`absolute top-full left-0 right-0 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-50 mt-1 overflow-hidden`}>
                       <div className="max-h-52 overflow-y-auto">
                         {metierSuggestions.map((m) => (
                           <button
                             key={m.id}
                             type="button"
                             onMouseDown={() => { setFormData({ ...formData, titre: m.titre }); setShowSuggestions(false); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-teal-50 transition-colors border-b border-slate-100 last:border-0"
+                            className={`w-full text-left px-4 py-2.5 transition-colors border-b ${tw.borderSubtle} last:border-0 ${tw.bgTealHover}`}
                           >
-                            <p className="text-sm font-medium text-slate-900">{m.titre}</p>
-                            <p className="text-xs text-slate-500">{m.secteur}</p>
+                            <p className={`text-sm font-medium ${tw.textStrong}`}>{m.titre}</p>
+                            <p className={`text-xs ${tw.textMuted700}`}>{m.secteur}</p>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
-                {errors.titre && <p className="text-xs text-red-500 mt-1">{errors.titre}</p>}
+                {errors.titre && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.titre}</p>}
               </Field>
             </div>
 
@@ -296,7 +306,7 @@ const CreateJob = () => {
                     }),
                   }}
                 />
-                {errors.specialite && <p className="text-xs text-red-500 mt-1">{errors.specialite}</p>}
+                {errors.specialite && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.specialite}</p>}
               </Field>
             </div>
           </div>
@@ -323,7 +333,7 @@ const CreateJob = () => {
                     }),
                   }}
                 />
-                {errors.wilaya && <p className="text-xs text-red-500 mt-1">{errors.wilaya}</p>}
+                {errors.wilaya && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.wilaya}</p>}
               </Field>
             </div>
             <Field label="Commune (optionnel)">
@@ -345,14 +355,14 @@ const CreateJob = () => {
         <Section icon={FileText} title="Détails de la mission">
           <div className="space-y-4">
             {/* Fix 5 : bouton IA avec état "Prêt" */}
-            <div className={`flex items-center justify-between p-3 rounded-lg border ${iaReady ? "bg-amber-50 border-amber-300" : "bg-slate-50 border-slate-200"}`}>
+            <div className={`flex items-center justify-between p-3 rounded-lg border ${iaReady ? tw.amberReadyBanner : `${tw.surfaceMuted} ${tw.borderBase}`}`}>
               <div>
-                <p className="text-sm font-semibold flex items-center gap-1.5" style={{ color: iaReady ? "#92400e" : "#475569" }}>
-                  <Sparkles size={14} className={iaReady ? "text-amber-500" : "text-slate-400"} />
+                <p className={`text-sm font-semibold flex items-center gap-1.5 ${iaReady ? tw.textWarning800 : tw.textMuted}`}>
+                  <Sparkles size={14} className={iaReady ? tw.textAmber500 : tw.textMuted} />
                   Remplissage automatique par IA
-                  {iaReady && <span className="ml-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">Prêt</span>}
+                  {iaReady && <span className={`ml-1 px-2 py-0.5 ${tw.badgeSuccessSolid100} text-[10px] font-bold rounded-full`}>Prêt</span>}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: iaReady ? "#b45309" : "#94a3b8" }}>
+                <p className={`text-xs mt-0.5 ${iaReady ? tw.textWarning : tw.textLight}`}>
                   {isPremium
                     ? (iaReady ? "Titre et spécialité renseignés — vous pouvez générer." : "Renseignez le titre et la spécialité pour activer.")
                     : "Fonctionnalité réservée aux comptes Premium ⭐"}
@@ -364,13 +374,13 @@ const CreateJob = () => {
                   onClick={handleGenererIA}
                   disabled={iaLoading || !iaReady}
                   title={!iaReady ? "Remplissez le titre et la spécialité d'abord" : ""}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? "bg-amber-500 hover:bg-amber-600" : "bg-slate-300"}`}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? tw.bgAmberSolidHover : tw.bgSlate300}`}
                 >
                   <Sparkles size={14} />
                   {iaLoading ? "Génération..." : "Générer"}
                 </button>
               ) : (
-                <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-3 py-1.5 rounded-lg shrink-0">Premium uniquement</span>
+                <span className={`text-xs font-semibold ${tw.badgeAmberSolid100} px-3 py-1.5 rounded-lg shrink-0`}>Premium uniquement</span>
               )}
             </div>
 
@@ -413,9 +423,9 @@ const CreateJob = () => {
         {/* Section 5 — Questionnaire */}
         <Section icon={ClipboardList} title="Questionnaire (optionnel)">
           {questionnaires.length === 0 ? (
-            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-sm text-slate-500">Vous n'avez aucun questionnaire créé.</p>
-              <Link to="/questionnaires" className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors shrink-0">
+            <div className={`flex items-center justify-between p-3 rounded-lg ${tw.surfaceMuted} border ${tw.borderBase}`}>
+              <p className={tw.bodyText}>Vous n'avez aucun questionnaire créé.</p>
+              <Link to="/questionnaires" className={`text-sm font-semibold transition-colors shrink-0 ${tw.linkTeal}`}>
                 Créer un questionnaire →
               </Link>
             </div>
@@ -430,7 +440,7 @@ const CreateJob = () => {
                 isClearable
                 styles={selectStyles}
               />
-              <p className="text-xs text-slate-500 mt-2">Les candidats devront répondre avant de postuler.</p>
+              <p className={`text-xs mt-2 ${tw.textMuted700}`}>Les candidats devront répondre avant de postuler.</p>
             </>
           )}
         </Section>
@@ -451,7 +461,7 @@ const CreateJob = () => {
                     key={days}
                     type="button"
                     onClick={() => setFormData({ ...formData, date_expiration: addDays(days) })}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isSelected ? "bg-teal-700 text-white border-teal-700" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-teal-400"}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isSelected ? tw.chipTealActive : tw.chipTealInactive}`}
                   >
                     <Clock size={13} className="inline mr-1 mb-0.5" />{days} jours
                   </button>
@@ -465,12 +475,12 @@ const CreateJob = () => {
                 min={new Date().toISOString().split("T")[0]}
               />
               {formData.date_expiration && (
-                <button type="button" onClick={() => setFormData({ ...formData, date_expiration: "" })} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                <button type="button" onClick={() => setFormData({ ...formData, date_expiration: "" })} className={`text-xs transition-colors ${tw.textMutedHoverDanger}`}>
                   × Sans limite
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-400 mt-1.5">L'offre sera clôturée automatiquement à cette date. Laissez vide pour pas de limite.</p>
+            <p className={`text-xs mt-1.5 ${tw.textMuted}`}>L'offre sera clôturée automatiquement à cette date. Laissez vide pour pas de limite.</p>
           </Field>
         </Section>
 
@@ -479,14 +489,14 @@ const CreateJob = () => {
           <button
             type="button"
             onClick={() => navigate("/dashboard")}
-            className="px-5 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors ${tw.buttonNeutralSoft}`}
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-50 shadow-sm"
+            className={`flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-sm ${tw.bgTealSolid}`}
           >
             <Send size={15} />
             {loading ? "Publication..." : "Publier l'offre"}
@@ -495,11 +505,11 @@ const CreateJob = () => {
       </form>
 
       {/* Fix 4 : boutons sticky mobile */}
-      <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t border-slate-200 px-4 py-3 flex gap-3 z-40">
+      <div className={`fixed bottom-0 left-0 right-0 sm:hidden ${tw.surface} border-t ${tw.borderBase} px-4 py-3 flex gap-3 z-40`}>
         <button
           type="button"
           onClick={() => navigate("/dashboard")}
-          className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors ${tw.buttonNeutralSoft}`}
         >
           Annuler
         </button>
@@ -507,7 +517,7 @@ const CreateJob = () => {
           type="button"
           disabled={loading}
           onClick={handleSubmit}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-50"
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgTealSolid}`}
         >
           <Send size={15} />
           {loading ? "Publication..." : "Publier l'offre"}

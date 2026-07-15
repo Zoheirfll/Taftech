@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import {
   Plus,
   Search,
@@ -108,16 +108,16 @@ const DashboardRecruteur = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700" />
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.spinnerTealB}`} />
       </div>
     );
 
   if (error === "PREMIUM_EXPIRE")
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl">⭐</div>
-        <h2 className="text-xl font-bold text-slate-800">Abonnement Premium expiré</h2>
-        <p className="text-sm text-slate-700 max-w-sm">
+        <div className={`w-16 h-16 rounded-2xl ${tw.bgWarningSoft} border ${tw.borderWarning} flex items-center justify-center text-3xl`}>⭐</div>
+        <h2 className={`text-xl font-bold ${tw.textSlate800}`}>Abonnement Premium expiré</h2>
+        <p className={`text-sm max-w-sm ${tw.bodyText}`}>
           L'abonnement Premium de votre entreprise a expiré. Votre accès est suspendu jusqu'au renouvellement.
           Contactez le propriétaire du compte.
         </p>
@@ -126,7 +126,7 @@ const DashboardRecruteur = () => {
 
   if (error)
     return (
-      <div className="max-w-4xl mx-auto mt-10 p-6 bg-red-50 text-red-700 rounded-xl text-center text-sm font-medium">
+      <div className={`max-w-4xl mx-auto mt-10 p-6 ${tw.bgErrorSoft} ${tw.textError700} rounded-xl text-center text-sm font-medium`}>
         {error}
       </div>
     );
@@ -149,10 +149,10 @@ const DashboardRecruteur = () => {
   })();
 
   const getStatutBadge = (offre) => {
-    if (offre.est_cloturee)      return { label: "Archivée",    cls: "bg-slate-100 text-slate-600" };
-    if (offre.statut_moderation === "EN_ATTENTE") return { label: "En validation", cls: "bg-amber-50 text-amber-700 border border-amber-200" };
-    if (offre.statut_moderation === "REJETEE")    return { label: "À corriger",    cls: "bg-red-50 text-red-700 border border-red-200" };
-    return { label: "Publiée", cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+    if (offre.est_cloturee)      return { label: "Archivée",    cls: tw.tagSlateSoft };
+    if (offre.statut_moderation === "EN_ATTENTE") return { label: "En validation", cls: `border ${tw.candidatureStatutStyles.RECUE}` };
+    if (offre.statut_moderation === "REJETEE")    return { label: "À corriger",    cls: `border ${tw.candidatureStatutStyles.REFUSE}` };
+    return { label: "Publiée", cls: `border ${tw.candidatureStatutStyles.RETENU}` };
   };
 
   const listeBase = activeTab === "ouvertes" ? offresOuvertes : offresCloturees;
@@ -208,42 +208,42 @@ const DashboardRecruteur = () => {
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
 
       {/* ── HEADER COMPACT ─────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 mb-5">
+      <div className={`${tw.cardColors} rounded-2xl p-4 md:p-5 mb-5`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
           {/* Logo + nom + badges */}
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+            <div className={`w-12 h-12 rounded-xl ${tw.surfaceSubtle} border ${tw.borderBase} flex items-center justify-center overflow-hidden shrink-0`}>
               {entreprise?.logo
                 ? <img src={mediaUrl(entreprise.logo)} alt="Logo" className="w-full h-full object-cover" />
-                : <Building2 size={18} className="text-slate-400" />}
+                : <Building2 size={18} className={tw.textMuted} />}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg font-extrabold text-slate-900">{entreprise?.nom_entreprise}</h1>
+                <h1 className={`text-lg font-extrabold ${tw.textStrong}`}>{entreprise?.nom_entreprise}</h1>
                 {entreprise?.est_approuvee
-                  ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full"><CheckCircle size={11} /> Vérifié</span>
-                  : <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full"><AlertCircle size={11} /> En attente</span>}
+                  ? <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgSuccessSoft} ${tw.textSuccess} text-xs font-semibold rounded-full`}><CheckCircle size={11} /> Vérifié</span>
+                  : <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgWarningSoft} ${tw.textWarning} text-xs font-semibold rounded-full`}><AlertCircle size={11} /> En attente</span>}
                 {isPremium
-                  ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 text-teal-700 text-xs font-bold rounded-full border border-teal-200">
+                  ? <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgTealSoft} ${tw.textTeal} text-xs font-bold rounded-full border ${tw.borderTeal200}`}>
                       ⭐ Premium{premiumExpire && <span className="font-normal opacity-70"> · {premiumExpire}</span>}
                     </span>
-                  : <Link to="/recruteurs/premium" className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-medium rounded-full hover:bg-teal-50 hover:text-teal-700 transition-colors">🔒 Premium</Link>}
+                  : <Link to="/recruteurs/premium" className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft700} text-xs font-medium rounded-full transition-colors hover:bg-teal-50 hover:text-teal-700`}>🔒 Premium</Link>}
               </div>
 
               {/* Mini stats inline — grille 2×2 mobile, ligne desktop */}
               <div className="grid grid-cols-2 sm:flex sm:items-center sm:gap-0 mt-2">
                 {[
-                  { val: stats.total,        label: "candidatures",  color: "text-slate-700" },
-                  { val: stats.nouvelles,    label: "nouvelles",     color: "text-emerald-600" },
-                  { val: stats.enTraitement, label: "en traitement", color: "text-amber-600" },
-                  { val: stats.pertinentes,  label: "+80% IA",       color: "text-teal-700" },
+                  { val: stats.total,        label: "candidatures",  color: tw.textMuted700 },
+                  { val: stats.nouvelles,    label: "nouvelles",     color: tw.scoreTextSuccess },
+                  { val: stats.enTraitement, label: "en traitement", color: tw.scoreTextWarning },
+                  { val: stats.pertinentes,  label: "+80% IA",       color: tw.textTeal },
                 ].map(({ val, label, color }, i) => (
                   <React.Fragment key={label}>
-                    <span className="text-xs text-slate-500 py-0.5 sm:py-0 sm:pr-4">
+                    <span className={`text-xs py-0.5 sm:py-0 sm:pr-4 ${tw.textMuted700}`}>
                       <span className={`font-bold text-sm ${color}`}>{val}</span> {label}
                     </span>
-                    {i < 3 && <span className="hidden sm:inline text-slate-200 pr-4">|</span>}
+                    {i < 3 && <span className={`hidden sm:inline pr-4 ${tw.textSlate200}`}>|</span>}
                   </React.Fragment>
                 ))}
               </div>
@@ -255,7 +255,7 @@ const DashboardRecruteur = () => {
             {entreprise?.slug && entreprise?.est_approuvee && (
               <Link
                 to={`/entreprise/${entreprise.slug}`}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-sm font-medium rounded-lg transition-colors ${tw.surface} ${tw.textMuted} ${tw.hoverSurfaceMuted}`}
               >
                 <Building2 size={14} /> Ma vitrine
               </Link>
@@ -264,13 +264,13 @@ const DashboardRecruteur = () => {
               <>
                 <button
                   onClick={() => navigate("/cvtheque")}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+                  className={`flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-sm font-semibold rounded-lg transition-colors ${tw.surface} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
                 >
                   <Search size={14} /> CV
                 </button>
                 <button
                   onClick={() => navigate("/creer-offre")}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 transition-colors shadow-sm"
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-lg transition-colors shadow-sm ${tw.bgTealSolid}`}
                 >
                   <Plus size={14} /> Publier une offre
                 </button>
@@ -278,10 +278,10 @@ const DashboardRecruteur = () => {
             )}
             {authService.peutFaire("UTILISATEUR") && !entreprise?.est_approuvee && (
               <div className="text-right">
-                <button disabled className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-lg cursor-not-allowed">
+                <button disabled className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-not-allowed ${tw.buttonNeutralSoft}`}>
                   <Plus size={14} /> Publier une offre
                 </button>
-                <p className="text-xs text-amber-600 font-medium mt-1">Validation admin requise</p>
+                <p className={`text-xs font-medium mt-1 ${tw.scoreTextWarning}`}>Validation admin requise</p>
               </div>
             )}
           </div>
@@ -289,7 +289,7 @@ const DashboardRecruteur = () => {
       </div>
 
       {/* ── ONGLETS principaux ─────────────────────────────────────────────── */}
-      <div className="flex gap-1 border-b border-slate-200 mb-5">
+      <div className={`flex gap-1 border-b ${tw.borderBase} mb-5`}>
         {[
           { key: "ouvertes",  label: "Offres en cours", count: offresOuvertes.length },
           { key: "cloturees", label: "Archives",         count: offresCloturees.length },
@@ -297,10 +297,10 @@ const DashboardRecruteur = () => {
           <button
             key={key}
             onClick={() => { setActiveTab(key); setFiltreStatut("toutes"); setSearch(""); setSortConfig({ col: null, dir: "asc" }); }}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === key ? "border-teal-700 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-900"}`}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === key ? tw.segmentTabActiveTeal : tw.segmentTabInactive}`}
           >
             {label}
-            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-600"}`}>
+            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? tw.compareChipActive : tw.tagSlateSoft}`}>
               {count}
             </span>
           </button>
@@ -320,13 +320,13 @@ const DashboardRecruteur = () => {
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         {/* Recherche */}
         <div className="relative flex-1 max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher une offre..."
-            className="w-full pl-8 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+            className={`w-full pl-8 pr-4 py-2 rounded-lg text-sm ${tw.inputColorsWhiteTeal}`}
           />
         </div>
 
@@ -334,9 +334,9 @@ const DashboardRecruteur = () => {
         <div className="flex items-center gap-1.5 flex-wrap">
           {(activeTab === "ouvertes" ? [
             { key: "toutes",     label: "Toutes",      count: offresOuvertes.length },
-            { key: "APPROUVEE",  label: "Publiées",    count: nbPubliees,     dot: "bg-emerald-400" },
-            { key: "EN_ATTENTE", label: "En validation",count: nbEnValidation, dot: "bg-amber-400" },
-            { key: "REJETEE",    label: "À corriger",  count: nbACorrection,  dot: "bg-red-400" },
+            { key: "APPROUVEE",  label: "Publiées",    count: nbPubliees,     dot: tw.dotEmerald400 },
+            { key: "EN_ATTENTE", label: "En validation",count: nbEnValidation, dot: tw.dotAmber400 },
+            { key: "REJETEE",    label: "À corriger",  count: nbACorrection,  dot: tw.dotRed400 },
           ] : [
             { key: "toutes",    label: "Toutes",   count: offresCloturees.length },
             { key: "APPROUVEE", label: "Publiées", count: offresCloturees.filter((o) => o.statut_moderation === "APPROUVEE").length },
@@ -347,14 +347,14 @@ const DashboardRecruteur = () => {
               onClick={() => setFiltreStatut(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                 filtreStatut === key
-                  ? "bg-teal-700 text-white border-teal-700"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                  ? tw.chipTealActive
+                  : tw.chipNeutralInactive
               }`}
             >
               {dot && filtreStatut !== key && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
               {label}
               {count > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filtreStatut === key ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filtreStatut === key ? tw.badgeOnGradient : tw.tagSlateSoft700}`}>
                   {count}
                 </span>
               )}
@@ -365,23 +365,23 @@ const DashboardRecruteur = () => {
 
       {/* ── TABLE ──────────────────────────────────────────────────────────── */}
       {enriched.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-2xl py-16 px-8 text-center">
+        <div className={`${tw.cardColors} border-dashed rounded-2xl py-16 px-8 text-center`}>
           {search ? (
             <>
-              <Search size={32} className="text-slate-200 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-700 mb-1">Aucun résultat pour "{search}"</p>
-              <p className="text-xs text-slate-400 mb-4">Essayez un autre mot-clé ou effacez la recherche.</p>
-              <button onClick={() => setSearch("")} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">
+              <Search size={32} className={`${tw.textSlate200} mx-auto mb-3`} />
+              <p className={`text-sm font-semibold mb-1 ${tw.textMuted700}`}>Aucun résultat pour "{search}"</p>
+              <p className={`text-xs mb-4 ${tw.textMuted}`}>Essayez un autre mot-clé ou effacez la recherche.</p>
+              <button onClick={() => setSearch("")} className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${tw.buttonNeutralSoft}`}>
                 Effacer la recherche
               </button>
             </>
           ) : activeTab === "ouvertes" && offresOuvertes.length === 0 ? (
             <>
-              <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-4">
-                <Plus size={28} className="text-teal-600" />
+              <div className={`w-16 h-16 rounded-2xl ${tw.bgTealSoft} border ${tw.borderTeal100} flex items-center justify-center mx-auto mb-4`}>
+                <Plus size={28} className={tw.textTeal600} />
               </div>
-              <p className="text-base font-bold text-slate-900 mb-1">Aucune offre publiée</p>
-              <p className="text-sm text-slate-400 mb-6 max-w-xs mx-auto">
+              <p className={`text-base font-bold mb-1 ${tw.textStrong}`}>Aucune offre publiée</p>
+              <p className={`text-sm mb-6 max-w-xs mx-auto ${tw.textMuted}`}>
                 {entreprise?.est_approuvee
                   ? "Commencez à recruter en publiant votre première offre d'emploi."
                   : "Votre entreprise est en cours de validation par l'équipe TAFTECH avant de pouvoir publier."}
@@ -389,7 +389,7 @@ const DashboardRecruteur = () => {
               {entreprise?.est_approuvee && authService.peutFaire("UTILISATEUR") && (
                 <button
                   onClick={() => navigate("/creer-offre")}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-xl hover:bg-teal-800 transition-colors shadow-sm"
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors shadow-sm ${tw.bgTealSolid}`}
                 >
                   <Plus size={16} /> Publier ma première offre
                 </button>
@@ -397,15 +397,15 @@ const DashboardRecruteur = () => {
             </>
           ) : (
             <>
-              <Building2 size={28} className="text-slate-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-500">Aucune offre dans cette catégorie</p>
+              <Building2 size={28} className={`${tw.textSlate200} mx-auto mb-3`} />
+              <p className={`text-sm font-medium ${tw.textMuted700}`}>Aucune offre dans cette catégorie</p>
             </>
           )}
         </div>
       ) : (
-        <div className="border border-slate-200 rounded-2xl overflow-hidden">
+        <div className={`border ${tw.borderBase} rounded-2xl overflow-hidden`}>
           {/* En-têtes desktop */}
-          <div className="hidden md:grid bg-slate-50 border-b border-slate-200 px-4 py-2.5" style={{ gridTemplateColumns: GRID }}>
+          <div className={`hidden md:grid ${tw.surfaceMuted} border-b ${tw.borderBase} px-4 py-2.5`} style={{ gridTemplateColumns: GRID }}>
             {[
               { label: "Offre",      col: "titre",        align: "left" },
               { label: "Wilaya",     col: "wilaya",       align: "left" },
@@ -423,11 +423,11 @@ const DashboardRecruteur = () => {
                 onClick={() => col && toggleSort(col)}
                 className={`text-[11px] font-semibold uppercase tracking-wide flex items-center gap-0.5 transition-colors
                   ${align === "center" ? "justify-center" : ""}
-                  ${col ? "text-slate-400 hover:text-slate-700 cursor-pointer" : "cursor-default"}`}
+                  ${col ? `${tw.textMutedHoverMuted700} cursor-pointer` : "cursor-default"}`}
               >
                 {label}
                 {col && sortConfig.col === col && (
-                  <span className="text-teal-600 ml-0.5">{sortConfig.dir === "asc" ? "▲" : "▼"}</span>
+                  <span className={`ml-0.5 ${tw.textTeal600}`}>{sortConfig.dir === "asc" ? "▲" : "▼"}</span>
                 )}
               </button>
             ))}
@@ -438,31 +438,31 @@ const DashboardRecruteur = () => {
             const badge = getStatutBadge(offre);
 
             const rowBg = offre.statut_moderation === "REJETEE"
-              ? "bg-red-50 hover:bg-red-50/60"
+              ? tw.rowRejetee
               : offre.statut_moderation === "EN_ATTENTE"
-              ? "bg-amber-50 hover:bg-amber-50/60"
+              ? tw.rowEnAttente
               : offre.est_cloturee
-              ? "bg-slate-50 hover:bg-slate-100/50"
-              : "bg-white hover:bg-slate-50/50";
+              ? tw.rowCloturee
+              : tw.rowDefault;
 
-            const expColor = jours === null ? "text-slate-300"
-              : jours === 0 ? "text-red-600"
-              : jours <= 7 ? "text-red-500"
-              : jours <= 30 ? "text-amber-500"
-              : jours <= 60 ? "text-teal-600"
-              : "text-slate-500";
+            const expColor = jours === null ? tw.textSubtle
+              : jours === 0 ? tw.textError
+              : jours <= 7 ? tw.textErrorMuted
+              : jours <= 30 ? tw.textAmber500
+              : jours <= 60 ? tw.textTeal600
+              : tw.textMuted700;
 
             const ActionBtn = () => {
               if (offre.statut_moderation === "REJETEE") {
                 return authService.peutFaire("UTILISATEUR")
-                  ? <button onClick={() => handleOuvrirModification(offre)} className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap">Corriger <ChevronRight size={12} /></button>
-                  : <span className="px-2.5 py-1.5 bg-red-100 text-red-600 text-xs font-semibold rounded-lg border border-red-200">Rejetée</span>;
+                  ? <button onClick={() => handleOuvrirModification(offre)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.buttonDangerSolid}`}>Corriger <ChevronRight size={12} /></button>
+                  : <span className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border ${tw.badgeErrorLight100} ${tw.borderError}`}>Rejetée</span>;
               }
               if (offre.statut_moderation === "EN_ATTENTE") {
-                return <span className="px-3 py-1.5 bg-slate-100 text-slate-400 text-xs font-medium rounded-lg whitespace-nowrap">En attente</span>;
+                return <span className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap ${tw.tagSlateSoft}`}>En attente</span>;
               }
               return (
-                <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className="flex items-center gap-1 px-3 py-1.5 bg-teal-700 text-white text-xs font-semibold rounded-lg hover:bg-teal-800 transition-colors whitespace-nowrap">
+                <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.bgTealSolid}`}>
                   Candidats <ChevronRight size={12} />
                 </button>
               );
@@ -472,41 +472,41 @@ const DashboardRecruteur = () => {
               <React.Fragment key={offre.id}>
                 {/* ── Ligne desktop ── */}
                 <div
-                  className={`hidden md:grid items-center px-4 py-3 border-b border-slate-100 last:border-0 transition-colors ${rowBg}`}
+                  className={`hidden md:grid items-center px-4 py-3 border-b ${tw.borderSubtle} last:border-0 transition-colors ${rowBg}`}
                   style={{ gridTemplateColumns: GRID }}
                 >
                   <div className="min-w-0 pr-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900 truncate">{offre.titre}</span>
+                      <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
                       <span className={`shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${badge.cls}`}>{badge.label}</span>
                     </div>
                     {offre.motif_rejet && (
-                      <p className="text-xs text-red-500 truncate mt-0.5 flex items-center gap-1">
+                      <p className={`text-xs truncate mt-0.5 flex items-center gap-1 ${tw.textErrorMuted}`}>
                         <AlertTriangle size={10} className="shrink-0" /> {offre.motif_rejet}
                       </p>
                     )}
                   </div>
 
-                  <span className="text-xs text-slate-600 truncate pr-2">{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
-                  <span className="text-xs text-slate-600">{offre.type_contrat}</span>
+                  <span className={`text-xs truncate pr-2 ${tw.textMuted}`}>{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
+                  <span className={`text-xs ${tw.textMuted}`}>{offre.type_contrat}</span>
 
                   <span className={`text-xs font-semibold text-center tabular-nums ${expColor}`}>
-                    {jours === null ? <span className="text-slate-300 text-base">∞</span> : jours === 0 ? "Auj." : `${jours}j`}
+                    {jours === null ? <span className={`${tw.textSubtle} text-base`}>∞</span> : jours === 0 ? "Auj." : `${jours}j`}
                   </span>
 
                   {[
-                    { val: nbCandidatures, color: "text-slate-700" },
-                    { val: nbNouvelles,    color: "text-emerald-600" },
-                    { val: nbEntretiens,   color: "text-orange-500" },
-                    { val: nbRetenus,      color: "text-teal-700" },
+                    { val: nbCandidatures, color: tw.textMuted700 },
+                    { val: nbNouvelles,    color: tw.scoreTextSuccess },
+                    { val: nbEntretiens,   color: tw.textOrange500 },
+                    { val: nbRetenus,      color: tw.textTeal },
                   ].map(({ val, color }, i) => (
-                    <span key={i} className={`text-base font-bold tabular-nums text-center ${val > 0 ? color : "text-slate-300"}`}>{val}</span>
+                    <span key={i} className={`text-base font-bold tabular-nums text-center ${val > 0 ? color : tw.textSubtle}`}>{val}</span>
                   ))}
 
                   <span className={`text-sm font-bold tabular-nums text-center ${
                     meilleurScore > 0
-                      ? meilleurScore >= 80 ? "text-emerald-600" : meilleurScore >= 60 ? "text-amber-500" : "text-red-400"
-                      : "text-slate-200"
+                      ? meilleurScore >= 80 ? tw.scoreTextSuccess : meilleurScore >= 60 ? tw.textAmber500 : tw.textRed400
+                      : tw.textSlate200
                   }`}>
                     {meilleurScore > 0 ? `${meilleurScore}%` : "—"}
                   </span>
@@ -515,22 +515,22 @@ const DashboardRecruteur = () => {
                 </div>
 
                 {/* ── Card mobile ── */}
-                <div className={`md:hidden border-b border-slate-100 last:border-0 p-4 transition-colors ${rowBg}`}>
+                <div className={`md:hidden border-b ${tw.borderSubtle} last:border-0 p-4 transition-colors ${rowBg}`}>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 truncate">{offre.titre}</span>
+                        <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full shrink-0 ${badge.cls}`}>{badge.label}</span>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500">
+                      <div className={`flex items-center gap-2 flex-wrap text-xs ${tw.textMuted700}`}>
                         <span className="flex items-center gap-1"><MapPin size={10} />{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
                         <span>{offre.type_contrat}</span>
                         {jours === null
-                          ? <span className="text-slate-300">∞ sans limite</span>
+                          ? <span className={tw.textSubtle}>∞ sans limite</span>
                           : <span className={`font-semibold ${expColor}`}>{jours === 0 ? "Expire auj." : `${jours}j`}</span>}
                       </div>
                       {offre.motif_rejet && (
-                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textErrorMuted}`}>
                           <AlertTriangle size={10} className="shrink-0" /> {offre.motif_rejet}
                         </p>
                       )}
@@ -539,20 +539,20 @@ const DashboardRecruteur = () => {
                   </div>
                   <div className="flex items-center gap-5">
                     {[
-                      { val: nbCandidatures, label: "Total", color: "text-slate-700" },
-                      { val: nbNouvelles,    label: "Nouv.",  color: "text-emerald-600" },
-                      { val: nbEntretiens,   label: "Entr.",  color: "text-orange-500" },
-                      { val: nbRetenus,      label: "Ret.",   color: "text-teal-700" },
+                      { val: nbCandidatures, label: "Total", color: tw.textMuted700 },
+                      { val: nbNouvelles,    label: "Nouv.",  color: tw.scoreTextSuccess },
+                      { val: nbEntretiens,   label: "Entr.",  color: tw.textOrange500 },
+                      { val: nbRetenus,      label: "Ret.",   color: tw.textTeal },
                     ].map(({ val, label, color }) => (
                       <div key={label} className="text-center">
-                        <p className={`text-lg font-bold tabular-nums ${val > 0 ? color : "text-slate-300"}`}>{val}</p>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wide">{label}</p>
+                        <p className={`text-lg font-bold tabular-nums ${val > 0 ? color : tw.textSubtle}`}>{val}</p>
+                        <p className={`text-[10px] uppercase tracking-wide ${tw.textMuted}`}>{label}</p>
                       </div>
                     ))}
                     {meilleurScore > 0 && (
                       <div className="text-center ml-auto">
-                        <p className={`text-lg font-bold ${meilleurScore >= 80 ? "text-emerald-600" : meilleurScore >= 60 ? "text-amber-500" : "text-red-400"}`}>{meilleurScore}%</p>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wide">Top IA</p>
+                        <p className={`text-lg font-bold ${meilleurScore >= 80 ? tw.scoreTextSuccess : meilleurScore >= 60 ? tw.textAmber500 : tw.textRed400}`}>{meilleurScore}%</p>
+                        <p className={`text-[10px] uppercase tracking-wide ${tw.textMuted}`}>Top IA</p>
                       </div>
                     )}
                   </div>
@@ -572,7 +572,7 @@ const DashboardRecruteur = () => {
                 <h3 className="text-base font-bold text-slate-900">Corriger l'offre</h3>
                 <p className="text-xs text-slate-600 mt-0.5">L'offre sera soumise à revalidation après modification.</p>
               </div>
-              <button onClick={() => setShowModifierModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">✕</button>
+              <button onClick={() => setShowModifierModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">✕</button>
             </div>
             {offreAModifier.motif_rejet && (
               <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">

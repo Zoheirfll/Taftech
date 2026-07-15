@@ -18,21 +18,16 @@ import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import { tw } from "../../../theme";
 
-const INPUT_CLASS =
-  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-const MODAL_CLASS =
-  "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4";
-const MODAL_INNER_CLASS =
-  "bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl overflow-y-auto max-h-[90vh]";
-const BTN_PRIMARY =
-  "flex-1 py-3 bg-indigo-600 text-white text-base font-bold rounded-xl hover:bg-indigo-700 transition-colors";
-const BTN_CANCEL =
-  "flex-1 py-3 bg-slate-100 text-slate-600 text-base font-semibold rounded-xl hover:bg-slate-200 transition-colors";
-const SECTION_CLASS = "bg-white border border-slate-200 rounded-2xl p-6";
-const SECTION_TITLE = "text-lg font-bold text-slate-900";
-const EDIT_BTN =
-  "flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors";
+const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
+const MODAL_CLASS = `${tw.modalOverlay} p-4`;
+const MODAL_INNER_CLASS = `${tw.surface} rounded-2xl p-8 max-w-xl w-full shadow-2xl overflow-y-auto max-h-[90vh]`;
+const BTN_PRIMARY = `flex-1 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-base font-bold rounded-xl transition-colors`;
+const BTN_CANCEL = `flex-1 py-3 text-base font-semibold rounded-xl transition-colors ${tw.buttonCancelSoft}`;
+const SECTION_CLASS = `${tw.card} rounded-2xl p-6`;
+const SECTION_TITLE = `text-lg font-bold ${tw.textStrong}`;
+const EDIT_BTN = `flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tw.editButtonOutline}`;
 
 const ProfilCandidat = () => {
   const [langName, setLangName] = useState("");
@@ -113,13 +108,13 @@ const ProfilCandidat = () => {
   if (loading)
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.borderPrimary}`}></div>
       </div>
     );
 
   return (
     <div className="space-y-6 pb-16">
-      <h1 className="text-2xl font-extrabold text-slate-900">
+      <h1 className={tw.pageTitleGrand}>
         Mon profil professionnel
       </h1>
 
@@ -130,23 +125,23 @@ const ProfilCandidat = () => {
       </InfoBanner>
 
       {/* JAUGE COMPLETION */}
-      <div className="bg-indigo-600 rounded-xl p-5 text-white">
+      <div className={`rounded-xl p-5 ${tw.profileGaugeCard}`}>
         <div className="flex justify-between items-center mb-2">
           <p className="text-sm font-semibold flex items-center gap-1">
             Remplissage du profil
             <TooltipIcon text="Score calculé sur 10 critères : photo, CV, bio, titre, compétences, langues, expériences, formations, wilaya et préférences." position="right" />
           </p>
-          <span className="text-sm font-bold bg-white/20 px-2.5 py-0.5 rounded-full">
+          <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full ${tw.profileGaugeBadge}`}>
             {completionPercent}%
           </span>
         </div>
-        <div className="w-full bg-white/20 rounded-full h-2">
+        <div className={`w-full rounded-full h-2 ${tw.profileGaugeTrack}`}>
           <div
-            className="bg-white h-2 rounded-full transition-all duration-1000"
+            className={`h-2 rounded-full transition-all duration-1000 ${tw.profileGaugeBar}`}
             style={{ width: `${completionPercent}%` }}
           />
         </div>
-        <p className="text-xs text-indigo-200 mt-2">
+        <p className={`text-xs mt-2 ${tw.profileGaugeFootnote}`}>
           {completionPercent === 100
             ? "Profil complet — vous maximisez vos chances !"
             : "Complétez vos informations pour améliorer le matching IA."}
@@ -158,10 +153,10 @@ const ProfilCandidat = () => {
         <div className="flex justify-between items-start mb-3">
           <div>
             <h2 className={SECTION_TITLE}>Mon CV</h2>
-            <p className="text-sm font-semibold text-indigo-600 mt-1">
+            <p className={`text-sm font-semibold ${tw.textPrimary} mt-1`}>
               {profil.titre_professionnel || "Titre à définir"}
             </p>
-            <p className="text-xs text-slate-600 mt-1">
+            <p className={`text-xs ${tw.textMuted} mt-1`}>
               {profil.cv_pdf
                 ? profil.cv_pdf.split("/").pop()
                 : "Aucun fichier joint"}
@@ -171,21 +166,21 @@ const ProfilCandidat = () => {
             <Pencil size={12} /> Modifier
           </button>
         </div>
-        <div className="border-t border-slate-100 pt-4 mt-4">
+        <div className={`border-t ${tw.borderSubtle} pt-4 mt-4`}>
           <button
             onClick={() => setShowParserModal(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className={`w-full flex items-center justify-center gap-2 py-3 px-4 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
           >
             <Sparkles size={16} /> Remplir automatiquement depuis mon CV
           </button>
-          <p className="text-xs text-slate-600 mt-2 text-center">
+          <p className={`text-xs ${tw.textMuted} mt-2 text-center`}>
             Notre IA analyse votre CV et remplit vos infos en quelques secondes.
           </p>
         </div>
         {(profil.bio || profil.linkedin || profil.github) && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+          <div className={`mt-4 pt-4 border-t ${tw.borderSubtle} space-y-3`}>
             {profil.bio && (
-              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg italic">
+              <p className={`text-sm leading-relaxed p-3 rounded-lg italic ${tw.bioQuoteBox}`}>
                 "{profil.bio}"
               </p>
             )}
@@ -195,7 +190,7 @@ const ProfilCandidat = () => {
                   href={profil.linkedin}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.linkedinPill}`}
                 >
                   <ExternalLink size={13} /> LinkedIn
                 </a>
@@ -205,14 +200,14 @@ const ProfilCandidat = () => {
                   href={profil.github}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.githubPill}`}
                 >
                   <ExternalLink size={13} /> GitHub
                 </a>
               )}
               <button
                 onClick={() => setShowLinksForm(true)}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tw.editButtonOutline}`}
               >
                 <Pencil size={12} /> Modifier
               </button>
@@ -220,10 +215,10 @@ const ProfilCandidat = () => {
           </div>
         )}
         {!profil.bio && !profil.linkedin && !profil.github && (
-          <div className="mt-3 pt-3 border-t border-slate-100">
+          <div className={`mt-3 pt-3 border-t ${tw.borderSubtle}`}>
             <button
               onClick={() => setShowLinksForm(true)}
-              className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:underline"
+              className={`flex items-center gap-1.5 text-xs font-medium ${tw.linkPrimaryUnderline}`}
             >
               <Plus size={12} /> Ajouter bio / LinkedIn / GitHub
             </button>
@@ -241,7 +236,7 @@ const ProfilCandidat = () => {
         </div>
         <div className="flex flex-col md:flex-row items-center md:items-start gap-5 mb-5">
           <div className="relative shrink-0">
-            <div className="w-20 h-20 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200">
+            <div className={`w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden ${tw.photoPlaceholder}`}>
               {profil.photo_profil ? (
                 <img
                   src={getPhotoUrl(profil.photo_profil)}
@@ -249,11 +244,11 @@ const ProfilCandidat = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <User size={28} className="text-slate-400" />
+                <User size={28} className={tw.textMuted} />
               )}
             </div>
-            <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-indigo-700 transition-colors border-2 border-white">
-              <Camera size={12} className="text-white" />
+            <label className={`absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${tw.photoUploadButton}`}>
+              <Camera size={12} className={tw.textOnDark} />
               <input
                 type="file"
                 className="hidden"
@@ -263,26 +258,26 @@ const ProfilCandidat = () => {
             </label>
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h3 className="text-lg font-bold text-slate-900">
+            <h3 className={`text-lg font-bold ${tw.textStrong}`}>
               {profil.first_name} {profil.last_name}
             </h3>
-            <p className="text-sm text-slate-600 mt-0.5">
+            <p className={`text-sm ${tw.textMuted} mt-0.5`}>
               {profil.wilaya ? (profil.wilaya.split(" - ")[1] || profil.wilaya) : "Wilaya non renseignée"}
               {profil.commune ? ` · ${profil.commune}` : ""}
             </p>
-            <p className="text-xs text-slate-600 mt-0.5">
+            <p className={`text-xs ${tw.textMuted} mt-0.5`}>
               {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
               {" · "}
               {constants.secteurs.find(s => s.value === profil.specialite)?.label || formatText(profil.specialite)}
             </p>
             {profil.niveau_experience && (
-              <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full">
+              <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
                 <Award size={10} /> {formatText(profil.niveau_experience)}
               </span>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 py-3 border-t border-slate-100 mb-4">
+        <div className={`flex flex-wrap gap-2 py-3 border-t ${tw.borderSubtle} mb-4`}>
           {[
             {
               label: profil.service_militaire
@@ -295,15 +290,15 @@ const ProfilCandidat = () => {
           ].map(({ label, active }) => (
             <span
               key={label}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${active ? tw.toggleChipActive : tw.toggleChipInactive}`}
             >
               {active ? <Check size={11} /> : <Minus size={11} />} {label}
             </span>
           ))}
         </div>
-        <div className="flex flex-wrap gap-4 text-sm text-slate-700">
-          <span className="flex items-center gap-1.5"><Phone size={13} className="text-slate-400" /> {profil.telephone || "Non renseigné"}</span>
-          <span className="flex items-center gap-1.5"><Mail size={13} className="text-slate-400" /> {profil.email}</span>
+        <div className={`flex flex-wrap gap-4 text-sm ${tw.textMuted700}`}>
+          <span className="flex items-center gap-1.5"><Phone size={13} className={tw.textMuted} /> {profil.telephone || "Non renseigné"}</span>
+          <span className="flex items-center gap-1.5"><Mail size={13} className={tw.textMuted} /> {profil.email}</span>
         </div>
       </div>
 
@@ -333,12 +328,12 @@ const ProfilCandidat = () => {
           ].map(({ label, value }) => (
             <div
               key={label}
-              className="bg-slate-50 p-3 rounded-lg border border-slate-100"
+              className={`p-3 rounded-lg ${tw.prefCardSoft}`}
             >
-              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide mb-1">
+              <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wide mb-1`}>
                 {label}
               </p>
-              <p className="text-sm font-semibold text-indigo-600">{value}</p>
+              <p className={`text-sm font-semibold ${tw.textPrimary}`}>{value}</p>
             </div>
           ))}
         </div>
@@ -360,18 +355,18 @@ const ProfilCandidat = () => {
               });
               setShowExpForm(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-xl transition-colors ${tw.addButtonSoft}`}
           >
             <Plus size={13} /> Ajouter
           </button>
         </div>
         <div className="space-y-5">
           {profil.experiences_detail?.length === 0 && (
-            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl">
-              <p className="text-sm text-slate-500 mb-2">Aucune expérience renseignée.</p>
+            <div className={`text-center py-6 border border-dashed ${tw.borderBase} rounded-xl`}>
+              <p className={`text-sm ${tw.textMuted700} mb-2`}>Aucune expérience renseignée.</p>
               <button
                 onClick={() => setShowExpForm(true)}
-                className="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1 mx-auto"
+                className={`text-xs font-semibold hover:underline flex items-center gap-1 mx-auto ${tw.textPrimary}`}
               >
                 <Plus size={11} /> Ajouter une expérience
               </button>
@@ -380,21 +375,21 @@ const ProfilCandidat = () => {
           {profil.experiences_detail?.map((exp) => (
             <div
               key={exp.id}
-              className="relative group pl-5 border-l-2 border-indigo-100"
+              className={`relative group pl-5 border-l-2 ${tw.timelineBorderPrimary}`}
             >
-              <div className="absolute -left-2 top-1 w-3.5 h-3.5 bg-white border-2 border-indigo-500 rounded-full" />
+              <div className={`absolute -left-2 top-1 w-3.5 h-3.5 rounded-full ${tw.timelineDotPrimary}`} />
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-base font-semibold text-slate-900">
+                  <h4 className={`text-base font-semibold ${tw.textStrong}`}>
                     {exp.titre_poste}
                   </h4>
-                  <p className="text-xs text-indigo-600 font-medium">
+                  <p className={`text-xs ${tw.textPrimary} font-medium`}>
                     {exp.entreprise}
                     {exp.secteur && (
-                      <span className="ml-2 text-slate-400 font-normal">· {exp.secteur}</span>
+                      <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.secteur}</span>
                     )}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className={`text-xs ${tw.textMuted} mt-1`}>
                     {formatDate(exp.date_debut)} —{" "}
                     {exp.date_fin ? formatDate(exp.date_fin) : "Aujourd'hui"}
                   </p>
@@ -402,20 +397,20 @@ const ProfilCandidat = () => {
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEditExp(exp)}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.hoverIconActionPrimary}`}
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => handleDeleteExp(exp.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
                   >
                     <Trash2 size={13} />
                   </button>
                 </div>
               </div>
               {exp.description && (
-                <p className="text-xs text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
+                <p className={`text-xs ${tw.textMuted} mt-2 leading-relaxed whitespace-pre-line`}>
                   {exp.description}
                 </p>
               )}
@@ -440,18 +435,18 @@ const ProfilCandidat = () => {
               });
               setShowFormForm(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-xl transition-colors ${tw.addButtonSoft}`}
           >
             <Plus size={13} /> Ajouter
           </button>
         </div>
         <div className="space-y-5">
           {profil.formations_detail?.length === 0 && (
-            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl">
-              <p className="text-sm text-slate-500 mb-2">Aucune formation renseignée.</p>
+            <div className={`text-center py-6 border border-dashed ${tw.borderBase} rounded-xl`}>
+              <p className={`text-sm ${tw.textMuted700} mb-2`}>Aucune formation renseignée.</p>
               <button
                 onClick={() => setShowFormForm(true)}
-                className="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1 mx-auto"
+                className={`text-xs font-semibold hover:underline flex items-center gap-1 mx-auto ${tw.textPrimary}`}
               >
                 <Plus size={11} /> Ajouter une formation
               </button>
@@ -460,23 +455,23 @@ const ProfilCandidat = () => {
           {profil.formations_detail?.map((f) => (
             <div
               key={f.id}
-              className="relative group pl-5 border-l-2 border-slate-200"
+              className={`relative group pl-5 border-l-2 ${tw.timelineBorderNeutral}`}
             >
-              <div className="absolute -left-2 top-1 w-3.5 h-3.5 bg-white border-2 border-slate-400 rounded-full" />
+              <div className={`absolute -left-2 top-1 w-3.5 h-3.5 rounded-full ${tw.timelineDotNeutral}`} />
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-base font-semibold text-slate-900">
+                  <h4 className={`text-base font-semibold ${tw.textStrong}`}>
                     {f.diplome || "Diplôme non précisé"}
                   </h4>
                   {f.description && (
-                    <p className="text-xs text-indigo-600 font-medium">
+                    <p className={`text-xs ${tw.textPrimary} font-medium`}>
                       {f.description}
                     </p>
                   )}
-                  <p className="text-xs text-slate-600 font-medium">
+                  <p className={`text-xs ${tw.textMuted} font-medium`}>
                     {f.etablissement}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className={`text-xs ${tw.textMuted} mt-1`}>
                     {formatDate(f.date_debut)} —{" "}
                     {f.date_fin ? formatDate(f.date_fin) : "En cours"}
                   </p>
@@ -484,13 +479,13 @@ const ProfilCandidat = () => {
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEditFormation(f)}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.hoverIconActionPrimary}`}
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => handleDeleteForm(f.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -511,12 +506,12 @@ const ProfilCandidat = () => {
             .map((tag) => (
               <span
                 key={tag.trim()}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg shadow-sm"
+                className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-lg shadow-sm ${tw.skillTag}`}
               >
                 {tag.trim()}
                 <button
                   onClick={() => handleRemoveTag("competences", tag)}
-                  className="text-slate-300 hover:text-red-400 transition-colors ml-0.5"
+                  className={`transition-colors ml-0.5 ${tw.skillTagRemove}`}
                 >
                   <X size={11} />
                 </button>
@@ -540,7 +535,7 @@ const ProfilCandidat = () => {
               const el = document.getElementById("comp-input");
               if (el?.value.trim()) { handleAddTag("competences", el.value); el.value = ""; }
             }}
-            className="px-4 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
+            className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${tw.buttonDark}`}
           >
             <Plus size={14} />
           </button>
@@ -559,17 +554,17 @@ const ProfilCandidat = () => {
               return (
                 <div
                   key={l}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${tw.langueChip}`}
                 >
-                  <span className="text-sm font-semibold text-indigo-900">
+                  <span className={`text-sm font-semibold ${tw.langueChipName}`}>
                     {name}
                   </span>
-                  <span className="text-[10px] uppercase px-2 py-0.5 bg-white text-indigo-600 rounded-md font-semibold border border-indigo-100">
+                  <span className={`text-[10px] uppercase px-2 py-0.5 rounded-md font-semibold ${tw.langueChipLevel}`}>
                     {level}
                   </span>
                   <button
                     onClick={() => handleRemoveTag("langues", l)}
-                    className="text-indigo-300 hover:text-red-400 transition-colors"
+                    className={`transition-colors ${tw.langueChipRemove}`}
                   >
                     <X size={11} />
                   </button>
@@ -601,7 +596,7 @@ const ProfilCandidat = () => {
                 setLangName("");
               }
             }}
-            className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors"
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg ${tw.buttonDark}`}
           >
             Ajouter
           </button>

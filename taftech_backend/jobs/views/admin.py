@@ -41,6 +41,31 @@ def _audit(request, action, detail=''):
     AuditLog.objects.create(admin=request.user, action=action, detail=detail, ip=_get_client_ip(request))
 
 
+def _envoyer_email_offre_approuvee(offre):
+    entreprise = offre.entreprise
+    email_destinataire = entreprise.user.email
+    if not email_destinataire:
+        return
+    try:
+        ctx = {
+            'nom_entreprise': entreprise.nom_entreprise,
+            'titre_offre': offre.titre,
+            'annee': timezone.now().year,
+        }
+        html_body = render_to_string('emails/offre_approuvee.html', ctx)
+        texte = f"Votre offre \"{offre.titre}\" a été approuvée et est désormais en ligne sur TafTech."
+        msg = EmailMultiAlternatives(
+            f"Offre approuvée — {offre.titre}",
+            texte,
+            settings.EMAIL_HOST_USER,
+            [email_destinataire],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=True)
+    except Exception:
+        pass
+
+
 class AdminOffresListAPIView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -65,12 +90,15 @@ class AdminOffreModerateAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        statut_avant = offre.statut_moderation
         serializer = OffreEmploiSerializer(offre, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             nouveau_statut = request.data.get('statut_moderation', '')
             action = 'APPROUVER_OFFRE' if nouveau_statut == 'APPROUVEE' else 'REFUSER_OFFRE' if nouveau_statut == 'REFUSEE' else 'AUTRE'
             _audit(request, action, f"offre #{offre.id} - {offre.titre}")
+            if nouveau_statut == 'APPROUVEE' and statut_avant != 'APPROUVEE':
+                _envoyer_email_offre_approuvee(offre)
             return Response({
                 "message": "Offre modérée avec succès !",
                 "offre": OffreDashboardDTO(offre).data
@@ -94,6 +122,29 @@ class AdminEntreprisesListAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
+def _envoyer_email_entreprise_approuvee(entreprise):
+    email_destinataire = entreprise.user.email
+    if not email_destinataire:
+        return
+    try:
+        ctx = {
+            'nom_entreprise': entreprise.nom_entreprise,
+            'annee': timezone.now().year,
+        }
+        html_body = render_to_string('emails/entreprise_approuvee.html', ctx)
+        texte = f"Votre entreprise \"{entreprise.nom_entreprise}\" a été validée sur TafTech."
+        msg = EmailMultiAlternatives(
+            "Entreprise validée — TafTech",
+            texte,
+            settings.EMAIL_HOST_USER,
+            [email_destinataire],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=True)
+    except Exception:
+        pass
+
+
 class AdminEntrepriseModerateAPIView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -102,12 +153,15 @@ class AdminEntrepriseModerateAPIView(APIView):
             entreprise = ProfilEntreprise.objects.get(id=entreprise_id)
         except ProfilEntreprise.DoesNotExist:
             return Response({"error": "Entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        etait_approuvee = entreprise.est_approuvee
         serializer = EntrepriseDashboardDetailSerializer(entreprise, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             approuvee = request.data.get('est_approuvee')
             action = 'APPROUVER_ENTREPRISE' if approuvee is True or approuvee == 'true' else 'REFUSER_ENTREPRISE' if approuvee is False or approuvee == 'false' else 'AUTRE'
             _audit(request, action, f"entreprise #{entreprise.id} - {entreprise.nom_entreprise}")
+            if (approuvee is True or approuvee == 'true') and not etait_approuvee:
+                _envoyer_email_entreprise_approuvee(entreprise)
             return Response({"message": "Statut mis à jour !"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

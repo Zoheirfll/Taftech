@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offre approuvée</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:1px;">TafTech</h1>
+              <p style="margin:4px 0 0;color:#c7d2fe;font-size:13px;">Plateforme de recrutement</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">Bonjour {{ nom_entreprise }},</h2>
+              <p style="color:#475569;font-size:15px;line-height:1.7;margin:0 0 24px;">
+                Bonne nouvelle : votre offre <strong>{{ titre_offre }}</strong> a été
+                <strong style="color:#059669;">approuvée</strong> par notre équipe et est désormais
+                visible publiquement sur TafTech.
+              </p>
+              <p style="color:#475569;font-size:15px;line-height:1.7;margin:0 0 32px;">
+                Cordialement,<br>
+                <strong>L'équipe TafTech</strong>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;color:#94a3b8;font-size:12px;">
+                Vous recevez cet email car vous êtes recruteur sur TafTech.<br>
+                &copy; {{ annee }} TafTech — Tous droits réservés.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

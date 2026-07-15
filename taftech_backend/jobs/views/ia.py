@@ -242,7 +242,7 @@ Secteur souhaité : {profil.secteur_souhaite or 'Non renseigné'}
                     )
                 },
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
-            ], max_tokens=500, temperature=0.7)
+            ], max_tokens=800, temperature=0.7)
             return Response({'analyse': analyse})
         except Exception as e:
             logger.error("Erreur Groq carrière : %s", e)

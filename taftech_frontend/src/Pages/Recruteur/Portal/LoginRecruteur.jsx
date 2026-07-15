@@ -64,7 +64,7 @@ const LoginRecruteur = () => {
             <h2 className="text-2xl font-extrabold leading-snug mb-3">
               Trouvez les meilleurs talents <span className="text-teal-400">d'Algérie</span>
             </h2>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <p className="text-slate-600 text-sm leading-relaxed">
               Matching par intelligence artificielle, CVthèque complète et gestion d'équipe — tout en un.
             </p>
           </div>
@@ -76,7 +76,7 @@ const LoginRecruteur = () => {
               </div>
             ))}
           </div>
-          <div className="mt-10 pt-8 border-t border-slate-800 text-xs text-slate-500">
+          <div className="mt-10 pt-8 border-t border-slate-800 text-xs text-slate-700">
             Vous êtes candidat ?{" "}
             <Link to="/login" className="text-indigo-400 font-semibold hover:underline">
               Espace candidats →
@@ -88,7 +88,7 @@ const LoginRecruteur = () => {
         <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
           <div className="mb-8">
             <h3 className="text-xl font-bold text-slate-900">Connexion Recruteur</h3>
-            <p className="text-sm text-slate-500 mt-1">Accédez à votre espace employeur TAFTECH</p>
+            <p className="text-sm text-slate-700 mt-1">Accédez à votre espace employeur TAFTECH</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -120,7 +120,7 @@ const LoginRecruteur = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-600 transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -156,7 +156,7 @@ const LoginRecruteur = () => {
             </button>
           </form>
 
-          <p className="text-center text-sm text-slate-500 mt-6">
+          <p className="text-center text-sm text-slate-700 mt-6">
             Pas encore de compte ?{" "}
             <Link to="/recruteurs/inscription" className="text-teal-700 font-semibold hover:underline">
               Créer un compte recruteur

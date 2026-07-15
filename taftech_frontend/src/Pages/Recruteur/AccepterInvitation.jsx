@@ -5,6 +5,7 @@ import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { CheckCircle2, Loader2, Eye, EyeOff, Building2, Users } from "lucide-react";
 import logoTafTech from "../../assets/logo-taftech.png";
+import { tw } from "../../theme";
 
 const AccepterInvitation = () => {
   const { token } = useParams();
@@ -62,27 +63,27 @@ const AccepterInvitation = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <Loader2 size={28} className="animate-spin text-indigo-600" />
+    <div className={`min-h-screen flex items-center justify-center ${tw.surfaceMuted}`}>
+      <Loader2 size={28} className={`animate-spin ${tw.textPrimary}`} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
+    <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-12 ${tw.surfaceMuted}`}>
       <Link to="/" className="mb-8">
         <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
       </Link>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 max-w-md w-full">
+      <div className={`${tw.surface} border ${tw.borderBase} rounded-2xl shadow-xl p-8 max-w-md w-full`}>
 
         {erreur && (
           <div className="text-center">
-            <div className="w-14 h-14 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className={`w-14 h-14 ${tw.iconCircleError} rounded-full flex items-center justify-center mx-auto mb-4`}>
               <span className="text-2xl">❌</span>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Lien invalide</h1>
-            <p className="text-sm text-slate-700 mb-6">{erreur}</p>
-            <Link to="/recruteurs/connexion" className="text-sm text-indigo-600 font-semibold hover:underline">
+            <h1 className={`text-xl font-bold ${tw.textStrong} mb-2`}>Lien invalide</h1>
+            <p className={`text-sm ${tw.bodyText} mb-6`}>{erreur}</p>
+            <Link to="/recruteurs/connexion" className={`text-sm ${tw.textPrimary} font-semibold hover:underline`}>
               Retour à la connexion
             </Link>
           </div>
@@ -90,56 +91,56 @@ const AccepterInvitation = () => {
 
         {success && (
           <div className="text-center">
-            <div className="w-14 h-14 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 size={28} className="text-emerald-600" />
+            <div className={`w-14 h-14 ${tw.iconCircleSuccess} rounded-full flex items-center justify-center mx-auto mb-4`}>
+              <CheckCircle2 size={28} className={tw.textSuccess} />
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Invitation acceptée !</h1>
-            <p className="text-sm text-slate-700">Redirection vers votre tableau de bord...</p>
+            <h1 className={`text-xl font-bold ${tw.textStrong} mb-2`}>Invitation acceptée !</h1>
+            <p className={`text-sm ${tw.bodyText}`}>Redirection vers votre tableau de bord...</p>
           </div>
         )}
 
         {!erreur && !success && info && (
           <>
             <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-indigo-50 border-2 border-indigo-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Users size={26} className="text-indigo-600" />
+              <div className={`w-14 h-14 ${tw.iconCirclePrimary} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+                <Users size={26} className={tw.textPrimary} />
               </div>
-              <h1 className="text-xl font-bold text-slate-900">Rejoindre l'équipe</h1>
+              <h1 className={`text-xl font-bold ${tw.textStrong}`}>Rejoindre l'équipe</h1>
               <div className="flex items-center justify-center gap-2 mt-2">
-                <Building2 size={14} className="text-slate-400" />
-                <p className="text-sm text-slate-600 font-semibold">{info.entreprise}</p>
+                <Building2 size={14} className={tw.textMuted} />
+                <p className={`text-sm ${tw.textMuted} font-semibold`}>{info.entreprise}</p>
               </div>
-              <p className="text-xs text-slate-600 mt-1">
-                Vous serez ajouté(e) en tant que <span className="font-semibold text-slate-600">{info.role_display}</span>
+              <p className={`text-xs ${tw.textMuted} mt-1`}>
+                Vous serez ajouté(e) en tant que <span className={`font-semibold ${tw.textMuted}`}>{info.role_display}</span>
               </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs text-slate-600">Invitation pour</p>
-              <p className="text-sm font-semibold text-slate-900">{info.email}</p>
+            <div className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-xl px-4 py-3 mb-5`}>
+              <p className={`text-xs ${tw.textMuted}`}>Invitation pour</p>
+              <p className={`text-sm font-semibold ${tw.textStrong}`}>{info.email}</p>
             </div>
 
             <div className="space-y-4">
               {!info.compte_existant && (
                 <>
-                  <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">Créer votre compte</p>
+                  <p className={`text-xs ${tw.textMuted} font-semibold uppercase tracking-wider`}>Créer votre compte</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Prénom</label>
+                      <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Prénom</label>
                       <input
                         type="text"
                         value={form.first_name}
                         onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        className={`w-full px-3 py-2.5 ${tw.input}`}
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Nom</label>
+                      <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>Nom</label>
                       <input
                         type="text"
                         value={form.last_name}
                         onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        className={`w-full px-3 py-2.5 ${tw.input}`}
                       />
                     </div>
                   </div>
@@ -147,19 +148,19 @@ const AccepterInvitation = () => {
               )}
 
               {info.compte_existant && !info.sans_mot_de_passe && (
-                <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className={`text-xs ${tw.textMuted} ${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl px-4 py-3`}>
                   Un compte TAFTECH existe déjà avec cet email. Entrez votre mot de passe pour confirmer et rejoindre l'équipe.
                 </p>
               )}
 
               {info.sans_mot_de_passe && (
-                <p className="text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                <p className={`text-xs ${tw.textMuted} ${tw.bgBlueSoft} border ${tw.borderBlue} rounded-xl px-4 py-3`}>
                   Votre compte TAFTECH a été créé via Google. Définissez un mot de passe pour accéder à l'espace recruteur.
                 </p>
               )}
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                <label className={`text-xs font-semibold ${tw.textMuted} mb-1 block`}>
                   {info.sans_mot_de_passe ? "Créez un mot de passe recruteur" : info.compte_existant ? "Votre mot de passe" : "Choisissez un mot de passe"} *
                 </label>
                 <div className="relative">
@@ -167,14 +168,14 @@ const AccepterInvitation = () => {
                     type={showPwd ? "text" : "password"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className={`w-full pr-10 ${tw.input}`}
                     placeholder={info.compte_existant && !info.sans_mot_de_passe ? "Votre mot de passe TAFTECH" : "8 caractères minimum"}
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}
                   >
                     {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -185,7 +186,7 @@ const AccepterInvitation = () => {
             <button
               onClick={handleAccepter}
               disabled={saving}
-              className="w-full mt-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className={`w-full mt-6 py-3 text-sm font-bold rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${tw.bgPrimarySolidHover} ${tw.textOnDark}`}
             >
               {saving ? <><Loader2 size={16} className="animate-spin" /> En cours...</> : "Accepter l'invitation"}
             </button>

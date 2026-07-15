@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Info } from "lucide-react";
+import { tw } from "../theme";
 
 const InfoBanner = ({ storageKey, title, children, icon: Icon = Info, color = "indigo" }) => {
   const [visible, setVisible] = useState(() => !localStorage.getItem(`banner_${storageKey}`));
@@ -11,12 +12,7 @@ const InfoBanner = ({ storageKey, title, children, icon: Icon = Info, color = "i
     setVisible(false);
   };
 
-  const colors = {
-    indigo: "bg-indigo-50 border-indigo-200 text-indigo-900 [&_svg]:text-indigo-500",
-    teal:   "bg-teal-50 border-teal-200 text-teal-900 [&_svg]:text-teal-500",
-    amber:  "bg-amber-50 border-amber-200 text-amber-900 [&_svg]:text-amber-500",
-    slate:  "bg-slate-50 border-slate-200 text-slate-800 [&_svg]:text-slate-400",
-  };
+  const colors = tw.bannerColors;
 
   return (
     <div role="alert" className={`border rounded-xl px-4 py-3 flex items-start gap-3 animate-[fadeInDown_0.2s_ease] ${colors[color] || colors.indigo}`}>

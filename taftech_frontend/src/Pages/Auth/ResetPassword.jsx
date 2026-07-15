@@ -4,6 +4,7 @@ import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { KeyRound, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { tw } from "../../theme";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -16,8 +17,6 @@ const ResetPassword = () => {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   const handleOtpChange = (index, e) => {
     const value = e.target.value;
@@ -62,46 +61,46 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
+    <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center px-4`}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <KeyRound size={26} className="text-indigo-600" />
+          <div className={`w-14 h-14 ${tw.bgPrimarySoft} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+            <KeyRound size={26} className={tw.textPrimary} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Nouveau mot de passe</h1>
-          <p className="text-sm text-slate-500 mt-2">
+          <h1 className={tw.pageTitlePetit}>Nouveau mot de passe</h1>
+          <p className={`${tw.bodyText} mt-2`}>
             Entrez le code reçu par email et votre nouveau mot de passe.
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-8">
+        <div className={`${tw.authCardShell} p-8`}>
           {success ? (
             <div className="text-center space-y-4 py-4">
-              <CheckCircle2 size={48} className="text-emerald-500 mx-auto animate-bounce" />
-              <h2 className="text-lg font-bold text-slate-900">Mot de passe réinitialisé !</h2>
-              <p className="text-sm text-slate-500">
+              <CheckCircle2 size={48} className={`${tw.textSuccessIcon} mx-auto animate-bounce`} />
+              <h2 className={`text-lg font-bold ${tw.textStrong}`}>Mot de passe réinitialisé !</h2>
+              <p className={tw.bodyText}>
                 Vous allez être redirigé vers la connexion dans quelques secondes...
               </p>
-              <Link to="/login" className="block w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-center">
+              <Link to="/login" className={`block w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors text-center`}>
                 Se connecter maintenant →
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Email *</label>
+                <label className={`${tw.authLabel} mb-1.5`}>Email *</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="votre@email.dz"
-                  className={inputClass}
+                  className={tw.authInput}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-2 block">Code de vérification *</label>
+                <label className={`${tw.authLabel} mb-2`}>Code de vérification *</label>
                 <div className="flex justify-center gap-2">
                   {otp.map((digit, index) => (
                     <input
@@ -112,14 +111,14 @@ const ResetPassword = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-11 h-12 text-center text-xl font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                      className={`w-11 h-12 text-xl ${tw.otpBoxInput}`}
                     />
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Nouveau mot de passe *</label>
+                <label className={`${tw.authLabel} mb-1.5`}>Nouveau mot de passe *</label>
                 <div className="relative">
                   <input
                     type={showPass ? "text" : "password"}
@@ -127,16 +126,16 @@ const ResetPassword = () => {
                     value={form.nouveau_mdp}
                     onChange={(e) => setForm({ ...form, nouveau_mdp: e.target.value })}
                     placeholder="Minimum 8 caractères"
-                    className={inputClass + " pr-10"}
+                    className={`${tw.authInput} pr-10`}
                   />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-slate-600 mb-1.5 block">Confirmer le mot de passe *</label>
+                <label className={`${tw.authLabel} mb-1.5`}>Confirmer le mot de passe *</label>
                 <div className="relative">
                   <input
                     type={showConfirm ? "text" : "password"}
@@ -144,9 +143,9 @@ const ResetPassword = () => {
                     value={form.confirmer_mdp}
                     onChange={(e) => setForm({ ...form, confirmer_mdp: e.target.value })}
                     placeholder="Répétez le mot de passe"
-                    className={inputClass + " pr-10"}
+                    className={`${tw.authInput} pr-10`}
                   />
-                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                     {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
@@ -155,9 +154,9 @@ const ResetPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className={`w-full py-2.5 ${tw.bgPrimarySolidHover} ${tw.textOnDark} text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
               >
-                {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {loading && <span className={`w-4 h-4 ${tw.spinnerOnDark}`} />}
                 {loading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
               </button>
             </form>
@@ -165,7 +164,7 @@ const ResetPassword = () => {
         </div>
 
         <div className="text-center mt-4">
-          <Link to="/login" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition-colors">
+          <Link to="/login" className={`inline-flex items-center gap-1 text-sm ${tw.linkMutedHover}`}>
             <ArrowLeft size={14} /> Retour à la connexion
           </Link>
         </div>

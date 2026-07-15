@@ -99,39 +99,39 @@ const LandingRecruteur = () => {
     <div className="bg-white">
 
       {/* ─── HERO ─── */}
-      <section className="bg-white border-b border-slate-100">
+      <section className={tw.landingHeroBorder}>
         <div className="max-w-7xl mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
           {/* TEXTE */}
           <div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-900 leading-tight mb-6">
+            <h1 className={`text-4xl lg:text-5xl font-extrabold ${tw.textStrong} leading-tight mb-6`}>
               Publiez vos annonces.
               <br />
-              <span className="text-teal-700">Trouvez les meilleurs</span>
+              <span className={tw.textTeal}>Trouvez les meilleurs</span>
               <br />
               talents en un temps record.
             </h1>
-            <p className="text-slate-700 text-lg leading-relaxed mb-8 max-w-lg">
+            <p className={`${tw.bodyTextGrand} text-lg leading-relaxed mb-8 max-w-lg`}>
               TAFTECH connecte les entreprises algériennes aux profils qualifiés grâce à l'intelligence artificielle. Matching automatique, CVthèque nationale, gestion complète.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
               <Link
                 to="/recruteurs/inscription"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-teal-700 text-white font-bold rounded-xl hover:bg-teal-800 transition-colors shadow-md text-base"
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 ${tw.buttonTealSolidLg} text-base`}
               >
                 Publier une annonce maintenant <ArrowRight size={18} />
               </Link>
               <Link
                 to="/recruteurs/connexion"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors text-base"
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 ${tw.buttonSlateSoftLg} text-base`}
               >
                 Se connecter <ChevronRight size={16} />
               </Link>
             </div>
             <div className="flex flex-wrap gap-4">
               {["Gratuit au lancement", "Sans engagement", "Validé ANPDP"].map((item) => (
-                <div key={item} className="flex items-center gap-1.5 text-sm text-slate-700">
-                  <CheckCircle size={14} className="text-teal-600" />
+                <div key={item} className={`flex items-center gap-1.5 text-sm ${tw.bodyTextGrand}`}>
+                  <CheckCircle size={14} className={tw.iconMuted} />
                   {item}
                 </div>
               ))}
@@ -140,20 +140,20 @@ const LandingRecruteur = () => {
 
           {/* CARTE STATS — Fix 4 badge responsive */}
           <div className="relative">
-            <div className="bg-slate-900 rounded-3xl p-8 text-white">
-              <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-6">TAFTECH en chiffres</p>
+            <div className={tw.landingStatsPanelDark}>
+              <p className={`text-xs font-semibold ${tw.textTealLight} uppercase tracking-wider mb-6`}>TAFTECH en chiffres</p>
               <div className="space-y-4">
                 {[
-                  { label: "Offres actives",        value: fmt(stats?.total_offres),      color: "bg-teal-500" },
-                  { label: "Entreprises vérifiées", value: fmt(stats?.total_entreprises), color: "bg-indigo-500" },
-                  { label: "Candidats inscrits",    value: fmt(stats?.total_candidats),   color: "bg-emerald-500" },
+                  { label: "Offres actives",        value: fmt(stats?.total_offres),      color: tw.landingStatsDotTeal },
+                  { label: "Entreprises vérifiées", value: fmt(stats?.total_entreprises), color: tw.landingStatsDotIndigo },
+                  { label: "Candidats inscrits",    value: fmt(stats?.total_candidats),   color: tw.landingStatsDotEmerald },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+                  <div key={label} className={tw.landingStatsRow}>
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${color}`} />
-                      <span className="text-sm text-slate-300">{label}</span>
+                      <span className={tw.landingStatsLabel}>{label}</span>
                     </div>
-                    <span className="text-base font-bold text-white">{value}</span>
+                    <span className={`text-base font-bold ${tw.textOnDark}`}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -163,7 +163,7 @@ const LandingRecruteur = () => {
       </section>
 
       {/* ─── STATS — Fix 1 + Fix 2 icônes ─── */}
-      <section className="bg-teal-700 py-12">
+      <section className={tw.landingStatsBandTeal}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
@@ -172,11 +172,11 @@ const LandingRecruteur = () => {
               { icon: Users,     value: fmt(stats?.total_candidats),   label: "Candidats inscrits" },
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="text-center flex flex-col items-center gap-2">
-                <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center mb-1">
-                  <Icon size={22} className="text-teal-100" />
+                <div className={tw.landingStatsIconBox}>
+                  <Icon size={22} className={tw.landingStatsIconColor} />
                 </div>
-                <p className="text-3xl font-extrabold text-white">{value}</p>
-                <p className="text-sm text-teal-200">{label}</p>
+                <p className={`text-3xl font-extrabold ${tw.textOnDark}`}>{value}</p>
+                <p className={tw.landingStatsCaption}>{label}</p>
               </div>
             ))}
           </div>

@@ -128,6 +128,9 @@ export const tw = {
   borderStrong: "border-slate-300",
   divideBase: "divide-slate-100",
 
+  // Anneau de focus clavier générique (accessibilité) — à ajouter sur les boutons d'action
+  focusRing: "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-indigo-500",
+
   // === PRIMAIRE (INDIGO) ===
   textPrimary: "text-indigo-600",
   textPrimaryStrong: "text-indigo-700",
@@ -358,9 +361,9 @@ export const tw = {
   borderOnDark20: "border-white/20",
   textAmberOnDark: "text-amber-300",
 
-  // Admin sidebar (fond slate-900, liens actifs/inactifs)
-  adminNavLinkActive: "bg-indigo-600 text-white",
-  adminNavLinkInactive: "text-slate-600 hover:bg-slate-800 hover:text-white",
+  // Admin sidebar (fond clair, liens actifs/inactifs)
+  adminNavLinkActive: "bg-indigo-50 text-indigo-700",
+  adminNavLinkInactive: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
 
   // === CERCLES D'ICÔNES SÉMANTIQUES (états succès/erreur/info) ===
   iconCircleError: "bg-red-100 border border-red-200",
@@ -806,6 +809,18 @@ export const tw = {
     amber: "border-amber-100",
     indigo: "border-indigo-100",
     red: "border-red-100",
+  },
+
+  // === ADMIN STATISTIQUES — chips icône KPI (fond plein + icône blanche) ===
+  // Uniquement les 2 couleurs de marque TafTech (indigo/teal) + ambre/rouge réservés aux alertes
+  kpiIconBg: {
+    blue: "bg-indigo-600",
+    violet: "bg-teal-600",
+    pink: "bg-indigo-600",
+    emerald: "bg-teal-600",
+    amber: "bg-amber-500",
+    indigo: "bg-indigo-600",
+    red: "bg-red-500",
   },
 };
 

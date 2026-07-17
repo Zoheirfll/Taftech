@@ -3,10 +3,10 @@ import { reportError } from "../utils/errorReporter";
 
 export const adminService = {
   // Offres
-  getAdminOffres: async (page = 1, search = "") => {
+  getAdminOffres: async (page = 1, search = "", statut = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/offres/?page=${page}&search=${search}`,
+        `jobs/admin/offres/?page=${page}&search=${search}&statut=${statut}&ordering=${ordering}`,
       );
       return response.data;
     } catch (err) {
@@ -29,10 +29,10 @@ export const adminService = {
   },
 
   // Entreprises
-  getAdminEntreprises: async (page = 1, search = "") => {
+  getAdminEntreprises: async (page = 1, search = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/entreprises/?page=${page}&search=${search}`,
+        `jobs/admin/entreprises/?page=${page}&search=${search}&ordering=${ordering}`,
       );
       return response.data;
     } catch (err) {
@@ -66,10 +66,10 @@ export const adminService = {
   },
 
   // Utilisateurs
-  getAdminUsers: async (page = 1, search = "") => {
+  getAdminUsers: async (page = 1, search = "", role = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/utilisateurs/?page=${page}&search=${search}`,
+        `jobs/admin/utilisateurs/?page=${page}&search=${search}&role=${role}&ordering=${ordering}`,
       );
       return response.data;
     } catch (err) {
@@ -92,10 +92,10 @@ export const adminService = {
   },
 
   // Candidatures
-  getAdminCandidatures: async (page = 1, search = "") => {
+  getAdminCandidatures: async (page = 1, search = "", statut = "", ordering = "") => {
     try {
       const response = await api.get(
-        `/jobs/admin/candidatures/?page=${page}&search=${search}`,
+        `/jobs/admin/candidatures/?page=${page}&search=${search}&statut=${statut}&ordering=${ordering}`,
       );
       return response.data;
     } catch (err) {

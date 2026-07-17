@@ -24,12 +24,12 @@ const AdminAuditLogs = () => {
   const [prevUrl, setPrevUrl] = useState(null);
   const PAGE_SIZE = 20;
 
-  const fetchLogs = async (url = null) => {
+  const fetchLogs = async (url = null, searchValue = search) => {
     setLoading(true);
     try {
       const res = url
         ? await api.get(url)
-        : await api.get(`jobs/admin/audit-logs/?page=${page}&page_size=${PAGE_SIZE}`);
+        : await api.get(`jobs/admin/audit-logs/?page=${page}&page_size=${PAGE_SIZE}&search=${encodeURIComponent(searchValue)}`);
       setLogs(res.data.results || []);
       setTotalCount(res.data.count || 0);
       setNextUrl(res.data.next);
@@ -42,17 +42,18 @@ const AdminAuditLogs = () => {
     }
   };
 
-  useEffect(() => { fetchLogs(); }, [page]);
+  useEffect(() => { fetchLogs(); }, [page]); // eslint-disable-line
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setPage(1);
+      fetchLogs(null, search);
+    }, 350);
+    return () => clearTimeout(delay);
+  }, [search]); // eslint-disable-line
 
   const handleNext = () => { setPage((p) => p + 1); };
   const handlePrev = () => { setPage((p) => Math.max(1, p - 1)); };
-
-  const filtered = logs.filter((l) =>
-    search === "" ||
-    l.admin.toLowerCase().includes(search.toLowerCase()) ||
-    l.detail.toLowerCase().includes(search.toLowerCase()) ||
-    l.action.toLowerCase().includes(search.toLowerCase())
-  );
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -69,7 +70,7 @@ const AdminAuditLogs = () => {
           )}
         </div>
         <button
-          onClick={() => { setPage(1); fetchLogs(); }}
+          onClick={() => { if (page === 1) fetchLogs(); else setPage(1); }}
           className={`flex items-center gap-2 text-sm ${tw.textMutedHoverPrimary} transition`}
         >
           <RefreshCw size={14} /> Actualiser
@@ -86,7 +87,7 @@ const AdminAuditLogs = () => {
 
       {loading ? (
         <p className={`${tw.textMuted} text-sm`}>Chargement...</p>
-      ) : filtered.length === 0 ? (
+      ) : logs.length === 0 ? (
         <p className={`${tw.textMuted} text-sm`}>Aucun log trouvé.</p>
       ) : (
         <>
@@ -102,7 +103,7 @@ const AdminAuditLogs = () => {
                 </tr>
               </thead>
               <tbody className={tw.divideBase}>
-                {filtered.map((log) => {
+                {logs.map((log) => {
                   const meta = ACTION_LABELS[log.action] || ACTION_LABELS.AUTRE;
                   return (
                     <tr key={log.id} className={tw.rowHover}>

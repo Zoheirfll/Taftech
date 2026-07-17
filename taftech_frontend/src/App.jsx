@@ -146,6 +146,7 @@ const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
 const AdminCandidatures = lazy(() => import("./Pages/Admin/AdminCandidatures"));
 const AdminSystemLogs   = lazy(() => import("./Pages/Admin/AdminSystemLogs"));
+const AdminDemandesPremium = lazy(() => import("./Pages/Admin/AdminDemandesPremium"));
 
 if (import.meta.env.MODE === "production") {
   const noop = () => {};
@@ -272,6 +273,7 @@ function AppContent() {
               <Route path="utilisateurs" element={<AdminUsers />} />
               <Route path="broadcast" element={<AdminBroadcast />} />
               <Route path="candidatures" element={<AdminCandidatures />} />
+              <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
               <Route path="audit" element={<AdminAuditLogs />} />
               <Route path="comptes-admins" element={<AdminComptes />} />

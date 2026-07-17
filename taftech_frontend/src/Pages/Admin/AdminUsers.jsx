@@ -3,7 +3,17 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { Search, Download, X } from "lucide-react";
+import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
+import { tw } from "../../theme";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import SortableTh from "../../Components/SortableTh";
+
+const ROLE_TABS = [
+  { key: "", label: "Tous", icon: Users2 },
+  { key: "CANDIDAT", label: "Candidats", icon: GraduationCap },
+  { key: "RECRUTEUR", label: "Recruteurs", icon: Briefcase },
+  { key: "ADMIN", label: "Admins", icon: Shield },
+];
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -12,14 +22,18 @@ const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [roleFiltre, setRoleFiltre] = useState("");
+  const [counts, setCounts] = useState({ CANDIDAT: 0, RECRUTEUR: 0, ADMIN: 0 });
+  const [ordering, setOrdering] = useState("-date_joined");
 
   const chargerUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminUsers(currentPage, searchTerm);
+      const data = await jobsService.getAdminUsers(currentPage, searchTerm, roleFiltre, ordering);
       if (data.results) {
         setUsers(data.results);
         setTotalPages(Math.ceil(data.count / 5));
+        if (data.counts) setCounts(data.counts);
       } else setUsers(data);
     } catch (err) {
       toast.error("Erreur de chargement.");
@@ -27,7 +41,12 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, roleFiltre, ordering]);
+
+  const handleSort = (field) => {
+    setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const delay = setTimeout(() => chargerUsers(), 300);
@@ -80,7 +99,7 @@ const AdminUsers = () => {
   const renderTags = (data) => {
     if (!data)
       return (
-        <span className="text-slate-600 italic text-xs">Non renseigné</span>
+        <span className={`${tw.textMuted} italic text-xs`}>Non renseigné</span>
       );
     return (
       <div className="flex flex-wrap gap-1.5">
@@ -90,7 +109,7 @@ const AdminUsers = () => {
           .map((item, idx) => (
             <span
               key={idx}
-              className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-medium rounded-md border border-slate-200"
+              className={`px-2 py-0.5 ${tw.surfaceMuted} ${tw.textSlate800} text-[10px] font-medium rounded-md border ${tw.borderBase}`}
             >
               {item.trim()}
             </span>
@@ -105,29 +124,27 @@ const AdminUsers = () => {
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Utilisateurs inscrits
-          </h1>
-          <p className="text-sm text-slate-700 mt-0.5">
+          <h1 className={tw.pageTitle}>Utilisateurs inscrits</h1>
+          <p className={`${tw.pageSubtitle} mt-0.5`}>
             Gestion de la communauté TAFTECH.
           </p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+            className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
           >
             <Download size={15} /> Exporter
           </button>
           <div className="relative flex-1 md:w-72">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
             />
             <input
               type="text"
               placeholder="Nom ou email..."
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+              className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-lg text-sm`}
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -138,31 +155,49 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="flex flex-wrap gap-2">
+        {ROLE_TABS.map(({ key, label, icon: Icon }) => {
+          const count = key ? counts[key] : Object.values(counts).reduce((a, b) => a + b, 0);
+          const active = roleFiltre === key;
+          return (
+            <button
+              key={key || "TOUS"}
+              onClick={() => { setRoleFiltre(key); setCurrentPage(1); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                active ? tw.bgPrimarySolid : `${tw.surfaceMuted} ${tw.textMuted700} ${tw.hoverSurfaceSubtleStrong}`
+              }`}
+            >
+              <Icon size={15} /> {label}
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  active ? "bg-white/20" : `${tw.surface} ${tw.textMuted}`
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
-              <th className="px-5 py-3">Identité</th>
+          <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
+            <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
+              <SortableTh field="last_name" label="Identité" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
               <th className="px-5 py-3">Rôle</th>
-              <th className="px-5 py-3">Inscription</th>
+              <SortableTh field="date_joined" label="Inscription" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className={`divide-y ${tw.divideBase}`}>
             {loading && users.length === 0 ? (
-              <tr>
-                <td
-                  colSpan="4"
-                  className="py-12 text-center text-sm text-indigo-600 animate-pulse font-medium"
-                >
-                  Chargement...
-                </td>
-              </tr>
+              <SkeletonTableRows columns={4} />
             ) : users.length === 0 ? (
               <tr>
                 <td
                   colSpan="4"
-                  className="py-12 text-center text-sm text-slate-600 italic"
+                  className={`py-12 text-center text-sm ${tw.textMuted} italic`}
                 >
                   Aucun utilisateur trouvé.
                 </td>
@@ -171,11 +206,11 @@ const AdminUsers = () => {
               users.map((user) => (
                 <tr
                   key={user.id}
-                  className={`hover:bg-slate-50 transition-colors ${!user.is_active ? "bg-red-50/30" : ""}`}
+                  className={`${tw.rowHover} ${!user.is_active ? "bg-red-50/30" : ""}`}
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 overflow-hidden flex-shrink-0 border border-white shadow-sm">
+                      <div className={`w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center ${tw.textSlate800} overflow-hidden shrink-0 border border-white shadow-sm`}>
                         {user.profil_candidat?.photo_profil ? (
                           <img
                             src={mediaUrl(user.profil_candidat.photo_profil)}
@@ -190,28 +225,28 @@ const AdminUsers = () => {
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {user.last_name} {user.first_name}
                         </p>
-                        <p className="text-xs text-indigo-600">{user.email}</p>
+                        <p className={`text-xs ${tw.textPrimary}`}>{user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-4">
                     <span
-                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${user.role === "CANDIDAT" ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}
+                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${user.role === "CANDIDAT" ? tw.scoreHigh : "bg-violet-50 text-violet-700"}`}
                     >
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-xs text-slate-700 font-medium">
+                  <td className={`px-5 py-4 text-xs ${tw.textMuted700} font-medium`}>
                     {new Date(user.date_joined).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => setSelectedUser(user)}
-                        className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                        className={`px-3 py-1.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg ${tw.bgIndigoHover100} transition-colors ${tw.focusRing}`}
                       >
                         Inspecter
                       </button>
@@ -219,7 +254,7 @@ const AdminUsers = () => {
                         onClick={() =>
                           handleToggleBlock(user.id, user.is_active)
                         }
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${user.is_active ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${user.is_active ? tw.dangerPillSoft : tw.buttonSuccessSolid}`}
                       >
                         {user.is_active ? "Bloquer" : "Débloquer"}
                       </button>
@@ -231,21 +266,21 @@ const AdminUsers = () => {
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1 || loading}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               ← Précédent
             </button>
-            <span className="text-xs font-medium text-slate-600">
+            <span className={`text-xs font-medium ${tw.textMuted}`}>
               Page {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages || loading}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-slate-100 transition-colors"
+              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
             >
               Suivant →
             </button>
@@ -254,11 +289,11 @@ const AdminUsers = () => {
       </div>
 
       {selectedUser && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-7 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
+        <div className={tw.modalOverlay + " p-4"}>
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+            <div className={`flex justify-between items-start mb-6 pb-4 border-b ${tw.borderSubtle}`}>
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
+                <div className={`w-14 h-14 rounded-xl ${tw.surfaceMuted} flex items-center justify-center overflow-hidden border ${tw.borderBase}`}>
                   {selectedUser.profil_candidat?.photo_profil ? (
                     <img
                       src={mediaUrl(
@@ -272,15 +307,15 @@ const AdminUsers = () => {
                   )}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className={`text-xl font-bold ${tw.textStrong}`}>
                     {selectedUser.last_name} {selectedUser.first_name}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-slate-700">
+                    <span className={`text-sm ${tw.textMuted700}`}>
                       @{selectedUser.username}
                     </span>
                     <span
-                      className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${selectedUser.is_active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${selectedUser.is_active ? tw.scoreHigh : "bg-red-50 text-red-700"}`}
                     >
                       {selectedUser.is_active ? "Actif" : "Bloqué"}
                     </span>
@@ -289,42 +324,42 @@ const AdminUsers = () => {
               </div>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="p-1.5 text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}
               >
                 <X size={18} />
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
+              <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
+                <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
                   Contact & Compte
                 </p>
-                <p className="text-sm text-slate-800 font-medium">
+                <p className={`text-sm ${tw.textSlate800} font-medium`}>
                   📧 {selectedUser.email}
                 </p>
-                <p className="text-sm text-slate-800 font-medium mt-1">
+                <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
                   📞 {selectedUser.telephone || "Non renseigné"}
                 </p>
-                <p className="text-xs text-indigo-600 font-semibold mt-1 uppercase">
+                <p className={`text-xs ${tw.textPrimary} font-semibold mt-1 uppercase`}>
                   {selectedUser.role}
                 </p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
+              <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
+                <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
                   Légal & Identité
                 </p>
-                <p className="text-sm text-slate-800 font-medium font-mono">
+                <p className={`text-sm ${tw.textSlate800} font-medium font-mono`}>
                   NIN: {selectedUser.nin || "N/A"}
                 </p>
-                <p className="text-sm text-slate-800 font-medium mt-1">
+                <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
                   Adresse : {selectedUser.profil_candidat?.adresse || "N/A"}
                 </p>
-                <p className="text-sm text-slate-800 font-medium mt-1">
+                <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
                   Né(e) le : {selectedUser.date_naissance || "N/A"}
                 </p>
                 <span
-                  className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}
+                  className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? tw.scoreHigh : "bg-red-50 text-red-600"}`}
                 >
                   {selectedUser.consentement_loi_18_07
                     ? "✅ Loi 18-07 acceptée"
@@ -336,11 +371,11 @@ const AdminUsers = () => {
             {selectedUser.role === "CANDIDAT" &&
               selectedUser.profil_candidat && (
                 <div className="space-y-5">
-                  <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
+                  <h3 className={`text-base font-bold ${tw.textStrong} border-b ${tw.borderSubtle} pb-2`}>
                     Dossier candidat
                   </h3>
 
-                  <div className="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className={`${tw.bgPrimarySoftLight} p-5 rounded-xl border border-indigo-100 grid grid-cols-1 sm:grid-cols-2 gap-4`}>
                     <div>
                       <p className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">
                         Titre
@@ -387,7 +422,7 @@ const AdminUsers = () => {
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
+                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-3`}>
                       Préférences
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -419,12 +454,12 @@ const AdminUsers = () => {
                       ].map(({ label, value }) => (
                         <div
                           key={label}
-                          className="bg-slate-50 p-3 rounded-lg border border-slate-100"
+                          className={`${tw.surfaceMuted} p-3 rounded-lg border ${tw.borderSubtle}`}
                         >
-                          <p className="text-[10px] font-semibold text-slate-600 uppercase">
+                          <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase`}>
                             {label}
                           </p>
-                          <p className="text-xs font-semibold text-slate-800 mt-1">
+                          <p className={`text-xs font-semibold ${tw.textSlate800} mt-1`}>
                             {value}
                           </p>
                         </div>
@@ -435,7 +470,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.experiences_detail?.length >
                     0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-3`}>
                         Expériences
                       </p>
                       <div className="space-y-3">
@@ -445,18 +480,18 @@ const AdminUsers = () => {
                               key={exp.id}
                               className="pl-4 border-l-2 border-indigo-100"
                             >
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className={`text-sm font-semibold ${tw.textStrong}`}>
                                 {exp.titre_poste}{" "}
-                                <span className="text-indigo-600">
+                                <span className={tw.textPrimary}>
                                   @ {exp.entreprise}
                                 </span>
                               </p>
-                              <p className="text-xs text-slate-600 mt-0.5">
+                              <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                                 {exp.date_debut} —{" "}
                                 {exp.date_fin || "Aujourd'hui"}
                               </p>
                               {exp.description && (
-                                <p className="text-xs text-slate-600 mt-1">
+                                <p className={`text-xs ${tw.textMuted} mt-1`}>
                                   {exp.description}
                                 </p>
                               )}
@@ -470,7 +505,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.formations_detail?.length >
                     0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-3">
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-3`}>
                         Formations
                       </p>
                       <div className="space-y-3">
@@ -480,10 +515,10 @@ const AdminUsers = () => {
                               key={form.id}
                               className="pl-4 border-l-2 border-slate-200"
                             >
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className={`text-sm font-semibold ${tw.textStrong}`}>
                                 {form.diplome}
                               </p>
-                              <p className="text-xs text-slate-700">
+                              <p className={`text-xs ${tw.textMuted700}`}>
                                 {form.etablissement} · {form.date_debut} —{" "}
                                 {form.date_fin}
                               </p>
@@ -494,15 +529,15 @@ const AdminUsers = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
                         Compétences
                       </p>
                       {renderTags(selectedUser.profil_candidat.competences)}
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
                         Langues
                       </p>
                       {renderTags(selectedUser.profil_candidat.langues)}
@@ -515,7 +550,7 @@ const AdminUsers = () => {
                         href={mediaUrl(selectedUser.profil_candidat.cv_pdf)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors shadow-sm"
+                        className={`inline-flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
                       >
                         📄 Télécharger le CV PDF
                       </a>

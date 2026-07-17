@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Search, Download } from "lucide-react";
 import { tw } from "../../theme";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import { TooltipIcon } from "../../Components/Tooltip";
+import SortableTh from "../../Components/SortableTh";
 
 const getBadgeStyle = (statut) => {
   const styles = {
@@ -22,11 +26,13 @@ const AdminCandidatures = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [statutFiltre, setStatutFiltre] = useState("");
+  const [ordering, setOrdering] = useState("-date_postulation");
 
-  const fetchCandidatures = async (currentPage = 1, search = "") => {
+  const fetchCandidatures = async (currentPage = 1, search = "", statut = statutFiltre, order = ordering) => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminCandidatures(currentPage, search);
+      const data = await jobsService.getAdminCandidatures(currentPage, search, statut, order);
       setCandidatures(data.results);
       setTotalPages(Math.ceil(data.count / 10));
     } catch (err) {
@@ -38,13 +44,18 @@ const AdminCandidatures = () => {
   };
 
   useEffect(() => {
-    fetchCandidatures(page, searchTerm);
-  }, [page]); // eslint-disable-line
+    fetchCandidatures(page, searchTerm, statutFiltre, ordering);
+  }, [page, statutFiltre, ordering]); // eslint-disable-line
+
+  const handleSort = (field) => {
+    setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
+    setPage(1);
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchCandidatures(1, searchTerm);
+    fetchCandidatures(1, searchTerm, statutFiltre);
   };
 
   const handleExport = async () => {
@@ -102,6 +113,18 @@ const AdminCandidatures = () => {
               className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
             />
           </div>
+          <select
+            value={statutFiltre}
+            onChange={(e) => { setStatutFiltre(e.target.value); setPage(1); }}
+            className={`${tw.inputColorsMuted} rounded-lg text-sm px-3`}
+          >
+            <option value="">Tous statuts</option>
+            <option value="RECUE">Reçue</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="ENTRETIEN">Entretien</option>
+            <option value="RETENU">Retenu</option>
+            <option value="REFUSE">Refusé</option>
+          </select>
           <button
             type="submit"
             className={`px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}
@@ -116,24 +139,28 @@ const AdminCandidatures = () => {
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className={`${tw.surfaceMuted} border-b ${tw.borderSubtle} text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
-                <th className="px-4 py-3 text-left">Date & ID</th>
+                <SortableTh field="date_postulation" label="Date & ID" ordering={ordering} onSort={handleSort} className="px-4 py-3" />
                 <th className="px-4 py-3 text-left">Candidat</th>
                 <th className="px-4 py-3 text-left">Offre & Entreprise</th>
-                <th className="px-4 py-3 text-center">Score IA</th>
-                <th className="px-4 py-3 text-center">Note entretien</th>
+                <SortableTh
+                  field="score_matching"
+                  label={<span className="inline-flex items-center gap-1">Score IA <TooltipIcon text="Score de compatibilité calculé automatiquement (spécialité, diplôme, expérience, région, compétences). Absent pour les candidatures rapides (sans profil)." /></span>}
+                  ordering={ordering}
+                  onSort={handleSort}
+                  className="px-4 py-3"
+                  align="center"
+                />
+                <th className="px-4 py-3 text-center">
+                  <span className="inline-flex items-center gap-1">
+                    Note entretien <TooltipIcon text="Note /20 donnée par le recruteur après entretien (moyenne de 4 critères : technique, communication, motivation, expérience)." />
+                  </span>
+                </th>
                 <th className="px-4 py-3 text-center">Statut</th>
               </tr>
             </thead>
             <tbody className={tw.divideBase}>
               {loading ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className={`py-12 text-center text-sm font-medium ${tw.textPrimary} animate-pulse`}
-                  >
-                    Chargement...
-                  </td>
-                </tr>
+                <SkeletonTableRows columns={6} />
               ) : candidatures.length === 0 ? (
                 <tr>
                   <td
@@ -168,12 +195,32 @@ const AdminCandidatures = () => {
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className={`text-sm font-semibold ${tw.textStrong} truncate max-w-[200px]`}>
-                        {cand.offre_titre}
-                      </p>
-                      <p className={`text-xs ${tw.textMuted700}`}>
-                        {cand.entreprise_nom}
-                      </p>
+                      {cand.offre_id ? (
+                        <Link
+                          to={`/jobs/${cand.offre_id}`}
+                          target="_blank"
+                          className={`text-sm font-semibold ${tw.textStrong} hover:underline truncate max-w-[200px] block`}
+                        >
+                          {cand.offre_titre}
+                        </Link>
+                      ) : (
+                        <p className={`text-sm font-semibold ${tw.textStrong} truncate max-w-[200px]`}>
+                          {cand.offre_titre}
+                        </p>
+                      )}
+                      {cand.entreprise_slug ? (
+                        <Link
+                          to={`/entreprise/${cand.entreprise_slug}`}
+                          target="_blank"
+                          className={`text-xs ${tw.textPrimary} hover:underline`}
+                        >
+                          {cand.entreprise_nom}
+                        </Link>
+                      ) : (
+                        <p className={`text-xs ${tw.textMuted700}`}>
+                          {cand.entreprise_nom}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {cand.est_rapide ? (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { Link } from "react-router-dom";
 import {
   Search,
   Download,
@@ -10,8 +11,12 @@ import {
   CheckCircle,
   XCircle,
   X,
+  Building2,
+  Users,
 } from "lucide-react";
 import { tw } from "../../theme";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import SortableTh from "../../Components/SortableTh";
 
 const getBadge = (offre) => {
   if (offre.est_cloturee)
@@ -66,27 +71,67 @@ const AdminOffres = () => {
   const [selectedOffre, setSelectedOffre] = useState(null);
   const [motifRejet, setMotifRejet] = useState("");
   const [showTop5Only, setShowTop5Only] = useState(false);
+  const [statutFiltre, setStatutFiltre] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [ordering, setOrdering] = useState("-date_publication");
 
   const chargerOffres = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminOffres(currentPage, searchTerm);
+      const data = await jobsService.getAdminOffres(currentPage, searchTerm, statutFiltre, ordering);
       if (data.results) {
         setOffres(data.results);
         setTotalPages(Math.ceil(data.count / 5));
       } else setOffres(data);
+      setSelectedIds([]);
     } catch (err) {
       toast.error("Erreur d'accès aux offres.");
       reportError("ECHEC_CHARGEMENT_OFFRES_ADMIN", err);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, statutFiltre, ordering]);
+
+  const handleSort = (field) => {
+    setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const delay = setTimeout(() => chargerOffres(), 300);
     return () => clearTimeout(delay);
   }, [chargerOffres]);
+
+  const offresSelectionnables = offres.filter((o) => o.statut_moderation !== "APPROUVEE" && !o.est_cloturee);
+  const toutSelectionne = offresSelectionnables.length > 0 && offresSelectionnables.every((o) => selectedIds.includes(o.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(toutSelectionne ? [] : offresSelectionnables.map((o) => o.id));
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleApprouverSelection = async () => {
+    if (!window.confirm(`Approuver ${selectedIds.length} offre(s) sélectionnée(s) ?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          jobsService.moderateOffre(id, { statut_moderation: "APPROUVEE", motif_rejet: "" })
+        )
+      );
+      toast.success(`${selectedIds.length} offre(s) approuvée(s) !`);
+      chargerOffres();
+    } catch (err) {
+      toast.error("Erreur lors de l'approbation groupée.");
+      reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", err);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const handleApprouver = async (id) => {
     if (window.confirm("Publier cette offre en ligne ?")) {
@@ -179,6 +224,17 @@ const AdminOffres = () => {
           >
             <Download size={15} /> Exporter
           </button>
+          <select
+            value={statutFiltre}
+            onChange={(e) => { setStatutFiltre(e.target.value); setCurrentPage(1); }}
+            className={`${tw.inputColorsWhite} rounded-lg text-sm px-3 py-2.5`}
+          >
+            <option value="">Tous statuts</option>
+            <option value="EN_ATTENTE">En attente</option>
+            <option value="APPROUVEE">Approuvées</option>
+            <option value="REJETEE">Rejetées</option>
+            <option value="CLOTUREE">Clôturées</option>
+          </select>
           <div className="relative flex-1 md:w-72">
             <Search
               size={14}
@@ -198,31 +254,57 @@ const AdminOffres = () => {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className={`flex items-center justify-between ${tw.bgPrimarySoft} border border-indigo-200 rounded-xl px-4 py-3`}>
+          <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>
+            {selectedIds.length} offre(s) sélectionnée(s)
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${tw.surface} ${tw.textMuted} ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleApprouverSelection}
+              disabled={bulkLoading}
+              className={`flex items-center gap-2 px-3 py-1.5 ${tw.buttonSuccessSolid} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.focusRing}`}
+            >
+              <CheckCircle size={14} /> Approuver la sélection
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
-              <th className="px-5 py-3">Offre & Entreprise</th>
-              <th className="px-5 py-3">Date</th>
-              <th className="px-5 py-3">Expiration</th>
+              <th className="px-4 py-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={toutSelectionne}
+                  onChange={toggleSelectAll}
+                  disabled={offresSelectionnables.length === 0}
+                  className={`rounded ${tw.focusRing}`}
+                  aria-label="Sélectionner toutes les offres modérables"
+                />
+              </th>
+              <SortableTh field="titre" label="Offre & Entreprise" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
+              <SortableTh field="date_publication" label="Date" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
+              <SortableTh field="date_expiration" label="Expiration" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
               <th className="px-5 py-3">Statut</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${tw.divideBase}`}>
             {loading && offres.length === 0 ? (
-              <tr>
-                <td
-                  colSpan="4"
-                  className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}
-                >
-                  Chargement...
-                </td>
-              </tr>
+              <SkeletonTableRows columns={6} />
             ) : offres.length === 0 ? (
               <tr>
                 <td
-                  colSpan="4"
+                  colSpan="6"
                   className={`py-12 text-center text-sm ${tw.textMuted} italic`}
                 >
                   Aucune offre trouvée.
@@ -234,13 +316,44 @@ const AdminOffres = () => {
                   key={offre.id}
                   className={tw.rowHover}
                 >
+                  <td className="px-4 py-4">
+                    {offre.statut_moderation !== "APPROUVEE" && !offre.est_cloturee && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(offre.id)}
+                        onChange={() => toggleSelectOne(offre.id)}
+                        className={`rounded ${tw.focusRing}`}
+                        aria-label={`Sélectionner l'offre ${offre.titre}`}
+                      />
+                    )}
+                  </td>
                   <td className="px-5 py-4">
                     <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       {offre.titre}
+                      {offre.nombre_postes > 1 && (
+                        <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[10px] font-semibold rounded-full align-middle`}>
+                          <Users size={10} /> {offre.nombre_postes} postes
+                        </span>
+                      )}
                     </p>
-                    <p className={`text-xs ${tw.textPrimary} mt-0.5`}>
-                      {offre.entreprise?.nom_entreprise || "Inconnue"}
-                    </p>
+                    {offre.entreprise?.slug ? (
+                      <Link
+                        to={`/entreprise/${offre.entreprise.slug}`}
+                        target="_blank"
+                        className={`text-xs ${tw.textPrimary} hover:underline mt-0.5 inline-flex items-center gap-1`}
+                      >
+                        <Building2 size={11} /> {offre.entreprise?.nom_entreprise || "Inconnue"}
+                      </Link>
+                    ) : (
+                      <p className={`text-xs ${tw.textPrimary} mt-0.5`}>
+                        {offre.entreprise?.nom_entreprise || "Inconnue"}
+                      </p>
+                    )}
+                    {(offre.wilaya || offre.commune) && (
+                      <p className={`text-[10px] ${tw.textMuted} mt-0.5`}>
+                        📍 {offre.wilaya}{offre.commune ? ` · ${offre.commune}` : ""}
+                      </p>
+                    )}
                     {offre.motif_rejet && (
                       <p className={`text-[10px] ${tw.textErrorMuted} mt-1 ${tw.bgErrorSoft} inline-block px-2 py-0.5 rounded italic`}>
                         Motif : {offre.motif_rejet}
@@ -273,15 +386,17 @@ const AdminOffres = () => {
                           setSelectedOffre(offre);
                           setShowTop5Only(false);
                         }}
-                        className={`p-2 ${tw.bgPrimarySoft} ${tw.textPrimary} rounded-lg ${tw.bgIndigoHover100} transition-colors`}
+                        className={`p-2 ${tw.bgPrimarySoft} ${tw.textPrimary} rounded-lg ${tw.bgIndigoHover100} transition-colors ${tw.focusRing}`}
                         title="Voir"
+                        aria-label="Voir l'offre"
                       >
                         <Eye size={14} />
                       </button>
                       <button
                         onClick={() => setEditingOffre(offre)}
-                        className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
+                        className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
                         title="Corriger"
+                        aria-label="Corriger l'offre"
                       >
                         <Pencil size={14} />
                       </button>
@@ -289,8 +404,9 @@ const AdminOffres = () => {
                         !offre.est_cloturee && (
                           <button
                             onClick={() => handleApprouver(offre.id)}
-                            className={`p-2 ${tw.bgSuccessSoft} ${tw.textSuccess} rounded-lg ${tw.hoverSuccessSoft} transition-colors`}
+                            className={`p-2 ${tw.bgSuccessSoft} ${tw.textSuccess} rounded-lg ${tw.hoverSuccessSoft} transition-colors ${tw.focusRing}`}
                             title="Approuver"
+                            aria-label="Approuver l'offre"
                           >
                             <CheckCircle size={14} />
                           </button>
@@ -299,8 +415,9 @@ const AdminOffres = () => {
                         !offre.est_cloturee && (
                           <button
                             onClick={() => setRejectingOffre(offre)}
-                            className={`p-2 ${tw.bgErrorSoft} ${tw.textError} rounded-lg ${tw.hoverErrorSoft} transition-colors`}
+                            className={`p-2 ${tw.bgErrorSoft} ${tw.textError} rounded-lg ${tw.hoverErrorSoft} transition-colors ${tw.focusRing}`}
                             title="Rejeter"
+                            aria-label="Rejeter l'offre"
                           >
                             <XCircle size={14} />
                           </button>
@@ -354,11 +471,26 @@ const AdminOffres = () => {
                   {selectedOffre.est_cloturee && null}
                 </div>
                 <h2 className={`text-xl font-extrabold ${tw.textOnDark} mt-2`}>{selectedOffre.titre}</h2>
-                <p className={`${tw.textPrimaryOnDark} text-sm mt-0.5`}>{selectedOffre.entreprise?.nom_entreprise}</p>
+                {selectedOffre.entreprise?.slug ? (
+                  <Link
+                    to={`/entreprise/${selectedOffre.entreprise.slug}`}
+                    target="_blank"
+                    className={`${tw.textPrimaryOnDark} text-sm mt-0.5 hover:underline inline-flex items-center gap-1`}
+                  >
+                    <Building2 size={13} /> {selectedOffre.entreprise?.nom_entreprise}
+                  </Link>
+                ) : (
+                  <p className={`${tw.textPrimaryOnDark} text-sm mt-0.5`}>{selectedOffre.entreprise?.nom_entreprise}</p>
+                )}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {selectedOffre.wilaya && (
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
-                      📍 {selectedOffre.wilaya}
+                      📍 {selectedOffre.wilaya}{selectedOffre.commune ? ` · ${selectedOffre.commune}` : ""}
+                    </span>
+                  )}
+                  {selectedOffre.nombre_postes > 1 && (
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
+                      👥 {selectedOffre.nombre_postes} postes
                     </span>
                   )}
                   {selectedOffre.type_contrat && (

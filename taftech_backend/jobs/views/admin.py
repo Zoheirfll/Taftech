@@ -69,13 +69,28 @@ def _envoyer_email_offre_approuvee(offre):
 class AdminOffresListAPIView(APIView):
     permission_classes = [IsAdminUser]
 
+    ORDERING_FIELDS = {
+        'date_publication': 'date_publication',
+        'date_expiration': 'date_expiration',
+        'titre': 'titre',
+    }
+
     def get(self, request):
         search = request.query_params.get('search', '')
-        offres = OffreEmploi.objects.all().order_by('-date_publication')
+        statut = request.query_params.get('statut', '')
+        ordering = request.query_params.get('ordering', '-date_publication')
+        field = ordering.lstrip('-')
+        if field not in self.ORDERING_FIELDS:
+            ordering = '-date_publication'
+        offres = OffreEmploi.objects.select_related('entreprise').all().order_by(ordering)
         if search:
             offres = offres.filter(
                 Q(titre__icontains=search) | Q(entreprise__nom_entreprise__icontains=search)
             )
+        if statut == 'CLOTUREE':
+            offres = offres.filter(est_cloturee=True)
+        elif statut in ('EN_ATTENTE', 'APPROUVEE', 'REJETEE'):
+            offres = offres.filter(statut_moderation=statut, est_cloturee=False)
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(offres, request)
         serializer = OffreDashboardDTO(result_page, many=True)
@@ -108,10 +123,15 @@ class AdminOffreModerateAPIView(APIView):
 
 class AdminEntreprisesListAPIView(APIView):
     permission_classes = [IsAdminUser]
+    ORDERING_FIELDS = {'id': 'id', 'nom_entreprise': 'nom_entreprise'}
 
     def get(self, request):
         search = request.query_params.get('search', '')
-        entreprises = ProfilEntreprise.objects.all().order_by('-id')
+        ordering = request.query_params.get('ordering', '-id')
+        field = ordering.lstrip('-')
+        if field not in self.ORDERING_FIELDS:
+            ordering = '-id'
+        entreprises = ProfilEntreprise.objects.all().order_by(ordering)
         if search:
             entreprises = entreprises.filter(
                 Q(nom_entreprise__icontains=search) | Q(registre_commerce__icontains=search)
@@ -178,26 +198,42 @@ class AdminStatsAPIView(APIView):
             "total_candidats": User.objects.filter(role='CANDIDAT').count(),
             "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
             "total_recrutements": Candidature.objects.filter(statut='RETENU').count(),
+            "demandes_premium_attente": DemandeActivationPremium.objects.filter(est_traitee=False).count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
 
 
 class AdminUsersListAPIView(APIView):
     permission_classes = [IsAdminUser]
+    ORDERING_FIELDS = {'date_joined': 'date_joined', 'last_name': 'last_name'}
 
     def get(self, request):
         search = request.query_params.get('search', '')
-        users = User.objects.exclude(is_superuser=True).order_by('-date_joined')
+        role = request.query_params.get('role', '')
+        ordering = request.query_params.get('ordering', '-date_joined')
+        field = ordering.lstrip('-')
+        if field not in self.ORDERING_FIELDS:
+            ordering = '-date_joined'
+        users = User.objects.exclude(is_superuser=True).order_by(ordering)
         if search:
             users = users.filter(
                 Q(first_name__icontains=search) |
                 Q(last_name__icontains=search) |
                 Q(email__icontains=search)
             )
+        counts = {
+            'CANDIDAT': users.filter(role='CANDIDAT').count(),
+            'RECRUTEUR': users.filter(role='RECRUTEUR').count(),
+            'ADMIN': users.filter(role='ADMIN').count(),
+        }
+        if role in ('CANDIDAT', 'RECRUTEUR', 'ADMIN'):
+            users = users.filter(role=role)
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(users, request)
         serializer = AdminUserSerializer(result_page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        response = paginator.get_paginated_response(serializer.data)
+        response.data['counts'] = counts
+        return response
 
 
 class AdminUserModerateAPIView(APIView):
@@ -250,10 +286,16 @@ class AdminBroadcastEmailAPIView(APIView):
 
 class AdminCandidaturesListAPIView(APIView):
     permission_classes = [IsAdminUser]
+    ORDERING_FIELDS = {'date_postulation': 'date_postulation', 'score_matching': 'score_matching', 'note_globale': 'note_globale'}
 
     def get(self, request):
         search = request.query_params.get('search', '')
-        candidatures = Candidature.objects.all().order_by('-date_postulation')
+        statut = request.query_params.get('statut', '')
+        ordering = request.query_params.get('ordering', '-date_postulation')
+        field = ordering.lstrip('-')
+        if field not in self.ORDERING_FIELDS:
+            ordering = '-date_postulation'
+        candidatures = Candidature.objects.select_related('candidat', 'offre__entreprise').order_by(ordering)
         if search:
             candidatures = candidatures.filter(
                 Q(candidat__first_name__icontains=search) |
@@ -262,6 +304,8 @@ class AdminCandidaturesListAPIView(APIView):
                 Q(offre__titre__icontains=search) |
                 Q(offre__entreprise__nom_entreprise__icontains=search)
             )
+        if statut:
+            candidatures = candidatures.filter(statut=statut)
         paginator = PageNumberPagination()
         paginator.page_size = 10
         result_page = paginator.paginate_queryset(candidatures, request)
@@ -270,7 +314,9 @@ class AdminCandidaturesListAPIView(APIView):
         for index, item in enumerate(serializer.data):
             cand_obj = result_page[index]
             item['offre_titre'] = cand_obj.offre.titre
+            item['offre_id'] = cand_obj.offre.id
             item['entreprise_nom'] = cand_obj.offre.entreprise.nom_entreprise
+            item['entreprise_slug'] = cand_obj.offre.entreprise.slug
             data.append(item)
         return paginator.get_paginated_response(data)
 
@@ -435,6 +481,13 @@ class AdminAuditLogAPIView(APIView):
 
     def get(self, request):
         logs = AuditLog.objects.select_related('admin').all()
+        search = request.query_params.get('search', '').strip()
+        if search:
+            logs = logs.filter(
+                Q(admin__email__icontains=search) |
+                Q(action__icontains=search) |
+                Q(detail__icontains=search)
+            )
         paginator = AdminPagination()
         paginator.page_size = int(request.query_params.get('page_size', 20))
         result_page = paginator.paginate_queryset(logs, request)

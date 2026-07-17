@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Search, Download, X } from "lucide-react";
 import { tw } from "../../theme";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import SortableTh from "../../Components/SortableTh";
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
@@ -12,25 +14,60 @@ const AdminEntreprises = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [ordering, setOrdering] = useState("-id");
 
   const chargerEntreprises = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminEntreprises(currentPage, searchTerm);
+      const data = await jobsService.getAdminEntreprises(currentPage, searchTerm, ordering);
       setEntreprises(data.results || []);
       setTotalPages(Math.ceil(data.count / 5) || 1);
+      setSelectedIds([]);
     } catch (err) {
       toast.error("Erreur de chargement.");
       reportError("ECHEC_CHARGEMENT_ENTREPRISES_ADMIN", err);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, ordering]);
+
+  const handleSort = (field) => {
+    setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const delay = setTimeout(() => chargerEntreprises(), 300);
     return () => clearTimeout(delay);
   }, [chargerEntreprises]);
+
+  const entreprisesSelectionnables = entreprises.filter((e) => !e.est_approuvee);
+  const toutSelectionne = entreprisesSelectionnables.length > 0 && entreprisesSelectionnables.every((e) => selectedIds.includes(e.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(toutSelectionne ? [] : entreprisesSelectionnables.map((e) => e.id));
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleApprouverSelection = async () => {
+    if (!window.confirm(`Approuver ${selectedIds.length} entreprise(s) sélectionnée(s) ?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(selectedIds.map((id) => jobsService.moderateEntreprise(id, { est_approuvee: true })));
+      toast.success(`${selectedIds.length} entreprise(s) approuvée(s) !`);
+      chargerEntreprises();
+    } catch (err) {
+      toast.error("Erreur lors de l'approbation groupée.");
+      reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", err);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const handleTogglePremium = async (id, statutActuel) => {
     try {
@@ -127,11 +164,44 @@ const AdminEntreprises = () => {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className={`flex items-center justify-between ${tw.bgPrimarySoft} border border-indigo-200 rounded-xl px-4 py-3`}>
+          <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>
+            {selectedIds.length} entreprise(s) sélectionnée(s)
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${tw.surface} ${tw.textMuted} ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleApprouverSelection}
+              disabled={bulkLoading}
+              className={`px-3 py-1.5 ${tw.buttonSuccessSolid} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.focusRing}`}
+            >
+              Approuver la sélection
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={`${tw.card} overflow-hidden`}>
         <table className="w-full text-left">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
-              <th className="px-5 py-3">Entreprise</th>
+              <th className="px-4 py-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={toutSelectionne}
+                  onChange={toggleSelectAll}
+                  disabled={entreprisesSelectionnables.length === 0}
+                  className={`rounded ${tw.focusRing}`}
+                  aria-label="Sélectionner toutes les entreprises en attente"
+                />
+              </th>
+              <SortableTh field="nom_entreprise" label="Entreprise" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3">Statut</th>
               <th className="px-5 py-3">Premium</th>
@@ -140,14 +210,21 @@ const AdminEntreprises = () => {
           </thead>
           <tbody className={`divide-y ${tw.divideBase}`}>
             {loading && entreprises.length === 0 ? (
-              <tr>
-                <td colSpan="5" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>
-                  Chargement...
-                </td>
-              </tr>
+              <SkeletonTableRows columns={6} />
             ) : (
               entreprises.map((ent) => (
                 <tr key={ent.id} className={tw.rowHover}>
+                  <td className="px-4 py-4">
+                    {!ent.est_approuvee && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(ent.id)}
+                        onChange={() => toggleSelectOne(ent.id)}
+                        className={`rounded ${tw.focusRing}`}
+                        aria-label={`Sélectionner ${ent.nom_entreprise}`}
+                      />
+                    )}
+                  </td>
                   <td className="px-5 py-4">
                     <p className={`text-sm font-semibold ${tw.textStrong}`}>{ent.nom_entreprise}</p>
                     <p className={`text-xs ${tw.textMuted} mt-0.5`}>{ent.secteur_activite}</p>
@@ -174,13 +251,13 @@ const AdminEntreprises = () => {
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
                     <button
                       onClick={() => setSelectedEntreprise(ent)}
-                      className={`px-3 py-1.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg ${tw.bgIndigoHover100} transition-colors`}
+                      className={`px-3 py-1.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg ${tw.bgIndigoHover100} transition-colors ${tw.focusRing}`}
                     >
                       Voir
                     </button>
                     <button
                       onClick={() => handleToggleApprobation(ent.id, ent.est_approuvee)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${ent.est_approuvee ? tw.dangerPillSoft : tw.buttonSuccessSolid}`}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${ent.est_approuvee ? tw.dangerPillSoft : tw.buttonSuccessSolid}`}
                     >
                       {ent.est_approuvee ? "Bloquer" : "Approuver"}
                     </button>
@@ -188,7 +265,7 @@ const AdminEntreprises = () => {
                     {ent.est_premium && (
                       <button
                         onClick={() => handleTogglePremium(ent.id, ent.est_premium)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.pillAmberSoft}`}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${tw.pillAmberSoft}`}
                       >
                         ⭐ Retirer
                       </button>

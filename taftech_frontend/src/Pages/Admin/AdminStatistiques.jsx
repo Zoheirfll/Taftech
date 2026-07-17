@@ -3,21 +3,35 @@ import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { RefreshCw, TrendingUp, MapPin, Briefcase, Users } from "lucide-react";
+import {
+  RefreshCw,
+  TrendingUp,
+  MapPin,
+  Briefcase,
+  Users,
+  GraduationCap,
+  Building2,
+  PartyPopper,
+  Hourglass,
+  BarChart3,
+  FolderClock,
+} from "lucide-react";
 import { tw } from "../../theme";
+import { TooltipIcon } from "../../Components/Tooltip";
 
-const StatCard = ({ icon, label, value, colorClass }) => (
+const StatCard = ({ icon: Icon, label, value, color, info }) => (
   <div
-    className={`${tw.surface} border rounded-xl p-6 flex items-center gap-4 ${colorClass}`}
+    className={`${tw.surface} border ${tw.borderSubtle} rounded-xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow`}
   >
-    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-current/10 shrink-0">
-      {icon}
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${tw.kpiIconBg[color]} text-white shadow-sm`}>
+      <Icon size={20} />
     </div>
     <div>
-      <p className={`text-xs font-medium ${tw.textMuted} uppercase tracking-wide`}>
+      <p className={`text-[11px] font-semibold ${tw.textMuted} uppercase tracking-wider flex items-center gap-1`}>
         {label}
+        {info && <TooltipIcon text={info} />}
       </p>
-      <p className={`text-3xl font-bold ${tw.textStrong} mt-0.5`}>{value}</p>
+      <p className={`text-2xl font-extrabold ${tw.textStrong} mt-0.5 tabular-nums`}>{value}</p>
     </div>
   </div>
 );
@@ -129,7 +143,9 @@ const AdminStatistiques = () => {
                   to="/admin-taftech/entreprises"
                   className={`flex items-center gap-3 p-4 ${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl hover:border-amber-400 transition-colors`}
                 >
-                  <span className="text-xl">⚠️</span>
+                  <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                    <Hourglass size={17} />
+                  </div>
                   <p className={`text-sm font-semibold ${tw.textWarning900}`}>
                     {stats.entreprises_attente} entreprise(s) attendent
                     validation
@@ -141,7 +157,9 @@ const AdminStatistiques = () => {
                   to="/admin-taftech/offres"
                   className={`flex items-center gap-3 p-4 ${tw.bgErrorSoft} border ${tw.borderError} rounded-xl hover:border-red-400 transition-colors`}
                 >
-                  <span className="text-xl">🚨</span>
+                  <div className="w-9 h-9 rounded-lg bg-red-500 text-white flex items-center justify-center shrink-0">
+                    <FolderClock size={17} />
+                  </div>
                   <p className={`text-sm font-semibold ${tw.textError900}`}>
                     {stats.offres_attente} offre(s) attendent modération
                   </p>
@@ -151,49 +169,53 @@ const AdminStatistiques = () => {
           )}
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
-                icon: "👥",
+                icon: GraduationCap,
                 label: "Candidats",
                 value: stats.total_candidats,
-                colorClass: tw.kpiBorderColors.blue,
+                color: "blue",
               },
               {
-                icon: "👔",
+                icon: Briefcase,
                 label: "Recruteurs",
                 value: stats.total_recruteurs,
-                colorClass: tw.kpiBorderColors.violet,
+                color: "violet",
               },
               {
-                icon: "🎉",
+                icon: PartyPopper,
                 label: "Recrutements réussis",
                 value: stats.total_recrutements,
-                colorClass: tw.kpiBorderColors.pink,
+                color: "pink",
+                info: "Nombre de candidatures dont le statut final est \"Retenu\".",
               },
               {
-                icon: "🏢",
+                icon: Building2,
                 label: "Entreprises",
                 value: stats.total_entreprises,
-                colorClass: tw.kpiBorderColors.emerald,
+                color: "emerald",
               },
               {
-                icon: "⏳",
+                icon: Hourglass,
                 label: "Entreprises en attente",
                 value: stats.entreprises_attente,
-                colorClass: tw.kpiBorderColors.amber,
+                color: "amber",
+                info: "Entreprises inscrites qui attendent une validation manuelle avant de pouvoir publier des offres.",
               },
               {
-                icon: "📊",
+                icon: BarChart3,
                 label: "Offres publiées",
                 value: stats.total_offres,
-                colorClass: tw.kpiBorderColors.indigo,
+                color: "indigo",
+                info: "Offres actuellement visibles côté candidat (approuvées, actives, non clôturées).",
               },
               {
-                icon: "📁",
+                icon: FolderClock,
                 label: "Offres en attente",
                 value: stats.offres_attente,
-                colorClass: tw.kpiBorderColors.red,
+                color: "red",
+                info: "Offres soumises par des recruteurs qui attendent une modération (approbation ou rejet).",
               },
             ].map((card) => (
               <StatCard key={card.label} {...card} />
@@ -218,8 +240,9 @@ const AdminStatistiques = () => {
                     <TrendingUp size={24} className={tw.textPrimary} />
                   </div>
                   <div>
-                    <p className={`text-xs font-semibold ${tw.textMuted} uppercase tracking-wider`}>
+                    <p className={`text-xs font-semibold ${tw.textMuted} uppercase tracking-wider flex items-center gap-1`}>
                       Score matching moyen global
+                      <TooltipIcon text="Moyenne du score de compatibilité IA (spécialité, diplôme, expérience, région, compétences) calculé sur toutes les candidatures ayant un score." />
                     </p>
                     <p className={`text-3xl font-bold ${tw.textPrimary}`}>
                       {marche.matching_moyen}%

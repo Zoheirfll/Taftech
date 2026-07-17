@@ -51,7 +51,15 @@ class ProfilCandidatAPIView(APIView):
                     {"error": "Une des valeurs envoyées est trop longue."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        serializer = ProfilCandidatDTO(profil, data=request.data, partial=True)
+        data = request.data.copy()
+        if 'langues' in data and isinstance(data['langues'], str):
+            data['langues'] = data['langues'][:255]
+        # Les CV mentionnent souvent "linkedin.com/in/..." sans protocole → rejeté par le URLField
+        for champ_url in ('linkedin', 'github'):
+            valeur = data.get(champ_url)
+            if valeur and isinstance(valeur, str) and not valeur.startswith(('http://', 'https://')):
+                data[champ_url] = f"https://{valeur}"
+        serializer = ProfilCandidatDTO(profil, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({

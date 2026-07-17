@@ -175,15 +175,21 @@ def extract_email(text):
 
 
 def extract_phone(text):
-    patterns = [
-        r'\+213\s?[567]\d{1}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}',
-        r'00213\s?[567]\d{1}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}',
-        r'0[567]\d{1}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return re.sub(r'[\s.-]', '', match.group(0))
+    """
+    Cherche un numéro algérien peu importe le regroupement de chiffres utilisé
+    dans le CV (2-2-2-2-2, 3-3-3, espaces/points/tirets/parenthèses...).
+    On capture une plage large de chiffres/séparateurs puis on valide la longueur
+    une fois les séparateurs retirés, plutôt que d'imposer un regroupement fixe.
+    """
+    pattern = r'(?:\(?\+213\)?|00213|0)[\s.\-]?[567][\d\s.\-]{6,14}'
+    for match in re.finditer(pattern, text):
+        digits = re.sub(r'\D', '', match.group(0))
+        if digits.startswith('00213'):
+            digits = '0' + digits[5:]
+        elif digits.startswith('213') and len(digits) >= 12:
+            digits = '0' + digits[3:]
+        if len(digits) == 10 and digits[0] == '0':
+            return digits
     return None
 
 
@@ -325,10 +331,15 @@ SECTIONS_KEYWORDS = {
     ],
     'competences': [
         'compétence', 'competence', 'compétences', 'competences',
-        'skills', 'aptitudes', 'savoir-faire', 'technical skills'
+        'skills', 'aptitudes', 'savoir-faire', 'technical skills', 'informatique'
     ],
     'langues': [
         'langue', 'langues', 'languages', 'language', 'compétences linguistiques'
+    ],
+    # Section volontairement non exploitée : sert juste de délimiteur pour ne pas polluer
+    # la section précédente (ex: compétences) avec le contenu "Centres d'intérêt".
+    'interets': [
+        'centres d', 'centre d', 'hobbies', 'loisirs', "centres d'intérêt", "centres d'interet",
     ],
 }
 
@@ -349,7 +360,7 @@ def find_sections(text):
         matched_section = None
         for section_name, keywords in SECTIONS_KEYWORDS.items():
             for keyword in keywords:
-                if keyword in line_clean and len(line_clean) < 60:
+                if line_clean.startswith(keyword) and len(line_clean) < 60:
                     matched_section = section_name
                     break
             if matched_section:
@@ -408,12 +419,12 @@ def extract_langues(text_section):
             langue_clean = langue.capitalize()
             if langue_clean in [f.split(' (')[0] for f in found]:
                 continue
-            pattern = rf'{langue}\s*[:\-]?\s*([a-zà-ÿ0-9\s\(\)]{{0,40}})'
+            pattern = rf'{langue}\s*[:\-]?\s*([a-zà-ÿ0-9\s\(\)/.,]{{0,60}})'
             m = re.search(pattern, text_low)
             niveau = ""
             if m:
                 niveau_raw = m.group(1).strip()
-                for keyword in ['maternelle', 'natif', 'native', 'bilingue', 'courant', 'avancé', 'avance', 'fluent', 'intermédiaire', 'intermediaire', 'débutant', 'debutant', 'c1', 'c2', 'b1', 'b2', 'a1', 'a2']:
+                for keyword in ['maternelle', 'natif', 'native', 'bilingue', 'courant', 'avancé', 'avance', 'fluent', 'intermédiaire', 'intermediaire', 'débutant', 'debutant', 'bon niveau', 'notions', 'scolaire', 'c1', 'c2', 'b1', 'b2', 'a1', 'a2']:
                     if keyword in niveau_raw:
                         niveau = f" ({keyword.capitalize()})"
                         break
@@ -424,6 +435,77 @@ def extract_langues(text_section):
 # ==========================================
 # 6. EXPÉRIENCES (PATTERN AMÉLIORÉ)
 # ==========================================
+# Format très répandu dans les CV algériens : "Du 01/11/2021 au 04/2024 : Chef de projet chez FIELDCORE"
+DATE_HEADER_PATTERN = re.compile(r'^du\s+(.+?)\s+au\s+(.+?)\s*:\s*(.*)$', re.IGNORECASE)
+
+
+def _parse_titre_entreprise(texte):
+    """Sépare 'Chef de projet chez FIELDCORE, GE...' en (titre, entreprise)."""
+    for separateur in (r'\bchez\b', r'\bà\b', r'\bau sein de\b'):
+        parts = re.split(separateur, texte, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) == 2:
+            return parts[0].strip(" :-"), parts[1].strip(" .")
+    return texte.strip(" :-"), ""
+
+
+def _extract_experiences_du_au(lines):
+    """Détecte le format 'Du <date> au <date> : Titre chez Entreprise'.
+    Le PDF coupe parfois cette ligne en deux (ex: "...: Organisateur de conditionnement"
+    puis "chez ACG SIM." sur la ligne suivante) — on recolle les lignes de continuation
+    (celles qui ne commencent pas par une puce) avant de considérer que la description commence."""
+    indices = [i for i, l in enumerate(lines) if DATE_HEADER_PATTERN.match(l)]
+    if not indices:
+        return []
+    experiences = []
+    for idx, start in enumerate(indices):
+        end = indices[idx + 1] if idx + 1 < len(indices) else len(lines)
+        block = lines[start:end]
+        m = DATE_HEADER_PATTERN.match(block[0])
+        date_debut_raw, date_fin_raw, reste = m.groups()
+        reste = reste.strip()
+
+        # Recolle les lignes suivantes tant qu'elles ne sont pas des puces de description
+        i = 1
+        while i < len(block) and not block[i].lstrip().startswith(('-', '•', '*')):
+            reste = f"{reste} {block[i].strip()}".strip()
+            i += 1
+
+        titre, entreprise = _parse_titre_entreprise(reste)
+
+        # Format fréquent : le titre est sur la ligne D'AVANT ("Chef de projet\nDu ... au ... : chez FIELDCORE")
+        # plutôt que sur la ligne de date elle-même (qui ne contient alors que "chez Entreprise").
+        if not titre and start > 0:
+            ligne_precedente = lines[start - 1].strip()
+            if (
+                ligne_precedente
+                and len(ligne_precedente) < 100
+                and not DATE_HEADER_PATTERN.match(ligne_precedente)
+                and not ligne_precedente.lstrip().startswith(('-', '•', '*'))
+            ):
+                titre = ligne_precedente
+                # Cette ligne avait été ajoutée à tort comme puce finale de l'expérience précédente : on la retire.
+                if experiences:
+                    bogus = f"- {ligne_precedente}"
+                    if experiences[-1]["description"].endswith(bogus):
+                        experiences[-1]["description"] = experiences[-1]["description"][: -len(bogus)].rstrip("\n")
+
+        date_fin_present = bool(re.search(r"aujourd'?hui|présent|present|en cours", date_fin_raw, re.IGNORECASE))
+        description_lines = block[i:]
+        description = "\n".join(
+            l if l.lstrip().startswith(('-', '•', '*')) else f"- {l}"
+            for l in description_lines
+        )
+        if titre:
+            experiences.append({
+                "titre_poste": titre[:200],
+                "entreprise": entreprise[:200],
+                "date_debut_raw": date_debut_raw.strip(),
+                "date_fin_raw": "Aujourd'hui" if date_fin_present else date_fin_raw.strip(),
+                "description": description[:3000],
+            })
+    return experiences[:10]
+
+
 def extract_experiences_list(text_section):
     """
     Extrait les expériences en détectant les titres de postes
@@ -432,6 +514,11 @@ def extract_experiences_list(text_section):
     """
     if not text_section:
         return []
+
+    lines_du_au = [l.strip() for l in text_section.split("\n") if l.strip()]
+    experiences_du_au = _extract_experiences_du_au(lines_du_au)
+    if experiences_du_au:
+        return experiences_du_au
 
     experiences = []
     annee_pattern = re.compile(r'\b(19\d{2}|20\d{2})\b')
@@ -526,7 +613,7 @@ def extract_experiences_list(text_section):
                 "entreprise": entreprise[:200],
                 "date_debut_raw": date_debut,
                 "date_fin_raw": date_fin,
-                "description": description[:500],
+                "description": description[:3000],
             })
 
     return experiences[:10]
@@ -577,7 +664,7 @@ def _extract_experiences_fallback(lines, annee_pattern):
                 "entreprise": entreprise[:200],
                 "date_debut_raw": date_debut,
                 "date_fin_raw": date_fin,
-                "description": description[:500],
+                "description": description[:3000],
             })
 
     return experiences[:10]
@@ -586,12 +673,67 @@ def _extract_experiences_fallback(lines, annee_pattern):
 # ==========================================
 # 7. FORMATIONS
 # ==========================================
+_MOIS_RE = r'(?:janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)'
+DATE_FORMATION_HEADER = re.compile(rf'^(?:{_MOIS_RE}\s+)?(\d{{4}})\s*:\s*(.*)$', re.IGNORECASE)
+
+
+def _parse_diplome_etablissement(texte):
+    """Sépare 'MBA ... à l'I.N.S.I.M d'Oran' ou 'Ingéniorat ... Université de Blida' en (diplome, etablissement)."""
+    parts = re.split(r'(\bà\b|\bau sein de\b)', texte, maxsplit=1, flags=re.IGNORECASE)
+    if len(parts) == 3:
+        return parts[0].strip(" :-"), parts[2].strip(" .")
+    m = re.search(r'\b(Université|Universite|Institut|École|Ecole|Lycée|Lycee|Centre)\b', texte, re.IGNORECASE)
+    if m:
+        return texte[:m.start()].strip(" :-"), texte[m.start():].strip(" .")
+    return texte.strip(" :-"), ""
+
+
+def _extract_formations_mois_annee(lines):
+    """Détecte le format 'Février 2023 : Diplôme à Établissement' (avec ou sans mois avant l'année)."""
+    indices = [i for i, l in enumerate(lines) if DATE_FORMATION_HEADER.match(l)]
+    if not indices:
+        return []
+    formations = []
+    for idx, start in enumerate(indices):
+        end = indices[idx + 1] if idx + 1 < len(indices) else len(lines)
+        block = lines[start:end]
+        m = DATE_FORMATION_HEADER.match(block[0])
+        annee, reste = m.groups()
+        reste = reste.strip()
+
+        i = 1
+        while i < len(block) and not block[i].lstrip().startswith(('-', '•', '*')):
+            reste = f"{reste} {block[i].strip()}".strip()
+            i += 1
+
+        diplome, etablissement = _parse_diplome_etablissement(reste)
+        description_lines = block[i:]
+        description = "\n".join(
+            l if l.lstrip().startswith(('-', '•', '*')) else f"- {l}"
+            for l in description_lines
+        )
+        if diplome:
+            formations.append({
+                "diplome": diplome[:200],
+                "etablissement": etablissement[:200],
+                "date_debut_raw": annee,
+                "date_fin_raw": annee,
+                "description": description[:3000],
+            })
+    return formations[:10]
+
+
 def extract_formations_list(text_section):
     """
     Extrait les formations en détectant les titres de diplômes.
     """
     if not text_section:
         return []
+
+    lines_mois_annee = [l.strip() for l in text_section.split("\n") if l.strip()]
+    formations_mois_annee = _extract_formations_mois_annee(lines_mois_annee)
+    if formations_mois_annee:
+        return formations_mois_annee
 
     formations = []
     annee_pattern = re.compile(r'\b(19\d{2}|20\d{2})\b')
@@ -664,7 +806,7 @@ def extract_formations_list(text_section):
                 "etablissement": etablissement[:200],
                 "date_debut_raw": date_debut,
                 "date_fin_raw": date_fin,
-                "description": description[:500],
+                "description": description[:3000],
             })
 
     return formations[:10]
@@ -729,131 +871,48 @@ def get_groq_client():
             return None
         _groq_client = Groq(api_key=api_key)
     return _groq_client 
-PROMPT_EXPERIENCES = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
+PROMPT_CV_COMPLET = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
 
-Extrais TOUTES les expériences PROFESSIONNELLES (emplois, stages, missions rémunérées) en JSON strict.
+Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autre avant/après).
 
-⚠️ RÈGLE CRITIQUE : NE METS JAMAIS DE FORMATIONS, DIPLÔMES OU ÉTUDES DANS LES EXPÉRIENCES.
-Les éléments suivants ne sont PAS des expériences (ce sont des formations) :
-- "Licence en ...", "Master en ...", "Bac", "3ème année licence"
-- "Étudiant en ...", "Étudiante en ..."
-- Cours suivis, formations en ligne, certifications
-- Universités, écoles, instituts (sauf si la personne y a TRAVAILLÉ)
+1. TITRE PROFESSIONNEL : la phrase courte juste sous le nom (ex: "INGÉNIEUR LOGICIEL"). Si absent : null.
 
-Les VRAIES expériences sont des EMPLOIS comme :
-- Caissier, Hôtesse d'accueil, Vendeur
-- Ingénieur, Développeur, Comptable, Assistant
-- Stage en entreprise (mais pas formation en école)
-
-RÈGLES JSON :
-- Réponds UNIQUEMENT avec un tableau JSON, sans texte avant ou après.
+2. EXPÉRIENCES PROFESSIONNELLES (emplois, stages rémunérés — PAS les formations/diplômes/études) :
+⚠️ NE METS JAMAIS DE FORMATIONS, DIPLÔMES OU ÉTUDES DEDANS ("Licence en...", "Master en...", "Bac", "Étudiant en...", cours, certifications, écoles où la personne n'a pas travaillé).
+Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, Stage en entreprise...).
 - Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description.
-- Si une date de fin n'existe pas (poste actuel), mets "Aujourd'hui".
-- Garde les dates dans le format brut du CV.
-- Si une info manque, mets "" (chaîne vide), pas null.
-- Si AUCUNE expérience pro trouvée, renvoie un tableau vide [].
-- Pour "description" : NE FUSIONNE PAS les points/missions en un seul paragraphe. Garde chaque point du CV sur sa propre ligne, préfixé par "- ", séparés par des retours à la ligne (\n). Ne reformule pas le contenu, garde le texte le plus proche possible de l'original.
+- Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
+- Si info manquante : "" (chaîne vide), jamais null.
+- Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
+- Si aucune expérience : tableau vide [].
 
-EXEMPLE de "description" attendu :
-"- Oversee end-to-end HR administration, social security, payroll processing.\n- Ensure compliance with Algerian labor laws and internal policies.\n- Supervise and coach a multidisciplinary HR team."
-
-FORMAT EXIGÉ :
-[
-  {
-    "titre_poste": "string",
-    "entreprise": "string",
-    "date_debut_raw": "string",
-    "date_fin_raw": "string",
-    "description": "string"
-  }
-]
-
-CV À ANALYSER :
----
-{cv_text}
----
-
-RÉPONDS UNIQUEMENT AVEC LE TABLEAU JSON :
-"""
-
-PROMPT_FORMATIONS = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
-
-Extrais TOUTES les FORMATIONS et DIPLÔMES (Master, Licence, Bac, certifications, cours suivis) en JSON strict.
-
-⚠️ RÈGLE CRITIQUE : NE METS JAMAIS DES EMPLOIS DANS LES FORMATIONS.
-Ne sont PAS des formations :
-- Postes occupés (caissier, vendeur, ingénieur, hôtesse, etc.)
-- Stages en entreprise (sauf si stage académique avec mention d'école)
-
-Les VRAIES formations sont :
-- Diplômes universitaires (Licence, Master, Doctorat)
-- Bac, BTS, DUT, certifications professionnelles
-- Cours suivis en école ou en ligne
-- Formations qualifiantes (ex: "prothésiste ongulaire" dans une école)
-
-RÈGLES JSON :
-- Réponds UNIQUEMENT avec un tableau JSON, sans texte avant ou après.
+3. FORMATIONS ET DIPLÔMES (Master, Licence, Bac, certifications, cours suivis — PAS les emplois) :
+⚠️ NE METS JAMAIS D'EMPLOIS DEDANS (postes occupés, stages en entreprise sauf stage académique avec école).
 - Pour chaque formation : diplome, etablissement, date_debut_raw, date_fin_raw, description.
-- Garde les dates dans le format brut du CV.
-- Si une info manque, mets "" (chaîne vide), pas null.
-- Pour "description" : NE FUSIONNE PAS les points en un seul paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par des retours à la ligne (\n).
+- Mêmes règles de "" et de description (points sur lignes séparées, préfixés "- ") que ci-dessus.
 
-FORMAT EXIGÉ :
-[
-  {
-    "diplome": "string",
-    "etablissement": "string",
-    "date_debut_raw": "string",
-    "date_fin_raw": "string",
-    "description": "string"
-  }
-]
+4. INFOS PERSONNELLES :
+- nom_complet : nom + prénom du candidat (ex: "FILALI Zoheir"), PAS son titre professionnel. Si absent : null.
+- telephone : tous les chiffres, format brut. Si absent : null.
+- competences : TOUTES les compétences techniques (langages, outils, logiciels, soft skills), séparées par virgules. Si absent : null.
+- langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
+- linkedin : URL complète du profil LinkedIn si présente. Sinon null.
+- github : URL complète du profil GitHub si présente. Sinon null.
+- bio : résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences. Sinon null.
 
-CV À ANALYSER :
----
-{cv_text}
----
-
-RÉPONDS UNIQUEMENT AVEC LE TABLEAU JSON :
-"""
-
-PROMPT_TITRE = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
-
-Trouve le TITRE PROFESSIONNEL du candidat. C'est généralement la phrase courte juste sous son nom (ex: "INGÉNIEUR LOGICIEL", "DIRECTRICE MARKETING", "DÉVELOPPEUR FULLSTACK").
-
-RÈGLES :
-- Réponds UNIQUEMENT avec le titre, sans guillemets, sans explication.
-- Si tu ne trouves pas, réponds exactement : NON_TROUVE
-- Maximum 100 caractères.
-
-CV À ANALYSER :
----
-{cv_text}
----
-
-LE TITRE PROFESSIONNEL :
-"""
-PROMPT_INFOS_PERSO = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
-
-Extrais les informations personnelles du candidat en JSON strict.
-
-RÈGLES :
-- Réponds UNIQUEMENT avec un objet JSON, sans texte avant ou après.
-- Si une info manque, mets null.
-- Pour le nom complet : nom + prénom du candidat (ex: "FILALI Zoheir"). NE MET PAS son titre professionnel.
-- Pour le téléphone : récupère TOUS les chiffres, format brut.
-- Pour les compétences : liste TOUTES les compétences techniques mentionnées (langages, outils, logiciels, soft skills). Sépare par des virgules.
-- Pour les langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau, mets "Intermédiaire".
-- NOUVEAU - linkedin : Extrais l'URL complète du profil LinkedIn si elle est présente dans le texte.
-- NOUVEAU - github : Extrais l'URL complète du profil GitHub si elle est présente (crucial pour les profils IT).
-- NOUVEAU - bio : Rédige un résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences.
-
-FORMAT EXIGÉ :
+FORMAT EXIGÉ (JSON strict, un seul objet) :
 {
+  "titre_professionnel": "string ou null",
+  "experiences": [
+    {"titre_poste": "string", "entreprise": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
+  ],
+  "formations": [
+    {"diplome": "string", "etablissement": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
+  ],
   "nom_complet": "string ou null",
   "telephone": "string ou null",
-  "competences": "string (compétences séparées par virgules) ou null",
-  "langues": "string (format Langue:Niveau séparé par virgules) ou null",
+  "competences": "string ou null",
+  "langues": "string ou null",
   "linkedin": "string ou null",
   "github": "string ou null",
   "bio": "string ou null"
@@ -939,11 +998,12 @@ def _extract_json_object(content):
 
 def parse_with_groq(text):
     """
-    Appelle Groq 4 fois (titre, expériences, formations, infos perso).
-    Retourne un dict complet.
-    Retourne None si TOUS les appels échouent.
+    Appelle Groq UNE SEULE FOIS pour tout extraire (titre, expériences, formations, infos perso).
+    Avant : 4 appels séquentiels renvoyant chacun le CV complet en entrée → 4x la consommation
+    de tokens pour le même texte, ce qui déclenchait le rate-limit Groq (429) sur les CV longs.
+    Retourne un dict complet, ou None si l'appel échoue entièrement.
     """
-    text_truncated = text[:8000]
+    text_truncated = text[:12000]
 
     result = {
         "titre_professionnel": None,
@@ -953,82 +1013,55 @@ def parse_with_groq(text):
         "telephone": None,
         "competences": None,
         "langues": None,
-        "linkedin": None,  # NOUVEAU
-        "github": None,    # NOUVEAU
-        "bio": None,       # NOUVEAU
+        "linkedin": None,
+        "github": None,
+        "bio": None,
     }
 
-    any_success = False
-
-    # === APPEL 1 : TITRE ===
-    logger.debug("Groq : extraction du titre...")
+    logger.debug("Groq : extraction complète du CV (1 appel)...")
     content = _call_groq(
-        PROMPT_TITRE.replace("{cv_text}", text_truncated),
-        max_tokens=100
+        PROMPT_CV_COMPLET.replace("{cv_text}", text_truncated),
+        max_tokens=8000
     )
-    if content:
-        titre = content.strip().strip('"').strip("'")
+    infos = _extract_json_object(content)
+    if not infos:
+        return None
+
+    if infos.get("titre_professionnel"):
+        titre = str(infos["titre_professionnel"]).strip().strip('"').strip("'")
         if titre and titre != "NON_TROUVE" and len(titre) < 150:
             result["titre_professionnel"] = titre
-            any_success = True
 
-    # === APPEL 2 : EXPÉRIENCES ===
-    logger.debug("Groq : extraction des expériences...")
-    content = _call_groq(
-        PROMPT_EXPERIENCES.replace("{cv_text}", text_truncated),
-        max_tokens=3000
-    )
-    experiences = _extract_json_array(content)
-    if experiences:
+    experiences = infos.get("experiences")
+    if isinstance(experiences, list):
         experiences_clean = [
             e for e in experiences
             if isinstance(e, dict) and e.get("titre_poste")
         ]
         result["experiences"] = experiences_clean[:15]
-        any_success = True
 
-    # === APPEL 3 : FORMATIONS ===
-    logger.debug("Groq : extraction des formations...")
-    content = _call_groq(
-        PROMPT_FORMATIONS.replace("{cv_text}", text_truncated),
-        max_tokens=2000
-    )
-    formations = _extract_json_array(content)
-    if formations:
+    formations = infos.get("formations")
+    if isinstance(formations, list):
         formations_clean = [
             f for f in formations
             if isinstance(f, dict) and f.get("diplome")
         ]
         result["formations"] = formations_clean[:10]
-        any_success = True
 
-    # === APPEL 4 : INFOS PERSO (nom, téléphone, compétences, langues, réseaux, bio) ===
-    logger.debug("Groq : extraction des infos personnelles...")
-    content = _call_groq(
-        PROMPT_INFOS_PERSO.replace("{cv_text}", text_truncated),
-        max_tokens=1500
-    )
-    infos = _extract_json_object(content)
-    if infos:
-        if infos.get("nom_complet"):
-            result["nom_complet"] = str(infos["nom_complet"]).strip()
-        if infos.get("telephone"):
-            tel = re.sub(r'[\s.\-]', '', str(infos["telephone"]))
-            tel = re.split(r'[/,;]', tel)[0]
-            result["telephone"] = tel
-        if infos.get("competences"):
-            result["competences"] = str(infos["competences"]).strip()
-        if infos.get("langues"):
-            result["langues"] = str(infos["langues"]).strip()
-        
-        # Injection des nouveaux champs extraits par l'IA
-        result["linkedin"] = infos.get("linkedin")
-        result["github"] = infos.get("github")
-        result["bio"] = infos.get("bio")
-        any_success = True
+    if infos.get("nom_complet"):
+        result["nom_complet"] = str(infos["nom_complet"]).strip()
+    if infos.get("telephone"):
+        tel = re.sub(r'[\s.\-]', '', str(infos["telephone"]))
+        tel = re.split(r'[/,;]', tel)[0]
+        result["telephone"] = tel
+    if infos.get("competences"):
+        result["competences"] = str(infos["competences"]).strip()
+    if infos.get("langues"):
+        result["langues"] = str(infos["langues"]).strip()
 
-    if not any_success:
-        return None
+    result["linkedin"] = infos.get("linkedin")
+    result["github"] = infos.get("github")
+    result["bio"] = infos.get("bio")
 
     return result
 # ==========================================

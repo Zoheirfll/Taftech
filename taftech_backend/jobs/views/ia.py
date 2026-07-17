@@ -196,7 +196,7 @@ class SuggestionsCarriereAPIView(APIView):
                     q |= Q(titre__icontains=mot)
             metiers_extra = list(MetierReferentiel.objects.filter(
                 q, est_actif=True
-            ).exclude(titre=profil.titre_professionnel)[:20])
+            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'secteur', 'niveau_experience')[:20])
             metiers = metiers + metiers_extra
         return Response({
             'metiers': metiers[:20],

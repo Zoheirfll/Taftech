@@ -524,12 +524,16 @@ export const useProfilCandidat = () => {
           if (m) return `${m[1].trim()}:${m[2].trim()}`;
           return `${l}:Intermédiaire`;
         });
-        formData.append(
-          "langues",
-          existing
-            ? `${existing},${newLangsFormatted.join(",")}`
-            : newLangsFormatted.join(","),
-        );
+        const combined = existing
+          ? `${existing},${newLangsFormatted.join(",")}`
+          : newLangsFormatted.join(",");
+        // Déduplique par nom de langue (garde la dernière valeur = la plus récente) et limite à 255 caractères (max_length du modèle)
+        const parLangue = new Map();
+        combined.split(",").map((l) => l.trim()).filter(Boolean).forEach((l) => {
+          const nom = l.split(":")[0].trim().toLowerCase();
+          parLangue.set(nom, l);
+        });
+        formData.append("langues", [...parLangue.values()].join(",").slice(0, 255));
       }
       if (parsedData.photo && (remplacer || !profil.photo_profil)) {
         const byteCharacters = atob(parsedData.photo.data);

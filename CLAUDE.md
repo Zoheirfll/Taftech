@@ -2,7 +2,37 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 15/07/2026 — Migration en cours des couleurs Tailwind en dur vers theme.js (voir section MIGRATION THEME.JS ci-dessous), arrêtée en pause à la demande de l'utilisateur. Couleurs marque calibrées sur le logo officiel (bleu/vert) + fix `@config` Tailwind v4 + email approbation entreprise, commit `6930876` sur `feature/home-redesign-texte`._
+_Dernière mise à jour : 17/07/2026 — Corrections parser CV (sections/expériences/formations/langues/téléphone) + refonte complète de l'admin (design, badges, tri, actions groupées, tooltips)._
+
+---
+
+## 🆕 SESSION PARSER CV + REFONTE ADMIN (17/07/2026)
+
+### Parser CV (`jobs/cv_parser.py`) — bugs réels trouvés sur CV utilisateurs
+- **`find_sections()`** : le matching de mot-clé était en sous-chaîne (`keyword in line_clean`) au lieu de `line_clean.startswith(keyword)` → une ligne comme "Arabe Langue maternelle..." était prise pour un nouveau header de section (contenait "langue") et son contenu était perdu. Fix : `startswith`.
+- **Format d'expérience "Du DATE au DATE : ..."** : nouvelle fonction `_extract_experiences_du_au()` — gère le cas réel où le titre du poste est sur la ligne PRÉCÉDENTE (pas fusionné avec la ligne de dates), avec retrait rétroactif de la puce erronée ajoutée par erreur à l'expérience précédente.
+- **Format de formation "Mois AAAA : Diplôme à Établissement"** : nouvelle fonction `_extract_formations_mois_annee()`, même logique de continuation.
+- **Téléphone** : `extract_phone()` réécrit — gérait mal les regroupements de chiffres autres que 2-2-2-2-2 (ex: "698 560 337" en 3-3-3) et l'indicatif entre parenthèses `(+213)`.
+- **Langues** : regex de niveau élargie (`bon niveau`, `notions`, `scolaire` ajoutés), charset élargi pour capter "IELTS : B2" sans couper au `/`.
+- **Description tronquée** : `description[:500]` → `description[:3000]` (CV à nombreuses puces coupés à mi-phrase).
+- **1 seul appel Groq au lieu de 4** (`PROMPT_CV_COMPLET` fusionné) — réduit le token usage ~4x, corrige un 429 TPM ; `text[:12000]` + `max_tokens=8000` (rééquilibré après la fusion).
+- **`ProfilCandidatAPIView.put()`** : troncature auto des champs `User` trop longs + auto-préfixe `https://` sur `linkedin`/`github` (CV contiennent souvent "linkedin.com/..." sans protocole → `URLField` rejetait avant).
+- **`_deviner_secteur_experience()`** (nouveau, `jobs/views/ia.py`) : devine le secteur de chaque expérience extraite (recherche `MetierReferentiel` puis fallback mots-clés puis `'AUTRE'` — ne retourne jamais `None`).
+- **Limite connue non résolue** : CV à mise en page colonnes (ex. dates alignées à droite) peuvent scrambler l'ordre du texte extrait par `pdfplumber`, regroupant tous les headers de section en tête sans contenu entre eux — cassant le modèle séquentiel de `find_sections()`. Pas encore corrigé ; fallback recommandé = laisser Groq gérer (plus robuste à l'ordre) plutôt que réécrire l'extraction PDF.
+
+### Refonte Admin — design + fonctionnalités
+- **Sidebar** (`AdminLayout.jsx`) : regroupée en sections (Principal/Modération/Communauté/Système), fond clair (plus de slate-900 sombre), lien actif = `bg-indigo-50` + barre latérale indigo. Badges de notification (offres/entreprises/demandes premium en attente) alimentés par `AdminStatsAPIView`.
+- **Nouvelle page** `AdminDemandesPremium.jsx` (+ route `/admin-taftech/demandes-premium`) : expose l'endpoint `AdminDemandesPremiumAPIView` qui existait déjà côté backend mais n'était jamais utilisé côté frontend.
+- **AdminUsers.jsx** : migré vers `tw.*` (était 100% Tailwind en dur) + onglets par rôle (Tous/Candidats/Recruteurs/Admins) avec compteurs, alimentés par un filtre `role` + champ `counts` ajoutés à `AdminUsersListAPIView`.
+- **AdminSystemLogs.jsx** : migré vers `tw.*`.
+- **Cartes KPI dashboard** (`AdminStatistiques.jsx`) : emojis remplacés par icônes lucide-react dans des chips colorés, recentrées sur la charte TafTech (indigo/teal), ambre/rouge réservés aux alertes.
+- **Filtres + tri serveur** : `statut` sur Offres/Candidatures, `ordering` sur Offres/Entreprises/Utilisateurs/Candidatures (nouveau paramètre backend `ORDERING_FIELDS` par vue, whitelist stricte des champs triables). En-têtes cliquables via composant réutilisable `SortableTh.jsx`.
+- **Actions groupées** : sélection multiple + "Approuver la sélection" sur Offres et Entreprises (boucle `Promise.all` sur l'endpoint de modération existant, pas de nouvel endpoint bulk côté backend). Volontairement PAS ajouté sur Candidatures (le changement de statut appartient au workflow recruteur/équipe, pas à l'admin).
+- **Skeleton loaders** : nouveau composant partagé `SkeletonTableRows.jsx`, remplace le texte "Chargement..." clignotant sur les 4 tableaux admin (Offres/Candidatures/Entreprises/Utilisateurs).
+- **Tooltips d'info** (`TooltipIcon` existant réutilisé) : ajoutés sur les KPI ambigus (Recrutements réussis, Offres en attente...), colonnes Score IA/Note entretien, tarif Premium.
+- **Accessibilité** : anneau de focus clavier (`tw.focusRing`, nouveau token) + `aria-label` ajoutés sur les boutons d'action icône-seule (Offres/Entreprises/Utilisateurs/Demandes Premium).
+- **Décision produit** : pas de bouton "Supprimer" généralisé dans l'admin — seul bloquer/débloquer par défaut, suppression réservée aux cas déjà sûrs (offres non approuvées sans candidature). Historique de recrutement = valeur légale/business, suppression accidentelle plus coûteuse que son absence.
+- **5 comptes de test supprimés** (`test_e2e@example.com`, `test_repro@example.com` ×4) — créés le même jour, jamais réels, supprimés en cascade (profil + formations) après confirmation explicite.
 
 ---
 

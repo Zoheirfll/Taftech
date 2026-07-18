@@ -8,7 +8,7 @@ from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
-from django.db.models import Q
+from django.db.models import Q, F
 import os
 import random
 import tempfile
@@ -175,7 +175,9 @@ class SuggestionsCarriereAPIView(APIView):
         if profil.specialite:
             metiers_qs = list(MetierReferentiel.objects.filter(
                 domaine__code=profil.specialite, est_actif=True
-            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'domaine__code', 'domaine__libelle'))
+            ).exclude(titre=profil.titre_professionnel).values(
+                'id', 'titre', domaine_code=F('domaine__code'), domaine_label=F('domaine__libelle')
+            ))
             seed = hash(f"{request.user.id}_{profil.specialite or ''}")
             random.seed(seed)
             random.shuffle(metiers_qs)

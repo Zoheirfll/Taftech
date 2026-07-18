@@ -8,6 +8,7 @@ import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User } fro
 import Select from "react-select";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import DomaineLabel from "../../Components/DomaineLabel";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
@@ -177,7 +178,6 @@ const CandidaturesSpontanees = () => {
             const isExpanded = expandedIds[c.id];
             const lettreEstLongue = c.lettre_motivation && c.lettre_motivation.length > 160;
             const diplomeLabel = constants.diplomes.find(d => d.value === c.diplome)?.label || c.diplome;
-            const specialiteLabel = constants.secteurs.find(s => s.value === c.specialite)?.label || c.specialite;
 
             return (
               <div
@@ -233,7 +233,7 @@ const CandidaturesSpontanees = () => {
                         <span className={`px-2 py-0.5 ${tw.surfaceSubtle} ${tw.textMuted} text-[10px] font-medium rounded-md`}>{diplomeLabel}</span>
                       )}
                       {c.specialite && (
-                        <span className={`px-2 py-0.5 ${tw.badgeTealSoft} text-[10px] font-medium rounded-md`}>{specialiteLabel}</span>
+                        <span className={`px-2 py-0.5 ${tw.badgeTealSoft} text-[10px] font-medium rounded-md`}><DomaineLabel code={c.specialite} /></span>
                       )}
                     </div>
 

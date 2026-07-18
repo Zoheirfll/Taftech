@@ -1041,7 +1041,7 @@ def parse_with_groq(text):
     if infos.get("nom_complet"):
         result["nom_complet"] = str(infos["nom_complet"]).strip()
     if infos.get("telephone"):
-        tel = re.sub(r'[\s.\-]', '', str(infos["telephone"]))
+        tel = re.sub(r'[\s.\-()]', '', str(infos["telephone"]))
         tel = re.split(r'[/,;]', tel)[0]
         result["telephone"] = tel
     if infos.get("competences"):

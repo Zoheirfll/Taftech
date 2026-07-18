@@ -2,6 +2,7 @@ import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
 import { SecteurDomaineSelect } from "../../../Components/SecteurDomaineSelect";
+import DomaineLabel from "../../../Components/DomaineLabel";
 import { Pencil, X, Sparkles, ExternalLink } from "lucide-react";
 import { tw } from "../../../theme";
 
@@ -495,7 +496,7 @@ export const Modals = ({
                               {m.titre}
                             </p>
                             <p className={`text-xs ${tw.autocompleteItemSubtitle}`}>
-                              {m.secteur}
+                              {m.domaine_label}
                             </p>
                           </button>
                         ))}
@@ -943,7 +944,12 @@ export const Modals = ({
                       },
                       { label: "Wilaya", value: parsedData.wilaya },
                       { label: "Diplôme", value: parsedData.diplome },
-                      { label: "Spécialité", value: parsedData.specialite },
+                      {
+                        label: "Spécialité",
+                        value: parsedData.specialite ? (
+                          <DomaineLabel code={parsedData.specialite} />
+                        ) : null,
+                      },
                       {
                         label: "Service militaire",
                         value: parsedData.service_militaire,
@@ -1005,7 +1011,7 @@ export const Modals = ({
                             {exp.date_debut_raw} — {exp.date_fin_raw}
                             {exp.secteur && (
                               <span className={tw.textPrimary}>
-                                {" "}· {constants.secteurs?.find((s) => s.value === exp.secteur)?.label || exp.secteur}
+                                {" "}<DomaineLabel code={exp.secteur} prefix="· " />
                               </span>
                             )}
                           </p>

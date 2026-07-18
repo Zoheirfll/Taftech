@@ -3,6 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import DomaineLabel from "../../Components/DomaineLabel";
 import {
   RefreshCw,
   TrendingUp,
@@ -385,7 +386,7 @@ const AdminStatistiques = () => {
                           <div key={s.specialite}>
                             <div className="flex justify-between items-center mb-1">
                               <span className={`text-xs font-medium ${tw.textMuted700}`}>
-                                {i + 1}. {s.specialite}
+                                {i + 1}. <DomaineLabel code={s.specialite} />
                               </span>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs ${tw.textMuted} flex items-center gap-1`}>

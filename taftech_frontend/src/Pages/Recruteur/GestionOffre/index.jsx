@@ -17,6 +17,7 @@ import { Modals } from "./Modals";
 import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import DomaineLabel from "../../../Components/DomaineLabel";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 
@@ -187,7 +188,7 @@ const GestionOffre = () => {
             <div className={`px-6 py-4 ${tw.surfaceMuted} border-b ${tw.borderSubtle} flex flex-wrap gap-x-8 gap-y-3`}>
               {[
                 { label: "Localisation", value: `${offre.wilaya}${offre.commune ? ` · ${offre.commune}` : ""}` },
-                { label: "Spécialité", value: formatText(offre.specialite) },
+                { label: "Spécialité", value: <DomaineLabel code={offre.specialite} /> },
                 { label: "Diplôme requis", value: offre.diplome ? formatText(offre.diplome) : "Non exigé" },
                 { label: "Expérience", value: formatText(offre.experience_requise) },
                 { label: "Postes", value: `${offre.nombre_postes || 1} poste${(offre.nombre_postes || 1) > 1 ? "s" : ""}` },

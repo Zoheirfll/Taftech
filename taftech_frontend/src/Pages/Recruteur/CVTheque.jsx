@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import InfoBanner from "../../Components/InfoBanner";
+import DomaineLabel from "../../Components/DomaineLabel";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import Select from "react-select";
@@ -937,7 +938,7 @@ const CVTheque = () => {
                       {selectedCandidat.specialite && (
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <Briefcase size={12} />
-                          {selectedCandidat.specialite}
+                          <DomaineLabel code={selectedCandidat.specialite} />
                         </span>
                       )}
                     </div>
@@ -1009,7 +1010,7 @@ const CVTheque = () => {
                           {exp.entreprise}
                           {exp.secteur && (
                             <span className={`font-normal ${tw.textMuted}`}>
-                              {" "}· {constants.secteurs?.find((s) => s.value === exp.secteur)?.label || exp.secteur}
+                              {" "}<DomaineLabel code={exp.secteur} prefix="· " />
                             </span>
                           )}
                         </p>

@@ -231,7 +231,7 @@ const CreateJob = () => {
                             className={`w-full text-left px-4 py-2.5 transition-colors border-b ${tw.borderSubtle} last:border-0 ${tw.bgTealHover}`}
                           >
                             <p className={`text-sm font-medium ${tw.textStrong}`}>{m.titre}</p>
-                            <p className={`text-xs ${tw.textMuted700}`}>{m.secteur}</p>
+                            <p className={`text-xs ${tw.textMuted700}`}>{m.domaine_label}</p>
                           </button>
                         ))}
                       </div>

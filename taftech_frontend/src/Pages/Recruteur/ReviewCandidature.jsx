@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
+import DomaineLabel from "../../Components/DomaineLabel";
 import {
   MapPin,
   GraduationCap,
@@ -334,7 +335,7 @@ const ReviewCandidature = () => {
               {[
                 {
                   label: "Secteur",
-                  value: formatText(profil.secteur_souhaite),
+                  value: <DomaineLabel code={profil.secteur_souhaite} />,
                 },
                 {
                   label: "Salaire",
@@ -424,7 +425,7 @@ const ReviewCandidature = () => {
                     </p>
                     <p className="text-xs text-indigo-600">
                       {exp.entreprise}
-                      {exp.secteur && <span className="text-slate-600 font-normal ml-1">· {exp.secteur}</span>}
+                      {exp.secteur && <span className="text-slate-600 font-normal ml-1"><DomaineLabel code={exp.secteur} prefix="· " /></span>}
                     </p>
                     <p className="text-xs text-slate-600 mt-0.5">
                       {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}

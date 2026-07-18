@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import DomaineLabel from "../../../Components/DomaineLabel";
 import { tw } from "../../../theme";
 
 const CRITERES_RADAR = [
@@ -464,7 +465,7 @@ export const DetailCandidature = ({
                   {[
                     {
                       label: "Secteur",
-                      value: formatText(candidatData.secteur_souhaite),
+                      value: <DomaineLabel code={candidatData.secteur_souhaite} />,
                     },
                     {
                       label: "Prétentions",
@@ -510,7 +511,7 @@ export const DetailCandidature = ({
                         </p>
                         <p className={`text-sm ${tw.textTeal}`}>
                           {exp.entreprise}
-                          {exp.secteur && <span className={`${tw.textMuted} font-normal ml-1`}>· {exp.secteur}</span>}
+                          {exp.secteur && <span className={`${tw.textMuted} font-normal ml-1`}><DomaineLabel code={exp.secteur} prefix="· " /></span>}
                         </p>
                         <p className={`text-xs ${tw.textMuted} mt-0.5 flex items-center gap-1`}>
                           <Calendar size={10} />

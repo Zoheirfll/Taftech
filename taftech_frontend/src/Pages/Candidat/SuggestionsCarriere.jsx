@@ -190,7 +190,7 @@ const SuggestionsCarriere = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2.5 py-0.5 text-xs rounded-full ${tw.tagNeutralSolid}`}>
-                      {m.secteur}
+                      {m.domaine_label}
                     </span>
                     <ChevronRight size={14} className={tw.textSubtle} />
                   </div>

@@ -20,6 +20,7 @@ import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import DomaineLabel from "../../../Components/DomaineLabel";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 
@@ -287,8 +288,12 @@ const ProfilCandidat = () => {
             </p>
             <p className={`text-xs ${tw.textMuted} mt-0.5`}>
               {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
-              {" · "}
-              {constants.secteurs.find(s => s.value === profil.specialite)?.label || formatText(profil.specialite)}
+              {profil.specialite && (
+                <>
+                  {" · "}
+                  <DomaineLabel code={profil.specialite} />
+                </>
+              )}
             </p>
             {profil.niveau_experience && (
               <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
@@ -334,7 +339,7 @@ const ProfilCandidat = () => {
           {[
             {
               label: "Secteur souhaité",
-              value: formatText(profil.secteur_souhaite),
+              value: <DomaineLabel code={profil.secteur_souhaite} />,
             },
             {
               label: "Salaire souhaité",
@@ -406,7 +411,7 @@ const ProfilCandidat = () => {
                   <p className={`text-xs ${tw.textPrimary} font-medium`}>
                     {exp.entreprise}
                     {exp.secteur && (
-                      <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.secteur}</span>
+                      <span className={`ml-2 ${tw.textMuted} font-normal`}><DomaineLabel code={exp.secteur} prefix="· " /></span>
                     )}
                   </p>
                   <p className={`text-xs ${tw.textMuted} mt-1`}>

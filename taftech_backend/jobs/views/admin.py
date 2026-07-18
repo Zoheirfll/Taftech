@@ -14,7 +14,7 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog, DemandeActivationPremium
+    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine
 )
 import django.utils.timezone as timezone
 from ..serializers import (
@@ -440,12 +440,15 @@ class AdminMarcheAPIView(APIView):
                 salaires_candidats.setdefault(c['secteur_souhaite'], []).append(m)
 
         tous_secteurs = set(list(salaires_offres.keys()) + list(salaires_candidats.keys()))
+        libelles_domaines = dict(
+            Domaine.objects.filter(code__in=tous_secteurs).values_list('code', 'libelle')
+        )
         salaires_par_secteur = []
         for secteur in tous_secteurs:
             ol = salaires_offres.get(secteur, [])
             cl = salaires_candidats.get(secteur, [])
             salaires_par_secteur.append({
-                'secteur': secteur,
+                'secteur': libelles_domaines.get(secteur, secteur),
                 'moy_offres': int(sum(ol) / len(ol)) if ol else None,
                 'moy_candidats': int(sum(cl) / len(cl)) if cl else None,
                 'nb_offres': len(ol),

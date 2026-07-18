@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 
 // ─── Constantes grille ────────────────────────────────────────────────────────
 const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 112px";
@@ -674,10 +675,9 @@ const DashboardRecruteur = () => {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Spécialité</label>
-                  <Select
-                    options={constants.secteurs}
-                    value={constants.secteurs.find((s) => s.value === modifierForm.specialite) || null}
-                    onChange={(s) => setModifierForm({ ...modifierForm, specialite: s ? s.value : "" })}
+                  <SecteurDomaineSelect
+                    value={modifierForm.specialite}
+                    onChange={(domaineCode) => setModifierForm({ ...modifierForm, specialite: domaineCode })}
                     styles={selectStylesTeal}
                   />
                 </div>

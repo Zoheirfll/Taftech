@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { TooltipIcon } from "../../Components/Tooltip";
+import DomaineLabel from "../../Components/DomaineLabel";
 import {
   ArrowLeft, MapPin, Calendar, Briefcase, GraduationCap,
   Banknote, TrendingUp, FileText, Zap, CheckCircle, XCircle,
@@ -544,7 +545,7 @@ const JobDetail = () => {
                 {job.specialite && (
                   <div className={`${tw.bgPrimarySoft} rounded-lg p-3`}>
                     <p className={`text-[10px] font-semibold ${tw.textPrimaryLight} uppercase tracking-wider mb-1`}>Spécialité</p>
-                    <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>{job.specialite}</p>
+                    <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}><DomaineLabel code={job.specialite} /></p>
                   </div>
                 )}
                 {job.salaire_propose && (

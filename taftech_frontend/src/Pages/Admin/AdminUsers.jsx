@@ -7,6 +7,7 @@ import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "l
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
+import DomaineLabel from "../../Components/DomaineLabel";
 
 const ROLE_TABS = [
   { key: "", label: "Tous", icon: Users2 },
@@ -427,8 +428,10 @@ const AdminUsers = () => {
                       {[
                         {
                           label: "Secteur",
-                          value: formatField(
-                            selectedUser.profil_candidat.secteur_souhaite,
+                          value: (
+                            <DomaineLabel
+                              code={selectedUser.profil_candidat.secteur_souhaite}
+                            />
                           ),
                         },
                         {

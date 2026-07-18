@@ -3,6 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Link } from "react-router-dom";
+import DomaineLabel from "../../Components/DomaineLabel";
 import {
   Search,
   Download,
@@ -527,7 +528,7 @@ const AdminOffres = () => {
                 {selectedOffre.specialite && (
                   <div>
                     <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Spécialité</p>
-                    <p className={`text-sm font-semibold ${tw.textAmberOnDark} mt-0.5`}>{selectedOffre.specialite}</p>
+                    <p className={`text-sm font-semibold ${tw.textAmberOnDark} mt-0.5`}><DomaineLabel code={selectedOffre.specialite} /></p>
                   </div>
                 )}
               </div>

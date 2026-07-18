@@ -6,6 +6,7 @@ import Select from "react-select";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
@@ -85,7 +86,7 @@ const CreateJob = () => {
     setFormData({ ...formData, titre: value });
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value);
+        const data = await jobsService.getMetiers(value, "", formData.specialite);
         setMetierSuggestions(data.slice(0, 10));
         setShowSuggestions(true);
       } catch {
@@ -301,24 +302,16 @@ const CreateJob = () => {
             </Field>
             {/* Fix 3 : validation spécialité */}
             <div id="field-specialite">
-              <Field label="Spécialité" required>
-                <Select
-                  name="specialite"
-                  options={constants.secteurs}
-                  onChange={(opt, meta) => { handleSelectChange(opt, meta); if (errors.specialite) setErrors(p => ({ ...p, specialite: "" })); }}
-                  value={constants.secteurs.find((s) => s.value === formData.specialite) || null}
-                  placeholder="Sélectionner..."
-                  isClearable
-                  styles={{
-                    ...selectStylesTeal,
-                    control: (base, state) => ({
-                      ...(selectStylesTeal.control ? selectStylesTeal.control(base, state) : base),
-                      ...(errors.specialite ? { borderColor: "#f87171", boxShadow: "0 0 0 2px #fee2e2" } : {}),
-                    }),
-                  }}
-                />
-                {errors.specialite && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.specialite}</p>}
-              </Field>
+              <SecteurDomaineSelect
+                value={formData.specialite}
+                onChange={(domaineCode) => {
+                  setFormData((p) => ({ ...p, specialite: domaineCode }));
+                  if (errors.specialite) setErrors((p) => ({ ...p, specialite: "" }));
+                }}
+                styles={selectStylesTeal}
+                required
+              />
+              {errors.specialite && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.specialite}</p>}
             </div>
           </div>
         </Section>

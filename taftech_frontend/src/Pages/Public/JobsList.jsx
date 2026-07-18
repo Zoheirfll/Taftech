@@ -8,6 +8,7 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import {
   MapPin, Briefcase, Bookmark, Sparkles, Search,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
@@ -76,6 +77,7 @@ const JobsList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [], experiences: [], contrats: [] });
+  const [nomenclature, setNomenclature] = useState({ domaines: [] });
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
@@ -87,12 +89,14 @@ const JobsList = () => {
       try {
         const isConnected = !!localStorage.getItem("userRole");
         const isCandidat = localStorage.getItem("userRole") === "CANDIDAT";
-        const [constantsData, favorisData, recommandationsData] = await Promise.all([
+        const [constantsData, nomenclatureData, favorisData, recommandationsData] = await Promise.all([
           jobsService.getConstants(),
+          jobsService.getNomenclature().catch(() => ({ domaines: [] })),
           isConnected ? api.get("jobs/sauvegardes/").catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
           isCandidat ? jobsService.getOffresRecommandees().catch(() => []) : Promise.resolve([]),
         ]);
         setConstants(constantsData);
+        setNomenclature(nomenclatureData);
         setFavoris(favorisData.data);
         setRecommandations(recommandationsData || []);
       } catch (error) {
@@ -193,7 +197,7 @@ const JobsList = () => {
     filters.commune && { key: "commune", label: filters.commune },
     filters.experience && { key: "experience", label: expLabel(filters.experience) },
     filters.contrat && { key: "contrat", label: CONTRAT_LABELS[filters.contrat] || filters.contrat },
-    filters.specialite && { key: "specialite", label: constants.secteurs.find((s) => s.value === filters.specialite)?.label || filters.specialite },
+    filters.specialite && { key: "specialite", label: nomenclature.domaines.find((d) => d.code === filters.specialite)?.libelle || filters.specialite },
     filters.diplome && { key: "diplome", label: constants.diplomes.find((d) => d.value === filters.diplome)?.label || filters.diplome },
   ].filter(Boolean);
 
@@ -225,7 +229,6 @@ const JobsList = () => {
         {[
           { label: "Expérience", name: "experience", options: constants.experiences, placeholder: "Toutes" },
           { label: "Type de contrat", name: "contrat", options: constants.contrats, placeholder: "Tous" },
-          { label: "Secteur", name: "specialite", options: constants.secteurs, placeholder: "Tous" },
           { label: "Diplôme", name: "diplome", options: constants.diplomes, placeholder: "Tous" },
         ].map(({ label, name, options, placeholder }) => (
           <div key={name}>
@@ -233,6 +236,14 @@ const JobsList = () => {
             <Select name={name} options={options} onChange={handleSelectChange} value={options.find((c) => c.value === filters[name]) || null} placeholder={placeholder} isClearable styles={selectStyles} />
           </div>
         ))}
+        <div>
+          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Secteur / Domaine</label>
+          <SecteurDomaineSelect
+            value={filters.specialite}
+            onChange={(domaineCode) => setFilters({ ...filters, specialite: domaineCode })}
+            styles={selectStyles}
+          />
+        </div>
         <div>
           <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Wilaya</label>
           <Select name="wilaya" options={constants.wilayas} onChange={(opt) => setFilters({ ...filters, wilaya: opt ? opt.value : "", commune: "" })} value={constants.wilayas.find((c) => c.value === filters.wilaya) || null} placeholder="Toutes" isClearable styles={selectStyles} />

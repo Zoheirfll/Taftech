@@ -1,6 +1,4 @@
 import logging
-import re
-from collections import Counter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -25,22 +23,9 @@ User = get_user_model()
 
 
 def _deviner_secteur_experience(titre_poste, description=""):
-    """Devine le secteur d'une expérience : référentiel métiers en priorité
-    (plus précis, 11 000+ intitulés déjà rattachés à un secteur), mots-clés
-    en repli, 'AUTRE' en dernier recours pour toujours proposer une valeur."""
-    if titre_poste:
-        mots = [m for m in re.findall(r"\w+", titre_poste.lower()) if len(m) >= 4]
-        if mots:
-            q = Q()
-            for mot in mots:
-                q |= Q(titre__icontains=mot)
-            secteurs = list(
-                MetierReferentiel.objects.filter(q, est_actif=True).values_list('secteur', flat=True)[:50]
-            )
-            if secteurs:
-                return Counter(secteurs).most_common(1)[0][0]
-    secteur_mots_cles = extract_specialite(f"{titre_poste or ''} {description or ''}")
-    return secteur_mots_cles or 'AUTRE'
+    """Devine le code Domaine ANEM d'une expérience à partir du référentiel métiers."""
+    from ..referentiel_utils import resoudre_domaine_depuis_texte
+    return resoudre_domaine_depuis_texte(titre_poste, description)
 
 
 class GroqThrottle(UserRateThrottle):
@@ -103,11 +88,16 @@ class MetierReferentielAPIView(APIView):
     def get(self, request):
         metiers = MetierReferentiel.objects.filter(est_actif=True)
         secteur = request.query_params.get('secteur')
+        domaine = request.query_params.get('domaine')
+        sous_domaine = request.query_params.get('sous_domaine')
         search = request.query_params.get('search')
         if secteur:
-            metiers = metiers.filter(secteur=secteur)
+            metiers = metiers.filter(secteur_code=secteur)
+        if domaine:
+            metiers = metiers.filter(domaine__code=domaine)
+        if sous_domaine:
+            metiers = metiers.filter(sous_domaine_id=sous_domaine)
         if search:
-            from django.db.models import Q
             q = Q()
             for mot in search.strip().split():
                 q &= Q(titre__icontains=mot)
@@ -184,8 +174,8 @@ class SuggestionsCarriereAPIView(APIView):
         metiers = []
         if profil.specialite:
             metiers_qs = list(MetierReferentiel.objects.filter(
-                secteur=profil.specialite, est_actif=True
-            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'secteur', 'niveau_experience'))
+                domaine__code=profil.specialite, est_actif=True
+            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'domaine__code', 'domaine__libelle'))
             seed = hash(f"{request.user.id}_{profil.specialite or ''}")
             random.seed(seed)
             random.shuffle(metiers_qs)
@@ -197,7 +187,7 @@ class SuggestionsCarriereAPIView(APIView):
                     q |= Q(titre__icontains=mot)
             metiers_extra = list(MetierReferentiel.objects.filter(
                 q, est_actif=True
-            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'secteur', 'niveau_experience')[:20])
+            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'domaine__code', 'domaine__libelle')[:20])
             metiers = metiers + metiers_extra
         return Response({
             'metiers': metiers[:20],

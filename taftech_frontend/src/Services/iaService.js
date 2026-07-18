@@ -74,12 +74,14 @@ export const iaService = {
     }
   },
 
-  // Métiers référentiel
-  getMetiers: async (search = "", secteur = "") => {
+  // Métiers référentiel (nomenclature ANEM)
+  getMetiers: async (search = "", secteur = "", domaine = "", sousDomaine = "") => {
     try {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       if (secteur) params.append("secteur", secteur);
+      if (domaine) params.append("domaine", domaine);
+      if (sousDomaine) params.append("sous_domaine", sousDomaine);
       const response = await api.get(`jobs/metiers/?${params.toString()}`);
       return response.data;
     } catch (err) {

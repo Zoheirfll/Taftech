@@ -34,7 +34,12 @@ class JobListAPIView(APIView):
         if diplome:
             offres = offres.filter(diplome__icontains=diplome)
         if specialite:
-            offres = offres.filter(specialite__icontains=specialite)
+            # Un code Secteur seul (1 lettre, ex: "A") filtre tous les domaines de
+            # ce secteur ; un code Domaine complet (ex: "A11") filtre exactement.
+            if len(specialite) == 1:
+                offres = offres.filter(specialite__istartswith=specialite)
+            else:
+                offres = offres.filter(specialite__iexact=specialite)
         if experience:
             offres = offres.filter(experience_requise=experience)
         if contrat:
@@ -179,4 +184,30 @@ class ConstantsAPIView(APIView):
             "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
         }
         cache.set('jobs_constants', data, timeout=3600)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class NomenclatureAPIView(APIView):
+    """Arbre complet Secteur > Domaine > Sous-domaine (nomenclature ANEM), pour
+    alimenter les filtres en cascade côté frontend (filtré côté client, comme
+    wilaya→commune)."""
+    permission_classes = [AllowAny]
+    def get(self, request):
+        from django.core.cache import cache
+        cached = cache.get('jobs_nomenclature')
+        if cached:
+            return Response(cached, status=status.HTTP_200_OK)
+        from ..models import Secteur, Domaine, SousDomaine
+        data = {
+            "secteurs": [{"code": s.code, "libelle": s.libelle} for s in Secteur.objects.all()],
+            "domaines": [
+                {"id": d.id, "code": d.code, "libelle": d.libelle, "secteur_code": d.secteur_id and d.secteur.code}
+                for d in Domaine.objects.select_related('secteur').all()
+            ],
+            "sous_domaines": [
+                {"id": sd.id, "libelle": sd.libelle, "domaine_code": sd.domaine.code}
+                for sd in SousDomaine.objects.select_related('domaine').all()
+            ],
+        }
+        cache.set('jobs_nomenclature', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)

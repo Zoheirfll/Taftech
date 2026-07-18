@@ -3,7 +3,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from jobs.models import MetierReferentiel
+from jobs.models import MetierReferentiel, Secteur, Domaine, SousDomaine
 
 User = get_user_model()
 
@@ -33,24 +33,34 @@ class MetierReferentielAPITestCase(TestCase):
             role="CANDIDAT"
         )
 
+        # Nomenclature ANEM de test
+        self.secteur_j = Secteur.objects.create(code="J", libelle="Communication, média et multimédia")
+        self.secteur_l = Secteur.objects.create(code="L", libelle="Support à l'entreprise")
+        self.domaine_it = Domaine.objects.create(code="L18", libelle="Systèmes d'information et de télécommunication", secteur=self.secteur_l)
+        self.domaine_finance = Domaine.objects.create(code="L12", libelle="Comptabilité et finance", secteur=self.secteur_l)
+
         # Métiers de test
         self.metier_it = MetierReferentiel.objects.create(
             titre="Développeur Full-Stack",
-            secteur="IT",
-            niveau_experience="Junior/Senior",
-            mots_cles="React, Django, Python",
+            domaine=self.domaine_it,
+            code_fiche="L1801",
+            fiche_metier="Développement informatique",
+            secteur_code="L",
             est_actif=True
         )
         self.metier_finance = MetierReferentiel.objects.create(
             titre="Comptable Principal",
-            secteur="FINANCE",
-            niveau_experience="Senior",
-            mots_cles="Comptabilité, TVA, Bilan",
+            domaine=self.domaine_finance,
+            code_fiche="L1201",
+            fiche_metier="Comptabilité",
+            secteur_code="L",
             est_actif=True
         )
         self.metier_inactif = MetierReferentiel.objects.create(
             titre="Métier Obsolète",
-            secteur="AUTRE",
+            domaine=self.domaine_it,
+            code_fiche="L1802",
+            secteur_code="L",
             est_actif=False
         )
 
@@ -87,6 +97,14 @@ class MetierReferentielAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
+    def test_HP4b_filtre_par_domaine(self):
+        """HP4b : Le filtre ?domaine=<code> restreint aux métiers de ce domaine."""
+        response = self.client.get(f"/api/jobs/metiers/?domaine={self.domaine_finance.code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titres = [m["titre"] for m in response.data]
+        self.assertIn("Comptable Principal", titres)
+        self.assertNotIn("Développeur Full-Stack", titres)
+
     # ==============================================
     # HAPPY PATHS — API ADMIN
     # ==============================================
@@ -103,9 +121,9 @@ class MetierReferentielAPITestCase(TestCase):
         self.client.force_authenticate(user=self.admin)
         payload = {
             "titre": "Ingénieur DevOps",
-            "secteur": "IT",
-            "niveau_experience": "Intermédiaire",
-            "mots_cles": "Docker, Kubernetes, CI/CD",
+            "domaine": self.domaine_it.id,
+            "code_fiche": "L1803",
+            "secteur_code": "L",
             "est_actif": True
         }
         response = self.client.post("/api/jobs/admin/metiers/", payload)
@@ -119,9 +137,9 @@ class MetierReferentielAPITestCase(TestCase):
         self.client.force_authenticate(user=self.admin)
         payload = {
             "titre": "Développeur Full-Stack Senior",
-            "secteur": "IT",
-            "niveau_experience": "Senior",
-            "mots_cles": "React, Django",
+            "domaine": self.domaine_it.id,
+            "code_fiche": "L1801",
+            "secteur_code": "L",
             "est_actif": True
         }
         response = self.client.put(
@@ -149,7 +167,9 @@ class MetierReferentielAPITestCase(TestCase):
         for i in range(25):
             MetierReferentiel.objects.create(
                 titre=f"Métier Test {i}",
-                secteur="IT",
+                domaine=self.domaine_it,
+                code_fiche=f"L99{i:02d}",
+                secteur_code="L",
                 est_actif=True
             )
         self.client.force_authenticate(user=self.admin)
@@ -184,7 +204,7 @@ class MetierReferentielAPITestCase(TestCase):
         self.client.force_authenticate(user=self.admin)
         response = self.client.put(
             "/api/jobs/admin/metiers/9999/",
-            {"titre": "Test", "secteur": "IT", "est_actif": True}
+            {"titre": "Test", "domaine": self.domaine_it.id, "code_fiche": "X", "secteur_code": "L", "est_actif": True}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 

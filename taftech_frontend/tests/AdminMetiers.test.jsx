@@ -14,6 +14,7 @@ import AdminMetiers from "../src/Pages/Admin/AdminMetiers";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
+import selectEvent from "react-select-event";
 
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
@@ -21,6 +22,11 @@ vi.mock("../src/Services/jobsService", () => ({
     createMetier: vi.fn(),
     updateMetier: vi.fn(),
     deleteMetier: vi.fn(),
+    getNomenclature: vi.fn().mockResolvedValue({
+      secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
+      domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
+      sous_domaines: [],
+    }),
   },
 }));
 
@@ -149,7 +155,7 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
     await waitFor(() => screen.getByText(/Ajouter un métier/i));
     fireEvent.click(screen.getByText(/Ajouter un métier/i));
 
-    expect(screen.getByText(/Titre \*/i)).toBeInTheDocument();
+    expect(screen.getByText(/Titre \(appellation\) \*/i)).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText(/Ex: Développeur Full-Stack/i),
     ).toBeInTheDocument();
@@ -160,9 +166,10 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
     jobsService.createMetier.mockResolvedValue({
       id: 5,
       titre: "Nouveau Métier",
-      secteur: "IT",
-      niveau_experience: "",
-      mots_cles: "",
+      domaine: 1,
+      domaine_code: "L18",
+      code_fiche: "L1899",
+      secteur_code: "L",
       est_actif: true,
     });
 
@@ -179,6 +186,14 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
       /Ex: Développeur Full-Stack/i,
     );
     fireEvent.change(titreInput, { target: { value: "Nouveau Métier" } });
+
+    const secteurSelect = screen.getAllByText(/Sélectionnez.../i)[0];
+    await selectEvent.select(secteurSelect, "Support à l'entreprise");
+    const domaineSelect = await screen.findAllByText(/Sélectionnez.../i);
+    await selectEvent.select(domaineSelect[0], "Systèmes d'information");
+
+    const codeFicheInput = screen.getByPlaceholderText(/Ex: A1101/i);
+    fireEvent.change(codeFicheInput, { target: { value: "L1899" } });
 
     const form = titreInput.closest("form");
     fireEvent.submit(form);

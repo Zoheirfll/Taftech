@@ -1,6 +1,7 @@
 import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
+import { SecteurDomaineSelect } from "../../../Components/SecteurDomaineSelect";
 import { Pencil, X, Sparkles, ExternalLink } from "lucide-react";
 import { tw } from "../../../theme";
 
@@ -220,19 +221,10 @@ export const Modals = ({
                   <label className={tw.formLabel}>
                     Spécialité
                   </label>
-                  <Select
-                    options={constants.secteurs}
-                    value={
-                      constants.secteurs.find(
-                        (s) => s.value === editInfo.specialite,
-                      ) || null
-                    }
-                    placeholder="Sélectionnez..."
-                    onChange={(opt) =>
-                      setEditInfo({
-                        ...editInfo,
-                        specialite: opt ? opt.value : "",
-                      })
+                  <SecteurDomaineSelect
+                    value={editInfo.specialite}
+                    onChange={(domaineCode) =>
+                      setEditInfo({ ...editInfo, specialite: domaineCode })
                     }
                     styles={selectStyles}
                   />
@@ -315,19 +307,10 @@ export const Modals = ({
                 <label className={tw.formLabel}>
                   Secteur souhaité
                 </label>
-                <Select
-                  options={constants.secteurs}
-                  value={
-                    constants.secteurs.find(
-                      (s) => s.value === editPref.secteur_souhaite,
-                    ) || null
-                  }
-                  placeholder="Sélectionnez..."
-                  onChange={(opt) =>
-                    setEditPref({
-                      ...editPref,
-                      secteur_souhaite: opt ? opt.value : "",
-                    })
+                <SecteurDomaineSelect
+                  value={editPref.secteur_souhaite}
+                  onChange={(domaineCode) =>
+                    setEditPref({ ...editPref, secteur_souhaite: domaineCode })
                   }
                   styles={selectStyles}
                 />
@@ -618,12 +601,9 @@ export const Modals = ({
                 <label className={tw.formLabel}>
                   Secteur du poste
                 </label>
-                <Select
-                  options={constants.secteurs}
-                  value={constants.secteurs?.find((s) => s.value === newExp.secteur) || null}
-                  onChange={(opt) => setNewExp({ ...newExp, secteur: opt ? opt.value : "" })}
-                  placeholder="Sélectionner un secteur..."
-                  isClearable
+                <SecteurDomaineSelect
+                  value={newExp.secteur}
+                  onChange={(domaineCode) => setNewExp({ ...newExp, secteur: domaineCode })}
                   styles={selectStyles}
                 />
               </div>

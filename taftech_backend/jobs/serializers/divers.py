@@ -38,7 +38,25 @@ class CandidatureSpontaneeSerializer(serializers.ModelSerializer):
 
 
 class MetierReferentielSerializer(serializers.ModelSerializer):
+    secteur_label = serializers.SerializerMethodField()
+    domaine_label = serializers.SerializerMethodField()
+    domaine_code = serializers.CharField(source='domaine.code', read_only=True)
+    sous_domaine_label = serializers.SerializerMethodField()
+
     class Meta:
         model = MetierReferentiel
-        fields = ['id', 'titre', 'secteur', 'niveau_experience', 'mots_cles', 'est_actif', 'date_creation']
+        fields = [
+            'id', 'titre', 'domaine', 'domaine_code', 'domaine_label', 'sous_domaine',
+            'sous_domaine_label', 'code_fiche', 'fiche_metier', 'secteur_code',
+            'secteur_label', 'est_actif', 'date_creation',
+        ]
         read_only_fields = ['date_creation']
+
+    def get_secteur_label(self, obj):
+        return obj.domaine.secteur.libelle if obj.domaine_id else None
+
+    def get_domaine_label(self, obj):
+        return obj.domaine.libelle if obj.domaine_id else None
+
+    def get_sous_domaine_label(self, obj):
+        return obj.sous_domaine.libelle if obj.sous_domaine_id else None

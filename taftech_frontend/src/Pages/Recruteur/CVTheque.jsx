@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import {
   Search,
   SlidersHorizontal,
@@ -540,19 +541,16 @@ const CVTheque = () => {
               }}
               styles={selectStylesTeal}
             />
-            <Select
-              options={constants.secteurs}
-              placeholder="Spécialité"
-              isClearable
-              value={
-                constants.secteurs.find((s) => s.value === specialite) || null
-              }
-              onChange={(val) => {
-                setSpecialite(val ? val.value : "");
-                setCurrentPage(1);
-              }}
-              styles={selectStylesTeal}
-            />
+            <div className="min-w-55">
+              <SecteurDomaineSelect
+                value={specialite}
+                onChange={(domaineCode) => {
+                  setSpecialite(domaineCode);
+                  setCurrentPage(1);
+                }}
+                styles={selectStylesTeal}
+              />
+            </div>
             <Select
               options={constants.diplomes}
               placeholder="Diplôme"

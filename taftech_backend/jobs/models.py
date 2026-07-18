@@ -80,19 +80,56 @@ class ProfilEntreprise(models.Model):
     def __str__(self):
         return self.nom_entreprise
 
+class Secteur(models.Model):
+    """Nomenclature ANEM — niveau 1 (ex: 'A' = Agriculture et pêche)."""
+    code = models.CharField(max_length=5, unique=True)
+    libelle = models.CharField(max_length=150)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.libelle}"
+
+
+class Domaine(models.Model):
+    """Nomenclature ANEM — niveau 2 (ex: 'A11' = Espaces naturels et espaces verts)."""
+    secteur = models.ForeignKey(Secteur, on_delete=models.CASCADE, related_name='domaines')
+    code = models.CharField(max_length=10, unique=True)
+    libelle = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.libelle}"
+
+
+class SousDomaine(models.Model):
+    """Nomenclature ANEM — niveau 3, optionnel (absent pour la plupart des domaines)."""
+    domaine = models.ForeignKey(Domaine, on_delete=models.CASCADE, related_name='sous_domaines')
+    libelle = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.libelle
+
+
 class MetierReferentiel(models.Model):
+    """Nomenclature ANEM — niveau 5, une ligne par appellation de poste (ex: 'Élagueur-grimpeur')."""
     titre = models.CharField(max_length=200)
-    secteur = models.CharField(max_length=100)
-    niveau_experience = models.CharField(max_length=50, blank=True)
-    mots_cles = models.TextField(blank=True)
+    domaine = models.ForeignKey(Domaine, null=True, blank=True, on_delete=models.CASCADE, related_name='metiers')
+    sous_domaine = models.ForeignKey(SousDomaine, null=True, blank=True, on_delete=models.SET_NULL, related_name='metiers')
+    code_fiche = models.CharField(max_length=10, blank=True, default='', db_index=True)
+    fiche_metier = models.CharField(max_length=200, blank=True)
+    secteur_code = models.CharField(max_length=5, blank=True, default='', db_index=True)
     est_actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['secteur', 'titre']
+        ordering = ['secteur_code', 'titre']
 
     def __str__(self):
-        return f"{self.titre} — {self.secteur}"
+        return f"{self.titre} — {self.secteur_code}"
 
 class OffreEmploi(models.Model):
     """
@@ -111,7 +148,7 @@ class OffreEmploi(models.Model):
     wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, verbose_name="Lieu de travail (Wilaya)")
     commune = models.CharField(max_length=100, blank=True, null=True, verbose_name="Commune")
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme requis")
-    specialite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True, verbose_name="Spécialité / Secteur")
+    specialite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Spécialité (code Domaine ANEM)")
     type_contrat = models.CharField(max_length=50, choices=TYPES_CONTRAT, default='CDI')
     experience_requise = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
     nombre_postes = models.PositiveIntegerField(default=1, verbose_name="Nombre de postes à pourvoir")
@@ -278,14 +315,14 @@ class ProfilCandidat(models.Model):
     passeport_valide = models.BooleanField(default=False, verbose_name="Passeport valide")
 
     # --- PRÉFÉRENCES DE RECRUTEMENT ---
-    secteur_souhaite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True)
+    secteur_souhaite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Domaine souhaité (code ANEM)")
     salaire_souhaite = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 80 000 DA")
     mobilite = models.CharField(max_length=50, choices=MOBILITE_CHOICES, blank=True, null=True)
     situation_actuelle = models.CharField(max_length=50, choices=SITUATION_ACTUELLE, blank=True, null=True)
 
     # --- ANCIENS CHAMPS GARDÉS ---
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme")
-    specialite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True, verbose_name="Spécialité / Secteur")
+    specialite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Spécialité (code Domaine ANEM)")
     experiences = models.TextField(blank=True, null=True, verbose_name="Expériences")
     competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
     langues = models.CharField(max_length=255, blank=True, null=True, verbose_name="Langues")
@@ -305,7 +342,7 @@ class ExperienceCandidat(models.Model):
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='experiences_detail')
     titre_poste = models.CharField(max_length=200, verbose_name="Titre du poste (Ex: Développeur Front-End)")
     entreprise = models.CharField(max_length=200, verbose_name="Nom de l'entreprise")
-    secteur = models.CharField(max_length=100, choices=SECTEURS_CHOICES, blank=True, null=True, verbose_name="Secteur d'activité")
+    secteur = models.CharField(max_length=100, blank=True, null=True, verbose_name="Domaine d'activité (code ANEM)")
 
     date_debut = models.DateField(verbose_name="Date de début")
     date_fin = models.DateField(null=True, blank=True, verbose_name="Date de fin (Vide si toujours en poste)")

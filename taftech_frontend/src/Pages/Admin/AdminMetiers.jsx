@@ -4,33 +4,20 @@ import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { tw } from "../../theme";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 
-const SECTEURS = [
-  "IT",
-  "FINANCE",
-  "BTP",
-  "COMMERCIAL",
-  "MARKETING",
-  "RH",
-  "INGENIERIE",
-  "LOGISTIQUE",
-  "ADMIN",
-  "SANTE",
-  "JURIDIQUE",
-  "EDUCATION",
-  "TOURISME",
-  "MAINTENANCE",
-  "PRODUCTION",
-  "AGRICULTURE",
-  "COMMUNICATION",
-  "ARTS",
-  "SPECTACLE",
-  "SERVICE_PUBLIC",
-  "AUTRE",
-];
+const FORM_VIDE = {
+  titre: "",
+  domaine: "",
+  code_fiche: "",
+  fiche_metier: "",
+  secteur_code: "",
+  est_actif: true,
+};
 
 const AdminMetiers = () => {
   const [metiers, setMetiers] = useState([]);
+  const [nomenclature, setNomenclature] = useState({ secteurs: [], domaines: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -38,16 +25,15 @@ const AdminMetiers = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [form, setForm] = useState({
-    titre: "",
-    secteur: "IT",
-    niveau_experience: "",
-    mots_cles: "",
-    est_actif: true,
-  });
+  const [form, setForm] = useState(FORM_VIDE);
+  const [domaineCodeSelectionne, setDomaineCodeSelectionne] = useState("");
 
   useEffect(() => {
     fetchMetiers();
+    jobsService
+      .getNomenclature()
+      .then(setNomenclature)
+      .catch((err) => reportError("ECHEC_CHARGEMENT_NOMENCLATURE_ADMIN", err));
   }, []);
 
   const fetchMetiers = async (s = "", p = 1) => {
@@ -75,13 +61,8 @@ const AdminMetiers = () => {
 
   const handleOpenCreate = () => {
     setEditingId(null);
-    setForm({
-      titre: "",
-      secteur: "IT",
-      niveau_experience: "",
-      mots_cles: "",
-      est_actif: true,
-    });
+    setForm(FORM_VIDE);
+    setDomaineCodeSelectionne("");
     setShowModal(true);
   };
 
@@ -89,30 +70,39 @@ const AdminMetiers = () => {
     setEditingId(m.id);
     setForm({
       titre: m.titre,
-      secteur: m.secteur,
-      niveau_experience: m.niveau_experience || "",
-      mots_cles: m.mots_cles || "",
+      domaine: m.domaine,
+      code_fiche: m.code_fiche || "",
+      fiche_metier: m.fiche_metier || "",
+      secteur_code: m.secteur_code || "",
       est_actif: m.est_actif,
     });
+    setDomaineCodeSelectionne(m.domaine_code || "");
     setShowModal(true);
+  };
+
+  // La sélection du domaine (via le sélecteur en cascade) alimente aussi
+  // secteur_code automatiquement, en dénormalisant depuis la nomenclature.
+  const handleDomaineChange = (domaineCode) => {
+    const domaine = nomenclature.domaines.find((d) => d.code === domaineCode);
+    setDomaineCodeSelectionne(domaineCode);
+    setForm({ ...form, domaine: domaine?.id || "", secteur_code: domaine?.secteur_code || "" });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.titre.trim()) return toast.error("Le titre est obligatoire.");
+    if (!form.domaine) return toast.error("Le domaine est obligatoire.");
+    if (!form.code_fiche.trim()) return toast.error("Le code fiche est obligatoire.");
     try {
       if (editingId) {
         await jobsService.updateMetier(editingId, form);
-        setMetiers(
-          metiers.map((m) => (m.id === editingId ? { ...m, ...form } : m)),
-        );
         toast.success("Métier mis à jour !");
       } else {
-        const created = await jobsService.createMetier(form);
-        setMetiers([created, ...metiers]);
+        await jobsService.createMetier(form);
         toast.success("Métier ajouté !");
       }
       setShowModal(false);
+      fetchMetiers(search, page);
     } catch (err) {
       reportError("ECHEC_SAVE_METIER", err);
       toast.error("Erreur lors de la sauvegarde.");
@@ -138,7 +128,7 @@ const AdminMetiers = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className={tw.pageTitle}>
-            Référentiel métiers
+            Référentiel métiers (nomenclature ANEM)
           </h1>
           <p className={`${tw.pageSubtitle} mt-0.5`}>
             {totalCount} métiers au total
@@ -171,8 +161,8 @@ const AdminMetiers = () => {
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-5 py-3">Titre</th>
-              <th className="px-5 py-3">Secteur</th>
-              <th className="px-5 py-3">Niveau</th>
+              <th className="px-5 py-3">Domaine</th>
+              <th className="px-5 py-3">Code fiche</th>
               <th className="px-5 py-3 text-center">Statut</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
@@ -206,11 +196,11 @@ const AdminMetiers = () => {
                   </td>
                   <td className="px-5 py-3">
                     <span className={`px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full`}>
-                      {m.secteur}
+                      {m.domaine_label || m.domaine_code}
                     </span>
                   </td>
                   <td className={`px-5 py-3 text-xs ${tw.textMuted}`}>
-                    {m.niveau_experience || "—"}
+                    {m.code_fiche || "—"}
                   </td>
                   <td className="px-5 py-3 text-center">
                     <span
@@ -289,7 +279,7 @@ const AdminMetiers = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Titre *
+                  Titre (appellation) *
                 </label>
                 <input
                   required
@@ -299,47 +289,35 @@ const AdminMetiers = () => {
                   onChange={(e) => setForm({ ...form, titre: e.target.value })}
                 />
               </div>
+              <SecteurDomaineSelect
+                value={domaineCodeSelectionne}
+                onChange={handleDomaineChange}
+                required
+              />
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Secteur *
-                </label>
-                <select
-                  className={inputClass}
-                  value={form.secteur}
-                  onChange={(e) =>
-                    setForm({ ...form, secteur: e.target.value })
-                  }
-                >
-                  {SECTEURS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Niveau d'expérience
+                  Code fiche métier *
                 </label>
                 <input
+                  required
                   className={inputClass}
-                  placeholder="Ex: Junior/Senior"
-                  value={form.niveau_experience}
+                  placeholder="Ex: A1101"
+                  value={form.code_fiche}
                   onChange={(e) =>
-                    setForm({ ...form, niveau_experience: e.target.value })
+                    setForm({ ...form, code_fiche: e.target.value })
                   }
                 />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Mots-clés
+                  Nom de la fiche métier
                 </label>
                 <input
                   className={inputClass}
-                  placeholder="Ex: React, Django, Python"
-                  value={form.mots_cles}
+                  placeholder="Ex: Sylviculture"
+                  value={form.fiche_metier}
                   onChange={(e) =>
-                    setForm({ ...form, mots_cles: e.target.value })
+                    setForm({ ...form, fiche_metier: e.target.value })
                   }
                 />
               </div>

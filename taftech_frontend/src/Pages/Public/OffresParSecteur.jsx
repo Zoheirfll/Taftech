@@ -3,17 +3,29 @@ import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import {
-  Search, X, Laptop, Wallet, Handshake, Cog, Package, Megaphone,
-  HardHat, FolderKanban, HeartPulse, FlaskConical, Users, Palmtree,
-  Wrench, Scale, Layers, Briefcase,
+  Search, X, Cog, Package, Megaphone, HardHat, HeartPulse, Users, Palmtree,
+  Wrench, Briefcase, Sprout, Flame, Palette, Store, Landmark, Theater,
+  GraduationCap,
 } from "lucide-react";
 import { tw } from "../../theme";
 
 const iconsMap = {
-  IT: Laptop, FINANCE: Wallet, COMMERCIAL: Handshake, PRODUCTION: Cog,
-  LOGISTIQUE: Package, MARKETING: Megaphone, BTP: HardHat, ADMIN: FolderKanban,
-  SANTE: HeartPulse, INGENIERIE: FlaskConical, RH: Users, TOURISME: Palmtree,
-  MAINTENANCE: Wrench, JURIDIQUE: Scale, AUTRE: Layers,
+  A: Sprout,        // Agriculture et pêche
+  B: Flame,          // Énergie, extraction et hydrocarbure
+  C: Cog,            // Industrie
+  D: Wrench,         // Installation, maintenance et propreté
+  E: Palette,        // Artisanat d'art
+  F: HardHat,        // Bâtiment et travaux publics
+  G: Store,          // Commerce
+  H: Palmtree,       // Hôtellerie, restauration et tourisme
+  I: Package,        // Transport et logistique
+  J: Megaphone,      // Communication, média et multimédia
+  K: Landmark,       // Banque, assurances et immobilier
+  L: Briefcase,      // Support à l'entreprise
+  M: HeartPulse,     // Santé
+  N: Theater,        // Spectacle
+  O: GraduationCap,  // Formation, enseignement et recherche scientifique
+  P: Users,          // Services à la personne et à la collectivité
 };
 
 const SkeletonSecteur = () => (

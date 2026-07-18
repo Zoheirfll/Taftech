@@ -7,6 +7,8 @@ import { recruteurService } from "./recruteurService";
 import { adminService } from "./adminService";
 import { iaService } from "./iaService";
 
+let _nomenclatureCache = null;
+
 // ─── Offres publiques (reste ici car utilisé partout) ────────
 const offresPubliquesService = {
   getAllJobs: async (filters = {}, page = 1) => {
@@ -47,6 +49,22 @@ const offresPubliquesService = {
       reportError("ECHEC_GET_CONSTANTS_API", err);
       throw err;
     }
+  },
+
+  // Arbre Secteur > Domaine > Sous-domaine (nomenclature ANEM), quasi-statique —
+  // gardé en mémoire pour toute la session, filtré côté client en cascade.
+  getNomenclature: async () => {
+    if (!_nomenclatureCache) {
+      _nomenclatureCache = api
+        .get("jobs/nomenclature/")
+        .then((response) => response.data)
+        .catch((err) => {
+          _nomenclatureCache = null;
+          reportError("ECHEC_GET_NOMENCLATURE_API", err);
+          throw err;
+        });
+    }
+    return _nomenclatureCache;
   },
 
   getStatsGeo: async () => {

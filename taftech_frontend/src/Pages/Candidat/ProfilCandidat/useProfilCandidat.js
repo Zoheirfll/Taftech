@@ -168,7 +168,7 @@ export const useProfilCandidat = () => {
     setNewExp((prev) => ({ ...prev, titre_poste: value }));
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value);
+        const data = await jobsService.getMetiers(value, "", newExp.secteur);
         setExpTitreSuggestions(data.slice(0, 20));
         setShowExpTitreSuggestions(true);
       } catch {
@@ -183,7 +183,7 @@ export const useProfilCandidat = () => {
     setEditCV(prev => ({ ...prev, titre: value }));
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value);
+        const data = await jobsService.getMetiers(value, "", editInfo.specialite);
         setTitreSuggestions(data.slice(0, 20));
         setShowTitreSuggestions(true);
       } catch {

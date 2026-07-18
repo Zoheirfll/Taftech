@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
 import Select from "react-select";
 import { selectStylesTeal, tw } from "../../theme";
+import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
@@ -143,15 +144,13 @@ const CandidaturesSpontanees = () => {
             setFiltres({ ...filtres, diplome: opt ? opt.value : "" })
           }
         />
-        <Select
-          options={constants.secteurs}
-          styles={selectStylesTeal}
-          isClearable
-          placeholder="Spécialité..."
-          onChange={(opt) =>
-            setFiltres({ ...filtres, specialite: opt ? opt.value : "" })
-          }
-        />
+        <div className="min-w-50">
+          <SecteurDomaineSelect
+            value={filtres.specialite}
+            onChange={(domaineCode) => setFiltres({ ...filtres, specialite: domaineCode })}
+            styles={selectStylesTeal}
+          />
+        </div>
         <Select
           options={[
             { value: "lue", label: "Lues" },

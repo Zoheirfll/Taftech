@@ -18,9 +18,9 @@ vi.mock("../src/Services/jobsService", () => ({
 
 const mockConstants = {
   secteurs: [
-    { value: "IT", label: "Informatique" },
-    { value: "FINANCE", label: "Finance & Comptabilité" },
-    { value: "AEROSPATIAL", label: "Aérospatial" }, // Secteur non listé dans le iconsMap
+    { value: "A", label: "Agriculture et pêche" },
+    { value: "B", label: "Énergie, extraction et hydrocarbure" },
+    { value: "Z", label: "Secteur inconnu" }, // Non listé dans le iconsMap
   ],
 };
 
@@ -48,12 +48,12 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
 
     await waitFor(() => {
       // Les labels s'affichent correctement
-      expect(screen.getByText("Informatique")).toBeInTheDocument();
-      expect(screen.getByText("Finance & Comptabilité")).toBeInTheDocument();
+      expect(screen.getByText("Agriculture et pêche")).toBeInTheDocument();
+      expect(screen.getByText("Énergie, extraction et hydrocarbure")).toBeInTheDocument();
 
-      // Les icônes lucide-react associées s'affichent (Informatique -> Laptop, Finance -> Wallet)
-      expect(container.querySelector(".lucide-laptop")).toBeInTheDocument();
-      expect(container.querySelector(".lucide-wallet")).toBeInTheDocument();
+      // Les icônes lucide-react associées s'affichent (A -> Sprout, B -> Flame)
+      expect(container.querySelector(".lucide-sprout")).toBeInTheDocument();
+      expect(container.querySelector(".lucide-flame")).toBeInTheDocument();
     });
   });
 
@@ -67,8 +67,8 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Aérospatial")).toBeInTheDocument();
-      // Le secteur Aérospatial n'est pas dans le dictionnaire, on s'attend au fallback Briefcase
+      expect(screen.getByText("Secteur inconnu")).toBeInTheDocument();
+      // Le secteur "Z" n'est pas dans le dictionnaire, on s'attend au fallback Briefcase
       expect(container.querySelector(".lucide-briefcase")).toBeInTheDocument();
     });
   });
@@ -83,11 +83,11 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
     );
 
     await waitFor(() => {
-      // On cherche le lien englobant le texte "Finance & Comptabilité"
-      const linkFinance = screen
-        .getByText("Finance & Comptabilité")
+      // On cherche le lien englobant le texte "Énergie, extraction et hydrocarbure"
+      const linkEnergie = screen
+        .getByText("Énergie, extraction et hydrocarbure")
         .closest("a");
-      expect(linkFinance).toHaveAttribute("href", "/offres?specialite=FINANCE");
+      expect(linkEnergie).toHaveAttribute("href", "/offres?specialite=B");
     });
   });
 

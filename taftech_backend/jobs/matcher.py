@@ -1,7 +1,6 @@
 import datetime
 import difflib
 import re
-from .constants import SYNONYMES_SPECIALITE
 
 def normaliser(texte):
     if not texte:
@@ -40,34 +39,13 @@ def _meme_region(w1, w2):
 
 
 # ---------------------------------------------------------------------------
-# Spécialité — les deux côtés utilisent SECTEURS_CHOICES (même codes)
+# Spécialité — les deux côtés stockent un code Domaine de la nomenclature ANEM
+# (ex: "A11"). Les codes ANEM encodent déjà le Secteur en préfixe (1ère lettre),
+# donc "même secteur" se déduit directement du code sans table de proximité à
+# maintenir à la main (voir jobs/models.py Secteur/Domaine).
 # ---------------------------------------------------------------------------
 
-# Mapping inter-codes : secteurs proches métier (Point 1)
-# Clé = code SECTEURS_CHOICES, valeur = set de codes compatibles
-_CODES_PROCHES = {
-    "IT":           {"IT", "INGENIERIE"},
-    "INGENIERIE":   {"INGENIERIE", "IT", "PRODUCTION", "BTP", "MAINTENANCE", "QSE"},
-    "FINANCE":      {"FINANCE", "ADMIN", "JURIDIQUE"},
-    "COMMERCIAL":   {"COMMERCIAL", "VENTE", "GRANDS_COMPTES", "MARKETING"},
-    "VENTE":        {"VENTE", "COMMERCIAL", "GRANDS_COMPTES"},
-    "GRANDS_COMPTES": {"GRANDS_COMPTES", "COMMERCIAL", "VENTE"},
-    "MARKETING":    {"MARKETING", "COMMERCIAL"},
-    "RH":           {"RH", "ADMIN"},
-    "ADMIN":        {"ADMIN", "RH", "SECRETARIAT"},
-    "SECRETARIAT":  {"SECRETARIAT", "ADMIN"},
-    "PRODUCTION":   {"PRODUCTION", "INGENIERIE", "MAINTENANCE", "LOGISTIQUE", "QSE"},
-    "LOGISTIQUE":   {"LOGISTIQUE", "PRODUCTION"},
-    "MAINTENANCE":  {"MAINTENANCE", "PRODUCTION", "INGENIERIE"},
-    "BTP":          {"BTP", "INGENIERIE"},
-    "QSE":          {"QSE", "INGENIERIE", "PRODUCTION"},
-    "JURIDIQUE":    {"JURIDIQUE", "FINANCE"},
-    "SANTE":        {"SANTE"},
-    "TOURISME":     {"TOURISME"},
-}
-
 def _mots(texte):
-    import re
     return set(re.findall(r'\b\w+\b', normaliser(texte)))
 
 def specialites_compatibles(spec_candidat, spec_offre):
@@ -75,24 +53,13 @@ def specialites_compatibles(spec_candidat, spec_offre):
         return False, 0.0
     sc = normaliser(spec_candidat).upper()
     so = normaliser(spec_offre).upper()
-    # 1. Codes identiques
+    # 1. Code Domaine identique
     if sc == so:
         return True, 1.0
-    # 2. Mapping inter-codes (ex : IT ↔ INGENIERIE)
-    codes_proches_sc = _CODES_PROCHES.get(sc, set())
-    if so in codes_proches_sc:
+    # 2. Même Secteur parent (même 1ère lettre du code Domaine, ex: "A11" et "A21")
+    if sc[:1] and sc[:1] == so[:1]:
         return True, 0.85
-    # 3. Synonymes texte libre (pour les champs non normalisés éventuels)
-    for cle, synonymes in SYNONYMES_SPECIALITE.items():
-        cle_norm = normaliser(cle)
-        mots_sc = _mots(sc.lower())
-        mots_so = _mots(so.lower())
-        syns = {normaliser(s) for s in synonymes} | {cle_norm}
-        sc_in = bool(mots_sc & syns) or sc.lower() == cle_norm
-        so_in = bool(mots_so & syns) or so.lower() == cle_norm
-        if sc_in and so_in:
-            return True, 0.9
-    # 4. Fuzzy (filet de sécurité pour anciens champs texte libre)
+    # 3. Fuzzy (filet de sécurité pour d'éventuels champs texte libre hérités)
     sc_l, so_l = sc.lower(), so.lower()
     ratio = difflib.SequenceMatcher(None, sc_l, so_l).ratio()
     if ratio >= 0.72:
@@ -159,12 +126,6 @@ def _experience_pertinente(exp, offre):
         if compat and ratio >= 0.8:
             return True, ratio
 
-    if offre.specialite:
-        spec_norm = normaliser(offre.specialite)
-        mots_titre = _mots(exp.titre_poste)
-        if spec_norm in mots_titre:
-            return True, 0.85
-
     if exp.titre_poste and offre.titre:
         ratio = difflib.SequenceMatcher(
             None, normaliser(exp.titre_poste), normaliser(offre.titre)
@@ -176,13 +137,15 @@ def _experience_pertinente(exp, offre):
         if mots_exp & mots_off:
             return True, 0.70
 
-    synonymes_offre = SYNONYMES_SPECIALITE.get(
-        str(offre.specialite).upper() if offre.specialite else "", []
-    )
-    if synonymes_offre and exp.description:
-        desc_norm = normaliser(exp.description)
-        if any(re.search(r'\b' + re.escape(normaliser(s)) + r'\b', desc_norm) for s in synonymes_offre):
-            return True, 0.65
+    # Filet de sécurité : le domaine ANEM deviné depuis titre+description de
+    # l'expérience correspond-il au même Secteur/Domaine que l'offre ?
+    if offre.specialite and (exp.titre_poste or exp.description):
+        from .referentiel_utils import resoudre_domaine_depuis_texte
+        domaine_devine = resoudre_domaine_depuis_texte(exp.titre_poste, exp.description)
+        if domaine_devine:
+            compat, ratio = specialites_compatibles(domaine_devine, offre.specialite)
+            if compat:
+                return True, min(ratio, 0.65)
 
     return False, 0.0
 

@@ -23,6 +23,11 @@ vi.mock("../src/Services/jobsService", () => ({
     creerOffre: vi.fn(),
     getQuestionnaires: vi.fn().mockResolvedValue([]),
     getMetiers: vi.fn().mockResolvedValue([]),
+    getNomenclature: vi.fn().mockResolvedValue({
+      secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
+      domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
+      sous_domaines: [],
+    }),
   },
 }));
 
@@ -133,10 +138,10 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    await selectEvent.select(
-      getSelectWrapper(container, "specialite"),
-      "Informatique",
-    );
+    const secteurSelect = screen.getAllByText(/Sélectionnez.../i)[0];
+    await selectEvent.select(secteurSelect, "Support à l'entreprise");
+    const domaineSelect = await screen.findAllByText(/Sélectionnez.../i);
+    await selectEvent.select(domaineSelect[0], "Systèmes d'information");
 
     fireEvent.submit(container.querySelector("form"));
 
@@ -201,10 +206,10 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    await selectEvent.select(
-      getSelectWrapper(container, "specialite"),
-      "Informatique",
-    );
+    const secteurSelect = screen.getAllByText(/Sélectionnez.../i)[0];
+    await selectEvent.select(secteurSelect, "Support à l'entreprise");
+    const domaineSelect = await screen.findAllByText(/Sélectionnez.../i);
+    await selectEvent.select(domaineSelect[0], "Systèmes d'information");
 
     fireEvent.submit(container.querySelector("form"));
 

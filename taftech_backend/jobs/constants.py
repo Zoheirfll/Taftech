@@ -25,26 +25,29 @@ WILAYAS_CHOICES = [
     ('57 - El M\'Ghair', '57 - El M\'Ghair'), ('58 - El Meniaa', '58 - El Meniaa'),
 ]
 
+# Nomenclature officielle ANEM (Agence Nationale de l'Emploi, Algérie) — niveau Secteur.
+# Source : fichier NAME.xlsx fourni par l'ANEM. Le code Django est la lettre préfixe
+# (ex: 'A' pour "A-AGRICULTURE ET PÊCHE"). Voir jobs/models.py (Secteur/Domaine/SousDomaine)
+# pour la hiérarchie complète — ces 16 valeurs ne servent qu'au niveau le plus large
+# (secteur d'activité entreprise, page "Par secteur"). Le matching et la recherche fine
+# se font au niveau Domaine (voir MetierReferentiel).
 SECTEURS_CHOICES = [
-    ('COMMERCIAL', 'Commercial, Technico Commercial, Service Client'),
-    ('PRODUCTION', 'Production, Méthode, Industrie'),
-    ('FINANCE', 'Comptabilité, Finance'),
-    ('LOGISTIQUE', 'Logistique, Achat, Stock, Transport'),
-    ('MARKETING', 'Marketing, Communication'),
-    ('IT', 'Informatique, Systèmes d\'Information, Internet'),
-    ('BTP', 'Chantier, Métiers BTP, Architecture'),
-    ('ADMIN', 'Administration, Moyens Généraux'),
-    ('VENTE', 'Vente, Télévente, Assistanat'),
-    ('SANTE', 'Santé, Médical, Pharmacie'),
-    ('INGENIERIE', 'Ingénierie, Etudes, Projet, R&D'),
-    ('RH', 'RH, Personnel, Formation'),
-    ('AUTRE', 'Autre'),
-    ('SECRETARIAT', 'Assistanat, Secrétariat'),
-    ('QSE', 'Qualité, Sécurité, Environnement'),
-    ('TOURISME', 'Hôtellerie, Tourisme, Restauration, Loisirs'),
-    ('MAINTENANCE', 'Maintenance, Entretien'),
-    ('JURIDIQUE', 'Juridique, Fiscal, Audit, Conseil'),
-    ('GRANDS_COMPTES', 'Responsable Commercial, Grands Comptes'),
+    ('A', 'Agriculture et pêche'),
+    ('B', 'Énergie, extraction et hydrocarbure'),
+    ('C', 'Industrie'),
+    ('D', 'Installation, maintenance et propreté'),
+    ('E', "Artisanat d'art"),
+    ('F', 'Bâtiment et travaux publics'),
+    ('G', 'Commerce'),
+    ('H', 'Hôtellerie, restauration et tourisme'),
+    ('I', 'Transport et logistique'),
+    ('J', 'Communication, média et multimédia'),
+    ('K', 'Banque, assurances et immobilier'),
+    ('L', "Support à l'entreprise"),
+    ('M', 'Santé'),
+    ('N', 'Spectacle'),
+    ('O', 'Formation, enseignement et recherche scientifique'),
+    ('P', 'Services à la personne et à la collectivité'),
 ]
 
 DIPLOMES_CHOICES = [
@@ -149,36 +152,9 @@ DIPLOMES_MAPPING = [
     (['certification', 'certifié', 'certifie', 'certificat', 'شهادة'], 'CERTIFICATION'),
 ]
 
-# Mapping spécialité texte → code Django (vos SECTEURS_CHOICES)
-SPECIALITES_MAPPING = [
-    (['informatique', 'informatic', 'computer', 'développeur', 'developpeur', 'développement', 'developer', 'software', 'web', 'mobile', 'fullstack', 'front-end', 'frontend', 'back-end', 'backend', 'ia', 'intelligence artificielle', 'machine learning', 'data scien', 'إعلام آلي', 'معلوماتية', 'برمجة', 'مطور'], 'IT'),
-    (['ingénieur', 'ingeniorat', 'ingénierie', 'ingenierie', 'r&d', 'recherche', 'études', 'engineer', 'engineering', 'research', 'هندسة', 'مهندس', 'بحث'], 'INGENIERIE'),
-    (['commercial', 'commerce', 'vente', 'sales', 'client', 'business development', 'account manager', 'customer', 'تجاري', 'تجارة', 'مبيعات', 'زبائن'], 'COMMERCIAL'),
-    (['marketing', 'communication', 'community', 'digital marketing', 'seo', 'advertising', 'branding', 'social media', 'تسويق', 'اتصال', 'إشهار'], 'MARKETING'),
-    (['finance', 'comptable', 'comptabilité', 'comptabilite', 'audit', 'accounting', 'accountant', 'financial', 'auditor', 'مالية', 'محاسبة', 'محاسب', 'تدقيق'], 'FINANCE'),
-    (['logistique', 'achat', 'stock', 'transport', 'supply', 'logistics', 'purchasing', 'procurement', 'inventory', 'warehouse', 'لوجستيك', 'شراء', 'مخزون', 'نقل'], 'LOGISTIQUE'),
-    (['production', 'industriel', 'industrie', 'méthode', 'manufacturing', 'industrial', 'إنتاج', 'صناعي', 'صناعة'], 'PRODUCTION'),
-    (['btp', 'chantier', 'génie civil', 'architecte', 'construction', 'civil engineering', 'architect', 'site manager', 'بناء', 'ورشة', 'هندسة مدنية', 'معماري'], 'BTP'),
-    (['administration', 'cadre administratif', 'administrative', 'office manager', 'إدارة', 'إداري'], 'ADMIN'),
-    (['rh', 'ressources humaines', 'paie', 'recrutement', 'formation', 'hr', 'human resources', 'payroll', 'recruitment', 'labor relations', 'employee relations', 'موارد بشرية', 'رواتب', 'توظيف'], 'RH'),
-    (['santé', 'médical', 'pharmacie', 'infirmier', 'health', 'medical', 'pharmacy', 'nurse', 'healthcare', 'صحة', 'طبي', 'صيدلة', 'ممرض'], 'SANTE'),
-    (['secrétariat', 'secretariat', 'assistanat', 'assistant', 'secretary', 'personal assistant', 'سكرتارية', 'مساعد إداري'], 'SECRETARIAT'),
-    (['qualité', 'qse', 'hse', 'sécurité', 'environnement', 'quality', 'safety', 'environment', 'compliance', 'جودة', 'سلامة', 'بيئة'], 'QSE'),
-    (['hôtellerie', 'hotellerie', 'restauration', 'tourisme', 'hospitality', 'tourism', 'restaurant', 'hotel', 'فندقة', 'سياحة', 'مطعم'], 'TOURISME'),
-    (['maintenance', 'entretien', 'صيانة'], 'MAINTENANCE'),
-    (['juridique', 'avocat', 'droit', 'fiscal', 'legal', 'lawyer', 'attorney', 'tax law', 'قانوني', 'محامي', 'حقوق'], 'JURIDIQUE'),
-]
-
-# Dictionnaire de synonymes pour la spécialité
-SYNONYMES_SPECIALITE = {
-    "IT": ["informatique", "technologie", "numérique", "digital", "développement", "software", "système", "réseau", "tech", "معلوماتية", "برمجة"],
-    "FINANCE": ["comptabilité", "finance", "gestion", "audit", "fiscalité", "banque", "économie", "contrôle de gestion", "مالية", "محاسبة"],
-    "RH": ["ressources humaines", "recrutement", "paie", "formation", "gestion du personnel", "rh", "موارد بشرية", "توظيف"],
-    "MARKETING": ["marketing", "communication", "publicité", "commercial", "vente", "digital marketing", "تسويق", "إشهار"],
-    "JURIDIQUE": ["droit", "juridique", "légal", "notariat", "avocat", "juriste", "قانوني", "حقوق"],
-    "SANTE": ["médecine", "santé", "pharmacie", "infirmier", "médical", "paramédical", "صحة", "طبي"],
-    "EDUCATION": ["enseignement", "éducation", "formation", "pédagogie", "professeur", "تعليم", "تربية"],
-    "INGENIERIE": ["ingénierie", "génie civil", "mécanique", "électrique", "industriel", "btp", "هندسة", "هندسة مدنية"],
-    "PRODUCTION": ["production", "industrie", "fabrication", "qualité", "logistique", "supply chain", "إنتاج", "صناعة"],
-    "ADMINISTRATION": ["administration", "secrétariat", "bureautique", "office management", "إدارة", "سكرتارية"],
-}
+# SPECIALITES_MAPPING et SYNONYMES_SPECIALITE (anciens dictionnaires de mots-clés → code
+# secteur) sont supprimés depuis le passage à la nomenclature ANEM : la résolution
+# spécialité/domaine se fait désormais dynamiquement par recherche dans MetierReferentiel
+# (voir jobs/referentiel_utils.py, résoudre_domaine_depuis_texte) au lieu d'un dictionnaire
+# codé en dur — la base de 5786 appellations officielles est une source bien plus fiable
+# et exhaustive qu'une liste de mots-clés maintenue à la main.

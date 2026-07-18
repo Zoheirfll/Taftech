@@ -32,6 +32,12 @@ vi.mock("../src/Services/profilService", () => ({
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
+    getMetiers: vi.fn().mockResolvedValue([]),
+    getNomenclature: vi.fn().mockResolvedValue({
+      secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
+      domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
+      sous_domaines: [],
+    }),
   },
 }));
 
@@ -127,9 +133,10 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     const wilayaSelect = screen.getByText("31 - Oran");
     await selectEvent.select(wilayaSelect, "16 - Alger");
 
-    // ✅ Correction : Une fois la wilaya choisie, le placeholder devient "Sélectionnez..."
-    // car (editInfo.wilaya ? "Sélectionnez..." : "Wilaya d'abord")
-    expect(screen.getByText(/Sélectionnez.../i)).toBeInTheDocument();
+    // ✅ Correction : Une fois la wilaya choisie, le placeholder "Wilaya d'abord" disparaît
+    await waitFor(() => {
+      expect(screen.queryByText("Wilaya d'abord")).not.toBeInTheDocument();
+    });
   });
 
   it("🟢 HP3 (Gestion Expériences) : Ajout d'une expérience", async () => {

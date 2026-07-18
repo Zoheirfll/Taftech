@@ -13,7 +13,7 @@ import fitz  # pymupdf - pour extraire les images du PDF
 import json
 import os
 from groq import Groq
-from .constants import WILAYAS_MAPPING, DIPLOMES_MAPPING, SPECIALITES_MAPPING
+from .constants import WILAYAS_MAPPING, DIPLOMES_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -264,19 +264,9 @@ def extract_diplome_max(text):
 
 
 def extract_specialite(text):
-    """Détecte la spécialité principale."""
-    text_low = text.lower()
-    # On compte les occurrences (mot entier) pour choisir la spécialité dominante
-    scores = {}
-    for keywords, code in SPECIALITES_MAPPING:
-        score = 0
-        for kw in keywords:
-            score += len(re.findall(r'\b' + re.escape(kw) + r'\b', text_low))
-        if score > 0:
-            scores[code] = scores.get(code, 0) + score
-    if scores:
-        return max(scores, key=scores.get)
-    return None
+    """Détecte la spécialité principale (code Domaine ANEM) via le référentiel métiers."""
+    from .referentiel_utils import resoudre_domaine_depuis_texte
+    return resoudre_domaine_depuis_texte(text)
 
 
 def extract_service_militaire(text):

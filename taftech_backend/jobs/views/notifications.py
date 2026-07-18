@@ -52,12 +52,18 @@ class PublicStatsAPIView(APIView):
 class StatsGeoAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request):
+        from collections import Counter
         from django.db.models import Count
         from ..models import OffreEmploi
         qs = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
         wilayas = {r['wilaya']: r['count'] for r in qs.values('wilaya').annotate(count=Count('id')) if r['wilaya']}
-        secteurs = {r['specialite']: r['count'] for r in qs.values('specialite').annotate(count=Count('id')) if r['specialite']}
-        return Response({'wilayas': wilayas, 'secteurs': secteurs})
+        # specialite stocke un code Domaine ANEM (ex: "A11") — on agrège au niveau
+        # Secteur (1ère lettre du code) pour la page "Par secteur".
+        secteurs_counter = Counter()
+        for r in qs.values('specialite'):
+            if r['specialite']:
+                secteurs_counter[r['specialite'][:1]] += 1
+        return Response({'wilayas': wilayas, 'secteurs': dict(secteurs_counter)})
 
 class EntrepriseListAPIView(APIView):
     permission_classes = [AllowAny]

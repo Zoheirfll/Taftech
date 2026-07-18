@@ -2,7 +2,37 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 17/07/2026 — Corrections parser CV (sections/expériences/formations/langues/téléphone) + refonte complète de l'admin (design, badges, tri, actions groupées, tooltips)._
+_Dernière mise à jour : 18/07/2026 — Remplacement complet du référentiel métiers + du système de secteurs par la nomenclature officielle ANEM (hiérarchie Secteur/Domaine/Sous-domaine/Appellation), sur branche `feature/anem-nomenclature`._
+
+---
+
+## 🆕 SESSION NOMENCLATURE ANEM (18/07/2026)
+
+**Contexte** : l'ANEM a fourni un fichier officiel (`NAME.xlsx`, 5790 lignes) contenant la nomenclature algérienne des métiers. Remplacement complet (pas d'ajout) de deux systèmes existants :
+1. `SECTEURS_CHOICES` (19 codes plats codés en dur type `IT`/`BTP`/`FINANCE`) → 16 secteurs officiels ANEM (`A`.."P")
+2. `MetierReferentiel` plat (13 388 lignes ROME+Emploitic, un seul champ `secteur` texte libre) → hiérarchie complète Secteur → Domaine (87) → Sous-domaine (36) → Appellation (5786, = nouveau `MetierReferentiel`)
+
+**Nouveaux modèles** (`jobs/models.py`, migration `0054`) : `Secteur` (code, libelle), `Domaine` (FK Secteur, code type "A11", libelle), `SousDomaine` (FK Domaine, libelle). `MetierReferentiel` restructuré : `titre` (= appellation), `domaine` FK, `sous_domaine` FK nullable, `code_fiche`, `fiche_metier`, `secteur_code` dénormalisé. Anciens champs `secteur`/`niveau_experience`/`mots_cles` supprimés.
+
+**Matching au niveau Domaine (pas Secteur)** : `OffreEmploi.specialite`, `ProfilCandidat.specialite`/`secteur_souhaite`, `ExperienceCandidat.secteur` restent des `CharField` simples (pas de FK — éviterait un refactor massif de matcher.py/serializers/frontend) mais stockent désormais un **code Domaine** (ex `"L18"`) au lieu d'un code Secteur. Le préfixe du code Domaine encode son Secteur (`"L18"[0] == "L"`) → sert à déduire la compatibilité "même secteur" dans `matcher.py` sans table de proximité codée en dur. `ProfilEntreprise.secteur_activite` reste au niveau Secteur (16 codes) — une entreprise n'est pas cantonnée à un seul domaine.
+
+**`jobs/matcher.py`** : `_CODES_PROCHES` (dict 19×19 codé en dur) et `SYNONYMES_SPECIALITE` supprimés. `specialites_compatibles()` : code Domaine identique → 1.0, même Secteur (même 1ère lettre) → 0.85, sinon fuzzy `difflib` ≥0.72 en filet de sécurité.
+
+**`jobs/constants.py`** : `SPECIALITES_MAPPING`/`SYNONYMES_SPECIALITE` supprimés, remplacés par résolution dynamique via `jobs/referentiel_utils.resoudre_domaine_depuis_texte()` (recherche par mots-clés dans `MetierReferentiel.titre`, retourne le `domaine.code` le plus fréquent) — utilisé par `cv_parser.extract_specialite()` et `matcher._experience_pertinente()` (fallback).
+
+**Nouvel endpoint `GET jobs/nomenclature/`** (`NomenclatureAPIView`, `jobs/views/offres.py`) : retourne l'arbre complet (secteurs+domaines+sous_domaines, ~140 nœuds), caché 1h (`jobs_nomenclature`). Filtré côté client en cascade, même pattern que wilaya→commune. `domaines[].id` exposé en plus de `code` — nécessaire pour soumettre le FK numérique depuis l'admin (`AdminMetiers.jsx`).
+
+**`MetierReferentielAPIView`** (autocomplete public) : accepte désormais `secteur`, `domaine`, `sous_domaine` en query params en plus de `search`.
+
+**Frontend — `SecteurDomaineSelect.jsx`** (nouveau composant réutilisable) : cascade Secteur → Domaine → Sous-domaine (affiché seulement si non vide pour le domaine choisi). Charge la nomenclature une seule fois via `jobsService.getNomenclature()` (cache module-level). Intégré dans `CreateJob.jsx`, `JobsList.jsx`, `CVTheque.jsx`, `CandidaturesSpontanees.jsx`, `ProfilCandidat/Modals.jsx` (spécialité candidat, secteur souhaité, secteur d'expérience), `AdminMetiers.jsx`.
+
+**`OffresParSecteur.jsx`** : nouveau `iconsMap` 16 entrées (A→Sprout ... P→Users), fallback Briefcase inchangé.
+
+**Migration des données existantes** : commande `import_anem_nomenclature.py` (`--dry-run`, `--migrate-existing-data`, `--file`). Import réel : 16 secteurs, 87 domaines, 36 sous-domaines, 5786 métiers. Les 6 offres + 8 profils + 28 expériences existants (base dev) remappés automatiquement via un dict `ANCIEN_VERS_DOMAINE` (19 anciens codes → code Domaine ANEM le plus pertinent, vérifié manuellement contre les libellés réels après import, ex: `IT`→`L18` "Systèmes d'information et de télécommunication", `BTP`→`F11`, `JURIDIQUE`→`P16` "Droit").
+
+**`requirements.txt`** : ajout `openpyxl==3.1.5` (lecture du fichier Excel ANEM).
+
+**Tests** : backend `test_api_metiers.py` réécrit pour le nouveau modèle (25/25). Frontend : ajout du mock `getNomenclature` dans 7 fichiers de test consommant `SecteurDomaineSelect`, `OffresParSecteur.test.jsx` mis à jour avec les nouveaux codes secteur. 338/338 frontend + 283/283 backend au vert, `npx vite build` propre.
 
 ---
 

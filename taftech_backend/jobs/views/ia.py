@@ -22,8 +22,13 @@ from .equipe import get_entreprise_for_user
 User = get_user_model()
 
 
-def _deviner_secteur_experience(titre_poste, description=""):
-    """Devine le code Domaine ANEM d'une expérience à partir du référentiel métiers."""
+def _deviner_secteur_experience(titre_poste, description="", secteur_groq=""):
+    """Code Domaine ANEM d'une expérience. Priorité au choix de Groq (déjà informé du
+    métier réel via le CV entier) s'il est valide ; sinon repli sur le référentiel
+    métiers par mots-clés, moins fiable sur des titres/descriptions génériques."""
+    from ..models import Domaine
+    if secteur_groq and Domaine.objects.filter(code=secteur_groq).exists():
+        return secteur_groq
     from ..referentiel_utils import resoudre_domaine_depuis_texte
     return resoudre_domaine_depuis_texte(titre_poste, description)
 
@@ -73,7 +78,9 @@ class ParserCVAPIView(APIView):
             result = parse_cv(tmp_file.name, cv_file.name)
             for exp in result.get('experiences', []):
                 if isinstance(exp, dict):
-                    exp['secteur'] = _deviner_secteur_experience(exp.get('titre_poste'), exp.get('description'))
+                    exp['secteur'] = _deviner_secteur_experience(
+                        exp.get('titre_poste'), exp.get('description'), exp.get('secteur')
+                    )
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

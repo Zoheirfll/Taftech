@@ -870,10 +870,13 @@ Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autr
 2. EXPÉRIENCES PROFESSIONNELLES (emplois, stages rémunérés — PAS les formations/diplômes/études) :
 ⚠️ NE METS JAMAIS DE FORMATIONS, DIPLÔMES OU ÉTUDES DEDANS ("Licence en...", "Master en...", "Bac", "Étudiant en...", cours, certifications, écoles où la personne n'a pas travaillé).
 Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, Stage en entreprise...).
-- Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description.
+- Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description, secteur.
 - Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
 - Si info manquante : "" (chaîne vide), jamais null.
 - Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
+- Pour "secteur" : choisis le CODE le plus pertinent dans cette liste de domaines d'activité officiels (ne te base PAS sur des mots isolés de la description, comprends le métier réel exercé) :
+{domaines_list}
+Si vraiment aucun ne correspond : "".
 - Si aucune expérience : tableau vide [].
 
 3. FORMATIONS ET DIPLÔMES (Master, Licence, Bac, certifications, cours suivis — PAS les emplois) :
@@ -894,7 +897,7 @@ FORMAT EXIGÉ (JSON strict, un seul objet) :
 {
   "titre_professionnel": "string ou null",
   "experiences": [
-    {"titre_poste": "string", "entreprise": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
+    {"titre_poste": "string", "entreprise": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string", "secteur": "code ou vide"}
   ],
   "formations": [
     {"diplome": "string", "etablissement": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
@@ -986,6 +989,20 @@ def _extract_json_object(content):
         logger.warning("Groq : JSON object invalide - %s", e)
     return None
 
+def _domaines_list_pour_prompt():
+    """Liste "code — libellé" des domaines ANEM, injectée dans le prompt Groq pour que
+    l'IA choisisse un secteur d'expérience réel au lieu de deviner via mots-clés."""
+    from django.core.cache import cache
+    from .models import Domaine
+    cached = cache.get('jobs_domaines_prompt_list')
+    if cached:
+        return cached
+    lignes = [f"{code} — {libelle}" for code, libelle in Domaine.objects.values_list('code', 'libelle')]
+    texte = "\n".join(lignes)
+    cache.set('jobs_domaines_prompt_list', texte, timeout=3600)
+    return texte
+
+
 def parse_with_groq(text):
     """
     Appelle Groq UNE SEULE FOIS pour tout extraire (titre, expériences, formations, infos perso).
@@ -993,7 +1010,9 @@ def parse_with_groq(text):
     de tokens pour le même texte, ce qui déclenchait le rate-limit Groq (429) sur les CV longs.
     Retourne un dict complet, ou None si l'appel échoue entièrement.
     """
-    text_truncated = text[:12000]
+    # Réduit vs la version précédente : la liste des domaines ANEM injectée dans le
+    # prompt (~900 tokens) grignote le budget TPM Groq (12000 tokens/min).
+    text_truncated = text[:9000]
 
     result = {
         "titre_professionnel": None,
@@ -1009,10 +1028,10 @@ def parse_with_groq(text):
     }
 
     logger.debug("Groq : extraction complète du CV (1 appel)...")
-    content = _call_groq(
-        PROMPT_CV_COMPLET.replace("{cv_text}", text_truncated),
-        max_tokens=8000
+    prompt = PROMPT_CV_COMPLET.replace("{cv_text}", text_truncated).replace(
+        "{domaines_list}", _domaines_list_pour_prompt()
     )
+    content = _call_groq(prompt, max_tokens=6000)
     infos = _extract_json_object(content)
     if not infos:
         return None

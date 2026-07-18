@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,6 +14,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'changeme-in-production')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+if not DEBUG and SECRET_KEY == 'changeme-in-production':
+    raise ImproperlyConfigured(
+        "SECRET_KEY n'est pas défini (variable d'environnement manquante) — "
+        "refus de démarrer en production avec la valeur par défaut publique."
+    )
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 
 # ── NGROK (tests uniquement) ──────────────────────────────────────────────────
@@ -106,6 +113,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'accounts.authenticate.CustomJWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_THROTTLE_CLASSES': [
@@ -156,7 +166,7 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SECURE': not DEBUG,   # True en production (HTTPS)
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': 'Lax',
+    'AUTH_COOKIE_SAMESITE': 'Strict',
 }
 
 # ──────────────────────────────────────────────

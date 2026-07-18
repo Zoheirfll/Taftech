@@ -34,10 +34,11 @@ describe("📑 UI & Logique - Composant <Footer />", () => {
         <Footer />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Toutes les offres")).toBeInTheDocument();
-    expect(screen.getByText("Par wilaya")).toBeInTheDocument();
-    // Le CTA recruteur est "Vous recrutez ? Espace recruteur →"
-    expect(screen.getByText(/Espace recruteur/i)).toBeInTheDocument();
+    // Colonnes "Espace candidat/recruteur/Plateforme" retirées (redondantes avec la navbar)
+    expect(screen.getByText("Réseaux sociaux")).toBeInTheDocument();
+    expect(screen.getByText("Légal")).toBeInTheDocument();
+    expect(screen.getByText("Nous contacter")).toBeInTheDocument();
+    expect(screen.getByText("Qui sommes-nous ?")).toBeInTheDocument();
   });
 
   it("🟢 HP3 : Copyright affiché", () => {

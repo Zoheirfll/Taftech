@@ -19,7 +19,8 @@ class AdminMarcheAPITestCase(TestCase):
             username="admin_test",
             email="admin@test.dz",
             password="Pass1234!",
-            role="ADMIN"
+            role="ADMIN",
+            is_staff=True
         )
         self.recruteur = User.objects.create_user(
             username="recruteur_test",

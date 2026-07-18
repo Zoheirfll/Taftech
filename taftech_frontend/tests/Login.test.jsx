@@ -107,6 +107,7 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
         "test@taftech.dz",
         "password123",
         "candidat",
+        false,
       );
 
       // Vérification des retours visuels

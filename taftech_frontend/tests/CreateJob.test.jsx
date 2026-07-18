@@ -46,9 +46,10 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
-vi.mock("../src/theme", () => ({
-  selectStyles: {},
-}));
+vi.mock("../src/theme", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, selectStyles: {} };
+});
 
 vi.mock("../src/data/communes.json", () => ({
   default: [

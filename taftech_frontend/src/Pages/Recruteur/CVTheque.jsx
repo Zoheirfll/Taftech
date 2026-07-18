@@ -6,7 +6,7 @@ import { authService } from "../../Services/authService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
+import { mediaUrl as getMediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
 import {
   Search,
@@ -734,7 +734,7 @@ const CVTheque = () => {
                       {/* Avatar */}
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
                         {candidat.photo_profil ? (
-                          <img src={getMediaUrl(candidat.photo_profil)} alt="" className="w-full h-full object-cover" />
+                          <img src={candidatFichierUrl(candidat.user_id, "photo")} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <User size={18} className={tw.textMuted} />
                         )}
@@ -864,7 +864,7 @@ const CVTheque = () => {
                   <div className={`w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
                     {selectedCandidat.photo_profil ? (
                       <img
-                        src={getMediaUrl(selectedCandidat.photo_profil)}
+                        src={candidatFichierUrl(selectedCandidat.user_id, "photo")}
                         alt=""
                         className="w-full h-full object-cover"
                       />
@@ -1138,7 +1138,7 @@ const CVTheque = () => {
               {selectedCandidat.cv_pdf && (
                 <div className="px-6 pb-6">
                   <a
-                    href={getMediaUrl(selectedCandidat.cv_pdf)}
+                    href={candidatFichierUrl(selectedCandidat.user_id, "cv")}
                     target="_blank"
                     rel="noreferrer"
                     className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${tw.buttonDark}`}

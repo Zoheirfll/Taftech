@@ -31,7 +31,10 @@ class CustomUser(AbstractUser):
         default=False,
         verbose_name="Consentement traitement des données candidats (CVthèque)"
     )
-    telephone = models.CharField(max_length=15, null=True, blank=True)
+    telephone = models.CharField(
+        max_length=15, null=True, blank=True,
+        validators=[RegexValidator(r'^\+?[0-9]{8,14}$', "Numéro de téléphone invalide (8 à 14 chiffres, + optionnel en préfixe).")],
+    )
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
     email_verifie = models.BooleanField(default=False)
     code_verification = models.CharField(max_length=6, blank=True, null=True)

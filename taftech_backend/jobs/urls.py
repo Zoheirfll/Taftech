@@ -15,6 +15,7 @@ from .views import (
     OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView,
     AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView,
     ParametresNotificationsAPIView,
+    CandidatFichierPriveAPIView,
 
     # Recruteur
     DashboardRecruteurAPIView, UpdateProfilEntrepriseAPIView,
@@ -83,6 +84,7 @@ urlpatterns = [
     path('alertes/', AlerteEmploiListCreateAPIView.as_view(), name='liste-alertes'),
     path('alertes/<int:pk>/', AlerteEmploiDetailAPIView.as_view(), name='detail-alerte'),
     path('parametres/notifications/', ParametresNotificationsAPIView.as_view(), name='parametres-notifications'),
+    path('media-prive/candidat/<int:candidat_id>/<str:type_fichier>/', CandidatFichierPriveAPIView.as_view(), name='candidat-fichier-prive'),
 
     # Recruteur
     path('dashboard/', DashboardRecruteurAPIView.as_view(), name='dashboard-recruteur'),

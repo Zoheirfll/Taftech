@@ -4,7 +4,7 @@ from collections import Counter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import get_user_model
@@ -19,6 +19,7 @@ from ..models import OffreEmploi, ProfilCandidat, Candidature, MetierReferentiel
 from ..serializers import OffreEmploiSerializer, MetierReferentielSerializer
 from ..matcher import calculer_score_matching
 from ..cv_parser import parse_cv, extract_specialite
+from .equipe import get_entreprise_for_user
 
 User = get_user_model()
 
@@ -115,7 +116,7 @@ class MetierReferentielAPIView(APIView):
 
 
 class MetierReferentielAdminAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         if request.user.role != 'ADMIN':
@@ -284,6 +285,10 @@ class AnalyseGroqRecruteurAPIView(APIView):
             candidature = Candidature.objects.get(id=candidature_id)
         except Candidature.DoesNotExist:
             return Response({'error': 'Candidature introuvable.'}, status=404)
+
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({'error': 'Non autorisé.'}, status=403)
 
         snapshot = candidature.profil_snapshot
         if snapshot:

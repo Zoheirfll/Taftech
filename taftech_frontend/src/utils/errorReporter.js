@@ -3,8 +3,9 @@ import axios from "axios";
 // On utilise une instance séparée de votre "api.js" habituel.
 // Pourquoi ? Parce que si votre API principale plante (ex: problème de token JWT),
 // il faut que l'outil de signalement puisse quand même fonctionner de manière indépendante.
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/accounts` : "/api/accounts";
 const telemetryApi = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/accounts",
+  baseURL: API_BASE,
   withCredentials: true,
 });
 

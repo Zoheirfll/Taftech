@@ -40,7 +40,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
   it("🟢 HP1 : Chargement et affichage des secteurs avec la bonne icône", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
 
-    render(
+    const { container } = render(
       <MemoryRouter>
         <OffresParSecteur />
       </MemoryRouter>,
@@ -51,16 +51,16 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
       expect(screen.getByText("Informatique")).toBeInTheDocument();
       expect(screen.getByText("Finance & Comptabilité")).toBeInTheDocument();
 
-      // Les icônes associées s'affichent (Informatique -> 💻, Finance -> 💰)
-      expect(screen.getByText("💻")).toBeInTheDocument();
-      expect(screen.getByText("💰")).toBeInTheDocument();
+      // Les icônes lucide-react associées s'affichent (Informatique -> Laptop, Finance -> Wallet)
+      expect(container.querySelector(".lucide-laptop")).toBeInTheDocument();
+      expect(container.querySelector(".lucide-wallet")).toBeInTheDocument();
     });
   });
 
   it("🟢 HP2 : Affichage de l'icône de fallback pour un secteur inconnu", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
 
-    render(
+    const { container } = render(
       <MemoryRouter>
         <OffresParSecteur />
       </MemoryRouter>,
@@ -68,8 +68,8 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Aérospatial")).toBeInTheDocument();
-      // Le secteur Aérospatial n'est pas dans le dictionnaire, on s'attend au fallback 💼
-      expect(screen.getByText("💼")).toBeInTheDocument();
+      // Le secteur Aérospatial n'est pas dans le dictionnaire, on s'attend au fallback Briefcase
+      expect(container.querySelector(".lucide-briefcase")).toBeInTheDocument();
     });
   });
 

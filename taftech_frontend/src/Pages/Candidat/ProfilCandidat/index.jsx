@@ -21,6 +21,7 @@ import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import { tw } from "../../../theme";
+import { candidatFichierUrl } from "../../../utils/mediaUrl";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 const MODAL_CLASS = `${tw.modalOverlay} p-4`;
@@ -161,7 +162,7 @@ const ProfilCandidat = () => {
             </p>
             {profil.cv_pdf ? (
               <a
-                href={getPhotoUrl(profil.cv_pdf)}
+                href={candidatFichierUrl(profil.user_id, "cv")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border ${tw.bgSuccessSoft} border-emerald-200 hover:border-emerald-300 transition-colors group`}
@@ -258,7 +259,7 @@ const ProfilCandidat = () => {
             <div className={`w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden ${tw.photoPlaceholder}`}>
               {profil.photo_profil ? (
                 <img
-                  src={getPhotoUrl(profil.photo_profil)}
+                  src={candidatFichierUrl(profil.user_id, "photo")}
                   alt="Profil"
                   className="w-full h-full object-cover"
                 />

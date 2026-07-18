@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { mediaUrl } from "../../utils/mediaUrl";
+import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import {
   MapPin,
   GraduationCap,
@@ -261,7 +261,7 @@ const ReviewCandidature = () => {
             <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
               {profil.photo_profil ? (
                 <img
-                  src={getMediaUrl(profil.photo_profil)}
+                  src={candidatFichierUrl(profil.user_id, "photo")}
                   alt="Profil"
                   className="w-full h-full object-cover"
                 />

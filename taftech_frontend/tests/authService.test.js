@@ -59,6 +59,7 @@ describe("🔧 Logique Métier - Service <authService />", () => {
     expect(api.post).toHaveBeenCalledWith("accounts/login/", {
       username: "meriem@test.dz",
       password: "password123",
+      remember_me: false,
     });
 
     // Le faux localStorage doit avoir enregistré le rôle
@@ -69,6 +70,7 @@ describe("🔧 Logique Métier - Service <authService />", () => {
 
   it("🟢 HP2 : Déconnexion Recruteur — redirige vers /recruteurs/connexion", async () => {
     mockStore["userRole"] = "RECRUTEUR";
+    mockStore["loginPortal"] = "recruteur";
     api.post.mockResolvedValue({});
 
     await authService.logout();

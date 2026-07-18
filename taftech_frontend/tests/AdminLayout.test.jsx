@@ -73,9 +73,9 @@ describe("🗂️ UI & Routage - Composant <AdminLayout />", () => {
       </MemoryRouter>,
     );
     const linkEntreprises = screen.getByRole("link", { name: /Entreprises/i });
-    expect(linkEntreprises).toHaveClass("bg-indigo-600");
+    expect(linkEntreprises).toHaveClass("bg-indigo-50", "text-indigo-700");
     const linkDashboard = screen.getByRole("link", { name: /Vue d'ensemble/i });
-    expect(linkDashboard).not.toHaveClass("bg-indigo-600");
-    expect(linkDashboard).toHaveClass("text-slate-400");
+    expect(linkDashboard).not.toHaveClass("bg-indigo-50");
+    expect(linkDashboard).toHaveClass("text-slate-600");
   });
 });

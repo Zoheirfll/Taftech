@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, Now
 from django.core.mail import EmailMultiAlternatives
@@ -89,7 +90,17 @@ class UpdateProfilEntrepriseAPIView(APIView):
         user_fields = []
         for field in ('first_name', 'last_name', 'telephone'):
             if field in data:
-                setattr(user, field, data[field])
+                val = data[field]
+                model_field = user._meta.get_field(field)
+                max_len = model_field.max_length
+                if max_len and isinstance(val, str) and len(val) > max_len:
+                    val = val[:max_len]
+                if val:
+                    try:
+                        model_field.run_validators(val)
+                    except DjangoValidationError as e:
+                        return Response({"error": " ".join(e.messages)}, status=400)
+                setattr(user, field, val)
                 user_fields.append(field)
         if user_fields:
             user.save(update_fields=user_fields)
@@ -295,6 +306,10 @@ class EnvoyerCandidatureSpontaneeAPIView(APIView):
         if request.user.is_authenticated and request.user.role == 'CANDIDAT':
             if CandidatureSpontanee.objects.filter(entreprise=entreprise, candidat=request.user).exists():
                 return Response({'error': 'Candidature spontanée déjà envoyée.'}, status=400)
+        else:
+            email = (request.data.get('email') or '').strip()
+            if email and CandidatureSpontanee.objects.filter(entreprise=entreprise, email__iexact=email).exists():
+                return Response({'error': 'Candidature spontanée déjà envoyée avec cet email.'}, status=400)
         serializer = CandidatureSpontaneeSerializer(data=request.data)
         if serializer.is_valid():
             candidature = serializer.save(entreprise=entreprise)
@@ -451,7 +466,10 @@ class DemanderActivationPremiumAPIView(APIView):
         if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
         moyen = request.data.get('moyen_paiement', 'CIB')
-        nb_mois = int(request.data.get('nb_mois', 1))
+        try:
+            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+        except (TypeError, ValueError):
+            return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
         if DemandeActivationPremium.objects.filter(entreprise=entreprise, est_traitee=False).exists():
             return Response({'message': 'Demande déjà envoyée. En attente de traitement.'}, status=200)
         DemandeActivationPremium.objects.create(entreprise=entreprise, moyen_paiement=moyen, nb_mois=nb_mois)
@@ -483,7 +501,10 @@ class ChargilyCheckoutAPIView(APIView):
         if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
 
-        nb_mois = int(request.data.get('nb_mois', 1))
+        try:
+            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+        except (TypeError, ValueError):
+            return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
         montant = _get_prix_premium(nb_mois)
 
         # URLs de retour après paiement Chargily
@@ -618,8 +639,11 @@ class EnvoyerRecuPremiumAPIView(APIView):
         except Exception:
             return Response({'error': 'Profil entreprise introuvable.'}, status=404)
         moyen = request.data.get('moyen_paiement', 'CIB')
-        nb_mois = request.data.get('nb_mois', 1)
-        montant = int(nb_mois) * 2000
+        try:
+            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+        except (TypeError, ValueError):
+            return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
+        montant = nb_mois * 2000
         message_custom = request.data.get('message', '')
         subject = f"[TafTech Premium] Reçu de paiement — {entreprise.nom_entreprise}"
         body = f"""

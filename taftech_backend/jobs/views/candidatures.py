@@ -115,7 +115,8 @@ class PostulerAPIView(APIView):
                 disqualifie = False
                 for question_id, reponse_texte in reponses_dict.items():
                     try:
-                        question = QuestionQuestionnaire.objects.get(id=int(question_id))
+                        question = QuestionQuestionnaire.objects.get(id=int(question_id), questionnaire=offre.questionnaire)
+                        reponse_texte = str(reponse_texte)[:2000]
                         ReponseCandidat.objects.create(
                             candidature=candidature,
                             question=question,
@@ -176,8 +177,8 @@ class PostulerRapideAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
-        email = request.data.get('email_rapide')
-        if Candidature.objects.filter(offre=offre, email_rapide=email).exists():
+        email = (request.data.get('email_rapide') or '').strip()
+        if Candidature.objects.filter(offre=offre, email_rapide__iexact=email).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre avec cet email."}, status=status.HTTP_400_BAD_REQUEST)
         serializer = PostulerRapideDTO(data=request.data)
         if serializer.is_valid():

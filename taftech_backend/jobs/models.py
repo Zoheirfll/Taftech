@@ -439,7 +439,14 @@ class CandidatureSpontanee(models.Model):
     prenom = models.CharField(max_length=100)
     email = models.EmailField()
     telephone = models.CharField(max_length=20, blank=True)
-    cv = models.FileField(upload_to='cvs_spontanes/')
+    cv = models.FileField(
+        upload_to='cvs_spontanes/',
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx']),
+            validate_document_mime,
+            validate_file_size(5),
+        ]
+    )
     lettre_motivation = models.TextField(blank=True)
     date_envoi = models.DateTimeField(auto_now_add=True)
     lue = models.BooleanField(default=False)

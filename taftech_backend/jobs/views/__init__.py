@@ -26,6 +26,7 @@ from .profils import (
     AlerteEmploiListCreateAPIView,
     AlerteEmploiDetailAPIView,
     ParametresNotificationsAPIView,
+    CandidatFichierPriveAPIView,
 )
 from .candidatures import (
     PostulerAPIView,

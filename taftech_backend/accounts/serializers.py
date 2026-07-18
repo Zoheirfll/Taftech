@@ -2,6 +2,9 @@ from rest_framework import serializers
 from .models import CustomUser, SystemErrorLog
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.exceptions import AuthenticationFailed
@@ -11,7 +14,7 @@ User = get_user_model()
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION_MINUTES = 15
 class RegisterCandidatDTO(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=8)
     # 👇 AJOUT : On récupère la wilaya depuis React
     wilaya = serializers.CharField(write_only=True, required=True)
     nin = serializers.CharField(required=True)
@@ -24,6 +27,19 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
             'last_name', 'nin', 'telephone', 'date_naissance',
             'consentement_loi_18_07', 'wilaya', 'adresse' # <-- Ajout de wilaya/adresse ici
         )
+
+    def validate_password(self, value):
+        temp_user = CustomUser(
+            username=self.initial_data.get('username', ''),
+            email=self.initial_data.get('email', ''),
+            first_name=self.initial_data.get('first_name', ''),
+            last_name=self.initial_data.get('last_name', ''),
+        )
+        try:
+            validate_password(value, user=temp_user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
 
     # --- TES VALIDATIONS (Gardées car elles sont parfaites) ---
     def validate_email(self, value):
@@ -131,7 +147,7 @@ class RecruteurRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    telephone = serializers.CharField(required=True)
+    telephone = serializers.CharField(required=True, validators=[RegexValidator(r'^\+?[0-9]{8,14}$', "Numéro de téléphone invalide (8 à 14 chiffres, + optionnel en préfixe).")])
 
     # Champs de l'entreprise
     nom_entreprise = serializers.CharField(write_only=True, required=True)
@@ -144,6 +160,19 @@ class RecruteurRegisterSerializer(serializers.ModelSerializer):
             'email', 'username', 'password', 'first_name', 'last_name', 'telephone',
             'nom_entreprise', 'secteur_activite', 'registre_commerce'
         )
+
+    def validate_password(self, value):
+        temp_user = User(
+            username=self.initial_data.get('username', ''),
+            email=self.initial_data.get('email', ''),
+            first_name=self.initial_data.get('first_name', ''),
+            last_name=self.initial_data.get('last_name', ''),
+        )
+        try:
+            validate_password(value, user=temp_user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():

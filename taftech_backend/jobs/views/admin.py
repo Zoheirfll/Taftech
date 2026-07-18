@@ -409,7 +409,7 @@ class ExportUtilisateursCSVAPIView(APIView):
 
 
 class AdminMarcheAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         if request.user.role != 'ADMIN':
@@ -535,7 +535,10 @@ class AdminDemandesPremiumAPIView(APIView):
             demande = DemandeActivationPremium.objects.get(id=demande_id)
         except DemandeActivationPremium.DoesNotExist:
             return Response({'error': 'Demande introuvable.'}, status=404)
-        nb_mois = int(request.data.get('nb_mois', demande.nb_mois))
+        try:
+            nb_mois = max(1, min(int(request.data.get('nb_mois', demande.nb_mois)), 12))
+        except (TypeError, ValueError):
+            return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
         entreprise = demande.entreprise
         # Prolonger si déjà premium actif, sinon partir de maintenant
         base = entreprise.premium_expire_at if entreprise.est_premium_actif else timezone.now()

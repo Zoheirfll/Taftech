@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { mediaUrl } from "../../utils/mediaUrl";
+import { candidatFichierUrl } from "../../utils/mediaUrl";
 import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -213,7 +213,7 @@ const AdminUsers = () => {
                       <div className={`w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center ${tw.textSlate800} overflow-hidden shrink-0 border border-white shadow-sm`}>
                         {user.profil_candidat?.photo_profil ? (
                           <img
-                            src={mediaUrl(user.profil_candidat.photo_profil)}
+                            src={candidatFichierUrl(user.id, "photo")}
                             alt="Profil"
                             className="w-full h-full object-cover"
                           />
@@ -296,9 +296,7 @@ const AdminUsers = () => {
                 <div className={`w-14 h-14 rounded-xl ${tw.surfaceMuted} flex items-center justify-center overflow-hidden border ${tw.borderBase}`}>
                   {selectedUser.profil_candidat?.photo_profil ? (
                     <img
-                      src={mediaUrl(
-                        selectedUser.profil_candidat.photo_profil,
-                      )}
+                      src={candidatFichierUrl(selectedUser.id, "photo")}
                       alt="Profil"
                       className="w-full h-full object-cover"
                     />
@@ -547,7 +545,7 @@ const AdminUsers = () => {
                   {selectedUser.profil_candidat.cv_pdf && (
                     <div className="text-center pt-2">
                       <a
-                        href={mediaUrl(selectedUser.profil_candidat.cv_pdf)}
+                        href={candidatFichierUrl(selectedUser.id, "cv")}
                         target="_blank"
                         rel="noreferrer"
                         className={`inline-flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg transition-colors shadow-sm`}

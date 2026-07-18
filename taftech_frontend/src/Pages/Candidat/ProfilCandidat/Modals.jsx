@@ -903,7 +903,7 @@ export const Modals = ({
                 {parsedData.photo && (
                   <div className={`flex items-center gap-4 p-4 rounded-xl ${tw.photoDetectedBox}`}>
                     <img
-                      src={`data:image/${parsedData.photo.ext};base64,${parsedData.photo.data}`}
+                      src={`data:image/${["jpg", "jpeg", "png", "webp"].includes(parsedData.photo.ext?.toLowerCase()) ? parsedData.photo.ext.toLowerCase() : "png"};base64,${parsedData.photo.data}`}
                       alt="Photo"
                       className={`w-16 h-16 rounded-xl object-cover border-2 ${tw.surface} shadow-sm`}
                     />

@@ -125,7 +125,7 @@ class CandidaturesSpontaneesAPITestCase(TestCase):
         self.client.force_authenticate(user=nouveau_candidat)
     
         import io
-        cv_factice = io.BytesIO(b"Contenu CV factice")
+        cv_factice = io.BytesIO(b"%PDF-1.4 contenu CV factice")
         cv_factice.name = "cv_test.pdf"
     
         data = {

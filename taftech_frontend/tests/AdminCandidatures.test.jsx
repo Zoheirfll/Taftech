@@ -91,6 +91,8 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
       expect(jobsService.getAdminCandidatures).toHaveBeenCalledWith(
         1,
         "TafTech",
+        "",
+        "-date_postulation",
       );
     });
   });

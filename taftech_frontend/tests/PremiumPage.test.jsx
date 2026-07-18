@@ -110,8 +110,8 @@ describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
   it("🟢 HP7 : Bouton Prolonger bascule vers le flow paiement Chargily", async () => {
     jobsService.getDashboard.mockResolvedValue({
       est_premium: true,
-      premium_expire_at: "12/07/2026",
-      premium_active_since: "12/06/2026",
+      premium_expire_at: "15/09/2026",
+      premium_active_since: "17/07/2026",
       premium_nb_mois: 1,
     });
     renderPage();
@@ -126,8 +126,8 @@ describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
   it("🟢 HP8 : Mode renouvellement affiche le bouton annuler", async () => {
     jobsService.getDashboard.mockResolvedValue({
       est_premium: true,
-      premium_expire_at: "12/07/2026",
-      premium_active_since: "12/06/2026",
+      premium_expire_at: "15/09/2026",
+      premium_active_since: "17/07/2026",
       premium_nb_mois: 1,
     });
     renderPage();

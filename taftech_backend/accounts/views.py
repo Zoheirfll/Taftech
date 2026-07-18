@@ -1,22 +1,41 @@
+import os
 import random
 import logging
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth.password_validation import validate_password
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+
+
+# Le test runner Django force settings.DEBUG=False pendant `manage.py test`,
+# même avec DEBUG=True dans .env → on lit la variable d'env brute pour le bypass Cypress.
+_DEBUG_ENV = os.getenv('DEBUG', 'False') == 'True'
 
 
 class CypressAwareThrottle(AnonRateThrottle):
     """En mode DEBUG, désactive le throttle pour 127.0.0.1 (Cypress)."""
     def allow_request(self, request, view):
-        if settings.DEBUG:
+        if _DEBUG_ENV:
+            ip = request.META.get('REMOTE_ADDR', '')
+            if ip in ('127.0.0.1', '::1'):
+                return True
+        return super().allow_request(request, view)
+
+
+class AuthRateThrottle(ScopedRateThrottle):
+    """Scope 'auth' (10/min) — endpoints sensibles anti brute-force. Bypass Cypress en DEBUG."""
+    scope = 'auth'
+
+    def allow_request(self, request, view):
+        if _DEBUG_ENV:
             ip = request.META.get('REMOTE_ADDR', '')
             if ip in ('127.0.0.1', '::1'):
                 return True
@@ -47,7 +66,8 @@ def _generate_otp(user):
 
 class CandidatRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         dto = RegisterCandidatDTO(data=request.data)
@@ -89,7 +109,8 @@ class CandidatRegistrationAPIView(APIView):
 
 class VerifyEmailAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         email = request.data.get('email')
@@ -123,7 +144,8 @@ class VerifyEmailAPIView(APIView):
 
 class RenvoyerCodeVerificationAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         email = request.data.get('email')
@@ -160,7 +182,8 @@ class EmailTokenObtainView(TokenObtainPairView):
 
 class RecruteurRegisterAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         serializer = RecruteurRegisterSerializer(data=request.data)
@@ -197,7 +220,8 @@ class RecruteurRegisterAPIView(APIView):
 
 class CookieTokenObtainView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -372,11 +396,11 @@ class ErrorReportAPIView(APIView):
             user = request.user if request.user.is_authenticated else None
             SystemErrorLog.objects.create(
                 user=user,
-                message=request.data.get('message', 'Erreur Inconnue'),
-                details=request.data.get('details', 'N/A'),
-                url=request.data.get('url', 'N/A'),
-                user_agent=request.data.get('user_agent', 'N/A'),
-                stack_trace=request.data.get('stack_trace', 'N/A')
+                message=str(request.data.get('message', 'Erreur Inconnue'))[:1000],
+                details=str(request.data.get('details', 'N/A'))[:2000],
+                url=str(request.data.get('url', 'N/A'))[:500],
+                user_agent=str(request.data.get('user_agent', 'N/A'))[:1000],
+                stack_trace=str(request.data.get('stack_trace', 'N/A'))[:5000]
             )
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception:
@@ -409,7 +433,8 @@ class AdminSystemLogAPIView(APIView):
 
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         email = request.data.get('email', '').strip()
@@ -447,7 +472,8 @@ class ForgotPasswordAPIView(APIView):
 
 class ResetPasswordAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = 'auth'
 
     def post(self, request):
         email = request.data.get('email', '').strip()
@@ -456,9 +482,6 @@ class ResetPasswordAPIView(APIView):
 
         if not email or not code or not nouveau_mdp:
             return Response({'error': 'Email, code et nouveau mot de passe obligatoires.'}, status=400)
-
-        if len(nouveau_mdp) < 8:
-            return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
 
         try:
             user = User.objects.get(email=email, code_verification=code)
@@ -473,6 +496,11 @@ class ResetPasswordAPIView(APIView):
                 user.code_verification_created_at = None
                 user.save(update_fields=['code_verification', 'code_verification_created_at'])
                 return Response({'error': 'Code invalide ou expiré.'}, status=400)
+
+        try:
+            validate_password(nouveau_mdp, user=user)
+        except DjangoValidationError as e:
+            return Response({'error': ' '.join(e.messages)}, status=400)
 
         user.set_password(nouveau_mdp)
         user.code_verification = None
@@ -489,8 +517,13 @@ class ChangerMotDePasseAPIView(APIView):
         user = request.user
         nouveau = request.data.get('nouveau_mdp', '')
 
-        if not nouveau or len(nouveau) < 8:
-            return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères.'}, status=400)
+        if not nouveau:
+            return Response({'error': 'Le nouveau mot de passe est obligatoire.'}, status=400)
+
+        try:
+            validate_password(nouveau, user=user)
+        except DjangoValidationError as e:
+            return Response({'error': ' '.join(e.messages)}, status=400)
 
         if getattr(user, 'est_compte_google', False):
             # Compte Google — pas d'ancien mot de passe requis

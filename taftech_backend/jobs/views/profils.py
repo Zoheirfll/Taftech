@@ -1,3 +1,6 @@
+import os
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import FileResponse, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,13 +9,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.utils import DataError
 from ..models import (
     ProfilCandidat, ExperienceCandidat, FormationCandidat,
-    OffreSauvegardee, AlerteEmploi, OffreEmploi
+    OffreSauvegardee, AlerteEmploi, OffreEmploi, Candidature
 )
 from ..serializers import (
     ProfilCandidatDTO, ExperienceSerializer, FormationSerializer,
     OffreSauvegardeeSerializer, AlerteEmploiSerializer,
     ParametresNotificationsSerializer
 )
+from .equipe import get_entreprise_for_user
 
 
 class ProfilCandidatAPIView(APIView):
@@ -38,9 +42,15 @@ class ProfilCandidatAPIView(APIView):
         for field in ('first_name', 'last_name', 'telephone'):
             val = request.data.get(field)
             if val is not None:
-                max_len = user._meta.get_field(field).max_length
+                model_field = user._meta.get_field(field)
+                max_len = model_field.max_length
                 if max_len and isinstance(val, str) and len(val) > max_len:
                     val = val[:max_len]
+                if val:
+                    try:
+                        model_field.run_validators(val)
+                    except DjangoValidationError as e:
+                        return Response({"error": " ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
                 setattr(user, field, val)
                 user_fields.append(field)
         if user_fields:
@@ -258,3 +268,43 @@ class ParametresNotificationsAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CandidatFichierPriveAPIView(APIView):
+    """
+    Sert le CV PDF ou la photo de profil d'un candidat après vérification d'accès :
+    le candidat lui-même, un admin, ou un recruteur ayant reçu une candidature de
+    ce candidat / ayant un abonnement premium actif (CVThèque).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, candidat_id, type_fichier):
+        try:
+            profil = ProfilCandidat.objects.select_related('user').get(user_id=candidat_id)
+        except ProfilCandidat.DoesNotExist:
+            raise Http404
+
+        if type_fichier == 'cv':
+            fichier = profil.cv_pdf
+        elif type_fichier == 'photo':
+            fichier = profil.photo_profil
+        else:
+            return Response({"error": "Type de fichier invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not fichier:
+            raise Http404
+
+        if not self._acces_autorise(request.user, profil):
+            return Response({"error": "Accès refusé."}, status=status.HTTP_403_FORBIDDEN)
+
+        return FileResponse(fichier.open('rb'), filename=os.path.basename(fichier.name))
+
+    def _acces_autorise(self, user, profil):
+        if user.id == profil.user_id or user.role == 'ADMIN':
+            return True
+        entreprise = get_entreprise_for_user(user)
+        if not entreprise:
+            return False
+        if Candidature.objects.filter(candidat_id=profil.user_id, offre__entreprise=entreprise).exists():
+            return True
+        return entreprise.est_premium_actif

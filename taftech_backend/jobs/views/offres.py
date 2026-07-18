@@ -51,7 +51,7 @@ class JobDetailAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, offre_id):
         try:
-            offre = OffreEmploi.objects.select_related('entreprise').get(id=offre_id, est_active=True, est_cloturee=False)
+            offre = OffreEmploi.objects.select_related('entreprise').get(id=offre_id, est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
             serializer = OffreEmploiSerializer(offre)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:

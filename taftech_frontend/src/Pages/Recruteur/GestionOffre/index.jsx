@@ -18,6 +18,7 @@ import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import { tw } from "../../../theme";
+import { candidatFichierUrl } from "../../../utils/mediaUrl";
 
 const STATUTS_DOTS = tw.statutDotColors;
 
@@ -304,7 +305,7 @@ const GestionOffre = () => {
                           <div className={`w-9 h-9 rounded-lg ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}>
                             {cand.candidat?.photo_profil ? (
                               <img
-                                src={getMediaUrl(cand.candidat.photo_profil)}
+                                src={candidatFichierUrl(cand.candidat.id, "photo")}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />

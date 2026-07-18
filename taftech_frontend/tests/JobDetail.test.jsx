@@ -98,6 +98,8 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
 
   it("🟢 HP2 : Navigation entre les modes de postulation (TafTech / Rapide)", async () => {
     jobsService.getJobById.mockResolvedValue(mockJobData);
+    authService.isAuthenticated.mockReturnValue(true);
+    authService.getUserRole.mockReturnValue("CANDIDAT");
     render(
       <MemoryRouter>
         <JobDetail />
@@ -235,14 +237,12 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
     );
     await waitFor(() => screen.getByText(/Prêt à postuler/i));
 
-    fireEvent.click(screen.getByText(/Postuler avec mon profil TafTech/i));
-    fireEvent.click(screen.getByText(/Envoyer ma candidature/i));
+    fireEvent.click(screen.getByText(/Se connecter pour postuler/i));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "Vous devez être connecté en tant que candidat.",
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining("/login?next="),
       );
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
       expect(jobsService.postuler).not.toHaveBeenCalled();
     });
   });

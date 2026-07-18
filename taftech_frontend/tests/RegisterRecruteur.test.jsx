@@ -36,9 +36,10 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: { getConstants: vi.fn() },
 }));
 
-vi.mock("../src/theme", () => ({
-  selectStyles: {},
-}));
+vi.mock("../src/theme", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, selectStyles: {} };
+});
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -90,6 +91,9 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
       { target: { value: "1234A" } },
     );
     fireEvent.change(container.querySelector('input[name="password"]'), {
+      target: { value: "pass1234" },
+    });
+    fireEvent.change(container.querySelector('input[name="confirmPassword"]'), {
       target: { value: "pass1234" },
     });
 
@@ -226,6 +230,9 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
       { target: { value: "1234A" } },
     );
     fireEvent.change(container.querySelector('input[name="password"]'), {
+      target: { value: "pass1234" },
+    });
+    fireEvent.change(container.querySelector('input[name="confirmPassword"]'), {
       target: { value: "pass1234" },
     });
 

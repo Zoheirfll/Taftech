@@ -666,6 +666,7 @@ Checklist avant déploiement :
 - [ ] Whitenoise pour fichiers statiques
 - [ ] `requirements.txt` à jour
 - [ ] `python manage.py migrate && python manage.py collectstatic`
+- [ ] **Sécurisation fichiers média (CV/photos/logos)** : en DEBUG=False, `taftech_backend/urls.py` ne sert plus `/media/` du tout (bloc `static()` gardé par `if settings.DEBUG`) — il faut un serving explicite en prod (nginx `alias` ou équivalent). Les fichiers gardent leur nom original (`upload_to='cvs/'` sans fonction de nommage, ex. `CV_Ahmed_Benali.pdf`) donc plus devinable qu'un UUID. Avant d'exposer `/media/` publiquement, décider : (a) accepter le risque (fichiers non listables, mais devinables si le nom réel est connu), ou (b) passer par une vue Django authentifiée qui vérifie la propriété/l'accès avant de streamer le fichier, ou (c) URLs signées à expiration (nginx `secure_link` / S3 presigned URLs)
 
 ---
 

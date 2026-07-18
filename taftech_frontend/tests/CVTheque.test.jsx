@@ -25,6 +25,13 @@ vi.mock("../src/Services/jobsService", () => ({
   },
 }));
 
+vi.mock("../src/Services/authService", () => ({
+  authService: {
+    getMe: vi.fn().mockResolvedValue({ consentement_cvtheque: true }),
+    accepterConsentementCVTheque: vi.fn().mockResolvedValue({}),
+  },
+}));
+
 const mockConstants = {
   wilayas: [{ value: "31 - Oran", label: "31 - Oran" }],
   secteurs: [{ value: "IT", label: "Informatique" }],
@@ -79,7 +86,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
-    const input = screen.getByPlaceholderText(/Mots clés, métier, poste/i);
+    const input = await screen.findByPlaceholderText(/Mots clés, métier, poste/i);
     fireEvent.change(input, { target: { value: "React" } });
 
     // On avance le temps manuellement pour le debounce
@@ -119,7 +126,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(mockResults);
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
-    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
+    fireEvent.change(await screen.findByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "A" },
     });
     await act(async () => {
@@ -154,7 +161,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue({ count: 0, results: [] });
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
-    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
+    fireEvent.change(await screen.findByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Unknown" },
     });
     await act(async () => {
@@ -171,7 +178,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockRejectedValue(new Error("Fail"));
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
-    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
+    fireEvent.change(await screen.findByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Bug" },
     });
     await act(async () => {
@@ -195,7 +202,7 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     jobsService.searchCVtheque.mockResolvedValue(incomplete);
     render(<MemoryRouter><CVTheque /></MemoryRouter>);
 
-    fireEvent.change(screen.getByPlaceholderText(/Mots clés, métier, poste/i), {
+    fireEvent.change(await screen.findByPlaceholderText(/Mots clés, métier, poste/i), {
       target: { value: "Ali" },
     });
     await act(async () => {
@@ -271,9 +278,8 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
       // "Comparer avec une offre" apparaît dans l'InfoBanner ET le dropdown
       const matches = screen.getAllByText(/Comparer avec une offre/i);
       expect(matches.length).toBeGreaterThan(0);
+      // getDashboard est appelé pour charger les offres actives
+      expect(jobsService.getDashboard).toHaveBeenCalled();
     });
-
-    // getDashboard est appelé pour charger les offres actives
-    expect(jobsService.getDashboard).toHaveBeenCalled();
   });
 });

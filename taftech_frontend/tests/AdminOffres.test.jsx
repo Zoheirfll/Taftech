@@ -67,7 +67,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Développeur React")).toBeInTheDocument();
-      expect(screen.getByText(/En attente/i)).toBeInTheDocument();
+      const badges = screen.getAllByText(/En attente/i);
+      expect(badges.some((el) => el.tagName === "SPAN")).toBe(true);
     });
   });
 

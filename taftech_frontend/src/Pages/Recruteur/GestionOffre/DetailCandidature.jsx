@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
-import { mediaUrl } from "../../../utils/mediaUrl";
+import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import { tw } from "../../../theme";
 
@@ -155,6 +155,7 @@ export const DetailCandidature = ({
   setEvalForm,
 }) => {
   const candidatData = getCandidatData(selectedCandidature);
+  const candidatUserId = selectedCandidature?.candidat?.id;
   const [showStatutMenu, setShowStatutMenu] = React.useState(false);
   const statutMenuRef = React.useRef(null);
 
@@ -177,7 +178,7 @@ export const DetailCandidature = ({
           <div className={`w-16 h-16 rounded-xl ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden flex-shrink-0`}>
             {candidatData?.photo_profil ? (
               <img
-                src={getMediaUrl(candidatData.photo_profil)}
+                src={candidatFichierUrl(candidatUserId, "photo")}
                 alt=""
                 className="w-full h-full object-cover"
               />
@@ -305,9 +306,7 @@ export const DetailCandidature = ({
         <div className="ml-auto flex items-center px-4 gap-2">
           {candidatData?.cv_pdf && (
             <a
-              href={
-                mediaUrl(candidatData.cv_pdf.startsWith("/") ? candidatData.cv_pdf : `/${candidatData.cv_pdf}`)
-              }
+              href={candidatFichierUrl(candidatUserId, "cv")}
               target="_blank"
               rel="noopener noreferrer"
               className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-medium rounded-lg transition-colors`}

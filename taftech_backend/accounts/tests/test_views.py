@@ -376,7 +376,7 @@ class PasswordResetSecurityTests(APITestCase):
             "nouveau_mdp": "short"
         })
         self.assertEqual(response.status_code, 400)
-        self.assertIn("8 caractères", response.data['error'])
+        self.assertIn("8 characters", response.data['error'])
 
     def test_reset_password_champs_manquants_rejete(self):
         """Champs manquants → 400."""

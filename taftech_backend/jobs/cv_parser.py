@@ -874,7 +874,8 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
 - Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
 - Si info manquante : "" (chaîne vide), jamais null.
 - Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
-- Pour "secteur" : choisis le CODE le plus pertinent dans cette liste de domaines d'activité officiels (ne te base PAS sur des mots isolés de la description, comprends le métier réel exercé) :
+- Pour "secteur" : choisis le CODE le plus pertinent dans cette liste de domaines d'activité officiels.
+⚠️ Base-toi sur le MÉTIER/LA FONCTION réellement exercée par le candidat (titre_poste + missions), PAS sur le secteur d'activité de l'entreprise employeuse. Un développeur web chez un fabricant de véhicules reste dans le domaine informatique, pas "Production industrielle" ; un comptable dans une clinique reste en comptabilité/finance, pas en santé.
 {domaines_list}
 Si vraiment aucun ne correspond : "".
 - Si aucune expérience : tableau vide [].
@@ -985,8 +986,15 @@ def _extract_json_object(content):
         data = json.loads(json_str)
         if isinstance(data, dict):
             return data
-    except json.JSONDecodeError as e:
-        logger.warning("Groq : JSON object invalide - %s", e)
+    except json.JSONDecodeError:
+        # Groq échappe parfois les apostrophes françaises en \' , une séquence
+        # invalide en JSON strict (seul \" est un échappement JSON valide).
+        try:
+            data = json.loads(json_str.replace("\\'", "'"))
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError as e:
+            logger.warning("Groq : JSON object invalide - %s", e)
     return None
 
 def _domaines_list_pour_prompt():

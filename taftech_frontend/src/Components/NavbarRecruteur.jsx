@@ -33,10 +33,12 @@ const NavbarRecruteur = () => {
       isActive(path) ? tw.navLinkDesktopActiveTeal : tw.navLinkDesktopInactiveTeal
     }`;
 
-  const mobileLinkClass = (path) =>
-    `flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-      isActive(path) ? tw.navLinkMobileActiveTeal : tw.navLinkMobileInactiveTeal
-    }`;
+  // `dupBottomNav` : lien déjà présent dans BottomNavRecruteur (<md) — masqué ici pour ne
+  // pas dupliquer, réaffiché en tablette portrait (md-lg) où la bottom nav est cachée.
+  const mobileLinkClass = (path, dupBottomNav = false) =>
+    `items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium rounded-lg transition-colors ${
+      dupBottomNav ? "hidden md:flex" : "flex"
+    } ${isActive(path) ? tw.navLinkMobileActiveTeal : tw.navLinkMobileInactiveTeal}`;
 
   useEffect(() => {
     if (isLogged && estRecruteurOuMembre) {
@@ -64,6 +66,12 @@ const NavbarRecruteur = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Empêche le scroll de la page sous le panneau mobile plein écran quand il est ouvert.
+  useEffect(() => {
+    document.body.style.overflow = isMobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobileOpen]);
+
   const handleLogout = () => {
     setIsDropdownOpen(false);
     setIsMobileOpen(false);
@@ -81,7 +89,7 @@ const NavbarRecruteur = () => {
         {/* LOGO */}
         <div className="flex items-center gap-8">
           <Link to="/recruteurs" className="flex items-center gap-2 shrink-0">
-            <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
+            <img src={logoTafTech} alt="TAFTECH" width={48} height={48} className="h-12 w-auto object-contain" />
             <span className={`text-xs font-semibold ${tw.textTeal} ${tw.bgTealSoft} border border-teal-200 px-2 py-0.5 rounded-md`}>
               Recruteurs
             </span>
@@ -217,35 +225,38 @@ const NavbarRecruteur = () => {
 
           <button
             onClick={() => setIsMobileOpen(!isMobileOpen)}
-            className={`lg:hidden p-2 ${tw.textMuted700} hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors`}
+            className={`lg:hidden ${tw.tapTarget} ${tw.textMuted700} hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors`}
+            aria-label={isMobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
-            {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
+            {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* MENU MOBILE */}
+      {/* MENU MOBILE — dropdown ancré sous la navbar (hauteur = contenu, pas plein écran) */}
       {isMobileOpen && (
-        <div className={`lg:hidden ${tw.borderSubtle} border-t bg-white px-4 py-3 space-y-1`}>
+        <>
+          <div className={`lg:hidden ${tw.mobileMenuBackdrop}`} onClick={() => setIsMobileOpen(false)} />
+          <div className={`lg:hidden ${tw.mobileMenuSheet} px-4 py-3 space-y-1`}>
           {!isLogged && (
             <>
-              <a href="/recruteurs#fonctionnalites" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium ${tw.navLinkMobileInactive}`}>
+              <a href="/recruteurs#fonctionnalites" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
                 <Zap size={16} className="shrink-0" /> Fonctionnalités
               </a>
-              <a href="/recruteurs#comment-ca-marche" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium ${tw.navLinkMobileInactive}`}>
+              <a href="/recruteurs#comment-ca-marche" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
                 <HelpCircle size={16} className="shrink-0" /> Comment ça marche
               </a>
-              <a href="/recruteurs#faq" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium ${tw.navLinkMobileInactive}`}>
+              <a href="/recruteurs#faq" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
                 <MessageCircle size={16} className="shrink-0" /> FAQ
               </a>
               <div className={`${tw.borderSubtle} border-t pt-2 mt-1`}>
-                <Link to="/" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium ${tw.navLinkMobileInactive}`}>
+                <Link to="/" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
                   <User size={16} className="shrink-0" /> Espace candidat
                 </Link>
-                <Link to="/recruteurs/connexion" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium ${tw.navLinkMobileInactive}`}>
+                <Link to="/recruteurs/connexion" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
                   <LogIn size={16} className="shrink-0" /> Connexion
                 </Link>
-                <Link to="/recruteurs/inscription" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 text-sm font-bold ${tw.textTeal} hover:bg-teal-50 rounded-lg transition-colors`}>
+                <Link to="/recruteurs/inscription" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold ${tw.textTeal} hover:bg-teal-50 rounded-lg transition-colors`}>
                   <User size={16} className="shrink-0" /> S'inscrire
                 </Link>
               </div>
@@ -265,8 +276,10 @@ const NavbarRecruteur = () => {
                 .filter(({ minRole }) => authService.peutFaire(minRole))
                 .map(({ to, label, icon }) => {
                   const ItemIcon = icon;
+                  // BottomNavRecruteur couvre déjà ces 5 liens — Questionnaires n'y est pas.
+                  const dup = to !== "/questionnaires";
                   return (
-                    <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to)}>
+                    <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
                       <ItemIcon size={16} className="shrink-0" /> {label}
                     </Link>
                   );
@@ -278,7 +291,8 @@ const NavbarRecruteur = () => {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </>
       )}
     </nav>
   );

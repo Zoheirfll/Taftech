@@ -308,6 +308,9 @@ const GestionOffre = () => {
                               <img
                                 src={candidatFichierUrl(cand.candidat.id, "photo")}
                                 alt=""
+                                loading="lazy"
+                                width={36}
+                                height={36}
                                 className="w-full h-full object-cover"
                               />
                             ) : cand.est_rapide ? (

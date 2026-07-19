@@ -91,7 +91,8 @@ const AdminSystemLogs = () => {
             <p className="text-sm">Aucune erreur enregistrée — tout va bien !</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr>
                 <th className={`text-left px-4 py-3 text-xs font-semibold ${tw.textMuted} uppercase`}>Date</th>
@@ -120,6 +121,7 @@ const AdminSystemLogs = () => {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

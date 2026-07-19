@@ -92,7 +92,8 @@ const AdminAuditLogs = () => {
       ) : (
         <>
           <div className={`${tw.surface} rounded-xl shadow-sm ${tw.borderSubtle} border overflow-hidden`}>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
               <thead className={`${tw.surfaceMuted} ${tw.textMuted} text-xs uppercase tracking-wide`}>
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
@@ -121,6 +122,7 @@ const AdminAuditLogs = () => {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
 
           {totalPages > 1 && (

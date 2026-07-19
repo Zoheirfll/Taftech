@@ -19,7 +19,7 @@ const LogoEntreprise = ({ url, nom }) => {
   return (
     <div className={`w-16 h-16 rounded-xl ${tw.surfaceWhiteSubtleBorder} shadow-sm flex items-center justify-center overflow-hidden shrink-0`}>
       {url && !err ? (
-        <img src={url} alt={nom} className="w-full h-full object-contain p-1.5" onError={() => setErr(true)} />
+        <img src={url} alt={nom} loading="lazy" width={64} height={64} className="w-full h-full object-contain p-1.5" onError={() => setErr(true)} />
       ) : (
         <Building2 size={26} className={tw.textSubtle} />
       )}

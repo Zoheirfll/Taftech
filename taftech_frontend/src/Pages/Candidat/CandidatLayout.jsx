@@ -55,8 +55,10 @@ const CandidatLayout = () => {
   ], [unreadCount]);
 
   return (
-    <div className={`max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-8 min-h-screen ${tw.surfaceSubtle}`}>
-      <aside className="w-full md:w-60 shrink-0">
+    <div className={`max-w-7xl mx-auto flex flex-col md:flex-row gap-4 md:gap-6 px-4 md:px-6 py-5 md:py-8 min-h-screen ${tw.surfaceSubtle}`}>
+      {/* Sur mobile, ce menu est déjà couvert par le hamburger de la Navbar (mêmes liens) —
+          l'afficher aussi ici doublerait la navigation en haut de chaque page candidat. */}
+      <aside className="hidden md:block md:w-60 shrink-0">
         <div className={`${tw.sidebarShell} rounded-2xl overflow-hidden sticky top-20`}>
           <nav className="p-2">
             {menuItems.map((item) => {

@@ -392,7 +392,7 @@ const DashboardRecruteur = () => {
               {dot && filtreStatut !== key && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
               {label}
               {count > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filtreStatut === key ? tw.badgeOnGradient : tw.tagSlateSoft700}`}>
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${filtreStatut === key ? tw.badgeOnGradient : tw.tagSlateSoft700}`}>
                   {count}
                 </span>
               )}
@@ -551,7 +551,7 @@ const DashboardRecruteur = () => {
                   <div className="min-w-0 pr-3">
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
-                      <span className={`shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${badge.cls}`}>{badge.label}</span>
+                      <span className={`shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full ${badge.cls}`}>{badge.label}</span>
                     </div>
                     {offre.motif_rejet && (
                       <p className={`text-xs truncate mt-0.5 flex items-center gap-1 ${tw.textErrorMuted}`}>
@@ -593,7 +593,7 @@ const DashboardRecruteur = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full shrink-0 ${badge.cls}`}>{badge.label}</span>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full shrink-0 ${badge.cls}`}>{badge.label}</span>
                       </div>
                       <div className={`flex items-center gap-2 flex-wrap text-xs ${tw.textMuted700}`}>
                         <span className="flex items-center gap-1"><MapPin size={10} />{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
@@ -619,13 +619,13 @@ const DashboardRecruteur = () => {
                     ].map(({ val, label, color }) => (
                       <div key={label} className="text-center">
                         <p className={`text-lg font-bold tabular-nums ${val > 0 ? color : tw.textSubtle}`}>{val}</p>
-                        <p className={`text-[10px] uppercase tracking-wide ${tw.textMuted}`}>{label}</p>
+                        <p className={`text-xs uppercase tracking-wide ${tw.textMuted}`}>{label}</p>
                       </div>
                     ))}
                     {meilleurScore > 0 && (
                       <div className="text-center ml-auto">
                         <p className={`text-lg font-bold ${meilleurScore >= 80 ? tw.scoreTextSuccess : meilleurScore >= 60 ? tw.textAmber500 : tw.textRed400}`}>{meilleurScore}%</p>
-                        <p className={`text-[10px] uppercase tracking-wide ${tw.textMuted}`}>Top IA</p>
+                        <p className={`text-xs uppercase tracking-wide ${tw.textMuted}`}>Top IA</p>
                       </div>
                     )}
                   </div>

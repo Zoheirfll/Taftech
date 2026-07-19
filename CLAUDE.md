@@ -2,7 +2,55 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 19/07/2026 — Agent IA dédié à la classification du Domaine ANEM d'une expérience CV, sur branche `feature/anem-nomenclature`._
+_Dernière mise à jour : 19/07/2026 — Refonte mobile complète : style flat touch-first, bottom nav 3 portails, hamburger converti en dropdown, fix bugs réels (overflow CV, sidebar dupliquée). Mergé vers `main`._
+
+---
+
+## 🆕 SUITE SESSION REFONTE MOBILE (19/07/2026, tard) — style, bottom nav, bugs réels
+
+**Contexte** : après les 8 lots structurels/perf (voir section précédente), l'utilisateur a testé sur téléphone réel via ngrok et remonté 3 problèmes concrets avec captures d'écran — l'exercice a servi de rappel que l'audit statique ne remplace pas un test réel.
+
+**Bug réel #1 — overflow horizontal sur ProfilCandidat** : le nom de fichier CV (`Curriculum_Vitae_Officiel_BOUMAZA_Rafik-1_CHPwxq6.pdf`) faisait déborder toute la page horizontalement au lieu d'être tronqué. Cause : `truncate` sur un `<span flex-1>` sans `min-w-0` sur la chaîne de parents flex (`<a>` et son `<div flex-1>`) — anti-pattern classique, les flex-items ont `min-width:auto` par défaut donc un texte long pousse tout le layout plus large que le viewport au lieu d'être coupé. Fix : `min-w-0` ajouté sur `<div className="flex-1">` et `<a>` (`ProfilCandidat/index.jsx` section CV). Vérifié qu'aucun autre endroit du code n'a le même pattern non protégé (`CVTheque.jsx` avait déjà `min-w-0` correctement).
+
+**Bug réel #2 — navigation candidat dupliquée sur mobile** : `CandidatLayout.jsx` a une sidebar desktop (`aside w-full md:w-60`) qui se rabattait en **pleine largeur** sur mobile au lieu de disparaître — résultat : les mêmes liens (Mon profil, Mes candidatures, Boîte de réception, etc.) apparaissaient DEUX fois : dans le hamburger ET en grosse carte blanche redondante en haut de chaque page candidat. Fix : `<aside>` passé en `hidden md:block` (uniquement desktop/tablette, le hamburger/bottom nav couvrent le mobile). Padding de page resserré en même temps (`px-6 py-8` → `px-4 py-5` sur mobile, `md:` restaure l'ancien).
+
+**Style visuel — flat touch-first sur JobCard** : l'utilisateur a précisé vouloir un vrai changement visuel (pas seulement structurel), en gardant les couleurs de marque indigo/teal. `tw.jobCardShell` : `rounded-2xl` sur mobile (vs `rounded-xl` desktop inchangé via `sm:`), `active:scale-[0.98]` (feedback de press immédiat, `sm:active:scale-100` pour ne pas l'appliquer au hover desktop). Badges/tags passés de gris neutre discret à blocs de couleur pleins et contrastés (`jobCardBadgeNeutral` : `bg-slate-100` → `bg-indigo-50 text-indigo-700 font-bold`, `jobCardTagSuccess` : `bg-emerald-50` → `bg-emerald-100 text-emerald-800 font-semibold`). Titre/nom entreprise en `text-base font-bold` sur mobile (vs `text-sm font-semibold` desktop). Autres écrans (Accueil, Dashboard) pas retouchés visuellement cette session — JobCard est le composant le plus visible/répété (Accueil + Recherche offres).
+
+**Bottom nav mobile — 3 nouveaux composants** (`Components/BottomNav{Candidat,Guest,Recruteur}.jsx`) : barre fixe en bas d'écran, 5 destinations max, visible uniquement `<md` (sous 768px). Complète le hamburger, ne le remplace pas — le hamburger garde les liens secondaires.
+- `BottomNavCandidat` (candidat connecté) : Accueil, Offres, Profil, Candidatures, Messages (badge non-lus).
+- `BottomNavGuest` (visiteur non connecté, portail candidat) : Accueil, Offres, Secteurs, Entreprises, Connexion.
+- `BottomNavRecruteur` (recruteur/membre équipe connecté) : Tableau, Publier, CVthèque, Spontanées, Paramètres — filtré par rôle via `authService.peutFaire()` (un INVITE ne voit pas Publier/CVthèque, identique à la logique du dropdown desktop existant).
+- Branché dans `App.jsx` (`showBottomNavCandidat`/`showBottomNavGuest`/`showBottomNavRecruteur`, mutuellement exclusifs selon `role`/`recruteurPortal`/`isLogged`), pas affiché sur les routes admin. `<main>` reçoit `pb-16 md:pb-0` quand une bottom nav est visible pour ne pas passer dessous.
+- **Décision produit** : pas de bottom nav pour les visiteurs non connectés du portail recruteur (landing page) — déjà dense en CTA, jugé non prioritaire.
+
+**Hamburger allégé pour éviter le triple-doublon** (Navbar + NavbarRecruteur) : une fois la bottom nav en place, le hamburger dupliquait ses liens en dessous de 768px. `mobileLinkClass(path, dupBottomNav)` : les liens déjà couverts par la bottom nav sont masqués `hidden md:flex` — **cachés sous 768px, réaffichés en tablette portrait 768-1024px** où il n'y a pas de bottom nav et le hamburger reste la seule navigation. Candidat : Accueil/Offres masqués (guest : + Secteurs/Entreprises/Connexion). Recruteur : Tableau/Publier/CVthèque/Spontanées/Paramètres masqués, seuls Questionnaires et Déconnexion restent visibles sous 768px.
+
+**Hamburger converti en dropdown ancré (pas plein écran)** : après le trim ci-dessus, le panneau plein écran (`fixed inset-0`, ajouté plus tôt dans la session) laissait un immense vide blanc pour 2-3 liens restants (ex. visiteur : juste "Par région" + "S'inscrire" + "Espace recruteur"). Remplacé par un menu déroulant ancré sous la navbar (`tw.mobileMenuSheet` : `fixed top-16 inset-x-0 rounded-b-2xl shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto` — hauteur = contenu, pas viewport) + `tw.mobileMenuBackdrop` (fond assombri cliquable pour fermer, `bg-slate-900/40`). Header interne dupliqué (logo + bouton fermer) supprimé — la vraie navbar reste visible au-dessus, son bouton hamburger (devenu ✕) suffit à fermer. Tokens `mobileOverlayPanel`/plein écran retirés de `theme.js`, remplacés par ces deux nouveaux.
+
+**Tests** : 338/338 vert après chaque étape (bug fixes, style JobCard, 3 bottom nav, trim hamburger, conversion dropdown) — aucune régression sur toute cette suite de changements.
+
+---
+
+## 🆕 SESSION REFONTE MOBILE (19/07/2026)
+
+**Contexte** : l'utilisateur jugeait le mode mobile "bas de gamme" (perf + polish). Audit exploratoire complet du frontend avant travail (skill `ui-ux-pro-max`), plan en 8 lots exécutés d'un coup avec `npx vite build` + suite Vitest complète vérifiés après chaque lot (338/338 systématiquement). Aucune couleur de marque ni rendu desktop modifiés — uniquement des ajustements responsive/perf.
+
+**`theme.js`** : nouveaux tokens `tapTarget` (`min-h-[44px] min-w-[44px] flex items-center justify-center`, cibles tactiles), `mobileOverlayPanel` (`fixed inset-0 z-[60] bg-white flex flex-col overscroll-contain`, panneau nav mobile plein écran), `modalPanelMobile` (variante bottom-sheet définie mais **non consommée** — voir limite ci-dessous). `jobCardApplyButton`/`jobCardGhostButton` agrandis en `py-2.5 sm:py-1.5 text-sm sm:text-xs` (desktop inchangé). `modalOverlay` passe de `items-center` à `items-end sm:items-center` — toutes les modales de l'app (12 fichiers, backdrop partagé) s'ancrent désormais en bas d'écran sur mobile au lieu de flotter au centre, desktop identique.
+
+**Navigation mobile** (`Navbar.jsx`, `NavbarRecruteur.jsx`) : le panneau hamburger, auparavant inséré en flux normal sous la navbar (`lg:hidden` + `border-t`), est remplacé par un overlay `fixed inset-0` plein écran avec header interne (logo + bouton fermer) et liste scrollable. Scroll-lock du `<body>` via `useEffect` sur l'état d'ouverture (`document.body.style.overflow`). Boutons hamburger/fermer et liens mobiles portés à ≥44px (`tw.tapTarget`, `min-h-[44px]`).
+
+**Grids sans fallback mobile** corrigés (pattern `grid-cols-1 sm:grid-cols-2 md:grid-cols-N` déjà standard au projet) : `JobDetail.jsx` (×2), `ParametresRecruteur.jsx` (skeleton loader), `DetailCandidature.jsx`, `AdminUsers.jsx`. Deux grids `grid-cols-2` volontaires laissés tels quels (mini-stats 2×2 `DashboardRecruteur.jsx`/`QuiSommesNous.jsx`, commentés comme un choix délibéré, pas un bug).
+
+**Tap targets & lisibilité** : tous les `text-[10px]` remontés à `text-xs` (12px, minimum lisible mobile) dans `JobsList.jsx`, `DashboardRecruteur.jsx`, `AdminOffres.jsx`.
+
+**Tables admin non responsive** : bug confirmé `overflow-hidden` (au lieu de `overflow-x-auto`) sur le wrapper `${tw.card}` — la table coupait/comprimait son contenu sur mobile sans scroll possible. Corrigé en généralisant le pattern déjà correct de `AdminCandidatures.jsx`/`MonEquipe.jsx` (`<div className="overflow-x-auto"><table className="min-w-[Npx]">`) sur `AdminOffres.jsx`, `AdminUsers.jsx`, `AdminAuditLogs.jsx`, `AdminMetiers.jsx`, `AdminEntreprises.jsx`, `AdminDemandesPremium.jsx`, `AdminSystemLogs.jsx`.
+**Décision produit** : pas de carte mobile dédiée par ligne (pattern déjà utilisé dans `DashboardRecruteur.jsx`) généralisée à ces 7 tables admin — jugé disproportionné (risque de doublons DOM dans les tests RTL type `getByText` + effort élevé) pour un panel interne à faible trafic mobile. Le scroll horizontal résout le bug réel (contenu coupé) ; la carte mobile reste une amélioration future si le besoin se confirme.
+
+**Perf images** : `loading="lazy"` + `width`/`height` HTML natifs (anti-CLS) sur les images répétées en liste/grille : logos entreprise (`JobsList.jsx`, `Entreprises.jsx`), avatars candidats (`CVTheque.jsx`, `AdminUsers.jsx`, `GestionOffre/index.jsx`). Logos navbar (au-dessus de la ligne de flottaison) : dimensions ajoutées sans `lazy`. Code-splitting existant (`React.lazy` sur la majorité des pages) laissé tel quel — `Home`/`JobsList`/`JobDetail`/`Login` restent statiques (pages d'entrée les plus visitées, un lazy-load dégraderait le temps perçu).
+
+**`prefers-reduced-motion`** : règle globale ajoutée dans `index.css` (`animation-duration`/`transition-duration` ramenés à ~0 quand l'utilisateur l'a demandé au niveau OS) — couvre l'unique `@keyframes` custom du projet (`fadeInDown`) et toutes les transitions Tailwind standards.
+
+**Limite connue** : `modalPanelMobile` (bottom-sheet avec coins arrondis seulement en haut, poignée de fermeture) a été défini dans `theme.js` mais n'est pas consommé — les 12 fichiers utilisant des modales référencent uniquement `tw.modalOverlay` (le fond) et définissent leur propre classe de panneau en dur (`rounded-xl`/`rounded-2xl` sur tous les coins, pas de token `modalPanel` central à réviser en un seul endroit). Un vrai bottom-sheet par modale nécessiterait une passe fichier par fichier — non fait cette session, `modalOverlay` (ancrage bas d'écran) apporte déjà l'essentiel du gain UX à risque quasi nul.
 
 ---
 

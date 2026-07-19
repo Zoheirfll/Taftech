@@ -156,7 +156,7 @@ const ProfilCandidat = () => {
       {/* CV */}
       <div className={SECTION_CLASS}>
         <div className="flex justify-between items-start mb-3">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h2 className={SECTION_TITLE}>Mon CV</h2>
             <p className={`text-sm font-semibold ${tw.textPrimary} mt-1`}>
               {profil.titre_professionnel || "Titre à définir"}
@@ -166,7 +166,7 @@ const ProfilCandidat = () => {
                 href={candidatFichierUrl(profil.user_id, "cv")}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border ${tw.bgSuccessSoft} border-emerald-200 hover:border-emerald-300 transition-colors group`}
+                className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border min-w-0 ${tw.bgSuccessSoft} border-emerald-200 hover:border-emerald-300 transition-colors group`}
               >
                 <FileText size={18} className={`${tw.textSuccess} shrink-0`} />
                 <span className={`text-sm font-medium truncate flex-1 ${tw.textSuccess}`}>

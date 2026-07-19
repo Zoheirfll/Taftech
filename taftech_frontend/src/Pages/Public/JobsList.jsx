@@ -33,7 +33,7 @@ const LogoEntreprise = ({ url }) => {
   return (
     <div className={`w-12 h-12 rounded-xl border ${tw.borderBase} ${tw.surfaceMuted} flex items-center justify-center shrink-0 overflow-hidden`}>
       {url && !err ? (
-        <img src={url} alt="" className="w-full h-full object-contain p-1" onError={() => setErr(true)} />
+        <img src={url} alt="" loading="lazy" width={48} height={48} className="w-full h-full object-contain p-1" onError={() => setErr(true)} />
       ) : (
         <Building2 size={22} className={tw.textMuted} />
       )}
@@ -308,7 +308,7 @@ const JobsList = () => {
                   {recommandations.map((rec) => (
                     <div key={rec.id} className={`min-w-70 ${tw.surface} border ${tw.borderPrimary200} rounded-xl p-4 shrink-0 hover:shadow-sm transition-all`}>
                       <div className="flex justify-between items-start mb-2">
-                        <span className={`px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[10px] font-semibold rounded-full`}>
+                        <span className={`px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-full`}>
                           {rec.matching_score >= 80 ? "⭐ Top Match" : "Recommandé"}
                         </span>
                         <span className={`text-xs font-bold ${tw.textPrimary}`}>{rec.matching_score}%</span>

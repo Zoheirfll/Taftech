@@ -188,10 +188,22 @@ export const tw = {
     "relative p-2 text-slate-700 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-50",
   navbarShell: "bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm",
 
+  // === MOBILE — cibles tactiles & menu hamburger en dropdown ancré (pas plein écran :
+  // évite un grand vide blanc quand peu de liens restent après la bottom nav) ===
+  tapTarget: "min-h-[44px] min-w-[44px] flex items-center justify-center",
+  mobileMenuBackdrop: "fixed inset-0 z-[55] bg-slate-900/40",
+  mobileMenuSheet: "fixed top-16 inset-x-0 z-[60] bg-white rounded-b-2xl shadow-xl max-h-[calc(100vh-4rem)] overflow-y-auto",
+
   // === MODALES ===
+  // Panneau ancré en bas d'écran sur mobile (plus naturel au pouce, pas de contenu
+  // qui flotte au milieu d'un petit écran), centré comme avant à partir de sm:.
   modalOverlay:
-    "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center",
+    "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center",
   modalPanel: "bg-white rounded-xl border border-slate-200 shadow-xl",
+  // Variante bottom-sheet mobile (Lot E) — desktop identique à modalPanel, mobile en feuille
+  // ancrée en bas d'écran avec poignée de fermeture visuelle.
+  modalPanelMobile:
+    "bg-white border border-slate-200 shadow-xl fixed sm:relative inset-x-0 bottom-0 sm:inset-auto sm:bottom-auto rounded-t-2xl sm:rounded-xl max-h-[85vh] sm:max-h-none overflow-y-auto",
 
   // === TYPO complémentaire ===
   sectionHeading: "text-sm font-semibold text-slate-900",
@@ -234,15 +246,16 @@ export const tw = {
   footerCopyrightTeal: "text-xs text-slate-400",
   footerCopyrightLinkTeal: "text-xs text-slate-400 hover:text-teal-400 transition-colors",
 
-  // === JOBCARD ===
-  jobCardShell: "bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all",
-  jobCardBadgeNeutral: "flex-shrink-0 px-2.5 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-full",
-  jobCardTagNeutral: "inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-600 text-xs rounded-md",
-  jobCardTagSuccess: "inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-md",
+  // === JOBCARD — flat touch-first sur mobile (rounded-2xl, feedback de press),
+  // rendu desktop conservé (rounded-xl, hover shadow) via sm: ===
+  jobCardShell: "bg-white border border-slate-200 rounded-2xl sm:rounded-xl overflow-hidden active:scale-[0.98] sm:active:scale-100 hover:border-indigo-300 hover:shadow-sm transition-all duration-150",
+  jobCardBadgeNeutral: "flex-shrink-0 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full",
+  jobCardTagNeutral: "inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-full",
+  jobCardTagSuccess: "inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full",
   jobCardStatusOk: "flex items-center gap-2 px-3 py-2 rounded-lg mb-3 text-xs font-medium bg-emerald-50 text-emerald-700",
   jobCardStatusError: "flex items-center gap-2 px-3 py-2 rounded-lg mb-3 text-xs font-medium bg-red-50 text-red-600",
-  jobCardApplyButton: "px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors",
-  jobCardGhostButton: "px-3 py-1.5 border border-slate-200 text-slate-700 text-xs rounded-lg hover:bg-slate-50 transition-colors",
+  jobCardApplyButton: "px-3 py-2.5 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-xs font-semibold rounded-lg transition-colors",
+  jobCardGhostButton: "px-3 py-2.5 sm:py-1.5 border border-slate-200 text-slate-700 text-sm sm:text-xs rounded-lg hover:bg-slate-50 transition-colors",
 
   // === BANNIÈRES / TOOLTIPS (variantes couleur) ===
   bannerColors: {

@@ -82,6 +82,9 @@ import Navbar from "./Components/Navbar";
 import NavbarRecruteur from "./Components/NavbarRecruteur";
 import Footer from "./Components/Footer";
 import FooterRecruteur from "./Components/FooterRecruteur";
+import BottomNavCandidat from "./Components/BottomNavCandidat";
+import BottomNavGuest from "./Components/BottomNavGuest";
+import BottomNavRecruteur from "./Components/BottomNavRecruteur";
 
 // Layouts — chargés immédiatement (enveloppes de routes)
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
@@ -199,6 +202,14 @@ function AppContent() {
     !isAdminRoute(location.pathname) &&
     (isRecruteurRoute(location.pathname) || estRecruteurConnecte || forcePortalParam === "recruteur");
 
+  const isLogged = authService.isAuthenticated();
+  const isAdminPath = isAdminRoute(location.pathname);
+  const showBottomNavCandidat = role === "CANDIDAT" && !recruteurPortal && !isAdminPath;
+  const showBottomNavGuest = !isLogged && !recruteurPortal && !isAdminPath;
+  const showBottomNavRecruteur =
+    recruteurPortal && !isAdminPath && isLogged && authService.isRecruteurOuMembre();
+  const showAnyBottomNav = showBottomNavCandidat || showBottomNavGuest || showBottomNavRecruteur;
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       <Toaster
@@ -212,7 +223,7 @@ function AppContent() {
 
       {recruteurPortal ? <NavbarRecruteur /> : <Navbar />}
 
-      <main className="grow">
+      <main className={`grow ${showAnyBottomNav ? "pb-16 md:pb-0" : ""}`}>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* ROUTES PUBLIQUES */}
@@ -284,6 +295,9 @@ function AppContent() {
       </main>
 
       {recruteurPortal ? <FooterRecruteur /> : <Footer />}
+      {showBottomNavCandidat && <BottomNavCandidat />}
+      {showBottomNavGuest && <BottomNavGuest />}
+      {showBottomNavRecruteur && <BottomNavRecruteur />}
     </div>
   );
 }

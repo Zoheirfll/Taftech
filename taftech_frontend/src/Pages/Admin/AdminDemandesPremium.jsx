@@ -74,7 +74,8 @@ const AdminDemandesPremium = () => {
       </div>
 
       <div className={`${tw.card} overflow-hidden`}>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[700px]">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-5 py-3">Entreprise</th>
@@ -159,6 +160,7 @@ const AdminDemandesPremium = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

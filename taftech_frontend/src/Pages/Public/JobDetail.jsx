@@ -113,7 +113,7 @@ const SkeletonJobDetail = () => (
         <div className="lg:col-span-2 space-y-5">
           <div className={`${tw.cardColors} rounded-xl p-6`}>
             <div className={`h-7 w-2/3 ${tw.surfaceSubtle} rounded mb-4`} />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
               {[...Array(6)].map((_, i) => <div key={i} className={`h-16 ${tw.surfaceSubtle} rounded-lg`} />)}
             </div>
             <div className={`h-3 w-40 ${tw.surfaceSubtle} rounded mt-4`} />
@@ -511,7 +511,7 @@ const JobDetail = () => {
             <div className={`${tw.cardColors} rounded-xl p-6`}>
               <h1 className={`text-2xl font-extrabold ${tw.textStrong} leading-tight mb-4`}>{job.titre}</h1>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-5">
                 {job.wilaya && (
                   <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
                     <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Lieu de travail</p>

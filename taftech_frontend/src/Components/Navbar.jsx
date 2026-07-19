@@ -43,10 +43,13 @@ const Navbar = () => {
       isActive(path) ? tw.navLinkDesktopActive : tw.navLinkDesktopInactive
     }`;
 
-  const mobileLinkClass = (path) =>
-    `flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-      isActive(path) ? tw.navLinkMobileActive : tw.navLinkMobileInactive
-    }`;
+  // `dupBottomNav` : lien déjà présent dans la bottom nav mobile (<md) — masqué ici pour ne
+  // pas dupliquer, mais réaffiché en tablette portrait (md-lg) où la bottom nav est cachée
+  // et le hamburger reste la seule navigation.
+  const mobileLinkClass = (path, dupBottomNav = false) =>
+    `items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium rounded-lg transition-colors ${
+      dupBottomNav ? "hidden md:flex" : "flex"
+    } ${isActive(path) ? tw.navLinkMobileActive : tw.navLinkMobileInactive}`;
 
   useEffect(() => {
     if (isLogged) {
@@ -88,6 +91,12 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Empêche le scroll de la page sous le panneau mobile plein écran quand il est ouvert.
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobileMenuOpen]);
+
   const closeDropdown = () => setIsDropdownOpen(false);
   const closeMobile = () => setIsMobileMenuOpen(false);
 
@@ -115,7 +124,7 @@ const Navbar = () => {
         {/* GAUCHE : LOGO + LIENS */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center shrink-0">
-            <img src={logoTafTech} alt="TAFTECH" className="h-12 w-auto object-contain" />
+            <img src={logoTafTech} alt="TAFTECH" width={48} height={48} className="h-12 w-auto object-contain" />
           </Link>
           <div className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(({ to, label, icon: Icon }) => (
@@ -220,27 +229,34 @@ const Navbar = () => {
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors"
+            className={`lg:hidden ${tw.tapTarget} text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors`}
+            aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* MENU MOBILE */}
+      {/* MENU MOBILE — dropdown ancré sous la navbar (hauteur = contenu, pas plein écran) */}
       {isMobileMenuOpen && (
-        <div className={`lg:hidden ${tw.borderSubtle} border-t bg-white px-4 py-3 space-y-1`}>
-          {NAV_LINKS.map(({ to, label, icon: Icon }) => (
-            <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to)}>
-              <Icon size={16} className="shrink-0" />
-              {label}
-            </Link>
-          ))}
+        <>
+          <div className={`lg:hidden ${tw.mobileMenuBackdrop}`} onClick={closeMobile} />
+          <div className={`lg:hidden ${tw.mobileMenuSheet} px-4 py-3 space-y-1`}>
+          {NAV_LINKS.map(({ to, label, icon: Icon }) => {
+            // Bottom nav guest : Accueil/Offres/Secteurs/Entreprises. Bottom nav candidat : Accueil/Offres.
+            const dup = isLogged ? ["/", "/offres"].includes(to) : ["/", "/offres", "/secteurs", "/entreprises"].includes(to);
+            return (
+              <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
+                <Icon size={16} className="shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
 
           {!isLogged && (
             <>
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
-              <Link to="/login" onClick={closeMobile} className={mobileLinkClass("/login")}>
+              <Link to="/login" onClick={closeMobile} className={mobileLinkClass("/login", true)}>
                 <LogIn size={16} className="shrink-0" /> Se connecter
               </Link>
               <Link to="/register" onClick={closeMobile} className={mobileLinkClass("/register")}>
@@ -257,9 +273,9 @@ const Navbar = () => {
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               {role === "CANDIDAT" && (
                 <>
-                  <Link to="/profil" onClick={closeMobile} className={mobileLinkClass("/profil")}><User size={16} className="shrink-0" /> Mon profil</Link>
-                  <Link to="/mes-candidatures" onClick={closeMobile} className={mobileLinkClass("/mes-candidatures")}><Briefcase size={16} className="shrink-0" /> Mes candidatures</Link>
-                  <Link to="/inbox" onClick={closeMobile} className={mobileLinkClass("/inbox")}><Mail size={16} className="shrink-0" /> Boîte de réception</Link>
+                  <Link to="/profil" onClick={closeMobile} className={mobileLinkClass("/profil", true)}><User size={16} className="shrink-0" /> Mon profil</Link>
+                  <Link to="/mes-candidatures" onClick={closeMobile} className={mobileLinkClass("/mes-candidatures", true)}><Briefcase size={16} className="shrink-0" /> Mes candidatures</Link>
+                  <Link to="/inbox" onClick={closeMobile} className={mobileLinkClass("/inbox", true)}><Mail size={16} className="shrink-0" /> Boîte de réception</Link>
                   <Link to="/offres-sauvegardees" onClick={closeMobile} className={mobileLinkClass("/offres-sauvegardees")}><Bookmark size={16} className="shrink-0" /> Offres sauvegardées</Link>
                   <Link to="/alertes" onClick={closeMobile} className={mobileLinkClass("/alertes")}><Bell size={16} className="shrink-0" /> Alertes d'emploi</Link>
                   <Link to="/suggestions-carriere" onClick={closeMobile} className={mobileLinkClass("/suggestions-carriere")}><Sparkles size={16} className="shrink-0" /> Suggestions carrière</Link>
@@ -286,7 +302,8 @@ const Navbar = () => {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </>
       )}
     </nav>
   );

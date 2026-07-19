@@ -22,24 +22,24 @@ import SortableTh from "../../Components/SortableTh";
 const getBadge = (offre) => {
   if (offre.est_cloturee)
     return (
-      <span className={`px-2.5 py-1 ${tw.bgSlate800} text-white text-[10px] font-semibold rounded-full`}>
+      <span className={`px-2.5 py-1 ${tw.bgSlate800} text-white text-xs font-semibold rounded-full`}>
         🔒 Clôturée
       </span>
     );
   if (offre.statut_moderation === "APPROUVEE")
     return (
-      <span className={`px-2.5 py-1 ${tw.scoreHigh} border text-[10px] font-semibold rounded-full`}>
+      <span className={`px-2.5 py-1 ${tw.scoreHigh} border text-xs font-semibold rounded-full`}>
         En ligne
       </span>
     );
   if (offre.statut_moderation === "REJETEE")
     return (
-      <span className={`px-2.5 py-1 ${tw.scoreLow} border text-[10px] font-semibold rounded-full`}>
+      <span className={`px-2.5 py-1 ${tw.scoreLow} border text-xs font-semibold rounded-full`}>
         Rejetée
       </span>
     );
   return (
-    <span className={`px-2.5 py-1 ${tw.scoreMid} border text-[10px] font-semibold rounded-full`}>
+    <span className={`px-2.5 py-1 ${tw.scoreMid} border text-xs font-semibold rounded-full`}>
       En attente
     </span>
   );
@@ -47,9 +47,9 @@ const getBadge = (offre) => {
 
 const renderScoreBadge = (cand) => {
   if (cand.est_rapide)
-    return <span className={`text-[10px] ${tw.textMuted} italic`}>Rapide ⚡</span>;
+    return <span className={`text-xs ${tw.textMuted} italic`}>Rapide ⚡</span>;
   if (!cand.score_matching || parseFloat(cand.score_matching) === 0)
-    return <span className={`text-[10px] ${tw.textMuted}`}>En attente</span>;
+    return <span className={`text-xs ${tw.textMuted}`}>En attente</span>;
   const num = parseFloat(cand.score_matching);
   const style = num >= 70 ? tw.scoreHigh : num >= 40 ? tw.scoreMid : tw.scoreLow;
   return (
@@ -279,9 +279,10 @@ const AdminOffres = () => {
       )}
 
       <div className={`${tw.card} overflow-hidden`}>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[800px]">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
-            <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
+            <tr className={`text-xs ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-4 py-3 w-8">
                 <input
                   type="checkbox"
@@ -332,7 +333,7 @@ const AdminOffres = () => {
                     <p className={`text-sm font-semibold ${tw.textStrong}`}>
                       {offre.titre}
                       {offre.nombre_postes > 1 && (
-                        <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[10px] font-semibold rounded-full align-middle`}>
+                        <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-full align-middle`}>
                           <Users size={10} /> {offre.nombre_postes} postes
                         </span>
                       )}
@@ -351,12 +352,12 @@ const AdminOffres = () => {
                       </p>
                     )}
                     {(offre.wilaya || offre.commune) && (
-                      <p className={`text-[10px] ${tw.textMuted} mt-0.5`}>
+                      <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                         📍 {offre.wilaya}{offre.commune ? ` · ${offre.commune}` : ""}
                       </p>
                     )}
                     {offre.motif_rejet && (
-                      <p className={`text-[10px] ${tw.textErrorMuted} mt-1 ${tw.bgErrorSoft} inline-block px-2 py-0.5 rounded italic`}>
+                      <p className={`text-xs ${tw.textErrorMuted} mt-1 ${tw.bgErrorSoft} inline-block px-2 py-0.5 rounded italic`}>
                         Motif : {offre.motif_rejet}
                       </p>
                     )}
@@ -430,6 +431,7 @@ const AdminOffres = () => {
             )}
           </tbody>
         </table>
+        </div>
         {totalPages > 1 && (
           <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
@@ -515,19 +517,19 @@ const AdminOffres = () => {
               <div className={`flex flex-wrap gap-6 mt-4 pt-4 border-t ${tw.borderOnDark20}`}>
                 {selectedOffre.experience_requise && (
                   <div>
-                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Expérience</p>
+                    <p className={`text-xs font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Expérience</p>
                     <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{selectedOffre.experience_requise}</p>
                   </div>
                 )}
                 {selectedOffre.diplome && (
                   <div>
-                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Diplôme</p>
+                    <p className={`text-xs font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Diplôme</p>
                     <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{selectedOffre.diplome}</p>
                   </div>
                 )}
                 {selectedOffre.specialite && (
                   <div>
-                    <p className={`text-[10px] font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Spécialité</p>
+                    <p className={`text-xs font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Spécialité</p>
                     <p className={`text-sm font-semibold ${tw.textAmberOnDark} mt-0.5`}><DomaineLabel code={selectedOffre.specialite} /></p>
                   </div>
                 )}
@@ -614,9 +616,9 @@ const AdminOffres = () => {
                         <div>
                           <p className={`text-sm ${tw.textSlate800}`}>{q.texte}</p>
                           <div className="flex gap-2 mt-1">
-                            <span className={`text-[10px] ${tw.textMuted700} font-medium`}>{q.type_question}</span>
-                            {q.requis && <span className={`text-[10px] ${tw.textErrorMuted} font-medium`}>Obligatoire</span>}
-                            {q.disqualifiant && <span className={`text-[10px] ${tw.textOrangeStrong} font-medium`}>⚠ Disqualifiant</span>}
+                            <span className={`text-xs ${tw.textMuted700} font-medium`}>{q.type_question}</span>
+                            {q.requis && <span className={`text-xs ${tw.textErrorMuted} font-medium`}>Obligatoire</span>}
+                            {q.disqualifiant && <span className={`text-xs ${tw.textOrangeStrong} font-medium`}>⚠ Disqualifiant</span>}
                           </div>
                         </div>
                       </div>
@@ -642,7 +644,7 @@ const AdminOffres = () => {
                   <div className={`overflow-x-auto border ${tw.borderSubtle} rounded-xl`}>
                     <table className="w-full text-xs text-left">
                       <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
-                        <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
+                        <tr className={`text-xs ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                           <th className="px-3 py-2.5">Nom</th>
                           <th className="px-3 py-2.5 text-center">Score IA</th>
                           <th className="px-3 py-2.5 text-center">Note</th>
@@ -669,7 +671,7 @@ const AdminOffres = () => {
                                 {cand.note_globale ? `${cand.note_globale}/20` : <span className={tw.textSubtle}>—</span>}
                               </td>
                               <td className="px-3 py-2.5 text-right">
-                                <span className={`text-[10px] font-medium ${tw.candStatutColors[cand.statut] || tw.candStatutColors.DEFAULT}`}>
+                                <span className={`text-xs font-medium ${tw.candStatutColors[cand.statut] || tw.candStatutColors.DEFAULT}`}>
                                   {cand.statut.replace("_", " ")}
                                 </span>
                               </td>

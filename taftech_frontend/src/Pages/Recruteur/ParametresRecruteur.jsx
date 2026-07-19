@@ -338,7 +338,7 @@ const ParametresRecruteur = () => {
           </div>
           <div className={`${tw.card} rounded-2xl p-6 space-y-4 animate-pulse`}>
             <div className={`h-5 ${tw.surfaceSubtle} rounded w-48`} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[...Array(4)].map((_, i) => <div key={i} className={`h-12 ${tw.surfaceSubtle} rounded-xl`} />)}
             </div>
             <div className={`h-10 ${tw.surfaceSubtle} rounded-xl w-32 ml-auto`} />

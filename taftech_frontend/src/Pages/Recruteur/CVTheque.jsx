@@ -733,7 +733,7 @@ const CVTheque = () => {
                       {/* Avatar */}
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
                         {candidat.photo_profil ? (
-                          <img src={candidatFichierUrl(candidat.user_id, "photo")} alt="" className="w-full h-full object-cover" />
+                          <img src={candidatFichierUrl(candidat.user_id, "photo")} alt="" loading="lazy" width={40} height={40} className="w-full h-full object-cover" />
                         ) : (
                           <User size={18} className={tw.textMuted} />
                         )}

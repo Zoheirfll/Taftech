@@ -188,7 +188,8 @@ const AdminEntreprises = () => {
       )}
 
       <div className={`${tw.card} overflow-hidden`}>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[800px]">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <th className="px-4 py-3 w-8">
@@ -276,6 +277,7 @@ const AdminEntreprises = () => {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination />
       </div>
 

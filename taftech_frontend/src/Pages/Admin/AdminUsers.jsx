@@ -182,7 +182,8 @@ const AdminUsers = () => {
       </div>
 
       <div className={`${tw.card} overflow-hidden`}>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[800px]">
           <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
             <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
               <SortableTh field="last_name" label="Identité" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
@@ -216,6 +217,9 @@ const AdminUsers = () => {
                           <img
                             src={candidatFichierUrl(user.id, "photo")}
                             alt="Profil"
+                            loading="lazy"
+                            width={36}
+                            height={36}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -266,6 +270,7 @@ const AdminUsers = () => {
             )}
           </tbody>
         </table>
+        </div>
         {totalPages > 1 && (
           <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
             <button
@@ -424,7 +429,7 @@ const AdminUsers = () => {
                     <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-3`}>
                       Préférences
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       {[
                         {
                           label: "Secteur",

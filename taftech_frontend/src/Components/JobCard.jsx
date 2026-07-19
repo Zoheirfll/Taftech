@@ -36,16 +36,16 @@ const JobCard = ({ job }) => {
 
   return (
     <div className={tw.jobCardShell}>
-      <div className="h-0.5 bg-indigo-600" />
+      <div className="h-1 sm:h-0.5 bg-indigo-600" />
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
             <Link to={`/jobs/${job.id}`}>
-              <h3 className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors line-clamp-2">
+              <h3 className="text-base sm:text-sm font-bold sm:font-semibold text-slate-900 hover:text-indigo-600 transition-colors line-clamp-2">
                 {job.titre}
               </h3>
             </Link>
-            <p className={`text-xs font-medium ${tw.textPrimary} mt-0.5`}>
+            <p className={`text-sm sm:text-xs font-semibold sm:font-medium ${tw.textPrimary} mt-0.5`}>
               {job.entreprise?.nom_entreprise}
             </p>
           </div>

@@ -2,7 +2,27 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 18/07/2026 — Remplacement complet du référentiel métiers + du système de secteurs par la nomenclature officielle ANEM (hiérarchie Secteur/Domaine/Sous-domaine/Appellation), sur branche `feature/anem-nomenclature`._
+_Dernière mise à jour : 19/07/2026 — Agent IA dédié à la classification du Domaine ANEM d'une expérience CV, sur branche `feature/anem-nomenclature`._
+
+---
+
+## 🆕 SESSION AGENT IA CLASSIFICATION DOMAINE (19/07/2026)
+
+**Contexte** : le choix du Domaine ANEM par expérience se trompait trop souvent — il était décidé dans le même appel Groq géant que toute l'extraction CV (titre, expériences, formations, infos perso), noyé parmi 87 codes sans ancrage sur de vraies données.
+
+**Nouveau `jobs/domaine_agent.py`** — agent Groq **dédié**, appelé séparément après `parse_cv()` (pas dans le prompt d'extraction) : `classifier_domaines_experiences(experiences)`.
+- Pour chaque expérience, `_candidats_pour_experience()` cherche par mots-clés (`icontains`, mots ≥4 lettres) des appellations `MetierReferentiel` réelles ressemblant au poste/à la description → fournies à l'IA comme indices concrets (RAG léger, réduit l'hallucination vs deviner un code parmi 87 dans le vide).
+- Un seul appel Groq batché pour toutes les expériences du CV (pas un appel par expérience — coût token).
+- Réponse JSON `{"classifications": [{"index", "domaine_code", "raison"}]}` — `raison` demandée pour forcer un vrai raisonnement mais jamais stockée. Codes validés contre `Domaine.objects.values_list('code')` avant usage — un code halluciné est ignoré.
+- Si l'agent échoue ou ne répond rien pour un index → repli sur l'ancienne logique (`_deviner_secteur_experience` : choix Groq inline du prompt d'extraction, puis `resoudre_domaine_depuis_texte` par mots-clés).
+
+**`jobs/referentiel_utils.py`** : nouvelle fonction publique `domaines_list_pour_prompt()` (liste "code — libellé" des 87 domaines, cache 1h `jobs_domaines_prompt_list`) — mutualisée entre le prompt d'extraction CV et le nouvel agent. `cv_parser._domaines_list_pour_prompt()` délègue désormais à celle-ci (plus de duplication).
+
+**`jobs/views/ia.py`** (`ParserCVAPIView.post`) : appelle `classifier_domaines_experiences(experiences)` une fois sur toutes les expériences extraites, avant la boucle qui assigne `exp['secteur']`.
+
+**Décision produit** : pas de champ `sous_domaine` ajouté sur `ExperienceCandidat`/`ProfilCandidat` malgré la demande initiale — rien ne le consomme (matching reste au niveau Domaine), et ça aurait nécessité une migration + toucher tout le frontend pour zéro valeur mesurable. Le sous-domaine ANEM est fait pour classifier des appellations précises (5786 lignes), pas des expériences en langage libre. Priorité donnée à la précision du Domaine seul, qui est ce qui alimente réellement le matching.
+
+**Tests** : `test_api_metiers.py` 16/16 ✅ après le changement (aucune régression, le nouveau flux ne touche pas le modèle/l'API testée).
 
 ---
 

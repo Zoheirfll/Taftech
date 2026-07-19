@@ -998,17 +998,8 @@ def _extract_json_object(content):
     return None
 
 def _domaines_list_pour_prompt():
-    """Liste "code — libellé" des domaines ANEM, injectée dans le prompt Groq pour que
-    l'IA choisisse un secteur d'expérience réel au lieu de deviner via mots-clés."""
-    from django.core.cache import cache
-    from .models import Domaine
-    cached = cache.get('jobs_domaines_prompt_list')
-    if cached:
-        return cached
-    lignes = [f"{code} — {libelle}" for code, libelle in Domaine.objects.values_list('code', 'libelle')]
-    texte = "\n".join(lignes)
-    cache.set('jobs_domaines_prompt_list', texte, timeout=3600)
-    return texte
+    from .referentiel_utils import domaines_list_pour_prompt
+    return domaines_list_pour_prompt()
 
 
 def parse_with_groq(text):

@@ -76,9 +76,12 @@ class ParserCVAPIView(APIView):
                 tmp_file.write(chunk)
             tmp_file.close()
             result = parse_cv(tmp_file.name, cv_file.name)
-            for exp in result.get('experiences', []):
+            experiences = result.get('experiences', [])
+            from ..domaine_agent import classifier_domaines_experiences
+            classifications = classifier_domaines_experiences(experiences)
+            for i, exp in enumerate(experiences):
                 if isinstance(exp, dict):
-                    exp['secteur'] = _deviner_secteur_experience(
+                    exp['secteur'] = classifications.get(i) or _deviner_secteur_experience(
                         exp.get('titre_poste'), exp.get('description'), exp.get('secteur')
                     )
             return Response(result, status=status.HTTP_200_OK)

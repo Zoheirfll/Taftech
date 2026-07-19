@@ -29,3 +29,17 @@ def resoudre_domaine_depuis_texte(*textes):
     if not domaines:
         return None
     return Counter(domaines).most_common(1)[0][0]
+
+
+def domaines_list_pour_prompt():
+    """Liste "code — libellé" des domaines ANEM, injectée dans les prompts Groq pour que
+    l'IA choisisse un domaine réel au lieu de deviner via mots-clés."""
+    from django.core.cache import cache
+    from .models import Domaine
+    cached = cache.get('jobs_domaines_prompt_list')
+    if cached:
+        return cached
+    lignes = [f"{code} — {libelle}" for code, libelle in Domaine.objects.values_list('code', 'libelle')]
+    texte = "\n".join(lignes)
+    cache.set('jobs_domaines_prompt_list', texte, timeout=3600)
+    return texte

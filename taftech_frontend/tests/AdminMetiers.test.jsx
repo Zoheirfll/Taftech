@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminMetiers from "../src/Pages/Admin/AdminMetiers";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -87,7 +88,6 @@ const mockMetiersPage2 = {
 describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    window.confirm = vi.fn(() => true);
   });
 
   afterEach(() => {
@@ -232,6 +232,7 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
     render(
       <MemoryRouter>
         <AdminMetiers />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
@@ -239,6 +240,7 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
     const allButtons = screen.getAllByRole("button");
     // bouton 2 = trash du 1er métier
     fireEvent.click(allButtons[2]);
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.deleteMetier).toHaveBeenCalledWith(1);
@@ -330,18 +332,19 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
   });
 
   it("🔴 EC3 : Confirmation annulée ne supprime pas", async () => {
-    window.confirm = vi.fn(() => false);
     jobsService.getAdminMetiers.mockResolvedValue(mockMetiersPage1);
 
     render(
       <MemoryRouter>
         <AdminMetiers />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getByText("Développeur Full-Stack"));
     const allButtons = screen.getAllByRole("button");
     fireEvent.click(allButtons[2]);
+    fireEvent.click(await screen.findByText("Annuler"));
 
     await waitFor(() => {
       expect(jobsService.deleteMetier).not.toHaveBeenCalled();
@@ -373,12 +376,14 @@ describe("🗂️ UI & Logique - Composant <AdminMetiers />", () => {
     render(
       <MemoryRouter>
         <AdminMetiers />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getByText("Développeur Full-Stack"));
     const allButtons = screen.getAllByRole("button");
     fireEvent.click(allButtons[2]);
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

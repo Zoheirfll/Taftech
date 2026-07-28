@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
 import { Send } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
 const AdminBroadcast = () => {
@@ -13,27 +14,26 @@ const AdminBroadcast = () => {
   });
   const [isSending, setIsSending] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.sujet.trim() || !formData.message.trim())
       return toast.error("Le sujet et le message sont obligatoires.");
-    if (
-      !window.confirm(
-        `Envoyer cet email à tous les abonnés "${formData.type_envoi}" ?`,
-      )
-    )
-      return;
-    setIsSending(true);
-    try {
-      const response = await api.post("jobs/admin/broadcast-email/", formData);
-      toast.success(response.data.message || "Emails envoyés !");
-      setFormData({ ...formData, sujet: "", message: "" });
-    } catch (error) {
-      reportError("ECHEC_ENVOI_BROADCAST", error);
-      toast.error(error.response?.data?.error || "Erreur lors de l'envoi.");
-    } finally {
-      setIsSending(false);
-    }
+    confirmToast(
+      `Envoyer cet email à tous les abonnés "${formData.type_envoi}" ?`,
+      async () => {
+        setIsSending(true);
+        try {
+          const response = await api.post("jobs/admin/broadcast-email/", formData);
+          toast.success(response.data.message || "Emails envoyés !");
+          setFormData({ ...formData, sujet: "", message: "" });
+        } catch (error) {
+          reportError("ECHEC_ENVOI_BROADCAST", error);
+          toast.error(error.response?.data?.error || "Erreur lors de l'envoi.");
+        } finally {
+          setIsSending(false);
+        }
+      },
+    );
   };
 
   const inputClass = tw.input;

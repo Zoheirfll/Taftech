@@ -1,4 +1,5 @@
 import os
+from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse, Http404
 from rest_framework.views import APIView
@@ -37,6 +38,12 @@ class ProfilCandidatAPIView(APIView):
         if str(request.data.get('remove_photo_profil', '')).lower() == 'true':
             profil.photo_profil.delete(save=False)
             profil.photo_profil = None
+        if str(request.data.get('remove_cv_pdf', '')).lower() == 'true':
+            profil.cv_pdf.delete(save=False)
+            profil.cv_pdf = None
+            profil.cv_pdf_maj_le = None
+        if request.FILES.get('cv_pdf'):
+            profil.cv_pdf_maj_le = timezone.now()
         user = request.user
         user_fields = []
         for field in ('first_name', 'last_name', 'telephone'):

@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bell, Trash2, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
@@ -76,16 +77,17 @@ const AlertesEmploi = () => {
     }
   };
 
-  const handleDelete = async (alerteId) => {
-    if (!window.confirm("Supprimer cette alerte ?")) return;
-    try {
-      await jobsService.deleteAlerte(alerteId);
-      setAlertes(prev => prev.filter((a) => a.id !== alerteId));
-      toast.success("Alerte supprimée.");
-    } catch (error) {
-      toast.error("Erreur lors de la suppression.");
-      reportError("ECHEC_SUPPRESSION_ALERTE", error);
-    }
+  const handleDelete = (alerteId) => {
+    confirmToast("Supprimer cette alerte ?", async () => {
+      try {
+        await jobsService.deleteAlerte(alerteId);
+        setAlertes(prev => prev.filter((a) => a.id !== alerteId));
+        toast.success("Alerte supprimée.");
+      } catch (error) {
+        toast.error("Erreur lors de la suppression.");
+        reportError("ECHEC_SUPPRESSION_ALERTE", error);
+      }
+    });
   };
 
   if (isLoading)

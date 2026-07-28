@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import AdminEntreprises from "../src/Pages/Admin/AdminEntreprises";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -55,7 +56,6 @@ const mockData = {
 describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
     window.URL.revokeObjectURL = vi.fn();
     jobsService.getDemandesPremium.mockResolvedValue([]);
@@ -95,11 +95,16 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
   it("🟢 Happy Path 3 : Modération d'entreprise (Approbation)", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     jobsService.moderateEntreprise.mockResolvedValue({});
-    render(<AdminEntreprises />);
+    render(
+      <>
+        <AdminEntreprises />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("Approuver"));
     fireEvent.click(screen.getByText("Approuver"));
+    fireEvent.click(await screen.findByText("Confirmer"));
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(jobsService.moderateEntreprise).toHaveBeenCalledWith(1, {
         est_approuvee: true,
       });
@@ -122,11 +127,15 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
 
   it("🟡 Edge Case : Annulation de la modération", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
-    window.confirm.mockImplementationOnce(() => false);
-    render(<AdminEntreprises />);
+    render(
+      <>
+        <AdminEntreprises />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("Approuver"));
     fireEvent.click(screen.getByText("Approuver"));
-    expect(window.confirm).toHaveBeenCalled();
+    fireEvent.click(await screen.findByText("Annuler"));
     expect(jobsService.moderateEntreprise).not.toHaveBeenCalled();
   });
 
@@ -165,13 +174,18 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
   it("🟢 HP6 : Toggle Approbation approuve une entreprise", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
     jobsService.moderateEntreprise.mockResolvedValue({});
-    window.confirm = vi.fn(() => true);
-    render(<AdminEntreprises />);
+    render(
+      <>
+        <AdminEntreprises />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("SOMIZ Arzew"));
     // Chercher un bouton Approuver/Suspendre
     const btnApprouver = screen.queryByRole("button", { name: /Approuver|Suspendre/i });
     if (btnApprouver) {
       fireEvent.click(btnApprouver);
+      fireEvent.click(await screen.findByText("Confirmer"));
       await waitFor(() => {
         expect(jobsService.moderateEntreprise).toHaveBeenCalled();
       });

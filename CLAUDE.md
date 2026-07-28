@@ -2,7 +2,42 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 19/07/2026 — Refonte mobile complète : style flat touch-first, bottom nav 3 portails, hamburger converti en dropdown, fix bugs réels (overflow CV, sidebar dupliquée). Mergé vers `main`._
+_Dernière mise à jour : 28/07/2026 — Session mot de passe FR + confirmToast + IA offre/spécialité + questionnaire modale + export Excel. Branche `feature/us13-aout`._
+
+---
+
+## 🆕 SESSION 28/07/2026 — sécurité mdp FR, confirmToast, spécialité IA, questionnaire modale, export Excel
+
+**Contexte** : session longue avec plusieurs correctifs UX/backend distincts, tous sur `feature/us13-aout` (créée depuis `main` après un premier commit direct sur `main` : fix message d'erreur inscription + ajustements navbar/IA, poussé avec permission explicite de l'utilisateur).
+
+**Messages d'erreur mot de passe en français** : `LANGUAGE_CODE` passé de `'en-us'` à `'fr'` dans `settings.py` — active les traductions françaises déjà intégrées à Django pour `AUTH_PASSWORD_VALIDATORS` (trop court, trop courant, entièrement numérique, similaire à un champ utilisateur). Combiné à un fix frontend antérieur (`RegisterCandidat.jsx` affiche le premier message d'erreur backend réel au lieu de "Une erreur est survenue"). Un test (`test_reset_password_trop_court_rejete`) mis à jour pour matcher le message français.
+
+**`window.confirm()` remplacé partout** — popups navigateur natifs ("localhost dit...") jugés non professionnels. Nouveau `utils/confirmToast.jsx` : mini-modale maison (store module + `<ConfirmModalHost />` monté une fois dans `App.jsx`), pas `toast.custom()` de react-hot-toast (cassait sous Vitest — mock manuel de `react-hot-toast` dans plusieurs fichiers de test sans `.custom`, plus un souci de résolution ESM/CJS). 13 occurrences remplacées dans 9 fichiers (Admin : Broadcast, Entreprises, Offres, Users, Métiers, SystemLogs ; Candidat : ProfilCandidat, AlertesEmploi ; Recruteur : GestionOffre). 7 fichiers de tests adaptés (rendent `<ConfirmModalHost />` à côté du composant testé, cliquent "Confirmer"/"Annuler" au lieu de mocker `window.confirm`).
+
+**Spécialité candidat mal classée par l'IA (bug réel signalé)** : `extract_specialite()` utilisait `resoudre_domaine_depuis_texte()` sur tout le texte brut du CV (vote majoritaire par fréquence de mots sur 50 fiches `MetierReferentiel`) → classait un "Ingénieur IA" en secteur Agricole. Root cause en 2 couches :
+1. `_candidats_pour_experience()` (RAG des indices donnés à l'agent Groq) ne triait jamais par pertinence — requête `OR` sur mots-clés retournait les 10 premiers résultats dans l'ordre brut de la base (secteur A=Agricole en tête par ordre d'insertion). Fix : exclusion des mots trop génériques (`_MOTS_GENERIQUES` : ingénieur, cadre, chargé, développement...) + tri par nombre réel de mots communs, liste vide plutôt que suggestion trompeuse si titre 100% générique.
+2. `classifier_domaines_experiences()` : la spécialité globale (élément `[PROFIL]`) était injectée avec un index négatif (`-1`) dans le même batch Groq que les expériences — l'IA l'ignorait silencieusement dès qu'il y avait plusieurs vraies expériences (renvoyait un tableau JSON positionnel 0..n-1 sans jamais inclure -1). Fix : décalage séquentiel (`[PROFIL]`=index 0, expériences=1..n côté prompt, re-décalées côté retour) au lieu d'un index spécial.
+3. Règle d'abstention du prompt ("si trop vague, réponds vide") s'appliquait aussi au `[PROFIL]` — un titre composé ("Ingénieur IA ET Cadre administratif") était jugé trop ambigu et laissé vide. Fix : exception explicite pour `[PROFIL]` — ne jamais s'abstenir, classer selon la **première fonction mentionnée** dans le titre (décision produit validée avec l'utilisateur).
+Testé 3x de suite sur le vrai CV de l'utilisateur → `L18 Systèmes d'information et de télécommunication` stable.
+
+**Génération IA de l'offre (`GenererOffreIAAPIView`) cassée depuis l'ajout Domaine/Sous-domaine** : `specialite` envoyée au prompt Groq était le code brut (`"L18"`) au lieu d'un libellé lisible. Fix : traduction code→libellé via `Domaine.objects.filter(code=...)` avant construction du prompt (même pattern que le fix Suggestions Carrière d'une session précédente).
+
+**Questionnaire créable directement depuis "Publier une offre"** : le sélecteur de questionnaire existait déjà dans `CreateJob.jsx` mais le lien "Créer un questionnaire" menait vers `/questionnaires` (perte du formulaire d'offre en cours). Nouveau composant réutilisable `Components/CreateQuestionnaireModal.jsx` (logique de création extraite de `Questionnaires.jsx`, pas de refactor de la page existante pour ne pas risquer ses tests). **Bug trouvé en testant** : le `<form>` interne de la modale était imbriqué dans le `<form>` de la page offre (invalide en HTML) → cliquer sur "Créer le questionnaire" soumettait le formulaire PARENT (rechargement de page, perte des données saisies). Fix : `<form>` interne remplacé par `<div>` + bouton `type="button"` avec `onClick` manuel.
+
+**CV upload — feedback visuel amélioré** : nouveau champ `cv_pdf_maj_le` (migration `0055`) sur `ProfilCandidat`, mis à jour à chaque upload (parser ou formulaire normal) ; la modale "Remplissage automatique" affiche désormais une carte "CV actuel : `nom.pdf` — Mis à jour le [date]" avant la dropzone au lieu d'un écran neutre qui ne changeait jamais. Bouton supprimer CV ajouté dans `ProfilCandidat/index.jsx` (`remove_cv_pdf` côté backend, même pattern que `remove_photo_profil`).
+
+**Checklist "champs manquants" sur la page Profil Candidat** : réutilise exactement la logique déjà présente dans `ReviewCandidature.jsx` (`CHAMPS_PROFIL` avec labels + tests) — affichée en badges ambre sous la jauge de complétion, factorisée dans `useProfilCandidat.js` (`champsManquants`).
+
+**Suggestions Carrière — badges "IA Cloud"/"Regex" retirés** de la modale parser CV (jugés inutiles par l'utilisateur, exposaient un détail d'implémentation sans valeur pour le candidat).
+
+**Export Excel candidatures (notes + commentaires recruteur)** : deux nouveaux endpoints backend (`jobs/views/recruteur.py`, openpyxl déjà en dépendance) —
+- `GET jobs/dashboard/offres/<id>/export-excel/` : candidatures d'une offre (date, candidat, email, tél, statut, score IA, 4 notes détaillées, note globale /20, commentaire recruteur).
+- `GET jobs/dashboard/export-excel/` : toutes offres confondues de l'entreprise (+ colonne Offre).
+Boutons "Exporter Excel" dans `GestionOffre` (par offre) et `DashboardRecruteur` (global).
+
+**Date d'entretien absente de la notification boîte de réception** (signalé par l'utilisateur, l'email de convocation l'affichait déjà) : `jobs/views/candidatures.py`, la notification en base pour le statut `ENTRETIEN` inclut maintenant la date/heure formatée (`"...Le 05/08/2026 à 14h00."`) quand `candidature.date_entretien` est renseignée.
+
+**Tests** : 338/338 frontend ✅, backend suite complète ✅ (relancée après chaque fix significatif).
 
 ---
 

@@ -10,6 +10,7 @@ import {
   User,
   Zap,
   Eye,
+  Download,
 } from "lucide-react";
 import { useGestionOffre } from "./useGestionOffre";
 import { DetailCandidature } from "./DetailCandidature";
@@ -66,6 +67,7 @@ const GestionOffre = () => {
     setModalEval,
     evalForm,
     setEvalForm,
+    handleExportExcel,
     candidaturesTriees,
     getMediaUrl,
     formatText,
@@ -275,6 +277,14 @@ const GestionOffre = () => {
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${tw.bgTealSolid} transition-colors`}
                   >
                     Comparer
+                  </button>
+                )}
+                {candidaturesTriees.length > 0 && (
+                  <button
+                    onClick={handleExportExcel}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border ${tw.chipTealOutline}`}
+                  >
+                    <Download size={12} /> Exporter Excel
                   </button>
                 )}
               </div>

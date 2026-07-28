@@ -61,6 +61,45 @@ export const recruteurService = {
     }
   },
 
+  exporterCandidaturesOffreExcel: async (offreId, nomOffre = "candidatures") => {
+    try {
+      const response = await api.get(
+        `jobs/dashboard/offres/${offreId}/export-excel/`,
+        { responseType: "blob" },
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `candidatures_${nomOffre}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      reportError("ECHEC_EXPORT_CANDIDATURES_OFFRE_EXCEL", err);
+      throw err;
+    }
+  },
+
+  exporterCandidaturesExcel: async () => {
+    try {
+      const response = await api.get("jobs/dashboard/export-excel/", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "candidatures_taftech.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      reportError("ECHEC_EXPORT_CANDIDATURES_EXCEL", err);
+      throw err;
+    }
+  },
+
   // Candidatures
   updateStatutCandidature: async (candidatureId, payload) => {
     try {

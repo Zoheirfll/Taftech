@@ -3,7 +3,7 @@ import Select from "react-select";
 import { selectStyles } from "../../../theme";
 import { SecteurDomaineSelect } from "../../../Components/SecteurDomaineSelect";
 import DomaineLabel from "../../../Components/DomaineLabel";
-import { Pencil, X, Sparkles, ExternalLink } from "lucide-react";
+import { Pencil, X, Sparkles, ExternalLink, FileText } from "lucide-react";
 import { tw } from "../../../theme";
 
 export const Modals = ({
@@ -60,6 +60,7 @@ export const Modals = ({
   resetParser,
   parserMode,
   setParserMode,
+  profil,
   // Handlers
   handleUpdateGeneric,
   handleUpdateCV,
@@ -823,6 +824,26 @@ export const Modals = ({
             </div>
             {!parsedData ? (
               <div className="space-y-4">
+                {profil?.cv_pdf && (
+                  <div className={`flex items-center gap-3 p-4 rounded-xl border ${tw.bgSuccessSoft} border-emerald-200`}>
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <FileText size={18} className={tw.textSuccess} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${tw.textSuccess}`}>
+                        CV actuellement sur votre profil
+                      </p>
+                      <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>
+                        {profil.cv_pdf.split("/").pop()}
+                      </p>
+                      <p className={`text-xs ${tw.textMuted} mt-0.5`}>
+                        {profil.cv_pdf_maj_le
+                          ? `Mis à jour le ${new Date(profil.cv_pdf_maj_le).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}`
+                          : "Date de mise à jour inconnue"}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className={`rounded-xl p-10 text-center relative cursor-pointer transition-colors group ${tw.dropzonePrimary}`}>
                   <input
                     type="file"
@@ -844,7 +865,7 @@ export const Modals = ({
                   ) : (
                     <>
                       <p className={`text-sm font-semibold transition-colors ${tw.textMuted700} group-hover:text-indigo-600`}>
-                        Cliquez ou glissez votre CV ici
+                        {profil?.cv_pdf ? "Cliquez ou glissez un nouveau CV pour le remplacer" : "Cliquez ou glissez votre CV ici"}
                       </p>
                       <p className={`text-xs ${tw.textMuted} mt-1`}>
                         PDF, Word (.docx, .doc) — Max 5 Mo
@@ -871,15 +892,6 @@ export const Modals = ({
                   <p className={`text-sm font-semibold ${tw.parserSuccessText}`}>
                     ✅ Analyse terminée — vérifiez les données
                   </p>
-                  {parsedData.parsing_method?.includes(":ai") ? (
-                    <span className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.badgeAiCloud}`}>
-                      🤖 IA Cloud
-                    </span>
-                  ) : (
-                    <span className={`px-2.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.badgeRegex}`}>
-                      📐 Regex
-                    </span>
-                  )}
                 </div>
                 {parsedData.photo && (
                   <div className={`flex items-center gap-4 p-4 rounded-xl ${tw.photoDetectedBox}`}>

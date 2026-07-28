@@ -3,6 +3,7 @@ import api from "../../api/axiosConfig";
 import { AlertTriangle, RefreshCw, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
 const AdminSystemLogs = () => {
@@ -31,18 +32,19 @@ const AdminSystemLogs = () => {
 
   useEffect(() => { fetchLogs(1); }, []);
 
-  const handleClearAll = async () => {
-    if (!window.confirm("Supprimer tous les logs d'erreurs ? Cette action est irréversible.")) return;
-    try {
-      await api.delete("/accounts/admin/system-logs/");
-      toast.success("Logs supprimés.");
-      setLogs([]);
-      setTotal(0);
-      setTotalPages(1);
-    } catch (err) {
-      reportError("ADMIN_SYSTEM_LOGS_DELETE", err);
-      toast.error("Erreur lors de la suppression.");
-    }
+  const handleClearAll = () => {
+    confirmToast("Supprimer tous les logs d'erreurs ? Cette action est irréversible.", async () => {
+      try {
+        await api.delete("/accounts/admin/system-logs/");
+        toast.success("Logs supprimés.");
+        setLogs([]);
+        setTotal(0);
+        setTotalPages(1);
+      } catch (err) {
+        reportError("ADMIN_SYSTEM_LOGS_DELETE", err);
+        toast.error("Erreur lors de la suppression.");
+      }
+    });
   };
 
   const formatDate = (ts) => new Date(ts).toLocaleString("fr-FR", {

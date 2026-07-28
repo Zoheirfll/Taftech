@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import AdminUsers from "../src/Pages/Admin/AdminUsers";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -74,7 +75,6 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
   beforeEach(() => {
     // 🗑️ On retire les Fake Timers ici pour laisser RTL gérer les 300ms naturellement
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
     window.URL.revokeObjectURL = vi.fn();
   });
@@ -111,13 +111,18 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
     jobsService.moderateUser.mockResolvedValue({});
 
-    render(<AdminUsers />);
+    render(
+      <>
+        <AdminUsers />
+        <ConfirmModalHost />
+      </>,
+    );
 
     await waitFor(() => screen.getByText("Bloquer"));
     fireEvent.click(screen.getByText("Bloquer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       // 🌟 MODIFICATION ICI : On retire le ", true" car l'API ne prend que l'ID en paramètre
       expect(jobsService.moderateUser).toHaveBeenCalledWith(1);
       expect(toast.success).toHaveBeenCalledWith("Utilisateur bloqué.");
@@ -164,14 +169,18 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
 
   it("🔴 EC3 : Annulation Modération -> API préservée", async () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
-    window.confirm.mockImplementationOnce(() => false);
 
-    render(<AdminUsers />);
+    render(
+      <>
+        <AdminUsers />
+        <ConfirmModalHost />
+      </>,
+    );
 
     await waitFor(() => screen.getByText("Bloquer"));
     fireEvent.click(screen.getByText("Bloquer"));
+    fireEvent.click(await screen.findByText("Annuler"));
 
-    expect(window.confirm).toHaveBeenCalled();
     expect(jobsService.moderateUser).not.toHaveBeenCalled();
   });
 
@@ -179,10 +188,16 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
     jobsService.moderateUser.mockRejectedValue(new Error("Server Error"));
 
-    render(<AdminUsers />);
+    render(
+      <>
+        <AdminUsers />
+        <ConfirmModalHost />
+      </>,
+    );
 
     await waitFor(() => screen.getByText("Bloquer"));
     fireEvent.click(screen.getByText("Bloquer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

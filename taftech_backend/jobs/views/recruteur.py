@@ -63,6 +63,110 @@ class DashboardRecruteurAPIView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+def _construire_classeur_candidatures(candidatures, inclure_offre=False):
+    """Construit un classeur Excel (openpyxl) à partir d'un queryset/liste de Candidature."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Candidatures"
+
+    entetes = ["Date", "Candidat", "Email", "Téléphone"]
+    if inclure_offre:
+        entetes.append("Offre")
+    entetes += [
+        "Statut", "Score matching IA (%)",
+        "Note technique (/5)", "Note communication (/5)",
+        "Note motivation (/5)", "Note expérience (/5)",
+        "Note globale (/20)", "Commentaire recruteur",
+    ]
+    ws.append(entetes)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(vertical="center")
+
+    for cand in candidatures:
+        if cand.candidat:
+            nom = f"{cand.candidat.last_name} {cand.candidat.first_name}".strip()
+            email = cand.candidat.email
+            telephone = getattr(cand.candidat, 'telephone', '') or ''
+        else:
+            nom = f"{cand.nom_rapide or ''} {cand.prenom_rapide or ''}".strip()
+            email = cand.email_rapide or ''
+            telephone = getattr(cand, 'telephone_rapide', '') or ''
+        ligne = [
+            cand.date_postulation.strftime("%d/%m/%Y") if cand.date_postulation else '',
+            nom, email, telephone,
+        ]
+        if inclure_offre:
+            ligne.append(cand.offre.titre)
+        ligne += [
+            cand.get_statut_display(),
+            cand.score_matching if cand.score_matching is not None else '',
+            cand.note_technique if cand.note_technique is not None else '',
+            cand.note_communication if cand.note_communication is not None else '',
+            cand.note_motivation if cand.note_motivation is not None else '',
+            cand.note_experience if cand.note_experience is not None else '',
+            float(cand.note_globale) if cand.note_globale is not None else '',
+            cand.commentaire_evaluation or '',
+        ]
+        ws.append(ligne)
+
+    for col_cells in ws.columns:
+        longueur = max((len(str(c.value)) for c in col_cells if c.value is not None), default=10)
+        ws.column_dimensions[col_cells[0].column_letter].width = min(longueur + 2, 50)
+    ws.freeze_panes = "A2"
+    return wb
+
+
+class ExportCandidaturesOffreExcelAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, offre_id):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            offre = OffreEmploi.objects.get(id=offre_id, entreprise=entreprise)
+        except OffreEmploi.DoesNotExist:
+            return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        candidatures = offre.candidatures.select_related('candidat').order_by('-date_postulation')
+        wb = _construire_classeur_candidatures(candidatures, inclure_offre=False)
+
+        from django.http import HttpResponse
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        nom_fichier = f"candidatures_{offre.titre[:40].replace(' ', '_')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+        wb.save(response)
+        return response
+
+
+class ExportCandidaturesExcelAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        candidatures = (
+            Candidature.objects.select_related('candidat', 'offre')
+            .filter(offre__entreprise=entreprise)
+            .order_by('-date_postulation')
+        )
+        wb = _construire_classeur_candidatures(candidatures, inclure_offre=True)
+
+        from django.http import HttpResponse
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="candidatures_taftech.xlsx"'
+        wb.save(response)
+        return response
+
+
 class UpdateProfilEntrepriseAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser, JSONParser)

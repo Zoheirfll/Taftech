@@ -4,6 +4,7 @@ import { jobsService } from "../../../Services/jobsService";
 import { recruteurService } from "../../../Services/recruteurService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
+import { confirmToast } from "../../../utils/confirmToast";
 import toast from "react-hot-toast";
 
 const apiErrMsg = (err, fallback) => err.response?.data?.error || fallback;
@@ -202,21 +203,22 @@ export const useGestionOffre = () => {
     );
   };
 
-  const supprimerCandidature = async (candidatureId) => {
-    if (!window.confirm("Supprimer définitivement cette candidature ?")) return;
-    try {
-      await jobsService.deleteCandidature(candidatureId);
-      setOffre({
-        ...offre,
-        candidatures: offre.candidatures.filter((c) => c.id !== candidatureId),
-      });
-      if (selectedCandidature?.id === candidatureId)
-        setSelectedCandidature(null);
-      toast.success("Candidature supprimée.");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
-      reportError("ECHEC_SUPPRESSION_CANDIDATURE", err);
-    }
+  const supprimerCandidature = (candidatureId) => {
+    confirmToast("Supprimer définitivement cette candidature ?", async () => {
+      try {
+        await jobsService.deleteCandidature(candidatureId);
+        setOffre({
+          ...offre,
+          candidatures: offre.candidatures.filter((c) => c.id !== candidatureId),
+        });
+        if (selectedCandidature?.id === candidatureId)
+          setSelectedCandidature(null);
+        toast.success("Candidature supprimée.");
+      } catch (err) {
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        reportError("ECHEC_SUPPRESSION_CANDIDATURE", err);
+      }
+    });
   };
 
   const handleSetExpiration = async (date) => {
@@ -230,15 +232,28 @@ export const useGestionOffre = () => {
     }
   };
 
-  const handleCloturer = async () => {
-    if (!window.confirm("Voulez-vous clôturer cette offre ?")) return;
+  const handleCloturer = () => {
+    confirmToast("Voulez-vous clôturer cette offre ?", async () => {
+      try {
+        await jobsService.cloturerOffre(offre.id);
+        setOffre({ ...offre, est_cloturee: true });
+        toast.success("Offre clôturée !");
+      } catch (err) {
+        toast.error(apiErrMsg(err, "Erreur lors de la clôture."));
+        reportError("ECHEC_CLOTURE_OFFRE", err);
+      }
+    });
+  };
+
+  const handleExportExcel = async () => {
     try {
-      await jobsService.cloturerOffre(offre.id);
-      setOffre({ ...offre, est_cloturee: true });
-      toast.success("Offre clôturée !");
+      await jobsService.exporterCandidaturesOffreExcel(
+        offre.id,
+        offre.titre?.replace(/[^a-z0-9]+/gi, "_").slice(0, 40) || "offre",
+      );
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la clôture."));
-      reportError("ECHEC_CLOTURE_OFFRE", err);
+      toast.error("Erreur lors de l'export Excel.");
+      reportError("ECHEC_EXPORT_EXCEL_OFFRE", err);
     }
   };
 
@@ -394,6 +409,7 @@ export const useGestionOffre = () => {
     validerEntretien,
     supprimerCandidature,
     handleCloturer,
+    handleExportExcel,
     handleSetExpiration,
     soumettreEvaluation,
     handleDownloadBulletin,

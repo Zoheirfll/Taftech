@@ -3,6 +3,7 @@ from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
     ConstantsAPIView, NomenclatureAPIView, CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
+    ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView,
 
     # Candidatures
     PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView,
@@ -61,6 +62,8 @@ urlpatterns = [
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
     path('dashboard/offres/<int:offre_id>/supprimer/', SupprimerOffreAPIView.as_view(), name='supprimer-offre'),
+    path('dashboard/offres/<int:offre_id>/export-excel/', ExportCandidaturesOffreExcelAPIView.as_view(), name='export-candidatures-offre-excel'),
+    path('dashboard/export-excel/', ExportCandidaturesExcelAPIView.as_view(), name='export-candidatures-excel'),
 
     # Candidatures
     path('<int:offre_id>/postuler/', PostulerAPIView.as_view(), name='postuler-offre'),

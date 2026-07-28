@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ConfirmModalHost } from "./utils/confirmToast";
 import { ShieldOff } from "lucide-react";
 
 import ErrorBoundary from "./utils/ErrorBoundary";
@@ -220,6 +221,7 @@ function AppContent() {
           style: { fontWeight: "bold", borderRadius: "10px" },
         }}
       />
+      <ConfirmModalHost />
 
       {recruteurPortal ? <NavbarRecruteur /> : <Navbar />}
 

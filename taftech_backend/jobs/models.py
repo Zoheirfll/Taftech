@@ -288,6 +288,7 @@ class ProfilCandidat(models.Model):
             validate_file_size(5),
         ]
     )
+    cv_pdf_maj_le = models.DateTimeField(null=True, blank=True, verbose_name="Dernière mise à jour du CV")
     photo_profil = models.ImageField(
         upload_to='photos_profil/',
         blank=True,

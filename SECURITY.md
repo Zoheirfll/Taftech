@@ -6,7 +6,22 @@
 
 ## 🌿 Branche
 
-Travail effectué sur `security/audit-2026-07` (créée depuis `main`), pas encore mergée.
+Travail initial effectué sur `security/audit-2026-07` (créée depuis `main`) — **mergée dans `main`** (commit `749997e`). Toutes les branches créées depuis héritent des correctifs ci-dessous.
+
+---
+
+## ✅ 14. Suivi (28/07/2026) — re-vérification des 13 sections + nouvelles dépendances
+
+**Vérifié** : les 13 sections ci-dessous re-contrôlées une à une contre le code de `feature/us13-aout` (basée sur `main` post-audit) — tous les correctifs (SAMESITE=Strict, AuthRateThrottle, CandidatFichierPriveAPIView, IsAdminUser, RegexValidator téléphone/NIN, dedup `iexact`, filtre `statut_moderation` sur JobDetail, clamp `nb_mois`, URL relative `errorReporter.js`, guard `SECRET_KEY`) sont bien présents. Rien à corriger de ce côté.
+
+**Nouvelles vulnérabilités trouvées** (apparues depuis la rédaction de l'audit initial, CVEs publiées après) :
+- `react-router-dom` 7.15.1 → **7.18.2** (`npm audit fix`) — CVE open redirect via backslash, XSS `RSCErrorHandler`, DoS route matching.
+- `pyasn1` 0.6.3 → **0.6.4** (dépendance transitive crypto, `pip install --upgrade pyasn1` dans le venv — pas dans `requirements.txt`, à re-vérifier au prochain `pip freeze`).
+- **Risque accepté, non corrigé** : `react-router-dom@7.18.2` reste flagué "high" pour un CVE **RSC Mode CSRF Bypass** (`GHSA-qwww-vcr4-c8h2`) — non applicable, ce projet est une SPA Vite/React classique, aucun usage de React Server Components (fonctionnalité Next.js). Downgrader casserait les autres CVEs déjà corrigés.
+- **Piège évité** : `npm audit fix --force` a aussi remonté `cypress` à `15.19.0` en effet de bord — binaire cassé sur Windows 10 (déjà documenté dans `CLAUDE.md`, raison du pin `13.17.0`). Repéré et repin manuellement avant de continuer.
+- `pip`/`setuptools` (18 CVEs via `pip-audit`) : vulnérabilités de l'outil de packaging lui-même (surface d'attaque au moment du `pip install`, pas exposée par l'app web en runtime) — non traité, hors périmètre de l'audit applicatif.
+
+**Build + tests relancés après chaque changement de dépendance** : frontend 338/338 ✅, `npx vite build` propre.
 
 ---
 

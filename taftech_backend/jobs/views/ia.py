@@ -77,13 +77,17 @@ class ParserCVAPIView(APIView):
             tmp_file.close()
             result = parse_cv(tmp_file.name, cv_file.name)
             experiences = result.get('experiences', [])
-            from ..domaine_agent import classifier_domaines_experiences
-            classifications = classifier_domaines_experiences(experiences)
+            from ..domaine_agent import classifier_domaines_experiences, SPECIALITE_INDEX
+            classifications = classifier_domaines_experiences(
+                experiences, titre_professionnel=result.get('titre_professionnel')
+            )
             for i, exp in enumerate(experiences):
                 if isinstance(exp, dict):
                     exp['secteur'] = classifications.get(i) or _deviner_secteur_experience(
                         exp.get('titre_poste'), exp.get('description'), exp.get('secteur')
                     )
+            if SPECIALITE_INDEX in classifications:
+                result['specialite'] = classifications[SPECIALITE_INDEX]
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -201,10 +205,12 @@ class SuggestionsCarriereAPIView(APIView):
                 q, est_actif=True
             ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'domaine__code', 'domaine__libelle')[:20])
             metiers = metiers + metiers_extra
+        from ..models import Domaine
+        domaine_obj = Domaine.objects.filter(code=profil.specialite).first() if profil.specialite else None
         return Response({
             'metiers': metiers[:20],
             'profil_titre': profil.titre_professionnel,
-            'profil_secteur': profil.specialite,
+            'profil_secteur': domaine_obj.libelle if domaine_obj else profil.specialite,
         })
 
 
@@ -246,14 +252,21 @@ class AnalyseCarriereGroqAPIView(APIView):
         ]
         formations = [f"{f.diplome} à {f.etablissement}" for f in profil.formations_detail.all()]
 
+        from ..models import Domaine
+        def _libelle_domaine(code):
+            if not code:
+                return None
+            d = Domaine.objects.filter(code=code).first()
+            return d.libelle if d else code
+
         profil_text = f"""
 Titre : {profil.titre_professionnel or 'Non renseigné'}
 Diplôme : {profil.diplome or 'Non renseigné'}
-Spécialité : {profil.specialite or 'Non renseigné'}
+Spécialité : {_libelle_domaine(profil.specialite) or 'Non renseigné'}
 Compétences : {profil.competences or 'Non renseigné'}
 Expériences : {', '.join(experiences) if experiences else 'Aucune'}
 Formations : {', '.join(formations) if formations else 'Aucune'}
-Secteur souhaité : {profil.secteur_souhaite or 'Non renseigné'}
+Secteur souhaité : {_libelle_domaine(profil.secteur_souhaite) or 'Non renseigné'}
 """
         try:
             analyse = _appel_groq([
@@ -380,10 +393,17 @@ class GenererOffreIAAPIView(APIView):
         if not titre or not specialite:
             return Response({'error': 'Titre et spécialité requis.'}, status=400)
 
+        # `specialite` est un code Domaine ANEM (ex: "L18"), pas un texte lisible —
+        # on le traduit en libellé avant de l'envoyer à l'IA (sinon le prompt contient
+        # littéralement "Spécialité : L18", incompréhensible pour Groq).
+        from ..models import Domaine
+        domaine_obj = Domaine.objects.filter(code=specialite).first()
+        specialite_libelle = domaine_obj.libelle if domaine_obj else specialite
+
         prompt = f"""Tu es un expert RH algérien. Génère le contenu d'une offre d'emploi professionnelle en français pour le marché algérien.
 
 Poste : {titre}
-Spécialité / Secteur : {specialite}
+Spécialité / Secteur : {specialite_libelle}
 Diplôme requis : {diplome or 'Non précisé'}
 Expérience : {experience or 'Non précisée'}
 Type de contrat : {contrat or 'Non précisé'}

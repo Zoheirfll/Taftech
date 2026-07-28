@@ -15,6 +15,7 @@ import {
   Building2,
   Users,
 } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
@@ -115,27 +116,28 @@ const AdminOffres = () => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  const handleApprouverSelection = async () => {
-    if (!window.confirm(`Approuver ${selectedIds.length} offre(s) sélectionnée(s) ?`)) return;
-    setBulkLoading(true);
-    try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          jobsService.moderateOffre(id, { statut_moderation: "APPROUVEE", motif_rejet: "" })
-        )
-      );
-      toast.success(`${selectedIds.length} offre(s) approuvée(s) !`);
-      chargerOffres();
-    } catch (err) {
-      toast.error("Erreur lors de l'approbation groupée.");
-      reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", err);
-    } finally {
-      setBulkLoading(false);
-    }
+  const handleApprouverSelection = () => {
+    confirmToast(`Approuver ${selectedIds.length} offre(s) sélectionnée(s) ?`, async () => {
+      setBulkLoading(true);
+      try {
+        await Promise.all(
+          selectedIds.map((id) =>
+            jobsService.moderateOffre(id, { statut_moderation: "APPROUVEE", motif_rejet: "" })
+          )
+        );
+        toast.success(`${selectedIds.length} offre(s) approuvée(s) !`);
+        chargerOffres();
+      } catch (err) {
+        toast.error("Erreur lors de l'approbation groupée.");
+        reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", err);
+      } finally {
+        setBulkLoading(false);
+      }
+    });
   };
 
-  const handleApprouver = async (id) => {
-    if (window.confirm("Publier cette offre en ligne ?")) {
+  const handleApprouver = (id) => {
+    confirmToast("Publier cette offre en ligne ?", async () => {
       try {
         await jobsService.moderateOffre(id, {
           statut_moderation: "APPROUVEE",
@@ -147,7 +149,7 @@ const AdminOffres = () => {
         toast.error("Erreur lors de l'approbation.");
         reportError("ECHEC_APPROBATION_OFFRE", err);
       }
-    }
+    });
   };
 
   const handleRefuserSubmit = async () => {

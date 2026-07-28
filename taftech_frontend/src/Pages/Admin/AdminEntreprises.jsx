@@ -3,6 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Search, Download, X } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
@@ -54,19 +55,20 @@ const AdminEntreprises = () => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  const handleApprouverSelection = async () => {
-    if (!window.confirm(`Approuver ${selectedIds.length} entreprise(s) sélectionnée(s) ?`)) return;
-    setBulkLoading(true);
-    try {
-      await Promise.all(selectedIds.map((id) => jobsService.moderateEntreprise(id, { est_approuvee: true })));
-      toast.success(`${selectedIds.length} entreprise(s) approuvée(s) !`);
-      chargerEntreprises();
-    } catch (err) {
-      toast.error("Erreur lors de l'approbation groupée.");
-      reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", err);
-    } finally {
-      setBulkLoading(false);
-    }
+  const handleApprouverSelection = () => {
+    confirmToast(`Approuver ${selectedIds.length} entreprise(s) sélectionnée(s) ?`, async () => {
+      setBulkLoading(true);
+      try {
+        await Promise.all(selectedIds.map((id) => jobsService.moderateEntreprise(id, { est_approuvee: true })));
+        toast.success(`${selectedIds.length} entreprise(s) approuvée(s) !`);
+        chargerEntreprises();
+      } catch (err) {
+        toast.error("Erreur lors de l'approbation groupée.");
+        reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", err);
+      } finally {
+        setBulkLoading(false);
+      }
+    });
   };
 
   const handleTogglePremium = async (id, statutActuel) => {
@@ -80,8 +82,8 @@ const AdminEntreprises = () => {
     }
   };
 
-  const handleToggleApprobation = async (id, statutActuel) => {
-    if (window.confirm(`Voulez-vous vraiment ${statutActuel ? "suspendre" : "approuver"} cette entreprise ?`)) {
+  const handleToggleApprobation = (id, statutActuel) => {
+    confirmToast(`Voulez-vous vraiment ${statutActuel ? "suspendre" : "approuver"} cette entreprise ?`, async () => {
       try {
         await jobsService.moderateEntreprise(id, { est_approuvee: !statutActuel });
         chargerEntreprises();
@@ -90,7 +92,7 @@ const AdminEntreprises = () => {
         toast.error("Erreur lors de la modification.");
         reportError("ECHEC_MODERATION_ENTREPRISE", err);
       }
-    }
+    });
   };
 
   const handleExport = async () => {

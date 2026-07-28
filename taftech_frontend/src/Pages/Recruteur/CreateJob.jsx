@@ -11,6 +11,7 @@ import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkl
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
+import { CreateQuestionnaireModal } from "../../Components/CreateQuestionnaireModal";
 
 const Section = ({ icon: Icon, title, children }) => (
   <div className={`${tw.card} p-6`}>
@@ -40,6 +41,7 @@ const CreateJob = () => {
   const [iaLoading, setIaLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [questionnaires, setQuestionnaires] = useState([]);
+  const [showCreateQuestionnaire, setShowCreateQuestionnaire] = useState(false);
   const [metierSuggestions, setMetierSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [errors, setErrors] = useState({});
@@ -429,25 +431,49 @@ const CreateJob = () => {
           {questionnaires.length === 0 ? (
             <div className={`flex items-center justify-between p-3 rounded-lg ${tw.surfaceMuted} border ${tw.borderBase}`}>
               <p className={tw.bodyText}>Vous n'avez aucun questionnaire créé.</p>
-              <Link to="/questionnaires" className={`text-sm font-semibold transition-colors shrink-0 ${tw.linkTeal}`}>
+              <button
+                type="button"
+                onClick={() => setShowCreateQuestionnaire(true)}
+                className={`text-sm font-semibold transition-colors shrink-0 ${tw.linkTeal}`}
+              >
                 Créer un questionnaire →
-              </Link>
+              </button>
             </div>
           ) : (
             <>
-              <Select
-                name="questionnaire"
-                options={questionnaires.map((q) => ({ value: q.id, label: `${q.titre} (${q.questions.length} questions)` }))}
-                onChange={(opt) => setFormData({ ...formData, questionnaire: opt ? opt.value : "" })}
-                value={questionnaires.map((q) => ({ value: q.id, label: `${q.titre} (${q.questions.length} questions)` })).find((o) => o.value === formData.questionnaire) || null}
-                placeholder="Associer un questionnaire à cette offre..."
-                isClearable
-                styles={selectStylesTeal}
-              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    name="questionnaire"
+                    options={questionnaires.map((q) => ({ value: q.id, label: `${q.titre} (${q.questions.length} questions)` }))}
+                    onChange={(opt) => setFormData({ ...formData, questionnaire: opt ? opt.value : "" })}
+                    value={questionnaires.map((q) => ({ value: q.id, label: `${q.titre} (${q.questions.length} questions)` })).find((o) => o.value === formData.questionnaire) || null}
+                    placeholder="Associer un questionnaire à cette offre..."
+                    isClearable
+                    styles={selectStylesTeal}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateQuestionnaire(true)}
+                  className={`text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${tw.linkTeal}`}
+                >
+                  + Nouveau
+                </button>
+              </div>
               <p className={`text-xs mt-2 ${tw.textMuted700}`}>Les candidats devront répondre avant de postuler.</p>
             </>
           )}
         </Section>
+
+        <CreateQuestionnaireModal
+          open={showCreateQuestionnaire}
+          onClose={() => setShowCreateQuestionnaire(false)}
+          onCreated={(created) => {
+            setQuestionnaires((prev) => [...prev, created]);
+            setFormData((prev) => ({ ...prev, questionnaire: created.id }));
+          }}
+        />
 
         {/* Fix 1 — Durée d'affichage en section Paramètres de publication */}
         <Section icon={Calendar} title="Paramètres de publication">

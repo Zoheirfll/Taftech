@@ -3,6 +3,7 @@ import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
+import { confirmToast } from "../../../utils/confirmToast";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
 
@@ -148,20 +149,27 @@ export const useProfilCandidat = () => {
     }
   };
 
+  const CHAMPS_PROFIL = [
+    { label: "Téléphone", test: (p) => !!p.telephone },
+    { label: "Photo de profil", test: (p) => !!p.photo_profil },
+    { label: "CV", test: (p) => !!p.cv_pdf },
+    { label: "Titre professionnel", test: (p) => !!p.titre_professionnel },
+    { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
+    { label: "Diplôme", test: (p) => !!p.diplome },
+    { label: "Spécialité", test: (p) => !!p.specialite },
+    { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
+    { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
+    { label: "Compétences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
+  ];
+
   const completionPercent = useMemo(() => {
     if (!profil) return 0;
-    let points = 0;
-    if (profil.telephone) points += 10;
-    if (profil.photo_profil) points += 10;
-    if (profil.cv_pdf) points += 10;
-    if (profil.titre_professionnel) points += 10;
-    if (profil.wilaya && profil.commune) points += 10;
-    if (profil.diplome) points += 10;
-    if (profil.specialite) points += 10;
-    if (profil.experiences_detail?.length > 0) points += 10;
-    if (profil.formations_detail?.length > 0) points += 10;
-    if (profil.competences?.split(",").filter((t) => t).length > 0) points += 10;
-    return points;
+    return CHAMPS_PROFIL.filter((c) => c.test(profil)).length * 10;
+  }, [profil]);
+
+  const champsManquants = useMemo(() => {
+    if (!profil) return [];
+    return CHAMPS_PROFIL.filter((c) => !c.test(profil)).map((c) => c.label);
   }, [profil]);
 
   const handleExpTitreChange = async (value) => {
@@ -227,6 +235,19 @@ export const useProfilCandidat = () => {
     }
   };
 
+  const handleDeleteCV = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("remove_cv_pdf", "true");
+      await profilService.updateProfil(formData);
+      toast.success("CV supprimé");
+      fetchData();
+    } catch (err) {
+      toast.error("Erreur lors de la suppression du CV");
+      reportError("ECHEC_DELETE_CV", err);
+    }
+  };
+
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -256,8 +277,8 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const handleDeleteExp = async (id) => {
-    if (window.confirm("Supprimer cette expérience ?")) {
+  const handleDeleteExp = (id) => {
+    confirmToast("Supprimer cette expérience ?", async () => {
       try {
         await profilService.deleteExperience(id);
         fetchData();
@@ -265,7 +286,7 @@ export const useProfilCandidat = () => {
         toast.error("Erreur de suppression");
         reportError("ECHEC_DELETE_EXP", err);
       }
-    }
+    });
   };
 
   const handleEditExp = (exp) => {
@@ -310,8 +331,8 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const handleDeleteForm = async (id) => {
-    if (window.confirm("Supprimer cette formation ?")) {
+  const handleDeleteForm = (id) => {
+    confirmToast("Supprimer cette formation ?", async () => {
       try {
         await profilService.deleteFormation(id);
         fetchData();
@@ -319,7 +340,7 @@ export const useProfilCandidat = () => {
         toast.error("Erreur de suppression");
         reportError("ECHEC_DELETE_FORMATION", err);
       }
-    }
+    });
   };
 
   const handleEditFormation = (form) => {
@@ -688,6 +709,7 @@ export const useProfilCandidat = () => {
     setParserMode,
     // Computed
     completionPercent,
+    champsManquants,
     // Handlers
     fetchData,
     getPhotoUrl: mediaUrl,
@@ -697,6 +719,7 @@ export const useProfilCandidat = () => {
     handleTitreProChange,
     handleUpdateGeneric,
     handleUpdateCV,
+    handleDeleteCV,
     handlePhotoChange,
     handleAddExperience,
     handleDeleteExp,

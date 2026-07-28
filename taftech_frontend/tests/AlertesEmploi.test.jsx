@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import AlertesEmploi from "../src/Pages/candidat/AlertesEmploi";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -52,7 +53,6 @@ const mockConstants = {
 describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -133,7 +133,12 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.deleteAlerte.mockResolvedValue({});
 
-    render(<AlertesEmploi />);
+    render(
+      <>
+        <AlertesEmploi />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("Développeur React"));
 
     // The delete button contains a Trash2 icon; target by its position after the toggle
@@ -141,9 +146,9 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     // Last button in the alerte row is the delete button
     const deleteBtn = allBtns.find(btn => btn.className && btn.className.includes("hover:text-red-500"));
     fireEvent.click(deleteBtn);
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(jobsService.deleteAlerte).toHaveBeenCalledWith(1);
       expect(screen.queryByText("Développeur React")).not.toBeInTheDocument();
     });
@@ -238,13 +243,18 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
   it("🔴 EC5 : Hésitation sur la suppression -> API bloquée", async () => {
     jobsService.getAlertes.mockResolvedValue(mockAlertes);
     jobsService.getConstants.mockResolvedValue(mockConstants);
-    window.confirm.mockImplementationOnce(() => false);
 
-    render(<AlertesEmploi />);
+    render(
+      <>
+        <AlertesEmploi />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("Développeur React"));
 
     const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
     fireEvent.click(deleteBtn);
+    fireEvent.click(await screen.findByText("Annuler"));
 
     expect(jobsService.deleteAlerte).not.toHaveBeenCalled();
     expect(screen.getByText("Développeur React")).toBeInTheDocument();
@@ -255,11 +265,17 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.deleteAlerte.mockRejectedValue(new Error("Cannot delete"));
 
-    render(<AlertesEmploi />);
+    render(
+      <>
+        <AlertesEmploi />
+        <ConfirmModalHost />
+      </>,
+    );
     await waitFor(() => screen.getByText("Développeur React"));
 
     const deleteBtn = screen.getAllByRole("button").find(btn => btn.className && btn.className.includes("hover:text-red-500"));
     fireEvent.click(deleteBtn);
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

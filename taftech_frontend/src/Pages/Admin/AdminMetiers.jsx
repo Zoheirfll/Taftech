@@ -3,6 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 
@@ -109,16 +110,17 @@ const AdminMetiers = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Supprimer ce métier ?")) return;
-    try {
-      await jobsService.deleteMetier(id);
-      setMetiers(metiers.filter((m) => m.id !== id));
-      toast.success("Métier supprimé.");
-    } catch (err) {
-      reportError("ECHEC_DELETE_METIER", err);
-      toast.error("Erreur lors de la suppression.");
-    }
+  const handleDelete = (id) => {
+    confirmToast("Supprimer ce métier ?", async () => {
+      try {
+        await jobsService.deleteMetier(id);
+        setMetiers(metiers.filter((m) => m.id !== id));
+        toast.success("Métier supprimé.");
+      } catch (err) {
+        reportError("ECHEC_DELETE_METIER", err);
+        toast.error("Erreur lors de la suppression.");
+      }
+    });
   };
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;

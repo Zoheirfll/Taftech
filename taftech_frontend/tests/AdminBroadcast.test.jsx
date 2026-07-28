@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import AdminBroadcast from "../src/Pages/Admin/AdminBroadcast";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import api from "../src/api/axiosConfig";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -26,8 +27,6 @@ vi.mock("react-hot-toast", () => ({
 describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    // Mock de window.confirm pour accepter par défaut
-    vi.spyOn(window, "confirm").mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -38,7 +37,12 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
   it("🟢 Happy Path : Envoi de la campagne réussi", async () => {
     api.post.mockResolvedValue({ data: { message: "Campagne expédiée" } });
 
-    render(<AdminBroadcast />);
+    render(
+      <>
+        <AdminBroadcast />
+        <ConfirmModalHost />
+      </>,
+    );
 
     // ✅ CORRECTION : On cherche le VRAI placeholder du composant
     fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
@@ -48,11 +52,11 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
       target: { value: "Contenu de la newsletter..." },
     });
 
-    // Soumission
+    // Soumission → ouvre la modale de confirmation
     fireEvent.click(screen.getByText(/Envoyer la campagne/i));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(api.post).toHaveBeenCalledWith("jobs/admin/broadcast-email/", {
         type_envoi: "NEWSLETTER",
         sujet: "Nouvelle mise à jour",
@@ -63,10 +67,12 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
   });
 
   it("🟡 Edge Case : Refus de la confirmation annule l'envoi", async () => {
-    // L'utilisateur clique sur "Annuler" dans la popup
-    window.confirm.mockImplementationOnce(() => false);
-
-    render(<AdminBroadcast />);
+    render(
+      <>
+        <AdminBroadcast />
+        <ConfirmModalHost />
+      </>,
+    );
 
     // ✅ CORRECTION
     fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
@@ -77,15 +83,21 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     });
 
     fireEvent.click(screen.getByText(/Envoyer la campagne/i));
+    // L'utilisateur clique sur "Annuler" dans la modale
+    fireEvent.click(await screen.findByText("Annuler"));
 
-    expect(window.confirm).toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled(); // L'API ne doit pas être appelée
   });
 
   it("🔴 Edge Case : Crash serveur (500) déclenche reportError", async () => {
     api.post.mockRejectedValue({ response: { status: 500 } });
 
-    render(<AdminBroadcast />);
+    render(
+      <>
+        <AdminBroadcast />
+        <ConfirmModalHost />
+      </>,
+    );
 
     // ✅ CORRECTION
     fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
@@ -96,6 +108,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     });
 
     fireEvent.click(screen.getByText(/Envoyer la campagne/i));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import GestionOffre from "../src/Pages/Recruteur/GestionOffre/index";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -281,11 +282,13 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
     render(
       <MemoryRouter>
         <GestionOffre />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getByText("Ingénieur React"));
     fireEvent.click(screen.getByText(/CLÔTURER L'OFFRE/i));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.cloturerOffre).toHaveBeenCalledWith(1);

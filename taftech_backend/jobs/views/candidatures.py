@@ -303,6 +303,9 @@ class UpdateCandidatureStatusAPIView(APIView):
                 type_n = 'ENTRETIEN'
                 titre_notif = f"Entretien programmé chez {nom_entreprise}"
                 message_notif = f"Vous avez été convié à un entretien pour {candidature.offre.titre}."
+                if candidature.date_entretien:
+                    date_locale = timezone.localtime(candidature.date_entretien)
+                    message_notif += f" Le {date_locale.strftime('%d/%m/%Y à %Hh%M')}."
             elif nouveau_statut == 'RETENU':
                 type_n = 'RETENU'
                 titre_notif = f"🎉 Félicitations ! Vous êtes retenu chez {nom_entreprise}"

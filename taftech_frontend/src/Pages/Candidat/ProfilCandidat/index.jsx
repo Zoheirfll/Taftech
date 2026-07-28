@@ -15,12 +15,14 @@ import {
   Award,
   FileText,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
+import { confirmToast } from "../../../utils/confirmToast";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 
@@ -41,6 +43,7 @@ const ProfilCandidat = () => {
     loading,
     profil,
     completionPercent,
+    champsManquants,
     showExpForm,
     setShowExpForm,
     showFormForm,
@@ -96,6 +99,7 @@ const ProfilCandidat = () => {
     handleAddLanguage,
     handleUpdateGeneric,
     handleUpdateCV,
+    handleDeleteCV,
     handleUpdateLinks,
     handleTitreProChange,
     handleAddExperience,
@@ -151,6 +155,18 @@ const ProfilCandidat = () => {
             ? "Profil complet — vous maximisez vos chances !"
             : "Complétez vos informations pour améliorer le matching IA."}
         </p>
+        {champsManquants.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {champsManquants.map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-800 text-xs font-medium rounded-md"
+              >
+                <AlertTriangle size={11} /> {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CV */}
@@ -162,18 +178,28 @@ const ProfilCandidat = () => {
               {profil.titre_professionnel || "Titre à définir"}
             </p>
             {profil.cv_pdf ? (
-              <a
-                href={candidatFichierUrl(profil.user_id, "cv")}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border min-w-0 ${tw.bgSuccessSoft} border-emerald-200 hover:border-emerald-300 transition-colors group`}
-              >
-                <FileText size={18} className={`${tw.textSuccess} shrink-0`} />
-                <span className={`text-sm font-medium truncate flex-1 ${tw.textSuccess}`}>
-                  {profil.cv_pdf.split("/").pop()}
-                </span>
-                <ExternalLink size={14} className={`${tw.textSuccess} shrink-0 opacity-60 group-hover:opacity-100 transition-opacity`} />
-              </a>
+              <div className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border min-w-0 ${tw.bgSuccessSoft} border-emerald-200`}>
+                <a
+                  href={candidatFichierUrl(profil.user_id, "cv")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 min-w-0 flex-1 group"
+                >
+                  <FileText size={18} className={`${tw.textSuccess} shrink-0`} />
+                  <span className={`text-sm font-medium truncate flex-1 ${tw.textSuccess}`}>
+                    {profil.cv_pdf.split("/").pop()}
+                  </span>
+                  <ExternalLink size={14} className={`${tw.textSuccess} shrink-0 opacity-60 group-hover:opacity-100 transition-opacity`} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => confirmToast("Supprimer votre CV actuel ?", handleDeleteCV)}
+                  className="shrink-0 p-1.5 rounded-lg hover:bg-red-100 text-red-600 transition-colors"
+                  aria-label="Supprimer le CV"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             ) : (
               <div className={`flex items-center gap-2.5 mt-3 p-3 rounded-xl border ${tw.bgWarningSoft} border-amber-200`}>
                 <AlertCircle size={18} className={`${tw.textWarning} shrink-0`} />
@@ -190,13 +216,18 @@ const ProfilCandidat = () => {
         <div className={`border-t ${tw.borderSubtle} pt-4 mt-4`}>
           <button
             onClick={() => setShowParserModal(true)}
-            className={`w-full flex items-center justify-center gap-2 py-3 px-4 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl ${tw.bannerGradientPrimary} ${tw.textOnDark} shadow-md hover:shadow-lg transition-shadow group`}
           >
-            <Sparkles size={16} /> Remplir automatiquement depuis mon CV
+            <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Sparkles size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold">Remplissage automatique par IA</p>
+              <p className="text-xs text-white/80 mt-0.5">
+                Analysez votre CV et remplissez votre profil en quelques secondes
+              </p>
+            </div>
           </button>
-          <p className={`text-xs ${tw.textMuted} mt-2 text-center`}>
-            Notre IA analyse votre CV et remplit vos infos en quelques secondes.
-          </p>
         </div>
         {(profil.bio || profil.linkedin || profil.github) && (
           <div className={`mt-4 pt-4 border-t ${tw.borderSubtle} space-y-3`}>
@@ -636,6 +667,7 @@ const ProfilCandidat = () => {
         btnPrimary={BTN_PRIMARY}
         btnCancel={BTN_CANCEL}
         constants={constants}
+        profil={profil}
         showInfoForm={showInfoForm}
         setShowInfoForm={setShowInfoForm}
         showPrefForm={showPrefForm}

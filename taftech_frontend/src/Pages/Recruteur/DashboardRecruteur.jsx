@@ -23,6 +23,7 @@ import {
   Clock,
   Trash2,
   X,
+  Download,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
@@ -122,6 +123,15 @@ const DashboardRecruteur = () => {
       reportError("ECHEC_SUPPRIMER_OFFRE", err);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleExportExcelGlobal = async () => {
+    try {
+      await jobsService.exporterCandidaturesExcel();
+    } catch (err) {
+      toast.error("Erreur lors de l'export Excel.");
+      reportError("ECHEC_EXPORT_EXCEL_GLOBAL", err);
     }
   };
 
@@ -297,6 +307,14 @@ const DashboardRecruteur = () => {
               >
                 <Building2 size={14} /> Ma vitrine
               </Link>
+            )}
+            {offres?.length > 0 && (
+              <button
+                onClick={handleExportExcelGlobal}
+                className={`flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-sm font-medium rounded-lg transition-colors ${tw.surface} ${tw.textMuted} ${tw.hoverSurfaceMuted}`}
+              >
+                <Download size={14} /> Exporter Excel
+              </button>
             )}
             {authService.peutFaire("UTILISATEUR") && entreprise?.est_approuvee && (
               <>

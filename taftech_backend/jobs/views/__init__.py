@@ -54,6 +54,8 @@ from .recruteur import (
     EnvoyerRecuPremiumAPIView,
     ChargilyCheckoutAPIView,
     ChargilyWebhookAPIView,
+    ExportCandidaturesOffreExcelAPIView,
+    ExportCandidaturesExcelAPIView,
 )
 from .admin import (
     AdminPagination,

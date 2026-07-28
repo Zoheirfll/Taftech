@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
 import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
@@ -54,25 +55,24 @@ const AdminUsers = () => {
     return () => clearTimeout(delay);
   }, [chargerUsers]);
 
-  const handleToggleBlock = async (id, isActif) => {
-    if (
-      window.confirm(
-        `Voulez-vous vraiment ${isActif ? "bloquer" : "débloquer"} cet utilisateur ?`,
-      )
-    ) {
-      try {
-        await jobsService.moderateUser(id);
-        chargerUsers();
-        toast.success(
-          isActif ? "Utilisateur bloqué." : "Utilisateur débloqué !",
-        );
-        if (selectedUser?.id === id)
-          setSelectedUser({ ...selectedUser, is_active: !isActif });
-      } catch (err) {
-        toast.error("Erreur lors de la modification.");
-        reportError("ECHEC_MODERATION_USER", err);
-      }
-    }
+  const handleToggleBlock = (id, isActif) => {
+    confirmToast(
+      `Voulez-vous vraiment ${isActif ? "bloquer" : "débloquer"} cet utilisateur ?`,
+      async () => {
+        try {
+          await jobsService.moderateUser(id);
+          chargerUsers();
+          toast.success(
+            isActif ? "Utilisateur bloqué." : "Utilisateur débloqué !",
+          );
+          if (selectedUser?.id === id)
+            setSelectedUser({ ...selectedUser, is_active: !isActif });
+        } catch (err) {
+          toast.error("Erreur lors de la modification.");
+          reportError("ECHEC_MODERATION_USER", err);
+        }
+      },
+    );
   };
 
   const handleExport = async () => {

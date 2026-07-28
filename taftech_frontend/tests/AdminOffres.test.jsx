@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import AdminOffres from "../src/Pages/Admin/AdminOffres";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -50,7 +51,6 @@ const mockData = {
 describe("💼 UI & Logique - Composant <AdminOffres />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockImplementation(() => true);
     window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock");
     window.URL.revokeObjectURL = vi.fn();
   });
@@ -76,13 +76,18 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
     jobsService.getAdminOffres.mockResolvedValue(mockData);
     jobsService.moderateOffre.mockResolvedValue({});
 
-    render(<AdminOffres />);
+    render(
+      <>
+        <AdminOffres />
+        <ConfirmModalHost />
+      </>,
+    );
 
     await waitFor(() => screen.getByTitle("Approuver"));
     fireEvent.click(screen.getByTitle("Approuver"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
-      expect(window.confirm).toHaveBeenCalled();
       expect(jobsService.moderateOffre).toHaveBeenCalledWith(1, {
         statut_moderation: "APPROUVEE",
         motif_rejet: "",
@@ -182,10 +187,16 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
     jobsService.getAdminOffres.mockResolvedValue(mockData);
     jobsService.moderateOffre.mockRejectedValue(new Error("Database crash"));
 
-    render(<AdminOffres />);
+    render(
+      <>
+        <AdminOffres />
+        <ConfirmModalHost />
+      </>,
+    );
 
     await waitFor(() => screen.getByTitle("Approuver"));
     fireEvent.click(screen.getByTitle("Approuver"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

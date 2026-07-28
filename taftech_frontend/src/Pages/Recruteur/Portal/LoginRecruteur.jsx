@@ -76,12 +76,6 @@ const LoginRecruteur = () => {
               </div>
             ))}
           </div>
-          <div className="mt-10 pt-8 border-t border-slate-800 text-xs text-slate-700">
-            Vous êtes candidat ?{" "}
-            <Link to="/login" className="text-indigo-400 font-semibold hover:underline">
-              Espace candidats →
-            </Link>
-          </div>
         </div>
 
         {/* COLONNE DROITE */}

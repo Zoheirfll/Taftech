@@ -49,7 +49,7 @@ class OffresRecommandeesAPIView(APIView):
         offres_scorees = []
         for offre in offres_actives:
             resultat = calculer_score_matching(request.user, offre)
-            if resultat['total'] >= 60:
+            if resultat['total'] >= 80:
                 offre_data = OffreEmploiSerializer(offre).data
                 offre_data['matching_score'] = resultat['total']
                 offres_scorees.append(offre_data)

@@ -142,8 +142,8 @@ const Navbar = () => {
           {/* NON CONNECTÉ */}
           {!isLogged && (
             <>
-              <Link to="/recruteurs" target="_blank" rel="noopener noreferrer" className={tw.navLinkTealActive}>
-                <Briefcase size={14} /> Espace recruteur
+              <Link to="/recruteurs" target="_blank" rel="noopener noreferrer" className="hidden md:block text-sm font-semibold text-slate-700 pr-3 mr-1 border-r border-slate-200">
+                Vous recrutez ? <span className="font-semibold text-teal-700 hover:underline">Espace recruteur</span>
               </Link>
               <Link to="/login" className={tw.navLink}>
                 <LogIn size={14} /> Se connecter
@@ -263,7 +263,7 @@ const Navbar = () => {
                 <User size={16} className="shrink-0" /> S'inscrire
               </Link>
               <Link to="/recruteurs" onClick={closeMobile} target="_blank" rel="noopener noreferrer" className={tw.dropdownItemTeal}>
-                <Briefcase size={16} className="shrink-0" /> Espace recruteur
+                <Building2 size={16} className="shrink-0" /> Espace recruteur
               </Link>
             </>
           )}

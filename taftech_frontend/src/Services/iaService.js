@@ -19,7 +19,7 @@ export const iaService = {
       formData.append("cv", cvFile);
       const response = await api.post("jobs/parser-cv/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 30000,
+        timeout: 90000,
       });
       return response.data;
     } catch (err) {

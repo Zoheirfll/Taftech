@@ -147,7 +147,7 @@ class GenererBulletinPDFAPIView(APIView):
         story.append(Spacer(1, 5*mm))
 
         # SCORE IA
-        if candidature.score_matching and float(candidature.score_matching) >= 60:
+        if candidature.score_matching and float(candidature.score_matching) >= 80:
             score = float(candidature.score_matching)
             score_color = "#059669" if score >= 80 else "#d97706"
             score_table = Table([[

@@ -114,7 +114,11 @@ const RegisterCandidat = () => {
       setRegisteredEmail(formData.email);
       setStep(2);
     } catch (err) {
-      toast.error(err.response?.data?.email?.[0] || "Une erreur est survenue.", { id: toastId });
+      const data = err.response?.data;
+      const premierMsg = data && typeof data === "object"
+        ? Object.values(data).flat().find(Boolean)
+        : null;
+      toast.error(premierMsg || "Une erreur est survenue.", { id: toastId });
       reportError("ECHEC_REGISTRATION_CANDIDAT", err);
     } finally {
       setLoading(false);

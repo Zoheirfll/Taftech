@@ -134,11 +134,8 @@ const NavbarRecruteur = () => {
         <div className="flex items-center gap-3">
           {!isLogged && (
             <>
-              <Link to="/" className={tw.navLinkIndigoActive}>
-                <User size={14} /> Espace candidat
-              </Link>
               <Link to="/recruteurs/connexion" className={tw.navLinkTealActive}>
-                <LogIn size={14} /> Connexion
+                <LogIn size={14} /> Se connecter
               </Link>
               <Link to="/recruteurs/inscription" className={`${tw.bgTeal} px-4 py-1.5 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 active:scale-95 transition-all duration-150 shadow-md shadow-teal-200`}>
                 S'inscrire
@@ -250,11 +247,8 @@ const NavbarRecruteur = () => {
                 <MessageCircle size={16} className="shrink-0" /> FAQ
               </a>
               <div className={`${tw.borderSubtle} border-t pt-2 mt-1`}>
-                <Link to="/" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
-                  <User size={16} className="shrink-0" /> Espace candidat
-                </Link>
                 <Link to="/recruteurs/connexion" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-medium ${tw.navLinkMobileInactive}`}>
-                  <LogIn size={16} className="shrink-0" /> Connexion
+                  <LogIn size={16} className="shrink-0" /> Se connecter
                 </Link>
                 <Link to="/recruteurs/inscription" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold ${tw.textTeal} hover:bg-teal-50 rounded-lg transition-colors`}>
                   <User size={16} className="shrink-0" /> S'inscrire

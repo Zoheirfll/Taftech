@@ -140,9 +140,9 @@ class PostulerAPIView(APIView):
             except Exception as e:
                 logger.error("Erreur sauvegarde réponses : %s", e)
 
-        # Email recruteur si score >= 70%
+        # Email recruteur si score >= 80%
         email_employeur = offre.entreprise.user.email
-        if email_employeur and resultat_matching['total'] >= 70.0:
+        if email_employeur and resultat_matching['total'] >= 80.0:
             nom_candidat = f"{request.user.first_name} {request.user.last_name}"
             sujet = f"⭐ Top Profil détecté pour : {offre.titre}"
             ctx = {

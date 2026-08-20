@@ -13,6 +13,7 @@ const getBadgeStyle = (statut) => {
   const styles = {
     RECUE: `${tw.bgWarningSoft} ${tw.textWarning} ${tw.borderWarning}`,
     EN_COURS: `${tw.bgBlueSoft} ${tw.textBlue} ${tw.borderBlue}`,
+    PRESELECTION: `${tw.bgPurpleSoft} ${tw.textPurple} ${tw.borderPurple}`,
     ENTRETIEN: `${tw.bgOrangeSoft} ${tw.textOrange} ${tw.borderOrange}`,
     RETENU: `${tw.bgSuccessSoft} ${tw.textSuccess} ${tw.borderSuccess}`,
     REFUSE: `${tw.bgErrorSoft} ${tw.textError} ${tw.borderError}`,
@@ -121,6 +122,7 @@ const AdminCandidatures = () => {
             <option value="">Tous statuts</option>
             <option value="RECUE">Reçue</option>
             <option value="EN_COURS">En cours</option>
+            <option value="PRESELECTION">Présélection</option>
             <option value="ENTRETIEN">Entretien</option>
             <option value="RETENU">Retenu</option>
             <option value="REFUSE">Refusé</option>

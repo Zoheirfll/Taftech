@@ -278,6 +278,17 @@ const NavbarRecruteur = () => {
                     </Link>
                   );
                 })}
+              {authService.peutFaire("PROPRIETAIRE") && (
+                <Link
+                  to="/recruteurs/premium"
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold rounded-lg transition-colors ${
+                    isPremium ? "text-amber-600 hover:bg-amber-50" : `${tw.textTeal} hover:bg-teal-50`
+                  }`}
+                >
+                  <Star size={16} className="shrink-0" /> {isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒"}
+                </Link>
+              )}
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`}>
                 <button onClick={handleLogout} className={tw.dropdownItemDanger}>
                   <LogOut size={16} className="shrink-0" /> Déconnexion

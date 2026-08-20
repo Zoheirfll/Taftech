@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from ..models import Notification, ProfilEntreprise
 from ..serializers import NotificationSerializer, EntreprisePublicSerializer
+from ..throttles import PublicReadThrottle
 
 User = get_user_model()
 
@@ -39,6 +40,7 @@ class MarkNotificationReadAPIView(APIView):
 
 class PublicStatsAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request):
         from ..models import OffreEmploi, Candidature
         stats = {
@@ -51,6 +53,7 @@ class PublicStatsAPIView(APIView):
 
 class StatsGeoAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request):
         from collections import Counter
         from django.db.models import Count
@@ -67,6 +70,7 @@ class StatsGeoAPIView(APIView):
 
 class EntrepriseListAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
 
     def get(self, request):
         qs = ProfilEntreprise.objects.filter(est_approuvee=True).order_by('-id')
@@ -88,6 +92,7 @@ class EntrepriseListAPIView(APIView):
 
 class EntrepriseDetailAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request, slug):
         try:
             entreprise = ProfilEntreprise.objects.get(slug=slug, est_approuvee=True)

@@ -67,6 +67,8 @@ export const useProfilCandidat = () => {
   const [showTitreSuggestions, setShowTitreSuggestions] = useState(false);
   const [expTitreSuggestions, setExpTitreSuggestions] = useState([]);
   const [showExpTitreSuggestions, setShowExpTitreSuggestions] = useState(false);
+  const [competenceSuggestions, setCompetenceSuggestions] = useState([]);
+  const [showCompetenceSuggestions, setShowCompetenceSuggestions] = useState(false);
   const [constants, setConstants] = useState({
     wilayas: [],
     secteurs: [],
@@ -184,6 +186,20 @@ export const useProfilCandidat = () => {
       }
     } else {
       setShowExpTitreSuggestions(false);
+    }
+  };
+
+  const handleCompetenceInputChange = async (value) => {
+    if (value.length >= 2) {
+      try {
+        const data = await jobsService.searchCompetences(value);
+        setCompetenceSuggestions(data);
+        setShowCompetenceSuggestions(data.length > 0);
+      } catch {
+        setCompetenceSuggestions([]);
+      }
+    } else {
+      setShowCompetenceSuggestions(false);
     }
   };
 
@@ -670,6 +686,10 @@ export const useProfilCandidat = () => {
     showExpTitreSuggestions,
     setShowExpTitreSuggestions,
     handleExpTitreChange,
+    competenceSuggestions,
+    showCompetenceSuggestions,
+    setShowCompetenceSuggestions,
+    handleCompetenceInputChange,
     showExpForm,
     setShowExpForm,
     showFormForm,

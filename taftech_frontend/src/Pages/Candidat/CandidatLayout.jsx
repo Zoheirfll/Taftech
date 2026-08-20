@@ -5,6 +5,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import {
+  LayoutDashboard,
   User,
   Briefcase,
   Mail,
@@ -32,6 +33,7 @@ const CandidatLayout = () => {
   }, []);
 
   const menuItems = useMemo(() => [
+    { name: "Tableau de bord", path: "/dashboard-candidat", icon: LayoutDashboard },
     { name: "Mon profil", path: "/profil", icon: User },
     { name: "Mes candidatures", path: "/mes-candidatures", icon: Briefcase },
     {

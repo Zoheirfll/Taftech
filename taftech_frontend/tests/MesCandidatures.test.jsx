@@ -58,12 +58,14 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/TafTech Corp/i)).toBeInTheDocument();
     // STATUT_LABELS: RECUE → "Reçue", REFUSE → "Refusé(e)"
-    expect(screen.getByText("Reçue")).toBeInTheDocument();
+    // "Reçue" apparaît deux fois : le badge de statut et l'étape de la chronologie
+    expect(screen.getAllByText("Reçue").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/Votre candidature a été envoyée et attend/i),
     ).toBeInTheDocument();
     expect(screen.getByText("Data Analyst")).toBeInTheDocument();
-    expect(screen.getByText("Refusé(e)")).toBeInTheDocument();
+    // "Refusé(e)" apparaît deux fois : le badge de statut et l'étape "Décision" de la chronologie
+    expect(screen.getAllByText("Refusé(e)").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/votre profil n'a pas été retenu/i),
     ).toBeInTheDocument();
@@ -73,7 +75,8 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
     jobsService.getMesCandidatures.mockResolvedValue(mockData);
     render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     await screen.findByText("Designer UI/UX");
-    expect(screen.getByText("Entretien")).toBeInTheDocument();
+    // "Entretien" apparaît deux fois : le badge de statut et l'étape de la chronologie
+    expect(screen.getAllByText("Entretien").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/Le recruteur souhaite vous rencontrer/i),
     ).toBeInTheDocument();

@@ -13,6 +13,7 @@ import {
   Building2, ChevronDown, Users,
 } from "lucide-react";
 import { tw } from "../../theme";
+import Seo from "../../Components/Seo";
 
 const EXPERIENCE_LABELS = {
   DEBUTANT: "Débutant",
@@ -141,7 +142,16 @@ const SkeletonJobDetail = () => (
 );
 
 const JobDetail = () => {
-  const { id } = useParams();
+  // Deux formes de route possibles pour cette page :
+  // - legacy /jobs/:idSlug — "12345-developpeur-react" ou juste "12345" (préfixe = ID numérique)
+  // - SEO /entreprises/:entrepriseSlug/offres-d-emploi/:secteurSlug/:titreCode —
+  //   titreCode = "developpeur-react-a1b2c3" (suffixe = code_public de l'offre)
+  // Dans les deux cas, seul le segment de code (préfixe ou suffixe selon la route) est
+  // significatif pour l'appel API ; le reste est cosmétique. Une fois l'offre chargée,
+  // toute navigation interne (postuler, comparaison recommandations) utilise `job.id`
+  // (toujours numérique) et non ce paramètre de route, qui peut être un code non numérique.
+  const { idSlug, titreCode } = useParams();
+  const routeCode = titreCode ? titreCode.split("-").pop() : idSlug?.split("-")[0];
   const navigate = useNavigate();
   const panelRef = useRef(null);
   const [job, setJob] = useState(null);
@@ -162,12 +172,12 @@ const JobDetail = () => {
   useEffect(() => {
     const fetchJobAndRecommendation = async () => {
       try {
-        const data = await jobsService.getJobById(id);
+        const data = await jobsService.getJobById(routeCode);
         setJob(data);
         if (authService.isAuthenticated() && authService.getUserRole() === "CANDIDAT") {
           try {
             const recommandations = await jobsService.getOffresRecommandees();
-            const matchingJob = recommandations.find((r) => r.id === parseInt(id));
+            const matchingJob = recommandations.find((r) => r.id === data.id);
             if (matchingJob) setMatchingScore(matchingJob.matching_score);
           } catch (recErr) {
             reportError("ERREUR_SILENCIEUSE_RECOMMANDATION", recErr);
@@ -181,18 +191,18 @@ const JobDetail = () => {
       }
     };
     fetchJobAndRecommendation();
-  }, [id]);
+  }, [routeCode]);
 
   const handlePostulerTafTech = async () => {
     if (isSubmitting) return;
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
       toast.error("Vous devez être connecté en tant que candidat.");
-      navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
+      navigate(`/login?next=${encodeURIComponent(`/jobs/${job.id}/postuler`)}`);
       return;
     }
     setIsSubmitting(true);
     try {
-      await jobsService.postuler(id, { lettre_motivation: lettreMotivation, reponses: JSON.stringify(reponses) });
+      await jobsService.postuler(job.id, { lettre_motivation: lettreMotivation, reponses: JSON.stringify(reponses) });
       setPostulerStatus("success");
     } catch (err) {
       setPostulerStatus("error");
@@ -206,10 +216,10 @@ const JobDetail = () => {
   const handleReviewClick = () => {
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
       toast.error("Connectez-vous pour voir votre profil.");
-      navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
+      navigate(`/login?next=${encodeURIComponent(`/jobs/${job.id}/postuler`)}`);
       return;
     }
-    navigate(`/jobs/${id}/postuler`);
+    navigate(`/jobs/${job.id}/postuler`);
   };
 
   const handleFastFormChange = (e) => {
@@ -229,7 +239,7 @@ const JobDetail = () => {
       if (fastForm[key] !== null && fastForm[key] !== "") formData.append(key, fastForm[key]);
     });
     try {
-      await jobsService.postulerRapide(id, formData);
+      await jobsService.postulerRapide(job.id, formData);
       setPostulerStatus("success");
       toast.success("Candidature envoyée !", { id: toastId });
     } catch (err) {
@@ -346,7 +356,7 @@ const JobDetail = () => {
               <button
                 onClick={() => {
                   if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
-                    navigate(`/login?next=${encodeURIComponent(`/jobs/${id}/postuler`)}`);
+                    navigate(`/login?next=${encodeURIComponent(`/jobs/${job.id}/postuler`)}`);
                     return;
                   }
                   if (job.questionnaire) setShowQuestionnaireModal(true); else setPostulationMode("taftech");
@@ -478,6 +488,15 @@ const JobDetail = () => {
 
   return (
     <div className={`${tw.surfaceMuted} min-h-screen`}>
+      <Seo
+        title={`${job.titre}${job.entreprise?.nom_entreprise ? ` — ${job.entreprise.nom_entreprise}` : ""}`}
+        description={
+          job.description
+            ? job.description.replace(/\s+/g, " ").trim()
+            : `Offre d'emploi ${job.titre} chez ${job.entreprise?.nom_entreprise || "TafTech"}${job.wilaya ? ` — ${job.wilaya.split(" - ")[1] || job.wilaya}` : ""}.`
+        }
+        image={getMediaUrl(job.entreprise?.logo_url)}
+      />
 
       {/* BANDEAU ENTREPRISE */}
       <div className={`${tw.surface} border-b ${tw.borderBase}`}>
@@ -586,6 +605,12 @@ const JobDetail = () => {
               <div className={`${tw.cardColors} rounded-xl p-6`}>
                 <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Profil recherché</h2>
                 {renderTexte(job.profil_recherche)}
+              </div>
+            )}
+            {job.competences && (
+              <div className={`${tw.cardColors} rounded-xl p-6`}>
+                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Compétences requises</h2>
+                {renderTexte(job.competences)}
               </div>
             )}
 

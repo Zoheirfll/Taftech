@@ -27,6 +27,7 @@ vi.mock("../src/Services/jobsService", () => ({
 
 const mockEntrepriseBase = {
   id: 123,
+  slug: "taftech-solutions",
   nom_entreprise: "TafTech Solutions",
   secteur_activite: "Informatique",
   wilaya_siege: "31 - Oran",
@@ -91,6 +92,8 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       offres_actives: [
         {
           id: 1,
+          code_public: "x1y2z3",
+          secteur_libelle: "Informatique",
           titre: "Développeur Front-End",
           wilaya: "Alger",
           commune: "Bab Ezzouar",
@@ -116,7 +119,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       expect(screen.getByText("CDI")).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: /Voir l'offre/i }),
-      ).toHaveAttribute("href", "/jobs/1");
+      ).toHaveAttribute("href", "/entreprises/taftech-solutions/offres-d-emploi/informatique/developpeur-front-end-x1y2z3");
     });
   });
 

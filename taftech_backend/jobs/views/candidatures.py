@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 from ..models import OffreEmploi, Candidature, Notification, EquipeActionLog
 from ..models import QuestionQuestionnaire, ReponseCandidat
 from .equipe import get_entreprise_for_user, get_membre_role, _log
+from ..throttles import WriteActionThrottle, PostulerRapideEmailThrottle
 
 _ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 from ..serializers import (
@@ -170,6 +171,7 @@ class PostulerAPIView(APIView):
 
 class PostulerRapideAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [WriteActionThrottle, PostulerRapideEmailThrottle]
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, offre_id):
@@ -317,6 +319,9 @@ class UpdateCandidatureStatusAPIView(APIView):
             elif nouveau_statut == 'EN_COURS':
                 titre_notif = f"Candidature en cours d'étude - {nom_entreprise}"
                 message_notif = f"Votre candidature pour {candidature.offre.titre} est en cours d'examen."
+            elif nouveau_statut == 'PRESELECTION':
+                titre_notif = f"Vous êtes présélectionné(e) chez {nom_entreprise}"
+                message_notif = f"Votre profil a été présélectionné pour {candidature.offre.titre}."
             if titre_notif:
                 Notification.objects.create(
                     destinataire=candidature.candidat,

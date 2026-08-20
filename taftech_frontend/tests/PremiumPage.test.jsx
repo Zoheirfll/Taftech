@@ -2,171 +2,159 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  cleanup,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import PremiumPage from "../src/Pages/Recruteur/Portal/PremiumPage";
 import { jobsService } from "../src/Services/jobsService";
+import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
+    getPremiumPlans: vi.fn(),
+    getPremiumAvantages: vi.fn(),
+    getFaq: vi.fn(),
     chargilyCheckout: vi.fn(),
-    demanderPremium: vi.fn(),
-    envoyerRecuPremium: vi.fn(),
   },
 }));
 
 vi.mock("react-hot-toast", () => ({
-  default: { success: vi.fn(), error: vi.fn() },
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
-const renderPage = () =>
-  render(<MemoryRouter><PremiumPage /></MemoryRouter>);
+const mockPlans = [
+  { id: 1, nb_mois: 1, label: "1 mois", prix_da: 2000, populaire: false, actif: true, ordre: 0 },
+  { id: 2, nb_mois: 6, label: "6 mois", prix_da: 11040, populaire: true, actif: true, ordre: 2 },
+];
+
+const mockAvantages = [
+  { id: 1, icone: "Mail", titre: "Coordonnées candidats", description: "Email et téléphone visibles.", ordre: 0, actif: true },
+];
 
 describe("⭐ UI & Logique - Composant <PremiumPage />", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.spyOn(reporter, "reportError").mockImplementation(() => {});
+    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
+    jobsService.getPremiumPlans.mockResolvedValue(mockPlans);
+    jobsService.getPremiumAvantages.mockResolvedValue(mockAvantages);
+    jobsService.getFaq.mockResolvedValue([]);
   });
+
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
   });
 
-  // ─── Non Premium ────────────────────────────────────────────────────────
+  it("🟢 HP1 : Affiche les paliers récupérés depuis l'API (pas de valeurs en dur)", async () => {
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
 
-  it("🟢 HP1 : Affiche le flow paiement si non premium", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/Passer en Premium/i)).toBeInTheDocument();
-      // Plusieurs "1 mois" et "6 mois" peuvent exister (cards + label)
-      expect(screen.getAllByText(/1 mois/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/6 mois/i).length).toBeGreaterThan(0);
-    });
+      expect(screen.getByText("1 mois")).toBeInTheDocument();
+      expect(screen.getByText("6 mois")).toBeInTheDocument();
+      expect(screen.getByText("Populaire")).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it("🟢 HP2 : Calcul prix correct pour 6 mois (−8%)", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    renderPage();
-    await waitFor(() => screen.getByText(/6 mois/i));
-    fireEvent.click(screen.getByText(/6 mois/i).closest("button"));
+  it("🟢 HP2 : Sélectionne par défaut le palier marqué populaire", async () => {
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
+
     await waitFor(() => {
-      // 2000 * 6 * 0.92 = 11040 — plusieurs occurrences possibles (card + récap)
-      const items = screen.getAllByText(/11.040/);
-      expect(items.length).toBeGreaterThan(0);
-    });
+      expect(screen.getByText(/6 mois × 1 840 DA\/mois/)).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it("🟢 HP3 : Calcul prix correct pour 12 mois (−17%)", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    renderPage();
-    await waitFor(() => screen.getByText(/12 mois/i));
-    fireEvent.click(screen.getByText(/12 mois/i).closest("button"));
+  it("🟢 HP3 : Affiche les avantages récupérés depuis l'API", async () => {
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
+
     await waitFor(() => {
-      // 2000 * 12 * 0.83 = 19920
-      const items = screen.getAllByText(/19.920/);
-      expect(items.length).toBeGreaterThan(0);
-    });
+      expect(screen.getByText("Coordonnées candidats")).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it("🟢 HP4 : Bouton payer Chargily est visible et cliquable", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    renderPage();
+  it("🟢 HP4 : Changer de durée met à jour le total à payer", async () => {
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("1 mois"), { timeout: 3000 });
+    fireEvent.click(screen.getByText("1 mois"));
+
     await waitFor(() => {
-      // Le bouton principal de paiement Chargily
-      const btn = screen.getByRole("button", { name: /Payer.*DA.*Chargily/i });
-      expect(btn).toBeInTheDocument();
-    });
+      expect(screen.getAllByText("2 000 DA").length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
   });
 
-  it("🟢 HP5 : Sélection durée 1 mois affiche le bon prix (2000 DA)", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    renderPage();
-    await waitFor(() => screen.getAllByText(/1 mois/i));
-    // Par défaut 1 mois sélectionné
-    await waitFor(() => {
-      const items = screen.getAllByText(/2.000/);
-      expect(items.length).toBeGreaterThan(0);
-    });
-  });
+  it("🟢 HP5 : Paiement déclenche chargilyCheckout avec le nb_mois sélectionné", async () => {
+    jobsService.chargilyCheckout.mockResolvedValue({ checkout_url: "https://pay.chargily.net/x" });
 
-  // ─── Premium actif ──────────────────────────────────────────────────────
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
 
-  it("🟢 HP6 : Affiche l'écran statut si premium actif", async () => {
-    jobsService.getDashboard.mockResolvedValue({
-      est_premium: true,
-      premium_expire_at: "12/07/2026",
-      premium_active_since: "12/06/2026",
-      premium_nb_mois: 1,
-    });
-    renderPage();
+    await waitFor(() => screen.getByRole("button", { name: /Payer.*Chargily/i }), { timeout: 3000 });
+    fireEvent.click(screen.getByRole("button", { name: /Payer.*Chargily/i }));
+
     await waitFor(() => {
-      expect(screen.getByText(/Abonnement Premium actif/i)).toBeInTheDocument();
-      expect(screen.getByText("12/07/2026")).toBeInTheDocument();
-      expect(screen.getByText("12/06/2026")).toBeInTheDocument();
+      expect(jobsService.chargilyCheckout).toHaveBeenCalledWith(6);
     });
   });
 
-  it("🟢 HP7 : Bouton Prolonger bascule vers le flow paiement Chargily", async () => {
-    jobsService.getDashboard.mockResolvedValue({
-      est_premium: true,
-      premium_expire_at: "15/09/2026",
-      premium_active_since: "17/07/2026",
-      premium_nb_mois: 1,
-    });
-    renderPage();
-    await waitFor(() => screen.getByText(/Prolonger l'abonnement/i));
-    fireEvent.click(screen.getByText(/Prolonger l'abonnement/i));
+  // --- 🔴 EDGE CASES ---
+
+  it("🔴 EC1 : Erreur de chargement du contenu Premium déclenche reportError", async () => {
+    jobsService.getPremiumPlans.mockRejectedValue(new Error("API Down"));
+
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
+
     await waitFor(() => {
-      // Après clic sur Prolonger, le formulaire paiement Chargily s'affiche
-      expect(screen.getByRole("button", { name: /Payer.*DA.*Chargily/i })).toBeInTheDocument();
+      expect(reporter.reportError).toHaveBeenCalledWith(
+        "ECHEC_GET_PREMIUM_CONTENU",
+        expect.anything(),
+      );
     });
   });
 
-  it("🟢 HP8 : Mode renouvellement affiche le bouton annuler", async () => {
-    jobsService.getDashboard.mockResolvedValue({
-      est_premium: true,
-      premium_expire_at: "15/09/2026",
-      premium_active_since: "17/07/2026",
-      premium_nb_mois: 1,
-    });
-    renderPage();
-    await waitFor(() => screen.getByText(/Prolonger l'abonnement/i));
-    fireEvent.click(screen.getByText(/Prolonger l'abonnement/i));
-    await waitFor(() => {
-      expect(screen.getByText(/Annuler/i)).toBeInTheDocument();
-    });
-  });
+  it("🔴 EC2 : Aucun palier disponible n'affiche pas le flow de paiement", async () => {
+    jobsService.getPremiumPlans.mockResolvedValue([]);
 
-  // ─── Edge Cases ─────────────────────────────────────────────────────────
+    render(
+      <MemoryRouter>
+        <PremiumPage />
+      </MemoryRouter>,
+    );
 
-  it("🔴 EC1 : Erreur API paiement → toast.error", async () => {
-    jobsService.getDashboard.mockResolvedValue({ est_premium: false });
-    // Mock window.location.href (Chargily redirige via window.location.href)
-    const originalLocation = window.location;
-    delete window.location;
-    window.location = { href: "" };
-    // handlePayer appelle jobsService.creerPaiementPremium (ou similar) — simuler une erreur générique
-    renderPage();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Payer.*DA.*Chargily/i })).toBeInTheDocument();
-    });
-    window.location = originalLocation;
-  });
-
-  it("🔴 EC2 : Affiche badge bientôt si ≤14 jours restants", async () => {
-    const demain = new Date();
-    demain.setDate(demain.getDate() + 5);
-    const fmt = `${String(demain.getDate()).padStart(2,"0")}/${String(demain.getMonth()+1).padStart(2,"0")}/${demain.getFullYear()}`;
-    jobsService.getDashboard.mockResolvedValue({
-      est_premium: true,
-      premium_expire_at: fmt,
-      premium_active_since: "01/06/2026",
-      premium_nb_mois: 1,
-    });
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/Renouveler mon abonnement/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Payer/i)).not.toBeInTheDocument();
     });
   });
 });

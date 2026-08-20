@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { regionUrl } from "../../utils/slugify";
 import { MapPin, Search, X } from "lucide-react";
+import Seo from "../../Components/Seo";
 import { tw } from "../../theme";
 
 const SkeletonRegion = () => (
@@ -51,6 +53,10 @@ const OffresParRegion = () => {
 
   return (
     <div className={`${tw.surfaceSubtle} min-h-screen`}>
+      <Seo
+        title="Offres d'emploi par région"
+        description="Parcourez les offres d'emploi en Algérie classées par wilaya — trouvez un poste près de chez vous sur TafTech."
+      />
       {/* Header */}
       <div className={tw.bannerGradientPrimary}>
         <div className="max-w-6xl mx-auto px-6 py-10">
@@ -104,7 +110,7 @@ const OffresParRegion = () => {
                     return (
                       <Link
                         key={index}
-                        to={`/offres?wilaya=${encodeURIComponent(wilaya.value)}`}
+                        to={regionUrl(wilaya.value)}
                         className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-colors group ${tw.regionLinkHover}`}
                       >
                         <span className="flex items-center gap-2.5">
@@ -124,6 +130,10 @@ const OffresParRegion = () => {
             )}
           </div>
         )}
+        <div className={`mt-8 pt-6 border-t ${tw.borderSubtle} flex flex-wrap gap-4 text-sm`}>
+          <Link to="/secteurs" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par secteur →</Link>
+          <Link to="/metiers" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par métier →</Link>
+        </div>
       </div>
     </div>
   );

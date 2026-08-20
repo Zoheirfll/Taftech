@@ -52,7 +52,7 @@ describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
     });
   });
 
-  it("🟢 HP2 : Les liens pointent vers la bonne URL avec paramètre encodé", async () => {
+  it("🟢 HP2 : Les liens pointent vers l'URL propre de la wilaya (SEO)", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
 
     render(
@@ -62,11 +62,9 @@ describe("🌍 UI & Logique - Composant <OffresParRegion />", () => {
     );
 
     await waitFor(() => {
-      // Le lien affiché est "Oran" mais l'href contient la valeur complète encodée
+      // Le lien affiché est "Oran" et pointe vers la page dédiée /regions/31-oran
       const lienOran = screen.getByRole("link", { name: /Oran/i });
-
-      // L'attribut href doit contenir la valeur encodée (ex: les espaces deviennent %20)
-      expect(lienOran).toHaveAttribute("href", "/offres?wilaya=31%20-%20Oran");
+      expect(lienOran).toHaveAttribute("href", "/regions/31-oran");
     });
   });
 

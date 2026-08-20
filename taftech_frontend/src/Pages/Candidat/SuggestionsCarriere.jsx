@@ -5,8 +5,9 @@ import InfoBanner from "../../Components/InfoBanner";
 import {
   Sparkles,
   TrendingUp,
-  BookOpen,
-  Lightbulb,
+  Star,
+  AlertTriangle,
+  GraduationCap,
   ChevronRight,
   ChevronLeft,
   Briefcase,
@@ -16,41 +17,42 @@ import { tw } from "../../theme";
 
 const PER_PAGE = 5;
 
+const SECTION_KEYS = ["MÉTIERS POSSIBLES", "POINTS FORTS", "COMPÉTENCES MANQUANTES", "FORMATIONS RECOMMANDÉES", "ÉVOLUTION PROFESSIONNELLE"];
+const SECTION_ALTERNATION = SECTION_KEYS.join("|");
+
 const SECTIONS_CONFIG = [
-  {
-    key: "ÉVOLUTION POSSIBLE",
-    icon: TrendingUp,
-    color: "indigo",
-    regex: /(?:#{1,3})\s*ÉVOLUTION POSSIBLE\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
-  },
-  {
-    key: "COMPÉTENCES À ACQUÉRIR",
-    icon: BookOpen,
-    color: "amber",
-    regex: /(?:#{1,3})\s*COMPÉTENCES À ACQUÉRIR\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
-  },
-  {
-    key: "CONSEIL PERSONNALISÉ",
-    icon: Lightbulb,
-    color: "emerald",
-    regex: /(?:#{1,3})\s*CONSEIL PERSONNALISÉ\s*(?:#{1,3})\s*([\s\S]*?)(?=(?:#{1,3})\s*(?:ÉVOLUTION POSSIBLE|COMPÉTENCES À ACQUÉRIR|CONSEIL PERSONNALISÉ)|$)/i,
-  },
-];
+  { key: "MÉTIERS POSSIBLES", icon: Briefcase, color: "indigo" },
+  { key: "POINTS FORTS", icon: Star, color: "emerald" },
+  { key: "COMPÉTENCES MANQUANTES", icon: AlertTriangle, color: "amber" },
+  { key: "FORMATIONS RECOMMANDÉES", icon: GraduationCap, color: "blue" },
+  { key: "ÉVOLUTION PROFESSIONNELLE", icon: TrendingUp, color: "rose" },
+].map(({ key, icon, color }) => ({
+  key,
+  icon,
+  color,
+  regex: new RegExp(`(?:#{1,3})\\s*${key}\\s*(?:#{0,3})\\s*([\\s\\S]*?)(?=(?:#{1,3})\\s*(?:${SECTION_ALTERNATION})|$)`, "i"),
+}));
 
 const COLOR_MAP = {
   indigo: tw.analyseSectionColors.indigo.card,
   amber: tw.analyseSectionColors.amber.card,
   emerald: tw.analyseSectionColors.emerald.card,
+  blue: tw.analyseSectionColors.blue.card,
+  rose: tw.analyseSectionColors.rose.card,
 };
 const ICON_COLOR_MAP = {
   indigo: tw.analyseSectionColors.indigo.icon,
   amber: tw.analyseSectionColors.amber.icon,
   emerald: tw.analyseSectionColors.emerald.icon,
+  blue: tw.analyseSectionColors.blue.icon,
+  rose: tw.analyseSectionColors.rose.icon,
 };
 const HEADER_COLOR_MAP = {
   indigo: tw.analyseSectionColors.indigo.header,
   amber: tw.analyseSectionColors.amber.header,
   emerald: tw.analyseSectionColors.emerald.header,
+  blue: tw.analyseSectionColors.blue.header,
+  rose: tw.analyseSectionColors.rose.header,
 };
 
 const parseAnalyse = (text) => {

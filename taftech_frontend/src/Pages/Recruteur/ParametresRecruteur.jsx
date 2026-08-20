@@ -59,6 +59,11 @@ const ParametresRecruteur = () => {
   const [entrepriseForm, setEntrepriseForm] = useState({});
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [newPhotoLegende, setNewPhotoLegende] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
 
   // Notifications (recruteur uniquement)
@@ -116,10 +121,12 @@ const ParametresRecruteur = () => {
             adresse_complete: e.adresse_complete || "",
             taille_entreprise: e.taille_entreprise || "",
             description: e.description || "",
+            culture_entreprise: e.culture_entreprise || "",
             telephone: e.telephone || "",
             linkedin: e.linkedin || "",
             site_web: e.site_web || "",
           });
+          setPhotos(e.photos || []);
           setProfilForm({
             first_name: e.first_name || "",
             last_name: e.last_name || "",
@@ -147,10 +154,15 @@ const ParametresRecruteur = () => {
               secteur_activite: e.secteur_activite || "",
               wilaya_siege: e.wilaya_siege || "",
               commune_siege: e.commune_siege || "",
+              adresse_complete: e.adresse_complete || "",
               taille_entreprise: e.taille_entreprise || "",
               description: e.description || "",
+              culture_entreprise: e.culture_entreprise || "",
               telephone: e.telephone || "",
+              linkedin: e.linkedin || "",
+              site_web: e.site_web || "",
             });
+            setPhotos(e.photos || []);
           }
           setProfilForm({
             first_name: data.first_name || "",
@@ -231,6 +243,64 @@ const ParametresRecruteur = () => {
     setLogoPreview(URL.createObjectURL(file));
   };
 
+  const handleBannerChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Format non supporté.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Bannière trop volumineuse (max 5 Mo).");
+      return;
+    }
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const handleAjouterPhoto = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Format non supporté.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Photo trop volumineuse (max 3 Mo).");
+      return;
+    }
+    if (photos.length >= 12) {
+      toast.error("Maximum 12 photos dans la galerie.");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const photo = await jobsService.ajouterPhotoEntreprise(file, newPhotoLegende);
+      setPhotos((prev) => [photo, ...prev]);
+      setNewPhotoLegende("");
+      toast.success("Photo ajoutée !");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'ajout de la photo.");
+      reportError("ECHEC_AJOUTER_PHOTO_ENTREPRISE", err);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleSupprimerPhoto = async (photoId) => {
+    try {
+      await jobsService.supprimerPhotoEntreprise(photoId);
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      toast.success("Photo supprimée.");
+    } catch (err) {
+      toast.error("Erreur lors de la suppression.");
+      reportError("ECHEC_SUPPRIMER_PHOTO_ENTREPRISE", err);
+    }
+  };
+
   const sauvegarderProfil = async () => {
     setSaving(true);
     try {
@@ -287,11 +357,14 @@ const ParametresRecruteur = () => {
         nom_entreprise: _n,
         registre_commerce: _r,
         logo: _l,
+        banniere: _b,
         ...dataToSend
       } = entrepriseForm;
       if (logoFile) dataToSend.logo = logoFile;
+      if (bannerFile) dataToSend.banniere = bannerFile;
       await jobsService.updateProfilEntreprise(dataToSend);
       setLogoFile(null);
+      setBannerFile(null);
       toast.success("Entreprise mise à jour !");
     } catch (err) {
       toast.error("Erreur lors de la sauvegarde.");
@@ -349,6 +422,8 @@ const ParametresRecruteur = () => {
 
   const logoUrl =
     logoPreview || mediaUrl(entreprise?.logo);
+  const bannerUrl =
+    bannerPreview || mediaUrl(entreprise?.banniere);
 
   return (
     <div className={`${tw.surfaceSubtle} min-h-screen`}>
@@ -659,6 +734,33 @@ const ParametresRecruteur = () => {
               </div>
             </div>
 
+            {/* Bannière */}
+            <div>
+              <label className={`text-xs font-medium ${tw.textMuted700} mb-3 block`}>
+                Bannière (page vitrine)
+              </label>
+              <div className={`w-full h-32 rounded-xl flex items-center justify-center overflow-hidden mb-3 ${tw.readonlyFieldDashed}`}>
+                {bannerUrl ? (
+                  <img src={bannerUrl} alt="Bannière" className="w-full h-full object-cover" />
+                ) : (
+                  <span className={`text-xs ${tw.textSubtle}`}>Aucune bannière</span>
+                )}
+              </div>
+              <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${tw.uploadLabelPill}`}>
+                <Upload size={14} />
+                Changer la bannière
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleBannerChange}
+                  className="hidden"
+                />
+              </label>
+              <p className={`text-[10px] ${tw.textMuted} mt-1`}>
+                JPG, PNG ou WEBP — 5 Mo max — format large recommandé
+              </p>
+            </div>
+
             {/* Infos éditables */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
@@ -776,6 +878,23 @@ const ParametresRecruteur = () => {
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
+                  Culture d'entreprise
+                </label>
+                <textarea
+                  rows="4"
+                  value={entrepriseForm.culture_entreprise || ""}
+                  onChange={(e) =>
+                    setEntrepriseForm({
+                      ...entrepriseForm,
+                      culture_entreprise: e.target.value,
+                    })
+                  }
+                  className={`w-full px-4 py-3 rounded-xl text-base resize-none ${tw.inputTeal}`}
+                  placeholder="Valeurs, ambiance de travail, avantages, ce qui distingue votre équipe..."
+                />
+              </div>
 
               {/* Liens web */}
               <div>
@@ -797,6 +916,59 @@ const ParametresRecruteur = () => {
                   placeholder="https://www.monentreprise.dz"
                   className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
+              </div>
+
+              {/* Galerie photo */}
+              <div className="md:col-span-2">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-3 block`}>
+                  Galerie photo <span className={tw.textMuted}>({photos.length}/12 — bureaux, équipe, événements...)</span>
+                </label>
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    {photos.map((p) => (
+                      <div key={p.id} className="relative group">
+                        <img
+                          src={mediaUrl(p.image)}
+                          alt={p.legende || ""}
+                          className={`w-full h-24 object-cover rounded-lg border ${tw.borderBase}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSupprimerPhoto(p.id)}
+                          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-slate-900/70 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Supprimer la photo"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {photos.length < 12 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    <input
+                      type="text"
+                      value={newPhotoLegende}
+                      onChange={(e) => setNewPhotoLegende(e.target.value)}
+                      placeholder="Légende (optionnel)"
+                      className={`w-full sm:w-56 px-3 py-2 rounded-lg text-sm ${tw.inputColorsMuted}`}
+                    />
+                    <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors shrink-0 ${tw.uploadLabelPill} ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`}>
+                      <Upload size={14} />
+                      {uploadingPhoto ? "Envoi..." : "Ajouter une photo"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleAjouterPhoto}
+                        disabled={uploadingPhoto}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+                <p className={`text-[10px] ${tw.textMuted} mt-1`}>
+                  JPG, PNG ou WEBP — 3 Mo max par photo
+                </p>
               </div>
             </div>
 

@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from ..models import ProfilEntreprise
+from ..models import ProfilEntreprise, EntreprisePhoto
+
+
+class EntreprisePhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EntreprisePhoto
+        fields = ('id', 'image', 'legende', 'date_ajout')
 
 
 class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
@@ -7,12 +13,14 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     telephone = serializers.CharField(source='user.telephone', read_only=True)
+    photos = EntreprisePhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = ProfilEntreprise
         fields = (
             'id', 'slug', 'nom_entreprise', 'secteur_activite', 'registre_commerce',
             'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'logo',
+            'banniere', 'culture_entreprise', 'linkedin', 'site_web', 'photos',
             'description', 'est_approuvee', 'est_premium',
             'first_name', 'last_name', 'email', 'telephone'
         )

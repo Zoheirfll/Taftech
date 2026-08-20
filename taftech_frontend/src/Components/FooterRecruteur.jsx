@@ -101,6 +101,11 @@ const FooterRecruteur = () => {
                   Qui sommes-nous ?
                 </Link>
               </li>
+              <li>
+                <Link to="/blog" target="_blank" rel="noopener noreferrer" className={tw.footerLinkTeal}>
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

@@ -117,7 +117,7 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       });
 
       // Vérification de la navigation et du rafraîchissement
-      expect(mockNavigate).toHaveBeenCalledWith("/");
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard-candidat");
       expect(mockReload).toHaveBeenCalled();
     });
   });

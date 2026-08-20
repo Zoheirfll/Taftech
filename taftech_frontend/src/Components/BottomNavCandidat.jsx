@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, User, Briefcase, Mail } from "lucide-react";
+import { LayoutDashboard, Search, User, Briefcase, Mail } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 
 const ITEMS = [
-  { to: "/", label: "Accueil", icon: Home, exact: true },
+  { to: "/dashboard-candidat", label: "Tableau", icon: LayoutDashboard, exact: true },
   { to: "/offres", label: "Offres", icon: Search },
   { to: "/profil", label: "Profil", icon: User },
   { to: "/mes-candidatures", label: "Candidatures", icon: Briefcase },

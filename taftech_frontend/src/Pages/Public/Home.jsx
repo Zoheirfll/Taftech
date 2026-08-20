@@ -7,10 +7,13 @@ import { reportError } from "../../utils/errorReporter";
 import { authService } from "../../Services/authService";
 import {
   MapPin, Search, Briefcase, Users, Building2, Sparkles,
-  Clock, ArrowRight, CheckCircle, Zap, Globe, Star,
-  FileText, ChevronRight,
+  Clock, ArrowRight, CheckCircle, Zap, Star,
+  FileText, ChevronRight, ShieldCheck, Lock,
 } from "lucide-react";
 import { tw } from "../../theme";
+import Seo from "../../Components/Seo";
+import { jobUrl } from "../../utils/slugify";
+import BanniereCarousel from "../../Components/BanniereCarousel";
 
 const tempsDepuis = (dateStr) => {
   if (!dateStr) return null;
@@ -49,20 +52,14 @@ const FEATURES = [
   },
   {
     icon: Users,
-    title: "Une CVthèque riche et qualifiée",
-    desc: "Accédez à une base de profils issus de nombreux secteurs d'activité, du débutant au cadre expérimenté, partout en Algérie.",
+    title: "Expertise RH",
+    desc: "Une équipe de professionnels du recrutement accompagne candidats et entreprises à chaque étape, pour un placement pertinent et durable.",
     colorKey: "amber",
   },
   {
-    icon: Globe,
-    title: "Pensé pour le marché algérien",
-    desc: "Une plateforme conçue pour répondre aux réalités du recrutement en Algérie, conforme à la réglementation nationale et adaptée aux besoins des entreprises locales.",
-    colorKey: "emerald",
-  },
-  {
-    icon: Zap,
-    title: "Simple, rapide et sécurisé",
-    desc: "Publiez vos offres, gérez vos candidatures et recrutez en toute simplicité depuis une plateforme intuitive et sécurisée.",
+    icon: Lock,
+    title: "Protection des données",
+    desc: "Vos données personnelles et professionnelles sont hébergées et traitées en toute sécurité, dans le respect strict de la réglementation en vigueur.",
     colorKey: "rose",
   },
 ];
@@ -109,6 +106,7 @@ const Home = () => {
 
   return (
     <div className={`${tw.surfaceMuted} font-sans overflow-x-hidden`}>
+      <Seo description="TafTech connecte les entreprises algériennes aux profils qualifiés grâce à l'intelligence artificielle. Publiez une offre ou trouvez votre prochain emploi en Algérie." />
 
       {/* ─── HERO ─── */}
       <section className={`relative pt-24 pb-28 px-4 ${tw.surface} border-b ${tw.borderSubtle}`}>
@@ -177,8 +175,8 @@ const Home = () => {
           {/* CTA candidat connecté */}
           {isLogged && role === "CANDIDAT" && (
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
-              <Link to="/profil" className={`w-full sm:w-auto px-6 py-2.5 ${tw.bgPrimarySolid} text-sm font-semibold rounded-lg transition-colors`}>
-                Compléter mon profil
+              <Link to="/dashboard-candidat" className={`w-full sm:w-auto px-6 py-2.5 ${tw.bgPrimarySolid} text-sm font-semibold rounded-lg transition-colors`}>
+                Mon tableau de bord
               </Link>
               <Link to="/mes-candidatures" className={`w-full sm:w-auto px-6 py-2.5 ${tw.surface} ${tw.textMuted700} border ${tw.borderBase} text-sm font-semibold rounded-lg ${tw.rowHover}`}>
                 Mes candidatures
@@ -318,7 +316,7 @@ const Home = () => {
                       </span>
                     </div>
                   </div>
-                  <Link to={`/jobs/${job.id}`} className={`block text-center w-full py-2 ${tw.surfaceMuted} ${tw.ctaGhostHoverPrimary} ${tw.textMuted700} text-xs font-semibold rounded-lg transition-colors border ${tw.borderBase}`}>
+                  <Link to={jobUrl(job)} className={`block text-center w-full py-2 ${tw.surfaceMuted} ${tw.ctaGhostHoverPrimary} ${tw.textMuted700} text-xs font-semibold rounded-lg transition-colors border ${tw.borderBase}`}>
                     Voir l'offre
                   </Link>
                 </div>
@@ -334,6 +332,8 @@ const Home = () => {
         </div>
       </section>
 
+      <BanniereCarousel />
+
       {/* ─── POURQUOI TAFTECH ─── */}
       <section className={`py-20 ${tw.surface} px-4 border-t ${tw.borderSubtle}`}>
         <div className="max-w-5xl mx-auto">
@@ -342,7 +342,18 @@ const Home = () => {
             <h2 className={`text-2xl font-extrabold ${tw.textStrong} mb-2`}>Pourquoi choisir TAFTECH?</h2>
             <p className={`text-sm ${tw.textMuted700}`}>La plateforme de recrutement intelligente en Algérie.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-5 ${tw.surfaceMuted} border ${tw.borderBase} rounded-2xl p-8 mb-8 text-center sm:text-left`}>
+            <div className={`w-16 h-16 shrink-0 ${tw.featureColors.emerald.icon} rounded-2xl flex items-center justify-center`}>
+              <ShieldCheck size={32} />
+            </div>
+            <div>
+              <h3 className={`text-xl font-extrabold ${tw.textStrong} mb-1`}>Organisme agréé par l'État</h3>
+              <p className={`text-base ${tw.textMuted700} leading-relaxed`}>
+                TAFTECH est un organisme de placement des travailleurs agréé par le Ministère du Travail, de l'Emploi et de la Sécurité Sociale — <span className={`font-semibold ${tw.textStrong}`}>Agrément n°14 du 09 mai 2026</span>, gage de fiabilité et de conformité pour candidats et entreprises.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {FEATURES.map(({ icon: Icon, title, desc, colorKey }) => (
               <div key={title} className={`${tw.surfaceMuted} border ${tw.borderBase} ${tw.featureColors[colorKey].border} rounded-xl p-6 hover:shadow-md transition-all group`}>
                 <div className={`w-11 h-11 ${tw.featureColors[colorKey].icon} rounded-xl flex items-center justify-center mb-4`}>

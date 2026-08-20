@@ -12,7 +12,6 @@ from docx import Document
 import fitz  # pymupdf - pour extraire les images du PDF
 import json
 import os
-from groq import Groq
 from .constants import WILAYAS_MAPPING, DIPLOMES_MAPPING
 
 logger = logging.getLogger(__name__)
@@ -846,21 +845,9 @@ def _extract_formations_fallback(lines, annee_pattern):
 # ==========================================
 # 9. PARSING VIA OLLAMA (IA LOCALE)
 # ==========================================
-# === CONFIGURATION GROQ (IA cloud, gratuit et rapide) ===
-GROQ_MODEL = "llama-3.3-70b-versatile"
-GROQ_TIMEOUT = 30  # secondes
-_groq_client = None
-
-
-def get_groq_client():
-    """Lazy init du client Groq (chargé à la première utilisation)."""
-    global _groq_client
-    if _groq_client is None:
-        api_key = os.getenv("GROQ_API_KEY", "")
-        if not api_key:
-            return None
-        _groq_client = Groq(api_key=api_key)
-    return _groq_client 
+# === CONFIGURATION IA (Groq aujourd'hui, Ollama post-déploiement — voir jobs/ai_engine.py) ===
+# Fournisseur/modèle/reasoning_effort lus dynamiquement depuis AIConfig (panel admin), plus de
+# valeur figée dans le code.
 PROMPT_CV_COMPLET = """Tu es un expert en analyse de CV. Voici le texte brut d'un CV.
 
 Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autre avant/après).
@@ -922,25 +909,21 @@ RÉPONDS UNIQUEMENT AVEC L'OBJET JSON :
 
 def _call_groq(prompt, max_tokens=3000):
     """
-    Appelle Groq avec un timeout.
+    Appelle le moteur IA configuré (Groq ou Ollama selon AIConfig.provider) avec un timeout.
+    Nom conservé pour compatibilité (domaine_agent.py l'importe) même si l'appel réel passe
+    désormais par jobs.ai_engine, pas forcément Groq.
     Retourne la string de réponse ou None en cas d'erreur.
     """
-    client = get_groq_client()
-    if client is None:
-        logger.warning("Groq : clé API manquante, fallback regex")
-        return None
-
+    from .ai_engine import call_ai
     try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
+        content = call_ai(
+            [{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            timeout=GROQ_TIMEOUT,
+            temperature=0.1,
         )
-        return response.choices[0].message.content.strip()
+        return content.strip() if content else None
     except Exception as e:
-        logger.error("Groq : erreur - %s", e)
+        logger.error("IA (parser CV) : erreur - %s", e)
         return None
 
 
@@ -1030,7 +1013,8 @@ def parse_with_groq(text):
     prompt = PROMPT_CV_COMPLET.replace("{cv_text}", text_truncated).replace(
         "{domaines_list}", _domaines_list_pour_prompt()
     )
-    content = _call_groq(prompt, max_tokens=6000)
+    from .models import AIConfig
+    content = _call_groq(prompt, max_tokens=AIConfig.get_solo().parser_cv_max_tokens)
     infos = _extract_json_object(content)
     if not infos:
         return None

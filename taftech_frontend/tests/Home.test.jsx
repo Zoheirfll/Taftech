@@ -28,6 +28,7 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
     getAllJobs: vi.fn(),
+    getBannieresAccueil: vi.fn().mockResolvedValue([]),
   },
 }));
 

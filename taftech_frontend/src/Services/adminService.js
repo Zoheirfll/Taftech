@@ -278,4 +278,430 @@ export const adminService = {
       throw err;
     }
   },
+
+  // Premium — plans (abonnements)
+  getAdminPremiumPlans: async () => {
+    try {
+      const response = await api.get("jobs/admin/premium/plans/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_PREMIUM_PLANS", err);
+      throw err;
+    }
+  },
+
+  createPremiumPlan: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/premium/plans/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_PREMIUM_PLAN", err);
+      throw err;
+    }
+  },
+
+  updatePremiumPlan: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/premium/plans/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_PREMIUM_PLAN", err);
+      throw err;
+    }
+  },
+
+  deletePremiumPlan: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/premium/plans/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_PREMIUM_PLAN", err);
+      throw err;
+    }
+  },
+
+  // Premium — avantages
+  getAdminPremiumAvantages: async () => {
+    try {
+      const response = await api.get("jobs/admin/premium/avantages/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_PREMIUM_AVANTAGES", err);
+      throw err;
+    }
+  },
+
+  createPremiumAvantage: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/premium/avantages/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_PREMIUM_AVANTAGE", err);
+      throw err;
+    }
+  },
+
+  updatePremiumAvantage: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/premium/avantages/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_PREMIUM_AVANTAGE", err);
+      throw err;
+    }
+  },
+
+  deletePremiumAvantage: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/premium/avantages/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_PREMIUM_AVANTAGE", err);
+      throw err;
+    }
+  },
+
+  // FAQ
+  getAdminFaq: async () => {
+    try {
+      const response = await api.get("jobs/admin/faq/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_FAQ", err);
+      throw err;
+    }
+  },
+
+  createFaqItem: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/faq/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_FAQ_ITEM", err);
+      throw err;
+    }
+  },
+
+  updateFaqItem: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/faq/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_FAQ_ITEM", err);
+      throw err;
+    }
+  },
+
+  deleteFaqItem: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/faq/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_FAQ_ITEM", err);
+      throw err;
+    }
+  },
+
+  // Compétences (référentiel admin)
+  getAdminCompetences: async (search = "") => {
+    try {
+      const response = await api.get(`jobs/admin/competences/?search=${search}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
+      throw err;
+    }
+  },
+
+  createCompetence: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/competences/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  updateCompetence: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/competences/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  deleteCompetence: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/competences/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  // Articles / Blog (admin)
+  getAdminArticles: async () => {
+    try {
+      const response = await api.get("jobs/admin/articles/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_ARTICLES", err);
+      throw err;
+    }
+  },
+
+  getAdminArticle: async (id) => {
+    try {
+      const response = await api.get(`jobs/admin/articles/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_ARTICLE", err);
+      throw err;
+    }
+  },
+
+  createArticle: async (data) => {
+    try {
+      const hasFile = data.image_couverture instanceof File;
+      let payload = data;
+      let config = {};
+      if (hasFile) {
+        const formData = new FormData();
+        Object.keys(data).forEach((key) => {
+          if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]);
+        });
+        payload = formData;
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      }
+      const response = await api.post("jobs/admin/articles/", payload, config);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_ARTICLE", err);
+      throw err;
+    }
+  },
+
+  updateArticle: async (id, data) => {
+    try {
+      const hasFile = data.image_couverture instanceof File;
+      let payload = data;
+      let config = {};
+      if (hasFile) {
+        const formData = new FormData();
+        Object.keys(data).forEach((key) => {
+          if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]);
+        });
+        payload = formData;
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      }
+      const response = await api.put(`jobs/admin/articles/${id}/`, payload, config);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_ARTICLE", err);
+      throw err;
+    }
+  },
+
+  deleteArticle: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/articles/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_ARTICLE", err);
+      throw err;
+    }
+  },
+
+  getAdminArticleCategories: async () => {
+    try {
+      const response = await api.get("jobs/admin/articles-categories/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_ARTICLE_CATEGORIES", err);
+      throw err;
+    }
+  },
+
+  createArticleCategory: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/articles-categories/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_ARTICLE_CATEGORY", err);
+      throw err;
+    }
+  },
+
+  deleteArticleCategory: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/articles-categories/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_ARTICLE_CATEGORY", err);
+      throw err;
+    }
+  },
+
+  // Bannières — annonce globale
+  getAdminSiteAnnonces: async () => {
+    try {
+      const response = await api.get("jobs/admin/site-annonce/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_SITE_ANNONCES", err);
+      throw err;
+    }
+  },
+
+  createSiteAnnonce: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/site-annonce/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_SITE_ANNONCE", err);
+      throw err;
+    }
+  },
+
+  updateSiteAnnonce: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/site-annonce/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_SITE_ANNONCE", err);
+      throw err;
+    }
+  },
+
+  deleteSiteAnnonce: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/site-annonce/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_SITE_ANNONCE", err);
+      throw err;
+    }
+  },
+
+  // Bannières — carrousel accueil
+  getAdminBannieresAccueil: async () => {
+    try {
+      const response = await api.get("jobs/admin/bannieres-accueil/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_BANNIERES", err);
+      throw err;
+    }
+  },
+
+  createBanniereAccueil: async (data) => {
+    try {
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]);
+      });
+      const response = await api.post("jobs/admin/bannieres-accueil/", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_BANNIERE", err);
+      throw err;
+    }
+  },
+
+  updateBanniereAccueil: async (id, data) => {
+    try {
+      const hasFile = data.image instanceof File;
+      let payload = data;
+      let config = {};
+      if (hasFile) {
+        const formData = new FormData();
+        Object.keys(data).forEach((key) => {
+          if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]);
+        });
+        payload = formData;
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      }
+      const response = await api.put(`jobs/admin/bannieres-accueil/${id}/`, payload, config);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_BANNIERE", err);
+      throw err;
+    }
+  },
+
+  deleteBanniereAccueil: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/bannieres-accueil/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_BANNIERE", err);
+      throw err;
+    }
+  },
+
+  // Pages statiques (CGU, Confidentialité, Qui sommes-nous, pages libres)
+  getAdminPages: async () => {
+    try {
+      const response = await api.get("jobs/admin/pages/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_PAGES", err);
+      throw err;
+    }
+  },
+
+  createPageStatique: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/pages/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_PAGE_STATIQUE", err);
+      throw err;
+    }
+  },
+
+  updatePageStatique: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/pages/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_PAGE_STATIQUE", err);
+      throw err;
+    }
+  },
+
+  deletePageStatique: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/pages/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_PAGE_STATIQUE", err);
+      throw err;
+    }
+  },
+
+  // Configuration IA
+  getAIConfig: async () => {
+    try {
+      const response = await api.get("jobs/admin/ai-config/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_AI_CONFIG", err);
+      throw err;
+    }
+  },
+
+  updateAIConfig: async (data) => {
+    try {
+      const response = await api.put("jobs/admin/ai-config/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_AI_CONFIG", err);
+      throw err;
+    }
+  },
 };

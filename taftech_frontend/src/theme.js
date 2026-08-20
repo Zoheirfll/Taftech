@@ -304,7 +304,17 @@ export const tw = {
   scoreLow: "bg-red-50 text-red-700 border-red-200",
   statusBlueSoft: "bg-blue-50 text-blue-700 border-blue-200",
   statusOrangeSoft: "bg-orange-50 text-orange-700 border-orange-200",
+  statusPurpleSoft: "bg-purple-50 text-purple-700 border-purple-200",
   statusNeutralSoft: "bg-slate-100 text-slate-700",
+
+  // === CHRONOLOGIE CANDIDATURE (CandidatureTimeline) ===
+  timelineNodeDone: "bg-indigo-600 border-indigo-600 text-white",
+  timelineNodeCurrent: "bg-white border-indigo-600 text-indigo-600 ring-4 ring-indigo-100",
+  timelineNodePending: "bg-white border-slate-300 text-slate-400",
+  timelineNodeSuccess: "bg-emerald-600 border-emerald-600 text-white",
+  timelineNodeDanger: "bg-red-600 border-red-600 text-white",
+  timelineLineDone: "bg-indigo-600",
+  timelineLinePending: "bg-slate-200",
 
   // Badges de score solides (fond plein + texte blanc)
   scoreBadgeHigh: "bg-emerald-500 text-white",
@@ -642,6 +652,7 @@ export const tw = {
   candidatureStatutStyles: {
     RECUE: "bg-amber-50 text-amber-700 border-amber-200",
     EN_COURS: "bg-blue-50 text-blue-700 border-blue-200",
+    PRESELECTION: "bg-purple-50 text-purple-700 border-purple-200",
     ENTRETIEN: "bg-orange-50 text-orange-700 border-orange-200",
     RETENU: "bg-emerald-50 text-emerald-700 border-emerald-200",
     REFUSE: "bg-red-50 text-red-700 border-red-200",
@@ -761,6 +772,8 @@ export const tw = {
     indigo: { card: "bg-indigo-50 border-indigo-100", icon: "text-indigo-600", header: "text-indigo-700" },
     amber: { card: "bg-amber-50 border-amber-100", icon: "text-amber-600", header: "text-amber-700" },
     emerald: { card: "bg-emerald-50 border-emerald-100", icon: "text-emerald-600", header: "text-emerald-700" },
+    rose: { card: "bg-rose-50 border-rose-100", icon: "text-rose-600", header: "text-rose-700" },
+    blue: { card: "bg-blue-50 border-blue-100", icon: "text-blue-600", header: "text-blue-700" },
   },
 
   // === ADMIN — boutons/actions complémentaires ===

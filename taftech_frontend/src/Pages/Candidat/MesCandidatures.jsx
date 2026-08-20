@@ -11,15 +11,18 @@ import {
   Sparkles,
   CheckCircle,
   AlertCircle,
+  HelpCircle,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { TooltipIcon } from "../../Components/Tooltip";
+import CandidatureTimeline from "../../Components/CandidatureTimeline";
 import { tw } from "../../theme";
 
 const getBadgeStyle = (statut) => {
   const styles = {
     RECUE: tw.scoreMid,
     EN_COURS: tw.statusBlueSoft,
+    PRESELECTION: tw.statusPurpleSoft,
     ENTRETIEN: tw.statusOrangeSoft,
     RETENU: tw.scoreHigh,
     REFUSE: tw.scoreLow,
@@ -42,6 +45,8 @@ const getMessageStatut = (statut) => {
       return "Malheureusement, votre profil n'a pas été retenu. Ne vous découragez pas !";
     case "EN_COURS":
       return "Votre dossier est actuellement examiné par le recruteur.";
+    case "PRESELECTION":
+      return "Bonne nouvelle ! Votre profil a été présélectionné.";
     case "ENTRETIEN":
       return "Bonne nouvelle ! Le recruteur souhaite vous rencontrer.";
     default:
@@ -53,7 +58,7 @@ const CRITERES = [
   { key: "diplome", label: "Diplôme", max: 20 },
   { key: "experience", label: "Expérience", max: 20 },
   { key: "competences", label: "Compétences", max: 15 },
-  { key: "region", label: "Région", max: 20 },
+  { key: "region", label: "Localisation & mobilité", max: 20 },
 ];
 
 const RadarChart = ({ details }) => {
@@ -159,6 +164,7 @@ const RadarChart = ({ details }) => {
 const AnalyseIA = ({ cand }) => {
   const DM = cand.details_matching;
   const scores = DM?.scores || DM;
+  const explications = DM?.explications || {};
   const points_forts = DM?.highlights?.points_forts || [];
   const ecarts = DM?.highlights?.ecarts || [];
   return (
@@ -166,14 +172,14 @@ const AnalyseIA = ({ cand }) => {
       <div className="flex items-center gap-2 mb-4">
         <Sparkles size={14} className={tw.iconPrimary500} />
         <span className={`text-sm font-semibold ${tw.textPrimaryStrong} uppercase tracking-wide`}>
-          Analyse IA
+          Pourquoi ce score ?
         </span>
       </div>
       <div className="flex flex-col sm:flex-row gap-6 items-center mb-4">
         <div className="w-full sm:w-1/2">
           <RadarChart details={scores} />
         </div>
-        <div className="w-full sm:w-1/2 space-y-2.5">
+        <div className="w-full sm:w-1/2 space-y-3">
           {CRITERES.map((c) => {
             const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
             const bar =
@@ -194,6 +200,9 @@ const AnalyseIA = ({ cand }) => {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+                {explications[c.key] && (
+                  <p className={`text-xs ${tw.textMuted700} mt-1`}>{explications[c.key]}</p>
+                )}
               </div>
             );
           })}
@@ -233,6 +242,7 @@ const AnalyseIA = ({ cand }) => {
 const STATUT_LABELS = {
   RECUE: "Reçue",
   EN_COURS: "En cours",
+  PRESELECTION: "Présélectionné(e)",
   ENTRETIEN: "Entretien",
   RETENU: "Retenu(e)",
   REFUSE: "Refusé(e)",
@@ -368,6 +378,11 @@ const MesCandidatures = () => {
                 </span>
               </div>
 
+              {/* CHRONOLOGIE */}
+              <div className={`${tw.surfaceMuted} px-4 pt-4 pb-2 rounded-xl border ${tw.borderSubtle}`}>
+                <CandidatureTimeline statut={cand.statut} />
+              </div>
+
               {/* MESSAGE STATUT */}
               <div className={`${tw.surfaceMuted} px-4 py-3 rounded-xl border ${tw.borderSubtle}`}>
                 <p className={`text-sm ${tw.textMuted}`}>
@@ -403,10 +418,10 @@ const MesCandidatures = () => {
                     onClick={() => toggleAnalyse(cand.id)}
                     className={`mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${tw.toggleAnalyseButton}`}
                   >
-                    <Sparkles size={13} />
+                    <HelpCircle size={13} />
                     {openAnalyse[cand.id]
-                      ? "Masquer l'analyse IA"
-                      : "Voir l'analyse IA détaillée"}
+                      ? "Masquer l'explication du score"
+                      : "Pourquoi ce score ?"}
                     {openAnalyse[cand.id] ? (
                       <ChevronUp size={14} />
                     ) : (

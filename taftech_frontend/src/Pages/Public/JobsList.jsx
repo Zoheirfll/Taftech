@@ -9,6 +9,8 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import Seo from "../../Components/Seo";
+import { jobUrl } from "../../utils/slugify";
 import {
   MapPin, Briefcase, Bookmark, Sparkles, Search,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
@@ -258,6 +260,10 @@ const JobsList = () => {
 
   return (
     <div className={`min-h-screen ${tw.surfaceMuted}`}>
+      <Seo
+        title="Offres d'emploi en Algérie"
+        description={`Parcourez ${totalCount > 0 ? `${totalCount} offres d'emploi` : "les offres d'emploi"} en Algérie sur TafTech — tous secteurs, toutes wilayas.`}
+      />
 
       {/* HEADER */}
       <div className={tw.bannerGradientPrimary}>
@@ -313,11 +319,11 @@ const JobsList = () => {
                         </span>
                         <span className={`text-xs font-bold ${tw.textPrimary}`}>{rec.matching_score}%</span>
                       </div>
-                      <Link to={`/jobs/${rec.id}`} className={`text-sm font-semibold ${tw.textStrong} ${tw.hoverTextPrimary} line-clamp-1 block mb-1`}>
+                      <Link to={jobUrl(rec)} className={`text-sm font-semibold ${tw.textStrong} ${tw.hoverTextPrimary} line-clamp-1 block mb-1`}>
                         {rec.titre}
                       </Link>
                       <p className={`text-xs ${tw.textMuted700} mb-3`}>{rec.entreprise?.nom_entreprise || "Entreprise anonyme"}</p>
-                      <Link to={`/jobs/${rec.id}`} className={`block text-center py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>
+                      <Link to={jobUrl(rec)} className={`block text-center py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>
                         Voir l'offre
                       </Link>
                     </div>
@@ -383,7 +389,7 @@ const JobsList = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <Link to={`/jobs/${job.id}`} className={`text-base font-bold ${tw.textStrong} ${tw.hoverTextPrimary} transition-colors leading-snug`}>
+                                <Link to={jobUrl(job)} className={`text-base font-bold ${tw.textStrong} ${tw.hoverTextPrimary} transition-colors leading-snug`}>
                                   {job.titre}
                                 </Link>
                                 <div className="mt-0.5">
@@ -427,7 +433,7 @@ const JobsList = () => {
                                   {job.nombre_postes} postes
                                 </span>
                               )}
-                              <Link to={`/jobs/${job.id}`} className={`ml-auto px-4 py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>
+                              <Link to={jobUrl(job)} className={`ml-auto px-4 py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>
                                 Voir l'offre
                               </Link>
                             </div>

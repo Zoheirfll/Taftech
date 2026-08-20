@@ -41,6 +41,7 @@ from .candidatures import (
 from .recruteur import (
     DashboardRecruteurAPIView,
     UpdateProfilEntrepriseAPIView,
+    EntreprisePhotosAPIView,
     ParametresRecruteurAPIView,
     CVThequeView,
     ToggleFavoriCVAPIView,
@@ -94,3 +95,32 @@ from .equipe import (
     AccepterInvitationAPIView,
     EquipeAuditLogAPIView,
 )
+from .premium_admin import (
+    PremiumPlansPublicAPIView,
+    PremiumAvantagesPublicAPIView,
+    PremiumPlansAdminAPIView,
+    PremiumAvantagesAdminAPIView,
+    FaqPublicAPIView,
+    FaqAdminAPIView,
+    CompetencesAutocompleteAPIView,
+    CompetencesAdminAPIView,
+)
+from .articles import (
+    ArticleListPublicAPIView,
+    ArticleDetailPublicAPIView,
+    ArticleCategoriesPublicAPIView,
+    ArticleAdminAPIView,
+    ArticleAdminDetailAPIView,
+    ArticleCategoriesAdminAPIView,
+)
+from .banners import (
+    SiteAnnoncePublicAPIView,
+    BanniereAccueilPublicAPIView,
+    SiteAnnonceAdminAPIView,
+    BanniereAccueilAdminAPIView,
+)
+from .pages import (
+    PageStatiquePublicAPIView,
+    PageStatiqueAdminAPIView,
+)
+from .ai_config import AIConfigAdminAPIView

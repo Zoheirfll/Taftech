@@ -13,6 +13,14 @@ import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 import { CreateQuestionnaireModal } from "../../Components/CreateQuestionnaireModal";
 
+const TYPE_QUESTION_LABELS = {
+  COURT: "Texte court",
+  LONG: "Texte long",
+  NUMERIQUE: "Numérique",
+  CHOIX_UNIQUE: "Choix unique",
+  CHOIX_MULTIPLE: "Choix multiple",
+};
+
 const Section = ({ icon: Icon, title, children }) => (
   <div className={`${tw.card} p-6`}>
     <div className="flex items-center gap-2 mb-5">
@@ -61,9 +69,12 @@ const CreateJob = () => {
     description: "",
     missions: "",
     profil_recherche: "",
+    competences: "",
     questionnaire: "",
     date_expiration: "",
   });
+  const [questionsEntretien, setQuestionsEntretien] = useState([]);
+  const [modalPrefillQuestions, setModalPrefillQuestions] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,8 +125,8 @@ const CreateJob = () => {
   };
 
   const handleGenererIA = async () => {
-    if (!formData.titre || !formData.specialite) {
-      toast.error("Remplissez au moins le titre et la spécialité avant de générer.");
+    if (!formData.titre) {
+      toast.error("Saisissez au moins le titre du poste avant de générer.");
       return;
     }
     setIaLoading(true);
@@ -134,7 +145,13 @@ const CreateJob = () => {
         description: result.description || prev.description,
         missions: result.missions || prev.missions,
         profil_recherche: result.profil_recherche || prev.profil_recherche,
+        competences: result.competences || prev.competences,
+        // Le recruteur n'a peut-être saisi que le titre — l'IA devine la spécialité via le
+        // référentiel métiers ; on ne l'auto-sélectionne que si le champ était vide (jamais
+        // écraser un choix déjà fait manuellement par le recruteur).
+        specialite: prev.specialite || result.specialite_resolue || prev.specialite,
       }));
+      setQuestionsEntretien(result.questions_entretien || []);
       toast.success("Contenu généré ! Relisez et ajustez selon vos besoins.", { id: toastId });
     } catch (err) {
       toast.error(err.response?.data?.error || "Service IA indisponible.", { id: toastId });
@@ -175,7 +192,7 @@ const CreateJob = () => {
     }
   };
 
-  const iaReady = isPremium && formData.titre && formData.specialite;
+  const iaReady = isPremium && !!formData.titre;
   const errClass = (key) => errors[key] ? ` ${tw.inputErrorRing}` : "";
 
   return (
@@ -197,7 +214,7 @@ const CreateJob = () => {
         <InfoBanner storageKey="creer_offre" title="Conseils pour une offre efficace" color="teal">
           Un titre précis et un profil recherché détaillé améliorent la qualité du matching IA.
           Renseignez la <strong>spécialité</strong> et le <strong>diplôme</strong> requis pour que l'algorithme propose votre offre aux candidats les plus pertinents.
-          {isPremium && <> Utilisez le bouton <strong>✨ Générer avec l'IA</strong> pour rédiger la description automatiquement.</>}
+          {isPremium && <> Saisissez simplement le <strong>titre du poste</strong> et cliquez sur <strong>✨ Générer l'offre avec l'IA</strong> pour rédiger automatiquement description, missions, profil recherché, compétences et questions d'entretien.</>}
         </InfoBanner>
 
         <div className={`${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl p-4`}>
@@ -361,16 +378,16 @@ const CreateJob = () => {
         <Section icon={FileText} title="Détails de la mission">
           <div className="space-y-4">
             {/* Fix 5 : bouton IA avec état "Prêt" */}
-            <div className={`flex items-center justify-between p-3 rounded-lg border ${iaReady ? tw.amberReadyBanner : `${tw.surfaceMuted} ${tw.borderBase}`}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border ${iaReady ? tw.amberReadyBanner : `${tw.surfaceMuted} ${tw.borderBase}`}`}>
               <div>
-                <p className={`text-sm font-semibold flex items-center gap-1.5 ${iaReady ? tw.textWarning800 : tw.textMuted}`}>
+                <p className={`text-sm font-semibold flex items-center flex-wrap gap-1.5 ${iaReady ? tw.textWarning800 : tw.textMuted}`}>
                   <Sparkles size={14} className={iaReady ? tw.textAmber500 : tw.textMuted} />
-                  Remplissage automatique par IA
-                  {iaReady && <span className={`ml-1 px-2 py-0.5 ${tw.badgeSuccessSolid100} text-[10px] font-bold rounded-full`}>Prêt</span>}
+                  Générer l'offre avec l'IA
+                  {iaReady && <span className={`px-2 py-0.5 ${tw.badgeSuccessSolid100} text-[10px] font-bold rounded-full`}>Prêt</span>}
                 </p>
                 <p className={`text-xs mt-0.5 ${iaReady ? tw.textWarning : tw.textLight}`}>
                   {isPremium
-                    ? (iaReady ? "Titre et spécialité renseignés — vous pouvez générer." : "Renseignez le titre et la spécialité pour activer.")
+                    ? (iaReady ? "Description, missions, profil, compétences et questions d'entretien." : "Saisissez le titre du poste pour activer.")
                     : "Fonctionnalité réservée aux comptes Premium ⭐"}
                 </p>
               </div>
@@ -379,14 +396,14 @@ const CreateJob = () => {
                   type="button"
                   onClick={handleGenererIA}
                   disabled={iaLoading || !iaReady}
-                  title={!iaReady ? "Remplissez le titre et la spécialité d'abord" : ""}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? tw.bgAmberSolidHover : tw.bgSlate300}`}
+                  title={!iaReady ? "Saisissez le titre du poste d'abord" : ""}
+                  className={`flex items-center justify-center gap-1.5 px-4 py-2 w-full sm:w-auto text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? tw.bgAmberSolidHover : tw.bgSlate300}`}
                 >
                   <Sparkles size={14} />
-                  {iaLoading ? "Génération..." : "Générer"}
+                  {iaLoading ? "Génération..." : "Générer l'offre avec l'IA"}
                 </button>
               ) : (
-                <span className={`text-xs font-semibold ${tw.badgeAmberSolid100} px-3 py-1.5 rounded-lg shrink-0`}>Premium uniquement</span>
+                <span className={`text-xs font-semibold ${tw.badgeAmberSolid100} px-3 py-1.5 rounded-lg shrink-0 self-start`}>Premium uniquement</span>
               )}
             </div>
 
@@ -423,6 +440,55 @@ const CreateJob = () => {
                 />
               </Field>
             </div>
+            <Field label="Compétences requises">
+              <textarea
+                name="competences"
+                value={formData.competences}
+                onChange={handleChange}
+                rows={4}
+                className={textareaClass}
+                placeholder="- Python / Django / React&#10;- PostgreSQL&#10;- Git&#10;- ..."
+              />
+            </Field>
+
+            {questionsEntretien.length > 0 && (
+              <div className={`p-4 rounded-lg border ${tw.borderTeal200} ${tw.bgTealSoft}`}>
+                <p className={`text-sm font-semibold flex items-center gap-1.5 ${tw.textTeal}`}>
+                  <Sparkles size={14} /> Questions d'entretien suggérées par l'IA
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {questionsEntretien.map((q, i) => (
+                    <li key={i} className="text-sm">
+                      <div className={`${tw.textMuted700} flex items-start gap-2`}>
+                        <span className={`${tw.textTeal} font-bold shrink-0`}>{i + 1}.</span>
+                        <span>
+                          {q.texte}
+                          <span className={`ml-1.5 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${tw.tagSlateSoft700}`}>
+                            {TYPE_QUESTION_LABELS[q.type_question] || q.type_question}
+                          </span>
+                        </span>
+                      </div>
+                      {q.choix?.length > 0 && (
+                        <ul className="mt-1 ml-5 space-y-0.5">
+                          {q.choix.map((c, ci) => (
+                            <li key={ci} className={`text-xs ${tw.textMuted} flex items-center gap-1.5`}>
+                              <span className="w-1 h-1 rounded-full bg-slate-400 shrink-0" /> {c}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => { setModalPrefillQuestions(questionsEntretien); setShowCreateQuestionnaire(true); }}
+                  className={`mt-3 text-sm font-semibold transition-colors ${tw.linkTeal}`}
+                >
+                  Créer un questionnaire avec ces questions →
+                </button>
+              </div>
+            )}
           </div>
         </Section>
 
@@ -433,7 +499,7 @@ const CreateJob = () => {
               <p className={tw.bodyText}>Vous n'avez aucun questionnaire créé.</p>
               <button
                 type="button"
-                onClick={() => setShowCreateQuestionnaire(true)}
+                onClick={() => { setModalPrefillQuestions(null); setShowCreateQuestionnaire(true); }}
                 className={`text-sm font-semibold transition-colors shrink-0 ${tw.linkTeal}`}
               >
                 Créer un questionnaire →
@@ -455,7 +521,7 @@ const CreateJob = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowCreateQuestionnaire(true)}
+                  onClick={() => { setModalPrefillQuestions(null); setShowCreateQuestionnaire(true); }}
                   className={`text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${tw.linkTeal}`}
                 >
                   + Nouveau
@@ -473,6 +539,8 @@ const CreateJob = () => {
             setQuestionnaires((prev) => [...prev, created]);
             setFormData((prev) => ({ ...prev, questionnaire: created.id }));
           }}
+          initialQuestions={modalPrefillQuestions}
+          initialTitre={modalPrefillQuestions ? `Entretien — ${formData.titre}` : ""}
         />
 
         {/* Fix 1 — Durée d'affichage en section Paramètres de publication */}

@@ -46,6 +46,7 @@ from .serializers import RegisterCandidatDTO, EmailTokenObtainSerializer, Recrut
 from django.contrib.auth import get_user_model
 from .models import SystemErrorLog
 from jobs.views.equipe import get_entreprise_for_user, _log
+from jobs.throttles import WriteActionThrottle, EmailRateThrottle
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .serializers import SystemErrorLogSerializer
 from datetime import timedelta
@@ -674,7 +675,7 @@ class ConsentementCVThequeView(APIView):
 
 class ContactMessageAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [CypressAwareThrottle]
+    throttle_classes = [WriteActionThrottle, EmailRateThrottle]
 
     def post(self, request):
         data = request.data

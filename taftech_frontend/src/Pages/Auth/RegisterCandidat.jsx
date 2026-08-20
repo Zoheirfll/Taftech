@@ -350,7 +350,7 @@ const RegisterCandidat = () => {
                         setShowConsentModal(true);
                       } else {
                         toast.success("Compte connecté !");
-                        navigate("/");
+                        navigate("/dashboard-candidat");
                         window.location.reload();
                       }
                     } catch {

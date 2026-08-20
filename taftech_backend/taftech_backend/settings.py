@@ -127,6 +127,9 @@ REST_FRAMEWORK = {
         'user': '10000/day' if DEBUG else '1000/day',
         'auth': '10/min',
         'groq': '20/hour',
+        'public_read': '300/hour',
+        'write_action': '30/hour',
+        'email_write': '10/day',
     },
 }
 
@@ -197,6 +200,27 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 # En production : utiliser les clés "live" (préfixe live_sk_...)
 CHARGILY_API_KEY = os.getenv('CHARGILY_API_KEY', '')
 CHARGILY_SECRET_KEY = os.getenv('CHARGILY_SECRET_KEY', '')
+
+# En dev, ces clés peuvent être vides sans risque (email/paiement/IA juste
+# indisponibles) — mais en prod (DEBUG=False), une clé vide casse silencieusement
+# en runtime au premier appel (email de confirmation, webhook de paiement, analyse
+# IA) au lieu d'empêcher le démarrage. Refuse de démarrer plutôt que de laisser un
+# manque de config passer inaperçu jusqu'au premier incident utilisateur.
+if not DEBUG:
+    _MISSING_SECRETS = [
+        name for name, value in {
+            'EMAIL_HOST_USER': os.getenv('EMAIL_HOST_USER', ''),
+            'EMAIL_HOST_PASSWORD': os.getenv('EMAIL_HOST_PASSWORD', ''),
+            'GROQ_API_KEY': os.getenv('GROQ_API_KEY', ''),
+            'CHARGILY_API_KEY': os.getenv('CHARGILY_API_KEY', ''),
+            'CHARGILY_SECRET_KEY': os.getenv('CHARGILY_SECRET_KEY', ''),
+        }.items() if not value
+    ]
+    if _MISSING_SECRETS:
+        raise ImproperlyConfigured(
+            "Variables d'environnement manquantes en production : "
+            + ", ".join(_MISSING_SECRETS)
+        )
 
 # URL publique du frontend (utilisée dans les emails)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:5173')

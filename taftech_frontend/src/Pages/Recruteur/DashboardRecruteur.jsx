@@ -24,12 +24,58 @@ import {
   Trash2,
   X,
   Download,
+  TrendingUp,
+  GitBranch,
+  Star,
+  HelpCircle,
+  ChevronDown,
+  SlidersHorizontal,
+  LineChart,
+  BarChart3,
+  History,
+  Percent,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import MiniAreaChart from "../../Components/MiniAreaChart";
+import { candidatFichierUrl } from "../../utils/mediaUrl";
 
 // ─── Constantes grille ────────────────────────────────────────────────────────
 const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 112px";
+
+// ─── Constantes pipeline / recommandations ────────────────────────────────────
+const PIPELINE_STAGES = [
+  { key: "RECUE", label: "Reçue", color: "#d97706" },
+  { key: "EN_COURS", label: "En cours", color: "#2563eb" },
+  { key: "PRESELECTION", label: "Présélection", color: "#9333ea" },
+  { key: "ENTRETIEN", label: "Entretien", color: "#ea580c" },
+  { key: "RETENU", label: "Retenu(e)", color: "#059669" },
+  { key: "REFUSE", label: "Refusé(e)", color: "#dc2626" },
+];
+
+const STATUTS_LABELS = {
+  RECUE: "Candidature reçue",
+  EN_COURS: "En cours d'étude",
+  PRESELECTION: "Présélectionné",
+  ENTRETIEN: "Entretien programmé",
+  RETENU: "Candidat retenu",
+  REFUSE: "Candidat refusé",
+};
+
+const CRITERES_MATCHING = [
+  { key: "specialite", label: "Spécialité", max: 25 },
+  { key: "diplome", label: "Diplôme", max: 20 },
+  { key: "experience", label: "Expérience", max: 20 },
+  { key: "region", label: "Localisation & mobilité", max: 20 },
+  { key: "competences", label: "Compétences", max: 15 },
+];
+
+const PERIODES_EVOLUTION = [
+  { key: "7j", label: "7 derniers jours" },
+  { key: "30j", label: "30 derniers jours" },
+  { key: "6m", label: "6 derniers mois" },
+  { key: "1a", label: "12 derniers mois" },
+];
 
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
@@ -49,6 +95,16 @@ const DashboardRecruteur = () => {
   const [sortConfig, setSortConfig] = useState({ col: null, dir: "asc" });
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [filtreOffreId, setFiltreOffreId] = useState("toutes");
+  const [periodeEvolution, setPeriodeEvolution] = useState("6m");
+  const [masquerDecides, setMasquerDecides] = useState(true);
+  const [recommandesLimit, setRecommandesLimit] = useState(6);
+  const [expandedMatchId, setExpandedMatchId] = useState(null);
+  const [statutMenuOuvertId, setStatutMenuOuvertId] = useState(null);
+  const [changingStatutId, setChangingStatutId] = useState(null);
+  const [chartType, setChartType] = useState("area");
+  const [showComparaison, setShowComparaison] = useState(false);
+  const [showConversion, setShowConversion] = useState(false);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -92,6 +148,7 @@ const DashboardRecruteur = () => {
       description: offre.description || "",
       missions: offre.missions || "",
       profil_recherche: offre.profil_recherche || "",
+      competences: offre.competences || "",
       salaire_propose: offre.salaire_propose || "",
     });
     setShowModifierModal(true);
@@ -132,6 +189,27 @@ const DashboardRecruteur = () => {
     } catch (err) {
       toast.error("Erreur lors de l'export Excel.");
       reportError("ECHEC_EXPORT_EXCEL_GLOBAL", err);
+    }
+  };
+
+  const handleChangerStatutRecommande = async (candidatureId, offreId, nouveauStatut) => {
+    setChangingStatutId(candidatureId);
+    try {
+      await jobsService.updateStatutCandidature(candidatureId, { statut: nouveauStatut });
+      setOffres((prev) =>
+        prev.map((o) =>
+          o.id !== offreId
+            ? o
+            : { ...o, candidatures: o.candidatures.map((c) => (c.id === candidatureId ? { ...c, statut: nouveauStatut } : c)) },
+        ),
+      );
+      toast.success("Statut mis à jour.");
+    } catch (err) {
+      toast.error("Erreur lors de la mise à jour du statut.");
+      reportError("ECHEC_CHANGER_STATUT_RECOMMANDE", err);
+    } finally {
+      setChangingStatutId(null);
+      setStatutMenuOuvertId(null);
     }
   };
 
@@ -189,12 +267,89 @@ const DashboardRecruteur = () => {
       o.candidatures?.forEach((c) => {
         total++;
         if (c.statut === "RECUE") nouvelles++;
-        if (c.statut === "EN_COURS" || c.statut === "ENTRETIEN") enTraitement++;
+        if (c.statut === "EN_COURS" || c.statut === "PRESELECTION" || c.statut === "ENTRETIEN") enTraitement++;
         if (parseFloat(c.score_matching) >= 80) pertinentes++;
       });
     });
     return { total, nouvelles, pertinentes, enTraitement };
   })();
+
+  // ─── Offres filtrées (sélecteur partagé graphiques + recommandés) ─────────
+  const offresPourAnalyse = filtreOffreId === "toutes" ? offres : offres.filter((o) => String(o.id) === String(filtreOffreId));
+
+  // ─── Évolution candidatures/recrutements — période paramétrable ───────────
+  // shiftPeriodes=1 décale tout le bucket d'une période complète en arrière (comparaison)
+  const buildEvolutionBuckets = (periode, shiftPeriodes = 0) => {
+    const now = new Date();
+    let buckets;
+    if (periode === "7j" || periode === "30j") {
+      const nbJours = periode === "7j" ? 7 : 30;
+      const decalage = shiftPeriodes * nbJours;
+      buckets = Array.from({ length: nbJours }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (nbJours - 1 - i) - decalage);
+        return { key: d.toISOString().slice(0, 10), label: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }), candidatures: 0, recrutements: 0 };
+      });
+      offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
+        if (!c.date_postulation) return;
+        const key = c.date_postulation.slice(0, 10);
+        const entry = buckets.find((b) => b.key === key);
+        if (entry) {
+          entry.candidatures++;
+          if (c.statut === "RETENU") entry.recrutements++;
+        }
+      }));
+    } else {
+      const nbMois = periode === "1a" ? 12 : 6;
+      const decalage = shiftPeriodes * nbMois;
+      buckets = Array.from({ length: nbMois }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (nbMois - 1 - i) - decalage, 1);
+        return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("fr-FR", { month: "short" }), candidatures: 0, recrutements: 0 };
+      });
+      offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
+        if (!c.date_postulation) return;
+        const d = new Date(c.date_postulation);
+        const entry = buckets.find((b) => b.key === `${d.getFullYear()}-${d.getMonth()}`);
+        if (entry) {
+          entry.candidatures++;
+          if (c.statut === "RETENU") entry.recrutements++;
+        }
+      }));
+    }
+    buckets.forEach((b) => {
+      b.tauxConversion = b.candidatures > 0 ? Math.round((b.recrutements / b.candidatures) * 100) : 0;
+    });
+    return buckets;
+  };
+
+  const evolution = buildEvolutionBuckets(periodeEvolution, 0);
+  const evolutionPrevValues = showComparaison && chartType !== "bar"
+    ? buildEvolutionBuckets(periodeEvolution, 1).map((b) => b.candidatures)
+    : null;
+
+  // ─── Pipeline : répartition des candidatures par statut + taux de conversion ──
+  const pipelineCounts = (() => {
+    const counts = Object.fromEntries(PIPELINE_STAGES.map((s) => [s.key, 0]));
+    offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
+      if (counts[c.statut] !== undefined) counts[c.statut]++;
+    }));
+    return counts;
+  })();
+  const pipelineTotal = Object.values(pipelineCounts).reduce((a, b) => a + b, 0);
+  const pipelineMax = Math.max(1, ...Object.values(pipelineCounts));
+
+  // ─── Candidats recommandés : meilleurs scores, filtrables par offre/statut ──
+  const candidatsRecommandesTous = (() => {
+    const all = [];
+    offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
+      if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined) {
+        if (masquerDecides && (c.statut === "RETENU" || c.statut === "REFUSE")) return;
+        all.push({ ...c, offreTitre: o.titre, offreId: o.id });
+      }
+    }));
+    return all.sort((a, b) => parseFloat(b.score_matching) - parseFloat(a.score_matching));
+  })();
+  const candidatsRecommandes = candidatsRecommandesTous.slice(0, recommandesLimit);
+  const hasMoreRecommandes = candidatsRecommandesTous.length > recommandesLimit;
 
   const getStatutBadge = (offre) => {
     if (offre.est_cloturee)      return { label: "Archivée",    cls: tw.tagSlateSoft };
@@ -343,6 +498,298 @@ const DashboardRecruteur = () => {
           </div>
         </div>
       </div>
+
+      {/* ── GRAPHIQUES ─────────────────────────────────────────────────────── */}
+      {offres.length > 0 && (
+        <>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <SlidersHorizontal size={13} className={tw.textMuted} />
+            <select
+              value={filtreOffreId}
+              onChange={(e) => { setFiltreOffreId(e.target.value); setRecommandesLimit(6); }}
+              className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5 max-w-[220px]`}
+            >
+              <option value="toutes">Toutes les offres</option>
+              {offres.map((o) => (
+                <option key={o.id} value={o.id}>{o.titre}</option>
+              ))}
+            </select>
+            <select
+              value={periodeEvolution}
+              onChange={(e) => setPeriodeEvolution(e.target.value)}
+              className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+            >
+              {PERIODES_EVOLUTION.map((p) => (
+                <option key={p.key} value={p.key}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            <div className={`${tw.cardColors} rounded-2xl p-5`}>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                  <TrendingUp size={15} className={tw.textTeal} /> Évolution
+                </h2>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setChartType("area")}
+                    title="Courbe"
+                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "area" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                  >
+                    <LineChart size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartType("bar")}
+                    title="Barres"
+                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "bar" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                  >
+                    <BarChart3 size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap mb-3">
+                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                  <input
+                    type="checkbox"
+                    checked={showComparaison}
+                    disabled={chartType === "bar"}
+                    onChange={(e) => setShowComparaison(e.target.checked)}
+                    className="rounded"
+                  />
+                  <History size={12} /> Comparer à la période précédente
+                </label>
+                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                  <input
+                    type="checkbox"
+                    checked={showConversion}
+                    disabled={chartType === "bar"}
+                    onChange={(e) => setShowConversion(e.target.checked)}
+                    className="rounded"
+                  />
+                  <Percent size={12} /> Taux de conversion
+                </label>
+              </div>
+              <MiniAreaChart
+                data={evolution}
+                height={190}
+                chartType={chartType}
+                exportTitle="evolution-candidatures"
+                series={[
+                  { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
+                  { key: "recrutements", color: "#059669", label: "Recrutements" },
+                ]}
+                compareValues={evolutionPrevValues}
+                secondarySeries={showConversion && chartType !== "bar" ? { key: "tauxConversion", color: "#ea580c", label: "Taux de conversion (%)" } : null}
+              />
+            </div>
+            <div className={`${tw.cardColors} rounded-2xl p-5`}>
+              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+                <GitBranch size={15} className={tw.textTeal} /> Pipeline de recrutement
+              </h2>
+              <div className="space-y-2.5">
+                {PIPELINE_STAGES.map((stage) => {
+                  const count = pipelineCounts[stage.key];
+                  const pct = (count / pipelineMax) * 100;
+                  const pctTotal = pipelineTotal > 0 ? Math.round((count / pipelineTotal) * 100) : 0;
+                  return (
+                    <div key={stage.key} className="flex items-center gap-3">
+                      <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{stage.label}</span>
+                      <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: stage.color }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{count}</span>
+                      <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{count > 0 ? `${pctTotal}%` : ""}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── CANDIDATS RECOMMANDÉS ──────────────────────────────────────────── */}
+      {candidatsRecommandesTous.length > 0 && (
+        <div className={`${tw.cardColors} rounded-2xl p-5 mb-5`}>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+              <Star size={15} className={tw.textTeal} /> Candidats recommandés
+              <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
+            </h2>
+            <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${tw.textMuted700}`}>
+              <input
+                type="checkbox"
+                checked={masquerDecides}
+                onChange={(e) => { setMasquerDecides(e.target.checked); setRecommandesLimit(6); }}
+                className="rounded"
+              />
+              Masquer retenus/refusés
+            </label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {candidatsRecommandes.map((cand) => {
+              const score = Math.round(parseFloat(cand.score_matching));
+              const pointsForts = cand.details_matching?.highlights?.points_forts || [];
+              const pointsVigilance = cand.details_matching?.highlights?.ecarts || [];
+              const DM = cand.details_matching || {};
+              const scores = DM.scores || DM;
+              const explics = DM.explications || {};
+              const explicationPrincipale = explics.specialite || explics.experience || Object.values(explics)[0];
+              const nomComplet = `${cand.candidat.first_name} ${cand.candidat.last_name}`
+                .toLowerCase()
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+              const isExpanded = expandedMatchId === cand.id;
+              const menuOuvert = statutMenuOuvertId === cand.id;
+              return (
+                <div key={cand.id} className={`p-4 rounded-xl border ${tw.borderBase}`}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                    className="flex items-start justify-between gap-2 mb-1.5 w-full text-left"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-9 h-9 rounded-lg ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}>
+                        {cand.candidat.photo_profil ? (
+                          <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Users size={14} className={tw.textMuted} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{nomComplet}</p>
+                        <p className={`text-xs truncate ${tw.textMuted700}`}>{cand.offreTitre}</p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 px-2 py-1 rounded-lg text-xs font-bold ${score >= 80 ? tw.scoreTextSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
+                      {score}%
+                    </span>
+                  </button>
+
+                  {pointsForts.length > 0 && (
+                    <div className="mt-2">
+                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.scoreTextSuccess}`}>Points forts</p>
+                      <ul className="space-y-0.5">
+                        {pointsForts.slice(0, 2).map((p) => (
+                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
+                            <CheckCircle size={11} className={`${tw.scoreTextSuccess} mt-0.5 shrink-0`} /> {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {pointsVigilance.length > 0 && (
+                    <div className="mt-2">
+                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.textAmber500}`}>Points de vigilance</p>
+                      <ul className="space-y-0.5">
+                        {pointsVigilance.slice(0, 2).map((p) => (
+                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
+                            <AlertTriangle size={11} className={`${tw.textAmber500} mt-0.5 shrink-0`} /> {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {explicationPrincipale && (
+                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} flex items-start gap-1.5`}>
+                      <HelpCircle size={12} className={`${tw.textMuted} mt-0.5 shrink-0`} />
+                      <p className={`text-xs italic ${tw.textMuted}`}>{explicationPrincipale}</p>
+                    </div>
+                  )}
+
+                  {DM.scores && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedMatchId(isExpanded ? null : cand.id)}
+                      className={`mt-2 flex items-center gap-1 text-xs font-semibold ${tw.textTeal}`}
+                    >
+                      <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                      {isExpanded ? "Masquer le détail du matching" : "Voir le détail du matching"}
+                    </button>
+                  )}
+
+                  {isExpanded && (
+                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} space-y-2.5`}>
+                      {CRITERES_MATCHING.map(({ key, label, max }) => {
+                        const val = scores[key] || 0;
+                        const pct = (val / max) * 100;
+                        const color = pct >= 100 ? tw.progressBarSuccess : pct >= 50 ? tw.progressBarWarning : tw.progressBarDanger;
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className={`text-xs font-semibold ${tw.textMuted700}`}>{label}</span>
+                              <span className={`text-xs font-bold ${tw.textStrong}`}>{val}/{max}</span>
+                            </div>
+                            <div className={`w-full ${tw.progressTrack}`}>
+                              <div className={`${color} duration-700`} style={{ width: `${pct}%` }} />
+                            </div>
+                            {explics[key] && <p className={`text-xs ${tw.textMuted700} mt-1`}>{explics[key]}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className={`mt-3 pt-3 border-t ${tw.borderSubtle} flex items-center justify-between gap-2`}>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => authService.peutFaire("UTILISATEUR") && setStatutMenuOuvertId(menuOuvert ? null : cand.id)}
+                        disabled={changingStatutId === cand.id}
+                        className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${tw.candidatureStatutStyles[cand.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"}`}
+                      >
+                        {STATUTS_LABELS[cand.statut] || cand.statut}
+                        {authService.peutFaire("UTILISATEUR") && <ChevronDown size={11} />}
+                      </button>
+                      {menuOuvert && authService.peutFaire("UTILISATEUR") && (
+                        <div className={`absolute left-0 top-full mt-1 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[170px]`}>
+                          {Object.entries(STATUTS_LABELS).map(([key, label]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => handleChangerStatutRecommande(cand.id, cand.offreId, key)}
+                              className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === cand.statut ? tw.surfaceMuted : ""}`}
+                            >
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${tw.candidatureStatutStyles[key]}`}>
+                                {label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                      className={`flex items-center gap-1 text-xs font-semibold ${tw.textMuted700} hover:${tw.textTeal}`}
+                    >
+                      Voir la candidature <ChevronRight size={12} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {hasMoreRecommandes && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setRecommandesLimit((n) => n + 6)}
+                className={`text-xs font-semibold px-4 py-2 rounded-lg border ${tw.borderBase} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
+              >
+                Voir plus de candidats ({candidatsRecommandesTous.length - recommandesLimit} restants)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── ONGLETS principaux ─────────────────────────────────────────────── */}
       <div className={`flex gap-1 border-b ${tw.borderBase} mb-5`}>
@@ -710,10 +1157,10 @@ const DashboardRecruteur = () => {
                   />
                 </div>
               </div>
-              {["description", "missions", "profil_recherche"].map((field) => (
+              {["description", "missions", "profil_recherche", "competences"].map((field) => (
                 <div key={field}>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
-                    {field === "profil_recherche" ? "Profil recherché" : field.charAt(0).toUpperCase() + field.slice(1)}
+                    {field === "profil_recherche" ? "Profil recherché" : field === "competences" ? "Compétences requises" : field.charAt(0).toUpperCase() + field.slice(1)}
                   </label>
                   <textarea
                     rows="3"

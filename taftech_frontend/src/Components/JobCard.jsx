@@ -3,6 +3,7 @@ import { jobsService } from "../Services/jobsService";
 import { authService } from "../Services/authService";
 import { Link } from "react-router-dom";
 import { reportError } from "../utils/errorReporter";
+import { jobUrl } from "../utils/slugify";
 import { tw } from "../theme";
 import {
   MapPin,
@@ -40,7 +41,7 @@ const JobCard = ({ job }) => {
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
-            <Link to={`/jobs/${job.id}`}>
+            <Link to={jobUrl(job)}>
               <h3 className="text-base sm:text-sm font-bold sm:font-semibold text-slate-900 hover:text-indigo-600 transition-colors line-clamp-2">
                 {job.titre}
               </h3>
@@ -87,7 +88,7 @@ const JobCard = ({ job }) => {
           </span>
           <div className="flex items-center gap-2">
             <Link
-              to={`/jobs/${job.id}`}
+              to={jobUrl(job)}
               className={`text-xs font-medium ${tw.textPrimary} hover:underline`}
             >
               Voir les détails

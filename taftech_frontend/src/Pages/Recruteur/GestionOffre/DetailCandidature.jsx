@@ -17,12 +17,14 @@ import {
   Sparkles,
   Copy,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
+import CandidatureTimeline from "../../../Components/CandidatureTimeline";
 import { tw } from "../../../theme";
 
 const CRITERES_RADAR = [
@@ -126,6 +128,7 @@ const RadarChartRecruteur = ({ scores }) => {
 const STATUTS_LABELS = {
   RECUE: "Candidature reçue",
   EN_COURS: "En cours d'étude",
+  PRESELECTION: "Présélectionné",
   ENTRETIEN: "Entretien programmé",
   RETENU: "Candidat retenu",
   REFUSE: "Candidat refusé",
@@ -249,6 +252,10 @@ export const DetailCandidature = ({
               </div>
             )}
           </div>
+        </div>
+
+        <div className={`mt-4 pt-4 border-t ${tw.borderSubtle}`}>
+          <CandidatureTimeline statut={selectedCandidature.statut} />
         </div>
 
         {selectedCandidature.statut === "ENTRETIEN" &&
@@ -626,11 +633,17 @@ export const DetailCandidature = ({
                   const explics = DM.explications || {};
                   return (
                     <div className="space-y-4">
+                      <div className="flex items-center gap-2 -mb-1">
+                        <HelpCircle size={14} className={tw.textTeal} />
+                        <span className={`text-xs font-bold ${tw.textStrong} uppercase tracking-wide`}>
+                          Pourquoi ce score ?
+                        </span>
+                      </div>
                       {[
                         { key: "specialite", label: "Spécialité", max: 25 },
                         { key: "diplome", label: "Diplôme", max: 20 },
                         { key: "experience", label: "Expérience", max: 20 },
-                        { key: "region", label: "Localisation", max: 20 },
+                        { key: "region", label: "Localisation & mobilité", max: 20 },
                         { key: "competences", label: "Compétences", max: 15 },
                       ].map(({ key, label, max }) => {
                         const val = scores[key] || 0;

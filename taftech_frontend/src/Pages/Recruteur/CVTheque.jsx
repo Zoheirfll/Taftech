@@ -56,6 +56,10 @@ const CVTheque = () => {
     wilayas: [],
     secteurs: [],
     diplomes: [],
+    mobilites: [],
+    disponibilites: [],
+    services_militaires: [],
+    experiences: [],
   });
 
   // Filtres
@@ -64,6 +68,15 @@ const CVTheque = () => {
   const [specialite, setSpecialite] = useState("");
   const [diplome, setDiplome] = useState("");
   const [experience, setExperience] = useState("");
+  const [mobilite, setMobilite] = useState("");
+  const [disponibilite, setDisponibilite] = useState("");
+  const [langues, setLangues] = useState("");
+  const [competencesFiltre, setCompetencesFiltre] = useState("");
+  const [permis, setPermis] = useState(false);
+  const [vehicule, setVehicule] = useState(false);
+  const [passeport, setPasseport] = useState(false);
+  const [serviceMilitaire, setServiceMilitaire] = useState("");
+  const [niveauExperience, setNiveauExperience] = useState("");
   const [avecPhoto, setAvecPhoto] = useState(false);
   const [avecCV, setAvecCV] = useState(false);
   const [inscritRecent, setInscritRecent] = useState(false);
@@ -156,6 +169,15 @@ const CVTheque = () => {
         specialite,
         diplome,
         experience,
+        mobilite,
+        disponibilite,
+        langues,
+        competences: competencesFiltre,
+        permis,
+        vehicule,
+        passeport,
+        service_militaire: serviceMilitaire,
+        niveau_experience: niveauExperience,
         avec_photo: avecPhoto,
         avec_cv: avecCV,
         inscrit_recent: inscritRecent,
@@ -188,6 +210,15 @@ const CVTheque = () => {
     specialite,
     diplome,
     experience,
+    mobilite,
+    disponibilite,
+    langues,
+    competencesFiltre,
+    permis,
+    vehicule,
+    passeport,
+    serviceMilitaire,
+    niveauExperience,
     avecPhoto,
     avecCV,
     inscritRecent,
@@ -211,6 +242,15 @@ const CVTheque = () => {
     setSpecialite("");
     setDiplome("");
     setExperience("");
+    setMobilite("");
+    setDisponibilite("");
+    setLangues("");
+    setCompetencesFiltre("");
+    setPermis(false);
+    setVehicule(false);
+    setPasseport(false);
+    setServiceMilitaire("");
+    setNiveauExperience("");
     setAvecPhoto(false);
     setAvecCV(false);
     setInscritRecent(false);
@@ -308,6 +348,15 @@ const CVTheque = () => {
     specialite,
     diplome,
     experience,
+    mobilite,
+    disponibilite,
+    langues,
+    competencesFiltre,
+    permis,
+    vehicule,
+    passeport,
+    serviceMilitaire,
+    niveauExperience,
     avecPhoto,
     avecCV,
     inscritRecent,
@@ -580,6 +629,70 @@ const CVTheque = () => {
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <Select
+              options={constants.mobilites || []}
+              placeholder="Mobilité"
+              isClearable
+              value={(constants.mobilites || []).find((m) => m.value === mobilite) || null}
+              onChange={(val) => {
+                setMobilite(val ? val.value : "");
+                setCurrentPage(1);
+              }}
+              styles={selectStylesTeal}
+            />
+            <Select
+              options={constants.disponibilites || []}
+              placeholder="Disponibilité"
+              isClearable
+              value={(constants.disponibilites || []).find((d) => d.value === disponibilite) || null}
+              onChange={(val) => {
+                setDisponibilite(val ? val.value : "");
+                setCurrentPage(1);
+              }}
+              styles={selectStylesTeal}
+            />
+            <input
+              type="text"
+              value={langues}
+              onChange={(e) => { setLangues(e.target.value); setCurrentPage(1); }}
+              placeholder="Langue (ex: Anglais)"
+              className={tw.input}
+            />
+            <input
+              type="text"
+              value={competencesFiltre}
+              onChange={(e) => { setCompetencesFiltre(e.target.value); setCurrentPage(1); }}
+              placeholder="Compétence (ex: React)"
+              className={tw.input}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <Select
+              options={constants.experiences || []}
+              placeholder="Niveau d'expérience déclaré"
+              isClearable
+              value={(constants.experiences || []).find((n) => n.value === niveauExperience) || null}
+              onChange={(val) => {
+                setNiveauExperience(val ? val.value : "");
+                setCurrentPage(1);
+              }}
+              styles={selectStylesTeal}
+            />
+            <Select
+              options={constants.services_militaires || []}
+              placeholder="Service militaire"
+              isClearable
+              value={(constants.services_militaires || []).find((s) => s.value === serviceMilitaire) || null}
+              onChange={(val) => {
+                setServiceMilitaire(val ? val.value : "");
+                setCurrentPage(1);
+              }}
+              styles={selectStylesTeal}
+            />
+          </div>
+
           {/* Filtres rapides en checkboxes */}
           <div className={`flex flex-wrap gap-2 items-center pt-3 border-t ${tw.borderSubtle}`}>
             <span className={`text-xs font-medium mr-2 ${tw.textMuted}`}>
@@ -618,6 +731,39 @@ const CVTheque = () => {
               {inscritRecent && <CheckCircle2 size={14} />}
               <Sparkles size={12} />
               Inscrits récemment
+            </button>
+            <button
+              onClick={() => setPermis(!permis)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                permis
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
+              }`}
+            >
+              {permis && <CheckCircle2 size={14} />}
+              Permis de conduire
+            </button>
+            <button
+              onClick={() => setVehicule(!vehicule)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                vehicule
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
+              }`}
+            >
+              {vehicule && <CheckCircle2 size={14} />}
+              Véhicule personnel
+            </button>
+            <button
+              onClick={() => setPasseport(!passeport)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                passeport
+                  ? tw.chipTealActiveAlt
+                  : tw.chipNeutralInactive
+              }`}
+            >
+              {passeport && <CheckCircle2 size={14} />}
+              Passeport valide
             </button>
 
             {filtresActifs > 0 && (

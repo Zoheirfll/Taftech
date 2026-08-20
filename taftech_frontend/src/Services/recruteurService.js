@@ -155,7 +155,7 @@ export const recruteurService = {
   // Profil entreprise
   updateProfilEntreprise: async (data) => {
     try {
-      const hasFile = data.logo instanceof File;
+      const hasFile = data.logo instanceof File || data.banniere instanceof File;
       let payload = data;
       let config = {};
       if (hasFile) {
@@ -175,6 +175,31 @@ export const recruteurService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_UPDATE_PROFIL_ENTREPRISE_API", err);
+      throw err;
+    }
+  },
+
+  ajouterPhotoEntreprise: async (file, legende = "") => {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      if (legende) formData.append("legende", legende);
+      const response = await api.post("jobs/entreprise/photos/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_AJOUTER_PHOTO_ENTREPRISE_API", err);
+      throw err;
+    }
+  },
+
+  supprimerPhotoEntreprise: async (photoId) => {
+    try {
+      const response = await api.delete(`jobs/entreprise/photos/${photoId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_PHOTO_ENTREPRISE_API", err);
       throw err;
     }
   },
@@ -218,6 +243,15 @@ export const recruteurService = {
       specialite: filters.specialite || "",
       diplome: filters.diplome || "",
       experience: filters.experience || "",
+      mobilite: filters.mobilite || "",
+      disponibilite: filters.disponibilite || "",
+      langues: filters.langues || "",
+      competences: filters.competences || "",
+      permis: filters.permis ? "true" : "",
+      vehicule: filters.vehicule ? "true" : "",
+      passeport: filters.passeport ? "true" : "",
+      service_militaire: filters.service_militaire || "",
+      niveau_experience: filters.niveau_experience || "",
       avec_photo: filters.avec_photo ? "true" : "",
       avec_cv: filters.avec_cv ? "true" : "",
       inscrit_recent: filters.inscrit_recent ? "true" : "",

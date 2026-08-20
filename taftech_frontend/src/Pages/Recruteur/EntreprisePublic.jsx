@@ -5,6 +5,8 @@ import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import { selectStyles } from "../../theme";
 import { reportError } from "../../utils/errorReporter";
+import Seo from "../../Components/Seo";
+import { jobUrl } from "../../utils/slugify";
 import {
   MapPin,
   Briefcase,
@@ -139,9 +141,24 @@ const EntreprisePublic = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
+      <Seo
+        title={entreprise.nom_entreprise}
+        description={
+          entreprise.description
+            ? entreprise.description.replace(/\s+/g, " ").trim()
+            : `${entreprise.nom_entreprise} recrute sur TafTech — découvrez ses offres d'emploi en Algérie.`
+        }
+        image={entreprise.banniere_url ? getMediaUrl(entreprise.banniere_url) : getMediaUrl(entreprise.logo_url)}
+      />
 
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
+        {/* Bannière */}
+        {entreprise.banniere_url && (
+          <div className="h-32 md:h-48 w-full overflow-hidden">
+            <img src={getMediaUrl(entreprise.banniere_url)} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
         {/* Bandeau indigo : logo + nom + bouton */}
         <div className="bg-linear-to-br from-indigo-600 to-indigo-900 px-6 md:px-8 py-6">
           <div className="flex items-center gap-5">
@@ -222,6 +239,34 @@ const EntreprisePublic = () => {
             </div>
           )}
 
+          {/* Culture d'entreprise */}
+          {entreprise.culture_entreprise && (
+            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Culture d'entreprise</p>
+              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                {entreprise.culture_entreprise}
+              </p>
+            </div>
+          )}
+
+          {/* Galerie photo */}
+          {entreprise.photos?.length > 0 && (
+            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Photos</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {entreprise.photos.map((p) => (
+                  <img
+                    key={p.id}
+                    src={getMediaUrl(p.image)}
+                    alt={p.legende || ""}
+                    title={p.legende || ""}
+                    className="w-full h-24 object-cover rounded-lg border border-slate-200"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Localisation */}
           {(entreprise.adresse_complete || wilayaVille) && (() => {
             const lieuRecherche = entreprise.adresse_complete || [communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ");
@@ -257,7 +302,7 @@ const EntreprisePublic = () => {
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-lg font-bold text-slate-900">Offres disponibles</h2>
           <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-full">
-            {entreprise.offres_actives?.length || 0}
+            {entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0}
           </span>
         </div>
 
@@ -270,7 +315,7 @@ const EntreprisePublic = () => {
               >
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/jobs/${offre.id}`}
+                    to={jobUrl(offre, entreprise.slug)}
                     className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
                   >
                     {offre.titre}
@@ -295,7 +340,7 @@ const EntreprisePublic = () => {
                   </div>
                 </div>
                 <Link
-                  to={`/jobs/${offre.id}`}
+                  to={jobUrl(offre, entreprise.slug)}
                   className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
                 >
                   Voir l'offre →

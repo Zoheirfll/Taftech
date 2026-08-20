@@ -35,3 +35,8 @@ from .divers import (
 )
 from .entreprise import EntrepriseDashboardDetailSerializer
 from .dashboard import OffreDashboardDTO
+from .premium import PremiumPlanSerializer, PremiumAvantageSerializer, FaqItemSerializer, CompetenceReferentielSerializer
+from .articles import ArticleCategorieSerializer, ArticleListSerializer, ArticleDetailSerializer
+from .banners import SiteAnnonceSerializer, BanniereAccueilSerializer
+from .pages import PageStatiqueSerializer
+from .ai_config import AIConfigSerializer

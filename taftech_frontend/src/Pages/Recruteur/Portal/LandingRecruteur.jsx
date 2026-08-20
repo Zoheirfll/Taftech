@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp,
 } from "lucide-react";
 import api from "../../../api/axiosConfig";
+import { jobsService } from "../../../Services/jobsService";
 import { tw } from "../../../theme";
 
 const FEATURES = [
@@ -57,39 +58,14 @@ const AVANTAGES = [
   "Conforme ANPDP / Loi 18-07",
 ];
 
-const FAQ = [
-  {
-    q: "L'inscription est-elle gratuite ?",
-    r: "Oui, la création de compte et la publication d'offres sont gratuites au lancement. Certaines fonctionnalités avancées (CVthèque, analyse IA) nécessitent un abonnement Premium à partir de 2 000 DA/mois.",
-  },
-  {
-    q: "Combien de temps faut-il pour valider mon entreprise ?",
-    r: "La validation de votre registre de commerce prend généralement moins de 24h ouvrables. Vous recevez un email de confirmation dès que votre compte est approuvé.",
-  },
-  {
-    q: "Comment fonctionne le score de matching IA ?",
-    r: "Chaque candidature reçoit un score de 0 à 100% basé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts) et compétences (15pts). L'algorithme utilise la correspondance sémantique et les synonymes métier.",
-  },
-  {
-    q: "Mes données et celles des candidats sont-elles sécurisées ?",
-    r: "TAFTECH est 100% conforme à la loi algérienne 18-07 sur la protection des données personnelles. Les données sont stockées sur des serveurs localisés en Algérie. Aucune donnée n'est revendue à des tiers.",
-  },
-  {
-    q: "Puis-je inviter des collaborateurs sur mon espace recruteur ?",
-    r: "Oui, avec l'abonnement Premium vous pouvez inviter des membres avec des rôles distincts (Admin, Utilisateur, Invité) pour gérer les offres et candidatures en équipe.",
-  },
-  {
-    q: "Que se passe-t-il si une offre est rejetée par la modération ?",
-    r: "Vous recevez une notification avec le motif de rejet. Vous pouvez corriger l'offre directement depuis votre tableau de bord et la resoumettre en un clic.",
-  },
-];
-
 const LandingRecruteur = () => {
   const [stats, setStats] = useState(null);
   const [faqOpen, setFaqOpen] = useState(null);
+  const [faqItems, setFaqItems] = useState([]);
 
   useEffect(() => {
     api.get("jobs/stats/public/").then((r) => setStats(r.data)).catch(() => {});
+    jobsService.getFaq("RECRUTEUR").then(setFaqItems).catch(() => {});
   }, []);
 
   // Fix 1 — valeur uniforme pendant chargement
@@ -296,20 +272,20 @@ const LandingRecruteur = () => {
             <p className="text-slate-700 text-base">Tout ce que vous devez savoir avant de vous lancer.</p>
           </div>
           <div className="space-y-3">
-            {FAQ.map((item, i) => (
-              <div key={i} className="border border-slate-200 rounded-2xl overflow-hidden">
+            {faqItems.map((item) => (
+              <div key={item.id} className="border border-slate-200 rounded-2xl overflow-hidden">
                 <button
-                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                  onClick={() => setFaqOpen(faqOpen === item.id ? null : item.id)}
                   className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
                 >
-                  <span className="text-sm font-semibold text-slate-800 pr-4">{item.q}</span>
-                  {faqOpen === i
+                  <span className="text-sm font-semibold text-slate-800 pr-4">{item.question}</span>
+                  {faqOpen === item.id
                     ? <ChevronUp size={18} className="text-teal-600 shrink-0" />
                     : <ChevronDown size={18} className="text-slate-600 shrink-0" />}
                 </button>
-                {faqOpen === i && (
+                {faqOpen === item.id && (
                   <div className="px-6 pb-5 text-sm text-slate-700 leading-relaxed border-t border-slate-100 pt-4">
-                    {item.r}
+                    {item.reponse}
                   </div>
                 )}
               </div>

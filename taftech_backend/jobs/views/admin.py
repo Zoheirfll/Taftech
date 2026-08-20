@@ -14,7 +14,7 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine
+    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, PremiumPlan
 )
 import django.utils.timezone as timezone
 from ..serializers import (
@@ -513,6 +513,7 @@ class AdminDemandesPremiumAPIView(APIView):
 
     def get(self, request):
         demandes = DemandeActivationPremium.objects.select_related('entreprise__user').order_by('-date_demande')
+        prix_par_mois = dict(PremiumPlan.objects.values_list('nb_mois', 'prix_da'))
         data = [
             {
                 'id': d.id,
@@ -522,7 +523,7 @@ class AdminDemandesPremiumAPIView(APIView):
                 'telephone': d.entreprise.user.telephone,
                 'moyen_paiement': d.moyen_paiement,
                 'nb_mois': d.nb_mois,
-                'montant': d.nb_mois * 2000,
+                'montant': prix_par_mois.get(d.nb_mois, d.nb_mois * 2000),
                 'date_demande': d.date_demande.strftime('%d/%m/%Y %H:%M'),
                 'est_traitee': d.est_traitee,
                 'date_traitement': d.date_traitement.strftime('%d/%m/%Y %H:%M') if d.date_traitement else None,
@@ -539,7 +540,7 @@ class AdminDemandesPremiumAPIView(APIView):
         except DemandeActivationPremium.DoesNotExist:
             return Response({'error': 'Demande introuvable.'}, status=404)
         try:
-            nb_mois = max(1, min(int(request.data.get('nb_mois', demande.nb_mois)), 12))
+            nb_mois = max(1, min(int(request.data.get('nb_mois', demande.nb_mois)), 60))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
         entreprise = demande.entreprise

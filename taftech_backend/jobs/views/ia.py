@@ -12,12 +12,12 @@ from django.db.models import Q, F
 import os
 import random
 import tempfile
-import requests as req
 from ..models import OffreEmploi, ProfilCandidat, Candidature, MetierReferentiel
 from ..serializers import OffreEmploiSerializer, MetierReferentielSerializer
 from ..matcher import calculer_score_matching
 from ..cv_parser import parse_cv, extract_specialite
 from .equipe import get_entreprise_for_user
+from ..throttles import PublicReadThrottle
 
 User = get_user_model()
 
@@ -62,6 +62,9 @@ class ParserCVAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
+        from ..models import AIConfig
+        if not AIConfig.get_solo().parser_cv_actif:
+            return Response({"error": "Le parser CV est temporairement désactivé par l'administrateur."}, status=503)
         cv_file = request.FILES.get('cv')
         if not cv_file:
             return Response({"error": "Aucun fichier reçu."}, status=status.HTTP_400_BAD_REQUEST)
@@ -98,6 +101,7 @@ class ParserCVAPIView(APIView):
 
 class MetierReferentielAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
 
     def get(self, request):
         metiers = MetierReferentiel.objects.filter(est_actif=True)
@@ -214,23 +218,13 @@ class SuggestionsCarriereAPIView(APIView):
         })
 
 
-def _appel_groq(messages, max_tokens=500, temperature=0.7):
-    groq_key = os.environ.get('GROQ_API_KEY', '')
-    if not groq_key:
-        raise Exception("GROQ_API_KEY non configurée.")
-    response = req.post(
-        'https://api.groq.com/openai/v1/chat/completions',
-        headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
-        json={
-            'model': 'llama-3.1-8b-instant',
-            'messages': messages,
-            'max_tokens': max_tokens,
-            'temperature': temperature,
-        },
-        timeout=15
-    )
-    data = response.json()
-    texte = data['choices'][0]['message']['content']
+def _appel_groq(messages, max_tokens=500, temperature=None):
+    """Nom conservé pour compatibilité (nombreux appelants) même si l'appel réel passe par
+    jobs.ai_engine (Groq ou Ollama selon AIConfig.provider), pas forcément Groq à proprement
+    parler. Strip le markdown (**/##/*) — ne jamais utiliser pour un appel attendant du JSON en
+    sortie, ça corromprait le format (voir GenererOffreIAAPIView qui appelle call_ai directement)."""
+    from ..ai_engine import call_ai
+    texte = call_ai(messages, max_tokens=max_tokens, temperature=temperature)
     return texte.replace('**', '').replace('##', '').replace('*', '')
 
 
@@ -241,6 +235,10 @@ class AnalyseCarriereGroqAPIView(APIView):
     def get(self, request):
         if request.user.role != 'CANDIDAT':
             return Response({'error': 'Accès refusé.'}, status=403)
+        from ..models import AIConfig
+        ai_config = AIConfig.get_solo()
+        if not ai_config.analyse_carriere_actif:
+            return Response({'error': "L'analyse carrière IA est temporairement désactivée par l'administrateur."}, status=503)
         try:
             profil = request.user.profil_candidat
         except Exception:
@@ -274,15 +272,26 @@ Secteur souhaité : {_libelle_domaine(profil.secteur_souhaite) or 'Non renseign�
                     'role': 'system',
                     'content': (
                         'Tu es un conseiller carrière expert du marché algérien. '
-                        'Réponds UNIQUEMENT en français avec EXACTEMENT ces 3 sections : '
-                        '\n###ÉVOLUTION POSSIBLE###\n'
-                        '\n###COMPÉTENCES À ACQUÉRIR###\n'
-                        '\n###CONSEIL PERSONNALISÉ###\n'
-                        'Pas de markdown, texte simple.'
+                        'Analyse ce profil de façon STRICTEMENT PERSONNALISÉE : base-toi précisément sur son titre, '
+                        'ses compétences, ses expériences et ses formations réels. '
+                        'Interdiction absolue de conseils génériques valables pour n\'importe quel profil — '
+                        'chaque section doit citer des éléments concrets tirés du profil analysé. '
+                        'Réponds UNIQUEMENT en français avec EXACTEMENT ces 5 sections : '
+                        '\n###MÉTIERS POSSIBLES###\n'
+                        '(3 à 5 métiers précis auxquels CE profil peut prétendre dès maintenant, cohérents avec son titre/ses compétences réels)'
+                        '\n###POINTS FORTS###\n'
+                        '(atouts concrets de ce profil, en t\'appuyant sur ses expériences, diplômes et compétences listés)'
+                        '\n###COMPÉTENCES MANQUANTES###\n'
+                        '(compétences précises qui lui manquent pour progresser dans SON métier, pas des généralités)'
+                        '\n###FORMATIONS RECOMMANDÉES###\n'
+                        '(formations ou certifications concrètes et reconnues, en lien direct avec les compétences manquantes identifiées)'
+                        '\n###ÉVOLUTION PROFESSIONNELLE###\n'
+                        '(2 à 3 pistes d\'évolution réalistes à moyen terme dans SON secteur, à partir de SA situation actuelle)'
+                        '\nPas de markdown, texte simple, phrases courtes et concrètes, jamais de généralités.'
                     )
                 },
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
-            ], max_tokens=800, temperature=0.7)
+            ], max_tokens=ai_config.analyse_carriere_max_tokens)
             return Response({'analyse': analyse})
         except Exception as e:
             logger.error("Erreur Groq carrière : %s", e)
@@ -296,6 +305,10 @@ class AnalyseGroqRecruteurAPIView(APIView):
     def post(self, request, candidature_id):
         if request.user.role != 'RECRUTEUR':
             return Response({'error': 'Accès refusé.'}, status=403)
+        from ..models import AIConfig
+        ai_config = AIConfig.get_solo()
+        if not ai_config.analyse_recruteur_actif:
+            return Response({'error': "L'analyse IA recruteur est temporairement désactivée par l'administrateur."}, status=503)
         try:
             candidature = Candidature.objects.get(id=candidature_id)
         except Candidature.DoesNotExist:
@@ -363,7 +376,7 @@ Pas de markdown, maximum 150 mots."""
         try:
             analyse = _appel_groq(
                 [{'role': 'user', 'content': prompt}],
-                max_tokens=400,
+                max_tokens=ai_config.analyse_recruteur_max_tokens,
                 temperature=0.5
             )
             return Response({'analyse': analyse})
@@ -377,6 +390,10 @@ class GenererOffreIAAPIView(APIView):
     throttle_classes = [GroqThrottle]
 
     def post(self, request):
+        from ..models import AIConfig
+        ai_config = AIConfig.get_solo()
+        if not ai_config.generation_offre_actif:
+            return Response({'error': "La génération d'offre IA est temporairement désactivée par l'administrateur."}, status=503)
         # Vérification premium
         from .equipe import get_entreprise_for_user
         entreprise = get_entreprise_for_user(request.user)
@@ -390,15 +407,21 @@ class GenererOffreIAAPIView(APIView):
         experience = request.data.get('experience_requise', '').strip()
         contrat = request.data.get('type_contrat', '').strip()
 
-        if not titre or not specialite:
-            return Response({'error': 'Titre et spécialité requis.'}, status=400)
+        if not titre:
+            return Response({'error': 'Le titre du poste est requis.'}, status=400)
 
         # `specialite` est un code Domaine ANEM (ex: "L18"), pas un texte lisible —
         # on le traduit en libellé avant de l'envoyer à l'IA (sinon le prompt contient
-        # littéralement "Spécialité : L18", incompréhensible pour Groq).
+        # littéralement "Spécialité : L18", incompréhensible pour Groq). Si le recruteur
+        # n'a saisi que le titre du poste (flux "génération rapide"), on devine la
+        # spécialité via le référentiel métiers — même logique que le parser CV candidat.
         from ..models import Domaine
-        domaine_obj = Domaine.objects.filter(code=specialite).first()
-        specialite_libelle = domaine_obj.libelle if domaine_obj else specialite
+        from ..referentiel_utils import resoudre_domaine_depuis_texte
+        specialite_resolue = specialite
+        if not specialite_resolue:
+            specialite_resolue = resoudre_domaine_depuis_texte(titre) or ''
+        domaine_obj = Domaine.objects.filter(code=specialite_resolue).first() if specialite_resolue else None
+        specialite_libelle = domaine_obj.libelle if domaine_obj else (specialite_resolue or 'Non précisée')
 
         prompt = f"""Tu es un expert RH algérien. Génère le contenu d'une offre d'emploi professionnelle en français pour le marché algérien.
 
@@ -409,37 +432,67 @@ Expérience : {experience or 'Non précisée'}
 Type de contrat : {contrat or 'Non précisé'}
 Wilaya : {wilaya or 'Non précisée'}
 
+Pour les questions d'entretien, choisis le type le plus adapté à chaque question parmi : COURT (réponse texte courte), LONG (réponse texte développée), NUMERIQUE (un nombre, ex: années d'expérience), CHOIX_UNIQUE (QCM une seule bonne réponse), CHOIX_MULTIPLE (QCM plusieurs réponses possibles). Pour CHOIX_UNIQUE/CHOIX_MULTIPLE, fournis 3 à 5 options de réponse plausibles et réalistes pour ce poste précis (pas des options génériques "Oui/Non" sauf si vraiment pertinent).
+
 Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
 {{
   "description": "2-3 phrases présentant le contexte de ce poste et de l'entreprise.",
   "missions": "Liste de 4 à 6 missions concrètes, une par ligne, commençant par un tiret.",
-  "profil_recherche": "Liste de 4 à 5 exigences du profil, une par ligne, commençant par un tiret."
-}}"""
+  "profil_recherche": "Liste de 4 à 5 exigences du profil (formation, savoir-être), une par ligne, commençant par un tiret.",
+  "competences": "Liste de 5 à 8 compétences techniques/outils concrets attendus pour ce poste précis, une par ligne, commençant par un tiret.",
+  "questions_entretien": [
+    {{"texte": "Texte de la question", "type_question": "COURT|LONG|NUMERIQUE|CHOIX_UNIQUE|CHOIX_MULTIPLE", "choix": ["option 1", "option 2", "..."] }}
+  ]
+}}
+Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre)."""
 
         try:
             import json as _json
-            groq_key = os.environ.get('GROQ_API_KEY', '')
-            if not groq_key:
-                return Response({'error': 'GROQ_API_KEY non configurée.'}, status=503)
-
-            response = req.post(
-                'https://api.groq.com/openai/v1/chat/completions',
-                headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
-                json={
-                    'model': 'llama-3.1-8b-instant',
-                    'messages': [{'role': 'user', 'content': prompt}],
-                    'max_tokens': 800,
-                    'temperature': 0.6,
-                    'response_format': {'type': 'json_object'},
-                },
-                timeout=20,
+            from ..ai_engine import call_ai
+            # Appel direct à call_ai (pas _appel_groq) : ce dernier strip les **/##/* pour un
+            # rendu markdown propre, ce qui corromprait le JSON strict attendu ici.
+            raw = call_ai(
+                [{'role': 'user', 'content': prompt}],
+                max_tokens=ai_config.generation_offre_max_tokens,
+                temperature=0.6,
+                response_format={'type': 'json_object'},
             )
-            raw = response.json()['choices'][0]['message']['content']
             data = _json.loads(raw)
+            questions_brutes = data.get('questions_entretien', [])
+            if not isinstance(questions_brutes, list):
+                questions_brutes = []
+
+            TYPES_VALIDES = {'COURT', 'LONG', 'NUMERIQUE', 'CHOIX_UNIQUE', 'CHOIX_MULTIPLE'}
+            questions = []
+            for q in questions_brutes:
+                if isinstance(q, str):
+                    q = {'texte': q}
+                if not isinstance(q, dict):
+                    continue
+                texte = str(q.get('texte', '')).strip()
+                if not texte:
+                    continue
+                type_question = str(q.get('type_question', 'COURT')).strip().upper()
+                if type_question not in TYPES_VALIDES:
+                    type_question = 'COURT'
+                choix = q.get('choix', [])
+                choix = [str(c).strip() for c in choix if str(c).strip()] if isinstance(choix, list) else []
+                choix = list(dict.fromkeys(choix))[:6]
+                # Un QCM sans au moins 2 options réelles retombe sur une question texte simple.
+                if type_question in ('CHOIX_UNIQUE', 'CHOIX_MULTIPLE') and len(choix) < 2:
+                    type_question = 'COURT'
+                    choix = []
+                if type_question not in ('CHOIX_UNIQUE', 'CHOIX_MULTIPLE'):
+                    choix = []
+                questions.append({'texte': texte, 'type_question': type_question, 'choix': choix})
+
             return Response({
                 'description': data.get('description', ''),
                 'missions': data.get('missions', ''),
                 'profil_recherche': data.get('profil_recherche', ''),
+                'competences': data.get('competences', ''),
+                'questions_entretien': questions[:6],
+                'specialite_resolue': specialite_resolue,
             })
         except Exception as e:
             logger.error("Erreur GenererOffreIA : %s", e)

@@ -19,7 +19,7 @@ from .views import (
     CandidatFichierPriveAPIView,
 
     # Recruteur
-    DashboardRecruteurAPIView, UpdateProfilEntrepriseAPIView,
+    DashboardRecruteurAPIView, UpdateProfilEntrepriseAPIView, EntreprisePhotosAPIView,
     ParametresRecruteurAPIView, CVThequeView, ToggleFavoriCVAPIView,
     EnvoyerCandidatureSpontaneeAPIView, ListeCandidaturesSpontaneesAPIView,
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
@@ -50,12 +50,35 @@ from .views import (
 
     # Bulletin PDF
     GenererBulletinPDFAPIView,
+
+    # Premium (plans/avantages)
+    PremiumPlansPublicAPIView, PremiumAvantagesPublicAPIView,
+    PremiumPlansAdminAPIView, PremiumAvantagesAdminAPIView,
+
+    # FAQ
+    FaqPublicAPIView, FaqAdminAPIView,
+
+    # Compétences
+    CompetencesAutocompleteAPIView, CompetencesAdminAPIView,
+
+    # Articles / Blog
+    ArticleListPublicAPIView, ArticleDetailPublicAPIView, ArticleCategoriesPublicAPIView,
+    ArticleAdminAPIView, ArticleAdminDetailAPIView, ArticleCategoriesAdminAPIView,
+
+    # Bannières
+    SiteAnnoncePublicAPIView, BanniereAccueilPublicAPIView,
+    SiteAnnonceAdminAPIView, BanniereAccueilAdminAPIView,
+
+    # Pages statiques
+    PageStatiquePublicAPIView, PageStatiqueAdminAPIView,
+
+    # Config IA
+    AIConfigAdminAPIView,
 )
 
 urlpatterns = [
     # Offres
     path('', JobListAPIView.as_view(), name='job-list'),
-    path('<int:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
     path('creer/', JobCreateAPIView.as_view(), name='creer-offre'),
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
     path('nomenclature/', NomenclatureAPIView.as_view(), name='api-nomenclature'),
@@ -93,6 +116,8 @@ urlpatterns = [
     # Recruteur
     path('dashboard/', DashboardRecruteurAPIView.as_view(), name='dashboard-recruteur'),
     path('entreprise/update/', UpdateProfilEntrepriseAPIView.as_view(), name='update-entreprise'),
+    path('entreprise/photos/', EntreprisePhotosAPIView.as_view(), name='entreprise-photos'),
+    path('entreprise/photos/<int:photo_id>/', EntreprisePhotosAPIView.as_view(), name='entreprise-photo-delete'),
     path('parametres/recruteur/', ParametresRecruteurAPIView.as_view(), name='parametres-recruteur'),
     path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque'),
     path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-favori'),
@@ -145,6 +170,35 @@ urlpatterns = [
     path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view(), name='admin-metier-detail'),
     path('admin/comptes-admins/', AdminCompteAdminsAPIView.as_view(), name='admin-comptes-admins'),
     path('admin/comptes-admins/<int:admin_id>/', AdminCompteAdminsAPIView.as_view(), name='admin-compte-admin-detail'),
+    path('admin/premium/plans/', PremiumPlansAdminAPIView.as_view(), name='admin-premium-plans'),
+    path('admin/premium/plans/<int:pk>/', PremiumPlansAdminAPIView.as_view(), name='admin-premium-plan-detail'),
+    path('admin/premium/avantages/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantages'),
+    path('admin/premium/avantages/<int:pk>/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantage-detail'),
+    path('premium/plans/', PremiumPlansPublicAPIView.as_view(), name='premium-plans-public'),
+    path('premium/avantages/', PremiumAvantagesPublicAPIView.as_view(), name='premium-avantages-public'),
+    path('admin/faq/', FaqAdminAPIView.as_view(), name='admin-faq'),
+    path('admin/faq/<int:pk>/', FaqAdminAPIView.as_view(), name='admin-faq-detail'),
+    path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),
+    path('admin/competences/', CompetencesAdminAPIView.as_view(), name='admin-competences'),
+    path('admin/competences/<int:pk>/', CompetencesAdminAPIView.as_view(), name='admin-competence-detail'),
+    path('competences/', CompetencesAutocompleteAPIView.as_view(), name='competences-autocomplete'),
+    path('admin/articles/', ArticleAdminAPIView.as_view(), name='admin-articles'),
+    path('admin/articles/<int:pk>/', ArticleAdminDetailAPIView.as_view(), name='admin-article-detail'),
+    path('admin/articles-categories/', ArticleCategoriesAdminAPIView.as_view(), name='admin-articles-categories'),
+    path('admin/articles-categories/<int:pk>/', ArticleCategoriesAdminAPIView.as_view(), name='admin-articles-category-detail'),
+    path('articles/', ArticleListPublicAPIView.as_view(), name='articles-public'),
+    path('articles/categories/', ArticleCategoriesPublicAPIView.as_view(), name='articles-categories-public'),
+    path('articles/<slug:slug>/', ArticleDetailPublicAPIView.as_view(), name='article-detail-public'),
+    path('admin/site-annonce/', SiteAnnonceAdminAPIView.as_view(), name='admin-site-annonce'),
+    path('admin/site-annonce/<int:pk>/', SiteAnnonceAdminAPIView.as_view(), name='admin-site-annonce-detail'),
+    path('admin/bannieres-accueil/', BanniereAccueilAdminAPIView.as_view(), name='admin-bannieres-accueil'),
+    path('admin/bannieres-accueil/<int:pk>/', BanniereAccueilAdminAPIView.as_view(), name='admin-banniere-accueil-detail'),
+    path('site-annonce/', SiteAnnoncePublicAPIView.as_view(), name='site-annonce-public'),
+    path('bannieres-accueil/', BanniereAccueilPublicAPIView.as_view(), name='bannieres-accueil-public'),
+    path('admin/pages/', PageStatiqueAdminAPIView.as_view(), name='admin-pages'),
+    path('admin/pages/<int:pk>/', PageStatiqueAdminAPIView.as_view(), name='admin-page-detail'),
+    path('pages/<slug:slug>/', PageStatiquePublicAPIView.as_view(), name='page-statique-public'),
+    path('admin/ai-config/', AIConfigAdminAPIView.as_view(), name='admin-ai-config'),
 
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),
@@ -152,4 +206,10 @@ urlpatterns = [
     path('metiers/', MetierReferentielAPIView.as_view(), name='metiers'),
     path('suggestions-carriere/', SuggestionsCarriereAPIView.as_view(), name='suggestions-carriere'),
     path('analyse-carriere/', AnalyseCarriereGroqAPIView.as_view(), name='analyse-carriere'),
+
+    # ⚠️ Doit rester en DERNIER : capture tout segment unique restant (id numérique ou
+    # code_public SEO). Placé avant, il intercepterait à tort les routes littérales
+    # ci-dessus (constants/, entreprises/, metiers/, etc.) puisque <str:...> matche
+    # n'importe quel segment non-slash, contrairement à l'ancien <int:...>.
+    path('<str:offre_id>/', JobDetailAPIView.as_view(), name='job-detail'),
 ]

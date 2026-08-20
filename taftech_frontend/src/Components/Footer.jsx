@@ -100,6 +100,11 @@ const Footer = () => {
                   Qui sommes-nous ?
                 </Link>
               </li>
+              <li>
+                <Link to="/blog" target="_blank" rel="noopener noreferrer" className={tw.footerLinkAmber}>
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

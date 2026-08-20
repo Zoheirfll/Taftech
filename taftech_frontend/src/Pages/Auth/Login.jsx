@@ -29,7 +29,7 @@ const Login = () => {
     try {
       await authService.login(credentials.username, credentials.password, "candidat", rememberMe);
       toast.success("Connexion réussie !", { id: toastId });
-      navigate(next || "/");
+      navigate(next || "/dashboard-candidat");
       window.location.reload();
     } catch (err) {
       const data = err.response?.data;
@@ -52,7 +52,7 @@ const Login = () => {
     try {
       await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "login");
       toast.success("Connexion réussie !", { id: toastId });
-      navigate(next || "/");
+      navigate(next || "/dashboard-candidat");
       window.location.reload();
     } catch (err) {
       const msg = err.response?.data?.error || "Échec de la connexion Google.";

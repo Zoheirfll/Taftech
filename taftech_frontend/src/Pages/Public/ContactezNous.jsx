@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Mail, Phone, MapPin, Clock, ChevronDown } from "lucide-react";
 import { authService } from "../../Services/authService";
+import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 
@@ -14,30 +15,19 @@ const MOTIFS = [
   "Autre",
 ];
 
-const FAQ = [
-  {
-    q: "Comment postuler à une offre d'emploi ?",
-    a: "Créez un profil candidat gratuit, complétez vos expériences et votre CV, puis postulez directement depuis la page de l'offre — en un clic si votre profil est complet.",
-  },
-  {
-    q: "Vos services sont-ils gratuits pour les candidats ?",
-    a: "Oui, l'inscription, la recherche d'offres, le matching IA et la candidature sont entièrement gratuits pour les candidats.",
-  },
-  {
-    q: "Comment fonctionne le matching IA ?",
-    a: "Notre algorithme compare votre profil (spécialité, diplôme, expérience, région, compétences) à chaque offre et calcule un score de compatibilité en temps réel.",
-  },
-  {
-    q: "Comment une entreprise peut-elle publier une offre ?",
-    a: "Inscrivez votre entreprise, attendez la validation par notre équipe, puis publiez vos offres depuis votre tableau de bord recruteur.",
-  },
-];
-
 const ContactezNous = () => {
   const [form, setForm] = useState({ nom: "", email: "", entreprise: "", motif: "", objet: "", message: "" });
   const [accepte, setAccepte] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [faqItems, setFaqItems] = useState([]);
+
+  useEffect(() => {
+    jobsService
+      .getFaq("GENERAL")
+      .then(setFaqItems)
+      .catch((err) => reportError("ECHEC_GET_FAQ_CONTACT", err));
+  }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -150,18 +140,18 @@ const ContactezNous = () => {
           <div className={`${tw.cardColors} rounded-2xl p-5`}>
             <p className={`text-sm font-bold ${tw.textStrong} mb-3`}>Questions fréquentes</p>
             <div className="space-y-1">
-              {FAQ.map((f, i) => (
-                <div key={f.q} className={`border-b ${tw.borderSubtle} last:border-0 py-2.5`}>
+              {faqItems.map((f) => (
+                <div key={f.id} className={`border-b ${tw.borderSubtle} last:border-0 py-2.5`}>
                   <button
                     type="button"
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    onClick={() => setOpenFaq(openFaq === f.id ? null : f.id)}
                     className="w-full flex items-center justify-between gap-2 text-left"
                   >
-                    <span className={`text-sm font-semibold ${tw.textStrong}`}>{f.q}</span>
-                    <ChevronDown size={14} className={`${tw.textMuted} shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
+                    <span className={`text-sm font-semibold ${tw.textStrong}`}>{f.question}</span>
+                    <ChevronDown size={14} className={`${tw.textMuted} shrink-0 transition-transform ${openFaq === f.id ? "rotate-180" : ""}`} />
                   </button>
-                  {openFaq === i && (
-                    <p className={`text-xs ${tw.textMuted700} mt-2 leading-relaxed`}>{f.a}</p>
+                  {openFaq === f.id && (
+                    <p className={`text-xs ${tw.textMuted700} mt-2 leading-relaxed`}>{f.reponse}</p>
                   )}
                 </div>
               ))}

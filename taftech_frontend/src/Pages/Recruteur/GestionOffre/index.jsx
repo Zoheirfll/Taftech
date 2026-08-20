@@ -223,6 +223,12 @@ const GestionOffre = () => {
                   <div className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>{offre.profil_recherche}</div>
                 </div>
               )}
+              {offre.competences && (
+                <div className={`${tw.card} p-5`}>
+                  <h2 className={`text-base font-extrabold ${tw.textStrong} mb-3 pb-3 border-b ${tw.borderSubtle}`}>Compétences requises</h2>
+                  <div className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>{offre.competences}</div>
+                </div>
+              )}
             </div>
           </div>
         )}

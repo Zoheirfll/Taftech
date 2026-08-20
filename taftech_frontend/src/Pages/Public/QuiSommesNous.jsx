@@ -1,37 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axiosConfig";
-import {
-  Target, Eye, ShieldCheck, BadgeCheck, Sparkles, Heart,
-  Bell, Compass, Users, FileText, Briefcase, Building2,
-} from "lucide-react";
+import { jobsService } from "../../Services/jobsService";
+import { reportError } from "../../utils/errorReporter";
+import { Briefcase, Building2, Users, BadgeCheck } from "lucide-react";
 import { tw } from "../../theme";
-
-const VALEURS = [
-  { icon: Target, title: "Professionnalisme", desc: "Nous maintenons les plus hauts standards de qualité dans notre service de mise en relation." },
-  { icon: Eye, title: "Transparence", desc: "Une communication claire et honnête avec les candidats et les entreprises." },
-  { icon: ShieldCheck, title: "Conformité", desc: "Respect strict de la loi algérienne n° 18-07 sur la protection des données personnelles." },
-  { icon: BadgeCheck, title: "Expertise", desc: "Une connaissance approfondie du marché de l'emploi algérien et de ses spécificités." },
-  { icon: Sparkles, title: "Innovation", desc: "Un algorithme de matching intelligent pour rapprocher les bons profils des bonnes offres." },
-  { icon: Heart, title: "Engagement", desc: "Un dévouement total à la réussite des candidats et des entreprises qui nous font confiance." },
-];
-
-const SERVICES = [
-  { icon: Sparkles, title: "Matching par intelligence artificielle", desc: "Score de compatibilité calculé automatiquement entre chaque candidat et chaque offre." },
-  { icon: Building2, title: "CVthèque pour recruteurs", desc: "Accès aux profils candidats avec filtres avancés et classement par pertinence (offre Premium)." },
-  { icon: Bell, title: "Alertes emploi personnalisées", desc: "Notification par email dès qu'une offre correspond au profil du candidat." },
-  { icon: Compass, title: "Suggestions de carrière", desc: "Recommandations d'orientation basées sur le profil et les compétences du candidat." },
-  { icon: FileText, title: "Bulletin de candidature PDF", desc: "Génération d'un bulletin récapitulatif pour chaque candidature retenue." },
-  { icon: Users, title: "Gestion d'équipe recruteur", desc: "Invitation de collaborateurs avec rôles et permissions au sein d'une même entreprise." },
-];
 
 const fmt = (n) => (n === undefined || n === null ? "—" : `${n}+`);
 
 const QuiSommesNous = () => {
   const [stats, setStats] = useState(null);
+  const [page, setPage] = useState(null);
 
   useEffect(() => {
     api.get("jobs/stats/public/").then((r) => setStats(r.data)).catch(() => {});
+    jobsService
+      .getPageStatique("qui-sommes-nous")
+      .then(setPage)
+      .catch((err) => reportError("ECHEC_GET_PAGE_QUI_SOMMES_NOUS", err));
   }, []);
 
   return (
@@ -47,47 +33,14 @@ const QuiSommesNous = () => {
         </p>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-14">
-        {/* MISSION */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <div className="md:col-span-2 space-y-3">
-            <h2 className={tw.sectionTitle}>Notre mission</h2>
-            <p className={`text-sm ${tw.bodyText} leading-relaxed`}>
-              Nous œuvrons à établir un pont solide entre les chercheurs d'emploi et les entreprises algériennes en
-              quête de talents. Notre engagement est de fournir un service de recrutement rapide, transparent et
-              conforme à la réglementation nationale.
-            </p>
-            <p className={`text-sm ${tw.bodyText} leading-relaxed`}>
-              Nous croyons que chaque candidat mérite l'opportunité de révéler son potentiel, et que chaque
-              entreprise mérite de trouver le talent qui la fera progresser.
-            </p>
-          </div>
-          <div className={`${tw.cardColors} rounded-2xl p-6 text-center`}>
-            <div className={`w-14 h-14 mx-auto rounded-xl ${tw.bgPrimarySoft} flex items-center justify-center mb-3`}>
-              <Target size={24} className={tw.textPrimary} />
-            </div>
-            <p className={`text-sm font-semibold ${tw.textPrimary}`}>
-              Connecter les talents aux opportunités
-            </p>
-          </div>
+      {page && (
+        <div className="max-w-3xl mx-auto px-6 py-10">
+          <div
+            className="prose prose-slate max-w-none prose-headings:font-bold prose-a:text-teal-700"
+            dangerouslySetInnerHTML={{ __html: page.contenu_html }}
+          />
         </div>
-
-        {/* VALEURS */}
-        <div>
-          <h2 className={`${tw.sectionTitle} text-center mb-6`}>Nos valeurs</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {VALEURS.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className={`${tw.cardColors} rounded-2xl p-5 text-center`}>
-                <div className={`w-11 h-11 mx-auto rounded-xl ${tw.bgPrimarySoft} flex items-center justify-center mb-3`}>
-                  <Icon size={20} className={tw.textPrimary} />
-                </div>
-                <p className={`text-sm font-bold ${tw.textStrong} mb-1.5`}>{title}</p>
-                <p className={`text-xs ${tw.textMuted700} leading-relaxed`}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* CHIFFRES (données réelles en direct) */}
       <div className={tw.bannerGradientPrimary}>
@@ -106,22 +59,6 @@ const QuiSommesNous = () => {
                 <Icon size={20} className={`${tw.textPrimaryOnDark} mx-auto mb-2`} />
                 <p className={`text-2xl font-extrabold ${tw.textOnDark}`}>{value}</p>
                 <p className={`text-xs ${tw.textPrimaryOnDark} mt-1`}>{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-14 space-y-14">
-        {/* SERVICES */}
-        <div>
-          <h2 className={`${tw.sectionTitle} text-center mb-6`}>Nos services</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {SERVICES.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className={`${tw.cardColors} rounded-xl p-5 border-l-2 ${tw.borderPrimary}`}>
-                <Icon size={18} className={`${tw.textPrimary} mb-2`} />
-                <p className={`text-sm font-bold ${tw.textStrong} mb-1.5`}>{title}</p>
-                <p className={`text-xs ${tw.textMuted700} leading-relaxed`}>{desc}</p>
               </div>
             ))}
           </div>

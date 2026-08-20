@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 from .validators import validate_document_mime, validate_image_mime, validate_file_size
 from .constants import (
@@ -45,6 +45,18 @@ class ProfilEntreprise(models.Model):
         null=True,
         verbose_name="Taille de l'entreprise (effectif)"
     )
+    banniere = models.ImageField(
+        upload_to='bannieres_entreprises/',
+        blank=True,
+        null=True,
+        verbose_name="Bannière (page vitrine)",
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_mime,
+            validate_file_size(5),
+        ]
+    )
+    culture_entreprise = models.TextField(blank=True, null=True, verbose_name="Culture d'entreprise")
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
     premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
 
@@ -79,6 +91,28 @@ class ProfilEntreprise(models.Model):
 
     def __str__(self):
         return self.nom_entreprise
+
+
+class EntreprisePhoto(models.Model):
+    """Galerie photo de la page vitrine entreprise (bureaux, équipe, événements...)."""
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(
+        upload_to='photos_entreprises/',
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_mime,
+            validate_file_size(3),
+        ]
+    )
+    legende = models.CharField(max_length=150, blank=True, null=True)
+    date_ajout = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_ajout']
+
+    def __str__(self):
+        return f"Photo {self.entreprise.nom_entreprise} — {self.date_ajout:%d/%m/%Y}"
+
 
 class Secteur(models.Model):
     """Nomenclature ANEM — niveau 1 (ex: 'A' = Agriculture et pêche)."""
@@ -143,6 +177,11 @@ class OffreEmploi(models.Model):
 
     entreprise = models.ForeignKey('ProfilEntreprise', on_delete=models.CASCADE, related_name='offres')
     titre = models.CharField(max_length=200, verbose_name="Titre du poste")
+    code_public = models.CharField(
+        max_length=8, unique=True, blank=True, null=True,
+        verbose_name="Code public (URL SEO)",
+        help_text="Code court aléatoire utilisé dans l'URL publique de l'offre, généré automatiquement.",
+    )
     
     # Listes appliquées ici :
     wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, verbose_name="Lieu de travail (Wilaya)")
@@ -156,6 +195,7 @@ class OffreEmploi(models.Model):
     description = models.TextField(blank=True, null=True, verbose_name="Description générale")
     missions = models.TextField(blank=True, null=True, verbose_name="Missions du poste")
     profil_recherche = models.TextField(blank=True, null=True, verbose_name="Profil recherché (Exigences)")
+    competences = models.TextField(blank=True, null=True, verbose_name="Compétences requises")
     salaire_propose = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 68 000 DA Net")
     
     date_publication = models.DateTimeField(auto_now_add=True)
@@ -165,6 +205,18 @@ class OffreEmploi(models.Model):
     motif_rejet = models.TextField(blank=True, null=True)
     est_cloturee = models.BooleanField(default=False)
     questionnaire = models.ForeignKey('Questionnaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='offres')
+
+    def save(self, *args, **kwargs):
+        if not self.code_public:
+            import random
+            import string
+            alphabet = string.ascii_lowercase + string.digits
+            code = ''.join(random.choices(alphabet, k=6))
+            while OffreEmploi.objects.filter(code_public=code).exclude(pk=self.pk).exists():
+                code = ''.join(random.choices(alphabet, k=6))
+            self.code_public = code
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
 
@@ -176,6 +228,7 @@ class Candidature(models.Model):
     STATUTS = (
         ('RECUE', '🟡 Candidature reçue'),
         ('EN_COURS', '🔵 En cours d’étude'),
+        ('PRESELECTION', '🟣 Présélectionné'),
         ('ENTRETIEN', '🟠 Entretien programmé'),
         ('RETENU', '🟢 Candidat retenu'),
         ('REFUSE', '🔴 Candidat refusé'),
@@ -643,3 +696,287 @@ class DemandeActivationPremium(models.Model):
 
     def __str__(self):
         return f"{self.entreprise.nom_entreprise} — {self.moyen_paiement} — {'Traitée' if self.est_traitee else 'En attente'}"
+
+
+# Icônes lucide-react déjà utilisées dans PremiumPage.jsx/LandingRecruteur.jsx — whitelist stricte
+# pour que le nom stocké en base corresponde toujours à un composant React existant, jamais de
+# texte libre injecté comme nom de composant.
+ICONES_CHOICES = [
+    ('Mail', 'Mail'), ('Download', 'Download'), ('SlidersHorizontal', 'SlidersHorizontal'),
+    ('Sparkles', 'Sparkles'), ('Heart', 'Heart'), ('Headset', 'Headset'), ('Star', 'Star'),
+    ('Shield', 'Shield'), ('Zap', 'Zap'), ('Clock', 'Clock'), ('CheckCircle2', 'CheckCircle2'),
+    ('CreditCard', 'CreditCard'), ('Users', 'Users'), ('TrendingUp', 'TrendingUp'),
+    ('Search', 'Search'), ('FileText', 'FileText'), ('Award', 'Award'), ('Target', 'Target'),
+    ('Lock', 'Lock'), ('Bell', 'Bell'),
+]
+
+
+class PremiumPlan(models.Model):
+    """Palier d'abonnement Premium (durée + prix), éditable par l'admin sans toucher au code.
+    Source de vérité unique pour le montant réellement facturé via Chargily — pas de formule
+    calculée, prix final saisi directement (voir docs/superpowers/specs/2026-08-20-...)."""
+    nb_mois = models.PositiveIntegerField(
+        unique=True, verbose_name="Durée (mois)", validators=[MinValueValidator(1)]
+    )
+    label = models.CharField(max_length=50, verbose_name="Libellé")
+    prix_da = models.PositiveIntegerField(
+        verbose_name="Prix final (DA)", validators=[MinValueValidator(1)]
+    )
+    populaire = models.BooleanField(default=False, verbose_name="Badge \"Populaire\"")
+    actif = models.BooleanField(default=True, verbose_name="Visible/activable")
+    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
+
+    class Meta:
+        ordering = ['ordre', 'nb_mois']
+
+    def __str__(self):
+        return f"{self.label} — {self.prix_da} DA"
+
+
+class PremiumAvantage(models.Model):
+    """Carte "avantage Premium" (icône + titre + description), éditable par l'admin."""
+    icone = models.CharField(max_length=40, choices=ICONES_CHOICES, verbose_name="Icône")
+    titre = models.CharField(max_length=100, verbose_name="Titre")
+    description = models.CharField(max_length=300, verbose_name="Description")
+    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
+    actif = models.BooleanField(default=True, verbose_name="Visible")
+
+    class Meta:
+        ordering = ['ordre']
+
+    def __str__(self):
+        return self.titre
+
+
+class AIConfig(models.Model):
+    """Configuration IA du site — singleton (une seule ligne, `AIConfig.get_solo()`). Permet à
+    l'admin de couper une fonctionnalité IA en panne (ex: Groq a déjà changé de modèle sans
+    préavis, cassant tout silencieusement — cf. CLAUDE.md session 18/08/2026) sans déploiement, et
+    d'ajuster le modèle Groq utilisé sans toucher au code. `groq_model` reste un champ texte libre
+    (pas un `choices` figé) car Groq déprécie ses modèles de façon imprévisible."""
+    # `provider` anticipe la migration Groq → Ollama local prévue post-déploiement (roadmap
+    # CLAUDE.md, `ollama` déjà en dépendance mais pas encore câblé) — champ présent dès maintenant
+    # pour que ce futur changement soit un simple toggle admin, pas un redesign du modèle. OLLAMA
+    # n'est pas encore fonctionnel côté code (hors scope de cette session, tâche reportée) : le
+    # sélectionner n'a aucun effet tant que l'intégration n'est pas câblée.
+    PROVIDER_CHOICES = [('GROQ', 'Groq (cloud)'), ('OLLAMA', 'Ollama (local, post-déploiement)')]
+    provider = models.CharField(max_length=10, choices=PROVIDER_CHOICES, default='GROQ')
+    groq_model = models.CharField(max_length=100, default='openai/gpt-oss-20b', verbose_name="Modèle Groq")
+    ollama_model = models.CharField(max_length=100, default='mistral', blank=True, verbose_name="Modèle Ollama")
+    temperature = models.FloatField(
+        default=0.7,
+        validators=[MinValueValidator(0.0), MaxValueValidator(2.0)],
+    )
+    reasoning_effort = models.CharField(
+        max_length=10,
+        choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')],
+        default='low',
+    )
+
+    parser_cv_actif = models.BooleanField(default=True, verbose_name="Parser CV actif")
+    parser_cv_max_tokens = models.PositiveIntegerField(default=6000, validators=[MinValueValidator(100)])
+
+    analyse_carriere_actif = models.BooleanField(default=True, verbose_name="Analyse carrière candidat active")
+    analyse_carriere_max_tokens = models.PositiveIntegerField(default=1200, validators=[MinValueValidator(100)])
+
+    analyse_recruteur_actif = models.BooleanField(default=True, verbose_name="Analyse IA recruteur active")
+    analyse_recruteur_max_tokens = models.PositiveIntegerField(default=400, validators=[MinValueValidator(100)])
+
+    generation_offre_actif = models.BooleanField(default=True, verbose_name="Génération d'offre IA active")
+    generation_offre_max_tokens = models.PositiveIntegerField(default=1600, validators=[MinValueValidator(100)])
+
+    date_modification = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_solo(cls):
+        from django.core.cache import cache
+        cached = cache.get('jobs_ai_config')
+        if cached is not None:
+            return cached
+        obj, _ = cls.objects.get_or_create(pk=1)
+        cache.set('jobs_ai_config', obj, timeout=300)
+        return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.delete('jobs_ai_config')
+
+    def __str__(self):
+        return f"Config IA ({self.groq_model})"
+
+
+class PageStatique(models.Model):
+    """Contenu éditable d'une page du site (CGU, Confidentialité, Qui sommes-nous, ou toute
+    nouvelle page libre) — même sanitization HTML que Article.contenu_html. `slug` fixe
+    ('cgu', 'confidentialite', 'qui-sommes-nous') pour les 3 pages existantes ; toute autre valeur
+    crée une page accessible via /pages/<slug>."""
+    slug = models.SlugField(max_length=100, unique=True)
+    titre = models.CharField(max_length=200)
+    contenu_html = models.TextField()
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['titre']
+
+    def save(self, *args, **kwargs):
+        if self.contenu_html:
+            import bleach
+            allowed_tags = ['p', 'h1', 'h2', 'h3', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'br']
+            allowed_attrs = {'a': ['href', 'title', 'target', 'rel'], 'img': ['src', 'alt']}
+            self.contenu_html = bleach.clean(self.contenu_html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.titre
+
+
+class SiteAnnonce(models.Model):
+    """Bandeau d'annonce global, affiché au-dessus de la navbar sur tout le site — un seul actif
+    à la fois (l'admin en active un, ça désactive automatiquement les autres au save())."""
+    TYPE_CHOICES = [
+        ('INFO', 'Info (bleu)'),
+        ('WARNING', 'Avertissement (ambre)'),
+        ('SUCCESS', 'Succès (vert)'),
+    ]
+    texte = models.CharField(max_length=200)
+    lien_url = models.URLField(blank=True, null=True)
+    lien_label = models.CharField(max_length=50, blank=True, null=True, verbose_name="Libellé du lien")
+    type_annonce = models.CharField(max_length=10, choices=TYPE_CHOICES, default='INFO')
+    actif = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        from django.db import transaction
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self.actif:
+                SiteAnnonce.objects.exclude(pk=self.pk).update(actif=False)
+
+    def __str__(self):
+        return f"{self.texte[:50]} ({'actif' if self.actif else 'inactif'})"
+
+
+class BanniereAccueil(models.Model):
+    """Bannière promotionnelle du carrousel affiché sur la page d'accueil."""
+    image = models.ImageField(
+        upload_to='bannieres_accueil/',
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_mime,
+            validate_file_size(5),
+        ]
+    )
+    titre = models.CharField(max_length=150, blank=True, null=True)
+    lien_url = models.URLField(blank=True, null=True)
+    ordre = models.PositiveIntegerField(default=0)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['ordre']
+
+    def __str__(self):
+        return self.titre or f"Bannière #{self.pk}"
+
+
+class ArticleCategorie(models.Model):
+    """Catégorie de blog, gérée librement par l'admin (contrairement à FaqItem qui a des
+    catégories fixes) — évite la fragmentation "RH"/"rh"/"Ressources humaines" en forçant le choix
+    dans une liste existante plutôt qu'un champ texte libre par article."""
+    label = models.CharField(max_length=60, unique=True)
+
+    class Meta:
+        ordering = ['label']
+
+    def __str__(self):
+        return self.label
+
+
+class Article(models.Model):
+    """Article de blog TafTech — contenu HTML édité via TipTap (WYSIWYG) côté admin, sanitizé au
+    save() (bleach) en défense en profondeur même si seul le rôle ADMIN y écrit aujourd'hui."""
+    STATUT_CHOICES = [
+        ('BROUILLON', 'Brouillon'),
+        ('PUBLIE', 'Publié'),
+    ]
+    titre = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    categorie = models.ForeignKey(ArticleCategorie, on_delete=models.SET_NULL, null=True, blank=True, related_name='articles')
+    extrait = models.CharField(max_length=300, verbose_name="Extrait / résumé")
+    contenu_html = models.TextField(verbose_name="Contenu")
+    image_couverture = models.ImageField(
+        upload_to='articles/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            validate_image_mime,
+            validate_file_size(3),
+        ]
+    )
+    statut = models.CharField(max_length=10, choices=STATUT_CHOICES, default='BROUILLON')
+    date_publication = models.DateTimeField(null=True, blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.titre)
+            slug = base
+            n = 1
+            while Article.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        if self.contenu_html:
+            import bleach
+            allowed_tags = ['p', 'h1', 'h2', 'h3', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'br']
+            allowed_attrs = {'a': ['href', 'title', 'target', 'rel'], 'img': ['src', 'alt']}
+            self.contenu_html = bleach.clean(self.contenu_html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        if self.statut == 'PUBLIE' and not self.date_publication:
+            from django.utils import timezone
+            self.date_publication = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.titre
+
+
+class CompetenceReferentiel(models.Model):
+    """Référentiel de compétences suggérées, éditable par l'admin — alimente l'autocomplete du
+    champ "Compétences" du profil candidat (TextField libre, non modifié : ceci ne fait que
+    suggérer, jamais ne contraint la saisie)."""
+    label = models.CharField(max_length=100, unique=True, verbose_name="Compétence")
+    actif = models.BooleanField(default=True, verbose_name="Suggérée")
+
+    class Meta:
+        ordering = ['label']
+
+    def __str__(self):
+        return self.label
+
+
+class FaqItem(models.Model):
+    """Question/réponse FAQ, éditable par l'admin — 3 catégories correspondant aux 3 pages qui
+    affichaient jusqu'ici des listes en dur : ContactezNous (GENERAL), LandingRecruteur
+    (RECRUTEUR), PremiumPage (PREMIUM). Un seul modèle + filtre catégorie plutôt que 3 modèles
+    séparés — un admin gère tout au même endroit, chaque page ne consomme que sa catégorie."""
+    CATEGORIE_CHOICES = [
+        ('GENERAL', 'Général (page Contact)'),
+        ('RECRUTEUR', 'Recruteur (landing)'),
+        ('PREMIUM', 'Premium'),
+    ]
+    categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES, verbose_name="Catégorie")
+    question = models.CharField(max_length=300, verbose_name="Question")
+    reponse = models.TextField(verbose_name="Réponse")
+    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
+    actif = models.BooleanField(default=True, verbose_name="Visible")
+
+    class Meta:
+        ordering = ['categorie', 'ordre']
+
+    def __str__(self):
+        return f"[{self.categorie}] {self.question}"

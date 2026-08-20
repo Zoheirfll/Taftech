@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { ConfirmModalHost } from "./utils/confirmToast";
+import SiteAnnonceBar from "./Components/SiteAnnonceBar";
 import { ShieldOff } from "lucide-react";
 
 import ErrorBoundary from "./utils/ErrorBoundary";
@@ -34,7 +35,7 @@ const GuestRoute = ({ children, portal = "candidat" }) => {
     return <Navigate to="/admin-taftech" replace />;
   }
   if (loginPortal === portal) {
-    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/profil"} replace />;
+    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/dashboard-candidat"} replace />;
   }
   return children;
 };
@@ -62,7 +63,7 @@ const RecruteurRoute = ({ children }) => {
   const portal = authService.getLoginPortal();
   if (!role) return <Navigate to="/recruteurs/connexion" replace />;
   if (role === "ADMIN") return <Navigate to="/admin-taftech" replace />;
-  if (portal === "candidat") return <Navigate to="/profil" replace />;
+  if (portal === "candidat") return <Navigate to="/dashboard-candidat" replace />;
   if (portal !== "recruteur") return <Navigate to="/recruteurs/connexion" replace />;
   return children;
 };
@@ -73,7 +74,7 @@ const AdminRoute = ({ children }) => {
   if (!role) return <Navigate to="/login" replace />;
   if (role !== "ADMIN") {
     const portal = authService.getLoginPortal();
-    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/profil"} replace />;
+    return <Navigate to={portal === "recruteur" ? "/dashboard" : "/dashboard-candidat"} replace />;
   }
   return children;
 };
@@ -100,13 +101,16 @@ import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
 
 // Pages lazy — chargées à la demande
 const Entreprises        = lazy(() => import("./Pages/Public/Entreprises"));
-const PolitiqueConfidentialite = lazy(() => import("./Pages/Public/PolitiqueConfidentialite"));
 const ContactezNous = lazy(() => import("./Pages/Public/ContactezNous"));
-const CGU = lazy(() => import("./Pages/Public/CGU"));
+const PageStatiqueGenerique = lazy(() => import("./Pages/Public/PageStatiqueGenerique"));
 const QuiSommesNous = lazy(() => import("./Pages/Public/QuiSommesNous"));
 const EntreprisePublic   = lazy(() => import("./Pages/Recruteur/EntreprisePublic"));
 const OffresParRegion    = lazy(() => import("./Pages/Public/OffresParRegion"));
 const OffresParSecteur   = lazy(() => import("./Pages/Public/OffresParSecteur"));
+const OffresParMetier    = lazy(() => import("./Pages/Public/OffresParMetier"));
+const SecteurDetail      = lazy(() => import("./Pages/Public/SecteurDetail"));
+const MetierDetail       = lazy(() => import("./Pages/Public/MetierDetail"));
+const RegionDetail       = lazy(() => import("./Pages/Public/RegionDetail"));
 const RegisterCandidat   = lazy(() => import("./Pages/Auth/RegisterCandidat"));
 const RegisterRecruteur  = lazy(() => import("./Pages/Auth/RegisterRecruteur"));
 const ForgotPassword     = lazy(() => import("./Pages/Auth/ForgotPassword"));
@@ -131,6 +135,7 @@ const ReviewCandidature      = lazy(() => import("./Pages/Recruteur/ReviewCandid
 const MonEquipe              = lazy(() => import("./Pages/Recruteur/MonEquipe"));
 
 // Espace Candidat
+const CandidatDashboard = lazy(() => import("./Pages/Candidat/CandidatDashboard"));
 const ProfilCandidat    = lazy(() => import("./Pages/Candidat/ProfilCandidat/index"));
 const MesCandidatures   = lazy(() => import("./Pages/Candidat/MesCandidatures"));
 const BoiteReception    = lazy(() => import("./Pages/Candidat/BoiteReception"));
@@ -145,7 +150,16 @@ const AdminOffres       = lazy(() => import("./Pages/Admin/AdminOffres"));
 const AdminStatistiques = lazy(() => import("./Pages/Admin/AdminStatistiques"));
 const AdminUsers        = lazy(() => import("./Pages/Admin/AdminUsers"));
 const AdminBroadcast    = lazy(() => import("./Pages/admin/AdminBroadcast"));
+const Blog              = lazy(() => import("./Pages/Public/Blog"));
+const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminMetiers      = lazy(() => import("./Pages/Admin/AdminMetiers"));
+const AdminPremium      = lazy(() => import("./Pages/Admin/AdminPremium"));
+const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
+const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
+const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
+const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
+const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
+const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
 const AdminCandidatures = lazy(() => import("./Pages/Admin/AdminCandidatures"));
@@ -223,6 +237,7 @@ function AppContent() {
       />
       <ConfirmModalHost />
 
+      {!isAdminPath && <SiteAnnonceBar />}
       {recruteurPortal ? <NavbarRecruteur /> : <Navbar />}
 
       <main className={`grow ${showAnyBottomNav ? "pb-16 md:pb-0" : ""}`}>
@@ -232,16 +247,24 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/offres" element={<JobsList />} />
             <Route path="/entreprises" element={<Entreprises />} />
-            <Route path="/confidentialite" element={<PolitiqueConfidentialite />} />
+            <Route path="/confidentialite" element={<PageStatiqueGenerique slugFixe="confidentialite" />} />
             <Route path="/contact" element={<ContactezNous />} />
-            <Route path="/cgu" element={<CGU />} />
+            <Route path="/cgu" element={<PageStatiqueGenerique slugFixe="cgu" />} />
             <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
+            <Route path="/pages/:slug" element={<PageStatiqueGenerique />} />
             <Route path="/regions" element={<OffresParRegion />} />
+            <Route path="/regions/:slug" element={<RegionDetail />} />
             <Route path="/secteurs" element={<OffresParSecteur />} />
+            <Route path="/secteurs/:slug" element={<SecteurDetail />} />
+            <Route path="/metiers" element={<OffresParMetier />} />
+            <Route path="/metiers/:slug" element={<MetierDetail />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<ArticleDetail />} />
             <Route path="/register" element={<GuestRoute><RegisterCandidat /></GuestRoute>} />
             <Route path="/register-entreprise" element={<GuestRoute><RegisterRecruteur /></GuestRoute>} />
             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/jobs/:idSlug" element={<JobDetail />} />
+            <Route path="/entreprises/:entrepriseSlug/offres-d-emploi/:secteurSlug/:titreCode" element={<JobDetail />} />
             <Route path="/entreprise/:slug" element={<EntreprisePublic />} />
             <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
             <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
@@ -267,6 +290,7 @@ function AppContent() {
 
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>
+              <Route path="/dashboard-candidat" element={<CandidatDashboard />} />
               <Route path="/profil" element={<ProfilCandidat />} />
               <Route path="/mes-candidatures" element={<MesCandidatures />} />
               <Route path="/inbox" element={<BoiteReception />} />
@@ -288,6 +312,13 @@ function AppContent() {
               <Route path="candidatures" element={<AdminCandidatures />} />
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
+              <Route path="/admin-taftech/premium-config" element={<AdminPremium />} />
+              <Route path="/admin-taftech/faq" element={<AdminFaq />} />
+              <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
+              <Route path="/admin-taftech/articles" element={<AdminArticles />} />
+              <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
+              <Route path="/admin-taftech/pages" element={<AdminPages />} />
+              <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
               <Route path="audit" element={<AdminAuditLogs />} />
               <Route path="comptes-admins" element={<AdminComptes />} />
               <Route path="erreurs-systeme" element={<AdminSystemLogs />} />

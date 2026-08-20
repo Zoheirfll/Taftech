@@ -19,12 +19,13 @@ import requests as http_requests
 
 logger = logging.getLogger(__name__)
 from ..models import (
-    OffreEmploi, ProfilCandidat, ProfilEntreprise,
+    OffreEmploi, ProfilCandidat, ProfilEntreprise, EntreprisePhoto,
     ProfilCandidatFavori, CandidatureSpontanee,
     Questionnaire, QuestionQuestionnaire, ReponseChoix, Candidature,
     DemandeActivationPremium, AuditLog, MembreEquipe
 )
 from .equipe import get_entreprise_for_user, get_membre_role
+from ..throttles import WriteActionThrottle, EmailRateThrottle
 from ..matcher import calculer_score_matching
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
@@ -178,7 +179,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
         if get_membre_role(request.user, profil) not in ('PROPRIETAIRE', 'ADMIN'):
             return Response({"error": "Action réservée au propriétaire ou admin."}, status=403)
         data = request.data
-        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'description', 'linkedin', 'site_web']
+        champs = ['secteur_activite', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'description', 'linkedin', 'site_web', 'culture_entreprise']
         for champ in champs:
             if champ in data:
                 valeur = data[champ]
@@ -188,6 +189,8 @@ class UpdateProfilEntrepriseAPIView(APIView):
                 setattr(profil, champ, valeur)
         if 'logo' in request.FILES:
             profil.logo = request.FILES['logo']
+        if 'banniere' in request.FILES:
+            profil.banniere = request.FILES['banniere']
         profil.save()
         # Sauvegarder les infos personnelles de l'utilisateur
         user = request.user
@@ -209,9 +212,11 @@ class UpdateProfilEntrepriseAPIView(APIView):
         if user_fields:
             user.save(update_fields=user_fields)
         logo_url = request.build_absolute_uri(profil.logo.url) if profil.logo else None
+        banniere_url = request.build_absolute_uri(profil.banniere.url) if profil.banniere else None
         return Response({
             "message": "Informations mises à jour.",
             "description": profil.description,
+            "culture_entreprise": profil.culture_entreprise,
             "wilaya_siege": profil.wilaya_siege,
             "commune_siege": profil.commune_siege,
             "adresse_complete": profil.adresse_complete,
@@ -219,8 +224,50 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "taille_entreprise": profil.taille_entreprise,
             "linkedin": profil.linkedin,
             "site_web": profil.site_web,
-            "logo": logo_url
+            "logo": logo_url,
+            "banniere": banniere_url,
         }, status=status.HTTP_200_OK)
+
+
+class EntreprisePhotosAPIView(APIView):
+    """Galerie photo de la page vitrine — ajout/suppression, réservé PROPRIETAIRE/ADMIN."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        profil = get_entreprise_for_user(request.user)
+        if not profil:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, profil) not in ('PROPRIETAIRE', 'ADMIN'):
+            return Response({"error": "Action réservée au propriétaire ou admin."}, status=403)
+        if 'image' not in request.FILES:
+            return Response({"error": "Aucune image fournie."}, status=400)
+        if profil.photos.count() >= 12:
+            return Response({"error": "Maximum 12 photos dans la galerie."}, status=400)
+        photo = EntreprisePhoto(entreprise=profil, image=request.FILES['image'], legende=request.data.get('legende', '')[:150])
+        try:
+            photo.full_clean()
+        except DjangoValidationError as e:
+            return Response({"error": " ".join(sum(e.message_dict.values(), []))}, status=400)
+        photo.save()
+        return Response({
+            "id": photo.id,
+            "image": request.build_absolute_uri(photo.image.url),
+            "legende": photo.legende,
+        }, status=201)
+
+    def delete(self, request, photo_id):
+        profil = get_entreprise_for_user(request.user)
+        if not profil:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, profil) not in ('PROPRIETAIRE', 'ADMIN'):
+            return Response({"error": "Action réservée au propriétaire ou admin."}, status=403)
+        try:
+            photo = profil.photos.get(id=photo_id)
+        except EntreprisePhoto.DoesNotExist:
+            return Response({"error": "Photo introuvable."}, status=404)
+        photo.delete()
+        return Response({"message": "Photo supprimée."}, status=200)
 
 
 class ParametresRecruteurAPIView(APIView):
@@ -273,6 +320,15 @@ class CVThequeView(APIView):
         diplome = request.GET.get('diplome', '')
         specialite = request.GET.get('specialite', '')
         experience = request.GET.get('experience', '')
+        mobilite = request.GET.get('mobilite', '')
+        disponibilite = request.GET.get('disponibilite', '')
+        langues = request.GET.get('langues', '')
+        competences = request.GET.get('competences', '')
+        permis = request.GET.get('permis', '') == 'true'
+        vehicule = request.GET.get('vehicule', '') == 'true'
+        passeport = request.GET.get('passeport', '') == 'true'
+        service_militaire = request.GET.get('service_militaire', '')
+        niveau_experience = request.GET.get('niveau_experience', '')
         avec_photo = request.GET.get('avec_photo', '') == 'true'
         avec_cv = request.GET.get('avec_cv', '') == 'true'
         inscrit_recent = request.GET.get('inscrit_recent', '') == 'true'
@@ -295,6 +351,26 @@ class CVThequeView(APIView):
             candidats = candidats.filter(diplome=diplome)
         if specialite:
             candidats = candidats.filter(Q(specialite=specialite) | Q(secteur_souhaite=specialite)).distinct()
+        if mobilite:
+            candidats = candidats.filter(mobilite=mobilite)
+        if disponibilite:
+            candidats = candidats.filter(situation_actuelle=disponibilite)
+        if permis:
+            candidats = candidats.filter(permis_conduire=True)
+        if vehicule:
+            candidats = candidats.filter(vehicule_personnel=True)
+        if passeport:
+            candidats = candidats.filter(passeport_valide=True)
+        if service_militaire:
+            candidats = candidats.filter(service_militaire=service_militaire)
+        if niveau_experience:
+            candidats = candidats.filter(niveau_experience=niveau_experience)
+        # `langues`/`competences` sont des champs texte libre (pas de référentiel structuré
+        # côté candidat) — filtrage par sous-chaîne, pas par égalité exacte.
+        if langues:
+            candidats = candidats.filter(langues__icontains=langues)
+        if competences:
+            candidats = candidats.filter(competences__icontains=competences)
         if avec_photo:
             candidats = candidats.exclude(photo_profil='').exclude(photo_profil__isnull=True)
         if avec_cv:
@@ -400,6 +476,7 @@ class ToggleFavoriCVAPIView(APIView):
 
 class EnvoyerCandidatureSpontaneeAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [WriteActionThrottle, EmailRateThrottle]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, slug):
@@ -571,7 +648,7 @@ class DemanderActivationPremiumAPIView(APIView):
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
         moyen = request.data.get('moyen_paiement', 'CIB')
         try:
-            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 60))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
         if DemandeActivationPremium.objects.filter(entreprise=entreprise, est_traitee=False).exists():
@@ -580,14 +657,12 @@ class DemanderActivationPremiumAPIView(APIView):
         return Response({'message': 'Demande enregistrée. Votre compte sera activé sous 24h ouvrables.'}, status=201)
 
 
-def _get_prix_premium(nb_mois):
-    """Calcule le montant en DA selon la durée (remises 6M/12M identiques au frontend)."""
-    PRIX_MENSUEL = 2000
-    if nb_mois == 6:
-        return round(PRIX_MENSUEL * nb_mois * 0.92)   # −8%
-    if nb_mois == 12:
-        return round(PRIX_MENSUEL * nb_mois * 0.83)   # −17%
-    return PRIX_MENSUEL * nb_mois
+def _get_plan_premium(nb_mois):
+    """Palier Premium actif pour cette durée, ou None si `nb_mois` ne correspond à aucun palier
+    actif — source de vérité unique du prix (panel admin `PremiumPlan`), plus de formule codée en
+    dur ni de duplication entre frontend/backend/email."""
+    from ..models import PremiumPlan
+    return PremiumPlan.objects.filter(nb_mois=nb_mois, actif=True).first()
 
 
 class ChargilyCheckoutAPIView(APIView):
@@ -606,10 +681,13 @@ class ChargilyCheckoutAPIView(APIView):
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
 
         try:
-            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+            nb_mois = int(request.data.get('nb_mois', 1))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
-        montant = _get_prix_premium(nb_mois)
+        plan = _get_plan_premium(nb_mois)
+        if not plan:
+            return Response({'error': "Ce palier d'abonnement n'existe pas ou n'est plus disponible."}, status=400)
+        montant = plan.prix_da
 
         # URLs de retour après paiement Chargily
         site_url = settings.SITE_URL.rstrip('/')
@@ -693,7 +771,11 @@ class ChargilyWebhookAPIView(APIView):
         # Structure Chargily : event.data.metadata (pas event.data.object.metadata)
         metadata = data.get('data', {}).get('metadata', {})
         entreprise_id = metadata.get('entreprise_id')
-        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 12))
+        # Plafond large (5 ans) en filet de sécurité si le webhook est appelé avec un payload
+        # corrompu/falsifié — le vrai contrôle (durée valide = palier actif) a déjà eu lieu à la
+        # création du checkout ; les paliers n'étant plus figés à 12 mois (admin peut en ajouter
+        # au-delà), on ne recale plus sur l'ancien plafond fixe.
+        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 60))
 
         try:
             entreprise = ProfilEntreprise.objects.get(id=entreprise_id)
@@ -744,10 +826,11 @@ class EnvoyerRecuPremiumAPIView(APIView):
             return Response({'error': 'Profil entreprise introuvable.'}, status=404)
         moyen = request.data.get('moyen_paiement', 'CIB')
         try:
-            nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 12))
+            nb_mois = int(request.data.get('nb_mois', 1))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
-        montant = nb_mois * 2000
+        plan = _get_plan_premium(nb_mois)
+        montant = plan.prix_da if plan else nb_mois * 2000  # repli si palier désactivé/inconnu (email informatif seulement)
         message_custom = request.data.get('message', '')
         subject = f"[TafTech Premium] Reçu de paiement — {entreprise.nom_entreprise}"
         body = f"""

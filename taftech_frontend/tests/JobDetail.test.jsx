@@ -23,7 +23,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ id: "42" }),
+    useParams: () => ({ idSlug: "42" }),
   };
 });
 
@@ -155,7 +155,7 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
 
     await waitFor(() => {
       expect(jobsService.postuler).toHaveBeenCalledWith(
-        "42",
+        42,
         expect.objectContaining({ lettre_motivation: "" }),
       );
       expect(screen.getByText(/Candidature envoyée/i)).toBeInTheDocument();

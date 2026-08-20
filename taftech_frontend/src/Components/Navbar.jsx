@@ -10,7 +10,7 @@ import { tw } from "../theme";
 import {
   User, Bookmark, Briefcase, Bell, Settings, LayoutDashboard,
   Search, Mail, LogOut, Inbox, ClipboardList, Shield, Menu, X,
-  Sparkles, MapPin, Building2, LogIn, Home,
+  Sparkles, MapPin, Building2, LogIn, Home, GraduationCap,
 } from "lucide-react";
 
 const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
@@ -39,7 +39,7 @@ const Navbar = () => {
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
   const navLinkClass = (path) =>
-    `flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 ${
+    `flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 ${
       isActive(path) ? tw.navLinkDesktopActive : tw.navLinkDesktopInactive
     }`;
 
@@ -113,6 +113,7 @@ const Navbar = () => {
     { to: "/", label: "Accueil", icon: Home },
     { to: "/offres", label: "Recherche avancée", icon: Search },
     { to: "/secteurs", label: "Par secteur", icon: Briefcase },
+    { to: "/metiers", label: "Par métier", icon: GraduationCap },
     { to: "/regions", label: "Par région", icon: MapPin },
     { to: "/entreprises", label: "Entreprises", icon: Building2 },
   ];
@@ -142,7 +143,7 @@ const Navbar = () => {
           {/* NON CONNECTÉ */}
           {!isLogged && (
             <>
-              <Link to="/recruteurs" target="_blank" rel="noopener noreferrer" className="hidden md:block text-sm font-semibold text-slate-700 pr-3 mr-1 border-r border-slate-200">
+              <Link to="/recruteurs" target="_blank" rel="noopener noreferrer" className="hidden md:block shrink-0 whitespace-nowrap text-sm font-semibold text-slate-700 pl-4 pr-3 border-l border-slate-200">
                 Vous recrutez ? <span className="font-semibold text-teal-700 hover:underline">Espace recruteur</span>
               </Link>
               <Link to="/login" className={tw.navLink}>
@@ -193,6 +194,7 @@ const Navbar = () => {
                   <div className={tw.dropdownPanel}>
                     {role === "CANDIDAT" && (
                       <>
+                        <DropdownLink to="/dashboard-candidat" icon={LayoutDashboard} onClick={closeDropdown}>Tableau de bord</DropdownLink>
                         <DropdownLink to="/profil" icon={User} onClick={closeDropdown}>Mon profil</DropdownLink>
                         <DropdownLink to="/mes-candidatures" icon={Briefcase} onClick={closeDropdown}>Mes candidatures</DropdownLink>
                         <DropdownLink to="/offres-sauvegardees" icon={Bookmark} onClick={closeDropdown}>Offres sauvegardées</DropdownLink>
@@ -273,6 +275,7 @@ const Navbar = () => {
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               {role === "CANDIDAT" && (
                 <>
+                  <Link to="/dashboard-candidat" onClick={closeMobile} className={mobileLinkClass("/dashboard-candidat", true)}><LayoutDashboard size={16} className="shrink-0" /> Tableau de bord</Link>
                   <Link to="/profil" onClick={closeMobile} className={mobileLinkClass("/profil", true)}><User size={16} className="shrink-0" /> Mon profil</Link>
                   <Link to="/mes-candidatures" onClick={closeMobile} className={mobileLinkClass("/mes-candidatures", true)}><Briefcase size={16} className="shrink-0" /> Mes candidatures</Link>
                   <Link to="/inbox" onClick={closeMobile} className={mobileLinkClass("/inbox", true)}><Mail size={16} className="shrink-0" /> Boîte de réception</Link>

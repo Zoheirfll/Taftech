@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2,
@@ -15,36 +15,45 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Mail,
+  Download,
+  SlidersHorizontal,
+  Sparkles,
+  Heart,
+  Headset,
+  Users,
+  TrendingUp,
+  Search,
+  FileText,
+  Award,
+  Target,
+  Lock,
+  Bell,
 } from "lucide-react";
 import { jobsService } from "../../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../../utils/errorReporter";
 
-const AVANTAGES = [
-  "Accès complet à la CVthèque — profils, coordonnées, CV",
-  "Analyse approfondie IA de chaque candidature",
-  "Résumé IA automatique des profils candidats",
-  "Badge ⭐ Premium visible sur votre espace recruteur",
-];
-
-const DUREES = [
-  { mois: 1, label: "1 mois", remise: null },
-  { mois: 3, label: "3 mois", remise: null },
-  { mois: 6, label: "6 mois", remise: "−8%" },
-  { mois: 12, label: "12 mois", remise: "−17%" },
-];
-
-const PRIX_MENSUEL = 2000;
-
-const getPrix = (mois) => {
-  if (mois === 6) return Math.round(PRIX_MENSUEL * mois * 0.92);
-  if (mois === 12) return Math.round(PRIX_MENSUEL * mois * 0.83);
-  return PRIX_MENSUEL * mois;
+// Doit couvrir exactement ICONES_CHOICES côté backend (jobs/models.py) — un admin choisit un nom
+// d'icône via un <select> whitelisté, jamais du texte libre.
+export const PREMIUM_ICON_MAP = {
+  Mail, Download, SlidersHorizontal, Sparkles, Heart, Headset, Star, Shield, Zap, Clock,
+  CheckCircle2, CreditCard, Users, TrendingUp, Search, FileText, Award, Target, Lock, Bell,
 };
 
-const getEconomie = (mois) => {
-  const pleinTarif = PRIX_MENSUEL * mois;
-  return pleinTarif - getPrix(mois);
+const AvantageCard = ({ icone, titre, description }) => {
+  const Icon = PREMIUM_ICON_MAP[icone] || Star;
+  return (
+    <div className="flex items-start gap-3 p-3.5 bg-white border border-slate-200 rounded-lg">
+      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+        <Icon size={16} className="text-teal-700" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-900">{titre}</p>
+        <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
 };
 
 const formatDA = (n) => n.toLocaleString("fr-FR") + " DA";
@@ -62,27 +71,9 @@ const getDateExpiration = (mois) => {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 };
 
-const FAQ_ITEMS = [
-  {
-    q: "Que se passe-t-il à l'expiration de mon abonnement ?",
-    r: "Votre accès aux fonctionnalités Premium (CVthèque, analyse IA) est suspendu. Vos données et offres restent intactes. Les membres de votre équipe ne peuvent plus se connecter jusqu'au renouvellement.",
-  },
-  {
-    q: "Puis-je prolonger mon abonnement avant qu'il expire ?",
-    r: "Oui. La durée s'ajoute à la fin de votre abonnement actuel — vous ne perdez aucun jour.",
-  },
-  {
-    q: "Le paiement est-il sécurisé ?",
-    r: "Oui. Le paiement est traité par Chargily Pay, la plateforme de paiement algérienne agréée. TAFTECH ne stocke aucune information bancaire.",
-  },
-  {
-    q: "Quand mon accès Premium est-il activé ?",
-    r: "L'activation est automatique après confirmation du paiement, en quelques secondes via le système webhook de Chargily.",
-  },
-];
 
 // ─── Écran Statut Premium ────────────────────────────────────────────────────
-const StatusPremium = ({ premiumData, onRenouveler }) => {
+const StatusPremium = ({ premiumData, avantages, onRenouveler }) => {
   const { premium_expire_at, premium_active_since, premium_nb_mois } = premiumData;
   const jours = getJoursRestants(premium_expire_at);
   const bientotExpire = jours !== null && jours <= 14;
@@ -93,29 +84,28 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
   return (
     <div className="space-y-5">
       {/* Bandeau statut */}
-      <div className="bg-teal-50 border-2 border-teal-300 rounded-2xl p-6 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-100 border-2 border-teal-300 rounded-2xl mb-3">
-          <Star size={28} className="text-teal-700 fill-teal-200" />
+      <div className="bg-white border border-slate-200 rounded-xl p-6 text-center">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-50 border border-teal-200 rounded-xl mb-3">
+          <Star size={24} className="text-teal-700" />
         </div>
-        <h2 className="text-2xl font-extrabold text-teal-800">Abonnement Premium actif</h2>
-        <p className="text-teal-600 text-sm mt-1">Vous bénéficiez de toutes les fonctionnalités avancées.</p>
+        <h2 className="text-xl font-bold text-slate-900">Abonnement Premium actif</h2>
+        <p className="text-slate-600 text-sm mt-1">Vous bénéficiez de toutes les fonctionnalités avancées.</p>
         {jours !== null && (
-          <div className={`inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full text-sm font-semibold ${bientotExpire ? "bg-amber-100 text-amber-700 border border-amber-300" : "bg-teal-100 text-teal-700 border border-teal-300"}`}>
+          <div className={`inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full text-sm font-semibold ${bientotExpire ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-teal-50 text-teal-700 border border-teal-200"}`}>
             <Clock size={14} />
             {jours > 0 ? `${jours} jour${jours > 1 ? "s" : ""} restant${jours > 1 ? "s" : ""}` : "Expire aujourd'hui"}
           </div>
         )}
-        {/* Fix 2 — Barre de progression */}
         {jours !== null && (
           <div className="mt-4 px-2">
-            <div className="flex justify-between text-[10px] text-teal-600 mb-1">
+            <div className="flex justify-between text-[10px] text-slate-500 mb-1">
               <span>Début</span>
               <span>{pctConsomme}% écoulé</span>
               <span>Fin</span>
             </div>
-            <div className="h-2 bg-teal-200 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className={`h-2 rounded-full transition-all ${bientotExpire ? "bg-amber-500" : "bg-teal-600"}`}
+                className={`h-1.5 rounded-full transition-all ${bientotExpire ? "bg-amber-500" : "bg-teal-600"}`}
                 style={{ width: `${pctConsomme}%` }}
               />
             </div>
@@ -124,21 +114,21 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
       </div>
 
       {/* Détails */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6">
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
         <p className="text-sm font-bold text-slate-700 mb-4">Détails de l'abonnement</p>
-        <div className="space-y-3">
+        <div className="space-y-1">
           {premium_active_since && (
             <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                <CalendarDays size={15} className="text-slate-600" /> Date d'activation
+              <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                <CalendarDays size={15} className="text-slate-400" /> Date d'activation
               </div>
               <span className="text-sm font-semibold text-slate-800">{premium_active_since}</span>
             </div>
           )}
           {premium_expire_at && (
             <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                <CalendarCheck size={15} className="text-slate-600" /> Expire le
+              <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                <CalendarCheck size={15} className="text-slate-400" /> Expire le
               </div>
               <span className={`text-sm font-semibold ${bientotExpire ? "text-amber-600" : "text-slate-800"}`}>
                 {premium_expire_at}
@@ -148,8 +138,8 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
           )}
           {premium_nb_mois && (
             <div className="flex items-center justify-between py-2.5">
-              <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                <RefreshCw size={15} className="text-slate-600" /> Durée souscrite
+              <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                <RefreshCw size={15} className="text-slate-400" /> Durée souscrite
               </div>
               <span className="text-sm font-semibold text-slate-800">{premium_nb_mois} mois</span>
             </div>
@@ -158,24 +148,21 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
       </div>
 
       {/* Avantages */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6">
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
         <p className="text-sm font-bold text-slate-700 mb-3">Fonctionnalités incluses</p>
-        <div className="space-y-2">
-          {AVANTAGES.map((a, i) => (
-            <div key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
-              <CheckCircle2 size={15} className="text-teal-600 shrink-0 mt-0.5" />
-              {a}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {avantages.map((a) => (
+            <AvantageCard key={a.id} {...a} />
           ))}
         </div>
       </div>
 
       {bientotExpire ? (
-        <button onClick={onRenouveler} className="w-full flex items-center justify-center gap-2 py-3.5 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 transition-colors shadow-sm">
+        <button onClick={onRenouveler} className="w-full flex items-center justify-center gap-2 py-3.5 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 transition-colors">
           <RefreshCw size={16} /> Renouveler mon abonnement
         </button>
       ) : (
-        <button onClick={onRenouveler} className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+        <button onClick={onRenouveler} className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors">
           <RefreshCw size={15} /> Prolonger l'abonnement
         </button>
       )}
@@ -185,12 +172,38 @@ const StatusPremium = ({ premiumData, onRenouveler }) => {
 
 // ─── Flow Paiement ───────────────────────────────────────────────────────────
 const PremiumPage = () => {
-  const [nbMois, setNbMois] = useState(3);
+  const [nbMois, setNbMois] = useState(null);
   const [loading, setLoading] = useState(false);
   const [premiumData, setPremiumData] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [modeRenouvellement, setModeRenouvellement] = useState(false);
   const [faqOpen, setFaqOpen] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [avantages, setAvantages] = useState([]);
+  const [faqItems, setFaqItems] = useState([]);
+  const [loadingContenu, setLoadingContenu] = useState(true);
+
+  useEffect(() => {
+    const loadContenu = async () => {
+      try {
+        const [plansData, avantagesData, faqData] = await Promise.all([
+          jobsService.getPremiumPlans(),
+          jobsService.getPremiumAvantages(),
+          jobsService.getFaq("PREMIUM"),
+        ]);
+        setPlans(plansData);
+        setAvantages(avantagesData);
+        setFaqItems(faqData);
+        const defaut = plansData.find((p) => p.populaire) || plansData[0];
+        if (defaut) setNbMois(defaut.nb_mois);
+      } catch (err) {
+        reportError("ECHEC_GET_PREMIUM_CONTENU", err);
+      } finally {
+        setLoadingContenu(false);
+      }
+    };
+    loadContenu();
+  }, []);
 
   useEffect(() => {
     // Quand Chargily redirige ici après paiement, le webhook peut mettre 1-3s à arriver.
@@ -227,7 +240,26 @@ const PremiumPage = () => {
     load();
   }, []);
 
-  const prix = getPrix(nbMois);
+  const planSelectionne = plans.find((p) => p.nb_mois === nbMois) || null;
+  const prix = planSelectionne?.prix_da ?? 0;
+  // Base de comparaison "économies" = tarif au mois du plus petit palier (ex: 1 mois),
+  // sans hypothèse de prix mensuel global fixe — les paliers sont désormais libres.
+  const planBase = useMemo(() => {
+    if (plans.length === 0) return null;
+    return plans.reduce((min, p) => (p.nb_mois < min.nb_mois ? p : min), plans[0]);
+  }, [plans]);
+  const getEconomie = (plan) => {
+    if (!planBase || !plan || plan.nb_mois === planBase.nb_mois) return 0;
+    const tarifPlein = Math.round((planBase.prix_da / planBase.nb_mois) * plan.nb_mois);
+    return Math.max(0, tarifPlein - plan.prix_da);
+  };
+  const getRemisePct = (plan) => {
+    if (!planBase || !plan || plan.nb_mois === planBase.nb_mois) return null;
+    const tarifPlein = Math.round((planBase.prix_da / planBase.nb_mois) * plan.nb_mois);
+    if (tarifPlein <= 0) return null;
+    const pct = Math.round((1 - plan.prix_da / tarifPlein) * 100);
+    return pct > 0 ? `−${pct}%` : null;
+  };
   const showStatut = premiumData?.est_premium && !modeRenouvellement;
 
   const handlePayer = async () => {
@@ -246,35 +278,35 @@ const PremiumPage = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors mb-8">
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors mb-8">
           <ArrowLeft size={15} /> Retour au tableau de bord
         </Link>
 
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-50 border-2 border-teal-200 rounded-2xl mb-4">
-            <span className="text-3xl">⭐</span>
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-50 border border-teal-200 rounded-xl mb-4">
+            <Star size={24} className="text-teal-700" />
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900">
             {showStatut ? "Mon abonnement Premium" : "Passer en Premium"}
           </h1>
-          <p className="text-slate-700 mt-2 text-base">
+          <p className="text-slate-600 mt-2 text-sm">
             {showStatut ? "Consultez l'état de votre abonnement." : "Payez en ligne par CIB ou EDAHABIA via Chargily Pay."}
           </p>
         </div>
 
-        {loadingStatus && (
+        {(loadingStatus || (!showStatut && loadingContenu)) && (
           <div className="space-y-4 animate-pulse">
-            <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-8 text-center space-y-3">
-              <div className="w-16 h-16 bg-teal-200 rounded-2xl mx-auto" />
-              <div className="h-6 bg-teal-200 rounded w-64 mx-auto" />
-              <div className="h-4 bg-teal-100 rounded w-48 mx-auto" />
-              <div className="h-2 bg-teal-200 rounded-full w-full mt-4" />
+            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center space-y-3">
+              <div className="w-14 h-14 bg-slate-100 rounded-xl mx-auto" />
+              <div className="h-5 bg-slate-100 rounded w-56 mx-auto" />
+              <div className="h-4 bg-slate-100 rounded w-40 mx-auto" />
+              <div className="h-1.5 bg-slate-100 rounded-full w-full mt-4" />
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-3">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex justify-between py-2.5 border-b border-slate-100">
                   <div className="h-4 bg-slate-100 rounded w-32" />
-                  <div className="h-4 bg-slate-200 rounded w-24" />
+                  <div className="h-4 bg-slate-100 rounded w-24" />
                 </div>
               ))}
             </div>
@@ -282,87 +314,93 @@ const PremiumPage = () => {
         )}
 
         {!loadingStatus && showStatut && (
-          <StatusPremium premiumData={premiumData} onRenouveler={() => setModeRenouvellement(true)} />
+          <StatusPremium premiumData={premiumData} avantages={avantages} onRenouveler={() => setModeRenouvellement(true)} />
         )}
 
-        {!loadingStatus && !showStatut && (
+        {!loadingStatus && !showStatut && !loadingContenu && planSelectionne && (
           <>
             {modeRenouvellement && (
-              <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+              <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
                 <RefreshCw size={15} className="shrink-0" />
                 Prolongation — la durée s'ajoutera à la fin de votre abonnement actuel.
-                <button onClick={() => setModeRenouvellement(false)} className="ml-auto text-slate-600 hover:text-slate-600 text-xs underline">
+                <button onClick={() => setModeRenouvellement(false)} className="ml-auto text-slate-600 hover:text-slate-800 text-xs underline">
                   Annuler
                 </button>
               </div>
             )}
 
-            <div className="bg-white border-2 border-teal-200 rounded-2xl p-8 mb-6 shadow-sm">
-              <p className="text-sm font-semibold text-teal-700 uppercase tracking-wider mb-4 text-center">Ce qui est inclus</p>
-              <div className="space-y-2 mb-8">
-                {AVANTAGES.map((a, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
-                    <CheckCircle2 size={16} className="text-teal-600 shrink-0 mt-0.5" />
-                    {a}
-                  </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-8 mb-6">
+              <p className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4 text-center">Ce qui est inclus</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-8">
+                {avantages.map((a) => (
+                  <AvantageCard key={a.id} {...a} />
                 ))}
               </div>
 
               <p className="text-sm font-semibold text-slate-700 mb-3">Choisissez votre durée</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                {DUREES.map(({ mois, label, remise }) => (
-                  <button
-                    key={mois}
-                    onClick={() => setNbMois(mois)}
-                    className={`relative p-4 rounded-xl border-2 text-center transition-all ${nbMois === mois ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-white hover:border-teal-300"}`}
-                  >
-                    {remise && (
-                      <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                        {remise}
-                      </span>
-                    )}
-                    <p className="text-sm font-bold text-slate-900">{label}</p>
-                    <p className="text-xs text-teal-700 font-semibold mt-1">{getPrix(mois).toLocaleString("fr-DZ")} DA</p>
-                    <p className="text-[10px] text-slate-600 mt-0.5">{Math.round(getPrix(mois) / mois).toLocaleString("fr-DZ")} DA/mois</p>
-                  </button>
-                ))}
+                {plans.map((plan) => {
+                  const selected = nbMois === plan.nb_mois;
+                  const remise = getRemisePct(plan);
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setNbMois(plan.nb_mois)}
+                      className={`relative p-4 pt-5 rounded-lg border text-center transition-colors ${selected ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-white hover:border-teal-300"}`}
+                    >
+                      {plan.populaire && (
+                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+                          Populaire
+                        </span>
+                      )}
+                      {remise && (
+                        <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          {remise}
+                        </span>
+                      )}
+                      <p className="text-sm font-bold text-slate-900">{plan.label}</p>
+                      <p className="text-sm font-semibold text-teal-700 mt-1">{plan.prix_da.toLocaleString("fr-DZ")} DA</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{Math.round(plan.prix_da / plan.nb_mois).toLocaleString("fr-DZ")} DA/mois</p>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Fix 3 — Économies + Fix 4 — Date expiration estimée */}
-              <div className="bg-teal-50 border border-teal-200 rounded-xl px-5 py-4 space-y-2">
+              {/* Total + économies + date expiration estimée */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg px-5 py-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-700">Total à payer</p>
-                    <p className="text-xs text-slate-700">
-                      {nbMois} mois × {formatDA(Math.round(getPrix(nbMois) / nbMois))}/mois
-                      {(nbMois === 6 || nbMois === 12) && (
-                        <span className="ml-1 text-emerald-600 font-semibold">({nbMois === 6 ? "−8%" : "−17%"})</span>
+                    <p className="text-xs text-slate-600">
+                      {nbMois} mois × {formatDA(Math.round(prix / nbMois))}/mois
+                      {getRemisePct(planSelectionne) && (
+                        <span className="ml-1 text-emerald-600 font-semibold">({getRemisePct(planSelectionne)})</span>
                       )}
                     </p>
                   </div>
-                  <p className="text-2xl font-extrabold text-teal-700">{formatDA(prix)}</p>
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatDA(prix)}</p>
                 </div>
-                {getEconomie(nbMois) > 0 && (
+                {getEconomie(planSelectionne) > 0 && (
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
                     <Zap size={12} className="shrink-0" />
-                    Vous économisez {formatDA(getEconomie(nbMois))} par rapport au tarif mensuel
+                    Vous économisez {formatDA(getEconomie(planSelectionne))} par rapport au tarif mensuel
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 text-xs text-slate-700 pt-0.5">
-                  <CalendarCheck size={12} className="text-teal-500 shrink-0" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 pt-0.5">
+                  <CalendarCheck size={12} className="text-teal-600 shrink-0" />
                   Accès Premium jusqu'au <span className="font-semibold text-slate-700 ml-1">{getDateExpiration(nbMois)}</span>
                 </div>
               </div>
             </div>
 
             {/* Moyen de paiement */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-center shrink-0">
-                <CreditCard size={22} className="text-indigo-600" />
+            <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 flex items-center gap-4">
+              <div className="w-11 h-11 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center shrink-0">
+                <CreditCard size={20} className="text-slate-700" />
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-900">Paiement sécurisé via Chargily Pay</p>
-                <p className="text-xs text-slate-700 mt-0.5">CIB · EDAHABIA — vous serez redirigé vers la plateforme de paiement algérienne</p>
+                <p className="text-xs text-slate-600 mt-0.5">CIB · EDAHABIA — vous serez redirigé vers la plateforme de paiement algérienne</p>
               </div>
               <ExternalLink size={15} className="text-slate-300 ml-auto shrink-0" />
             </div>
@@ -370,7 +408,7 @@ const PremiumPage = () => {
             <button
               onClick={handlePayer}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-teal-700 text-white text-sm font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-60 shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-4 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-60"
             >
               {loading ? (
                 <><Loader2 size={16} className="animate-spin" /> Connexion à Chargily...</>
@@ -384,28 +422,30 @@ const PremiumPage = () => {
               <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Activation automatique après paiement</span>
             </div>
 
-            {/* Fix 5 — FAQ */}
-            <div className="mt-8 border-t border-slate-200 pt-8">
-              <p className="text-sm font-bold text-slate-700 mb-3">Questions fréquentes</p>
-              <div className="space-y-2">
-                {FAQ_ITEMS.map((item, i) => (
-                  <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setFaqOpen(faqOpen === i ? null : i)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
-                    >
-                      {item.q}
-                      {faqOpen === i ? <ChevronUp size={15} className="text-slate-600 shrink-0 ml-2" /> : <ChevronDown size={15} className="text-slate-600 shrink-0 ml-2" />}
-                    </button>
-                    {faqOpen === i && (
-                      <div className="px-4 pb-4 text-xs text-slate-700 leading-relaxed border-t border-slate-100 pt-3">
-                        {item.r}
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {/* FAQ */}
+            {faqItems.length > 0 && (
+              <div className="mt-8 border-t border-slate-200 pt-8">
+                <p className="text-sm font-bold text-slate-700 mb-3">Questions fréquentes</p>
+                <div className="space-y-2">
+                  {faqItems.map((item) => (
+                    <div key={item.id} className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setFaqOpen(faqOpen === item.id ? null : item.id)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                      >
+                        {item.question}
+                        {faqOpen === item.id ? <ChevronUp size={15} className="text-slate-600 shrink-0 ml-2" /> : <ChevronDown size={15} className="text-slate-600 shrink-0 ml-2" />}
+                      </button>
+                      {faqOpen === item.id && (
+                        <div className="px-4 pb-4 text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                          {item.reponse}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </div>

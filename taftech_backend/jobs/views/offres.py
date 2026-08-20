@@ -12,10 +12,12 @@ from ..serializers import (
     OffreEmploiCreateDTO,
     OffreDashboardDTO,
 )
+from ..throttles import PublicReadThrottle
 
 
 class JobListAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request):
         mot_cle = request.query_params.get('search', '')
         wilaya = request.query_params.get('wilaya', '')
@@ -54,9 +56,16 @@ class JobListAPIView(APIView):
 
 class JobDetailAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request, offre_id):
+        # `offre_id` est soit l'ID numérique historique (liens internes non publics :
+        # admin, favoris, retour de candidature), soit le `code_public` court utilisé
+        # dans les URLs SEO imbriquées (/entreprises/.../offres-d-emploi/.../titre-code).
+        lookup = {'id': offre_id} if str(offre_id).isdigit() else {'code_public': offre_id}
         try:
-            offre = OffreEmploi.objects.select_related('entreprise').get(id=offre_id, est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
+            offre = OffreEmploi.objects.select_related('entreprise').get(
+                est_active=True, statut_moderation='APPROUVEE', est_cloturee=False, **lookup
+            )
             serializer = OffreEmploiSerializer(offre)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
@@ -170,18 +179,23 @@ class SupprimerOffreAPIView(APIView):
 
 class ConstantsAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request):
         from django.core.cache import cache
         cached = cache.get('jobs_constants')
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..constants import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
+        from ..models import ProfilCandidat
         data = {
             "wilayas": [{"value": item[0], "label": item[1]} for item in WILAYAS_CHOICES],
             "secteurs": [{"value": item[0], "label": item[1]} for item in SECTEURS_CHOICES],
             "diplomes": [{"value": item[0], "label": item[1]} for item in DIPLOMES_CHOICES],
             "experiences": [{"value": item[0], "label": item[1]} for item in NIVEAUX_EXPERIENCE],
             "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
+            "mobilites": [{"value": item[0], "label": item[1]} for item in ProfilCandidat.MOBILITE_CHOICES],
+            "disponibilites": [{"value": item[0], "label": item[1]} for item in ProfilCandidat.SITUATION_ACTUELLE],
+            "services_militaires": [{"value": item[0], "label": item[1]} for item in ProfilCandidat.SERVICE_MILITAIRE_CHOICES],
         }
         cache.set('jobs_constants', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
@@ -192,6 +206,7 @@ class NomenclatureAPIView(APIView):
     alimenter les filtres en cascade côté frontend (filtré côté client, comme
     wilaya→commune)."""
     permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
     def get(self, request):
         from django.core.cache import cache
         cached = cache.get('jobs_nomenclature')

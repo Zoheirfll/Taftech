@@ -4,12 +4,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from accounts.views import CookieTokenRefreshView
+from jobs.seo_views import SitemapXMLView, RobotsTxtView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/jobs/', include('jobs.urls')),
     path('api/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('sitemap.xml', SitemapXMLView.as_view(), name='sitemap'),
+    path('robots.txt', RobotsTxtView.as_view(), name='robots'),
 ]
 
 # Swagger UI — disponible uniquement en DEBUG

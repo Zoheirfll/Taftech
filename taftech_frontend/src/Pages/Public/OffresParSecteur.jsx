@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { secteurUrl } from "../../utils/slugify";
 import {
   Search, X, Cog, Package, Megaphone, HardHat, HeartPulse, Users, Palmtree,
   Wrench, Briefcase, Sprout, Flame, Palette, Store, Landmark, Theater,
   GraduationCap,
 } from "lucide-react";
+import Seo from "../../Components/Seo";
 import { tw } from "../../theme";
 
 const iconsMap = {
@@ -68,6 +70,10 @@ const OffresParSecteur = () => {
 
   return (
     <div className={`${tw.surfaceSubtle} min-h-screen`}>
+      <Seo
+        title="Offres d'emploi par secteur"
+        description="Parcourez les offres d'emploi en Algérie classées par secteur d'activité — agriculture, industrie, informatique, santé et bien plus, sur TafTech."
+      />
       {/* Header */}
       <div className={tw.bannerGradientPrimary}>
         <div className="max-w-6xl mx-auto px-6 py-10">
@@ -127,7 +133,7 @@ const OffresParSecteur = () => {
                       return (
                         <Link
                           key={index}
-                          to={`/offres?specialite=${encodeURIComponent(secteur.value)}`}
+                          to={secteurUrl(secteur.value, secteur.label)}
                           className={`group ${tw.cardColors} rounded-2xl p-6 ${tw.borderPrimaryHover} hover:shadow-md transition-all flex items-center gap-5`}
                         >
                           <div className={`w-14 h-14 ${tw.surfaceMuted} rounded-2xl flex items-center justify-center ${tw.groupHoverBgPrimarySoft} transition-colors shrink-0`}>
@@ -152,6 +158,10 @@ const OffresParSecteur = () => {
             })()}
           </>
         )}
+        <div className={`mt-8 pt-6 border-t ${tw.borderSubtle} flex flex-wrap gap-4 text-sm`}>
+          <Link to="/metiers" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par métier →</Link>
+          <Link to="/regions" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par région →</Link>
+        </div>
       </div>
     </div>
   );

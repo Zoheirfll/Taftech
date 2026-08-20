@@ -12,6 +12,13 @@ import {
   UserCog,
   AlertTriangle,
   Star,
+  CreditCard,
+  HelpCircle,
+  Tags,
+  Newspaper,
+  GalleryHorizontal,
+  FileEdit,
+  Bot,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
@@ -44,7 +51,12 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin-taftech/utilisateurs", icon: Users, label: "Utilisateurs" },
       { to: "/admin-taftech/metiers", icon: Briefcase, label: "Référentiel métiers" },
+      { to: "/admin-taftech/competences", icon: Tags, label: "Référentiel compétences" },
       { to: "/admin-taftech/broadcast", icon: Megaphone, label: "Diffusion" },
+      { to: "/admin-taftech/articles", icon: Newspaper, label: "Blog / Articles" },
+      { to: "/admin-taftech/bannieres", icon: GalleryHorizontal, label: "Bannières" },
+      { to: "/admin-taftech/pages", icon: FileEdit, label: "Pages du site" },
+      { to: "/admin-taftech/ia-config", icon: Bot, label: "Configuration IA" },
     ],
   },
   {
@@ -53,6 +65,8 @@ const NAV_GROUPS = [
       { to: "/admin-taftech/audit", icon: ShieldCheck, label: "Journal d'audit" },
       { to: "/admin-taftech/erreurs-systeme", icon: AlertTriangle, label: "Erreurs système" },
       { to: "/admin-taftech/comptes-admins", icon: UserCog, label: "Comptes admins" },
+      { to: "/admin-taftech/premium-config", icon: CreditCard, label: "Config. Premium" },
+      { to: "/admin-taftech/faq", icon: HelpCircle, label: "FAQ" },
     ],
   },
 ];

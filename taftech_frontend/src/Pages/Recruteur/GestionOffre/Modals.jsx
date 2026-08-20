@@ -24,7 +24,7 @@ const CRITERES_COMPARATEUR = [
   { label: "Spécialité", key: "specialite", max: 25 },
   { label: "Diplôme", key: "diplome", max: 20 },
   { label: "Expérience", key: "experience", max: 20 },
-  { label: "Région", key: "region", max: 20 },
+  { label: "Localisation & mobilité", key: "region", max: 20 },
   { label: "Compétences", key: "competences", max: 15 },
 ];
 

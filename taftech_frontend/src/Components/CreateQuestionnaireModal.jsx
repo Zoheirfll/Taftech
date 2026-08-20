@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import toast from "react-hot-toast";
@@ -26,10 +26,39 @@ const MAX_CHOIX = 6;
 // Modale de création rapide de questionnaire, réutilisable partout où on a besoin d'en créer
 // un sans quitter la page (ex: en cours de publication d'une offre). Création uniquement —
 // pas d'édition/suppression, pour ça la page dédiée Questionnaires.jsx reste la référence.
-export const CreateQuestionnaireModal = ({ open, onClose, onCreated }) => {
+export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitre = "", initialQuestions = null }) => {
   const [form, setForm] = useState({ titre: "", questions: [questionVide()] });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Pré-remplissage : suggestions de questions d'entretien générées par l'IA (CreateJob).
+  // Chaque suggestion peut être une simple chaîne (texte libre) ou un objet enrichi
+  // { texte, type_question, choix } quand l'IA a proposé un QCM/numérique adapté à la question.
+  useEffect(() => {
+    if (!open) return;
+    if (initialQuestions && initialQuestions.length > 0) {
+      setForm({
+        titre: initialTitre,
+        questions: initialQuestions.map((q) => {
+          const question = typeof q === "string" ? { texte: q } : q;
+          const type = TYPE_OPTIONS.some((t) => t.value === question.type_question) ? question.type_question : "COURT";
+          const hasChoixType = type === "CHOIX_UNIQUE" || type === "CHOIX_MULTIPLE";
+          const choixIA = Array.isArray(question.choix) ? question.choix.filter((c) => c && c.trim()) : [];
+          const choix = hasChoixType && choixIA.length >= 2
+            ? choixIA.map((texte) => ({ texte }))
+            : [{ texte: "" }, { texte: "" }];
+          return {
+            texte: question.texte || "",
+            type_question: hasChoixType && choixIA.length < 2 ? "COURT" : type,
+            requis: false,
+            disqualifiant: false,
+            choix,
+          };
+        }),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 

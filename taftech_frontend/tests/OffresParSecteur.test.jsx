@@ -73,7 +73,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
     });
   });
 
-  it("🟢 HP3 : Les liens pointent vers la bonne URL avec le paramètre encodé", async () => {
+  it("🟢 HP3 : Les liens pointent vers l'URL propre du secteur (SEO)", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
 
     render(
@@ -87,7 +87,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
       const linkEnergie = screen
         .getByText("Énergie, extraction et hydrocarbure")
         .closest("a");
-      expect(linkEnergie).toHaveAttribute("href", "/offres?specialite=B");
+      expect(linkEnergie).toHaveAttribute("href", "/secteurs/b-energie-extraction-et-hydrocarbure");
     });
   });
 

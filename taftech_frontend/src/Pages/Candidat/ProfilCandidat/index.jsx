@@ -44,6 +44,10 @@ const ProfilCandidat = () => {
     profil,
     completionPercent,
     champsManquants,
+    competenceSuggestions,
+    showCompetenceSuggestions,
+    setShowCompetenceSuggestions,
+    handleCompetenceInputChange,
     showExpForm,
     setShowExpForm,
     showFormForm,
@@ -575,21 +579,48 @@ const ProfilCandidat = () => {
             ))}
         </div>
         <div className="flex gap-2">
-          <input
-            id="comp-input"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.target.value.trim()) {
-                handleAddTag("competences", e.target.value);
-                e.target.value = "";
-              }
-            }}
-            placeholder="Tapez une compétence puis Entrée..."
-            className={INPUT_CLASS + " flex-1"}
-          />
+          <div className="relative flex-1">
+            <input
+              id="comp-input"
+              onChange={(e) => handleCompetenceInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.target.value.trim()) {
+                  handleAddTag("competences", e.target.value);
+                  e.target.value = "";
+                  setShowCompetenceSuggestions(false);
+                }
+              }}
+              onBlur={() => setTimeout(() => setShowCompetenceSuggestions(false), 200)}
+              placeholder="Tapez une compétence puis Entrée..."
+              className={INPUT_CLASS + " w-full"}
+            />
+            {showCompetenceSuggestions && competenceSuggestions.length > 0 && (
+              <div className={`absolute top-full left-0 right-0 rounded-xl shadow-lg z-50 mt-1 overflow-hidden ${tw.autocompleteDropdown}`}>
+                <div className="max-h-48 overflow-y-auto">
+                  {competenceSuggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={() => {
+                        handleAddTag("competences", c.label);
+                        const el = document.getElementById("comp-input");
+                        if (el) el.value = "";
+                        setShowCompetenceSuggestions(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 transition-colors text-sm font-medium ${tw.autocompleteItem} ${tw.autocompleteItemTitle}`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => {
               const el = document.getElementById("comp-input");
               if (el?.value.trim()) { handleAddTag("competences", el.value); el.value = ""; }
+              setShowCompetenceSuggestions(false);
             }}
             className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${tw.bgPrimarySolidHover} text-white`}
           >

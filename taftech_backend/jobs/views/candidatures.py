@@ -206,7 +206,7 @@ class MesCandidaturesAPIView(APIView):
 
     def get(self, request):
         candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_postulation')
-        serializer = MesCandidaturesDTO(candidatures, many=True)
+        serializer = MesCandidaturesDTO(candidatures, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -411,3 +411,30 @@ class Top5CandidatsAPIView(APIView):
         ).order_by('-score_matching')[:5]
         serializer = CandidatureRecruteurDTO(shortlist, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CandidatureMarquerConsulteeAPIView(APIView):
+    """Journalise "candidature consultée" dans le fil d'activité du candidat (dashboard
+    candidat, session specs/important-features) — appelé par le frontend recruteur quand un
+    recruteur ouvre le détail d'une candidature (fire-and-forget, pas d'action bloquante)."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.select_related('offre__entreprise', 'candidat').get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
+        if candidature.candidat and not candidature.est_rapide:
+            from ..models import ActiviteProfil
+            # Une seule entrée par (candidat, entreprise, candidature) — pas de spam si le
+            # recruteur rouvre la même candidature plusieurs fois.
+            ActiviteProfil.objects.get_or_create(
+                candidat=candidature.candidat,
+                entreprise=entreprise,
+                candidature=candidature,
+                type_activite='CANDIDATURE_CONSULTEE',
+            )
+        return Response({"message": "OK"}, status=status.HTTP_200_OK)

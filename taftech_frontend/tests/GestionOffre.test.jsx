@@ -46,6 +46,7 @@ vi.mock("../src/Services/jobsService", () => ({
     cloturerOffre: vi.fn(),
     evaluerCandidature: vi.fn(),
     telechargerBulletin: vi.fn(),
+    marquerCandidatureConsultee: vi.fn().mockResolvedValue(null),
   },
 }));
 

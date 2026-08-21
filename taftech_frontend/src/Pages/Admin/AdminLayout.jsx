@@ -19,6 +19,8 @@ import {
   GalleryHorizontal,
   FileEdit,
   Bot,
+  CalendarClock,
+  FolderLock,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
@@ -67,6 +69,8 @@ const NAV_GROUPS = [
       { to: "/admin-taftech/comptes-admins", icon: UserCog, label: "Comptes admins" },
       { to: "/admin-taftech/premium-config", icon: CreditCard, label: "Config. Premium" },
       { to: "/admin-taftech/faq", icon: HelpCircle, label: "FAQ" },
+      { to: "/admin-taftech/rendez-vous", icon: CalendarClock, label: "Rendez-vous" },
+      { to: "/admin-taftech/types-documents", icon: FolderLock, label: "Types de documents" },
     ],
   },
 ];

@@ -174,12 +174,20 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
 class MesCandidaturesDTO(serializers.ModelSerializer):
     offre_titre = serializers.CharField(source='offre.titre', read_only=True)
     entreprise_nom = serializers.CharField(source='offre.entreprise.nom_entreprise', read_only=True)
+    entreprise_logo_url = serializers.SerializerMethodField()
     offre_est_cloturee = serializers.BooleanField(source='offre.est_cloturee', read_only=True)
 
     class Meta:
         model = Candidature
         fields = (
-            'id', 'offre_titre', 'entreprise_nom', 'date_postulation',
+            'id', 'offre_titre', 'entreprise_nom', 'entreprise_logo_url', 'date_postulation',
             'statut', 'offre_est_cloturee', 'date_entretien', 'message_entretien',
             'score_matching', 'details_matching'
         )
+
+    def get_entreprise_logo_url(self, obj):
+        logo = obj.offre.entreprise.logo
+        if not logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(logo.url) if request else logo.url

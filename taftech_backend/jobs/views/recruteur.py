@@ -423,6 +423,25 @@ class CVThequeView(APIView):
             results = serializer.data
             for item in results:
                 item['score_offre'] = scores_map.get(item['user_id'], 0)
+            # Fil d'activité candidat "profil recommandé" (dashboard candidat, session
+            # specs/important-features) — uniquement si score élevé, pas une simple
+            # consultation (décision utilisateur). Throttlé à 1 entrée/24h par candidat pour
+            # ne pas spammer à chaque rafraîchissement de la recherche CVthèque.
+            from ..models import ActiviteProfil
+            from django.utils import timezone
+            import datetime as _dt
+            seuil_recent = timezone.now() - _dt.timedelta(hours=24)
+            for profil, sc in page_items:
+                if sc >= ActiviteProfil.SEUIL_SCORE_RECOMMANDE:
+                    deja_recent = ActiviteProfil.objects.filter(
+                        candidat=profil.user, entreprise=entreprise_user,
+                        type_activite='PROFIL_RECOMMANDE', date_creation__gte=seuil_recent,
+                    ).exists()
+                    if not deja_recent:
+                        ActiviteProfil.objects.create(
+                            candidat=profil.user, entreprise=entreprise_user,
+                            type_activite='PROFIL_RECOMMANDE', score=sc,
+                        )
             return Response({
                 'count': total,
                 'next': None,

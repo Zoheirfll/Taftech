@@ -143,6 +143,9 @@ const Settings          = lazy(() => import("./Pages/Candidat/Settings"));
 const AlertesEmploi     = lazy(() => import("./Pages/Candidat/AlertesEmploi"));
 const OffresSauvegardees = lazy(() => import("./Pages/Candidat/OffresSauvegardees"));
 const SuggestionsCarriere = lazy(() => import("./Pages/Candidat/SuggestionsCarriere"));
+const MesCompetences    = lazy(() => import("./Pages/Candidat/MesCompetences"));
+const MesDocuments      = lazy(() => import("./Pages/Candidat/MesDocuments"));
+const PrendreRendezVous = lazy(() => import("./Pages/Candidat/PrendreRendezVous"));
 
 // Admin
 const AdminEntreprises  = lazy(() => import("./Pages/Admin/AdminEntreprises"));
@@ -160,6 +163,8 @@ const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
 const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
 const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
+const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
+const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
 const AdminCandidatures = lazy(() => import("./Pages/Admin/AdminCandidatures"));
@@ -298,6 +303,9 @@ function AppContent() {
               <Route path="/suggestions-carriere" element={<SuggestionsCarriere />} />
               <Route path="/alertes" element={<AlertesEmploi />} />
               <Route path="/offres-sauvegardees" element={<OffresSauvegardees />} />
+              <Route path="/mes-competences" element={<MesCompetences />} />
+              <Route path="/mes-documents" element={<MesDocuments />} />
+              <Route path="/rendez-vous" element={<PrendreRendezVous />} />
             </Route>
             <Route path="/jobs/:id/postuler" element={<CandidatRoute><ReviewCandidature /></CandidatRoute>} />
 
@@ -319,6 +327,8 @@ function AppContent() {
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
               <Route path="/admin-taftech/pages" element={<AdminPages />} />
               <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
+              <Route path="/admin-taftech/rendez-vous" element={<AdminRendezVous />} />
+              <Route path="/admin-taftech/types-documents" element={<AdminTypesDocuments />} />
               <Route path="audit" element={<AdminAuditLogs />} />
               <Route path="comptes-admins" element={<AdminComptes />} />
               <Route path="erreurs-systeme" element={<AdminSystemLogs />} />

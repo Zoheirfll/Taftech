@@ -243,6 +243,24 @@ class AlerteEmploiDetailAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class AlerteMarquerVueAPIView(APIView):
+    """Réinitialise le compteur "nouvelles offres" d'une alerte — appelé quand le candidat
+    clique "Voir les offres" pour cette alerte précise (dashboard ou page /alertes)."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
+        except AlerteEmploi.DoesNotExist:
+            return Response({"error": "Alerte introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        from django.utils import timezone
+        alerte.derniere_consultation = timezone.now()
+        alerte.save(update_fields=['derniere_consultation'])
+        return Response(AlerteEmploiSerializer(alerte).data, status=status.HTTP_200_OK)
+
     def delete(self, request, pk):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)

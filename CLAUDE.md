@@ -2,7 +2,56 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 21/08/2026 — Branche `main` : prompts IA éditables depuis "Configuration IA" + audit et refonte du tableau de bord admin (bug "N/A" corrigé, KPI Premium + contenu CMS ajoutés)._
+_Dernière mise à jour : 21/08/2026 — Branche `specs/important-features` : refonte complète du tableau de bord candidat (mockup employeur), score de profil composite, compétences structurées, documents privés, prise de rendez-vous, fil d'activité._
+
+---
+
+## 🆕 SESSION 21/08/2026 (branche `specs/important-features`) — Refonte tableau de bord candidat (mockup employeur)
+
+**Contexte** : l'employeur a envoyé des mockups générés par IA montrant une refonte souhaitée du tableau de bord candidat. Chaque point discuté individuellement avec l'utilisateur avant tout code (14 points au total : 6 "réorganiser l'existant", 8 "nouvelles fonctionnalités"), puis délégation complète ("faites tt debrouilles vous je vais sortir je compte sur votre expertise"). Nouvelle branche `specs/important-features` créée depuis `main` à jour (après commit du travail précédent : prompts IA éditables + audit dashboard admin).
+
+**Décisions actées point par point** :
+1. Jauge de complétude compacte + 6 sous-barres par catégorie (Informations personnelles, Expérience professionnelle, Compétences, Formation, Langues, CV), chacune avec tooltip listant ses critères exacts.
+2. Offres recommandées : badge % de matching + carrousel horizontal (au lieu d'une liste verticale figée).
+3. Nouveau **Score de profil** composite /100, remplace l'ancienne "Analyse IA du CV" comme widget principal — **volontairement pas généré par l'IA** (peu fiable pour s'auto-noter sur une échelle arbitraire), calcul déterministe backend : complétude (25pts) + diplôme (20pts, barème hiérarchique) + expérience (20pts, années plafonnées à 10) + langues (15pts, moyenne des niveaux déclarés) + pertinence marché (20pts, moyenne du score de matching sur les offres actives, réutilise `matcher.calculer_score_matching` sans nouvelle logique). "Pourquoi ce score ?" (explication détaillée) volontairement reporté — pas encore fait.
+4. Dernières candidatures : logo entreprise ajouté (nouveau champ `entreprise_logo_url` sur `MesCandidaturesDTO`).
+5. Alertes d'emploi : compteur "nouvelles offres" fiabilisé via un timestamp `derniere_consultation` (reset à la consultation) plutôt qu'un calcul figé — dupliqué sur le dashboard et sur `/alertes`.
+6. Suivi candidatures : funnel 6 lignes (Envoyées / Présélection / En cours / Entretien / Retenu / Refusé) — décision : ne PAS fusionner Retenu+Refusé en une seule ligne "Décision".
+7. **Compétences à développer** (%) — reporté, lié à la Feature 3 ("Mes tests") qui reste à décider.
+8. Recommandations de formation externe (Udemy/Coursera) — **écarté**, pas fait.
+9. **Mes tests** (évaluation de compétences) — **PARKÉ explicitement**, l'utilisateur veut y réfléchir davantage. Ne pas construire sans nouvelle demande.
+10. **Prendre rendez-vous** — système complet avec agenda réel, entièrement configurable par l'admin, un seul conseiller/agenda (pas multi-intervenants).
+11. **Mes documents** — espace 100% privé (jamais visible aux recruteurs), catégories de documents configurables par l'admin (pas codées en dur).
+12. **Mes compétences** (page dédiée) — option structurée choisie : chaque compétence a un niveau auto-déclaré (Débutant/Intermédiaire/Avancé/Confirmé), conçu pour s'articuler plus tard avec un statut "Vérifié par test" une fois "Mes tests" construit.
+13. **Activité récente** — fil d'événements "Candidature consultée" (recruteur a ouvert la candidature) et "Profil recommandé" (déclenché uniquement si score de matching ≥ 80%, même seuil que la convention "+80% IA" déjà en place ailleurs — pas pour une simple consultation de profil sans contexte).
+14. **Publier mon CV** — simple raccourci vers le flux d'upload CV existant, aucun nouveau backend.
+
+### Backend — 8 nouveaux modèles (`jobs/models.py`, migration `0076` + seed `0077`)
+`CompetenceCandidat` (label, niveau, source — resynchronise `ProfilCandidat.competences` texte libre à chaque écriture pour ne rien casser côté `matcher.py`/`cv_parser.py`), `TypeDocument` (catalogue admin, seedé avec 5 types de départ : CV/Diplôme/Attestation/Lettre de motivation/Certificat), `DocumentCandidat` (FK profil + type, jamais exposé aux recruteurs), `ConfigRendezVous` (singleton `get_solo()`, délai min de réservation + horizon max), `DisponibiliteRecurrente` (gabarit hebdomadaire admin : jour + heures + durée créneau), `JourBloque`, `RendezVous`, `ActiviteProfil`. Champ `derniere_consultation` ajouté à `AlerteEmploi` existant.
+
+**Score de profil** (`jobs/profile_score.py`, nouveau fichier) : `calculer_score_profil(candidat_user)` — 5 composantes documentées ci-dessus, réutilise `_annees_experience`/`_deduire_annees_sans_chevauchement` de `matcher.py` (pas de réimplémentation).
+
+**Créneaux de rendez-vous calculés à la volée** (`jobs/views/candidat_dashboard.py::_generer_creneaux_disponibles()`) — jamais matérialisés en base individuellement, calculés à chaque requête à partir de 3 entrées indépendantes (gabarit hebdomadaire actif + jours bloqués + créneaux déjà réservés). Vérifié en conditions réelles : le délai minimum de réservation exclut bien les créneaux du jour même pour le jour de la semaine configuré, en sautant à l'occurrence de la semaine suivante.
+
+**Compteur d'alertes fiable** (`AlerteEmploiSerializer.nb_nouvelles_offres`) : compte les offres publiées après `derniere_consultation` (ou `date_creation` si jamais consultée) — pas un compteur stocké à incrémenter, toujours recalculable, pas de race condition. Nouveau `AlerteMarquerVueAPIView` (`POST jobs/alertes/<id>/marquer-vue/`) reset le timestamp.
+
+**Activité récente — anti-spam** : `CandidatureMarquerConsulteeAPIView` (`POST jobs/candidatures/<id>/marquer-consultee/`, appelé côté frontend recruteur dans `GestionOffre/index.jsx::handleSelectCandidature`, fire-and-forget) logue un événement `CANDIDATURE_CONSULTEE` via `get_or_create` (jamais de doublon). `CVThequeView.get()` (`jobs/views/recruteur.py`) logue `PROFIL_RECOMMANDE` pour tout candidat scoré ≥80% dans les résultats, **throttlé à 1 événement / 24h par paire (candidat, entreprise)** pour éviter le spam à chaque rafraîchissement de recherche CVthèque.
+
+**19 nouvelles routes** ajoutées dans `jobs/urls.py`, toutes placées avant le catch-all final `<str:offre_id>/` (contrainte critique déjà documentée dans ce fichier — toute route littérale doit précéder ce pattern).
+
+### Frontend
+- **`Services/dashboardCandidatService.js`** (nouveau) — ~20 méthodes candidat + admin, réexporté dans la façade `jobsService.js` (`...dashboardCandidatService`).
+- **`Pages/Candidat/CandidatDashboard.jsx`** — réécrit en entier : jauge compacte + 6 sous-barres avec `TooltipIcon`, carrousel offres recommandées (scroll horizontal + boutons flèches) avec badge `matching_score`, widget Score de profil (jauge + détail 5 composantes), funnel candidatures 6 lignes, dernières candidatures avec logo entreprise, widget alertes avec compteur fiable, widget Activité récente, 3 raccourcis vers Mes compétences / Mes documents / Prendre rendez-vous, bouton "Publier mon CV".
+- **3 nouvelles pages candidat** : `MesCompetences.jsx`, `MesDocuments.jsx`, `PrendreRendezVous.jsx` — pattern déjà établi (`AlertesEmploi.jsx` : liste + modale + `confirmToast`). Ajoutées à `CandidatLayout.jsx` (sidebar) et aux routes `App.jsx` (dans le même `<Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>`).
+- **2 nouveaux panels admin** : `AdminRendezVous.jsx` (config délai/horizon + 3 onglets : créneaux récurrents / jours bloqués / liste rendez-vous avec changement de statut inline) et `AdminTypesDocuments.jsx` (CRUD simple, pattern `AdminFaq.jsx`). Routes + entrées sidebar section "Système" dans `AdminLayout.jsx`.
+
+**Piège récurrent (déjà documenté dans ce fichier pour le chantier CMS) reconfirmé cette session** : l'ajout de `jobsService.marquerCandidatureConsultee` dans `GestionOffre/index.jsx::handleSelectCandidature` a fait échouer silencieusement (unhandled exception, pas un test rouge) `GestionOffre.test.jsx` — le mock `vi.mock("../src/Services/jobsService")` du test ne définissait pas cette méthode. Fix : ajout de `marquerCandidatureConsultee: vi.fn().mockResolvedValue(null)` au mock.
+
+**Audit sécurité** : tous les nouveaux endpoints candidat vérifient `request.user.role == 'CANDIDAT'` explicitement (pattern déjà établi) ; tous les endpoints admin `IsAdminUser` + `request.user.role == 'ADMIN'`. Documents candidat (`DocumentCandidatAPIView`) scopés strictement à `request.user.profil_candidat` — jamais exposés aux recruteurs (aucune route recruteur/admin ne les expose). `RendezVousAPIView`/`RendezVousAnnulerAPIView` scopés à `candidat=request.user`. RAS.
+
+**Tests** : backend 338/338 ✅ (2 échecs pré-existants sans rapport avec ce chantier corrigés au passage — `test_api_marche.py` référençait encore l'ancien champ `salaires_par_secteur`, renommé `tension_par_secteur` lors de la refonte dashboard admin du 21/08 ; mis à jour vers le nouveau format), frontend 402/402 ✅ (dont le fix `GestionOffre.test.jsx` ci-dessus), `npx vite build` propre, `python manage.py check` propre, tous les nouveaux endpoints vérifiés manuellement en conditions réelles contre la base de dev (`APIClient` en shell Django).
+
+**Non fait cette session (hors scope explicite)** : "Mes tests" (Feature 3, parké par l'utilisateur), "Compétences à développer" %, recommandations de formation externes, explication détaillée "Pourquoi ce score ?" pour le Score de profil.
 
 ---
 

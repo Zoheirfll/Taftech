@@ -6,6 +6,7 @@ import { candidatService } from "./candidatService";
 import { recruteurService } from "./recruteurService";
 import { adminService } from "./adminService";
 import { iaService } from "./iaService";
+import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
 let _premiumPlansCache = null;
@@ -217,4 +218,7 @@ export const jobsService = {
 
   // IA
   ...iaService,
+
+  // Nouveau tableau de bord candidat
+  ...dashboardCandidatService,
 };

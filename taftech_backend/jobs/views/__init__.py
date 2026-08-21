@@ -37,6 +37,7 @@ from .candidatures import (
     DeleteCandidatureAPIView,
     EvaluerCandidatureAPIView,
     Top5CandidatsAPIView,
+    CandidatureMarquerConsulteeAPIView,
 )
 from .recruteur import (
     DashboardRecruteurAPIView,
@@ -124,3 +125,19 @@ from .pages import (
     PageStatiqueAdminAPIView,
 )
 from .ai_config import AIConfigAdminAPIView
+from .candidat_dashboard import (
+    ScoreProfilAPIView,
+    CompetenceCandidatAPIView,
+    TypeDocumentPublicAPIView,
+    DocumentCandidatAPIView,
+    DisponibilitesAPIView,
+    RendezVousAPIView,
+    RendezVousAnnulerAPIView,
+    ActiviteProfilAPIView,
+    ConfigRendezVousAdminAPIView,
+    DisponibiliteRecurrenteAdminAPIView,
+    JourBloqueAdminAPIView,
+    RendezVousAdminListAPIView,
+    TypeDocumentAdminAPIView,
+)
+from .profils import AlerteMarquerVueAPIView

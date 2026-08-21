@@ -14,6 +14,9 @@ import {
   Settings,
   LogOut,
   Sparkles,
+  Star,
+  FolderLock,
+  CalendarClock,
 } from "lucide-react";
 
 const CandidatLayout = () => {
@@ -53,6 +56,9 @@ const CandidatLayout = () => {
       path: "/suggestions-carriere",
       icon: Sparkles,
     },
+    { name: "Mes compétences", path: "/mes-competences", icon: Star },
+    { name: "Mes documents", path: "/mes-documents", icon: FolderLock },
+    { name: "Prendre rendez-vous", path: "/rendez-vous", icon: CalendarClock },
     { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
   ], [unreadCount]);
 

@@ -813,6 +813,13 @@ class AIConfig(models.Model):
         ),
     )
 
+    conseils_dashboard_actif = models.BooleanField(default=True, verbose_name="Conseils personnalisés (tableau de bord) actifs")
+    conseils_dashboard_max_tokens = models.PositiveIntegerField(default=600, validators=[MinValueValidator(100)])
+    conseils_dashboard_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Conseils personnalisés",
+        help_text="Instructions système (le profil/score/activité du candidat sont envoyés séparément). Si vide, le prompt par défaut du code est utilisé.",
+    )
+
     date_modification = models.DateTimeField(auto_now=True)
 
     @classmethod

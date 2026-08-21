@@ -14,6 +14,16 @@ export const dashboardCandidatService = {
     }
   },
 
+  getConseilsPersonnalises: async () => {
+    try {
+      const response = await api.get("jobs/conseils-personnalises/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_CONSEILS_PERSONNALISES", err);
+      throw err;
+    }
+  },
+
   getMesCompetencesDetail: async () => {
     try {
       const response = await api.get("jobs/mes-competences/");

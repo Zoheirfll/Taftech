@@ -35,6 +35,13 @@ const SECTION_CLASS = `${tw.card} rounded-2xl p-6`;
 const SECTION_TITLE = `text-lg font-bold ${tw.textStrong}`;
 const EDIT_BTN = `flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tw.editButtonOutline}`;
 
+const NIVEAUX_COMPETENCE = [
+  { value: "DEBUTANT", label: "Débutant" },
+  { value: "INTERMEDIAIRE", label: "Intermédiaire" },
+  { value: "AVANCE", label: "Avancé" },
+  { value: "CONFIRME", label: "Confirmé" },
+];
+
 const ProfilCandidat = () => {
   const [langName, setLangName] = useState("");
   const [langLevel, setLangLevel] = useState("Débutant");
@@ -100,6 +107,9 @@ const ProfilCandidat = () => {
     handlePhotoChange,
     handleAddTag,
     handleRemoveTag,
+    handleAjouterCompetence,
+    handleSupprimerCompetence,
+    handleChangerNiveauCompetence,
     handleAddLanguage,
     handleUpdateGeneric,
     handleUpdateCV,
@@ -560,23 +570,30 @@ const ProfilCandidat = () => {
       <div className={SECTION_CLASS}>
         <h2 className={`${SECTION_TITLE} mb-4`}>Compétences</h2>
         <div className="flex flex-wrap gap-2 mb-4">
-          {profil.competences
-            ?.split(",")
-            .filter((t) => t)
-            .map((tag) => (
-              <span
-                key={tag.trim()}
-                className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-lg shadow-sm ${tw.skillTag}`}
+          {(profil.competences_detail || []).map((c) => (
+            <span
+              key={c.id}
+              className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-lg shadow-sm ${tw.skillTag}`}
+            >
+              {c.label}
+              <select
+                value={c.niveau}
+                onChange={(e) => handleChangerNiveauCompetence(c.id, e.target.value)}
+                className="bg-transparent text-[10px] font-semibold border-l pl-1.5 ml-0.5 cursor-pointer focus:outline-none"
+                title="Niveau"
               >
-                {tag.trim()}
-                <button
-                  onClick={() => handleRemoveTag("competences", tag)}
-                  className={`transition-colors ml-0.5 ${tw.skillTagRemove}`}
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
+                {NIVEAUX_COMPETENCE.map((n) => (
+                  <option key={n.value} value={n.value}>{n.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleSupprimerCompetence(c.id)}
+                className={`transition-colors ml-0.5 ${tw.skillTagRemove}`}
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
         </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -585,7 +602,7 @@ const ProfilCandidat = () => {
               onChange={(e) => handleCompetenceInputChange(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.target.value.trim()) {
-                  handleAddTag("competences", e.target.value);
+                  handleAjouterCompetence(e.target.value);
                   e.target.value = "";
                   setShowCompetenceSuggestions(false);
                 }
@@ -602,7 +619,7 @@ const ProfilCandidat = () => {
                       key={c.id}
                       type="button"
                       onMouseDown={() => {
-                        handleAddTag("competences", c.label);
+                        handleAjouterCompetence(c.label);
                         const el = document.getElementById("comp-input");
                         if (el) el.value = "";
                         setShowCompetenceSuggestions(false);
@@ -619,7 +636,7 @@ const ProfilCandidat = () => {
           <button
             onClick={() => {
               const el = document.getElementById("comp-input");
-              if (el?.value.trim()) { handleAddTag("competences", el.value); el.value = ""; }
+              if (el?.value.trim()) { handleAjouterCompetence(el.value); el.value = ""; }
               setShowCompetenceSuggestions(false);
             }}
             className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${tw.bgPrimarySolidHover} text-white`}

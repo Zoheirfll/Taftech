@@ -76,7 +76,7 @@ from .views import (
     AIConfigAdminAPIView,
 
     # Nouveau tableau de bord candidat (specs/important-features)
-    ScoreProfilAPIView, CompetenceCandidatAPIView,
+    ScoreProfilAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
     TypeDocumentPublicAPIView, DocumentCandidatAPIView,
     DisponibilitesAPIView, RendezVousAPIView, RendezVousAnnulerAPIView,
     ActiviteProfilAPIView, AlerteMarquerVueAPIView,
@@ -212,6 +212,7 @@ urlpatterns = [
 
     # Nouveau tableau de bord candidat
     path('score-profil/', ScoreProfilAPIView.as_view(), name='score-profil'),
+    path('conseils-personnalises/', ConseilsPersonnalisesIAAPIView.as_view(), name='conseils-personnalises'),
     path('mes-competences/', CompetenceCandidatAPIView.as_view(), name='mes-competences'),
     path('types-documents/', TypeDocumentPublicAPIView.as_view(), name='types-documents-public'),
     path('mes-documents/', DocumentCandidatAPIView.as_view(), name='mes-documents'),

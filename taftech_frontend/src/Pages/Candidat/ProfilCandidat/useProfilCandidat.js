@@ -386,6 +386,37 @@ export const useProfilCandidat = () => {
     }
   };
 
+  const handleAjouterCompetence = async (label) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    try {
+      await jobsService.ajouterCompetence(trimmed, "DEBUTANT");
+      fetchData();
+    } catch (err) {
+      reportError("ECHEC_AJOUT_COMPETENCE", err);
+    }
+  };
+
+  const handleSupprimerCompetence = async (id) => {
+    try {
+      await jobsService.supprimerCompetence(id);
+      fetchData();
+    } catch (err) {
+      reportError("ECHEC_SUPPRESSION_COMPETENCE", err);
+    }
+  };
+
+  const handleChangerNiveauCompetence = async (id, niveau) => {
+    const competence = profil.competences_detail?.find((c) => c.id === id);
+    if (!competence) return;
+    try {
+      await jobsService.ajouterCompetence(competence.label, niveau);
+      fetchData();
+    } catch (err) {
+      reportError("ECHEC_CHANGEMENT_NIVEAU_COMPETENCE", err);
+    }
+  };
+
   const handleAddTag = async (type, value) => {
     const currentTags = profil[type] ? profil[type].split(",") : [];
     if (!currentTags.includes(value.trim())) {
@@ -594,6 +625,19 @@ export const useProfilCandidat = () => {
       }
       if ([...formData.entries()].length > 0)
         await profilService.updateProfil(formData);
+      // Niveaux détectés par l'IA pour les compétences extraites — la sauvegarde ci-dessus a déjà
+      // créé les compétences en base au niveau par défaut (Débutant), on affine ensuite celles
+      // dont Groq a pu estimer un niveau réel à partir du contexte du CV.
+      const niveaux = parsedData.competences_niveaux || {};
+      if (Object.keys(niveaux).length > 0) {
+        await Promise.allSettled(
+          Object.entries(niveaux).map(([label, niveau]) =>
+            jobsService
+              .ajouterCompetence(label, niveau)
+              .catch((err) => reportError("ECHEC_NIVEAU_COMPETENCE_PARSER", err)),
+          ),
+        );
+      }
       if (parsedData.experiences?.length > 0 || remplacer) {
         if (remplacer) {
           await Promise.allSettled(
@@ -751,6 +795,9 @@ export const useProfilCandidat = () => {
     handleUpdateFormation,
     handleAddTag,
     handleRemoveTag,
+    handleAjouterCompetence,
+    handleSupprimerCompetence,
+    handleChangerNiveauCompetence,
     handleAddLanguage,
     handleUpdateLinks,
     handleParserCVUpload,

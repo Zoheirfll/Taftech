@@ -1,6 +1,7 @@
 """Nouveau tableau de bord candidat (session specs/important-features) — refonte demandée par
 l'employeur sur mockup IA, discutée point par point : score de profil composite, compétences
 structurées avec niveau, documents privés, prise de rendez-vous, fil d'activité."""
+import logging
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.views import APIView
@@ -15,6 +16,9 @@ from ..models import (
     ActiviteProfil, Candidature,
 )
 from ..profile_score import calculer_score_profil
+from .ia import GroqThrottle
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -28,6 +32,89 @@ class ScoreProfilAPIView(APIView):
         if request.user.role != 'CANDIDAT' or not hasattr(request.user, 'profil_candidat'):
             return Response({"error": "Réservé aux candidats."}, status=403)
         return Response(calculer_score_profil(request.user), status=200)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONSEILS PERSONNALISÉS IA (tableau de bord) — contrairement au score de profil
+# (déterministe), ces conseils sont du texte généré par IA à partir des mêmes données réelles
+# (profil, score, candidatures, alertes) : pas de note arbitraire à sortir, juste reformuler
+# des observations concrètes en conseils actionnables — cas d'usage où le LLM est fiable.
+# ═══════════════════════════════════════════════════════════════════════════
+
+DEFAULT_PROMPT_CONSEILS_DASHBOARD = """Tu es un conseiller carrière pour la plateforme d'emploi algérienne TafTech.
+Analyse les données réelles du candidat ci-dessous et génère entre 3 et 5 conseils personnalisés,
+concrets et actionnables pour améliorer son profil et ses chances de recrutement.
+
+Règles strictes :
+- Base-toi UNIQUEMENT sur les données fournies, ne jamais inventer d'information absente.
+- Chaque conseil doit être une phrase courte (1-2 phrases max), concrète, jamais générique.
+- Varie les angles : complétude du profil, compétences, candidatures, alertes, activité marché.
+- Réponds en français, UNIQUEMENT en JSON strict, format exact :
+{"conseils": ["conseil 1", "conseil 2", "conseil 3"]}
+"""
+
+
+class ConseilsPersonnalisesIAAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [GroqThrottle]
+
+    def get(self, request):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=403)
+        from ..models import AIConfig
+        ai_config = AIConfig.get_solo()
+        if not ai_config.conseils_dashboard_actif:
+            return Response({"error": "Les conseils personnalisés sont temporairement désactivés par l'administrateur."}, status=503)
+
+        try:
+            profil = request.user.profil_candidat
+        except Exception:
+            return Response({"error": "Profil introuvable."}, status=404)
+
+        score = calculer_score_profil(request.user)
+        candidatures = Candidature.objects.filter(candidat=request.user)
+        from ..models import AlerteEmploi
+        alertes = AlerteEmploi.objects.filter(candidat=request.user)
+
+        competences_faibles = [
+            f"{c.label} ({c.get_niveau_display()})"
+            for c in profil.competences_detail.exclude(niveau='CONFIRME')[:5]
+        ]
+        nb_nouvelles_offres_alertes = sum(
+            1 for a in alertes if a.derniere_consultation is None
+        )
+
+        donnees_text = f"""
+Score de profil global : {score['total']}/100
+Détail du score : {score['details']}
+Nombre de candidatures envoyées : {candidatures.count()}
+Statuts des candidatures : {list(candidatures.values_list('statut', flat=True))}
+Compétences non confirmées (niveau faible) : {', '.join(competences_faibles) if competences_faibles else 'Aucune'}
+Nombre d'alertes emploi configurées : {alertes.count()}
+Titre professionnel : {profil.titre_professionnel or 'Non renseigné'}
+Diplôme : {profil.diplome or 'Non renseigné'}
+"""
+        try:
+            from ..ai_engine import call_ai
+            import json
+            system_prompt = ai_config.conseils_dashboard_prompt or DEFAULT_PROMPT_CONSEILS_DASHBOARD
+            content = call_ai(
+                [
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': f"Données du candidat :\n{donnees_text}"},
+                ],
+                max_tokens=ai_config.conseils_dashboard_max_tokens,
+                response_format={'type': 'json_object'},
+            )
+            parsed = json.loads(content)
+            conseils = parsed.get('conseils', [])
+            if not isinstance(conseils, list):
+                conseils = []
+            conseils = [str(c).strip() for c in conseils if str(c).strip()][:5]
+            return Response({"conseils": conseils}, status=200)
+        except Exception as e:
+            logger.error("Erreur Groq conseils personnalisés : %s", e)
+            return Response({"error": "Service IA temporairement indisponible."}, status=503)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -48,6 +135,9 @@ class CompetenceCandidatAPIView(APIView):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Réservé aux candidats."}, status=403)
         profil = request.user.profil_candidat
+        if profil.competences and profil.competences.strip() and not profil.competences_detail.exists():
+            from .profils import _synchroniser_competences_depuis_texte
+            _synchroniser_competences_depuis_texte(profil)
         data = [
             {'id': c.id, 'label': c.label, 'niveau': c.niveau, 'niveau_libelle': c.get_niveau_display(), 'source': c.source}
             for c in profil.competences_detail.all()

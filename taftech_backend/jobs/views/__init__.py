@@ -127,6 +127,7 @@ from .pages import (
 from .ai_config import AIConfigAdminAPIView
 from .candidat_dashboard import (
     ScoreProfilAPIView,
+    ConseilsPersonnalisesIAAPIView,
     CompetenceCandidatAPIView,
     TypeDocumentPublicAPIView,
     DocumentCandidatAPIView,

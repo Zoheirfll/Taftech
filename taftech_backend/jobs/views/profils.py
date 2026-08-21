@@ -28,6 +28,12 @@ class ProfilCandidatAPIView(APIView):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil, created = ProfilCandidat.objects.get_or_create(user=request.user)
+        # Backfill paresseux : un profil dont les compétences texte existaient déjà avant
+        # l'introduction de CompetenceCandidat (niveau par compétence) n'a jamais déclenché la
+        # synchronisation — elle ne se faisait qu'à l'écriture. Sans ce backfill, "Mes
+        # compétences" et le profil restent vides tant que le candidat ne resauvegarde rien.
+        if profil.competences and profil.competences.strip() and not profil.competences_detail.exists():
+            _synchroniser_competences_depuis_texte(profil)
         serializer = ProfilCandidatDTO(profil, context={'is_premium': True, 'include_nin': True})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -79,11 +85,29 @@ class ProfilCandidatAPIView(APIView):
         serializer = ProfilCandidatDTO(profil, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            if 'competences' in data:
+                _synchroniser_competences_depuis_texte(profil)
             return Response({
                 "message": "Profil mis à jour avec succès !",
                 "profil": serializer.data
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _synchroniser_competences_depuis_texte(profil):
+    """Fait converger CompetenceCandidat (structuré, avec niveau) vers le champ texte libre
+    ProfilCandidat.competences après toute modification faite via les tags du profil (page
+    Mon profil) — pour que "Mes compétences" (niveau par compétence) reste cohérent avec les
+    tags affichés sur le profil, quel que soit l'écran utilisé pour les modifier. Sens inverse
+    de _resynchroniser_competences_texte (candidat_dashboard.py, appelé quand la modification
+    part de "Mes compétences") — les deux écrans convergent vers la même liste."""
+    from ..models import CompetenceCandidat
+    profil.refresh_from_db(fields=['competences'])
+    labels_texte = {l.strip() for l in (profil.competences or '').split(',') if l.strip()}
+    labels_existants = set(profil.competences_detail.values_list('label', flat=True))
+    for label in labels_texte - labels_existants:
+        CompetenceCandidat.objects.create(profil=profil, label=label, niveau='DEBUTANT')
+    profil.competences_detail.exclude(label__in=labels_texte).delete()
 
 
 class ExperienceAPIView(APIView):

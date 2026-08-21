@@ -6,6 +6,13 @@ import DomaineLabel from "../../../Components/DomaineLabel";
 import { Pencil, X, Sparkles, ExternalLink, FileText } from "lucide-react";
 import { tw } from "../../../theme";
 
+const NIVEAU_LABELS = {
+  DEBUTANT: "Débutant",
+  INTERMEDIAIRE: "Intermédiaire",
+  AVANCE: "Avancé",
+  CONFIRME: "Confirmé",
+};
+
 export const Modals = ({
   // Styles
   inputClass,
@@ -1071,14 +1078,19 @@ export const Modals = ({
                       {parsedData.competences
                         .split(",")
                         .filter((c) => c.trim())
-                        .map((c, i) => (
-                          <span
-                            key={i}
-                            className={`px-2.5 py-1 text-xs font-medium rounded-md ${tw.parserCompChip}`}
-                          >
-                            {c.trim()}
-                          </span>
-                        ))}
+                        .map((c, i) => {
+                          const label = c.trim();
+                          const niveau = parsedData.competences_niveaux?.[label];
+                          return (
+                            <span
+                              key={i}
+                              className={`px-2.5 py-1 text-xs font-medium rounded-md ${tw.parserCompChip}`}
+                            >
+                              {label}
+                              {niveau && <span className="opacity-60"> · {NIVEAU_LABELS[niveau] || niveau}</span>}
+                            </span>
+                          );
+                        })}
                     </div>
                   </div>
                 )}

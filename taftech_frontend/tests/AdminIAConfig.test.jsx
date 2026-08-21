@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminIAConfig from "../src/Pages/Admin/AdminIAConfig";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
@@ -90,6 +91,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     render(
       <MemoryRouter>
         <AdminIAConfig />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
@@ -98,6 +100,8 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     fireEvent.click(checkboxes[0]); // Parser CV toggle (premier de la liste FEATURES)
 
     fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.updateAIConfig).toHaveBeenCalledWith(
@@ -113,12 +117,15 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     render(
       <MemoryRouter>
         <AdminIAConfig />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getByDisplayValue("openai/gpt-oss-20b"));
     fireEvent.change(screen.getByDisplayValue("openai/gpt-oss-20b"), { target: { value: "llama-3.3-70b-versatile" } });
     fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.updateAIConfig).toHaveBeenCalledWith(
@@ -165,11 +172,14 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     render(
       <MemoryRouter>
         <AdminIAConfig />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getByText("Enregistrer"));
     fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(

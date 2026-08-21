@@ -847,6 +847,8 @@ export const tw = {
     amber: "bg-amber-500",
     indigo: "bg-indigo-600",
     red: "bg-red-500",
+    gold: "bg-amber-600",
+    slate: "bg-slate-500",
   },
 };
 

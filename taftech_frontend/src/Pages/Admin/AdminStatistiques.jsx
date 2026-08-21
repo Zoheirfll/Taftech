@@ -7,6 +7,7 @@ import DomaineLabel from "../../Components/DomaineLabel";
 import {
   RefreshCw,
   TrendingUp,
+  TrendingDown,
   MapPin,
   Briefcase,
   Users,
@@ -16,6 +17,12 @@ import {
   Hourglass,
   BarChart3,
   FolderClock,
+  Star,
+  Newspaper,
+  HelpCircle,
+  Sparkles,
+  Image as ImageIcon,
+  Clock,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
@@ -38,9 +45,11 @@ const StatCard = ({ icon: Icon, label, value, color, info }) => (
 );
 
 const formatSalaire = (montant) => {
-  if (!montant) return "N/A";
+  if (!montant) return "Non renseigné";
   return new Intl.NumberFormat("fr-DZ").format(montant) + " DA";
 };
+
+const formatDA = (montant) => new Intl.NumberFormat("fr-DZ").format(montant || 0) + " DA";
 
 const AdminStatistiques = () => {
   const [stats, setStats] = useState(null);
@@ -222,6 +231,57 @@ const AdminStatistiques = () => {
               <StatCard key={card.label} {...card} />
             ))}
           </div>
+
+          {/* PREMIUM */}
+          {stats.premium_expirant_bientot > 0 && (
+            <Link
+              to="/admin-taftech/demandes-premium"
+              className={`flex items-center gap-3 p-4 ${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl hover:border-amber-400 transition-colors`}
+            >
+              <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <Clock size={17} />
+              </div>
+              <p className={`text-sm font-semibold ${tw.textWarning900}`}>
+                {stats.premium_expirant_bientot} abonnement(s) Premium expirent dans les 7 prochains jours
+              </p>
+            </Link>
+          )}
+          <div>
+            <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>Premium</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatCard
+                icon={Star}
+                label="Abonnements actifs"
+                value={stats.premium_actifs}
+                color="gold"
+              />
+              <StatCard
+                icon={TrendingUp}
+                label="Revenu Premium estimé"
+                value={formatDA(stats.revenu_premium_estime)}
+                color="gold"
+                info="Estimation basée sur le dernier palier tarifaire traité pour chaque entreprise actuellement Premium — pas une comptabilité exacte (n'inclut pas les paiements Chargily sans demande d'activation correspondante)."
+              />
+              <StatCard
+                icon={Hourglass}
+                label="Demandes Premium en attente"
+                value={stats.demandes_premium_attente}
+                color="amber"
+              />
+            </div>
+          </div>
+
+          {/* CONTENU DU SITE (CMS) */}
+          <div>
+            <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>Contenu du site</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <StatCard icon={Newspaper} label="Articles publiés" value={stats.nb_articles_publies} color="slate" />
+              <StatCard icon={Newspaper} label="Brouillons" value={stats.nb_articles_brouillons} color="slate" />
+              <StatCard icon={HelpCircle} label="Questions FAQ" value={stats.nb_faq_actives} color="slate" />
+              <StatCard icon={Sparkles} label="Compétences référencées" value={stats.nb_competences_referentiel} color="slate" />
+              <StatCard icon={ImageIcon} label="Bannières actives" value={stats.nb_bannieres_actives} color="slate" />
+            </div>
+          </div>
         </div>
       )}
 
@@ -252,15 +312,16 @@ const AdminStatistiques = () => {
                 </div>
               )}
 
-              {/* SALAIRES PAR SECTEUR */}
-              {marche.salaires_par_secteur?.length > 0 && (
+              {/* TENSION MARCHÉ PAR SECTEUR */}
+              {marche.tension_par_secteur?.length > 0 && (
                 <div className={`${tw.card} overflow-hidden`}>
                   <div className={`px-5 py-4 border-b ${tw.borderSubtle}`}>
-                    <h2 className={`text-sm font-bold ${tw.textStrong}`}>
-                      Salaires par secteur
+                    <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-1.5`}>
+                      Tension marché par secteur
+                      <TooltipIcon text="Candidatures par offre publiée dans ce secteur — bas (proche de 0) signale un manque de candidats face aux postes ouverts (marché candidat, pénurie de profils), élevé signale beaucoup d'intérêt par poste (marché employeur)." />
                     </h2>
                     <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                      Comparaison offres publiées vs attentes candidats
+                      Offres publiées vs candidatures réellement reçues
                     </p>
                   </div>
                   <div className="overflow-x-auto">
@@ -268,59 +329,43 @@ const AdminStatistiques = () => {
                       <thead>
                         <tr className={`${tw.surfaceMuted} text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                           <th className="px-5 py-3 text-left">Secteur</th>
-                          <th className="px-5 py-3 text-right">Moy. offres</th>
-                          <th className="px-5 py-3 text-right">
-                            Moy. candidats
-                          </th>
-                          <th className="px-5 py-3 text-right">Écart</th>
+                          <th className="px-5 py-3 text-right">Salaire moyen proposé</th>
+                          <th className="px-5 py-3 text-right">Candidatures / offre</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${tw.divideBase}`}>
-                        {marche.salaires_par_secteur.map((s) => {
-                          const ecart =
-                            s.moy_offres && s.moy_candidats
-                              ? s.moy_candidats - s.moy_offres
-                              : null;
+                        {marche.tension_par_secteur.map((s) => {
+                          const tension = s.candidatures_par_offre;
+                          const tendu = tension !== null && tension < 1;
                           return (
-                            <tr
-                              key={s.secteur}
-                              className={tw.rowHover}
-                            >
+                            <tr key={s.secteur} className={tw.rowHover}>
                               <td className="px-5 py-3">
                                 <p className={`text-sm font-semibold ${tw.textStrong}`}>
                                   {s.secteur}
                                 </p>
                                 <p className={`text-xs ${tw.textMuted}`}>
-                                  {s.nb_offres} offres · {s.nb_candidats}{" "}
-                                  candidats
+                                  {s.nb_offres} offre{s.nb_offres > 1 ? "s" : ""} · {s.nb_candidatures} candidature{s.nb_candidatures > 1 ? "s" : ""}
                                 </p>
                               </td>
                               <td className="px-5 py-3 text-right">
                                 <p className={`text-sm font-semibold ${tw.textSuccessIcon}`}>
-                                  {formatSalaire(s.moy_offres)}
+                                  {formatSalaire(s.moy_salaire_offres)}
                                 </p>
                               </td>
                               <td className="px-5 py-3 text-right">
-                                <p className={`text-sm font-semibold ${tw.textPrimary}`}>
-                                  {formatSalaire(s.moy_candidats)}
-                                </p>
-                              </td>
-                              <td className="px-5 py-3 text-right">
-                                {ecart !== null ? (
+                                {tension !== null ? (
                                   <span
-                                    className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                                      ecart > 0
+                                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+                                      tendu
                                         ? `${tw.bgErrorSoft} ${tw.textError}`
                                         : `${tw.bgSuccessSoft} ${tw.textSuccessIcon}`
                                     }`}
                                   >
-                                    {ecart > 0 ? "+" : ""}
-                                    {formatSalaire(ecart)}
+                                    {tendu ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
+                                    {tension}
                                   </span>
                                 ) : (
-                                  <span className={`${tw.textMuted} text-xs`}>
-                                    —
-                                  </span>
+                                  <span className={`${tw.textMuted} text-xs`}>—</span>
                                 )}
                               </td>
                             </tr>

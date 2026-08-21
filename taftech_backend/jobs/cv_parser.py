@@ -1010,11 +1010,13 @@ def parse_with_groq(text):
     }
 
     logger.debug("Groq : extraction complète du CV (1 appel)...")
-    prompt = PROMPT_CV_COMPLET.replace("{cv_text}", text_truncated).replace(
+    from .models import AIConfig
+    ai_config = AIConfig.get_solo()
+    prompt_source = ai_config.parser_cv_prompt or PROMPT_CV_COMPLET
+    prompt = prompt_source.replace("{cv_text}", text_truncated).replace(
         "{domaines_list}", _domaines_list_pour_prompt()
     )
-    from .models import AIConfig
-    content = _call_groq(prompt, max_tokens=AIConfig.get_solo().parser_cv_max_tokens)
+    content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
     infos = _extract_json_object(content)
     if not infos:
         return None

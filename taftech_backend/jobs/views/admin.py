@@ -14,7 +14,8 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, PremiumPlan
+    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, PremiumPlan,
+    Article, FaqItem, CompetenceReferentiel, BanniereAccueil,
 )
 import django.utils.timezone as timezone
 from ..serializers import (
@@ -190,6 +191,26 @@ class AdminStatsAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        maintenant = timezone.now()
+        entreprises_premium_actives = ProfilEntreprise.objects.filter(est_premium=True).filter(
+            Q(premium_expire_at__isnull=True) | Q(premium_expire_at__gte=maintenant)
+        )
+        premium_expirant_bientot = entreprises_premium_actives.filter(
+            premium_expire_at__isnull=False,
+            premium_expire_at__lte=maintenant + datetime.timedelta(days=7),
+        ).count()
+
+        # Revenu estimé : pas de montant stocké sur ProfilEntreprise (source de vérité = dernière
+        # DemandeActivationPremium traitée, même logique que DashboardRecruteurAPIView.premium_nb_mois
+        # dans jobs/views/recruteur.py). Approximation raisonnable, pas une compta exacte
+        # (n'inclut pas les paiements Chargily sans DemandeActivationPremium correspondante).
+        plans_par_mois = dict(PremiumPlan.objects.values_list('nb_mois', 'prix_da'))
+        revenu_premium_estime = 0
+        for e in entreprises_premium_actives:
+            derniere = e.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
+            if derniere and derniere.nb_mois in plans_par_mois:
+                revenu_premium_estime += plans_par_mois[derniere.nb_mois]
+
         stats = {
             "total_offres": OffreEmploi.objects.count(),
             "offres_attente": OffreEmploi.objects.filter(statut_moderation='EN_ATTENTE').count(),
@@ -199,6 +220,14 @@ class AdminStatsAPIView(APIView):
             "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
             "total_recrutements": Candidature.objects.filter(statut='RETENU').count(),
             "demandes_premium_attente": DemandeActivationPremium.objects.filter(est_traitee=False).count(),
+            "premium_actifs": entreprises_premium_actives.count(),
+            "premium_expirant_bientot": premium_expirant_bientot,
+            "revenu_premium_estime": revenu_premium_estime,
+            "nb_articles_publies": Article.objects.filter(statut='PUBLIE').count(),
+            "nb_articles_brouillons": Article.objects.filter(statut='BROUILLON').count(),
+            "nb_faq_actives": FaqItem.objects.filter(actif=True).count(),
+            "nb_competences_referentiel": CompetenceReferentiel.objects.count(),
+            "nb_bannieres_actives": BanniereAccueil.objects.filter(actif=True).count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
 
@@ -421,6 +450,14 @@ class AdminMarcheAPIView(APIView):
             chiffres = re.findall(r'\d+', s.replace(' ', ''))
             return int(chiffres[0]) if chiffres else None
 
+        # 🐛 Ancien calcul cassé : comparait le salaire proposé (fiable, saisi par le recruteur)
+        # au salaire "souhaité" DÉCLARÉ par le candidat (ProfilCandidat.salaire_souhaite,
+        # CharField libre quasi jamais rempli en pratique) — résultat : moy_candidats/écart
+        # toujours None/"N/A" pour toutes les lignes, pas un bug de calcul mais une donnée
+        # source vide. Remplacé par un signal fiable : les CANDIDATURES réellement déposées
+        # par secteur (toujours peuplé, chaque candidature est liée à une offre avec une
+        # spécialité réelle) — mesure la tension marché (offres vs candidatures) au lieu
+        # d'une comparaison de salaires qui n'a jamais eu de données côté candidat.
         offres_avec_salaire = OffreEmploi.objects.filter(
             salaire_propose__isnull=False, statut_moderation='APPROUVEE'
         ).exclude(salaire_propose='').values('specialite', 'salaire_propose')
@@ -430,31 +467,38 @@ class AdminMarcheAPIView(APIView):
             if m and o['specialite']:
                 salaires_offres.setdefault(o['specialite'], []).append(m)
 
-        candidats_avec_salaire = ProfilCandidat.objects.filter(
-            salaire_souhaite__isnull=False
-        ).exclude(salaire_souhaite='').values('secteur_souhaite', 'salaire_souhaite')
-        salaires_candidats = {}
-        for c in candidats_avec_salaire:
-            m = extraire_montant(c['salaire_souhaite'])
-            if m and c['secteur_souhaite']:
-                salaires_candidats.setdefault(c['secteur_souhaite'], []).append(m)
+        nb_offres_par_secteur = {
+            row['specialite']: row['n']
+            for row in OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
+            .exclude(specialite__isnull=True).exclude(specialite='')
+            .values('specialite').annotate(n=Count('id'))
+        }
+        nb_candidatures_par_secteur = {
+            row['offre__specialite']: row['n']
+            for row in Candidature.objects.exclude(offre__specialite__isnull=True).exclude(offre__specialite='')
+            .values('offre__specialite').annotate(n=Count('id'))
+        }
 
-        tous_secteurs = set(list(salaires_offres.keys()) + list(salaires_candidats.keys()))
+        tous_secteurs = set(list(salaires_offres.keys()) + list(nb_offres_par_secteur.keys()) + list(nb_candidatures_par_secteur.keys()))
         libelles_domaines = dict(
             Domaine.objects.filter(code__in=tous_secteurs).values_list('code', 'libelle')
         )
-        salaires_par_secteur = []
+        tension_par_secteur = []
         for secteur in tous_secteurs:
             ol = salaires_offres.get(secteur, [])
-            cl = salaires_candidats.get(secteur, [])
-            salaires_par_secteur.append({
+            nb_offres = nb_offres_par_secteur.get(secteur, 0)
+            nb_candidatures = nb_candidatures_par_secteur.get(secteur, 0)
+            tension_par_secteur.append({
                 'secteur': libelles_domaines.get(secteur, secteur),
-                'moy_offres': int(sum(ol) / len(ol)) if ol else None,
-                'moy_candidats': int(sum(cl) / len(cl)) if cl else None,
-                'nb_offres': len(ol),
-                'nb_candidats': len(cl),
+                'moy_salaire_offres': int(sum(ol) / len(ol)) if ol else None,
+                'nb_offres': nb_offres,
+                'nb_candidatures': nb_candidatures,
+                # Candidatures par offre publiée — élevé = beaucoup d'intérêt par poste (marché
+                # employeur), bas/proche de 0 = peu de candidats pour beaucoup de postes (pénurie
+                # de profils, marché candidat). None si secteur sans offre active (rien à mesurer).
+                'candidatures_par_offre': round(nb_candidatures / nb_offres, 1) if nb_offres else None,
             })
-        salaires_par_secteur.sort(key=lambda x: x['nb_offres'] + x['nb_candidats'], reverse=True)
+        tension_par_secteur.sort(key=lambda x: x['nb_offres'] + x['nb_candidatures'], reverse=True)
 
         top_wilayas = list(
             OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
@@ -465,14 +509,16 @@ class AdminMarcheAPIView(APIView):
             .values('specialite').annotate(nb_offres=Count('id')).order_by('-nb_offres')[:10]
         )
         for s in top_secteurs:
-            s['nb_candidats'] = ProfilCandidat.objects.filter(secteur_souhaite=s['specialite']).count()
+            # Candidatures réellement déposées sur des offres de ce secteur — remplace l'ancien
+            # `ProfilCandidat.secteur_souhaite` (préférence déclarée, très rarement renseignée).
+            s['nb_candidats'] = nb_candidatures_par_secteur.get(s['specialite'], 0)
 
         matching_moyen = Candidature.objects.filter(
             score_matching__isnull=False
         ).aggregate(moy=Avg('score_matching'))['moy']
 
         return Response({
-            'salaires_par_secteur': salaires_par_secteur[:8],
+            'tension_par_secteur': tension_par_secteur[:8],
             'top_wilayas': top_wilayas,
             'top_secteurs': top_secteurs,
             'matching_moyen': round(float(matching_moyen), 1) if matching_moyen else None,

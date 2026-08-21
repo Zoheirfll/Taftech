@@ -21,6 +21,65 @@ from ..throttles import PublicReadThrottle
 
 User = get_user_model()
 
+# Prompts par défaut — utilisés si l'admin n'a rien saisi dans AIConfig (jobs/models.py),
+# ou en repli si le champ est vide. Éditables sans déploiement via le panel "Configuration IA".
+DEFAULT_PROMPT_ANALYSE_CARRIERE = (
+    'Tu es un conseiller carrière expert du marché algérien. '
+    'Analyse ce profil de façon STRICTEMENT PERSONNALISÉE : base-toi précisément sur son titre, '
+    'ses compétences, ses expériences et ses formations réels. '
+    'Interdiction absolue de conseils génériques valables pour n\'importe quel profil — '
+    'chaque section doit citer des éléments concrets tirés du profil analysé. '
+    'Réponds UNIQUEMENT en français avec EXACTEMENT ces 5 sections : '
+    '\n###MÉTIERS POSSIBLES###\n'
+    '(3 à 5 métiers précis auxquels CE profil peut prétendre dès maintenant, cohérents avec son titre/ses compétences réels)'
+    '\n###POINTS FORTS###\n'
+    '(atouts concrets de ce profil, en t\'appuyant sur ses expériences, diplômes et compétences listés)'
+    '\n###COMPÉTENCES MANQUANTES###\n'
+    '(compétences précises qui lui manquent pour progresser dans SON métier, pas des généralités)'
+    '\n###FORMATIONS RECOMMANDÉES###\n'
+    '(formations ou certifications concrètes et reconnues, en lien direct avec les compétences manquantes identifiées)'
+    '\n###ÉVOLUTION PROFESSIONNELLE###\n'
+    '(2 à 3 pistes d\'évolution réalistes à moyen terme dans SON secteur, à partir de SA situation actuelle)'
+    '\nPas de markdown, texte simple, phrases courtes et concrètes, jamais de généralités.'
+)
+
+DEFAULT_PROMPT_ANALYSE_RECRUTEUR = """Tu es un expert RH algérien. Analyse la compatibilité entre ce candidat et cette offre.
+OFFRE : {offre_titre} | {entreprise} | {specialite} | {type_contrat} | {offre_wilaya}
+CANDIDAT : {nom_candidat} | {titre_candidat} | {diplome} | {wilaya_candidat}
+Compétences : {competences}
+Expériences : {experiences}
+Formations : {formations}
+Score IA : {score}%
+
+Réponds avec EXACTEMENT ces 3 sections :
+###VERDICT###
+###POINTS FORTS###
+###RECOMMANDATION###
+Pas de markdown, maximum 150 mots."""
+
+DEFAULT_PROMPT_GENERATION_OFFRE = """Tu es un expert RH algérien. Génère le contenu d'une offre d'emploi professionnelle en français pour le marché algérien.
+
+Poste : {titre}
+Spécialité / Secteur : {specialite}
+Diplôme requis : {diplome}
+Expérience : {experience}
+Type de contrat : {contrat}
+Wilaya : {wilaya}
+
+Pour les questions d'entretien, choisis le type le plus adapté à chaque question parmi : COURT (réponse texte courte), LONG (réponse texte développée), NUMERIQUE (un nombre, ex: années d'expérience), CHOIX_UNIQUE (QCM une seule bonne réponse), CHOIX_MULTIPLE (QCM plusieurs réponses possibles). Pour CHOIX_UNIQUE/CHOIX_MULTIPLE, fournis 3 à 5 options de réponse plausibles et réalistes pour ce poste précis (pas des options génériques "Oui/Non" sauf si vraiment pertinent).
+
+Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
+{
+  "description": "2-3 phrases présentant le contexte de ce poste et de l'entreprise.",
+  "missions": "Liste de 4 à 6 missions concrètes, une par ligne, commençant par un tiret.",
+  "profil_recherche": "Liste de 4 à 5 exigences du profil (formation, savoir-être), une par ligne, commençant par un tiret.",
+  "competences": "Liste de 5 à 8 compétences techniques/outils concrets attendus pour ce poste précis, une par ligne, commençant par un tiret.",
+  "questions_entretien": [
+    {"texte": "Texte de la question", "type_question": "COURT|LONG|NUMERIQUE|CHOIX_UNIQUE|CHOIX_MULTIPLE", "choix": ["option 1", "option 2", "..."] }
+  ]
+}
+Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre)."""
+
 
 def _deviner_secteur_experience(titre_poste, description="", secteur_groq=""):
     """Code Domaine ANEM d'une expérience. Priorité au choix de Groq (déjà informé du
@@ -267,29 +326,9 @@ Formations : {', '.join(formations) if formations else 'Aucune'}
 Secteur souhaité : {_libelle_domaine(profil.secteur_souhaite) or 'Non renseigné'}
 """
         try:
+            system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
             analyse = _appel_groq([
-                {
-                    'role': 'system',
-                    'content': (
-                        'Tu es un conseiller carrière expert du marché algérien. '
-                        'Analyse ce profil de façon STRICTEMENT PERSONNALISÉE : base-toi précisément sur son titre, '
-                        'ses compétences, ses expériences et ses formations réels. '
-                        'Interdiction absolue de conseils génériques valables pour n\'importe quel profil — '
-                        'chaque section doit citer des éléments concrets tirés du profil analysé. '
-                        'Réponds UNIQUEMENT en français avec EXACTEMENT ces 5 sections : '
-                        '\n###MÉTIERS POSSIBLES###\n'
-                        '(3 à 5 métiers précis auxquels CE profil peut prétendre dès maintenant, cohérents avec son titre/ses compétences réels)'
-                        '\n###POINTS FORTS###\n'
-                        '(atouts concrets de ce profil, en t\'appuyant sur ses expériences, diplômes et compétences listés)'
-                        '\n###COMPÉTENCES MANQUANTES###\n'
-                        '(compétences précises qui lui manquent pour progresser dans SON métier, pas des généralités)'
-                        '\n###FORMATIONS RECOMMANDÉES###\n'
-                        '(formations ou certifications concrètes et reconnues, en lien direct avec les compétences manquantes identifiées)'
-                        '\n###ÉVOLUTION PROFESSIONNELLE###\n'
-                        '(2 à 3 pistes d\'évolution réalistes à moyen terme dans SON secteur, à partir de SA situation actuelle)'
-                        '\nPas de markdown, texte simple, phrases courtes et concrètes, jamais de généralités.'
-                    )
-                },
+                {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
             ], max_tokens=ai_config.analyse_carriere_max_tokens)
             return Response({'analyse': analyse})
@@ -359,19 +398,23 @@ class AnalyseGroqRecruteurAPIView(APIView):
             for f in formations
         ]) or "Aucune"
 
-        prompt = f"""Tu es un expert RH algérien. Analyse la compatibilité entre ce candidat et cette offre.
-OFFRE : {offre.titre} | {offre.entreprise.nom_entreprise} | {offre.specialite} | {offre.type_contrat} | {offre.wilaya}
-CANDIDAT : {nom} | {titre} | {diplome} | {wilaya}
-Compétences : {competences}
-Expériences : {exp_text}
-Formations : {form_text}
-Score IA : {candidature.score_matching}%
-
-Réponds avec EXACTEMENT ces 3 sections :
-###VERDICT###
-###POINTS FORTS###
-###RECOMMANDATION###
-Pas de markdown, maximum 150 mots."""
+        prompt_source = ai_config.analyse_recruteur_prompt or DEFAULT_PROMPT_ANALYSE_RECRUTEUR
+        prompt = (
+            prompt_source
+            .replace("{offre_titre}", str(offre.titre))
+            .replace("{entreprise}", str(offre.entreprise.nom_entreprise))
+            .replace("{specialite}", str(offre.specialite))
+            .replace("{type_contrat}", str(offre.type_contrat))
+            .replace("{offre_wilaya}", str(offre.wilaya))
+            .replace("{nom_candidat}", str(nom))
+            .replace("{titre_candidat}", str(titre))
+            .replace("{diplome}", str(diplome))
+            .replace("{wilaya_candidat}", str(wilaya))
+            .replace("{competences}", str(competences))
+            .replace("{experiences}", exp_text)
+            .replace("{formations}", form_text)
+            .replace("{score}", str(candidature.score_matching))
+        )
 
         try:
             analyse = _appel_groq(
@@ -423,28 +466,16 @@ class GenererOffreIAAPIView(APIView):
         domaine_obj = Domaine.objects.filter(code=specialite_resolue).first() if specialite_resolue else None
         specialite_libelle = domaine_obj.libelle if domaine_obj else (specialite_resolue or 'Non précisée')
 
-        prompt = f"""Tu es un expert RH algérien. Génère le contenu d'une offre d'emploi professionnelle en français pour le marché algérien.
-
-Poste : {titre}
-Spécialité / Secteur : {specialite_libelle}
-Diplôme requis : {diplome or 'Non précisé'}
-Expérience : {experience or 'Non précisée'}
-Type de contrat : {contrat or 'Non précisé'}
-Wilaya : {wilaya or 'Non précisée'}
-
-Pour les questions d'entretien, choisis le type le plus adapté à chaque question parmi : COURT (réponse texte courte), LONG (réponse texte développée), NUMERIQUE (un nombre, ex: années d'expérience), CHOIX_UNIQUE (QCM une seule bonne réponse), CHOIX_MULTIPLE (QCM plusieurs réponses possibles). Pour CHOIX_UNIQUE/CHOIX_MULTIPLE, fournis 3 à 5 options de réponse plausibles et réalistes pour ce poste précis (pas des options génériques "Oui/Non" sauf si vraiment pertinent).
-
-Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
-{{
-  "description": "2-3 phrases présentant le contexte de ce poste et de l'entreprise.",
-  "missions": "Liste de 4 à 6 missions concrètes, une par ligne, commençant par un tiret.",
-  "profil_recherche": "Liste de 4 à 5 exigences du profil (formation, savoir-être), une par ligne, commençant par un tiret.",
-  "competences": "Liste de 5 à 8 compétences techniques/outils concrets attendus pour ce poste précis, une par ligne, commençant par un tiret.",
-  "questions_entretien": [
-    {{"texte": "Texte de la question", "type_question": "COURT|LONG|NUMERIQUE|CHOIX_UNIQUE|CHOIX_MULTIPLE", "choix": ["option 1", "option 2", "..."] }}
-  ]
-}}
-Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre)."""
+        prompt_source = ai_config.generation_offre_prompt or DEFAULT_PROMPT_GENERATION_OFFRE
+        prompt = (
+            prompt_source
+            .replace("{titre}", titre)
+            .replace("{specialite}", specialite_libelle)
+            .replace("{diplome}", diplome or 'Non précisé')
+            .replace("{experience}", experience or 'Non précisée')
+            .replace("{contrat}", contrat or 'Non précisé')
+            .replace("{wilaya}", wilaya or 'Non précisée')
+        )
 
         try:
             import json as _json

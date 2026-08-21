@@ -1,21 +1,51 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { confirmToast } from "../../utils/confirmToast";
 import toast from "react-hot-toast";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { tw } from "../../theme";
 
+// `tokens` = variables que le prompt DOIT conserver pour que la fonctionnalité marche —
+// vérifiées avant sauvegarde pour éviter qu'un admin efface par erreur un jeton et casse
+// silencieusement l'interpolation (le texte serait envoyé tel quel à l'IA, ex: littéralement
+// "Poste : {titre}" au lieu du vrai titre saisi par le recruteur).
 const FEATURES = [
-  { key: "parser_cv", label: "Parser CV", desc: "Extraction automatique des infos d'un CV uploadé (candidat)." },
-  { key: "analyse_carriere", label: "Analyse carrière candidat", desc: "Analyse IA personnalisée du profil candidat (métiers possibles, compétences manquantes...)." },
-  { key: "analyse_recruteur", label: "Analyse IA recruteur", desc: "Résumé de compatibilité candidat/offre affiché au recruteur." },
-  { key: "generation_offre", label: "Génération d'offre IA", desc: "Pré-remplissage IA du formulaire de publication d'offre (Premium)." },
+  {
+    key: "parser_cv",
+    label: "Parser CV",
+    desc: "Extraction automatique des infos d'un CV uploadé (candidat).",
+    tokens: ["{cv_text}", "{domaines_list}"],
+  },
+  {
+    key: "analyse_carriere",
+    label: "Analyse carrière candidat",
+    desc: "Analyse IA personnalisée du profil candidat (métiers possibles, compétences manquantes...).",
+    tokens: [],
+  },
+  {
+    key: "analyse_recruteur",
+    label: "Analyse IA recruteur",
+    desc: "Résumé de compatibilité candidat/offre affiché au recruteur.",
+    tokens: [
+      "{offre_titre}", "{entreprise}", "{specialite}", "{type_contrat}", "{offre_wilaya}",
+      "{nom_candidat}", "{titre_candidat}", "{diplome}", "{wilaya_candidat}",
+      "{competences}", "{experiences}", "{formations}", "{score}",
+    ],
+  },
+  {
+    key: "generation_offre",
+    label: "Génération d'offre IA",
+    desc: "Pré-remplissage IA du formulaire de publication d'offre (Premium).",
+    tokens: ["{titre}", "{specialite}", "{diplome}", "{experience}", "{contrat}", "{wilaya}"],
+  },
 ];
 
 const AdminIAConfig = () => {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [openPrompt, setOpenPrompt] = useState(null);
 
   const fetchConfig = async () => {
     setLoading(true);
@@ -34,8 +64,20 @@ const AdminIAConfig = () => {
     fetchConfig();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Jetons manquants par fonctionnalité — [{ label, tokens: [...] }, ...], vide si tout va bien.
+  const getTokensManquants = () => {
+    const problemes = [];
+    FEATURES.forEach((f) => {
+      if (f.tokens.length === 0) return;
+      const prompt = config[`${f.key}_prompt`] || "";
+      if (!prompt.trim()) return; // prompt vide → repli sur le défaut backend, rien à valider
+      const manquants = f.tokens.filter((t) => !prompt.includes(t));
+      if (manquants.length > 0) problemes.push({ label: f.label, tokens: manquants });
+    });
+    return problemes;
+  };
+
+  const enregistrer = async () => {
     setSaving(true);
     try {
       const updated = await jobsService.updateAIConfig(config);
@@ -49,7 +91,24 @@ const AdminIAConfig = () => {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const problemes = getTokensManquants();
+    if (problemes.length > 0) {
+      toast.error(
+        `Variable(s) manquante(s) — ${problemes.map((p) => `${p.label} : ${p.tokens.join(", ")}`).join(" · ")}. Ces prompts ne fonctionneront pas correctement sans elles.`,
+        { duration: 8000 },
+      );
+      return;
+    }
+    confirmToast(
+      "Enregistrer la configuration IA ? Ces changements affectent immédiatement le comportement de l'IA sur tout le site, pour tous les utilisateurs.",
+      enregistrer,
+    );
+  };
+
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
+  const textareaClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-xs font-mono leading-relaxed`;
 
   if (loading || !config) {
     return <p className={`text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</p>;
@@ -119,7 +178,7 @@ const AdminIAConfig = () => {
                 </label>
               </div>
               <p className={`text-xs ${tw.textMuted} mb-2`}>{f.desc}</p>
-              <div>
+              <div className="mb-3">
                 <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>max_tokens</label>
                 <input
                   type="number"
@@ -129,6 +188,34 @@ const AdminIAConfig = () => {
                   onChange={(e) => setConfig({ ...config, [`${f.key}_max_tokens`]: Number(e.target.value) })}
                 />
               </div>
+
+              <button
+                type="button"
+                onClick={() => setOpenPrompt(openPrompt === f.key ? null : f.key)}
+                className={`flex items-center gap-1.5 text-xs font-semibold ${tw.textPrimary} hover:underline`}
+              >
+                {openPrompt === f.key ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                Prompt IA
+              </button>
+
+              {openPrompt === f.key && (
+                <div className="mt-2">
+                  {f.tokens.length > 0 && (
+                    <p className={`text-[10px] ${tw.textMuted} mb-1.5`}>
+                      Variables obligatoires — <strong>ne pas les supprimer</strong>, elles sont remplacées automatiquement :{" "}
+                      {f.tokens.map((t) => (
+                        <code key={t} className={`inline-block mx-0.5 px-1 py-0.5 rounded ${tw.badgeNeutral}`}>{t}</code>
+                      ))}
+                    </p>
+                  )}
+                  <textarea
+                    rows={10}
+                    className={textareaClass}
+                    value={config[`${f.key}_prompt`] || ""}
+                    onChange={(e) => setConfig({ ...config, [`${f.key}_prompt`]: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

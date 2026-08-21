@@ -2,7 +2,49 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 20/08/2026 — Branche `feature/demandes-client` : chantier CMS terminé (Premium, FAQ, Compétences, Blog, Bannières, Pages du site, Configuration IA) + abstraction moteur IA (`jobs/ai_engine.py`, swap Groq/Ollama réel) + audit sécurité complet + couverture de tests exhaustive (338 backend / 402 frontend)._
+_Dernière mise à jour : 21/08/2026 — Branche `main` : prompts IA éditables depuis "Configuration IA" + audit et refonte du tableau de bord admin (bug "N/A" corrigé, KPI Premium + contenu CMS ajoutés)._
+
+---
+
+## 🆕 SESSION 21/08/2026 (suite) — Audit + refonte tableau de bord admin & données marché
+
+**Contexte** : demande utilisateur d'auditer et d'améliorer le tableau de bord admin ("Vue d'ensemble" + "Données marché") à la lumière de tout le chantier CMS ajouté depuis (Premium, Blog, FAQ, Compétences, Bannières) — capture d'écran fournie montrant la table "Comparaison offres publiées vs attentes candidats" avec **"N/A" sur toutes les lignes de "Moy. candidats" et "—" sur toutes les lignes d'"Écart"**.
+
+**🐛 Bug trouvé (pas un bug de calcul — une donnée source vide)** : `AdminMarcheAPIView` (`jobs/views/admin.py`) comparait le salaire proposé par l'offre (fiable, saisi par le recruteur) au salaire **déclaré comme souhaité par le candidat** (`ProfilCandidat.salaire_souhaite`, `CharField` libre) — ce champ n'est quasiment jamais rempli en pratique (aucune pression UX ne l'impose), donc `salaires_candidats` était vide pour tous les secteurs, `moy_candidats`/`ecart` toujours `None` → "N/A"/"—" partout. Même souci sur `top_secteurs.nb_candidats`, qui comptait `ProfilCandidat.secteur_souhaite` (préférence déclarée, tout aussi rarement renseignée) — vérifié en base réelle : résultats à 0 sur la plupart des secteurs alors que des candidatures existaient bel et bien.
+
+**Fix — remplacé par un signal toujours peuplé** : au lieu des préférences déclarées par le candidat (jamais fiables), le nouveau calcul utilise les **candidatures réellement déposées** (`Candidature.offre__specialite`), qui existent forcément dès qu'un candidat postule. Nouvelle métrique `tension_par_secteur` (remplace `salaires_par_secteur`) : `candidatures_par_offre` = nb candidatures / nb offres actives par secteur — bas (< 1) signale une pénurie de candidats face aux postes ouverts (marché candidat), élevé signale beaucoup d'intérêt par poste (marché employeur). Salaire moyen proposé conservé (fiable, colonne seule, sans fausse comparaison). `top_secteurs.nb_candidats` bascule sur le même comptage de candidatures réelles.
+- Vérifié en conditions réelles (pas juste lu le code) : appel direct des 2 endpoints via `APIClient` en session Django shell contre la base de dev — `tension_par_secteur` renvoie désormais des valeurs réelles (`candidatures_par_offre: 1.7`, `2.5`, `0.0`...) au lieu de `None` partout.
+- Frontend (`AdminStatistiques.jsx`) : table renommée "Tension marché par secteur", colonnes "Salaire moyen proposé" + "Candidatures / offre" (badge rouge `TrendingDown` si tension < 1, vert `TrendingUp` sinon) avec tooltip explicatif. `formatSalaire()` affiche désormais "Non renseigné" au lieu de "N/A" quand la donnée est réellement absente (plus honnête, "N/A" laissait penser à un bug plutôt qu'à une absence de saisie).
+
+**Nouveaux KPI — Premium** (`AdminStatsAPIView`) : `premium_actifs` (`ProfilEntreprise.est_premium=True` et non expiré), `revenu_premium_estime` (somme du `PremiumPlan.prix_da` correspondant au dernier `DemandeActivationPremium.nb_mois` traité de chaque entreprise actuellement Premium — approximation assumée, pas une comptabilité exacte, n'inclut pas les paiements Chargily sans demande d'activation correspondante ; documenté via tooltip dans l'UI), `premium_expirant_bientot` (échéance ≤ 7 jours, affiché en bandeau d'alerte ambre si > 0, même style que les alertes existantes offres/entreprises en attente).
+
+**Nouveaux KPI — Contenu du site (CMS)** : `nb_articles_publies`/`nb_articles_brouillons`, `nb_faq_actives`, `nb_competences_referentiel`, `nb_bannieres_actives` — aucun de ces 5 chantiers CMS récents n'avait la moindre visibilité sur le tableau de bord jusqu'ici (confirmé par audit : zéro occurrence de `Article`/`FaqItem`/`CompetenceReferentiel`/`BanniereAccueil` dans `AdminStatsAPIView`/`AdminMarcheAPIView` avant cette session).
+
+**Décision produit — pas de KPI pour Journal d'audit / Erreurs système / Comptes admins / Référentiel métiers** : ces sections ont déjà leur propre page dédiée avec les vrais chiffres à jour en temps réel (pas de valeur ajoutée à dupliquer un compteur figé sur le dashboard) — contrairement à Premium/CMS qui n'avaient absolument aucune surface de visibilité ailleurs.
+
+**Audit sécurité** : aucun nouvel endpoint créé, uniquement des champs supplémentaires sur `AdminStatsAPIView`/`AdminMarcheAPIView` déjà `IsAdminUser` + vérif rôle. Aucune donnée sensible exposée (agrégats/comptages uniquement, pas de données nominatives). RAS.
+
+**Tests** : `AdminStatistiques.test.jsx` 4/4 ✅ (aucune modification nécessaire — ne couvrait pas la table détaillée), frontend 402/402 ✅, `npx vite build` propre, `python manage.py check` propre, backend relancé.
+
+---
+
+## 🆕 SESSION 21/08/2026 — Prompts IA éditables + vérification anti-erreur (panel "Configuration IA")
+
+**Contexte** : le panel "Configuration IA" (session 20/08/2026) permettait déjà de couper une fonctionnalité IA ou d'ajuster son `max_tokens`, mais pas de modifier le **texte du prompt** envoyé à Groq/Ollama — ceux-ci restaient codés en dur dans `cv_parser.py`/`jobs/views/ia.py`. Demande utilisateur : rendre les 4 prompts éditables depuis ce même panel, **avec une vérification pour éviter qu'une modification erronée casse silencieusement une fonctionnalité**.
+
+**Backend — 4 nouveaux champs `TextField` sur `AIConfig`** (migration `0074` + backfill `0075`) : `parser_cv_prompt`, `analyse_carriere_prompt`, `analyse_recruteur_prompt`, `generation_offre_prompt`, tous `blank=True`. **Comportement de repli si vide** : chaque appelant fait `ai_config.xxx_prompt or DEFAULT_PROMPT_XXX` — un champ vidé (volontairement ou par erreur) ne casse jamais rien, il retombe sur le prompt d'origine codé en dur, jamais un appel Groq avec un prompt vide.
+- Les 3 prompts de `jobs/views/ia.py` (analyse carrière, analyse recruteur, génération d'offre) étaient des f-strings Python — **convertis en constantes de gabarit avec jetons `{nom}` substitués via `.replace()`** (même mécanisme déjà en place pour `PROMPT_CV_COMPLET`/`{cv_text}`/`{domaines_list}` dans `cv_parser.py`, juste étendu aux 3 autres). Nécessaire car un prompt chargé depuis la base à l'exécution ne peut pas être un f-string littéral.
+- `DEFAULT_PROMPT_ANALYSE_CARRIERE`/`DEFAULT_PROMPT_ANALYSE_RECRUTEUR`/`DEFAULT_PROMPT_GENERATION_OFFRE` : nouvelles constantes module-level en haut de `jobs/views/ia.py`, texte identique à l'ancien prompt en dur (aucun changement de comportement par défaut).
+- **Migration de backfill (`0075`) : texte dupliqué en dur dans le fichier de migration**, pas d'import de `jobs.views.ia`/`jobs.cv_parser` — décision technique volontaire : une migration doit rester un instantané figé, indépendant d'une future modification des constantes `DEFAULT_PROMPT_*` dans le code applicatif (sinon rejouer cette migration sur un nouvel environnement plus tard backfillerait avec un texte différent de celui réellement utilisé au moment de l'écriture).
+- Vérifié en conditions réelles (pas juste lu le code) : `AIConfig.get_solo().parser_cv_prompt` non vide après migration (3520 caractères), substitution `.replace()` fonctionne bout-en-bout sur un exemple concret (`generation_offre`), schéma JSON de sortie toujours intact après substitution.
+
+**Frontend (`AdminIAConfig.jsx`)** :
+- Chaque carte fonctionnalité a désormais un bloc "Prompt IA" repliable (`<textarea>` monospace 10 lignes) + rappel des variables obligatoires à ne pas supprimer (badges au-dessus du textarea).
+- **Vérification anti-erreur avant sauvegarde** (la demande explicite de l'utilisateur) : si un prompt **non vide** ne contient plus l'une de ses variables obligatoires, `toast.error` bloquant nommant précisément la/les variable(s) manquante(s) par fonctionnalité — la sauvegarde est refusée tant que ce n'est pas corrigé. Un prompt **vide** ne déclenche jamais cette alerte (repli naturel sur le défaut backend, cas valide).
+- **Confirmation avant application** : `confirmToast()` (utilitaire déjà standard du projet, remplace `window.confirm`) — "Enregistrer la configuration IA ? Ces changements affectent immédiatement le comportement de l'IA sur tout le site, pour tous les utilisateurs." Le bouton "Enregistrer" n'appelle plus `updateAIConfig` directement, seulement après confirmation.
+- **Audit sécurité** : aucun nouvel endpoint (même `AIConfigAdminAPIView`, `IsAdminUser` + vérif rôle déjà en place, juste 4 champs de plus dans le serializer déjà `IsAdminUser`-only). RAS.
+
+**Tests** : `AdminIAConfig.test.jsx` (7/7, 3 tests mis à jour pour rendre `<ConfirmModalHost />` et cliquer "Confirmer" après "Enregistrer" — pattern déjà standard du projet pour tout composant utilisant `confirmToast`), frontend 402/402 ✅, `npx vite build` propre, `python manage.py check` propre.
 
 ---
 

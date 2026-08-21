@@ -775,15 +775,38 @@ class AIConfig(models.Model):
 
     parser_cv_actif = models.BooleanField(default=True, verbose_name="Parser CV actif")
     parser_cv_max_tokens = models.PositiveIntegerField(default=6000, validators=[MinValueValidator(100)])
+    parser_cv_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Parser CV",
+        help_text="Variables obligatoires : {cv_text} et {domaines_list}. Si vide, le prompt par défaut du code est utilisé.",
+    )
 
     analyse_carriere_actif = models.BooleanField(default=True, verbose_name="Analyse carrière candidat active")
     analyse_carriere_max_tokens = models.PositiveIntegerField(default=1200, validators=[MinValueValidator(100)])
+    analyse_carriere_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Analyse carrière",
+        help_text="Instructions système (aucune variable à interpoler — le profil du candidat est envoyé séparément). Si vide, le prompt par défaut du code est utilisé.",
+    )
 
     analyse_recruteur_actif = models.BooleanField(default=True, verbose_name="Analyse IA recruteur active")
     analyse_recruteur_max_tokens = models.PositiveIntegerField(default=400, validators=[MinValueValidator(100)])
+    analyse_recruteur_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Analyse recruteur",
+        help_text=(
+            "Variables disponibles : {offre_titre}, {entreprise}, {specialite}, {type_contrat}, {wilaya}, "
+            "{nom_candidat}, {titre_candidat}, {diplome}, {competences}, {experiences}, {formations}, {score}. "
+            "Si vide, le prompt par défaut du code est utilisé."
+        ),
+    )
 
     generation_offre_actif = models.BooleanField(default=True, verbose_name="Génération d'offre IA active")
     generation_offre_max_tokens = models.PositiveIntegerField(default=1600, validators=[MinValueValidator(100)])
+    generation_offre_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Génération d'offre",
+        help_text=(
+            "Variables disponibles : {titre}, {specialite}, {diplome}, {experience}, {contrat}, {wilaya}. "
+            "Si vide, le prompt par défaut du code est utilisé."
+        ),
+    )
 
     date_modification = models.DateTimeField(auto_now=True)
 

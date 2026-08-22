@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import InfoBanner from "../../Components/InfoBanner";
 import DomaineLabel from "../../Components/DomaineLabel";
 import { jobsService } from "../../Services/jobsService";
@@ -90,7 +90,10 @@ const CVTheque = () => {
   // UI
   const [selectedCandidat, setSelectedCandidat] = useState(null);
   const [showFiltres, setShowFiltres] = useState(false);
-  const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("favoris") === "true" ? "favoris" : "tous",
+  ); // "tous" ou "favoris"
   const [isPremium, setIsPremium] = useState(false);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);

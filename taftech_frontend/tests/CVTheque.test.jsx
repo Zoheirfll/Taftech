@@ -147,6 +147,27 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     });
   });
 
+  it("🟢 HP5 : ouvre directement sur l'onglet Favoris si l'URL contient ?favoris=true", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue(mockResults);
+    render(
+      <MemoryRouter initialEntries={["/cvtheque?favoris=true"]}>
+        <CVTheque />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const ongletFavoris = screen.getByText("Favoris").closest("button");
+      expect(ongletFavoris.className).toMatch(/border-b-2/);
+    });
+    await waitFor(() => {
+      expect(jobsService.searchCVtheque).toHaveBeenCalledWith(
+        expect.objectContaining({ favoris: true }),
+        1,
+      );
+    });
+  });
+
   // --- 🔴 EDGE CASES (4/4) ---
 
   it("🔴 EC1 : Échec du chargement des filtres", async () => {

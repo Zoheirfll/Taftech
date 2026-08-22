@@ -43,6 +43,7 @@ const ParametresRecruteur = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [accesEquipe, setAccesEquipe] = useState(false);
 
   // Profil commun
   const [profilForm, setProfilForm] = useState({
@@ -112,6 +113,7 @@ const ParametresRecruteur = () => {
             jobsService.getParametresRecruteur(),
           ]);
           setIsPremium(!!dash.est_premium);
+          setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           setEntreprise(e);
           setEntrepriseForm({
@@ -147,6 +149,7 @@ const ParametresRecruteur = () => {
           ]);
           setConstants(constData);
           setIsPremium(!!dash.est_premium);
+          setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           if (e) {
             setEntreprise(e);
@@ -393,7 +396,7 @@ const ParametresRecruteur = () => {
     { key: "notifications", label: "Notifications", icon: Bell, minRole: "PROPRIETAIRE" },
     // Toujours visible pour le propriétaire (même si premium expiré — pour pouvoir supprimer les membres)
     // Visible pour les membres uniquement si premium actif
-    ...((isPremium || role === "RECRUTEUR") ? [{ key: "equipe", label: "Mon équipe ⭐", icon: Users, minRole: "PROPRIETAIRE" }] : []),
+    ...((accesEquipe || role === "RECRUTEUR") ? [{ key: "equipe", label: "Mon équipe ⭐", icon: Users, minRole: "PROPRIETAIRE" }] : []),
   ].filter(({ minRole }) => authService.peutFaire(minRole));
 
   if (loading)

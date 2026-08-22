@@ -86,7 +86,7 @@ const CreateJob = () => {
         ]);
         setConstants(data);
         setQuestionnaires(qData);
-        if (dash.est_premium) setIsPremium(true);
+        if (dash.palier_actif) setIsPremium(true);
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_CONSTANTES_JOB", error);
         toast.error("Erreur lors du chargement des listes déroulantes.");

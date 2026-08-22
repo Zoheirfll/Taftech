@@ -437,11 +437,12 @@ class GenererOffreIAAPIView(APIView):
         ai_config = AIConfig.get_solo()
         if not ai_config.generation_offre_actif:
             return Response({'error': "La génération d'offre IA est temporairement désactivée par l'administrateur."}, status=503)
-        # Vérification premium
+        # Vérification palier — génération offre IA débloquée dès Starter (premier palier payant)
         from .equipe import get_entreprise_for_user
+        from ..paliers_utils import get_palier_actif
         entreprise = get_entreprise_for_user(request.user)
-        if not entreprise or not entreprise.est_premium_actif:
-            return Response({'error': 'Fonctionnalité réservée aux comptes Premium.'}, status=403)
+        if not entreprise or get_palier_actif(entreprise) is None:
+            return Response({'error': 'Fonctionnalité réservée aux comptes avec un abonnement actif.'}, status=403)
 
         titre = request.data.get('titre', '').strip()
         specialite = request.data.get('specialite', '').strip()

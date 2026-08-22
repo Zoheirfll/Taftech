@@ -52,6 +52,8 @@ class DashboardRecruteurAPIView(APIView):
             )
         offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
         derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,
             "offres": OffreDashboardDTO(offres, many=True).data,
@@ -60,6 +62,8 @@ class DashboardRecruteurAPIView(APIView):
             "premium_active_since": derniere_activation.date_traitement.strftime('%d/%m/%Y') if derniere_activation else None,
             "premium_nb_mois": derniere_activation.nb_mois if derniere_activation else None,
             "membre_role": mon_role,
+            "palier_actif": palier.nom if palier else None,
+            "acces_equipe": bool(palier and palier.acces_equipe),
         }
         return Response(data, status=status.HTTP_200_OK)
 
@@ -407,9 +411,13 @@ class CVThequeView(APIView):
                 result = calculer_score_matching(profil.user, offre_match)
                 scored.append((profil, round(result['total'])))
             scored.sort(key=lambda x: x[1], reverse=True)
-            is_premium = entreprise_user.est_premium_actif if entreprise_user else False
-            if not is_premium:
-                return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
+            from ..paliers_utils import get_palier_actif
+            palier = get_palier_actif(entreprise_user)
+            if palier is None:
+                return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
+            if not palier.acces_ia_recommandes:
+                return Response({"error": "Le classement par compatibilité IA nécessite le palier Pro ou supérieur.", "is_premium": False}, status=403)
+            is_premium = palier.acces_coordonnees
             # Pagination manuelle
             page_size = 10
             page = int(request.GET.get('page', 1))
@@ -465,9 +473,11 @@ class CVThequeView(APIView):
             candidats = candidats.order_by(F('duree_totale').desc(nulls_last=True))
         else:
             candidats = candidats.order_by('-user__date_joined')
-        is_premium = entreprise_user.est_premium_actif if entreprise_user else False
-        if not is_premium:
-            return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise_user)
+        if palier is None:
+            return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
+        is_premium = palier.acces_coordonnees
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})

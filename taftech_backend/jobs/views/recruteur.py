@@ -64,6 +64,8 @@ class DashboardRecruteurAPIView(APIView):
             "membre_role": mon_role,
             "palier_actif": palier.nom if palier else None,
             "acces_equipe": bool(palier and palier.acces_equipe),
+            "acces_ia_recommandes": bool(palier and palier.acces_ia_recommandes),
+            "acces_ia_avancee": bool(palier and palier.acces_ia_avancee),
         }
         return Response(data, status=status.HTTP_200_OK)
 

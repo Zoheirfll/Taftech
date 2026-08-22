@@ -15,6 +15,10 @@ import {
   Settings,
   LogOut,
   CreditCard,
+  FileText,
+  UserCheck,
+  Award,
+  Trophy,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -56,6 +60,8 @@ const RecruteurLayout = () => {
   const menuItems = useMemo(
     () => [
       { name: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard, minRole: "INVITE" },
+      { name: "Offres d'emploi", path: "/offres-emploi", icon: FileText, minRole: "INVITE" },
+      { name: "Candidatures", path: "/candidatures", icon: UserCheck, minRole: "INVITE" },
       {
         name: "CVthèque",
         path: "/cvtheque",
@@ -77,6 +83,8 @@ const RecruteurLayout = () => {
         minRole: "INVITE",
         badge: messagesNonLus > 0 ? messagesNonLus : null,
       },
+      { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE" },
+      { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
       { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },
       { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
       { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },

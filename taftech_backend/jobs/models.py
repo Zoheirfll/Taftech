@@ -753,6 +753,74 @@ class PremiumAvantage(models.Model):
         return self.titre
 
 
+class Palier(models.Model):
+    """Palier d'abonnement recruteur (Starter/Pro/Business/Enterprise) — remplace le système
+    Premium binaire (voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md).
+    'Gratuit' n'est PAS une ligne ici : c'est l'absence d'AbonnementEntreprise actif pour une
+    entreprise (voir Phase 2b, non câblée dans cette migration)."""
+    NOM_CHOICES = [
+        ('STARTER', 'Starter'),
+        ('PRO', 'Pro'),
+        ('BUSINESS', 'Business'),
+        ('ENTERPRISE', 'Enterprise'),
+    ]
+    nom = models.CharField(max_length=20, choices=NOM_CHOICES, unique=True, verbose_name="Palier")
+    prix_mensuel_da = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Prix mensuel (DA)", validators=[MinValueValidator(1)]
+    )
+    prix_annuel_da = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Prix annuel (DA)", validators=[MinValueValidator(1)]
+    )
+    remise_annuelle_active = models.BooleanField(default=False, verbose_name="Remise annuelle affichée")
+    limite_offres = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Limite offres actives (vide = illimité)",
+        validators=[MinValueValidator(1)],
+    )
+    limite_cv_mois = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Limite téléchargements CV/mois (vide = illimité)",
+        validators=[MinValueValidator(1)],
+    )
+    acces_coordonnees = models.BooleanField(default=False, verbose_name="Coordonnées candidats visibles")
+    acces_ia_recommandes = models.BooleanField(default=False, verbose_name="Candidats recommandés (IA)")
+    acces_ia_avancee = models.BooleanField(default=False, verbose_name="Recherche/filtres/stats IA avancés")
+    acces_equipe = models.BooleanField(default=False, verbose_name="Gestion d'équipe multi-utilisateurs")
+    support_label = models.CharField(max_length=100, blank=True, verbose_name="Support (texte libre)")
+    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
+    actif = models.BooleanField(default=True, verbose_name="Visible/achetable")
+
+    class Meta:
+        ordering = ['ordre']
+
+    def __str__(self):
+        return self.get_nom_display()
+
+
+class AbonnementEntreprise(models.Model):
+    """Abonnement actif d'une entreprise à un Palier. Remplace ProfilEntreprise.est_premium/
+    premium_expire_at comme future source de vérité — ces 2 champs restent en base pour
+    compatibilité (le gating existant les lit encore, voir Phase 2b) mais ne sont plus la
+    source de vérité une fois la Phase 2b câblée."""
+    entreprise = models.OneToOneField(
+        ProfilEntreprise, on_delete=models.CASCADE, related_name='abonnement'
+    )
+    palier = models.ForeignKey(Palier, on_delete=models.PROTECT, related_name='abonnements')
+    date_debut = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateTimeField(
+        null=True, blank=True, verbose_name="Expire le (vide = illimité)"
+    )
+    renouvellement_auto = models.BooleanField(default=True)
+
+    @property
+    def est_actif(self):
+        if self.date_expiration is None:
+            return True
+        from django.utils import timezone
+        return self.date_expiration > timezone.now()
+
+    def __str__(self):
+        return f"{self.entreprise.nom_entreprise} — {self.palier.get_nom_display()}"
+
+
 class AIConfig(models.Model):
     """Configuration IA du site — singleton (une seule ligne, `AIConfig.get_solo()`). Permet à
     l'admin de couper une fonctionnalité IA en panne (ex: Groq a déjà changé de modèle sans

@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
   LogIn, Zap, HelpCircle, MessageCircle, Users,
+  FileText, UserCheck, Award, CalendarClock, Trophy, BarChart3, Receipt,
 } from "lucide-react";
 
 const NOM_PALIERS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
@@ -268,10 +269,17 @@ const NavbarRecruteur = () => {
             <>
               {[
                 { to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" },
+                { to: "/offres-emploi", label: "Offres d'emploi", icon: FileText, minRole: "INVITE" },
+                { to: "/candidatures", label: "Candidatures", icon: UserCheck, minRole: "INVITE" },
                 { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR" },
                 { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
                 { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
+                { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
+                { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
+                { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },
+                { to: "/statistiques", label: "Statistiques", icon: BarChart3, minRole: "INVITE" },
                 { to: "/questionnaires", label: "Questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
+                { to: "/facturation", label: "Facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
                 { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
                 { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE" },
                 { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
@@ -279,9 +287,11 @@ const NavbarRecruteur = () => {
                 .filter(({ minRole }) => authService.peutFaire(minRole))
                 .map(({ to, label, icon }) => {
                   const ItemIcon = icon;
-                  // BottomNavRecruteur couvre déjà ces 5 liens — Questionnaires, Mon équipe
-                  // et Favoris (CVthèque filtrée) n'y sont pas.
-                  const dup = to !== "/questionnaires" && to !== "/mon-equipe" && to !== "/cvtheque?favoris=true";
+                  // BottomNavRecruteur couvre déjà 5 liens de base (dashboard/creer-offre/cvtheque/
+                  // candidatures-spontanees/parametres) — tous les autres restent toujours visibles
+                  // dans le hamburger (sinon aucun accès mobile possible, la sidebar RecruteurLayout
+                  // étant hidden md:block).
+                  const dup = ["/dashboard", "/creer-offre", "/cvtheque", "/candidatures-spontanees", "/parametres"].includes(to);
                   return (
                     <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
                       <ItemIcon size={16} className="shrink-0" /> {label}

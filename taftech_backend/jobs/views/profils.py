@@ -343,17 +343,33 @@ class CandidatFichierPriveAPIView(APIView):
         if not fichier:
             raise Http404
 
-        if not self._acces_autorise(request.user, profil):
+        acces, via_cvtheque = self._acces_autorise(request.user, profil)
+        if not acces:
             return Response({"error": "Accès refusé."}, status=status.HTTP_403_FORBIDDEN)
+
+        if type_fichier == 'cv' and via_cvtheque:
+            from ..paliers_utils import quota_cv_atteint
+            entreprise = get_entreprise_for_user(request.user)
+            if quota_cv_atteint(entreprise):
+                return Response(
+                    {"error": "Quota de téléchargements CV atteint pour ce mois. Passez à un palier supérieur pour un accès illimité.", "code": "QUOTA_CV_ATTEINT"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            from ..models import TelechargementCV
+            TelechargementCV.objects.create(entreprise=entreprise, candidat=profil.user)
 
         return FileResponse(fichier.open('rb'), filename=os.path.basename(fichier.name))
 
     def _acces_autorise(self, user, profil):
+        """Retourne (acces_autorise, via_cvtheque) — `via_cvtheque=True` seulement quand l'accès
+        vient de la navigation CVthèque premium (pas d'une vraie candidature reçue) : c'est le
+        seul cas compté dans le quota mensuel de téléchargements CV."""
         if user.id == profil.user_id or user.role == 'ADMIN':
-            return True
+            return True, False
         entreprise = get_entreprise_for_user(user)
         if not entreprise:
-            return False
+            return False, False
         if Candidature.objects.filter(candidat_id=profil.user_id, offre__entreprise=entreprise).exists():
-            return True
-        return entreprise.est_premium_actif
+            return True, False
+        from ..paliers_utils import get_palier_actif
+        return get_palier_actif(entreprise) is not None, True

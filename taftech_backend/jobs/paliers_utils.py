@@ -35,3 +35,20 @@ def limite_offres_actives(entreprise):
     if palier is None:
         return 1
     return palier.limite_offres
+
+
+def quota_cv_atteint(entreprise):
+    """True si l'entreprise a atteint son quota mensuel de téléchargements CV (limite_cv_mois).
+    Recompte toujours les logs du mois calendaire en cours — pas de compteur stocké à
+    incrémenter/reset, aucun risque de dérive. None de limite = jamais atteint."""
+    palier = get_palier_actif(entreprise)
+    limite = palier.limite_cv_mois if palier else 0  # Gratuit n'a de toute façon pas accès à la CVthèque
+    if limite is None:
+        return False
+    from django.utils import timezone
+    from .models import TelechargementCV
+    debut_mois = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    nb_ce_mois = TelechargementCV.objects.filter(
+        entreprise=entreprise, date_telechargement__gte=debut_mois,
+    ).count()
+    return nb_ce_mois >= limite

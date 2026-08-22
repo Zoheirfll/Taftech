@@ -824,6 +824,18 @@ class AbonnementEntreprise(models.Model):
         return f"{self.entreprise.nom_entreprise} — {self.palier.get_nom_display()}"
 
 
+class TelechargementCV(models.Model):
+    """Log d'un téléchargement de CV depuis la CVthèque — sert uniquement à compter le quota
+    mensuel `Palier.limite_cv_mois` (toujours recalculé à partir des logs du mois en cours, pas
+    un compteur stocké à incrémenter — même principe que AlerteEmploiSerializer.nb_nouvelles_offres,
+    voir CLAUDE.md). Ne trace PAS les téléchargements via une vraie candidature reçue (accès
+    toujours autorisé, jamais compté dans le quota) ni les téléchargements par le candidat
+    lui-même/un admin."""
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='telechargements_cv')
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date_telechargement = models.DateTimeField(auto_now_add=True)
+
+
 class AIConfig(models.Model):
     """Configuration IA du site — singleton (une seule ligne, `AIConfig.get_solo()`). Permet à
     l'admin de couper une fonctionnalité IA en panne (ex: Groq a déjà changé de modèle sans

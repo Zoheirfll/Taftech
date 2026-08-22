@@ -20,6 +20,7 @@ import {
   Award,
   Trophy,
   BarChart3,
+  CalendarClock,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -85,6 +86,7 @@ const RecruteurLayout = () => {
         badge: messagesNonLus > 0 ? messagesNonLus : null,
       },
       { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE" },
+      { name: "Entretiens", path: "/entretiens", icon: CalendarClock, minRole: "INVITE" },
       { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
       { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "INVITE" },
       { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },

@@ -19,6 +19,7 @@ import {
   UserCheck,
   Award,
   Trophy,
+  BarChart3,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -85,6 +86,7 @@ const RecruteurLayout = () => {
       },
       { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE" },
       { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
+      { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "INVITE" },
       { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },
       { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
       { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },

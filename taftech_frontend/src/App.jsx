@@ -90,6 +90,7 @@ import BottomNavRecruteur from "./Components/BottomNavRecruteur";
 
 // Layouts — chargés immédiatement (enveloppes de routes)
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
+import RecruteurLayout from "./Pages/Recruteur/RecruteurLayout";
 const AdminLayout = lazy(() => import("./Pages/Admin/AdminLayout"));
 
 // Pages Publiques — visibles sans connexion, on garde quelques-unes immédiates
@@ -284,14 +285,16 @@ function AppContent() {
             <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />
 
             {/* ESPACE RECRUTEUR CONNECTÉ */}
-            <Route path="/creer-offre" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard></RecruteurRoute>} />
-            <Route path="/dashboard" element={<RecruteurRoute><DashboardRecruteur /></RecruteurRoute>} />
-            <Route path="/dashboard/offres/:id" element={<RecruteurRoute><GestionOffre /></RecruteurRoute>} />
-            <Route path="/cvtheque" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard></RecruteurRoute>} />
-            <Route path="/candidatures-spontanees" element={<RecruteurRoute><CandidaturesSpontanees /></RecruteurRoute>} />
-            <Route path="/questionnaires" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard></RecruteurRoute>} />
-            <Route path="/parametres" element={<RecruteurRoute><ParametresRecruteur /></RecruteurRoute>} />
-            <Route path="/mon-equipe" element={<RecruteurRoute><MonEquipe /></RecruteurRoute>} />
+            <Route element={<RecruteurRoute><RecruteurLayout /></RecruteurRoute>}>
+              <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard>} />
+              <Route path="/dashboard" element={<DashboardRecruteur />} />
+              <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+              <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
+              <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
+              <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
+              <Route path="/parametres" element={<ParametresRecruteur />} />
+              <Route path="/mon-equipe" element={<MonEquipe />} />
+            </Route>
 
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>

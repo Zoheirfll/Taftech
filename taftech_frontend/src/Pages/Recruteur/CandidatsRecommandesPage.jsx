@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
@@ -13,50 +13,49 @@ const CRITERES_MATCHING = {
   region: { label: "Localisation & mobilité", max: 20 },
 };
 
-const PAR_PAGE = 12;
-
 const CandidatsRecommandesPage = () => {
-  const [offres, setOffres] = useState([]);
-  const [accesIA, setAccesIA] = useState(false);
+  const [candidats, setCandidats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [acces, setAcces] = useState(true);
   const [masquerDecides, setMasquerDecides] = useState(true);
   const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const dash = await jobsService.getDashboard();
-        setOffres(dash.offres || []);
-        setAccesIA(!!dash.acces_ia_recommandes);
-      } catch (err) {
+  const charger = useCallback(async (numPage, reset) => {
+    try {
+      const data = await jobsService.getCandidatsRecommandes(numPage, masquerDecides);
+      setAcces(true);
+      setCandidats((prev) => (reset ? data.results : [...prev, ...data.results]));
+      setHasNext(!!data.next);
+    } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.code === "PALIER_INSUFFISANT") {
+        setAcces(false);
+      } else {
         reportError("ECHEC_LOAD_RECOMMANDES", err);
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
-  }, []);
+    } finally {
+      setLoading(false);
+    }
+  }, [masquerDecides]);
 
-  const candidats = useMemo(() => {
-    let toutes = [];
-    offres.forEach((o) => {
-      (o.candidatures || []).forEach((c) => {
-        if (c.est_rapide || c.score_matching == null) return;
-        toutes.push({ ...c, offre_id: o.id, offre_titre: o.titre });
-      });
-    });
-    if (masquerDecides) toutes = toutes.filter((c) => c.statut !== "RETENU" && c.statut !== "REFUSE");
-    return toutes.sort((a, b) => b.score_matching - a.score_matching);
-  }, [offres, masquerDecides]);
+  useEffect(() => {
+    setLoading(true);
+    setPage(1);
+    charger(1, true);
+  }, [masquerDecides, charger]);
 
-  const candidatsPage = candidats.slice(0, page * PAR_PAGE);
+  const handleVoirPlus = () => {
+    const suivante = page + 1;
+    setPage(suivante);
+    charger(suivante, false);
+  };
 
   if (loading) {
     return <div className="py-20 text-center text-sm text-slate-600 animate-pulse">Chargement...</div>;
   }
 
-  if (!accesIA) {
+  if (!acces) {
     return (
       <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
         <Lock size={32} className="mx-auto text-slate-400" />
@@ -83,10 +82,10 @@ const CandidatsRecommandesPage = () => {
       </div>
 
       <div className="space-y-3">
-        {candidatsPage.length === 0 ? (
+        {candidats.length === 0 ? (
           <p className="text-sm text-slate-500 italic text-center py-10">Aucun candidat pour l'instant.</p>
         ) : (
-          candidatsPage.map((c) => {
+          candidats.map((c) => {
             const DM = c.details_matching || {};
             const scores = DM.scores || DM;
             const explications = DM.explications || {};
@@ -136,9 +135,9 @@ const CandidatsRecommandesPage = () => {
         )}
       </div>
 
-      {candidats.length > candidatsPage.length && (
+      {hasNext && (
         <div className="text-center">
-          <button onClick={() => setPage((p) => p + 1)} className="px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors">
+          <button onClick={handleVoirPlus} className="px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors">
             Voir plus
           </button>
         </div>

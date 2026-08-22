@@ -30,7 +30,7 @@ from ..matcher import calculer_score_matching
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
     ProfilCandidatDTO, CandidatureSpontaneeSerializer,
-    QuestionnaireSerializer
+    QuestionnaireSerializer, CandidatureRecruteurDTO,
 )
 
 User = get_user_model()
@@ -307,6 +307,42 @@ class ParametresRecruteurAPIView(APIView):
 
 class CVthequePagination(PageNumberPagination):
     page_size = 10
+
+
+class CandidatsRecommandesAPIView(APIView):
+    """Candidats les mieux classés (score de matching IA) toutes offres confondues de
+    l'entreprise — page dédiée sidebar "Candidats recommandés". Gatée Pro+ (acces_ia_recommandes)
+    côté serveur, pas seulement en façade frontend — contrairement au score de matching affiché
+    au fil de l'eau dans GestionOffre (jamais restreint), cette vue agrégée classée est bien la
+    fonctionnalité vendue comme premium."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if palier is None or not palier.acces_ia_recommandes:
+            return Response({"error": "Fonctionnalité réservée au palier Pro ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
+
+        masquer_decides = request.GET.get('masquer_decides', 'true') == 'true'
+        qs = Candidature.objects.select_related('candidat', 'offre').filter(
+            offre__entreprise=entreprise, est_rapide=False, score_matching__isnull=False,
+        )
+        if masquer_decides:
+            qs = qs.exclude(statut__in=['RETENU', 'REFUSE'])
+        qs = qs.order_by('-score_matching')
+
+        paginator = CVthequePagination()
+        paginator.page_size = 12
+        page = paginator.paginate_queryset(qs, request)
+        serializer = CandidatureRecruteurDTO(page, many=True)
+        results = serializer.data
+        for item, candidature in zip(results, page):
+            item['offre_id'] = candidature.offre_id
+            item['offre_titre'] = candidature.offre.titre
+        return paginator.get_paginated_response(results)
 
 
 class CVThequeView(APIView):

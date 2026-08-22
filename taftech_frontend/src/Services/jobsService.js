@@ -97,6 +97,16 @@ const offresPubliquesService = {
     return _premiumPlansCache;
   },
 
+  getCandidatsRecommandes: async (page = 1, masquerDecides = true) => {
+    try {
+      const response = await api.get(`jobs/dashboard/candidats-recommandes/?page=${page}&masquer_decides=${masquerDecides}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_CANDIDATS_RECOMMANDES", err);
+      throw err;
+    }
+  },
+
   getMonAbonnement: async () => {
     try {
       const response = await api.get("jobs/paliers/mon-abonnement/");

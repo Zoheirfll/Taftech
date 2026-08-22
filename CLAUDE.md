@@ -2,7 +2,27 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 21/08/2026 — Branche `specs/important-features` : compétences unifiées profil/dashboard (niveau + backfill), conseils personnalisés par IA (Groq réel, pas déterministe), recherche rapide sur le dashboard candidat, alertes email groupées, mise en page compacte alignée sur le palier "Petit"._
+_Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Phase 1 de la refonte portail recruteur (sidebar `RecruteurLayout`) livrée. Voir section ci-dessous._
+
+## 🆕 SESSION 22/08/2026 — Refonte portail recruteur (Phase 1 : sidebar)
+
+**Contexte** : l'employeur a envoyé un mockup IA d'une page "Abonnements & tarifs" recruteur avec sidebar, 4 formules tarifaires, tableau comparatif, FAQ, etc. Brainstorming complet mené point par point (checklist exhaustive de la capture, rien laissé de côté — spec écrit incrémentalement pour ne rien perdre en implémentation, contrairement à une session précédente sur un autre projet où 90% avait été oublié à l'implémentation). Spec complet : `docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md`.
+
+**Portée totale** (bien plus large que la seule page Abonnements) : nouveau layout à sidebar pour **tout** le portail recruteur (n'existait pas — contrairement au candidat qui a déjà `CandidatLayout.jsx`), refonte du système Premium binaire actuel en **4 vrais paliers** (Starter/Pro/Business/Enterprise) avec fonctionnalités différenciées, et 9 nouvelles pages sidebar (Offres, Candidatures, Candidats recommandés, Entretiens, Recrutements, Statistiques, Facturation, Favoris [réutilise CVthèque], Abonnements & tarifs). Découpage acté en **phases séparées**, chacune avec son propre plan d'implémentation (`docs/superpowers/plans/`) — cette session livre uniquement la **Phase 1**.
+
+**Phase 1 livrée — `RecruteurLayout.jsx`** (`taftech_frontend/src/Pages/Recruteur/RecruteurLayout.jsx`, nouveau) : sidebar calquée sur `CandidatLayout.jsx` (même structure `useMemo` menu + `<aside className="hidden md:block">` + `<main><Outlet/></main>`), variante teal (nouveaux tokens `theme.js` : `sidebarShellTeal`/`sidebarLinkActiveTeal`/etc., même pattern que les tokens indigo candidat). **8 liens actifs** pour l'instant (uniquement des pages qui existent déjà — pas de lien mort) : Tableau de bord, CVthèque, Favoris, Messages, Publier une offre, Questionnaires, Mon équipe, Paramètres entreprise. Les 8 liens restants (Offres, Candidatures, Recommandés, Entretiens, Recrutements, Statistiques, Abonnements, Facturation) seront ajoutés un par un dans les phases suivantes, au fur et à mesure que chaque page est construite.
+
+- **"Messages"** = `/candidatures-spontanees` renommé dans la sidebar (boîte de réception recruteur existante), badge = nombre de candidatures spontanées non lues (`jobsService.getCandidaturesSpontanees()`, filtre `!lue`).
+- **"Favoris"** = pas une nouvelle page — lien vers `/cvtheque?favoris=true`. `CVTheque.jsx` lit désormais ce paramètre au montage (`useSearchParams`) pour ouvrir directement sur l'onglet Favoris (l'onglet existait déjà en interne, seule l'initialisation depuis l'URL est nouvelle).
+- **Recherche Ctrl+K** : champ de recherche en haut de `RecruteurLayout` (raccourci clavier focus le champ), Entrée redirige vers `/cvtheque?search=<terme>` — réutilise la recherche CVthèque existante, aucun nouveau moteur/endpoint.
+- **`App.jsx`** : les 8 routes recruteur connectées (`/dashboard`, `/dashboard/offres/:id`, `/creer-offre`, `/cvtheque`, `/candidatures-spontanees`, `/questionnaires`, `/parametres`, `/mon-equipe`) nichées sous un seul `<Route element={<RecruteurRoute><RecruteurLayout/></RecruteurRoute>}>` parent au lieu d'un `<RecruteurRoute>` individuel par route — même pattern que le bloc `CandidatLayout` déjà présent juste en dessous. Les `RoleGuard minRole="UTILISATEUR"` internes (creer-offre/cvtheque/questionnaires) sont préservés tels quels sur les routes enfants.
+- **Parité mobile** (trouvé en revue de code, pas dans le plan initial) : `RecruteurLayout` n'a pas d'équivalent mobile (`hidden md:block`, comme `CandidatLayout`) — le menu hamburger + dropdown desktop de `NavbarRecruteur.jsx` couvraient déjà 6 des 8 liens mais pas "Mon équipe"/"Favoris" (nouveaux). Ajoutés aux deux listes existantes de `NavbarRecruteur.jsx` (dropdown desktop + hamburger mobile), même pattern `minRole`/`peutFaire` que les entrées existantes — pas de nouveau composant.
+
+**Exécuté en Subagent-Driven Development** (4 tâches, chacune avec implémenteur + relecteur dédiés, un aller-retour de correctifs sur la tâche 2 pour la parité mobile ci-dessus) — voir `docs/superpowers/plans/2026-08-22-recruteur-sidebar-phase1.md`.
+
+**Tests** : frontend 410/410 ✅ (410, +8 par rapport à la session précédente : nouveau `RecruteurLayout.test.jsx` + 1 test ajouté à `CVTheque.test.jsx`), `npx vite build` propre.
+
+**Non fait cette session (phases suivantes)** : les 4 paliers Premium (Starter/Pro/Business/Enterprise, nouveau modèle `Palier`/`AbonnementEntreprise`, gating limite offres/CV mensuel/coordonnées), les 8 pages sidebar restantes (Offres, Candidatures, Recommandés, Entretiens, Recrutements, Statistiques, Abonnements & tarifs, Facturation) — voir le spec complet pour le détail déjà tranché de chacune.
 
 ## 🆕 SESSION 21/08/2026 (suite 2) — Unification compétences, conseils IA réels, polish dashboard candidat
 

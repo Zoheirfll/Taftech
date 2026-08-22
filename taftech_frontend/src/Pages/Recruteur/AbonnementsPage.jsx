@@ -276,6 +276,14 @@ const AbonnementsPage = () => {
                   <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
                   {p.acces_coordonnees ? "Accès complet à la CVthèque" : "Accès basique à la CVthèque"}
                 </li>
+                <li className="flex items-center gap-2 text-xs text-slate-700">
+                  <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
+                  {p.limite_cv_mois != null ? `Téléchargement CV limité (${p.limite_cv_mois}/mois)` : "Téléchargement CV illimité"}
+                </li>
+                <li className="flex items-center gap-2 text-xs text-slate-700">
+                  {p.acces_coordonnees ? <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> : <X size={14} className="text-slate-300 shrink-0" />}
+                  Coordonnées candidats
+                </li>
                 {p.acces_ia_recommandes && (
                   <li className="flex items-center gap-2 text-xs text-slate-700">
                     <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Candidats recommandés (IA)
@@ -290,6 +298,30 @@ const AbonnementsPage = () => {
                   <li className="flex items-center gap-2 text-xs text-slate-700">
                     <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Gestion d'équipe multi-utilisateurs
                   </li>
+                )}
+                {p.nom === "BUSINESS" && (
+                  <li className="flex items-center gap-2 text-xs text-slate-700">
+                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Export & rapports personnalisés
+                  </li>
+                )}
+                {estEnterprise && (
+                  <>
+                    <li className="flex items-center gap-2 text-xs text-slate-700">
+                      <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Intégration API
+                    </li>
+                    <li className="flex items-center gap-2 text-xs text-slate-700">
+                      <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Accompagnement dédié
+                    </li>
+                    <li className="flex items-center gap-2 text-xs text-slate-700">
+                      <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Formation de vos équipes
+                    </li>
+                    <li className="flex items-center gap-2 text-xs text-slate-700">
+                      <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Rapports sur mesure
+                    </li>
+                    <li className="flex items-center gap-2 text-xs text-slate-700">
+                      <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Confidentialité renforcée
+                    </li>
+                  </>
                 )}
                 {p.support_label && (
                   <li className="flex items-center gap-2 text-xs text-slate-700">

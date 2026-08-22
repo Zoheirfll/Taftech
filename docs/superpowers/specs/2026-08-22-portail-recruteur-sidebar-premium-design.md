@@ -97,6 +97,9 @@ Nouveau compteur mensuel par entreprise côté backend, reset le 1er de chaque m
 - Business : + Recherche ultra avancée (IA) + Filtres intelligents (IA) + Statistiques avancées+IA.
 - Enterprise : tout Business + solution personnalisée.
 
+### Gestion d'équipe (Mon équipe) par palier — DÉCIDÉ
+Le mockup place "Gestion multi-utilisateurs" dans la colonne **Business** (pas Enterprise, correction après relecture de la capture). Décision : `Mon équipe` (inviter membres, rôles PROPRIETAIRE/ADMIN/UTILISATEUR/INVITE) devient une fonctionnalité **Business+** — Starter et Pro n'y ont plus accès. Cohérent avec la migration des Premium existants (point "Migration des Premium existants" ci-dessous) vers Business : **aucune rupture**, les équipes déjà constituées gardent l'accès puisque leur entreprise atterrit directement sur le palier qui inclut cette fonctionnalité.
+
 ### Modèle de données — DÉCIDÉ
 Nouveau modèle dédié (remplace complètement `PremiumPlan`/`est_premium`) : `Palier` (nom, prix_mensuel_da, prix_annuel_da, limite_offres nullable=illimité, limite_cv_mois nullable=illimité, acces_coordonnees bool, acces_ia_recommandes bool, acces_ia_avancee bool, ordre) + `AbonnementEntreprise` (FK entreprise, palier actif, date_debut, date_expiration, mode paiement). Détail des champs exacts à finaliser à l'implémentation.
 
@@ -178,6 +181,14 @@ Reprend l'existant (session 19/08/2026 : `MiniAreaChart` courbe/barres, comparai
 **+ 2 nouveaux graphiques "avancées + IA"** (gate Business+, décision point 3) — **aucun nouvel appel Groq**, calculés sur des données déjà en base :
 1. **Répartition par score de matching** : histogramme du nombre de candidatures par tranche de `score_matching` (ex. 0-20/20-40/.../80-100%) — montre la qualité du vivier de candidats.
 2. **Temps moyen de traitement par étape du pipeline** : durée moyenne entre l'entrée dans un statut et le passage au suivant (RECUE→EN_COURS→PRESELECTION→ENTRETIEN→décision) — nécessite de tracer les dates de transition de statut, absentes aujourd'hui (`Candidature` n'a que `date_postulation` et `date_entretien`, pas d'historique de changement de statut). **Nouveau besoin backend** : soit un nouveau modèle `CandidatureStatutHistorique` (log à chaque changement), soit une approximation moins précise sans historique — à trancher à l'implémentation.
+
+### Page "Paramètres entreprise" — DÉCIDÉ
+Reprend `ParametresRecruteur.jsx` existant tel quel (onglets Mon profil / Mon entreprise / Notifications / Mon équipe ⭐), juste renommée dans la sidebar. **Onglet "Mon équipe" conservé** dans Paramètres en plus de son lien sidebar dédié `/mon-equipe` (duplication d'accès volontaire, pas de suppression).
+
+Impact du nouveau système de paliers sur cette page :
+- Le gate `isPremium` conditionnant l'affichage de l'onglet "Mon équipe" (ligne 396, `ParametresRecruteur.jsx`) doit être remplacé par un gate sur le palier Business+ (voir "Gestion d'équipe par palier" ci-dessus) au lieu du binaire `est_premium` actuel.
+- QR code (onglet "Mon entreprise", pointe vers la page vitrine publique) et le reste du contenu ne sont pas affectés par la refonte paliers — inchangés.
+- Aucun contenu Premium/facturation n'existe dans `ParametresRecruteur.jsx` aujourd'hui (vérifié : pas de section paiement/abonnement dans ce fichier) — rien à en extraire vers les nouvelles pages Abonnements/Facturation.
 
 ### Page "Facturation" — DÉCIDÉ
 Vraies factures PDF téléchargeables (ReportLab, déjà utilisé dans le projet pour le bulletin candidat — même pattern technique réutilisé). Générée à chaque paiement de palier confirmé, basée sur `AbonnementEntreprise` (nouveau modèle, point 3) + historique `DemandeActivationPremium`-like.

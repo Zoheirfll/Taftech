@@ -55,6 +55,7 @@ from .recruteur import (
     DemanderActivationPremiumAPIView,
     EnvoyerRecuPremiumAPIView,
     ChargilyCheckoutAPIView,
+    ChargilyCheckoutPalierAPIView,
     ChargilyWebhookAPIView,
     ExportCandidaturesOffreExcelAPIView,
     ExportCandidaturesExcelAPIView,
@@ -109,6 +110,11 @@ from .premium_admin import (
 from .paliers_admin import (
     PaliersPublicAPIView,
     PaliersAdminAPIView,
+)
+from .facturation import (
+    FacturesListAPIView,
+    FacturePDFAPIView,
+    MentionsLegalesAdminAPIView,
 )
 from .articles import (
     ArticleListPublicAPIView,

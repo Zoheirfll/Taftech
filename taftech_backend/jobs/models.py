@@ -824,6 +824,54 @@ class AbonnementEntreprise(models.Model):
         return f"{self.entreprise.nom_entreprise} — {self.palier.get_nom_display()}"
 
 
+class MentionsLegalesEntreprise(models.Model):
+    """Mentions légales TafTech affichées sur les factures — singleton (`get_solo()`, même
+    pattern que AIConfig/ConfigRendezVous). Placeholders vides au départ, complétables par
+    l'admin sans déploiement (même logique que les CGU provisoires, mais directement éditable)."""
+    raison_sociale = models.CharField(max_length=200, blank=True, default="TafTech")
+    registre_commerce = models.CharField(max_length=50, blank=True)
+    nif = models.CharField(max_length=50, blank=True, verbose_name="NIF")
+    adresse = models.CharField(max_length=255, blank=True)
+    tva = models.CharField(max_length=50, blank=True, verbose_name="N° TVA (le cas échéant)")
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Mentions légales TafTech"
+
+
+class PaiementAbonnement(models.Model):
+    """Historique des paiements de paliers — source des factures PDF (page Facturation).
+    Champs dénormalisés (palier_nom/montant_da au moment du paiement, pas de FK vers Palier) :
+    supprimer/modifier un palier plus tard ne doit jamais altérer une facture déjà émise, même
+    principe déjà appliqué à PremiumPlan (voir CLAUDE.md, chantier CMS Premium)."""
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='paiements_abonnement')
+    palier_nom = models.CharField(max_length=20, choices=Palier.NOM_CHOICES)
+    montant_da = models.PositiveIntegerField()
+    periode = models.CharField(max_length=10, choices=[('MENSUEL', 'Mensuel'), ('ANNUEL', 'Annuel')], default='MENSUEL')
+    moyen_paiement = models.CharField(max_length=50, blank=True)
+    date_paiement = models.DateTimeField(auto_now_add=True)
+    numero_facture = models.CharField(max_length=30, unique=True, editable=False)
+
+    class Meta:
+        ordering = ['-date_paiement']
+
+    def save(self, *args, **kwargs):
+        if not self.numero_facture:
+            from django.utils import timezone
+            annee = timezone.now().year
+            dernier = PaiementAbonnement.objects.filter(numero_facture__startswith=f"TT-{annee}-").order_by('-id').first()
+            prochain_numero = (int(dernier.numero_facture.split('-')[-1]) + 1) if dernier else 1
+            self.numero_facture = f"TT-{annee}-{prochain_numero:05d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.numero_facture} — {self.entreprise.nom_entreprise}"
+
+
 class TelechargementCV(models.Model):
     """Log d'un téléchargement de CV depuis la CVthèque — sert uniquement à compter le quota
     mensuel `Palier.limite_cv_mois` (toujours recalculé à partir des logs du mois en cours, pas

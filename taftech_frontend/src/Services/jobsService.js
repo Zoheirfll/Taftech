@@ -97,6 +97,37 @@ const offresPubliquesService = {
     return _premiumPlansCache;
   },
 
+  chargilyCheckoutPalier: async (palierNom, periode) => {
+    try {
+      const response = await api.post("jobs/paliers/chargily/checkout/", { palier_nom: palierNom, periode });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CHARGILY_CHECKOUT_PALIER", err);
+      throw err;
+    }
+  },
+
+  // Factures (historique paiements de palier)
+  getFactures: async () => {
+    try {
+      const response = await api.get("jobs/factures/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_FACTURES", err);
+      throw err;
+    }
+  },
+
+  telechargerFacturePDF: async (paiementId) => {
+    try {
+      const response = await api.get(`jobs/factures/${paiementId}/pdf/`, { responseType: "blob" });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DOWNLOAD_FACTURE_PDF", err);
+      throw err;
+    }
+  },
+
   // Paliers d'abonnement (Starter/Pro/Business/Enterprise) — remplace getPremiumPlans à terme.
   getPaliers: async () => {
     if (!_paliersCache) {

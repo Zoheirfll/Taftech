@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2, X, Zap, ShieldCheck, CreditCard, Headset, ChevronDown, ChevronUp,
-  Clock, Users2, TrendingUp, Award,
+  Clock, Users2, TrendingUp, Award, Loader2,
 } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import toast from "react-hot-toast";
 import { tw } from "../../theme";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
@@ -43,6 +44,8 @@ const AbonnementsPage = () => {
   const [loading, setLoading] = useState(true);
   const [periode, setPeriode] = useState("mensuel");
   const [faqOuverte, setFaqOuverte] = useState(null);
+  const [palierActif, setPalierActif] = useState(null);
+  const [checkoutEnCours, setCheckoutEnCours] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -61,6 +64,42 @@ const AbonnementsPage = () => {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    // Retour de paiement Chargily (?paid=1) : le webhook peut mettre 1-3s à arriver, on
+    // réessaie jusqu'à 5 fois — même pattern que l'ancienne page Premium.
+    let tentatives = 0;
+    const MAX = 5;
+    const chargerPalierActif = async () => {
+      try {
+        const dash = await jobsService.getDashboard();
+        setPalierActif(dash.palier_actif);
+        const isPaidReturn = new URLSearchParams(window.location.search).get("paid");
+        if (!dash.palier_actif && isPaidReturn && tentatives < MAX) {
+          tentatives++;
+          setTimeout(chargerPalierActif, 2000);
+        } else if (isPaidReturn && dash.palier_actif) {
+          toast.success("Paiement confirmé, votre abonnement est actif !");
+        }
+      } catch (err) {
+        reportError("ECHEC_GET_PALIER_ACTIF", err);
+      }
+    };
+    chargerPalierActif();
+  }, []);
+
+  const handleChoisir = async (palierNom) => {
+    setCheckoutEnCours(palierNom);
+    try {
+      const periodeAPI = periode === "annuel" ? "ANNUEL" : "MENSUEL";
+      const data = await jobsService.chargilyCheckoutPalier(palierNom, periodeAPI);
+      window.location.href = data.checkout_url;
+    } catch (err) {
+      const msg = err.response?.data?.error || "Erreur lors de la création du paiement.";
+      toast.error(msg);
+      setCheckoutEnCours(null);
+    }
+  };
 
   const paliersTries = useMemo(
     () => [...paliers].sort((a, b) => a.ordre - b.ordre),
@@ -170,10 +209,18 @@ const AbonnementsPage = () => {
                 <Link to="/contact" className="mt-4 w-full py-2.5 text-center bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors">
                   Nous contacter
                 </Link>
+              ) : palierActif === p.nom ? (
+                <span className="mt-4 w-full py-2.5 text-center bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                  <CheckCircle2 size={15} /> Palier actuel
+                </span>
               ) : (
-                <Link to="/contact" className={`mt-4 w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors ${p.nom === "PRO" ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}>
-                  Choisir {NOM_LABELS[p.nom]}
-                </Link>
+                <button
+                  onClick={() => handleChoisir(p.nom)}
+                  disabled={checkoutEnCours === p.nom}
+                  className={`mt-4 w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 ${p.nom === "PRO" ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
+                >
+                  {checkoutEnCours === p.nom ? <><Loader2 size={14} className="animate-spin" /> Connexion à Chargily...</> : `Choisir ${NOM_LABELS[p.nom]}`}
+                </button>
               )}
             </div>
           );

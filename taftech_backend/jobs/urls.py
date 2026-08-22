@@ -25,7 +25,7 @@ from .views import (
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
-    ChargilyCheckoutAPIView, ChargilyWebhookAPIView,
+    ChargilyCheckoutAPIView, ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
@@ -55,6 +55,7 @@ from .views import (
     PremiumPlansPublicAPIView, PremiumAvantagesPublicAPIView,
     PremiumPlansAdminAPIView, PremiumAvantagesAdminAPIView,
     PaliersPublicAPIView, PaliersAdminAPIView,
+    FacturesListAPIView, FacturePDFAPIView, MentionsLegalesAdminAPIView,
 
     # FAQ
     FaqPublicAPIView, FaqAdminAPIView,
@@ -165,6 +166,7 @@ urlpatterns = [
     path('premium/envoyer-recu/', EnvoyerRecuPremiumAPIView.as_view(), name='envoyer-recu-premium'),
     # Chargily Pay — paiement en ligne
     path('premium/chargily/checkout/', ChargilyCheckoutAPIView.as_view(), name='chargily-checkout'),
+    path('paliers/chargily/checkout/', ChargilyCheckoutPalierAPIView.as_view(), name='chargily-checkout-palier'),
     path('premium/chargily/webhook/', ChargilyWebhookAPIView.as_view(), name='chargily-webhook'),
     # Équipe
     path('equipe/', EquipeAPIView.as_view(), name='equipe-list'),
@@ -190,6 +192,9 @@ urlpatterns = [
     path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),
     path('admin/paliers/<int:pk>/', PaliersAdminAPIView.as_view(), name='admin-palier-detail'),
     path('paliers/', PaliersPublicAPIView.as_view(), name='paliers-public'),
+    path('factures/', FacturesListAPIView.as_view(), name='factures-list'),
+    path('factures/<int:paiement_id>/pdf/', FacturePDFAPIView.as_view(), name='facture-pdf'),
+    path('admin/mentions-legales/', MentionsLegalesAdminAPIView.as_view(), name='admin-mentions-legales'),
     path('admin/faq/', FaqAdminAPIView.as_view(), name='admin-faq'),
     path('admin/faq/<int:pk>/', FaqAdminAPIView.as_view(), name='admin-faq-detail'),
     path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),

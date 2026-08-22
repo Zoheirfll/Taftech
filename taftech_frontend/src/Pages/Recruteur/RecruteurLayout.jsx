@@ -21,6 +21,7 @@ import {
   Trophy,
   BarChart3,
   CalendarClock,
+  Receipt,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -93,6 +94,7 @@ const RecruteurLayout = () => {
       { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
       { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },
       { name: "Abonnements & tarifs", path: "/recruteurs/abonnements", icon: CreditCard, minRole: "PROPRIETAIRE" },
+      { name: "Facturation", path: "/facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
       { name: "Paramètres entreprise", path: "/parametres", icon: Settings, minRole: "INVITE" },
     ],
     [messagesNonLus, location.pathname, location.search],

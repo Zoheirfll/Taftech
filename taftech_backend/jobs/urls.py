@@ -20,7 +20,7 @@ from .views import (
 
     # Recruteur
     DashboardRecruteurAPIView, UpdateProfilEntrepriseAPIView, EntreprisePhotosAPIView,
-    ParametresRecruteurAPIView, CVThequeView, ToggleFavoriCVAPIView, CandidatsRecommandesAPIView,
+    ParametresRecruteurAPIView, CVThequeView, ToggleFavoriCVAPIView, CandidatsRecommandesAPIView, StatistiquesAvanceesAPIView,
     EnvoyerCandidatureSpontaneeAPIView, ListeCandidaturesSpontaneesAPIView,
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
@@ -133,6 +133,7 @@ urlpatterns = [
     path('parametres/recruteur/', ParametresRecruteurAPIView.as_view(), name='parametres-recruteur'),
     path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque'),
     path('dashboard/candidats-recommandes/', CandidatsRecommandesAPIView.as_view(), name='candidats-recommandes'),
+    path('dashboard/statistiques-avancees/', StatistiquesAvanceesAPIView.as_view(), name='statistiques-avancees'),
     path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-favori'),
     path('entreprises/<slug:slug>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view(), name='candidature-spontanee'),
     path('dashboard/candidatures-spontanees/', ListeCandidaturesSpontaneesAPIView.as_view(), name='liste-spontanees'),

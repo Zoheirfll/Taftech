@@ -26,6 +26,7 @@ const TRANCHES_SCORE = [
 const StatistiquesPage = () => {
   const [offres, setOffres] = useState([]);
   const [accesAvance, setAccesAvance] = useState(false);
+  const [repartitionScoreAPI, setRepartitionScoreAPI] = useState(null);
   const [loading, setLoading] = useState(true);
   const [periode, setPeriode] = useState("6m");
 
@@ -34,7 +35,6 @@ const StatistiquesPage = () => {
       try {
         const dash = await jobsService.getDashboard();
         setOffres(dash.offres || []);
-        setAccesAvance(!!dash.acces_ia_avancee);
       } catch (err) {
         reportError("ECHEC_LOAD_STATISTIQUES", err);
       } finally {
@@ -42,6 +42,23 @@ const StatistiquesPage = () => {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const loadAvancees = async () => {
+      try {
+        const data = await jobsService.getStatistiquesAvancees();
+        setRepartitionScoreAPI(data.repartition_score);
+        setAccesAvance(true);
+      } catch (err) {
+        if (err.response?.status === 403 && err.response?.data?.code === "PALIER_INSUFFISANT") {
+          setAccesAvance(false);
+        } else {
+          reportError("ECHEC_LOAD_STATISTIQUES_AVANCEES", err);
+        }
+      }
+    };
+    loadAvancees();
   }, []);
 
   const evolution = useMemo(() => {
@@ -70,16 +87,6 @@ const StatistiquesPage = () => {
     }));
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     return { counts, total, max: Math.max(1, ...Object.values(counts)) };
-  }, [offres]);
-
-  const repartitionScore = useMemo(() => {
-    const counts = TRANCHES_SCORE.map(() => 0);
-    offres.forEach((o) => (o.candidatures || []).forEach((c) => {
-      if (c.score_matching == null) return;
-      const idx = TRANCHES_SCORE.findIndex((t) => c.score_matching >= t.min && c.score_matching < t.max);
-      if (idx >= 0) counts[idx]++;
-    }));
-    return counts;
   }, [offres]);
 
   if (loading) {
@@ -139,11 +146,11 @@ const StatistiquesPage = () => {
           <h2 className="text-sm font-bold text-slate-900">Répartition par score de matching (IA)</h2>
           {!accesAvance && <Lock size={14} className="text-slate-400" />}
         </div>
-        {accesAvance ? (
+        {accesAvance && repartitionScoreAPI ? (
           <div className={`${tw.card} p-4 space-y-3`}>
             {TRANCHES_SCORE.map((t, i) => {
-              const count = repartitionScore[i];
-              const max = Math.max(1, ...repartitionScore);
+              const count = repartitionScoreAPI[i];
+              const max = Math.max(1, ...repartitionScoreAPI);
               return (
                 <div key={t.label}>
                   <div className="flex justify-between text-xs mb-1">

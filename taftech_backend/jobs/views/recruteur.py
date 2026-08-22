@@ -345,6 +345,35 @@ class CandidatsRecommandesAPIView(APIView):
         return paginator.get_paginated_response(results)
 
 
+class StatistiquesAvanceesAPIView(APIView):
+    """Répartition des candidatures par tranche de score de matching — gatée Business+
+    (acces_ia_avancee) côté serveur, même principe que CandidatsRecommandesAPIView."""
+    permission_classes = [IsAuthenticated]
+
+    TRANCHES = [(0, 20), (20, 40), (40, 60), (60, 80), (80, 101)]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if palier is None or not palier.acces_ia_avancee:
+            return Response({"error": "Fonctionnalité réservée au palier Business ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
+
+        scores = Candidature.objects.filter(
+            offre__entreprise=entreprise, score_matching__isnull=False,
+        ).values_list('score_matching', flat=True)
+        repartition = [0] * len(self.TRANCHES)
+        for score in scores:
+            score = float(score)
+            for i, (mini, maxi) in enumerate(self.TRANCHES):
+                if mini <= score < maxi:
+                    repartition[i] += 1
+                    break
+        return Response({"repartition_score": repartition})
+
+
 class CVThequeView(APIView):
     permission_classes = [IsAuthenticated]
 

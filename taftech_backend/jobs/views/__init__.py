@@ -46,6 +46,7 @@ from .recruteur import (
     ParametresRecruteurAPIView,
     CVThequeView,
     CandidatsRecommandesAPIView,
+    StatistiquesAvanceesAPIView,
     ToggleFavoriCVAPIView,
     EnvoyerCandidatureSpontaneeAPIView,
     ListeCandidaturesSpontaneesAPIView,

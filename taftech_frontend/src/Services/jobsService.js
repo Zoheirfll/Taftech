@@ -107,6 +107,16 @@ const offresPubliquesService = {
     }
   },
 
+  getStatistiquesAvancees: async () => {
+    try {
+      const response = await api.get("jobs/dashboard/statistiques-avancees/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_STATISTIQUES_AVANCEES", err);
+      throw err;
+    }
+  },
+
   getMonAbonnement: async () => {
     try {
       const response = await api.get("jobs/paliers/mon-abonnement/");

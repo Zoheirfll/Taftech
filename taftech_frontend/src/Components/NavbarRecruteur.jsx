@@ -9,7 +9,7 @@ import { tw } from "../theme";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
-  LogIn, Zap, HelpCircle, MessageCircle,
+  LogIn, Zap, HelpCircle, MessageCircle, Users,
 } from "lucide-react";
 
 const NavbarRecruteur = () => {
@@ -180,6 +180,8 @@ const NavbarRecruteur = () => {
                     { to: "/creer-offre", icon: Briefcase, label: "Publier une offre", minRole: "UTILISATEUR" },
                     { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires", minRole: "UTILISATEUR" },
                     { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
+                    { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
+                    { to: "/cvtheque?favoris=true", icon: Star, label: "Favoris", minRole: "UTILISATEUR" },
                     ...(authService.peutFaire("PROPRIETAIRE")
                       ? [{ to: "/recruteurs/premium", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
@@ -266,12 +268,15 @@ const NavbarRecruteur = () => {
                 { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
                 { to: "/questionnaires", label: "Questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
                 { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
+                { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE" },
+                { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
               ]
                 .filter(({ minRole }) => authService.peutFaire(minRole))
                 .map(({ to, label, icon }) => {
                   const ItemIcon = icon;
-                  // BottomNavRecruteur couvre déjà ces 5 liens — Questionnaires n'y est pas.
-                  const dup = to !== "/questionnaires";
+                  // BottomNavRecruteur couvre déjà ces 5 liens — Questionnaires, Mon équipe
+                  // et Favoris (CVthèque filtrée) n'y sont pas.
+                  const dup = to !== "/questionnaires" && to !== "/mon-equipe" && to !== "/cvtheque?favoris=true";
                   return (
                     <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
                       <ItemIcon size={16} className="shrink-0" /> {label}

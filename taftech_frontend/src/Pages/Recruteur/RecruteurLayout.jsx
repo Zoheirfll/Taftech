@@ -116,7 +116,7 @@ const RecruteurLayout = () => {
                       />
                       <span className="text-sm font-semibold">{item.name}</span>
                     </div>
-                    {item.badge && (
+                    {item.badge != null && (
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                           isActive ? tw.sidebarBadgeActiveTeal : tw.sidebarBadgeInactiveTeal

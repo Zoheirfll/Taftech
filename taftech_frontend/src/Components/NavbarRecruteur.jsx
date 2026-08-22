@@ -12,6 +12,8 @@ import {
   LogIn, Zap, HelpCircle, MessageCircle, Users,
 } from "lucide-react";
 
+const NOM_PALIERS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
+
 const NavbarRecruteur = () => {
   const isLogged = authService.isAuthenticated();
   const role = authService.getUserRole();
@@ -23,6 +25,7 @@ const NavbarRecruteur = () => {
   const [userPhoto, setUserPhoto] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
   const [premiumExpire, setPremiumExpire] = useState(null);
+  const [palierNom, setPalierNom] = useState(null);
   const dropdownRef = useRef(null);
 
   const isActive = (path) =>
@@ -48,6 +51,7 @@ const NavbarRecruteur = () => {
           if (dash.entreprise?.logo) setUserPhoto(mediaUrl(dash.entreprise.logo));
           if (dash.est_premium) setIsPremium(true);
           if (dash.premium_expire_at) setPremiumExpire(dash.premium_expire_at);
+          if (dash.palier_actif) setPalierNom(dash.palier_actif);
           if (dash.membre_role) authService.setMembreRole(dash.membre_role);
         } catch (err) {
           reportError("ECHEC_PHOTO_NAVBAR_RECRUTEUR", err);
@@ -79,6 +83,7 @@ const NavbarRecruteur = () => {
     setUserPhoto(null);
     setIsPremium(false);
     setPremiumExpire(null);
+    setPalierNom(null);
     navigate("/recruteurs/connexion");
   };
 
@@ -154,7 +159,7 @@ const NavbarRecruteur = () => {
                   <p className="text-xs leading-tight">
                     {isPremium ? (
                       <span className="text-amber-600 font-semibold">
-                        ⭐ Premium
+                        ⭐ {NOM_PALIERS[palierNom] || "Premium"}
                         {premiumExpire && <span className="text-amber-500 font-normal"> · {premiumExpire}</span>}
                       </span>
                     ) : (
@@ -183,7 +188,7 @@ const NavbarRecruteur = () => {
                     { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
                     { to: "/cvtheque?favoris=true", icon: Star, label: "Favoris", minRole: "UTILISATEUR" },
                     ...(authService.peutFaire("PROPRIETAIRE")
-                      ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
+                      ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? `Mon ${NOM_PALIERS[palierNom] || "Premium"} ⭐` : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
                   ]
                     .filter(({ minRole }) => authService.peutFaire(minRole))
@@ -291,7 +296,7 @@ const NavbarRecruteur = () => {
                     isPremium ? "text-amber-600 hover:bg-amber-50" : `${tw.textTeal} hover:bg-teal-50`
                   }`}
                 >
-                  <Star size={16} className="shrink-0" /> {isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒"}
+                  <Star size={16} className="shrink-0" /> {isPremium ? `Mon ${NOM_PALIERS[palierNom] || "Premium"} ⭐` : "Passer Premium 🔒"}
                 </Link>
               )}
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`}>

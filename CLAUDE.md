@@ -2,7 +2,27 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Phase 1 de la refonte portail recruteur (sidebar `RecruteurLayout`) livrée, puis 3 bugs de synchronisation URL/CVthèque trouvés en revue de branche complète et corrigés le jour même. Voir section ci-dessous._
+_Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Phase 2a de la refonte portail recruteur (modèle `Palier`/`AbonnementEntreprise` backend + admin CRUD) livrée, à la suite de la Phase 1 (sidebar `RecruteurLayout`). Voir sections ci-dessous._
+
+## 🆕 SESSION 22/08/2026 (suite) — Refonte portail recruteur (Phase 2a : modèle Paliers backend + admin)
+
+**Contexte** : suite directe de la Phase 1 (sidebar). Spec complet : `docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md`. Plan : `docs/superpowers/plans/2026-08-22-recruteur-paliers-phase2a.md`.
+
+**Nouveaux modèles** (`jobs/models.py`, migration `0079`) : `Palier` (nom STARTER/PRO/BUSINESS/ENTERPRISE unique, prix mensuel/annuel nullable — null = "Sur devis" pour Enterprise —, `remise_annuelle_active`, `limite_offres`/`limite_cv_mois` nullable = illimité, `acces_coordonnees`/`acces_ia_recommandes`/`acces_ia_avancee`/`acces_equipe` booléens, `support_label` texte libre, `ordre`, `actif`) et `AbonnementEntreprise` (OneToOne vers `ProfilEntreprise`, FK `palier` PROTECT, `date_debut` auto, `date_expiration` nullable = illimité, property `est_actif`).
+
+**Migration de données** (`0080_seed_paliers_migrer_premium.py`) : seed des 4 paliers avec les valeurs exactes du mockup employeur (Starter 5900/70800 DA, Pro 12900/154800 DA, Business 22900/274800 DA, Enterprise sur devis) + bascule automatique des entreprises `est_premium=True` (ancien système) vers `AbonnementEntreprise(palier=BUSINESS, date_expiration=<premium_expire_at existant>)`, sans re-paiement forcé. Texte des valeurs dupliqué en dur dans la migration (pas d'import du code applicatif), même principe que la migration `0075` déjà documentée dans ce fichier — une migration reste un instantané figé.
+
+**Backend CRUD** (`jobs/views/paliers_admin.py`, pattern identique à `PremiumPlansAdminAPIView`) : `PaliersPublicAPIView` (`GET jobs/paliers/`, `AllowAny` + `PublicReadThrottle`, cache 1h `jobs_paliers`, ne retourne que `actif=True` — consommé par une future page Abonnements, pas encore construite) et `PaliersAdminAPIView` (CRUD complet, `IsAdminUser` + vérif rôle, invalide le cache à l'écriture).
+
+**Panel admin `AdminPaliers.jsx`** (route `/admin-taftech/paliers`, sidebar section "Système") : tableau des 4 paliers + modale d'édition complète (prix, limites, accès, support). **Pas de bouton Ajouter/Supprimer** (contrairement à `AdminPremium.jsx`) — les 4 paliers sont fixes (contrainte `unique=True` sur `nom`), l'admin ajuste seulement les valeurs.
+
+**🐛 Piège trouvé en testant (déjà anticipé dans le plan)** : les tests `PalierModelTest`/`AbonnementEntrepriseModelTest` (Task 1, écrits avant la migration de seed) créaient leurs propres `Palier(nom="STARTER"/"BUSINESS"/...)` sans vider la table d'abord — une fois la migration `0080` appliquée à la base de test, ces noms existaient déjà (contrainte unique), 6 tests en erreur sur la suite complète. Fix : `Palier.objects.all().delete()` ajouté en tête de `setUp()` des deux classes, même pattern que `CMSTestBase`/`PremiumPlanAPITest` déjà en place dans `test_api_cms.py`.
+
+**🔴 IMPORTANT — ce qui n'a PAS changé cette session** : le gating existant (`CVThequeView`, limite d'offres — inexistante avant —, `GenererOffreIAAPIView`, candidats recommandés IA, gestion d'équipe) continue de lire `ProfilEntreprise.est_premium_actif` exactement comme avant. Les nouveaux modèles `Palier`/`AbonnementEntreprise` existent en base et sont administrables, mais **rien ne les consomme encore côté gating** — c'est la Phase 2b (plan séparé, pas encore écrit), qui rebranchera CVthèque/limite offres/quota CV/IA/équipe sur les nouveaux paliers.
+
+**Tests** : `jobs/tests/test_api_paliers.py` (13/13 ✅ : 4 modèle Palier, 3 modèle AbonnementEntreprise, 6 API CRUD/permissions/cache), `AdminPaliers.test.jsx` (4/4 ✅), frontend 419/419 ✅, `npx vite build` propre, `python manage.py check` propre. Suite backend complète relancée après le fix ci-dessus.
+
+**Non fait cette session (Phase 2b, à faire)** : rebrancher CVthèque (accès + coordonnées + quota CV/mois), limite d'offres actives à la publication, génération offre IA (Starter+), candidats recommandés IA (Pro+), recherche/filtres/stats IA avancés (Business+), gestion d'équipe (Business+) sur le nouveau modèle `Palier`/`AbonnementEntreprise` au lieu de `ProfilEntreprise.est_premium_actif`. Voir le spec complet pour le détail déjà tranché de chaque gate.
 
 ## 🆕 SESSION 22/08/2026 — Refonte portail recruteur (Phase 1 : sidebar)
 

@@ -183,7 +183,7 @@ const NavbarRecruteur = () => {
                     { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
                     { to: "/cvtheque?favoris=true", icon: Star, label: "Favoris", minRole: "UTILISATEUR" },
                     ...(authService.peutFaire("PROPRIETAIRE")
-                      ? [{ to: "/recruteurs/premium", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
+                      ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? "Mon Premium ⭐" : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
                   ]
                     .filter(({ minRole }) => authService.peutFaire(minRole))
@@ -285,7 +285,7 @@ const NavbarRecruteur = () => {
                 })}
               {authService.peutFaire("PROPRIETAIRE") && (
                 <Link
-                  to="/recruteurs/premium"
+                  to="/recruteurs/abonnements"
                   onClick={() => setIsMobileOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold rounded-lg transition-colors ${
                     isPremium ? "text-amber-600 hover:bg-amber-50" : `${tw.textTeal} hover:bg-teal-50`

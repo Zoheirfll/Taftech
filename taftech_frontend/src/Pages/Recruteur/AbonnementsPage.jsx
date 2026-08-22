@@ -45,6 +45,7 @@ const AbonnementsPage = () => {
   const [periode, setPeriode] = useState("mensuel");
   const [faqOuverte, setFaqOuverte] = useState(null);
   const [palierActif, setPalierActif] = useState(null);
+  const [detailsAbonnement, setDetailsAbonnement] = useState(null);
   const [checkoutEnCours, setCheckoutEnCours] = useState(null);
 
   useEffect(() => {
@@ -74,6 +75,11 @@ const AbonnementsPage = () => {
       try {
         const dash = await jobsService.getDashboard();
         setPalierActif(dash.palier_actif);
+        setDetailsAbonnement({
+          activeDepuis: dash.premium_active_since,
+          expireLe: dash.premium_expire_at,
+          nbMois: dash.premium_nb_mois,
+        });
         const isPaidReturn = new URLSearchParams(window.location.search).get("paid");
         if (!dash.palier_actif && isPaidReturn && tentatives < MAX) {
           tentatives++;
@@ -116,6 +122,26 @@ const AbonnementsPage = () => {
         <h1 className="text-xl font-bold text-slate-900">Abonnements & tarifs</h1>
         <p className="text-sm text-slate-600 mt-1">Choisissez la formule qui correspond le mieux à vos besoins de recrutement.</p>
       </div>
+
+      {palierActif && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={20} className="text-emerald-700 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-emerald-900">Abonnement {NOM_LABELS[palierActif] || palierActif} actif</p>
+              {detailsAbonnement?.expireLe && (
+                <p className="text-xs text-emerald-700">
+                  Actif depuis le {detailsAbonnement.activeDepuis || "—"} · Expire le {detailsAbonnement.expireLe}
+                  {detailsAbonnement.nbMois ? ` (${detailsAbonnement.nbMois} mois)` : ""}
+                </p>
+              )}
+            </div>
+          </div>
+          <Link to="/facturation" className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-100 transition-colors text-center">
+            Voir mes factures
+          </Link>
+        </div>
+      )}
 
       {/* Badges avantages */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

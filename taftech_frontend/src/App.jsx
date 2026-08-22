@@ -119,7 +119,6 @@ const ResetPassword      = lazy(() => import("./Pages/Auth/ResetPassword"));
 
 // Portail Recruteur
 const LandingRecruteur          = lazy(() => import("./Pages/Recruteur/Portal/LandingRecruteur"));
-const PremiumPage               = lazy(() => import("./Pages/Recruteur/Portal/PremiumPage"));
 const PremiumSuccessPage        = lazy(() => import("./Pages/Recruteur/Portal/PremiumSuccessPage"));
 const ForgotPasswordRecruteur   = lazy(() => import("./Pages/Recruteur/Portal/ForgotPasswordRecruteur"));
 const AccepterInvitation = lazy(() => import("./Pages/Recruteur/AccepterInvitation"));
@@ -289,7 +288,9 @@ function AppContent() {
             <Route path="/recruteurs" element={<LandingRecruteur />} />
             <Route path="/recruteurs/connexion" element={<GuestRoute portal="recruteur"><LoginRecruteur /></GuestRoute>} />
             <Route path="/recruteurs/mot-de-passe-oublie" element={<GuestRoute portal="recruteur"><ForgotPasswordRecruteur /></GuestRoute>} />
-            <Route path="/recruteurs/premium" element={<RecruteurRoute><PremiumPage /></RecruteurRoute>} />
+            {/* Ancienne page Premium — remplacée par /recruteurs/abonnements (4 paliers, paiement Chargily réel).
+                Redirection conservée pour ne pas casser d'anciens liens/favoris. */}
+            <Route path="/recruteurs/premium" element={<Navigate to="/recruteurs/abonnements" replace />} />
             <Route path="/recruteurs/premium/success" element={<RecruteurRoute><PremiumSuccessPage /></RecruteurRoute>} />
             <Route path="/invitation/equipe/:token" element={<AccepterInvitation />} />
             <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />

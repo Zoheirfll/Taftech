@@ -107,6 +107,7 @@ const CVTheque = () => {
     setCurrentPage(1);
   }, [searchParams]);
   const [isPremium, setIsPremium] = useState(false);
+  const [rechercheAvancee, setRechercheAvancee] = useState(true);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
@@ -205,6 +206,7 @@ const CVTheque = () => {
       setTotalCandidats(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / 10));
       if (data.is_premium !== undefined) setIsPremium(data.is_premium);
+      if (data.recherche_avancee !== undefined) setRechercheAvancee(data.recherche_avancee);
 
       // Auto-sélection du premier candidat sur desktop
       if (data.results && data.results.length > 0) {
@@ -671,23 +673,28 @@ const CVTheque = () => {
               type="text"
               value={langues}
               onChange={(e) => { setLangues(e.target.value); setCurrentPage(1); }}
-              placeholder="Langue (ex: Anglais)"
-              className={tw.input}
+              placeholder={rechercheAvancee ? "Langue (ex: Anglais)" : "Langue (palier Business+)"}
+              disabled={!rechercheAvancee}
+              title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
+              className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
             />
             <input
               type="text"
               value={competencesFiltre}
               onChange={(e) => { setCompetencesFiltre(e.target.value); setCurrentPage(1); }}
-              placeholder="Compétence (ex: React)"
-              className={tw.input}
+              placeholder={rechercheAvancee ? "Compétence (ex: React)" : "Compétence (palier Business+)"}
+              disabled={!rechercheAvancee}
+              title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
+              className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <Select
               options={constants.experiences || []}
-              placeholder="Niveau d'expérience déclaré"
+              placeholder={rechercheAvancee ? "Niveau d'expérience déclaré" : "Niveau d'expérience (palier Business+)"}
               isClearable
+              isDisabled={!rechercheAvancee}
               value={(constants.experiences || []).find((n) => n.value === niveauExperience) || null}
               onChange={(val) => {
                 setNiveauExperience(val ? val.value : "");
@@ -697,8 +704,9 @@ const CVTheque = () => {
             />
             <Select
               options={constants.services_militaires || []}
-              placeholder="Service militaire"
+              placeholder={rechercheAvancee ? "Service militaire" : "Service militaire (palier Business+)"}
               isClearable
+              isDisabled={!rechercheAvancee}
               value={(constants.services_militaires || []).find((s) => s.value === serviceMilitaire) || null}
               onChange={(val) => {
                 setServiceMilitaire(val ? val.value : "");
@@ -707,6 +715,12 @@ const CVTheque = () => {
               styles={selectStylesTeal}
             />
           </div>
+          {!rechercheAvancee && (
+            <p className={`text-xs ${tw.textMuted} -mt-2 mb-4`}>
+              🔒 Filtres langues/compétences/expérience/service militaire réservés au palier Business ou supérieur.{" "}
+              <Link to="/recruteurs/abonnements" className="text-teal-700 font-semibold hover:underline">Voir les paliers</Link>
+            </p>
+          )}
 
           {/* Filtres rapides en checkboxes */}
           <div className={`flex flex-wrap gap-2 items-center pt-3 border-t ${tw.borderSubtle}`}>

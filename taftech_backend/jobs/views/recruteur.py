@@ -367,15 +367,22 @@ class CVThequeView(APIView):
             candidats = candidats.filter(vehicule_personnel=True)
         if passeport:
             candidats = candidats.filter(passeport_valide=True)
-        if service_militaire:
+        # Filtres "recherche avancée" — réservés Business+ (palier.acces_ia_avancee). Un palier
+        # inférieur voit ces filtres dans l'UI (CVTheque.jsx) mais ils sont silencieusement
+        # ignorés côté API plutôt que de renvoyer une erreur — dégrade la recherche à "basique"
+        # sans casser la page pour Starter/Pro.
+        from ..paliers_utils import get_palier_actif as _get_palier_pour_filtres
+        _palier_filtres = _get_palier_pour_filtres(entreprise_user)
+        _recherche_avancee_ok = bool(_palier_filtres and _palier_filtres.acces_ia_avancee)
+        if service_militaire and _recherche_avancee_ok:
             candidats = candidats.filter(service_militaire=service_militaire)
-        if niveau_experience:
+        if niveau_experience and _recherche_avancee_ok:
             candidats = candidats.filter(niveau_experience=niveau_experience)
         # `langues`/`competences` sont des champs texte libre (pas de référentiel structuré
         # côté candidat) — filtrage par sous-chaîne, pas par égalité exacte.
-        if langues:
+        if langues and _recherche_avancee_ok:
             candidats = candidats.filter(langues__icontains=langues)
-        if competences:
+        if competences and _recherche_avancee_ok:
             candidats = candidats.filter(competences__icontains=competences)
         if avec_photo:
             candidats = candidats.exclude(photo_profil='').exclude(photo_profil__isnull=True)
@@ -458,6 +465,7 @@ class CVThequeView(APIView):
                 'previous': None,
                 'results': results,
                 'is_premium': is_premium,
+                'recherche_avancee': _recherche_avancee_ok,
             })
 
         if tri == 'nom_asc':
@@ -485,6 +493,7 @@ class CVThequeView(APIView):
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
         response = paginator.get_paginated_response(serializer.data)
         response.data['is_premium'] = is_premium
+        response.data['recherche_avancee'] = _recherche_avancee_ok
         return response
 
 

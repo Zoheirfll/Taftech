@@ -59,6 +59,9 @@ class ProfilEntreprise(models.Model):
     culture_entreprise = models.TextField(blank=True, null=True, verbose_name="Culture d'entreprise")
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
     premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
+    mise_en_avant_accueil = models.BooleanField(
+        default=False, verbose_name='Afficher dans "Ils nous font confiance" (logos clients)'
+    )
 
     @property
     def est_premium_actif(self):
@@ -1071,6 +1074,7 @@ class FaqItem(models.Model):
         ('GENERAL', 'Général (page Contact)'),
         ('RECRUTEUR', 'Recruteur (landing)'),
         ('PREMIUM', 'Premium'),
+        ('PALIERS', 'Paliers (page Abonnements)'),
     ]
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES, verbose_name="Catégorie")
     question = models.CharField(max_length=300, verbose_name="Question")

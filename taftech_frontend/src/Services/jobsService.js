@@ -10,6 +10,7 @@ import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
 let _premiumPlansCache = null;
+let _paliersCache = null;
 let _premiumAvantagesCache = null;
 const _faqCacheParCategorie = {};
 
@@ -94,6 +95,32 @@ const offresPubliquesService = {
         });
     }
     return _premiumPlansCache;
+  },
+
+  // Paliers d'abonnement (Starter/Pro/Business/Enterprise) — remplace getPremiumPlans à terme.
+  getPaliers: async () => {
+    if (!_paliersCache) {
+      _paliersCache = api
+        .get("jobs/paliers/")
+        .then((response) => response.data)
+        .catch((err) => {
+          _paliersCache = null;
+          reportError("ECHEC_GET_PALIERS_API", err);
+          throw err;
+        });
+    }
+    return _paliersCache;
+  },
+
+  // Entreprises mises en avant côté admin ("Ils nous font confiance", page Abonnements).
+  getEntreprisesMisesEnAvant: async () => {
+    try {
+      const response = await api.get("jobs/entreprises/?mise_en_avant=true");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ENTREPRISES_MISES_EN_AVANT", err);
+      throw err;
+    }
   },
 
   getPremiumAvantages: async () => {

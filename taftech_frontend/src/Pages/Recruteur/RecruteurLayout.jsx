@@ -14,6 +14,7 @@ import {
   Users,
   Settings,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -79,6 +80,7 @@ const RecruteurLayout = () => {
       { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },
       { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
       { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },
+      { name: "Abonnements & tarifs", path: "/recruteurs/abonnements", icon: CreditCard, minRole: "PROPRIETAIRE" },
       { name: "Paramètres entreprise", path: "/parametres", icon: Settings, minRole: "INVITE" },
     ],
     [messagesNonLus, location.pathname, location.search],

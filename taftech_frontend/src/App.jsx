@@ -134,6 +134,7 @@ const Questionnaires         = lazy(() => import("./Pages/Recruteur/Questionnair
 const ParametresRecruteur    = lazy(() => import("./Pages/Recruteur/ParametresRecruteur"));
 const ReviewCandidature      = lazy(() => import("./Pages/Recruteur/ReviewCandidature"));
 const MonEquipe              = lazy(() => import("./Pages/Recruteur/MonEquipe"));
+const AbonnementsPage        = lazy(() => import("./Pages/Recruteur/AbonnementsPage"));
 
 // Espace Candidat
 const CandidatDashboard = lazy(() => import("./Pages/Candidat/CandidatDashboard"));
@@ -295,6 +296,7 @@ function AppContent() {
               <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
               <Route path="/parametres" element={<ParametresRecruteur />} />
               <Route path="/mon-equipe" element={<MonEquipe />} />
+              <Route path="/recruteurs/abonnements" element={<AbonnementsPage />} />
             </Route>
 
             {/* ESPACE CANDIDAT */}

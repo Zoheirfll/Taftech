@@ -158,6 +158,7 @@ const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminMetiers      = lazy(() => import("./Pages/Admin/AdminMetiers"));
 const AdminPremium      = lazy(() => import("./Pages/Admin/AdminPremium"));
+const AdminPaliers      = lazy(() => import("./Pages/Admin/AdminPaliers"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
@@ -324,6 +325,7 @@ function AppContent() {
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
               <Route path="/admin-taftech/premium-config" element={<AdminPremium />} />
+              <Route path="/admin-taftech/paliers" element={<AdminPaliers />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />

@@ -2,7 +2,7 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Phase 1 de la refonte portail recruteur (sidebar `RecruteurLayout`) livrée. Voir section ci-dessous._
+_Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Phase 1 de la refonte portail recruteur (sidebar `RecruteurLayout`) livrée, puis 3 bugs de synchronisation URL/CVthèque trouvés en revue de branche complète et corrigés le jour même. Voir section ci-dessous._
 
 ## 🆕 SESSION 22/08/2026 — Refonte portail recruteur (Phase 1 : sidebar)
 
@@ -23,6 +23,15 @@ _Dernière mise à jour : 22/08/2026 — Branche `specs/important-features` : Ph
 **Tests** : frontend 410/410 ✅ (410, +8 par rapport à la session précédente : nouveau `RecruteurLayout.test.jsx` + 1 test ajouté à `CVTheque.test.jsx`), `npx vite build` propre.
 
 **Non fait cette session (phases suivantes)** : les 4 paliers Premium (Starter/Pro/Business/Enterprise, nouveau modèle `Palier`/`AbonnementEntreprise`, gating limite offres/CV mensuel/coordonnées), les 8 pages sidebar restantes (Offres, Candidatures, Recommandés, Entretiens, Recrutements, Statistiques, Abonnements & tarifs, Facturation) — voir le spec complet pour le détail déjà tranché de chacune.
+
+**🐛 3 bugs réels trouvés en revue de branche complète (corrigés le jour même)** — la recherche Ctrl+K et le lien Favoris de `RecruteurLayout.jsx` naviguaient bien vers `/cvtheque?search=...`/`?favoris=true`, mais `CVTheque.jsx` ne réagissait pas correctement :
+1. **`?search=` mort** : `CVTheque.jsx` ne lisait jamais le paramètre `search` de l'URL (seul `favoris` était lu) — taper Ctrl+K puis Entrée atterrissait bien sur `/cvtheque?search=...` mais le champ de recherche restait vide et aucune requête n'était lancée avec ce terme.
+2. **`activeTab`/`search` non réactifs à un changement d'URL sans remount** : les deux étaient initialisés via `useState(...)` (exécuté une seule fois au montage) — React Router ne remonte pas `CVTheque` quand seule la query string change sur la même route, donc cliquer "Favoris" depuis `/cvtheque` (déjà monté) changeait l'URL sans jamais faire bouger l'onglet actif. Fix : nouveau `useEffect` keyé sur `searchParams` (`taftech_frontend/src/Pages/Recruteur/CVTheque.jsx`, juste après la déclaration de `searchParams`) qui resynchronise `activeTab` et `search` à chaque montage ET à chaque navigation vers une nouvelle query string — ne fight pas avec les handlers existants (clic onglet, saisie recherche) car il ne se déclenche que sur un vrai changement de `searchParams`, jamais sur une frappe clavier qui ne touche pas l'URL.
+3. **Double highlight sidebar** : le lien "CVthèque" utilisait le check d'activation par défaut (`location.pathname === item.path`), donc restait actif même quand `favoris=true` était dans l'URL — les deux liens "CVthèque" et "Favoris" s'affichaient actifs simultanément. Fix : `isActive` dédié sur l'entrée "CVthèque" (`RecruteurLayout.jsx`) qui exclut explicitement `favoris=true`.
+
+Tests ajoutés : `CVTheque.test.jsx` (recherche préchargée depuis `?search=`, navigation même-route `/cvtheque` → `/cvtheque?favoris=true` sans remount via un harnais `useNavigate` local), `RecruteurLayout.test.jsx` (Ctrl+K+Entrée navigue vers `/cvtheque?search=...`, un seul des deux liens CVthèque/Favoris actif dans chaque état d'URL).
+
+**Tests** : frontend 415/415 ✅ (+5 par rapport à la Phase 1), `npx vite build` propre.
 
 ## 🆕 SESSION 21/08/2026 (suite 2) — Unification compétences, conseils IA réels, polish dashboard candidat
 

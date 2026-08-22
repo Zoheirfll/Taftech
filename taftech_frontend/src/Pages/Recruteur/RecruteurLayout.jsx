@@ -55,7 +55,13 @@ const RecruteurLayout = () => {
   const menuItems = useMemo(
     () => [
       { name: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard, minRole: "INVITE" },
-      { name: "CVthèque", path: "/cvtheque", icon: Search, minRole: "UTILISATEUR" },
+      {
+        name: "CVthèque",
+        path: "/cvtheque",
+        icon: Search,
+        minRole: "UTILISATEUR",
+        isActive: () => location.pathname === "/cvtheque" && !location.search.includes("favoris=true"),
+      },
       {
         name: "Favoris",
         path: "/cvtheque?favoris=true",

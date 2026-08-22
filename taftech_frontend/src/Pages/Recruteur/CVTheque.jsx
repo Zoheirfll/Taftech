@@ -94,6 +94,18 @@ const CVTheque = () => {
   const [activeTab, setActiveTab] = useState(
     searchParams.get("favoris") === "true" ? "favoris" : "tous",
   ); // "tous" ou "favoris"
+
+  // Resynchronise l'onglet actif et la recherche avec l'URL à chaque navigation
+  // (mount ET changement de query string sur la même route — React Router ne
+  // remonte pas le composant quand seule la query string change).
+  useEffect(() => {
+    setActiveTab(searchParams.get("favoris") === "true" ? "favoris" : "tous");
+    const searchParam = searchParams.get("search");
+    if (searchParam !== null) {
+      setSearch(searchParam);
+    }
+    setCurrentPage(1);
+  }, [searchParams]);
   const [isPremium, setIsPremium] = useState(false);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);

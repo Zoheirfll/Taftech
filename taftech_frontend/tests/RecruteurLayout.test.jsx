@@ -102,4 +102,40 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     expect(input).toHaveFocus();
   });
+
+  it("🟢 HP7 : Ctrl+K + Entrée navigue vers /cvtheque?search=<terme>", async () => {
+    renderLayout();
+    await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
+    const input = screen.getByPlaceholderText(/Rechercher un candidat/i);
+    fireEvent.change(input, { target: { value: "développeur react" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(screen.getByText("Contenu CVthèque")).toBeInTheDocument());
+  });
+
+  it("🟢 HP8 : sur /cvtheque (sans favoris), seul le lien CVthèque est actif, pas Favoris", async () => {
+    renderLayout("/cvtheque");
+    await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
+    const lienCVtheque = screen.getByText("CVthèque").closest("a");
+    const lienFavoris = screen.getByText("Favoris").closest("a");
+    expect(lienCVtheque.className).toMatch(/bg-teal-700/);
+    expect(lienFavoris.className).not.toMatch(/bg-teal-700/);
+  });
+
+  it("🟢 HP9 : sur /cvtheque?favoris=true, seul le lien Favoris est actif, pas CVthèque", async () => {
+    render(
+      <MemoryRouter initialEntries={["/cvtheque?favoris=true"]}>
+        <Routes>
+          <Route element={<RecruteurLayout />}>
+            <Route path="/dashboard" element={<div>Contenu Dashboard</div>} />
+            <Route path="/cvtheque" element={<div>Contenu CVthèque</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
+    const lienCVtheque = screen.getByText("CVthèque").closest("a");
+    const lienFavoris = screen.getByText("Favoris").closest("a");
+    expect(lienFavoris.className).toMatch(/bg-teal-700/);
+    expect(lienCVtheque.className).not.toMatch(/bg-teal-700/);
+  });
 });

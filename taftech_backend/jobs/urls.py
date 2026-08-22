@@ -54,6 +54,7 @@ from .views import (
     # Premium (plans/avantages)
     PremiumPlansPublicAPIView, PremiumAvantagesPublicAPIView,
     PremiumPlansAdminAPIView, PremiumAvantagesAdminAPIView,
+    PaliersPublicAPIView, PaliersAdminAPIView,
 
     # FAQ
     FaqPublicAPIView, FaqAdminAPIView,
@@ -186,6 +187,9 @@ urlpatterns = [
     path('admin/premium/avantages/<int:pk>/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantage-detail'),
     path('premium/plans/', PremiumPlansPublicAPIView.as_view(), name='premium-plans-public'),
     path('premium/avantages/', PremiumAvantagesPublicAPIView.as_view(), name='premium-avantages-public'),
+    path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),
+    path('admin/paliers/<int:pk>/', PaliersAdminAPIView.as_view(), name='admin-palier-detail'),
+    path('paliers/', PaliersPublicAPIView.as_view(), name='paliers-public'),
     path('admin/faq/', FaqAdminAPIView.as_view(), name='admin-faq'),
     path('admin/faq/<int:pk>/', FaqAdminAPIView.as_view(), name='admin-faq-detail'),
     path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),

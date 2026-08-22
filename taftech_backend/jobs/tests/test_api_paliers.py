@@ -61,3 +61,64 @@ class AbonnementEntrepriseModelTest(TestCase):
         AbonnementEntreprise.objects.create(entreprise=self.entreprise, palier=self.palier)
         with self.assertRaises(Exception):
             AbonnementEntreprise.objects.create(entreprise=self.entreprise, palier=self.palier)
+
+
+from django.urls import reverse
+from rest_framework.test import APITestCase
+
+
+def make_admin_paliers():
+    return User.objects.create_user(
+        username="admin_paliers", email="admin_paliers@test.dz", password="pwd",
+        role="ADMIN", is_staff=True,
+    )
+
+
+class PalierAPITest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        Palier.objects.all().delete()  # vide le contenu seedé par la migration 0080
+        self.admin = make_admin_paliers()
+        self.palier_actif = Palier.objects.create(nom="STARTER", prix_mensuel_da=5900, actif=True)
+        self.palier_inactif = Palier.objects.create(nom="PRO", prix_mensuel_da=12900, actif=False)
+
+    def test_public_liste_seulement_actifs(self):
+        response = self.client.get(reverse("paliers-public"))
+        self.assertEqual(response.status_code, 200)
+        noms = [p["nom"] for p in response.data]
+        self.assertIn("STARTER", noms)
+        self.assertNotIn("PRO", noms)
+
+    def test_admin_liste_tout(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(reverse("admin-paliers"))
+        self.assertEqual(len(response.data), 2)
+
+    def test_non_admin_refuse(self):
+        candidat = User.objects.create_user(
+            username="cand_paliers", email="cand_paliers@test.dz", password="pwd", role="CANDIDAT",
+        )
+        self.client.force_authenticate(user=candidat)
+        response = self.client.get(reverse("admin-paliers"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_creation_admin(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(reverse("admin-paliers"), {
+            "nom": "BUSINESS", "prix_mensuel_da": 22900,
+        })
+        self.assertEqual(response.status_code, 201)
+
+    def test_update_invalide_cache_public(self):
+        self.client.get(reverse("paliers-public"))  # peuple le cache
+        self.client.force_authenticate(user=self.admin)
+        self.client.put(reverse("admin-palier-detail", args=[self.palier_actif.id]), {"prix_mensuel_da": 6900})
+        response = self.client.get(reverse("paliers-public"))
+        prix = next(p["prix_mensuel_da"] for p in response.data if p["id"] == self.palier_actif.id)
+        self.assertEqual(prix, 6900)
+
+    def test_delete_admin(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.delete(reverse("admin-palier-detail", args=[self.palier_actif.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Palier.objects.filter(id=self.palier_actif.id).exists())

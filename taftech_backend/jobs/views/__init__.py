@@ -106,6 +106,10 @@ from .premium_admin import (
     CompetencesAutocompleteAPIView,
     CompetencesAdminAPIView,
 )
+from .paliers_admin import (
+    PaliersPublicAPIView,
+    PaliersAdminAPIView,
+)
 from .articles import (
     ArticleListPublicAPIView,
     ArticleDetailPublicAPIView,

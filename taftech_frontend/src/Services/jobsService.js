@@ -97,6 +97,26 @@ const offresPubliquesService = {
     return _premiumPlansCache;
   },
 
+  getMonAbonnement: async () => {
+    try {
+      const response = await api.get("jobs/paliers/mon-abonnement/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_MON_ABONNEMENT", err);
+      throw err;
+    }
+  },
+
+  toggleRenouvellementAuto: async (renouvellementAuto) => {
+    try {
+      const response = await api.patch("jobs/paliers/mon-abonnement/", { renouvellement_auto: renouvellementAuto });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_TOGGLE_RENOUVELLEMENT", err);
+      throw err;
+    }
+  },
+
   chargilyCheckoutPalier: async (palierNom, periode) => {
     try {
       const response = await api.post("jobs/paliers/chargily/checkout/", { palier_nom: palierNom, periode });

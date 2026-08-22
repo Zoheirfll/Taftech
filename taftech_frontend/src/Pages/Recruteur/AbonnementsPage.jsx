@@ -7,6 +7,7 @@ import {
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
@@ -46,6 +47,8 @@ const AbonnementsPage = () => {
   const [faqOuverte, setFaqOuverte] = useState(null);
   const [palierActif, setPalierActif] = useState(null);
   const [detailsAbonnement, setDetailsAbonnement] = useState(null);
+  const [renouvellementAuto, setRenouvellementAuto] = useState(true);
+  const [resiliationEnCours, setResiliationEnCours] = useState(false);
   const [checkoutEnCours, setCheckoutEnCours] = useState(null);
 
   useEffect(() => {
@@ -94,6 +97,49 @@ const AbonnementsPage = () => {
     chargerPalierActif();
   }, []);
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await jobsService.getMonAbonnement();
+        if (data.palier) setRenouvellementAuto(data.renouvellement_auto);
+      } catch (err) {
+        // silencieux : pas d'AbonnementEntreprise réel (ex: compte legacy) — pas de bouton résiliation
+      }
+    };
+    load();
+  }, []);
+
+  const handleResilier = () => {
+    confirmToast(
+      "Résilier le renouvellement automatique ? Vous garderez l'accès à votre palier jusqu'à la fin de la période déjà payée, puis votre compte repassera en gratuit.",
+      async () => {
+        setResiliationEnCours(true);
+        try {
+          await jobsService.toggleRenouvellementAuto(false);
+          setRenouvellementAuto(false);
+          toast.success("Renouvellement automatique désactivé.");
+        } catch (err) {
+          toast.error("Erreur lors de la résiliation.");
+        } finally {
+          setResiliationEnCours(false);
+        }
+      },
+    );
+  };
+
+  const handleReactiverRenouvellement = async () => {
+    setResiliationEnCours(true);
+    try {
+      await jobsService.toggleRenouvellementAuto(true);
+      setRenouvellementAuto(true);
+      toast.success("Renouvellement automatique réactivé.");
+    } catch (err) {
+      toast.error("Erreur lors de la réactivation.");
+    } finally {
+      setResiliationEnCours(false);
+    }
+  };
+
   const handleChoisir = async (palierNom) => {
     setCheckoutEnCours(palierNom);
     try {
@@ -133,13 +179,33 @@ const AbonnementsPage = () => {
                 <p className="text-xs text-emerald-700">
                   Actif depuis le {detailsAbonnement.activeDepuis || "—"} · Expire le {detailsAbonnement.expireLe}
                   {detailsAbonnement.nbMois ? ` (${detailsAbonnement.nbMois} mois)` : ""}
+                  {!renouvellementAuto && " · Renouvellement automatique désactivé"}
                 </p>
               )}
             </div>
           </div>
-          <Link to="/facturation" className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-100 transition-colors text-center">
-            Voir mes factures
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/facturation" className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-100 transition-colors text-center">
+              Voir mes factures
+            </Link>
+            {renouvellementAuto ? (
+              <button
+                onClick={handleResilier}
+                disabled={resiliationEnCours}
+                className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Résilier
+              </button>
+            ) : (
+              <button
+                onClick={handleReactiverRenouvellement}
+                disabled={resiliationEnCours}
+                className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              >
+                Réactiver le renouvellement
+              </button>
+            )}
+          </div>
         </div>
       )}
 

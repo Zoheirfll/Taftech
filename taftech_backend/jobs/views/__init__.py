@@ -57,6 +57,7 @@ from .recruteur import (
     ChargilyCheckoutAPIView,
     ChargilyCheckoutPalierAPIView,
     ChargilyWebhookAPIView,
+    MonAbonnementAPIView,
     ExportCandidaturesOffreExcelAPIView,
     ExportCandidaturesExcelAPIView,
 )

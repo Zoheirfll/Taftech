@@ -831,6 +831,45 @@ class ChargilyCheckoutPalierAPIView(APIView):
         return Response({'checkout_url': checkout_url}, status=200)
 
 
+class MonAbonnementAPIView(APIView):
+    """Statut de l'abonnement (palier) de l'entreprise connectée + résiliation du renouvellement
+    automatique. « Résilier » ne coupe jamais l'accès immédiatement (voir badge "Sans engagement"
+    de la page Abonnements) : l'entreprise garde son palier jusqu'à date_expiration, puis
+    retombe naturellement sur Gratuit — aucun remboursement au prorata, cohérent avec le
+    paiement manuel/Chargily non récurrent actuel."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        if not abonnement:
+            return Response({"palier": None})
+        return Response({
+            "palier": abonnement.palier.nom,
+            "date_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement.date_expiration else None,
+            "renouvellement_auto": abonnement.renouvellement_auto,
+        })
+
+    def patch(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
+            return Response({"error": "Réservé au propriétaire."}, status=403)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        if not abonnement:
+            return Response({"error": "Aucun abonnement actif."}, status=404)
+        if 'renouvellement_auto' in request.data:
+            abonnement.renouvellement_auto = bool(request.data['renouvellement_auto'])
+            abonnement.save(update_fields=['renouvellement_auto'])
+        return Response({
+            "renouvellement_auto": abonnement.renouvellement_auto,
+            "date_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement.date_expiration else None,
+        })
+
+
 class ChargilyWebhookAPIView(APIView):
     """
     Endpoint appelé automatiquement par Chargily après un paiement réussi.

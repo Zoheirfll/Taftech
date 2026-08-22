@@ -25,7 +25,7 @@ from .views import (
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
-    ChargilyCheckoutAPIView, ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView,
+    ChargilyCheckoutAPIView, ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
@@ -167,6 +167,7 @@ urlpatterns = [
     # Chargily Pay — paiement en ligne
     path('premium/chargily/checkout/', ChargilyCheckoutAPIView.as_view(), name='chargily-checkout'),
     path('paliers/chargily/checkout/', ChargilyCheckoutPalierAPIView.as_view(), name='chargily-checkout-palier'),
+    path('paliers/mon-abonnement/', MonAbonnementAPIView.as_view(), name='mon-abonnement'),
     path('premium/chargily/webhook/', ChargilyWebhookAPIView.as_view(), name='chargily-webhook'),
     # Équipe
     path('equipe/', EquipeAPIView.as_view(), name='equipe-list'),

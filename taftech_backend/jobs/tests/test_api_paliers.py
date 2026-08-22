@@ -11,6 +11,7 @@ User = get_user_model()
 class PalierModelTest(TestCase):
     def setUp(self):
         cache.clear()
+        Palier.objects.all().delete()  # vide le contenu seedé par la migration 0080
 
     def test_creation_palier_minimal(self):
         p = Palier.objects.create(nom="STARTER", limite_offres=5)
@@ -35,6 +36,7 @@ class PalierModelTest(TestCase):
 class AbonnementEntrepriseModelTest(TestCase):
     def setUp(self):
         cache.clear()
+        Palier.objects.all().delete()  # vide le contenu seedé par la migration 0080
         self.user = User.objects.create_user(
             username="rec_paliers", email="rec_paliers@test.dz", password="pwd", role="RECRUTEUR",
         )

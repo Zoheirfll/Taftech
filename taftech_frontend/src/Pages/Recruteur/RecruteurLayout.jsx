@@ -22,6 +22,7 @@ import {
   BarChart3,
   CalendarClock,
   Receipt,
+  MessageSquare,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -104,17 +105,32 @@ const RecruteurLayout = () => {
 
   return (
     <div className={`max-w-7xl mx-auto flex flex-col gap-4 md:gap-5 px-4 md:px-6 py-5 md:py-6 min-h-screen ${tw.surfaceSubtle}`}>
-      <div className="relative w-full max-w-xl">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onKeyDown={handleSearchSubmit}
-          placeholder="Rechercher un candidat, un CV, une compétence... (Ctrl+K)"
-          className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative w-full max-w-xl">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleSearchSubmit}
+            placeholder="Rechercher un candidat, un CV, une compétence... (Ctrl+K)"
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/candidatures-spontanees")}
+          title="Messages"
+          className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
+        >
+          <MessageSquare size={16} className="text-slate-600" />
+          {messagesNonLus > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {messagesNonLus}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-5">

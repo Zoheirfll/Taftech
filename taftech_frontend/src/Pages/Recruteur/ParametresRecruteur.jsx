@@ -51,6 +51,7 @@ const ParametresRecruteur = () => {
     last_name: "",
     email: "",
     telephone: "",
+    intitule_poste: "",
   });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -134,6 +135,7 @@ const ParametresRecruteur = () => {
             last_name: e.last_name || "",
             email: e.email || "",
             telephone: e.telephone || "",
+            intitule_poste: e.intitule_poste || "",
           });
           setNotifForm({
             email_refus_auto: notifs.email_refus_auto || false,
@@ -557,6 +559,19 @@ const ParametresRecruteur = () => {
                   value={profilForm.telephone}
                   onChange={(e) =>
                     setProfilForm({ ...profilForm, telephone: e.target.value })
+                  }
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
+                />
+              </div>
+              <div>
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
+                  Intitulé de poste (ex: Responsable RH)
+                </label>
+                <input
+                  type="text"
+                  value={profilForm.intitule_poste}
+                  onChange={(e) =>
+                    setProfilForm({ ...profilForm, intitule_poste: e.target.value })
                   }
                   className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />

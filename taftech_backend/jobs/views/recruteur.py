@@ -423,7 +423,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
         # Sauvegarder les infos personnelles de l'utilisateur
         user = request.user
         user_fields = []
-        for field in ('first_name', 'last_name', 'telephone'):
+        for field in ('first_name', 'last_name', 'telephone', 'intitule_poste'):
             if field in data:
                 val = data[field]
                 model_field = user._meta.get_field(field)

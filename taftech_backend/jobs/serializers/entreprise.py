@@ -13,6 +13,7 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     telephone = serializers.CharField(source='user.telephone', read_only=True)
+    intitule_poste = serializers.CharField(source='user.intitule_poste', read_only=True)
     photos = EntreprisePhotoSerializer(many=True, read_only=True)
 
     class Meta:
@@ -22,5 +23,5 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
             'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'logo',
             'banniere', 'culture_entreprise', 'linkedin', 'site_web', 'photos',
             'description', 'est_approuvee', 'est_premium', 'mise_en_avant_accueil',
-            'first_name', 'last_name', 'email', 'telephone'
+            'first_name', 'last_name', 'email', 'telephone', 'intitule_poste'
         )

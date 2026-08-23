@@ -279,6 +279,19 @@ export const recruteurService = {
     }
   },
 
+  inviterCandidatCVTheque: async (candidatId, offreId) => {
+    try {
+      const response = await api.post("jobs/cvtheque/inviter/", {
+        candidat_id: candidatId,
+        offre_id: offreId,
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_INVITER_CANDIDAT_CVTHEQUE", err);
+      throw err;
+    }
+  },
+
   // Candidatures spontanées
   getCandidaturesSpontanees: async () => {
     try {

@@ -30,6 +30,7 @@ import {
   Zap,
   Copy,
   ExternalLink,
+  Send,
 } from "lucide-react";
 
 const OPTIONS_EXPERIENCE = [
@@ -116,6 +117,11 @@ const CVTheque = () => {
   const [offreId, setOffreId] = useState("");
   const [offresActives, setOffresActives] = useState([]);
   const [showMatchingPanel, setShowMatchingPanel] = useState(false);
+
+  // Invitation à postuler (sous-projet source candidature)
+  const [inviterCandidat, setInviterCandidat] = useState(null);
+  const [offreInvitation, setOffreInvitation] = useState("");
+  const [envoiInvitation, setEnvoiInvitation] = useState(false);
 
   // Accordéon détail
   const [openSections, setOpenSections] = useState({ competences: true, langues: true });
@@ -316,6 +322,26 @@ const CVTheque = () => {
     }
   };
 
+  const handleOuvrirInvitation = (candidat, e) => {
+    e.stopPropagation();
+    setOffreInvitation("");
+    setInviterCandidat(candidat);
+  };
+
+  const handleEnvoyerInvitation = async () => {
+    if (!offreInvitation || !inviterCandidat) return;
+    setEnvoiInvitation(true);
+    try {
+      await jobsService.inviterCandidatCVTheque(inviterCandidat.user_id, offreInvitation);
+      toast.success("Invitation envoyée !");
+      setInviterCandidat(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      reportError("ECHEC_INVITER_CANDIDAT_CVTHEQUE", err);
+    } finally {
+      setEnvoiInvitation(false);
+    }
+  };
 
   const isRecent = (dateString) => {
     if (!dateString) return false;
@@ -975,6 +1001,16 @@ const CVTheque = () => {
                   >
                     <Star size={14} className={candidat.is_favori ? tw.starFavoriActive : tw.starFavoriInactiveGroupHover} />
                   </button>
+
+                  {/* INVITER À POSTULER (Pro+, réservé à l'accès coordonnées) */}
+                  <button
+                    onClick={(e) => (isPremium ? handleOuvrirInvitation(candidat, e) : e.stopPropagation())}
+                    disabled={!isPremium}
+                    title={isPremium ? "Inviter à postuler" : "Nécessite un abonnement Pro ou supérieur"}
+                    className={`absolute top-3 right-10 p-1 rounded-md transition-colors group/send ${isPremium ? tw.hoverSurfaceSubtle : "opacity-30 cursor-not-allowed"}`}
+                  >
+                    <Send size={14} className={tw.iconMuted} />
+                  </button>
                 </div>
               );
             })
@@ -1336,6 +1372,43 @@ const CVTheque = () => {
           )}
         </div>
       </div>
+
+      {inviterCandidat && (
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-4`}>
+              Inviter {inviterCandidat.first_name || inviterCandidat.titre_professionnel || "ce candidat"} à postuler
+            </h3>
+            <select
+              value={offreInvitation}
+              onChange={(e) => setOffreInvitation(e.target.value)}
+              className={`w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm mb-4`}
+            >
+              <option value="" disabled>Choisir une offre</option>
+              {offresActives.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInviterCandidat(null)}
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!offreInvitation || envoiInvitation}
+                onClick={handleEnvoyerInvitation}
+                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg disabled:opacity-50`}
+              >
+                {envoiInvitation ? "Envoi..." : "Envoyer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -269,4 +269,46 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     // Vérifier que la liste des offres s'affiche correctement
     expect(screen.getAllByText("Offre Ouverte")[0]).toBeInTheDocument();
   });
+
+  it("🟢 HP5 : Sidebar Candidats recommandés — lien vers la page dédiée", async () => {
+    const mockDataAvecCandidat = {
+      ...mockData,
+      offres: [
+        {
+          id: 1,
+          titre: "Offre Ouverte",
+          est_cloturee: false,
+          date_publication: "2026-05-01",
+          candidatures: [
+            {
+              id: 10,
+              statut: "RECUE",
+              score_matching: 85,
+              est_rapide: false,
+              candidat: {
+                id: 20,
+                first_name: "Amine",
+                last_name: "Kaci",
+                wilaya: "31 - Oran",
+                competences: "React, Django",
+                photo_profil: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    jobsService.getDashboard.mockResolvedValue(mockDataAvecCandidat);
+    render(
+      <MemoryRouter>
+        <DashboardRecruteur />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("TafTech"));
+
+    expect(screen.getByText(/^Amine K\.$/)).toBeInTheDocument();
+    const lien = screen.getByRole("link", { name: /Voir plus de candidats recommandés/i });
+    expect(lien).toHaveAttribute("href", "/candidats-recommandes");
+  });
 });

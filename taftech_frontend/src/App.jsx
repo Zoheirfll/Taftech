@@ -139,6 +139,7 @@ const CandidaturesListPage   = lazy(() => import("./Pages/Recruteur/Candidatures
 const RecrutementsPage       = lazy(() => import("./Pages/Recruteur/RecrutementsPage"));
 const CandidatsRecommandesPage = lazy(() => import("./Pages/Recruteur/CandidatsRecommandesPage"));
 const StatistiquesPage       = lazy(() => import("./Pages/Recruteur/StatistiquesPage"));
+const EvaluationsPage        = lazy(() => import("./Pages/Recruteur/EvaluationsPage"));
 const EntretiensPage         = lazy(() => import("./Pages/Recruteur/EntretiensPage"));
 const FacturationPage        = lazy(() => import("./Pages/Recruteur/FacturationPage"));
 
@@ -311,6 +312,7 @@ function AppContent() {
               <Route path="/recrutements" element={<RecrutementsPage />} />
               <Route path="/candidats-recommandes" element={<CandidatsRecommandesPage />} />
               <Route path="/statistiques" element={<StatistiquesPage />} />
+              <Route path="/evaluations" element={<EvaluationsPage />} />
               <Route path="/entretiens" element={<EntretiensPage />} />
               <Route path="/facturation" element={<FacturationPage />} />
             </Route>

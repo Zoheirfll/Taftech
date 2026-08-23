@@ -23,6 +23,7 @@ import {
   CalendarClock,
   Receipt,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
@@ -91,6 +92,7 @@ const RecruteurLayout = () => {
       { name: "Entretiens", path: "/entretiens", icon: CalendarClock, minRole: "INVITE" },
       { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
       { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "INVITE" },
+      { name: "Évaluations", path: "/evaluations", icon: ClipboardCheck, minRole: "INVITE" },
       { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },
       { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
       { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },

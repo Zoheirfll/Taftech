@@ -699,8 +699,6 @@ const DashboardRecruteur = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 items-start">
-      <div className="lg:col-span-2 space-y-2.5">
       {/* ── GRAPHIQUES ─────────────────────────────────────────────────────── */}
       {offres.length > 0 && (
         <>
@@ -708,7 +706,7 @@ const DashboardRecruteur = () => {
             <SlidersHorizontal size={13} className={tw.textMuted} />
             <select
               value={filtreOffreId}
-              onChange={(e) => { setFiltreOffreId(e.target.value); setRecommandesLimit(6); }}
+              onChange={(e) => { setFiltreOffreId(e.target.value); setRecommandesLimit(3); }}
               className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5 max-w-[220px]`}
             >
               <option value="toutes">Toutes les offres</option>
@@ -727,66 +725,69 @@ const DashboardRecruteur = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-            <div className={`${tw.cardColors} rounded-2xl p-5`}>
-              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-                <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-                  <TrendingUp size={15} className={tw.textTeal} /> Évolution
-                </h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setChartType("area")}
-                    title="Courbe"
-                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "area" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
-                  >
-                    <LineChart size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartType("bar")}
-                    title="Barres"
-                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "bar" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
-                  >
-                    <BarChart3 size={14} />
-                  </button>
-                </div>
+          {/* Évolution — pleine largeur */}
+          <div className={`${tw.cardColors} rounded-2xl p-5 mb-2.5`}>
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                <TrendingUp size={15} className={tw.textTeal} /> Évolution
+              </h2>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setChartType("area")}
+                  title="Courbe"
+                  className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "area" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                >
+                  <LineChart size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartType("bar")}
+                  title="Barres"
+                  className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "bar" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                >
+                  <BarChart3 size={14} />
+                </button>
               </div>
-              <div className="flex items-center gap-3 flex-wrap mb-3">
-                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
-                  <input
-                    type="checkbox"
-                    checked={showComparaison}
-                    disabled={chartType === "bar"}
-                    onChange={(e) => setShowComparaison(e.target.checked)}
-                    className="rounded"
-                  />
-                  <History size={12} /> Comparer à la période précédente
-                </label>
-                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
-                  <input
-                    type="checkbox"
-                    checked={showConversion}
-                    disabled={chartType === "bar"}
-                    onChange={(e) => setShowConversion(e.target.checked)}
-                    className="rounded"
-                  />
-                  <Percent size={12} /> Taux de conversion
-                </label>
-              </div>
-              <MiniAreaChart
-                data={evolution}
-                height={190}
-                chartType={chartType}
-                exportTitle="evolution-candidatures"
-                series={[
-                  { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
-                  { key: "recrutements", color: "#059669", label: "Recrutements" },
-                ]}
-                compareValues={evolutionPrevValues}
-                secondarySeries={showConversion && chartType !== "bar" ? { key: "tauxConversion", color: "#ea580c", label: "Taux de conversion (%)" } : null}
-              />
             </div>
+            <div className="flex items-center gap-3 flex-wrap mb-3">
+              <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                <input
+                  type="checkbox"
+                  checked={showComparaison}
+                  disabled={chartType === "bar"}
+                  onChange={(e) => setShowComparaison(e.target.checked)}
+                  className="rounded"
+                />
+                <History size={12} /> Comparer à la période précédente
+              </label>
+              <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                <input
+                  type="checkbox"
+                  checked={showConversion}
+                  disabled={chartType === "bar"}
+                  onChange={(e) => setShowConversion(e.target.checked)}
+                  className="rounded"
+                />
+                <Percent size={12} /> Taux de conversion
+              </label>
+            </div>
+            <MiniAreaChart
+              data={evolution}
+              height={190}
+              chartType={chartType}
+              exportTitle="evolution-candidatures"
+              series={[
+                { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
+                { key: "recrutements", color: "#059669", label: "Recrutements" },
+              ]}
+              compareValues={evolutionPrevValues}
+              secondarySeries={showConversion && chartType !== "bar" ? { key: "tauxConversion", color: "#ea580c", label: "Taux de conversion (%)" } : null}
+            />
+          </div>
+
+          {/* Pipeline de recrutement | Mes offres actives | Activité récente — même ligne */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-2.5 items-start">
             <div className={`${tw.cardColors} rounded-2xl p-5`}>
               <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
                 <GitBranch size={15} className={tw.textTeal} /> Pipeline de recrutement
@@ -815,181 +816,76 @@ const DashboardRecruteur = () => {
                 })}
               </div>
             </div>
+
+            <div className={`${tw.cardColors} rounded-2xl p-5 overflow-hidden`}>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <h2 className={`text-sm font-bold ${tw.textStrong}`}>Mes offres d'emploi actives</h2>
+                <button type="button" onClick={() => { setActiveTab("ouvertes"); }} className={`text-xs font-semibold ${tw.textTeal}`}>Voir toutes</button>
+              </div>
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-left min-w-[280px]">
+                  <thead>
+                    <tr className={`text-[10px] uppercase tracking-wide font-semibold ${tw.textMuted}`}>
+                      <th className="px-1 py-1.5">Poste</th>
+                      <th className="px-1 py-1.5 text-center">Cand.</th>
+                      <th className="px-1 py-1.5 text-center">Entret.</th>
+                      <th className="px-1 py-1.5 text-right">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${tw.divideBase}`}>
+                    {[...offres].sort((a, b) => new Date(b.date_publication) - new Date(a.date_publication)).slice(0, 5).map((o) => {
+                      const nbCand = o.candidatures?.length || 0;
+                      const nbEnt = o.candidatures?.filter((c) => c.statut === "ENTRETIEN").length || 0;
+                      return (
+                        <tr key={o.id} className={tw.rowHover}>
+                          <td className="px-1 py-2 text-xs font-medium truncate max-w-[110px]">{o.titre}</td>
+                          <td className="px-1 py-2 text-xs text-center">{nbCand}</td>
+                          <td className="px-1 py-2 text-xs text-center">{nbEnt}</td>
+                          <td className="px-1 py-2 text-right">
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${o.est_cloturee ? tw.tagSlateSoft : "bg-emerald-100 text-emerald-700"}`}>
+                              {o.est_cloturee ? "Clôturée" : "Active"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className={`${tw.cardColors} rounded-2xl p-5`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                  <Activity size={15} className={tw.textTeal} /> Activité récente
+                </h2>
+                {activite.length > 5 && (
+                  <Link to="/activite" className={`text-xs font-semibold ${tw.textTeal}`}>Voir tout</Link>
+                )}
+              </div>
+              {activite.length === 0 ? (
+                <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
+              ) : (
+                <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                  {activite.slice(0, 5).map((a) => (
+                    <li key={a.id} className="flex items-start gap-2.5">
+                      <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${tw.bgTealSolid}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-xs ${tw.textMuted700}`}>{a.phrase}</p>
+                        <p className={`text-[10px] mt-0.5 ${tw.textMuted}`}>{formatTempsRelatif(a.date)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </>
       )}
-      </div>
 
-      <div className="lg:col-span-1 space-y-2.5">
-      {/* ── CANDIDATS RECOMMANDÉS ──────────────────────────────────────────── */}
-      {candidatsRecommandesTous.length > 0 && (
-        <div className={`${tw.cardColors} rounded-2xl p-5`}>
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-              <Star size={15} className={tw.textTeal} /> Candidats recommandés
-              <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
-            </h2>
-            <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${tw.textMuted700}`}>
-              <input
-                type="checkbox"
-                checked={masquerDecides}
-                onChange={(e) => { setMasquerDecides(e.target.checked); setRecommandesLimit(6); }}
-                className="rounded"
-              />
-              Masquer retenus/refusés
-            </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3">
-            {candidatsRecommandes.map((cand) => {
-              const score = Math.round(parseFloat(cand.score_matching));
-              const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
-                .trim();
-              const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
-              return (
-                <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
-                  <div className="flex items-start gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                      className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
-                    >
-                      {cand.candidat.photo_profil ? (
-                        <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Users size={16} className={tw.textMuted} />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                          className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
-                        >
-                          {nomAffiche}
-                        </button>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
-                          {score}% compatible
-                        </span>
-                      </div>
-                      <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
-                      {cand.candidat.wilaya && (
-                        <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
-                      )}
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {tags.map((t) => (
-                            <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
-                        title="Ajouter aux favoris"
-                        className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                      >
-                        <Bookmark size={14} className={tw.iconMuted} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
-                        title="Inviter à postuler"
-                        className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                      >
-                        <Send size={14} className={tw.iconMuted} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {hasMoreRecommandes && (
-            <div className="mt-3 text-center">
-              <button
-                type="button"
-                onClick={() => setRecommandesLimit((n) => n + 3)}
-                className={`text-xs font-semibold ${tw.textTeal}`}
-              >
-                Voir plus de candidats recommandés →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── ACTIVITÉ RÉCENTE (colonne latérale, sous Candidats recommandés) ── */}
-      <div className={`${tw.cardColors} rounded-2xl p-5`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-            <Activity size={15} className={tw.textTeal} /> Activité récente
-          </h2>
-          {activite.length > 5 && (
-            <Link to="/activite" className={`text-xs font-semibold ${tw.textTeal}`}>Voir tout</Link>
-          )}
-        </div>
-        {activite.length === 0 ? (
-          <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
-        ) : (
-          <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
-            {activite.slice(0, 5).map((a) => (
-              <li key={a.id} className="flex items-start gap-2.5">
-                <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${tw.bgTealSolid}`} />
-                <div className="min-w-0 flex-1">
-                  <p className={`text-xs ${tw.textMuted700}`}>{a.phrase}</p>
-                  <p className={`text-[10px] mt-0.5 ${tw.textMuted}`}>{formatTempsRelatif(a.date)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      </div>
-      </div>
-
-      {/* ── MES OFFRES ACTIVES + SOURCES DES CANDIDATURES ──────────────────── */}
-      {offres.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 mb-5 mt-5">
-          <div className={`${tw.cardColors} rounded-2xl p-5 overflow-hidden`}>
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-              <h2 className={`text-sm font-bold ${tw.textStrong}`}>Mes offres d'emploi actives</h2>
-              <button type="button" onClick={() => { setActiveTab("ouvertes"); }} className={`text-xs font-semibold ${tw.textTeal}`}>Voir toutes</button>
-            </div>
-            <div className="overflow-x-auto -mx-1">
-              <table className="w-full text-left min-w-[380px]">
-                <thead>
-                  <tr className={`text-[10px] uppercase tracking-wide font-semibold ${tw.textMuted}`}>
-                    <th className="px-1 py-1.5">Poste</th>
-                    <th className="px-1 py-1.5 text-center">Cand.</th>
-                    <th className="px-1 py-1.5 text-center">Entret.</th>
-                    <th className="px-1 py-1.5 text-right">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${tw.divideBase}`}>
-                  {[...offres].sort((a, b) => new Date(b.date_publication) - new Date(a.date_publication)).slice(0, 5).map((o) => {
-                    const nbCand = o.candidatures?.length || 0;
-                    const nbEnt = o.candidatures?.filter((c) => c.statut === "ENTRETIEN").length || 0;
-                    return (
-                      <tr key={o.id} className={tw.rowHover}>
-                        <td className="px-1 py-2 text-xs font-medium truncate max-w-[140px]">{o.titre}</td>
-                        <td className="px-1 py-2 text-xs text-center">{nbCand}</td>
-                        <td className="px-1 py-2 text-xs text-center">{nbEnt}</td>
-                        <td className="px-1 py-2 text-right">
-                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${o.est_cloturee ? tw.tagSlateSoft : "bg-emerald-100 text-emerald-700"}`}>
-                            {o.est_cloturee ? "Clôturée" : "Active"}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
+      {/* ── SOURCES DES CANDIDATURES + CANDIDATS RECOMMANDÉS ───────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 mb-5">
+        {offres.length > 0 && (
           <div className={`${tw.cardColors} rounded-2xl p-5`}>
             <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
               <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
@@ -1018,8 +914,107 @@ const DashboardRecruteur = () => {
               ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {candidatsRecommandesTous.length > 0 && (
+          <div className={`${tw.cardColors} rounded-2xl p-5`}>
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                <Star size={15} className={tw.textTeal} /> Candidats recommandés
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
+              </h2>
+              <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${tw.textMuted700}`}>
+                <input
+                  type="checkbox"
+                  checked={masquerDecides}
+                  onChange={(e) => { setMasquerDecides(e.target.checked); setRecommandesLimit(3); }}
+                  className="rounded"
+                />
+                Masquer retenus/refusés
+              </label>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {candidatsRecommandes.map((cand) => {
+                const score = Math.round(parseFloat(cand.score_matching));
+                const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
+                  .trim();
+                const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
+                return (
+                  <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
+                    <div className="flex items-start gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                        className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
+                      >
+                        {cand.candidat.photo_profil ? (
+                          <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Users size={16} className={tw.textMuted} />
+                        )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                            className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
+                          >
+                            {nomAffiche}
+                          </button>
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
+                            {score}% compatible
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
+                        {cand.candidat.wilaya && (
+                          <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
+                        )}
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {tags.map((t) => (
+                              <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
+                          title="Ajouter aux favoris"
+                          className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                        >
+                          <Bookmark size={14} className={tw.iconMuted} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
+                          title="Inviter à postuler"
+                          className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                        >
+                          <Send size={14} className={tw.iconMuted} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {hasMoreRecommandes && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setRecommandesLimit((n) => n + 3)}
+                  className={`text-xs font-semibold ${tw.textTeal}`}
+                >
+                  Voir plus de candidats recommandés →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── RECHERCHE CVTHÈQUE + GÉNÉRER OFFRE IA + BESOIN D'AIDE ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">

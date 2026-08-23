@@ -92,6 +92,16 @@ class PostulerAPIView(APIView):
             logger.warning("Erreur snapshot profil : %s", e)
             snapshot = None
 
+        source_candidature = 'SITE'
+        invitation_token = request.data.get('invitation_token')
+        if invitation_token:
+            from ..models import InvitationCVTheque
+            invitation = InvitationCVTheque.objects.filter(
+                token=invitation_token, candidat=request.user, offre=offre,
+            ).first()
+            if invitation and invitation.est_valide:
+                source_candidature = 'CVTHEQUE'
+
         candidature = Candidature.objects.create(
             offre=offre,
             candidat=request.user,
@@ -104,7 +114,8 @@ class PostulerAPIView(APIView):
                 "highlights": resultat_matching["highlights"]
             },
             profil_snapshot=snapshot,
-            statut='RECUE'
+            statut='RECUE',
+            source=source_candidature,
         )
 
         # Réponses questionnaire + détection disqualification
@@ -187,6 +198,7 @@ class PostulerRapideAPIView(APIView):
             Candidature.objects.create(
                 offre=offre,
                 est_rapide=True,
+                source='AUTRE',
                 nom_rapide=serializer.validated_data.get('nom_rapide'),
                 prenom_rapide=serializer.validated_data.get('prenom_rapide'),
                 email_rapide=serializer.validated_data.get('email_rapide'),

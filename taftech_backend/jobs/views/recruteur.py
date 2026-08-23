@@ -11,6 +11,7 @@ from django.db.models.functions import Coalesce, Now
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.utils import timezone
+from django.template.loader import render_to_string
 import datetime
 import hmac
 import hashlib
@@ -22,10 +23,11 @@ from ..models import (
     OffreEmploi, ProfilCandidat, ProfilEntreprise, EntreprisePhoto,
     ProfilCandidatFavori, CandidatureSpontanee,
     Questionnaire, QuestionQuestionnaire, ReponseChoix, Candidature,
-    DemandeActivationPremium, AuditLog, MembreEquipe
+    DemandeActivationPremium, AuditLog, MembreEquipe,
+    InvitationCVTheque, RechercheSauvegardee, EquipeActionLog, Notification,
 )
 from .equipe import get_entreprise_for_user, get_membre_role
-from ..throttles import WriteActionThrottle, EmailRateThrottle
+from ..throttles import WriteActionThrottle, EmailRateThrottle, InvitationCVThequeThrottle
 from ..matcher import calculer_score_matching
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
@@ -560,6 +562,83 @@ class CVThequeView(APIView):
         response.data['is_premium'] = is_premium
         response.data['recherche_avancee'] = _recherche_avancee_ok
         return response
+
+
+class InviterCandidatCVThequeAPIView(APIView):
+    """Invite un candidat de la CVthèque à postuler à une offre précise — voir
+    docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md."""
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [InvitationCVThequeThrottle]
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        mon_role = get_membre_role(request.user, entreprise)
+        if mon_role == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=status.HTTP_403_FORBIDDEN)
+
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if not palier or not palier.acces_coordonnees:
+            return Response(
+                {"error": "L'invitation de candidats nécessite un abonnement Pro ou supérieur.", "code": "PALIER_INSUFFISANT"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        candidat_id = request.data.get('candidat_id')
+        offre_id = request.data.get('offre_id')
+        try:
+            candidat = User.objects.get(id=candidat_id, role='CANDIDAT')
+        except (User.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Candidat introuvable."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            offre = OffreEmploi.objects.get(
+                id=offre_id, entreprise=entreprise, statut_moderation='APPROUVEE',
+                est_active=True, est_cloturee=False,
+            )
+        except (OffreEmploi.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Offre introuvable ou non active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if InvitationCVTheque.objects.filter(entreprise=entreprise, candidat=candidat, offre=offre).exists():
+            return Response({"error": "Ce candidat a déjà été invité à cette offre.", "code": "DEJA_INVITE"}, status=status.HTTP_409_CONFLICT)
+
+        invitation = InvitationCVTheque.objects.create(entreprise=entreprise, candidat=candidat, offre=offre)
+
+        Notification.objects.create(
+            destinataire=candidat,
+            type_notif='INFO',
+            titre="Une entreprise s'intéresse à votre profil",
+            message=f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} ».",
+        )
+
+        lien_offre = f"{settings.SITE_URL}/jobs/{offre.id}/?invitation={invitation.token}"
+        if candidat.email:
+            try:
+                ctx = {
+                    'prenom_candidat': candidat.first_name,
+                    'nom_entreprise': entreprise.nom_entreprise,
+                    'titre_offre': offre.titre,
+                    'lien_offre': lien_offre,
+                    'annee': timezone.now().year,
+                }
+                html_body = render_to_string('emails/invitation_cvtheque.html', ctx)
+                msg = EmailMultiAlternatives(
+                    f"{entreprise.nom_entreprise} vous invite à postuler",
+                    f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} » : {lien_offre}",
+                    settings.EMAIL_HOST_USER, [candidat.email],
+                )
+                msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=True)
+            except Exception as e:
+                logger.error("Erreur envoi email invitation CVthèque : %s", e)
+
+        EquipeActionLog.objects.create(
+            entreprise=entreprise, membre=request.user, action='AUTRE',
+            detail=f"Invitation CVthèque envoyée à {candidat.email} pour l'offre « {offre.titre} »",
+        )
+
+        return Response({"message": "Invitation envoyée."}, status=status.HTTP_201_CREATED)
 
 
 class ToggleFavoriCVAPIView(APIView):

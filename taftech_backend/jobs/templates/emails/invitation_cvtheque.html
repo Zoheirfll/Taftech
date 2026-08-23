@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6fb; padding: 20px; margin:0;">
+  <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    <div style="background: #204883; padding: 24px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 20px;">TafTech</h1>
+    </div>
+    <div style="padding: 32px;">
+      <h2 style="color: #1e293b; font-size: 18px;">Une entreprise s'intéresse à votre profil !</h2>
+      <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+        Bonjour {{ prenom_candidat }},<br><br>
+        <strong>{{ nom_entreprise }}</strong> a consulté votre profil dans notre CVthèque et vous invite à postuler à l'offre :
+      </p>
+      <div style="background: #f0fdfa; border-left: 4px solid #307020; padding: 16px; margin: 16px 0; border-radius: 8px;">
+        <strong style="color: #1e293b;">{{ titre_offre }}</strong>
+      </div>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{ lien_offre }}" style="background: #204883; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Voir l'offre et postuler</a>
+      </div>
+      <p style="color: #64748b; font-size: 12px;">Ce lien reste valide 7 jours.</p>
+    </div>
+    <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 11px;">
+      © {{ annee }} TafTech — Oran, Algérie
+    </div>
+  </div>
+</body>
+</html>

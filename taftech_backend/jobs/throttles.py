@@ -53,3 +53,9 @@ class EmailRateThrottle(SimpleRateThrottle):
 
 class PostulerRapideEmailThrottle(EmailRateThrottle):
     email_field = 'email_rapide'
+
+
+class InvitationCVThequeThrottle(_CypressAwareScopedThrottle):
+    """Scope 'invitation_cvtheque' (20/jour) — anti-spam sur les invitations recruteur→candidat
+    depuis la CVthèque, clé = utilisateur recruteur connecté (ScopedRateThrottle par défaut)."""
+    scope = 'invitation_cvtheque'

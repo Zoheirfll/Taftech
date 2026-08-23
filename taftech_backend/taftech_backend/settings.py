@@ -130,6 +130,7 @@ REST_FRAMEWORK = {
         'public_read': '300/hour',
         'write_action': '30/hour',
         'email_write': '10/day',
+        'invitation_cvtheque': '20/day',
     },
 }
 

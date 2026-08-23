@@ -3,12 +3,73 @@ import { reportError } from "../utils/errorReporter";
 
 export const recruteurService = {
   // Dashboard
-  getDashboard: async () => {
+  getDashboard: async (dateDebut, dateFin) => {
     try {
-      const response = await api.get("jobs/dashboard/");
+      const params = {};
+      if (dateDebut) params.date_debut = dateDebut;
+      if (dateFin) params.date_fin = dateFin;
+      const response = await api.get("jobs/dashboard/", { params });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_DASHBOARD_API", err);
+      throw err;
+    }
+  },
+
+  getActiviteRecente: async () => {
+    try {
+      const response = await api.get("jobs/dashboard/activite-recente/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ACTIVITE_RECENTE", err);
+      throw err;
+    }
+  },
+
+  getRecherchesSauvegardees: async () => {
+    try {
+      const response = await api.get("jobs/cvtheque/recherches-sauvegardees/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_RECHERCHES_SAUVEGARDEES", err);
+      throw err;
+    }
+  },
+
+  creerRechercheSauvegardee: async (nom, filtres) => {
+    try {
+      const response = await api.post("jobs/cvtheque/recherches-sauvegardees/", { nom, filtres });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREER_RECHERCHE_SAUVEGARDEE", err);
+      throw err;
+    }
+  },
+
+  supprimerRechercheSauvegardee: async (id) => {
+    try {
+      await api.delete(`jobs/cvtheque/recherches-sauvegardees/${id}/`);
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_RECHERCHE_SAUVEGARDEE", err);
+      throw err;
+    }
+  },
+
+  telechargerRapportDashboard: async (dateDebut, dateFin) => {
+    try {
+      const response = await api.get("jobs/dashboard/rapport-pdf/", {
+        params: { date_debut: dateDebut, date_fin: dateFin },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `rapport_taftech_${dateDebut}_${dateFin}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      reportError("ECHEC_TELECHARGER_RAPPORT", err);
       throw err;
     }
   },

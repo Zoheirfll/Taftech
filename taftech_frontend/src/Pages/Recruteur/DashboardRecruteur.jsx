@@ -86,6 +86,18 @@ const PERIODES_EVOLUTION = [
   { key: "1a", label: "12 derniers mois" },
 ];
 
+const formatTempsRelatif = (dateStr) => {
+  if (!dateStr) return "";
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "à l'instant";
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const heures = Math.floor(minutes / 60);
+  if (heures < 24) return `il y a ${heures}h`;
+  const jours = Math.floor(heures / 24);
+  return `il y a ${jours}j`;
+};
+
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("ouvertes");
@@ -537,7 +549,7 @@ const DashboardRecruteur = () => {
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
 
       {/* ── HEADER COMPACT ─────────────────────────────────────────────────── */}
       <div className={`${tw.cardColors} rounded-2xl p-4 md:p-5 mb-5`}>
@@ -687,6 +699,8 @@ const DashboardRecruteur = () => {
         </div>
       )}
 
+      <div className="xl:grid xl:grid-cols-3 xl:gap-5 items-start">
+      <div className="xl:col-span-2 space-y-5">
       {/* ── GRAPHIQUES ─────────────────────────────────────────────────────── */}
       {offres.length > 0 && (
         <>
@@ -804,10 +818,12 @@ const DashboardRecruteur = () => {
           </div>
         </>
       )}
+      </div>
 
+      <div className="xl:col-span-1 space-y-5 xl:sticky xl:top-20 mt-5 xl:mt-0">
       {/* ── CANDIDATS RECOMMANDÉS ──────────────────────────────────────────── */}
       {candidatsRecommandesTous.length > 0 && (
-        <div className={`${tw.cardColors} rounded-2xl p-5 mb-5`}>
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
             <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
               <Star size={15} className={tw.textTeal} /> Candidats recommandés
@@ -1001,53 +1017,58 @@ const DashboardRecruteur = () => {
         </div>
       )}
 
-      {/* ── SOURCES DES CANDIDATURES + ACTIVITÉ RÉCENTE ────────────────────── */}
-      {offres.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-          <div className={`${tw.cardColors} rounded-2xl p-5`}>
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-                Sources des candidatures
-              </h2>
-              <select
-                value={periodeSources}
-                onChange={(e) => setPeriodeSources(e.target.value)}
-                className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
-              >
-                {PERIODES_EVOLUTION.map((p) => (
-                  <option key={p.key} value={p.key}>{p.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2.5">
-              {sourcesDonut.map((s) => (
-                <div key={s.key} className="flex items-center gap-3">
-                  <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{s.label}</span>
-                  <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.pct}%`, backgroundColor: s.couleur }} />
-                  </div>
-                  <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{s.count}</span>
-                  <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{s.count > 0 ? `${s.pct}%` : ""}</span>
+      {/* ── ACTIVITÉ RÉCENTE (colonne latérale, sous Candidats recommandés) ── */}
+      <div className={`${tw.cardColors} rounded-2xl p-5`}>
+        <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+          <Activity size={15} className={tw.textTeal} /> Activité récente
+        </h2>
+        {activite.length === 0 ? (
+          <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
+        ) : (
+          <ul className="space-y-3.5">
+            {activite.map((a) => (
+              <li key={a.id} className="flex items-start gap-2.5">
+                <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${tw.bgTealSolid}`} />
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs ${tw.textMuted700}`}>{a.phrase}</p>
+                  <p className={`text-[10px] mt-0.5 ${tw.textMuted}`}>{formatTempsRelatif(a.date)}</p>
                 </div>
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      </div>
+      </div>
 
-          <div className={`${tw.cardColors} rounded-2xl p-5`}>
-            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
-              <Activity size={15} className={tw.textTeal} /> Activité récente
+      {/* ── SOURCES DES CANDIDATURES ──────────────────────────────────────── */}
+      {offres.length > 0 && (
+        <div className={`${tw.cardColors} rounded-2xl p-5 mb-5 mt-5`}>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+              Sources des candidatures
             </h2>
-            {activite.length === 0 ? (
-              <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
-            ) : (
-              <ul className="space-y-2.5">
-                {activite.map((a) => (
-                  <li key={a.id} className={`text-xs ${tw.textMuted700}`}>
-                    {a.phrase}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <select
+              value={periodeSources}
+              onChange={(e) => setPeriodeSources(e.target.value)}
+              className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+            >
+              {PERIODES_EVOLUTION.map((p) => (
+                <option key={p.key} value={p.key}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2.5">
+            {sourcesDonut.map((s) => (
+              <div key={s.key} className="flex items-center gap-3">
+                <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{s.label}</span>
+                <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.pct}%`, backgroundColor: s.couleur }} />
+                </div>
+                <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{s.count}</span>
+                <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{s.count > 0 ? `${s.pct}%` : ""}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1130,6 +1151,12 @@ const DashboardRecruteur = () => {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* ── GESTION DÉTAILLÉE DES OFFRES (séparée de l'aperçu ci-dessus) ────── */}
+      <div className={`border-t-2 ${tw.borderBase} pt-6 mt-2 mb-4`}>
+        <h2 className={`text-base font-bold ${tw.textStrong}`}>Gestion de vos offres</h2>
+        <p className={`text-xs mt-0.5 ${tw.textMuted}`}>Recherche, filtres, modification et suivi détaillé de chaque offre.</p>
       </div>
 
       {/* ── ONGLETS principaux ─────────────────────────────────────────────── */}

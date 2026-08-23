@@ -3,6 +3,8 @@ import React from "react";
 /**
  * Funnel SVG : trapèzes empilés, largeur proportionnelle au count de la première étape.
  * etapes: [{ label, count, pct, couleur }]
+ * viewBox fixe + width="100%" pour rester responsive (évite le rognage sur mobile
+ * qu'un <svg width="320"> figé provoquait quand le conteneur était plus étroit).
  */
 const FunnelChart = ({ etapes = [] }) => {
   if (!etapes.length) return null;
@@ -17,14 +19,20 @@ const FunnelChart = ({ etapes = [] }) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-1.5" role="img" aria-label="Pipeline de recrutement">
+    <div className="flex flex-col items-center gap-1.5 w-full max-w-[320px] mx-auto" role="img" aria-label="Pipeline de recrutement">
       {etapes.map((etape, i) => {
         const wActuelle = largeurPour(etape.count);
         const wSuivante = i < etapes.length - 1 ? largeurPour(etapes[i + 1].count) : wActuelle;
         const xActuelle = (largeurMax - wActuelle) / 2;
         const xSuivante = (largeurMax - wSuivante) / 2;
         return (
-          <svg key={etape.label} width={largeurMax} height={hauteurEtape} className="overflow-visible">
+          <svg
+            key={etape.label}
+            viewBox={`0 0 ${largeurMax} ${hauteurEtape}`}
+            width="100%"
+            height={hauteurEtape}
+            preserveAspectRatio="xMidYMid meet"
+          >
             <polygon
               points={`${xActuelle},0 ${xActuelle + wActuelle},0 ${xSuivante + wSuivante},${hauteurEtape - 4} ${xSuivante},${hauteurEtape - 4}`}
               fill={etape.couleur}

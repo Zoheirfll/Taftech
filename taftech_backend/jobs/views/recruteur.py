@@ -153,7 +153,7 @@ class ActiviteRecenteAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=404)
-        logs = EquipeActionLog.objects.filter(entreprise=entreprise).select_related('membre').order_by('-date')[:10]
+        logs = EquipeActionLog.objects.filter(entreprise=entreprise).exclude(action='CONNEXION').select_related('membre').order_by('-date')[:10]
         resultats = []
         for log in logs:
             membre_nom = (log.membre.first_name or log.membre.email) if log.membre else "Un membre"

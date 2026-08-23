@@ -839,7 +839,7 @@ const DashboardRecruteur = () => {
               Masquer retenus/refusés
             </label>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {candidatsRecommandes.map((cand) => {
               const score = Math.round(parseFloat(cand.score_matching));
               const pointsForts = cand.details_matching?.highlights?.points_forts || [];

@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
+from django.db.models import Q, Sum, F, Count, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, Now
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
@@ -38,6 +38,63 @@ from ..serializers import (
 User = get_user_model()
 
 
+def _calculer_kpis_periode(entreprise, date_debut, date_fin):
+    """Calcule les 5 KPIs du dashboard sur [date_debut, date_fin] et la variation % vs la
+    période précédente de même durée. Voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    duree = (date_fin - date_debut).days + 1
+    debut_precedent = date_debut - datetime.timedelta(days=duree)
+    fin_precedent = date_debut - datetime.timedelta(days=1)
+
+    def _kpis_sur_fenetre(debut, fin):
+        candidatures = Candidature.objects.filter(
+            offre__entreprise=entreprise,
+            date_postulation__date__gte=debut, date_postulation__date__lte=fin,
+        )
+        recues = candidatures.count()
+        entretien = candidatures.filter(statut='ENTRETIEN').count()
+        recrutements = candidatures.filter(statut='RETENU').count()
+        taux = round((recrutements / recues * 100), 2) if recues else 0.0
+        return recues, entretien, recrutements, taux
+
+    recues, entretien, recrutements, taux = _kpis_sur_fenetre(date_debut, date_fin)
+    recues_prec, entretien_prec, recrutements_prec, taux_prec = _kpis_sur_fenetre(debut_precedent, fin_precedent)
+
+    def _variation(actuel, precedent):
+        if not precedent:
+            return None
+        return round(((actuel - precedent) / precedent) * 100, 1)
+
+    offres_actives = OffreEmploi.objects.filter(
+        entreprise=entreprise, est_active=True, est_cloturee=False, statut_moderation='APPROUVEE',
+    ).count()
+    offres_actives_avant = OffreEmploi.objects.filter(
+        entreprise=entreprise, est_active=True, est_cloturee=False, statut_moderation='APPROUVEE',
+        date_publication__date__lte=debut_precedent,
+    ).count()
+
+    return {
+        "offres_actives": {"valeur": offres_actives, "variation_pct": _variation(offres_actives, offres_actives_avant)},
+        "candidatures_recues": {"valeur": recues, "variation_pct": _variation(recues, recues_prec)},
+        "candidats_entretien": {"valeur": entretien, "variation_pct": _variation(entretien, entretien_prec)},
+        "recrutements": {"valeur": recrutements, "variation_pct": _variation(recrutements, recrutements_prec)},
+        "taux_conversion": {"valeur": taux, "variation_pct": _variation(taux, taux_prec)},
+    }
+
+
+_TEMPLATES_ACTIVITE = {
+    'CONNEXION': "{membre} s'est connecté(e)",
+    'CREER_OFFRE': "{membre} a publié une nouvelle offre : {detail}",
+    'MODIFIER_OFFRE': "{membre} a modifié une offre : {detail}",
+    'CLOTURER_OFFRE': "{membre} a clôturé une offre : {detail}",
+    'STATUT_CANDIDATURE': "{membre} a changé le statut d'une candidature : {detail}",
+    'EVALUER_CANDIDATURE': "{membre} a évalué une candidature : {detail}",
+    'INVITER_MEMBRE': "{membre} a invité un membre : {detail}",
+    'RETIRER_MEMBRE': "{membre} a retiré un membre : {detail}",
+    'CHANGER_ROLE': "{membre} a changé un rôle : {detail}",
+    'AUTRE': "{detail}",
+}
+
+
 class DashboardRecruteurAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -52,6 +109,19 @@ class DashboardRecruteurAPIView(APIView):
                 {"error": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        date_fin_str = request.GET.get('date_fin')
+        date_debut_str = request.GET.get('date_debut')
+        aujourdhui = timezone.now().date()
+        try:
+            date_fin = datetime.date.fromisoformat(date_fin_str) if date_fin_str else aujourdhui
+            date_debut = datetime.date.fromisoformat(date_debut_str) if date_debut_str else (date_fin - datetime.timedelta(days=30))
+        except ValueError:
+            return Response({"error": "Format de date invalide (attendu YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+        if date_fin < date_debut:
+            return Response({"error": "date_fin doit être postérieure ou égale à date_debut."}, status=status.HTTP_400_BAD_REQUEST)
+        kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
+
         offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
         derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
         from ..paliers_utils import get_palier_actif
@@ -68,8 +138,158 @@ class DashboardRecruteurAPIView(APIView):
             "acces_equipe": bool(palier and palier.acces_equipe),
             "acces_ia_recommandes": bool(palier and palier.acces_ia_recommandes),
             "acces_ia_avancee": bool(palier and palier.acces_ia_avancee),
+            "kpis": kpis,
+            "periode": {"date_debut": date_debut.isoformat(), "date_fin": date_fin.isoformat()},
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+class ActiviteRecenteAPIView(APIView):
+    """Fil d'activité récente de l'entreprise (10 derniers événements), formaté en phrases
+    lisibles — voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        logs = EquipeActionLog.objects.filter(entreprise=entreprise).select_related('membre').order_by('-date')[:10]
+        resultats = []
+        for log in logs:
+            membre_nom = (log.membre.first_name or log.membre.email) if log.membre else "Un membre"
+            template = _TEMPLATES_ACTIVITE.get(log.action, "{detail}")
+            phrase = template.format(membre=membre_nom, detail=log.detail or "")
+            resultats.append({"id": log.id, "phrase": phrase.strip(), "date": log.date.isoformat()})
+        return Response(resultats)
+
+
+class RecherchesSauvegardeesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        recherches = RechercheSauvegardee.objects.filter(entreprise=entreprise)
+        return Response([
+            {"id": r.id, "nom": r.nom, "filtres": r.filtres, "date_creation": r.date_creation.isoformat()}
+            for r in recherches
+        ])
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=403)
+        if RechercheSauvegardee.objects.filter(entreprise=entreprise).count() >= 20:
+            return Response({"error": "Limite de 20 recherches sauvegardées atteinte."}, status=400)
+        nom = (request.data.get('nom') or '').strip()
+        filtres = request.data.get('filtres') or {}
+        if not nom:
+            return Response({"error": "Le nom de la recherche est requis."}, status=400)
+        recherche = RechercheSauvegardee.objects.create(entreprise=entreprise, nom=nom[:100], filtres=filtres)
+        return Response({"id": recherche.id, "nom": recherche.nom, "filtres": recherche.filtres}, status=201)
+
+    def delete(self, request, pk=None):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=403)
+        try:
+            RechercheSauvegardee.objects.get(id=pk, entreprise=entreprise).delete()
+            return Response({"message": "Supprimée."})
+        except RechercheSauvegardee.DoesNotExist:
+            return Response({"error": "Introuvable."}, status=404)
+
+
+class RapportDashboardPDFAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        date_fin_str = request.GET.get('date_fin')
+        date_debut_str = request.GET.get('date_debut')
+        aujourdhui = timezone.now().date()
+        try:
+            date_fin = datetime.date.fromisoformat(date_fin_str) if date_fin_str else aujourdhui
+            date_debut = datetime.date.fromisoformat(date_debut_str) if date_debut_str else (date_fin - datetime.timedelta(days=30))
+        except ValueError:
+            return Response({"error": "Format de date invalide."}, status=400)
+
+        kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
+
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import ParagraphStyle
+        import io
+
+        INDIGO = colors.HexColor("#204883")
+        SLATE = colors.HexColor("#1e293b")
+        BG_LIGHT = colors.HexColor("#f8fafc")
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20 * mm, leftMargin=20 * mm, topMargin=15 * mm, bottomMargin=20 * mm)
+        story = []
+        s_title = ParagraphStyle("title", fontSize=16, textColor=colors.white, fontName="Helvetica-Bold")
+        s_h2 = ParagraphStyle("h2", fontSize=12, textColor=INDIGO, fontName="Helvetica-Bold", spaceBefore=12, spaceAfter=6)
+        s_body = ParagraphStyle("body", fontSize=9, textColor=SLATE, fontName="Helvetica")
+
+        header_table = Table([[Paragraph(f"TafTech — Rapport dashboard<br/>{entreprise.nom_entreprise}", s_title)]], colWidths=[170 * mm])
+        header_table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, -1), INDIGO), ('TOPPADDING', (0, 0), (-1, -1), 12), ('BOTTOMPADDING', (0, 0), (-1, -1), 12), ('LEFTPADDING', (0, 0), (-1, -1), 12)]))
+        story.append(header_table)
+        story.append(Spacer(1, 10))
+        story.append(Paragraph(f"Période : {date_debut.strftime('%d/%m/%Y')} — {date_fin.strftime('%d/%m/%Y')}", s_body))
+        story.append(Paragraph("Indicateurs clés", s_h2))
+
+        kpi_rows = [["Indicateur", "Valeur"]]
+        libelles = {
+            "offres_actives": "Offres actives", "candidatures_recues": "Candidatures reçues",
+            "candidats_entretien": "Candidats en entretien", "recrutements": "Recrutements",
+            "taux_conversion": "Taux de conversion (%)",
+        }
+        for cle, libelle in libelles.items():
+            kpi_rows.append([libelle, str(kpis[cle]["valeur"])])
+        kpi_table = Table(kpi_rows, colWidths=[110 * mm, 60 * mm])
+        kpi_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(kpi_table)
+        story.append(Spacer(1, 14))
+
+        story.append(Paragraph("Top 5 offres (candidatures reçues sur la période)", s_h2))
+        offres_periode = OffreEmploi.objects.filter(entreprise=entreprise).annotate(
+            nb_candidatures_periode=Count(
+                'candidatures', filter=Q(
+                    candidatures__date_postulation__date__gte=date_debut,
+                    candidatures__date_postulation__date__lte=date_fin,
+                )
+            )
+        ).order_by('-nb_candidatures_periode')[:5]
+        offres_rows = [["Offre", "Candidatures"]]
+        for o in offres_periode:
+            offres_rows.append([o.titre, str(o.nb_candidatures_periode)])
+        offres_table = Table(offres_rows, colWidths=[130 * mm, 40 * mm])
+        offres_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(offres_table)
+
+        doc.build(story)
+        buffer.seek(0)
+        from django.http import HttpResponse
+        response = HttpResponse(buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="rapport_taftech_{date_debut}_{date_fin}.pdf"'
+        return response
 
 
 def _construire_classeur_candidatures(candidatures, inclure_offre=False):
@@ -655,6 +875,11 @@ class ToggleFavoriCVAPIView(APIView):
         if not created:
             favori.delete()
             return Response({"action": "retire", "is_favori": False}, status=200)
+        entreprise = get_entreprise_for_user(request.user)
+        EquipeActionLog.objects.create(
+            entreprise=entreprise, membre=request.user, action='AUTRE',
+            detail=f"{candidat.first_name} {candidat.last_name} a été ajouté(e) aux favoris",
+        )
         return Response({"action": "ajoute", "is_favori": True}, status=201)
 
 

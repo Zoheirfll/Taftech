@@ -118,6 +118,9 @@ class PostulerAPIView(APIView):
             source=source_candidature,
         )
 
+        from .equipe import _log
+        _log(None, offre.entreprise, 'AUTRE', f"Nouvelle candidature reçue pour « {offre.titre} » ({request.user.first_name} {request.user.last_name})")
+
         # Réponses questionnaire + détection disqualification
         reponses_raw = request.data.get('reponses', None)
         if reponses_raw and offre.questionnaire:

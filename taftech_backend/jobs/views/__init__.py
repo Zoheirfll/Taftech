@@ -41,6 +41,9 @@ from .candidatures import (
 )
 from .recruteur import (
     DashboardRecruteurAPIView,
+    ActiviteRecenteAPIView,
+    RecherchesSauvegardeesAPIView,
+    RapportDashboardPDFAPIView,
     UpdateProfilEntrepriseAPIView,
     EntreprisePhotosAPIView,
     ParametresRecruteurAPIView,

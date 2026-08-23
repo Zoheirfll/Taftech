@@ -182,7 +182,7 @@ class ActiviteRecenteAPIView(APIView):
             qs = qs.filter(membre=request.user)
         logs = qs.select_related('membre').order_by('-date')[:limite]
         resultats = [
-            {"id": log.id, "phrase": _phrase_activite(log, request.user).strip(), "date": log.date.isoformat()}
+            {"id": log.id, "action": log.action, "phrase": _phrase_activite(log, request.user).strip(), "date": log.date.isoformat()}
             for log in logs
         ]
         return Response(resultats)

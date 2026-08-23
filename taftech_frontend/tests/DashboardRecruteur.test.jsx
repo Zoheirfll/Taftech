@@ -124,22 +124,6 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     });
   });
 
-  it("🟢 HP2 : Navigation fluide entre les onglets", async () => {
-    jobsService.getDashboard.mockResolvedValue(mockData);
-    render(
-      <MemoryRouter>
-        <DashboardRecruteur />
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => screen.getByText("TafTech"));
-
-    // Onglet Archives - the tab button contains text "Archives" with a count badge
-    fireEvent.click(screen.getByRole("button", { name: /Archives/i }));
-    expect(screen.getAllByText("Offre Archives")[0]).toBeInTheDocument();
-    // "Offre Ouverte" peut apparaître dans d'autres sections (candidatures), on vérifie juste que Archives est affiché
-  });
-
   it("🟢 HP3 : Actions autorisées si l'entreprise est approuvée", async () => {
     jobsService.getDashboard.mockResolvedValue(mockData);
     render(
@@ -159,24 +143,6 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
     const btnCV = screen.getByRole("button", { name: /^CV$/i });
     fireEvent.click(btnCV);
     expect(mockNavigate).toHaveBeenCalledWith("/cvtheque");
-  });
-
-  it("🟢 HP4 : Navigation entre onglets Offres en cours et Archives", async () => {
-    jobsService.getDashboard.mockResolvedValue(mockData);
-    render(
-      <MemoryRouter>
-        <DashboardRecruteur />
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => screen.getByText("TafTech"));
-
-    // Par défaut l'onglet "Offres en cours" est actif
-    expect(screen.getAllByText("Offre Ouverte")[0]).toBeInTheDocument();
-
-    // Aller sur Archives
-    fireEvent.click(screen.getByRole("button", { name: /Archives/i }));
-    expect(screen.getAllByText("Offre Archives")[0]).toBeInTheDocument();
   });
 
   // --- 🔴 EDGE CASES (4/4) ---

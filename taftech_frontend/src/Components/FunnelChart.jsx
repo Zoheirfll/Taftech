@@ -1,46 +1,31 @@
 import React from "react";
 
 /**
- * Funnel SVG : trapèzes empilés, largeur proportionnelle au count de la première étape.
+ * Funnel en divs (pas de SVG) — chaque étape est une barre centrée dont la largeur
+ * est proportionnelle à son count vs la 1ère étape, avec un plancher minWidth pour
+ * que le libellé reste toujours lisible (l'ancienne version SVG coupait le texte
+ * quand le conteneur devenait plus étroit que le viewBox fixe).
  * etapes: [{ label, count, pct, couleur }]
- * viewBox fixe + width="100%" pour rester responsive (évite le rognage sur mobile
- * qu'un <svg width="320"> figé provoquait quand le conteneur était plus étroit).
  */
 const FunnelChart = ({ etapes = [] }) => {
   if (!etapes.length) return null;
-  const largeurMax = 320;
-  const largeurMin = 80;
-  const hauteurEtape = 42;
   const total = etapes[0]?.count || 1;
-
-  const largeurPour = (count) => {
-    const ratio = total ? count / total : 0;
-    return Math.max(largeurMin, largeurMax * ratio);
-  };
+  const largeurMinPct = 46;
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-full max-w-[320px] mx-auto" role="img" aria-label="Pipeline de recrutement">
-      {etapes.map((etape, i) => {
-        const wActuelle = largeurPour(etape.count);
-        const wSuivante = i < etapes.length - 1 ? largeurPour(etapes[i + 1].count) : wActuelle;
-        const xActuelle = (largeurMax - wActuelle) / 2;
-        const xSuivante = (largeurMax - wSuivante) / 2;
+    <div className="flex flex-col items-center gap-1.5 w-full" role="img" aria-label="Pipeline de recrutement">
+      {etapes.map((etape) => {
+        const ratio = total ? etape.count / total : 0;
+        const largeurPct = Math.max(largeurMinPct, Math.round(ratio * 100));
         return (
-          <svg
+          <div
             key={etape.label}
-            viewBox={`0 0 ${largeurMax} ${hauteurEtape}`}
-            width="100%"
-            height={hauteurEtape}
-            preserveAspectRatio="xMidYMid meet"
+            title={`${etape.label} — ${etape.count} (${etape.pct}%)`}
+            className="h-9 flex items-center justify-center rounded-lg text-white text-xs font-semibold px-2 min-w-0 truncate"
+            style={{ width: `${largeurPct}%`, backgroundColor: etape.couleur }}
           >
-            <polygon
-              points={`${xActuelle},0 ${xActuelle + wActuelle},0 ${xSuivante + wSuivante},${hauteurEtape - 4} ${xSuivante},${hauteurEtape - 4}`}
-              fill={etape.couleur}
-            />
-            <text x={largeurMax / 2} y={hauteurEtape / 2 - 2} textAnchor="middle" fontSize="12" fontWeight="600" fill="white">
-              {etape.label}  {etape.count}  ({etape.pct}%)
-            </text>
-          </svg>
+            {etape.label} · {etape.count} ({etape.pct}%)
+          </div>
         );
       })}
     </div>

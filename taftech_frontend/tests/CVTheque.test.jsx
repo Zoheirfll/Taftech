@@ -10,7 +10,7 @@ import {
   waitFor,
   act,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import CVTheque from "../src/Pages/Recruteur/CVTheque";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
@@ -147,6 +147,27 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     });
   });
 
+  it("🟢 HP5 : ouvre directement sur l'onglet Favoris si l'URL contient ?favoris=true", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue(mockResults);
+    render(
+      <MemoryRouter initialEntries={["/cvtheque?favoris=true"]}>
+        <CVTheque />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const ongletFavoris = screen.getByText("Favoris").closest("button");
+      expect(ongletFavoris.className).toMatch(/border-b-2/);
+    });
+    await waitFor(() => {
+      expect(jobsService.searchCVtheque).toHaveBeenCalledWith(
+        expect.objectContaining({ favoris: true }),
+        1,
+      );
+    });
+  });
+
   // --- 🔴 EDGE CASES (4/4) ---
 
   it("🔴 EC1 : Échec du chargement des filtres", async () => {
@@ -265,6 +286,87 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
       expect.objectContaining({ offre_id: 42 }),
       1
     );
+  });
+
+  it("🟢 HP8 : ?search=<terme> dans l'URL précharge la recherche et interroge searchCVtheque avec ce terme", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue(mockResults);
+    render(
+      <MemoryRouter initialEntries={["/cvtheque?search=développeur%20react"]}>
+        <CVTheque />
+      </MemoryRouter>,
+    );
+
+    const input = await screen.findByPlaceholderText(/Mots clés, métier, poste/i);
+    await waitFor(() => expect(input.value).toBe("développeur react"));
+
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    await waitFor(() => {
+      expect(jobsService.searchCVtheque).toHaveBeenCalledWith(
+        expect.objectContaining({ search: "développeur react" }),
+        1,
+      );
+    });
+  });
+
+  it("🟢 HP9 : naviguer vers /cvtheque?favoris=true depuis /cvtheque (même route, pas de remount) bascule l'onglet et relance la recherche avec favoris:true", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue(mockResults);
+
+    // Harnais local : un lien qui change uniquement la query string, sur la même route.
+    const NaviguerVersFavoris = () => {
+      const navigate = useNavigate();
+      return (
+        <button onClick={() => navigate("/cvtheque?favoris=true")}>
+          Aller aux favoris
+        </button>
+      );
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/cvtheque"]}>
+        <Routes>
+          <Route
+            path="/cvtheque"
+            element={
+              <>
+                <NaviguerVersFavoris />
+                <CVTheque />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // État initial : onglet "tous"
+    await waitFor(() => {
+      const ongletTous = screen.getByText(/Explorez le vivier de CV/i).closest("button");
+      expect(ongletTous.className).toMatch(/border-b-2/);
+    });
+
+    jobsService.searchCVtheque.mockClear();
+
+    fireEvent.click(screen.getByText("Aller aux favoris"));
+
+    await waitFor(() => {
+      const ongletFavoris = screen.getByText("Favoris").closest("button");
+      expect(ongletFavoris.className).toMatch(/border-b-2/);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    await waitFor(() => {
+      expect(jobsService.searchCVtheque).toHaveBeenCalledWith(
+        expect.objectContaining({ favoris: true }),
+        1,
+      );
+    });
   });
 
   it("🟢 HP7 : Le dropdown 'Comparer avec une offre' est rendu et les offres chargées depuis getDashboard", async () => {

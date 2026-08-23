@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from ..models import ProfilCandidat, ExperienceCandidat, FormationCandidat
+from ..models import ProfilCandidat, ExperienceCandidat, FormationCandidat, CompetenceCandidat
 
 User = get_user_model()
 
@@ -17,6 +17,14 @@ class FormationSerializer(serializers.ModelSerializer):
         fields = ['id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description']
 
 
+class CompetenceCandidatSerializer(serializers.ModelSerializer):
+    niveau_libelle = serializers.CharField(source='get_niveau_display', read_only=True)
+
+    class Meta:
+        model = CompetenceCandidat
+        fields = ['id', 'label', 'niveau', 'niveau_libelle', 'source']
+
+
 class ProfilCandidatDTO(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
@@ -29,12 +37,13 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     is_favori = serializers.SerializerMethodField()
     experiences_detail = ExperienceSerializer(many=True, read_only=True)
     formations_detail = FormationSerializer(many=True, read_only=True)
+    competences_detail = CompetenceCandidatSerializer(many=True, read_only=True)
 
     class Meta:
         model = ProfilCandidat
         fields = (
             'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'specialite',
-            'experiences', 'competences', 'langues',
+            'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin',
             'experiences_detail', 'formations_detail',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',

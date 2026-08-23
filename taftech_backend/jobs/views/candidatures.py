@@ -92,6 +92,16 @@ class PostulerAPIView(APIView):
             logger.warning("Erreur snapshot profil : %s", e)
             snapshot = None
 
+        source_candidature = 'SITE'
+        invitation_token = request.data.get('invitation_token')
+        if invitation_token:
+            from ..models import InvitationCVTheque
+            invitation = InvitationCVTheque.objects.filter(
+                token=invitation_token, candidat=request.user, offre=offre,
+            ).first()
+            if invitation and invitation.est_valide:
+                source_candidature = 'CVTHEQUE'
+
         candidature = Candidature.objects.create(
             offre=offre,
             candidat=request.user,
@@ -104,8 +114,12 @@ class PostulerAPIView(APIView):
                 "highlights": resultat_matching["highlights"]
             },
             profil_snapshot=snapshot,
-            statut='RECUE'
+            statut='RECUE',
+            source=source_candidature,
         )
+
+        from .equipe import _log
+        _log(None, offre.entreprise, 'AUTRE', f"{request.user.first_name} {request.user.last_name} a postulé sur « {offre.titre} »")
 
         # Réponses questionnaire + détection disqualification
         reponses_raw = request.data.get('reponses', None)
@@ -187,6 +201,7 @@ class PostulerRapideAPIView(APIView):
             Candidature.objects.create(
                 offre=offre,
                 est_rapide=True,
+                source='AUTRE',
                 nom_rapide=serializer.validated_data.get('nom_rapide'),
                 prenom_rapide=serializer.validated_data.get('prenom_rapide'),
                 email_rapide=serializer.validated_data.get('email_rapide'),
@@ -197,6 +212,10 @@ class PostulerRapideAPIView(APIView):
                 details_matching={"message": "Candidature rapide, pas d'analyse IA disponible."},
                 statut='RECUE'
             )
+            from .equipe import _log
+            prenom_rapide = serializer.validated_data.get('prenom_rapide', '') or ''
+            nom_rapide = serializer.validated_data.get('nom_rapide', '') or ''
+            _log(None, offre.entreprise, 'AUTRE', f"{prenom_rapide} {nom_rapide} a postulé sur « {offre.titre} »")
             return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -206,7 +225,7 @@ class MesCandidaturesAPIView(APIView):
 
     def get(self, request):
         candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_postulation')
-        serializer = MesCandidaturesDTO(candidatures, many=True)
+        serializer = MesCandidaturesDTO(candidatures, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -333,8 +352,16 @@ class UpdateCandidatureStatusAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if entreprise:
             nom_candidat = candidature.candidat.get_full_name() if candidature.candidat else 'Candidat rapide'
+            phrases_statut = {
+                'ENTRETIEN': f"programmé un entretien avec {nom_candidat} pour « {candidature.offre.titre} »",
+                'RETENU': f"retenu la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'REFUSE': f"refusé la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'PRESELECTION': f"présélectionné {nom_candidat} pour « {candidature.offre.titre} »",
+                'EN_COURS': f"mis en cours d'étude la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'RECUE': f"remis en attente la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+            }
             _log(request.user, entreprise, 'STATUT_CANDIDATURE',
-                 f"{nom_candidat} — {candidature.offre.titre} → {nouveau_statut}")
+                 phrases_statut.get(nouveau_statut, f"changé le statut de {nom_candidat} vers {nouveau_statut}"))
 
         return Response({"message": "Statut mis à jour !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
 
@@ -411,3 +438,30 @@ class Top5CandidatsAPIView(APIView):
         ).order_by('-score_matching')[:5]
         serializer = CandidatureRecruteurDTO(shortlist, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CandidatureMarquerConsulteeAPIView(APIView):
+    """Journalise "candidature consultée" dans le fil d'activité du candidat (dashboard
+    candidat, session specs/important-features) — appelé par le frontend recruteur quand un
+    recruteur ouvre le détail d'une candidature (fire-and-forget, pas d'action bloquante)."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.select_related('offre__entreprise', 'candidat').get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
+        if candidature.candidat and not candidature.est_rapide:
+            from ..models import ActiviteProfil
+            # Une seule entrée par (candidat, entreprise, candidature) — pas de spam si le
+            # recruteur rouvre la même candidature plusieurs fois.
+            ActiviteProfil.objects.get_or_create(
+                candidat=candidature.candidat,
+                entreprise=entreprise,
+                candidature=candidature,
+                type_activite='CANDIDATURE_CONSULTEE',
+            )
+        return Response({"message": "OK"}, status=status.HTTP_200_OK)

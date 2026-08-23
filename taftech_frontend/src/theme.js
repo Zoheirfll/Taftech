@@ -619,6 +619,15 @@ export const tw = {
   sidebarDivider: "border-t border-slate-100",
   sidebarLogoutButton: "text-red-500 hover:bg-red-50",
 
+  // === SIDEBAR RECRUTEUR (RecruteurLayout) — variante teal ===
+  sidebarShellTeal: "bg-white border border-slate-200",
+  sidebarLinkActiveTeal: "bg-teal-700 text-white",
+  sidebarLinkInactiveTeal: "text-slate-600 hover:bg-slate-50 hover:text-teal-700",
+  sidebarLinkIconActiveTeal: "text-white",
+  sidebarLinkIconInactiveTeal: "text-slate-600",
+  sidebarBadgeActiveTeal: "bg-white text-teal-700",
+  sidebarBadgeInactiveTeal: "bg-red-500 text-white",
+
   // === ATOMES COMPLÉMENTAIRES (Pages Public — Entreprises/Home/JobsList/JobDetail/Régions/Secteurs) ===
   borderHoverSlate300: "hover:border-slate-300",
   groupHoverTextPrimaryStrong: "group-hover:text-indigo-700",

@@ -3,26 +3,20 @@ import { useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
-import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { selectStylesTeal, tw } from "../../theme";
+import { tw } from "../../theme";
 import {
   Plus,
   Search,
   Building2,
   CheckCircle,
   AlertCircle,
-  ChevronRight,
-  MapPin,
-  AlertTriangle,
   Settings,
   Users,
   Inbox,
   Sparkles,
   Clock,
-  Trash2,
-  X,
   Download,
   TrendingUp,
   GitBranch,
@@ -34,16 +28,33 @@ import {
   BarChart3,
   History,
   Percent,
+  Calendar,
+  FileDown,
+  Send,
+  Bookmark,
+  Activity,
+  LifeBuoy,
+  Mail,
+  GraduationCap,
 } from "lucide-react";
-import InfoBanner from "../../Components/InfoBanner";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import MiniAreaChart from "../../Components/MiniAreaChart";
+import FunnelChart from "../../Components/FunnelChart";
+import DonutChart from "../../Components/DonutChart";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
 
-// ─── Constantes grille ────────────────────────────────────────────────────────
-const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 112px";
-
 // ─── Constantes pipeline / recommandations ────────────────────────────────────
+const ACTIVITE_EMOJIS = {
+  CREER_OFFRE: "📢",
+  MODIFIER_OFFRE: "✏️",
+  CLOTURER_OFFRE: "🔒",
+  STATUT_CANDIDATURE: "🔄",
+  EVALUER_CANDIDATURE: "⭐",
+  INVITER_MEMBRE: "👥",
+  RETIRER_MEMBRE: "🚫",
+  CHANGER_ROLE: "🛡️",
+  AUTRE: "🔔",
+};
+
 const PIPELINE_STAGES = [
   { key: "RECUE", label: "Reçue", color: "#d97706" },
   { key: "EN_COURS", label: "En cours", color: "#2563eb" },
@@ -77,47 +88,63 @@ const PERIODES_EVOLUTION = [
   { key: "1a", label: "12 derniers mois" },
 ];
 
+const formatTempsRelatif = (dateStr) => {
+  if (!dateStr) return "";
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "à l'instant";
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const heures = Math.floor(minutes / 60);
+  if (heures < 24) return `il y a ${heures}h`;
+  const jours = Math.floor(heures / 24);
+  return `il y a ${jours}j`;
+};
+
 const DashboardRecruteur = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("ouvertes");
-  const [filtreStatut, setFiltreStatut] = useState("toutes");
-  const [search, setSearch] = useState("");
-  const [showModifierModal, setShowModifierModal] = useState(false);
-  const [offreAModifier, setOffreAModifier] = useState(null);
-  const [modifierForm, setModifierForm] = useState({});
   const [entreprise, setEntreprise] = useState(null);
   const [offres, setOffres] = useState([]);
   const [isPremium, setIsPremium] = useState(false);
   const [premiumExpire, setPremiumExpire] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
-  const [sortConfig, setSortConfig] = useState({ col: null, dir: "asc" });
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
   const [filtreOffreId, setFiltreOffreId] = useState("toutes");
   const [periodeEvolution, setPeriodeEvolution] = useState("6m");
-  const [masquerDecides, setMasquerDecides] = useState(true);
-  const [recommandesLimit, setRecommandesLimit] = useState(6);
-  const [expandedMatchId, setExpandedMatchId] = useState(null);
-  const [statutMenuOuvertId, setStatutMenuOuvertId] = useState(null);
-  const [changingStatutId, setChangingStatutId] = useState(null);
   const [chartType, setChartType] = useState("area");
   const [showComparaison, setShowComparaison] = useState(false);
   const [showConversion, setShowConversion] = useState(false);
 
+  // Période globale + KPIs comparatifs
+  const [dateDebut, setDateDebut] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [dateFin, setDateFin] = useState(() => new Date().toISOString().slice(0, 10));
+  const [kpis, setKpis] = useState(null);
+  const [palierActif, setPalierActif] = useState(null);
+
+  // Activité récente + recherches sauvegardées
+  const [activite, setActivite] = useState([]);
+  const [recherches, setRecherches] = useState([]);
+
+  // Mini-recherche CVthèque + CTA IA
+  const [rechercheMotsCles, setRechercheMotsCles] = useState("");
+  const [titreIA, setTitreIA] = useState("");
+
+  // Sources des candidatures — période indépendante
+  const [periodeSources, setPeriodeSources] = useState("30j");
+
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const [dashData, constData] = await Promise.all([
-          jobsService.getDashboard(),
-          jobsService.getConstants(),
-        ]);
-        setConstants(constData);
+        const dashData = await jobsService.getDashboard(dateDebut, dateFin);
         setEntreprise(dashData.entreprise);
         setOffres(dashData.offres);
         setIsPremium(dashData.est_premium || false);
         setPremiumExpire(dashData.premium_expire_at || null);
+        setKpis(dashData.kpis || null);
+        setPalierActif(dashData.palier_actif || null);
       } catch (err) {
         if (err.response?.data?.code === "PREMIUM_EXPIRE") {
           setError("PREMIUM_EXPIRE");
@@ -132,55 +159,35 @@ const DashboardRecruteur = () => {
       }
     };
     fetchDashboard();
-  }, [navigate]);
+  }, [navigate, dateDebut, dateFin]);
 
-  const handleOuvrirModification = (offre) => {
-    setOffreAModifier(offre);
-    setModifierForm({
-      titre: offre.titre || "",
-      wilaya: offre.wilaya || "",
-      commune: offre.commune || "",
-      diplome: offre.diplome || "",
-      specialite: offre.specialite || "",
-      type_contrat: offre.type_contrat || "",
-      experience_requise: offre.experience_requise || "",
-      nombre_postes: offre.nombre_postes || 1,
-      description: offre.description || "",
-      missions: offre.missions || "",
-      profil_recherche: offre.profil_recherche || "",
-      competences: offre.competences || "",
-      salaire_propose: offre.salaire_propose || "",
-    });
-    setShowModifierModal(true);
-  };
+  useEffect(() => {
+    jobsService.getActiviteRecente().then(setActivite).catch(() => {});
+    jobsService.getRecherchesSauvegardees().then(setRecherches).catch(() => {});
+  }, []);
 
-  const handleSauvegarderModification = async () => {
-    const toastId = toast.loading("Envoi en cours...");
+  const handleTelechargerRapport = async () => {
     try {
-      const response = await jobsService.modifierOffre(offreAModifier.id, modifierForm);
-      setOffres(offres.map((o) => (o.id === offreAModifier.id ? response.offre : o)));
-      setShowModifierModal(false);
-      setOffreAModifier(null);
-      toast.success("Offre soumise pour revalidation !", { id: toastId });
+      await jobsService.telechargerRapportDashboard(dateDebut, dateFin);
     } catch (err) {
-      toast.error("Erreur lors de la modification.", { id: toastId });
-      reportError("ECHEC_MODIFIER_OFFRE", err);
+      toast.error("Erreur lors du téléchargement du rapport.");
     }
   };
 
-  const handleSupprimerOffre = async (offre) => {
-    setDeletingId(offre.id);
-    try {
-      await jobsService.supprimerOffre(offre.id);
-      setOffres(offres.filter((o) => o.id !== offre.id));
-      setConfirmDeleteId(null);
-      toast.success("Offre supprimée.");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de la suppression.");
-      reportError("ECHEC_SUPPRIMER_OFFRE", err);
-    } finally {
-      setDeletingId(null);
-    }
+  const handleRechercheCVTheque = () => {
+    const params = new URLSearchParams();
+    if (rechercheMotsCles) params.set("search", rechercheMotsCles);
+    navigate(`/cvtheque?${params.toString()}`);
+  };
+
+  const handleAppliquerRecherche = (recherche) => {
+    const params = new URLSearchParams(recherche.filtres || {});
+    navigate(`/cvtheque?${params.toString()}`);
+  };
+
+  const handleGenererOffreIA = () => {
+    const params = titreIA ? `?titre=${encodeURIComponent(titreIA)}` : "";
+    navigate(`/creer-offre${params}`);
   };
 
   const handleExportExcelGlobal = async () => {
@@ -192,24 +199,33 @@ const DashboardRecruteur = () => {
     }
   };
 
-  const handleChangerStatutRecommande = async (candidatureId, offreId, nouveauStatut) => {
-    setChangingStatutId(candidatureId);
+  const handleToggleFavoriRecommande = async (candidatUserId) => {
+    if (!candidatUserId) return;
     try {
-      await jobsService.updateStatutCandidature(candidatureId, { statut: nouveauStatut });
-      setOffres((prev) =>
-        prev.map((o) =>
-          o.id !== offreId
-            ? o
-            : { ...o, candidatures: o.candidatures.map((c) => (c.id === candidatureId ? { ...c, statut: nouveauStatut } : c)) },
-        ),
-      );
-      toast.success("Statut mis à jour.");
+      await jobsService.toggleFavoriCV(candidatUserId);
+      toast.success("Favoris mis à jour.");
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour du statut.");
-      reportError("ECHEC_CHANGER_STATUT_RECOMMANDE", err);
+      toast.error("Erreur lors de la mise à jour des favoris.");
+      reportError("ECHEC_TOGGLE_FAVORI_DASHBOARD", err);
+    }
+  };
+
+  const [inviterCandidat, setInviterCandidat] = useState(null);
+  const [offreInvitation, setOffreInvitation] = useState("");
+  const [envoiInvitation, setEnvoiInvitation] = useState(false);
+
+  const handleEnvoyerInvitation = async () => {
+    if (!offreInvitation || !inviterCandidat) return;
+    setEnvoiInvitation(true);
+    try {
+      await jobsService.inviterCandidatCVTheque(inviterCandidat.candidat?.id, offreInvitation);
+      toast.success("Invitation envoyée !");
+      setInviterCandidat(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      reportError("ECHEC_INVITER_CANDIDAT_DASHBOARD", err);
     } finally {
-      setChangingStatutId(null);
-      setStatutMenuOuvertId(null);
+      setEnvoiInvitation(false);
     }
   };
 
@@ -258,9 +274,6 @@ const DashboardRecruteur = () => {
     );
 
   // ─── Dérivées ─────────────────────────────────────────────────────────────
-  const offresOuvertes = offres.filter((o) => !o.est_cloturee);
-  const offresCloturees = offres.filter((o) => o.est_cloturee);
-
   const stats = (() => {
     let total = 0, nouvelles = 0, pertinentes = 0, enTraitement = 0;
     offres.forEach((o) => {
@@ -337,78 +350,61 @@ const DashboardRecruteur = () => {
   const pipelineTotal = Object.values(pipelineCounts).reduce((a, b) => a + b, 0);
   const pipelineMax = Math.max(1, ...Object.values(pipelineCounts));
 
-  // ─── Candidats recommandés : meilleurs scores, filtrables par offre/statut ──
+  // ─── Funnel 4 étapes (Candidatures reçues → Présélection → Entretiens → Recrutements) ──
+  const funnelEtapes = (() => {
+    const candidatures = offresPourAnalyse.flatMap((o) => o.candidatures || []);
+    const total = candidatures.length || 1;
+    const presel = candidatures.filter((c) => ["PRESELECTION", "ENTRETIEN", "RETENU", "REFUSE"].includes(c.statut)).length;
+    const entretien = candidatures.filter((c) => ["ENTRETIEN", "RETENU"].includes(c.statut)).length;
+    const retenu = candidatures.filter((c) => c.statut === "RETENU").length;
+    return [
+      { label: "Candidatures reçues", count: candidatures.length, pct: 100, couleur: "#4f46e5" },
+      { label: "Présélection", count: presel, pct: Math.round((presel / total) * 100), couleur: "#6366f1" },
+      { label: "Entretiens", count: entretien, pct: Math.round((entretien / total) * 100), couleur: "#0ea5e9" },
+      { label: "Recrutements", count: retenu, pct: Math.round((retenu / total) * 100), couleur: "#10b981" },
+    ];
+  })();
+
+  // ─── Sources des candidatures (donut, période indépendante) ─────────────────
+  const sourcesDonut = (() => {
+    const joursParPeriode = { "7j": 7, "30j": 30, "6m": 180, "1a": 365 };
+    const seuil = new Date();
+    seuil.setDate(seuil.getDate() - (joursParPeriode[periodeSources] || 30));
+    const candidatures = offres.flatMap((o) => o.candidatures || []).filter((c) => {
+      if (!c.date_postulation) return false;
+      return new Date(c.date_postulation) >= seuil;
+    });
+    const counts = { SITE: 0, CVTHEQUE: 0, AUTRE: 0 };
+    candidatures.forEach((c) => {
+      const src = c.source || "SITE";
+      if (counts[src] !== undefined) counts[src]++;
+      else counts.AUTRE++;
+    });
+    const total = candidatures.length || 1;
+    return [
+      { key: "SITE", label: "Site TafTech", count: counts.SITE, pct: Math.round((counts.SITE / total) * 100), couleur: "#4f46e5" },
+      { key: "CVTHEQUE", label: "CVthèque", count: counts.CVTHEQUE, pct: Math.round((counts.CVTHEQUE / total) * 100), couleur: "#0ea5e9" },
+      { key: "AUTRE", label: "Autres", count: counts.AUTRE, pct: Math.round((counts.AUTRE / total) * 100), couleur: "#94a3b8" },
+    ];
+  })();
+
+  // ─── Candidats recommandés : meilleurs scores toutes offres confondues ──
+  // Pas de filtre "masquer retenus/refusés" ici (widget compact sans toggle,
+  // contrairement à la page dédiée /candidats-recommandes) — sinon des
+  // candidats scorés disparaissent silencieusement sans moyen de les revoir.
   const candidatsRecommandesTous = (() => {
     const all = [];
     offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
       if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined) {
-        if (masquerDecides && (c.statut === "RETENU" || c.statut === "REFUSE")) return;
         all.push({ ...c, offreTitre: o.titre, offreId: o.id });
       }
     }));
     return all.sort((a, b) => parseFloat(b.score_matching) - parseFloat(a.score_matching));
   })();
-  const candidatsRecommandes = candidatsRecommandesTous.slice(0, recommandesLimit);
-  const hasMoreRecommandes = candidatsRecommandesTous.length > recommandesLimit;
-
-  const getStatutBadge = (offre) => {
-    if (offre.est_cloturee)      return { label: "Archivée",    cls: tw.tagSlateSoft };
-    if (offre.statut_moderation === "EN_ATTENTE") return { label: "En validation", cls: `border ${tw.candidatureStatutStyles.RECUE}` };
-    if (offre.statut_moderation === "REJETEE")    return { label: "À corriger",    cls: `border ${tw.candidatureStatutStyles.REFUSE}` };
-    return { label: "Publiée", cls: `border ${tw.candidatureStatutStyles.RETENU}` };
-  };
-
-  const listeBase = activeTab === "ouvertes" ? offresOuvertes : offresCloturees;
-  const listeStatut = filtreStatut === "toutes" ? listeBase : listeBase.filter((o) => o.statut_moderation === filtreStatut);
-  const listeRecherchee = search.trim()
-    ? listeStatut.filter((o) => o.titre?.toLowerCase().includes(search.toLowerCase()))
-    : listeStatut;
-
-  const enriched = listeRecherchee.map((offre) => {
-    const nbCandidatures = offre.candidatures?.length || 0;
-    const nbNouvelles    = offre.candidatures?.filter((c) => c.statut === "RECUE").length || 0;
-    const nbEntretiens   = offre.candidatures?.filter((c) => c.statut === "ENTRETIEN").length || 0;
-    const nbRetenus      = offre.candidatures?.filter((c) => c.statut === "RETENU").length || 0;
-    const meilleurScore  = offre.candidatures?.length > 0
-      ? Math.max(...offre.candidatures.map((c) => parseFloat(c.score_matching) || 0))
-      : null;
-    const jours = offre.date_expiration && !offre.est_cloturee
-      ? Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000))
-      : null;
-    return { offre, nbCandidatures, nbNouvelles, nbEntretiens, nbRetenus, meilleurScore, jours };
-  });
-
-  if (sortConfig.col) {
-    const dir = sortConfig.dir === "asc" ? 1 : -1;
-    enriched.sort((a, b) => {
-      const map = {
-        titre:        [a.offre.titre,       b.offre.titre],
-        wilaya:       [a.offre.wilaya,      b.offre.wilaya],
-        type_contrat: [a.offre.type_contrat,b.offre.type_contrat],
-        expiration:   [a.jours ?? 9999,     b.jours ?? 9999],
-        total:        [a.nbCandidatures,    b.nbCandidatures],
-        nouvelles:    [a.nbNouvelles,       b.nbNouvelles],
-        entretiens:   [a.nbEntretiens,      b.nbEntretiens],
-        retenus:      [a.nbRetenus,         b.nbRetenus],
-        score:        [a.meilleurScore ?? -1, b.meilleurScore ?? -1],
-      };
-      const [va, vb] = map[sortConfig.col] || [0, 0];
-      if (va < vb) return -dir;
-      if (va > vb) return dir;
-      return 0;
-    });
-  }
-
-  const nbPubliees    = offresOuvertes.filter((o) => o.statut_moderation === "APPROUVEE").length;
-  const nbEnValidation= offresOuvertes.filter((o) => o.statut_moderation === "EN_ATTENTE").length;
-  const nbACorrection = offresOuvertes.filter((o) => o.statut_moderation === "REJETEE").length;
-
-  const toggleSort = (col) =>
-    setSortConfig((s) => ({ col, dir: s.col === col && s.dir === "asc" ? "desc" : "asc" }));
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+    <div className="w-full px-0 py-2">
 
       {/* ── HEADER COMPACT ─────────────────────────────────────────────────── */}
       <div className={`${tw.cardColors} rounded-2xl p-4 md:p-5 mb-5`}>
@@ -499,6 +495,65 @@ const DashboardRecruteur = () => {
         </div>
       </div>
 
+      {/* ── SÉLECTEUR DE PÉRIODE + KPIs + RAPPORT ──────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar size={14} className={tw.textMuted} />
+          <input
+            type="date"
+            value={dateDebut}
+            onChange={(e) => setDateDebut(e.target.value)}
+            className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+          />
+          <span className={`text-xs ${tw.textMuted}`}>→</span>
+          <input
+            type="date"
+            value={dateFin}
+            onChange={(e) => setDateFin(e.target.value)}
+            className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleTelechargerRapport}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-xs font-semibold rounded-lg transition-colors ${tw.surface} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
+        >
+          <FileDown size={14} /> Télécharger le rapport
+        </button>
+      </div>
+
+      {kpis && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+          {[
+            { cle: "offres_actives", label: "Offres actives", icon: Building2 },
+            { cle: "candidatures_recues", label: "Candidatures reçues", icon: Users },
+            { cle: "candidats_entretien", label: "Candidats en entretien", icon: Calendar },
+            { cle: "recrutements", label: "Recrutements", icon: CheckCircle },
+            { cle: "taux_conversion", label: "Taux de conversion", icon: TrendingUp, suffixe: "%" },
+          ].map(({ cle, label, icon: Icon, suffixe }) => {
+            const kpi = kpis[cle];
+            if (!kpi) return null;
+            const variation = kpi.variation_pct;
+            return (
+              <div key={cle} className={`${tw.cardColors} rounded-2xl p-4`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-xs ${tw.textMuted}`}>{label}</p>
+                    <p className={`text-2xl font-bold ${tw.textStrong}`}>{kpi.valeur}{suffixe || ""}</p>
+                    {variation !== null && variation !== undefined && (
+                      <p className={`text-xs font-medium ${variation >= 0 ? tw.scoreTextSuccess : tw.textRed400}`}>
+                        {variation >= 0 ? "↗" : "↘"} {Math.abs(variation)}% vs période précédente
+                      </p>
+                    )}
+                  </div>
+                  <Icon size={18} className={tw.textMuted} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── GRAPHIQUES ─────────────────────────────────────────────────────── */}
       {offres.length > 0 && (
         <>
@@ -506,7 +561,7 @@ const DashboardRecruteur = () => {
             <SlidersHorizontal size={13} className={tw.textMuted} />
             <select
               value={filtreOffreId}
-              onChange={(e) => { setFiltreOffreId(e.target.value); setRecommandesLimit(6); }}
+              onChange={(e) => setFiltreOffreId(e.target.value)}
               className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5 max-w-[220px]`}
             >
               <option value="toutes">Toutes les offres</option>
@@ -525,655 +580,394 @@ const DashboardRecruteur = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-            <div className={`${tw.cardColors} rounded-2xl p-5`}>
-              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-                <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-                  <TrendingUp size={15} className={tw.textTeal} /> Évolution
+          {/* ── LIGNE 1 : Évolution | Pipeline | Candidats recommandés (hauteur alignée) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-2.5 items-stretch">
+              <div className={`${tw.cardColors} rounded-2xl p-5`}>
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                  <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                    <TrendingUp size={15} className={tw.textTeal} /> Évolution
+                  </h2>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setChartType("area")}
+                      title="Courbe"
+                      className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "area" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                    >
+                      <LineChart size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartType("bar")}
+                      title="Barres"
+                      className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "bar" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
+                    >
+                      <BarChart3 size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap mb-3">
+                  <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                    <input
+                      type="checkbox"
+                      checked={showComparaison}
+                      disabled={chartType === "bar"}
+                      onChange={(e) => setShowComparaison(e.target.checked)}
+                      className="rounded"
+                    />
+                    <History size={12} /> Comparer à la période précédente
+                  </label>
+                  <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
+                    <input
+                      type="checkbox"
+                      checked={showConversion}
+                      disabled={chartType === "bar"}
+                      onChange={(e) => setShowConversion(e.target.checked)}
+                      className="rounded"
+                    />
+                    <Percent size={12} /> Taux de conversion
+                  </label>
+                </div>
+                <MiniAreaChart
+                  data={evolution}
+                  height={190}
+                  chartType={chartType}
+                  exportTitle="evolution-candidatures"
+                  series={[
+                    { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
+                    { key: "recrutements", color: "#059669", label: "Recrutements" },
+                  ]}
+                  compareValues={evolutionPrevValues}
+                  secondarySeries={showConversion && chartType !== "bar" ? { key: "tauxConversion", color: "#ea580c", label: "Taux de conversion (%)" } : null}
+                />
+              </div>
+
+              <div className={`${tw.cardColors} rounded-2xl p-5`}>
+                <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+                  <GitBranch size={15} className={tw.textTeal} /> Pipeline de recrutement
                 </h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setChartType("area")}
-                    title="Courbe"
-                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "area" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
-                  >
-                    <LineChart size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartType("bar")}
-                    title="Barres"
-                    className={`p-1.5 rounded-lg border ${tw.borderBase} ${chartType === "bar" ? tw.bgTealSoft + " " + tw.textTeal : `${tw.surface} ${tw.textMuted}`}`}
-                  >
-                    <BarChart3 size={14} />
-                  </button>
+                <div className="flex justify-center mb-4">
+                  <FunnelChart etapes={funnelEtapes} />
+                </div>
+                <div className="space-y-2.5">
+                  {PIPELINE_STAGES.map((stage) => {
+                    const count = pipelineCounts[stage.key];
+                    const pct = (count / pipelineMax) * 100;
+                    const pctTotal = pipelineTotal > 0 ? Math.round((count / pipelineTotal) * 100) : 0;
+                    return (
+                      <div key={stage.key} className="flex items-center gap-3">
+                        <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{stage.label}</span>
+                        <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: stage.color }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{count}</span>
+                        <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{count > 0 ? `${pctTotal}%` : ""}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-wrap mb-3">
-                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
-                  <input
-                    type="checkbox"
-                    checked={showComparaison}
-                    disabled={chartType === "bar"}
-                    onChange={(e) => setShowComparaison(e.target.checked)}
-                    className="rounded"
-                  />
-                  <History size={12} /> Comparer à la période précédente
-                </label>
-                <label className={`flex items-center gap-1.5 text-xs font-medium ${chartType === "bar" ? "opacity-40" : "cursor-pointer"} ${tw.textMuted700}`}>
-                  <input
-                    type="checkbox"
-                    checked={showConversion}
-                    disabled={chartType === "bar"}
-                    onChange={(e) => setShowConversion(e.target.checked)}
-                    className="rounded"
-                  />
-                  <Percent size={12} /> Taux de conversion
-                </label>
+
+              {candidatsRecommandesTous.length > 0 ? (
+                <div className={`${tw.cardColors} rounded-2xl p-5 flex flex-col`}>
+                  <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+                    <Star size={15} className={tw.textTeal} /> Candidats recommandés
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
+                  </h2>
+                  <div className="grid grid-cols-1 gap-3">
+                    {candidatsRecommandesTous.slice(0, 3).map((cand) => {
+                      const score = Math.round(parseFloat(cand.score_matching));
+                      const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
+                        .trim();
+                      const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
+                      return (
+                        <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                              className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
+                            >
+                              {cand.candidat.photo_profil ? (
+                                <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Users size={16} className={tw.textMuted} />
+                              )}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                                  className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
+                                >
+                                  {nomAffiche}
+                                </button>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
+                                  {score}% compatible
+                                </span>
+                              </div>
+                              <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
+                              {cand.candidat.wilaya && (
+                                <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
+                              )}
+                              {tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {tags.map((t) => (
+                                    <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
+                                title="Ajouter aux favoris"
+                                className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                              >
+                                <Bookmark size={14} className={tw.iconMuted} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
+                                title="Inviter à postuler"
+                                className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                              >
+                                <Send size={14} className={tw.iconMuted} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 text-center">
+                    <Link to="/candidats-recommandes" className={`text-xs font-semibold ${tw.textTeal}`}>
+                      Voir plus de candidats recommandés →
+                    </Link>
+                  </div>
+                </div>
+              ) : <div />}
+          </div>
+
+          {/* ── LIGNE 2 : Offres actives | Sources | Activité récente (hauteur alignée) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-5 items-stretch">
+              <div className={`${tw.cardColors} rounded-2xl p-5 overflow-hidden`}>
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                  <h2 className={`text-sm font-bold ${tw.textStrong}`}>Mes offres d'emploi actives</h2>
+                  <Link to="/offres-emploi" className={`text-xs font-semibold ${tw.textTeal}`}>Voir toutes</Link>
+                </div>
+                <div className="overflow-x-auto -mx-1">
+                  <table className="w-full text-left min-w-[280px]">
+                    <thead>
+                      <tr className={`text-[10px] uppercase tracking-wide font-semibold ${tw.textMuted}`}>
+                        <th className="px-1 py-1.5">Poste</th>
+                        <th className="px-1 py-1.5 text-center">Cand.</th>
+                        <th className="px-1 py-1.5 text-center">Entret.</th>
+                        <th className="px-1 py-1.5 text-right">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${tw.divideBase}`}>
+                      {[...offres].sort((a, b) => new Date(b.date_publication) - new Date(a.date_publication)).slice(0, 5).map((o) => {
+                        const nbCand = o.candidatures?.length || 0;
+                        const nbEnt = o.candidatures?.filter((c) => c.statut === "ENTRETIEN").length || 0;
+                        return (
+                          <tr key={o.id} className={tw.rowHover}>
+                            <td className="px-1 py-2 text-xs font-medium truncate max-w-[110px]">{o.titre}</td>
+                            <td className="px-1 py-2 text-xs text-center">{nbCand}</td>
+                            <td className="px-1 py-2 text-xs text-center">{nbEnt}</td>
+                            <td className="px-1 py-2 text-right">
+                              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${o.est_cloturee ? tw.tagSlateSoft : "bg-emerald-100 text-emerald-700"}`}>
+                                {o.est_cloturee ? "Clôturée" : "Active"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <MiniAreaChart
-                data={evolution}
-                height={190}
-                chartType={chartType}
-                exportTitle="evolution-candidatures"
-                series={[
-                  { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
-                  { key: "recrutements", color: "#059669", label: "Recrutements" },
-                ]}
-                compareValues={evolutionPrevValues}
-                secondarySeries={showConversion && chartType !== "bar" ? { key: "tauxConversion", color: "#ea580c", label: "Taux de conversion (%)" } : null}
-              />
-            </div>
-            <div className={`${tw.cardColors} rounded-2xl p-5`}>
-              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
-                <GitBranch size={15} className={tw.textTeal} /> Pipeline de recrutement
-              </h2>
-              <div className="space-y-2.5">
-                {PIPELINE_STAGES.map((stage) => {
-                  const count = pipelineCounts[stage.key];
-                  const pct = (count / pipelineMax) * 100;
-                  const pctTotal = pipelineTotal > 0 ? Math.round((count / pipelineTotal) * 100) : 0;
-                  return (
-                    <div key={stage.key} className="flex items-center gap-3">
-                      <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{stage.label}</span>
-                      <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: stage.color }}
-                        />
-                      </div>
-                      <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{count}</span>
-                      <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{count > 0 ? `${pctTotal}%` : ""}</span>
+
+              {offres.length > 0 && (
+                <div className={`${tw.cardColors} rounded-2xl p-5`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                      Sources des candidatures
+                    </h2>
+                    <select
+                      value={periodeSources}
+                      onChange={(e) => setPeriodeSources(e.target.value)}
+                      className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+                    >
+                      {PERIODES_EVOLUTION.map((p) => (
+                        <option key={p.key} value={p.key}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <DonutChart data={sourcesDonut} />
+                    <div className="flex-1 space-y-2.5 min-w-0">
+                      {sourcesDonut.map((s) => (
+                        <div key={s.key} className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.couleur }} />
+                          <span className={`text-xs flex-1 truncate ${tw.textMuted700}`}>{s.label}</span>
+                          <span className={`text-xs font-bold shrink-0 ${tw.textStrong}`}>{s.count}</span>
+                          <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{s.count > 0 ? `${s.pct}%` : ""}</span>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+              )}
+
+              <div className={`${tw.cardColors} rounded-2xl p-5`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                    <Activity size={15} className={tw.textTeal} /> Activité récente
+                  </h2>
+                  {activite.length > 5 && (
+                    <Link to="/activite" className={`text-xs font-semibold ${tw.textTeal}`}>Voir tout</Link>
+                  )}
+                </div>
+                {activite.length === 0 ? (
+                  <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
+                ) : (
+                  <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    {activite.slice(0, 5).map((a) => (
+                      <li key={a.id} className="flex items-start gap-2.5">
+                        <span className={`w-7 h-7 rounded-full ${tw.surfaceSubtle} flex items-center justify-center text-sm shrink-0`}>
+                          {ACTIVITE_EMOJIS[a.action] || ACTIVITE_EMOJIS.AUTRE}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs ${tw.textMuted700}`}>{a.phrase}</p>
+                          <p className={`text-[10px] mt-0.5 ${tw.textMuted}`}>{formatTempsRelatif(a.date)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            </div>
           </div>
         </>
       )}
 
-      {/* ── CANDIDATS RECOMMANDÉS ──────────────────────────────────────────── */}
-      {candidatsRecommandesTous.length > 0 && (
-        <div className={`${tw.cardColors} rounded-2xl p-5 mb-5`}>
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
-              <Star size={15} className={tw.textTeal} /> Candidats recommandés
-              <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
-            </h2>
-            <label className={`flex items-center gap-1.5 text-xs font-medium cursor-pointer ${tw.textMuted700}`}>
-              <input
-                type="checkbox"
-                checked={masquerDecides}
-                onChange={(e) => { setMasquerDecides(e.target.checked); setRecommandesLimit(6); }}
-                className="rounded"
-              />
-              Masquer retenus/refusés
-            </label>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {candidatsRecommandes.map((cand) => {
-              const score = Math.round(parseFloat(cand.score_matching));
-              const pointsForts = cand.details_matching?.highlights?.points_forts || [];
-              const pointsVigilance = cand.details_matching?.highlights?.ecarts || [];
-              const DM = cand.details_matching || {};
-              const scores = DM.scores || DM;
-              const explics = DM.explications || {};
-              const explicationPrincipale = explics.specialite || explics.experience || Object.values(explics)[0];
-              const nomComplet = `${cand.candidat.first_name} ${cand.candidat.last_name}`
-                .toLowerCase()
-                .replace(/\b\w/g, (c) => c.toUpperCase());
-              const isExpanded = expandedMatchId === cand.id;
-              const menuOuvert = statutMenuOuvertId === cand.id;
-              return (
-                <div key={cand.id} className={`p-4 rounded-xl border ${tw.borderBase}`}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                    className="flex items-start justify-between gap-2 mb-1.5 w-full text-left"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-9 h-9 rounded-lg ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}>
-                        {cand.candidat.photo_profil ? (
-                          <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Users size={14} className={tw.textMuted} />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{nomComplet}</p>
-                        <p className={`text-xs truncate ${tw.textMuted700}`}>{cand.offreTitre}</p>
-                      </div>
-                    </div>
-                    <span className={`shrink-0 px-2 py-1 rounded-lg text-xs font-bold ${score >= 80 ? tw.scoreTextSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
-                      {score}%
-                    </span>
-                  </button>
-
-                  {pointsForts.length > 0 && (
-                    <div className="mt-2">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.scoreTextSuccess}`}>Points forts</p>
-                      <ul className="space-y-0.5">
-                        {pointsForts.slice(0, 2).map((p) => (
-                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
-                            <CheckCircle size={11} className={`${tw.scoreTextSuccess} mt-0.5 shrink-0`} /> {p}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {pointsVigilance.length > 0 && (
-                    <div className="mt-2">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.textAmber500}`}>Points de vigilance</p>
-                      <ul className="space-y-0.5">
-                        {pointsVigilance.slice(0, 2).map((p) => (
-                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
-                            <AlertTriangle size={11} className={`${tw.textAmber500} mt-0.5 shrink-0`} /> {p}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {explicationPrincipale && (
-                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} flex items-start gap-1.5`}>
-                      <HelpCircle size={12} className={`${tw.textMuted} mt-0.5 shrink-0`} />
-                      <p className={`text-xs italic ${tw.textMuted}`}>{explicationPrincipale}</p>
-                    </div>
-                  )}
-
-                  {DM.scores && (
+      {/* ── RECHERCHE CVTHÈQUE + GÉNÉRER OFFRE IA + BESOIN D'AIDE ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={`text-sm font-bold ${tw.textStrong}`}>Recherche avancée dans la CVthèque</h2>
+            {recherches.length > 0 && (
+              <div className="relative group">
+                <button type="button" className={`text-xs font-semibold ${tw.textTeal}`}>Recherche enregistrée</button>
+                <div className={`absolute right-0 top-full mt-1 hidden group-hover:block ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]`}>
+                  {recherches.map((r) => (
                     <button
+                      key={r.id}
                       type="button"
-                      onClick={() => setExpandedMatchId(isExpanded ? null : cand.id)}
-                      className={`mt-2 flex items-center gap-1 text-xs font-semibold ${tw.textTeal}`}
+                      onClick={() => handleAppliquerRecherche(r)}
+                      className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50"
                     >
-                      <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                      {isExpanded ? "Masquer le détail du matching" : "Voir le détail du matching"}
+                      {r.nom}
                     </button>
-                  )}
-
-                  {isExpanded && (
-                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} space-y-2.5`}>
-                      {CRITERES_MATCHING.map(({ key, label, max }) => {
-                        const val = scores[key] || 0;
-                        const pct = (val / max) * 100;
-                        const color = pct >= 100 ? tw.progressBarSuccess : pct >= 50 ? tw.progressBarWarning : tw.progressBarDanger;
-                        return (
-                          <div key={key}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className={`text-xs font-semibold ${tw.textMuted700}`}>{label}</span>
-                              <span className={`text-xs font-bold ${tw.textStrong}`}>{val}/{max}</span>
-                            </div>
-                            <div className={`w-full ${tw.progressTrack}`}>
-                              <div className={`${color} duration-700`} style={{ width: `${pct}%` }} />
-                            </div>
-                            {explics[key] && <p className={`text-xs ${tw.textMuted700} mt-1`}>{explics[key]}</p>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className={`mt-3 pt-3 border-t ${tw.borderSubtle} flex items-center justify-between gap-2`}>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => authService.peutFaire("UTILISATEUR") && setStatutMenuOuvertId(menuOuvert ? null : cand.id)}
-                        disabled={changingStatutId === cand.id}
-                        className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${tw.candidatureStatutStyles[cand.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"}`}
-                      >
-                        {STATUTS_LABELS[cand.statut] || cand.statut}
-                        {authService.peutFaire("UTILISATEUR") && <ChevronDown size={11} />}
-                      </button>
-                      {menuOuvert && authService.peutFaire("UTILISATEUR") && (
-                        <div className={`absolute left-0 top-full mt-1 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[170px]`}>
-                          {Object.entries(STATUTS_LABELS).map(([key, label]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => handleChangerStatutRecommande(cand.id, cand.offreId, key)}
-                              className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === cand.statut ? tw.surfaceMuted : ""}`}
-                            >
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${tw.candidatureStatutStyles[key]}`}>
-                                {label}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                      className={`flex items-center gap-1 text-xs font-semibold ${tw.textMuted700} hover:${tw.textTeal}`}
-                    >
-                      Voir la candidature <ChevronRight size={12} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {hasMoreRecommandes && (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setRecommandesLimit((n) => n + 6)}
-                className={`text-xs font-semibold px-4 py-2 rounded-lg border ${tw.borderBase} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
-              >
-                Voir plus de candidats ({candidatsRecommandesTous.length - recommandesLimit} restants)
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── ONGLETS principaux ─────────────────────────────────────────────── */}
-      <div className={`flex gap-1 border-b ${tw.borderBase} mb-5`}>
-        {[
-          { key: "ouvertes",  label: "Offres en cours", count: offresOuvertes.length },
-          { key: "cloturees", label: "Archives",         count: offresCloturees.length },
-        ].map(({ key, label, count }) => (
-          <button
-            key={key}
-            onClick={() => { setActiveTab(key); setFiltreStatut("toutes"); setSearch(""); setSortConfig({ col: null, dir: "asc" }); }}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === key ? tw.segmentTabActiveTeal : tw.segmentTabInactive}`}
-          >
-            {label}
-            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${activeTab === key ? tw.compareChipActive : tw.tagSlateSoft}`}>
-              {count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* ── INFOBANNER (après onglets) ─────────────────────────────────────── */}
-      <div className="mb-4">
-        <InfoBanner storageKey="dashboard_recruteur" title="Bienvenue sur votre tableau de bord" color="teal">
-          Publiez des offres, suivez vos candidatures et analysez vos talents depuis ici.
-          Votre entreprise doit être <strong>validée par l'équipe TAFTECH</strong> avant de pouvoir publier.
-          Pour accéder à la CVthèque et à l'analyse IA, passez en <strong>Premium</strong>.
-        </InfoBanner>
-      </div>
-
-      {/* ── BARRE DE RECHERCHE + CHIPS STATUT ──────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        {/* Recherche */}
-        <div className="relative flex-1 max-w-xs">
-          <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher une offre..."
-            className={`w-full pl-8 pr-4 py-2 rounded-lg text-sm ${tw.inputColorsWhiteTeal}`}
-          />
-        </div>
-
-        {/* Chips statut */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {(activeTab === "ouvertes" ? [
-            { key: "toutes",     label: "Toutes",      count: offresOuvertes.length },
-            { key: "APPROUVEE",  label: "Publiées",    count: nbPubliees,     dot: tw.dotEmerald400 },
-            { key: "EN_ATTENTE", label: "En validation",count: nbEnValidation, dot: tw.dotAmber400 },
-            { key: "REJETEE",    label: "À corriger",  count: nbACorrection,  dot: tw.dotRed400 },
-          ] : [
-            { key: "toutes",    label: "Toutes",   count: offresCloturees.length },
-            { key: "APPROUVEE", label: "Publiées", count: offresCloturees.filter((o) => o.statut_moderation === "APPROUVEE").length },
-            { key: "REJETEE",   label: "Rejetées", count: offresCloturees.filter((o) => o.statut_moderation === "REJETEE").length },
-          ]).map(({ key, label, count, dot }) => (
-            <button
-              key={key}
-              onClick={() => setFiltreStatut(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                filtreStatut === key
-                  ? tw.chipTealActive
-                  : tw.chipNeutralInactive
-              }`}
-            >
-              {dot && filtreStatut !== key && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
-              {label}
-              {count > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-xs ${filtreStatut === key ? tw.badgeOnGradient : tw.tagSlateSoft700}`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── TABLE ──────────────────────────────────────────────────────────── */}
-      {enriched.length === 0 ? (
-        <div className={`${tw.cardColors} border-dashed rounded-2xl py-16 px-8 text-center`}>
-          {search ? (
-            <>
-              <Search size={32} className={`${tw.textSlate200} mx-auto mb-3`} />
-              <p className={`text-sm font-semibold mb-1 ${tw.textMuted700}`}>Aucun résultat pour "{search}"</p>
-              <p className={`text-xs mb-4 ${tw.textMuted}`}>Essayez un autre mot-clé ou effacez la recherche.</p>
-              <button onClick={() => setSearch("")} className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${tw.buttonNeutralSoft}`}>
-                Effacer la recherche
-              </button>
-            </>
-          ) : activeTab === "ouvertes" && offresOuvertes.length === 0 ? (
-            <>
-              <div className={`w-16 h-16 rounded-2xl ${tw.bgTealSoft} border ${tw.borderTeal100} flex items-center justify-center mx-auto mb-4`}>
-                <Plus size={28} className={tw.textTeal600} />
-              </div>
-              <p className={`text-base font-bold mb-1 ${tw.textStrong}`}>Aucune offre publiée</p>
-              <p className={`text-sm mb-6 max-w-xs mx-auto ${tw.textMuted}`}>
-                {entreprise?.est_approuvee
-                  ? "Commencez à recruter en publiant votre première offre d'emploi."
-                  : "Votre entreprise est en cours de validation par l'équipe TAFTECH avant de pouvoir publier."}
-              </p>
-              {entreprise?.est_approuvee && authService.peutFaire("UTILISATEUR") && (
-                <button
-                  onClick={() => navigate("/creer-offre")}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors shadow-sm ${tw.bgTealSolid}`}
-                >
-                  <Plus size={16} /> Publier ma première offre
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <Building2 size={28} className={`${tw.textSlate200} mx-auto mb-3`} />
-              <p className={`text-sm font-medium ${tw.textMuted700}`}>Aucune offre dans cette catégorie</p>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className={`border ${tw.borderBase} rounded-2xl overflow-hidden`}>
-          {/* En-têtes desktop */}
-          <div className={`hidden md:grid ${tw.surfaceMuted} border-b ${tw.borderBase} px-4 py-2.5`} style={{ gridTemplateColumns: GRID }}>
-            {[
-              { label: "Offre",      col: "titre",        align: "left" },
-              { label: "Wilaya",     col: "wilaya",       align: "left" },
-              { label: "Contrat",    col: "type_contrat", align: "left" },
-              { label: "Expiration", col: "expiration",   align: "center" },
-              { label: "Total",      col: "total",        align: "center" },
-              { label: "Nouv.",      col: "nouvelles",    align: "center" },
-              { label: "Entret.",    col: "entretiens",   align: "center" },
-              { label: "Ret.",       col: "retenus",      align: "center" },
-              { label: "Top IA",     col: "score",        align: "center" },
-              { label: "",           col: null,           align: "right" },
-            ].map(({ label, col, align }, i) => (
-              <button
-                key={i}
-                onClick={() => col && toggleSort(col)}
-                className={`text-[11px] font-semibold uppercase tracking-wide flex items-center gap-0.5 transition-colors
-                  ${align === "center" ? "justify-center" : ""}
-                  ${col ? `${tw.textMutedHoverMuted700} cursor-pointer` : "cursor-default"}`}
-              >
-                {label}
-                {col && sortConfig.col === col && (
-                  <span className={`ml-0.5 ${tw.textTeal600}`}>{sortConfig.dir === "asc" ? "▲" : "▼"}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Lignes */}
-          {enriched.map(({ offre, nbCandidatures, nbNouvelles, nbEntretiens, nbRetenus, meilleurScore, jours }) => {
-            const badge = getStatutBadge(offre);
-
-            const rowBg = offre.statut_moderation === "REJETEE"
-              ? tw.rowRejetee
-              : offre.statut_moderation === "EN_ATTENTE"
-              ? tw.rowEnAttente
-              : offre.est_cloturee
-              ? tw.rowCloturee
-              : tw.rowDefault;
-
-            const expColor = jours === null ? tw.textSubtle
-              : jours === 0 ? tw.textError
-              : jours <= 7 ? tw.textErrorMuted
-              : jours <= 30 ? tw.textAmber500
-              : jours <= 60 ? tw.textTeal600
-              : tw.textMuted700;
-
-            const canDelete = authService.peutFaire("UTILISATEUR");
-            const isConfirmingDelete = confirmDeleteId === offre.id;
-            const DeleteControl = () => {
-              if (!canDelete) return null;
-              if (isConfirmingDelete) {
-                return (
-                  <span className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleSupprimerOffre(offre)}
-                      disabled={deletingId === offre.id}
-                      className={`px-2 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap ${tw.buttonDangerSolid} disabled:opacity-50`}
-                    >
-                      {deletingId === offre.id ? "..." : "Confirmer"}
-                    </button>
-                    <button onClick={() => setConfirmDeleteId(null)} className={`p-1.5 rounded-lg ${tw.iconButton}`}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                );
-              }
-              return (
-                <button onClick={() => setConfirmDeleteId(offre.id)} className={`p-1.5 rounded-lg ${tw.iconButton}`} title="Supprimer l'offre">
-                  <Trash2 size={13} />
-                </button>
-              );
-            };
-
-            const ActionBtn = () => {
-              if (offre.statut_moderation === "REJETEE") {
-                return authService.peutFaire("UTILISATEUR")
-                  ? <span className="flex items-center gap-1.5">
-                      <button onClick={() => handleOuvrirModification(offre)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.buttonDangerSolid}`}>Corriger <ChevronRight size={12} /></button>
-                      <DeleteControl />
-                    </span>
-                  : <span className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border ${tw.badgeErrorLight100} ${tw.borderError}`}>Rejetée</span>;
-              }
-              if (offre.statut_moderation === "EN_ATTENTE") {
-                return (
-                  <span className="flex items-center gap-1.5">
-                    <span className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap ${tw.tagSlateSoft}`}>En attente</span>
-                    <DeleteControl />
-                  </span>
-                );
-              }
-              return (
-                <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.bgTealSolid}`}>
-                  Candidats <ChevronRight size={12} />
-                </button>
-              );
-            };
-
-            return (
-              <React.Fragment key={offre.id}>
-                {/* ── Ligne desktop ── */}
-                <div
-                  className={`hidden md:grid items-center px-4 py-3 border-b ${tw.borderSubtle} last:border-0 transition-colors ${rowBg}`}
-                  style={{ gridTemplateColumns: GRID }}
-                >
-                  <div className="min-w-0 pr-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
-                      <span className={`shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full ${badge.cls}`}>{badge.label}</span>
-                    </div>
-                    {offre.motif_rejet && (
-                      <p className={`text-xs truncate mt-0.5 flex items-center gap-1 ${tw.textErrorMuted}`}>
-                        <AlertTriangle size={10} className="shrink-0" /> {offre.motif_rejet}
-                      </p>
-                    )}
-                  </div>
-
-                  <span className={`text-xs truncate pr-2 ${tw.textMuted}`}>{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
-                  <span className={`text-xs ${tw.textMuted}`}>{offre.type_contrat}</span>
-
-                  <span className={`text-xs font-semibold text-center tabular-nums ${expColor}`}>
-                    {jours === null ? <span className={`${tw.textSubtle} text-base`}>∞</span> : jours === 0 ? "Auj." : `${jours}j`}
-                  </span>
-
-                  {[
-                    { val: nbCandidatures, color: tw.textMuted700 },
-                    { val: nbNouvelles,    color: tw.scoreTextSuccess },
-                    { val: nbEntretiens,   color: tw.textOrange500 },
-                    { val: nbRetenus,      color: tw.textTeal },
-                  ].map(({ val, color }, i) => (
-                    <span key={i} className={`text-base font-bold tabular-nums text-center ${val > 0 ? color : tw.textSubtle}`}>{val}</span>
                   ))}
-
-                  <span className={`text-sm font-bold tabular-nums text-center ${
-                    meilleurScore > 0
-                      ? meilleurScore >= 80 ? tw.scoreTextSuccess : meilleurScore >= 60 ? tw.textAmber500 : tw.textRed400
-                      : tw.textSlate200
-                  }`}>
-                    {meilleurScore > 0 ? `${meilleurScore}%` : "—"}
-                  </span>
-
-                  <div className="flex justify-end"><ActionBtn /></div>
                 </div>
-
-                {/* ── Card mobile ── */}
-                <div className={`md:hidden border-b ${tw.borderSubtle} last:border-0 p-4 transition-colors ${rowBg}`}>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className={`text-sm font-semibold truncate ${tw.textStrong}`}>{offre.titre}</span>
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full shrink-0 ${badge.cls}`}>{badge.label}</span>
-                      </div>
-                      <div className={`flex items-center gap-2 flex-wrap text-xs ${tw.textMuted700}`}>
-                        <span className="flex items-center gap-1"><MapPin size={10} />{offre.wilaya?.split(" - ")[1] || offre.wilaya}</span>
-                        <span>{offre.type_contrat}</span>
-                        {jours === null
-                          ? <span className={tw.textSubtle}>∞ sans limite</span>
-                          : <span className={`font-semibold ${expColor}`}>{jours === 0 ? "Expire auj." : `${jours}j`}</span>}
-                      </div>
-                      {offre.motif_rejet && (
-                        <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textErrorMuted}`}>
-                          <AlertTriangle size={10} className="shrink-0" /> {offre.motif_rejet}
-                        </p>
-                      )}
-                    </div>
-                    <ActionBtn />
-                  </div>
-                  <div className="flex items-center gap-5">
-                    {[
-                      { val: nbCandidatures, label: "Total", color: tw.textMuted700 },
-                      { val: nbNouvelles,    label: "Nouv.",  color: tw.scoreTextSuccess },
-                      { val: nbEntretiens,   label: "Entr.",  color: tw.textOrange500 },
-                      { val: nbRetenus,      label: "Ret.",   color: tw.textTeal },
-                    ].map(({ val, label, color }) => (
-                      <div key={label} className="text-center">
-                        <p className={`text-lg font-bold tabular-nums ${val > 0 ? color : tw.textSubtle}`}>{val}</p>
-                        <p className={`text-xs uppercase tracking-wide ${tw.textMuted}`}>{label}</p>
-                      </div>
-                    ))}
-                    {meilleurScore > 0 && (
-                      <div className="text-center ml-auto">
-                        <p className={`text-lg font-bold ${meilleurScore >= 80 ? tw.scoreTextSuccess : meilleurScore >= 60 ? tw.textAmber500 : tw.textRed400}`}>{meilleurScore}%</p>
-                        <p className={`text-xs uppercase tracking-wide ${tw.textMuted}`}>Top IA</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── MODAL MODIFICATION ─────────────────────────────────────────────── */}
-      {showModifierModal && offreAModifier && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Corriger l'offre</h3>
-                <p className="text-xs text-slate-600 mt-0.5">L'offre sera soumise à revalidation après modification.</p>
-              </div>
-              <button onClick={() => setShowModifierModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">✕</button>
-            </div>
-            {offreAModifier.motif_rejet && (
-              <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
-                <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Motif de rejet</p>
-                <p className="text-sm text-red-600">{offreAModifier.motif_rejet}</p>
               </div>
             )}
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Titre *</label>
-                <input
-                  type="text"
-                  value={modifierForm.titre}
-                  onChange={(e) => setModifierForm({ ...modifierForm, titre: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Wilaya</label>
-                  <Select
-                    options={constants.wilayas}
-                    value={constants.wilayas.find((w) => w.value === modifierForm.wilaya) || null}
-                    onChange={(s) => setModifierForm({ ...modifierForm, wilaya: s ? s.value : "" })}
-                    styles={selectStylesTeal}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Spécialité</label>
-                  <SecteurDomaineSelect
-                    value={modifierForm.specialite}
-                    onChange={(domaineCode) => setModifierForm({ ...modifierForm, specialite: domaineCode })}
-                    styles={selectStylesTeal}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Nombre de postes</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={modifierForm.nombre_postes || 1}
-                    onChange={(e) => setModifierForm({ ...modifierForm, nombre_postes: e.target.value ? parseInt(e.target.value, 10) : 1 })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
-              {["description", "missions", "profil_recherche", "competences"].map((field) => (
-                <div key={field}>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
-                    {field === "profil_recherche" ? "Profil recherché" : field === "competences" ? "Compétences requises" : field.charAt(0).toUpperCase() + field.slice(1)}
-                  </label>
-                  <textarea
-                    rows="3"
-                    value={modifierForm[field] || ""}
-                    onChange={(e) => setModifierForm({ ...modifierForm, [field]: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 resize-none"
-                  />
-                </div>
+          </div>
+          <input
+            type="text"
+            value={rechercheMotsCles}
+            onChange={(e) => setRechercheMotsCles(e.target.value)}
+            placeholder="Mots-clés (compétence, métier...)"
+            className={`w-full px-3 py-2 rounded-lg text-sm mb-3 ${tw.inputColorsWhite}`}
+          />
+          <button
+            type="button"
+            onClick={handleRechercheCVTheque}
+            className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors ${tw.bgTealSolid}`}
+          >
+            Rechercher
+          </button>
+        </div>
+
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <h2 className={`text-sm font-bold ${tw.textStrong} mb-1`}>Générez vos offres avec l'IA</h2>
+          <p className={`text-xs mb-3 ${tw.textMuted}`}>Créez une offre complète en quelques secondes.</p>
+          <input
+            type="text"
+            value={titreIA}
+            onChange={(e) => setTitreIA(e.target.value)}
+            placeholder="Ex: Ingénieur qualité avec 5 ans d'expérience"
+            disabled={!palierActif}
+            className={`w-full px-3 py-2 rounded-lg text-sm mb-3 ${tw.inputColorsWhite} disabled:opacity-50`}
+          />
+          <button
+            type="button"
+            onClick={handleGenererOffreIA}
+            disabled={!palierActif}
+            className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors ${tw.bgTealSolid} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={!palierActif ? "Nécessite un abonnement actif" : ""}
+          >
+            Générer avec l'IA
+          </button>
+          <Link to="/contact" className={`block text-center text-xs mt-2 ${tw.textTeal}`}>En savoir plus</Link>
+        </div>
+
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <h2 className={`text-sm font-bold ${tw.textStrong} mb-3 flex items-center gap-2`}>
+            <LifeBuoy size={15} className={tw.textTeal} /> Besoin d'aide ?
+          </h2>
+          <div className="space-y-2.5">
+            <Link to="/contact" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <LifeBuoy size={13} /> Centre d'aide
+            </Link>
+            <a href="mailto:taftech963@gmail.com" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <Mail size={13} /> Contacter un conseiller
+            </a>
+            <Link to="/pages/formation-recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <GraduationCap size={13} /> Formation recruteur
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {inviterCandidat && (
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-4`}>
+              Inviter {inviterCandidat.candidat?.first_name || "ce candidat"} à postuler
+            </h3>
+            <select
+              value={offreInvitation}
+              onChange={(e) => setOffreInvitation(e.target.value)}
+              className={`w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm mb-4`}
+            >
+              <option value="" disabled>Choisir une offre</option>
+              {offres.filter((o) => o.est_active && !o.est_cloturee && o.statut_moderation === "APPROUVEE").map((o) => (
+                <option key={o.id} value={o.id}>{o.titre}</option>
               ))}
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowModifierModal(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">Annuler</button>
-                <button onClick={handleSauvegarderModification} className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors">Soumettre pour revalidation</button>
-              </div>
+            </select>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInviterCandidat(null)}
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!offreInvitation || envoiInvitation}
+                onClick={handleEnvoyerInvitation}
+                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg disabled:opacity-50`}
+              >
+                {envoiInvitation ? "Envoi..." : "Envoyer"}
+              </button>
             </div>
           </div>
         </div>

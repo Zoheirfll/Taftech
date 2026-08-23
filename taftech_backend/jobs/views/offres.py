@@ -85,6 +85,17 @@ class JobCreateAPIView(APIView):
             return Response({"error": "Votre entreprise doit être validée par TafTech avant de publier."}, status=status.HTTP_403_FORBIDDEN)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Accès refusé."}, status=403)
+        from ..paliers_utils import limite_offres_actives
+        limite = limite_offres_actives(entreprise)
+        if limite is not None:
+            nb_actives = OffreEmploi.objects.filter(
+                entreprise=entreprise, statut_moderation='APPROUVEE', est_cloturee=False
+            ).count()
+            if nb_actives >= limite:
+                return Response(
+                    {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier. Passez à un palier supérieur pour publier plus d'offres.", "code": "LIMITE_OFFRES_ATTEINTE"},
+                    status=403,
+                )
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)

@@ -82,6 +82,17 @@ const AdminEntreprises = () => {
     }
   };
 
+  const handleToggleMiseEnAvant = async (id, statutActuel) => {
+    try {
+      await jobsService.moderateEntreprise(id, { mise_en_avant_accueil: !statutActuel });
+      chargerEntreprises();
+      toast.success(statutActuel ? "Retirée des clients mis en avant." : "Ajoutée aux clients mis en avant !");
+    } catch (err) {
+      toast.error("Erreur lors de la modification.");
+      reportError("ECHEC_TOGGLE_MISE_EN_AVANT", err);
+    }
+  };
+
   const handleToggleApprobation = (id, statutActuel) => {
     confirmToast(`Voulez-vous vraiment ${statutActuel ? "suspendre" : "approuver"} cette entreprise ?`, async () => {
       try {
@@ -271,6 +282,15 @@ const AdminEntreprises = () => {
                         className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${tw.pillAmberSoft}`}
                       >
                         ⭐ Retirer
+                      </button>
+                    )}
+                    {ent.est_approuvee && (
+                      <button
+                        onClick={() => handleToggleMiseEnAvant(ent.id, ent.mise_en_avant_accueil)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${ent.mise_en_avant_accueil ? tw.pillAmberSoft : tw.bgPrimarySoft}`}
+                        title='Afficher/retirer dans "Ils nous font confiance" (page Abonnements)'
+                      >
+                        {ent.mise_en_avant_accueil ? "Client mis en avant ✓" : "Mettre en avant"}
                       </button>
                     )}
                   </td>

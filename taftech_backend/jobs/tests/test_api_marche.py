@@ -125,7 +125,7 @@ class AdminMarcheAPITestCase(TestCase):
         """HP2 : La réponse contient toutes les clés attendues."""
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/jobs/admin/marche/")
-        self.assertIn("salaires_par_secteur", response.data)
+        self.assertIn("tension_par_secteur", response.data)
         self.assertIn("top_wilayas", response.data)
         self.assertIn("top_secteurs", response.data)
         self.assertIn("matching_moyen", response.data)
@@ -160,17 +160,18 @@ class AdminMarcheAPITestCase(TestCase):
         self.assertAlmostEqual(float(matching), 80.0, delta=0.1)
 
     def test_HP6_salaires_par_secteur_calcules(self):
-        """HP6 : Les salaires moyens par secteur sont calculés."""
+        """HP6 : Les salaires moyens proposés par secteur sont calculés (tension_par_secteur,
+        remplace l'ancien salaires_par_secteur — session 21/08/2026, voir CLAUDE.md)."""
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/jobs/admin/marche/")
-        salaires = response.data["salaires_par_secteur"]
-        self.assertGreater(len(salaires), 0)
+        tension = response.data["tension_par_secteur"]
+        self.assertGreater(len(tension), 0)
         it_data = next(
-            (s for s in salaires if s["secteur"] == "IT"), None
+            (s for s in tension if s["secteur"] == "IT"), None
         )
         self.assertIsNotNone(it_data)
         # Moyenne offres IT : (80000 + 90000) / 2 = 85000
-        self.assertEqual(it_data["moy_offres"], 85000)
+        self.assertEqual(it_data["moy_salaire_offres"], 85000)
 
     # ==============================================
     # EDGE CASES

@@ -21,6 +21,7 @@ import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
+import { jobsService } from "../../../Services/jobsService";
 
 const STATUTS_DOTS = tw.statutDotColors;
 
@@ -30,6 +31,7 @@ const GestionOffre = () => {
   const detailRef = React.useRef(null);
   const handleSelectCandidature = (cand) => {
     hook.setSelectedCandidature(cand);
+    if (cand?.id) jobsService.marquerCandidatureConsultee(cand.id);
     setTimeout(() => {
       if (window.innerWidth < 1024 && detailRef.current) {
         detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" });

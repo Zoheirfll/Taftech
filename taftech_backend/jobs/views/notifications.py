@@ -77,6 +77,8 @@ class EntrepriseListAPIView(APIView):
         search = request.query_params.get('search', '').strip()
         secteur = request.query_params.get('secteur', '').strip()
         tri = request.query_params.get('tri', '')
+        if request.query_params.get('mise_en_avant', '') == 'true':
+            qs = qs.filter(mise_en_avant_accueil=True)
         if search:
             qs = qs.filter(nom_entreprise__icontains=search)
         if secteur:

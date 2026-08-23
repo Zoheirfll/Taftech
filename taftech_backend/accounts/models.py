@@ -42,6 +42,10 @@ class CustomUser(AbstractUser):
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     est_compte_google = models.BooleanField(default=False)
+    intitule_poste = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="Intitulé de poste (recruteur, cosmétique)",
+    )
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
     

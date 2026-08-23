@@ -6,11 +6,12 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q, Sum, F, ExpressionWrapper, DurationField
+from django.db.models import Q, Sum, F, Count, ExpressionWrapper, DurationField
 from django.db.models.functions import Coalesce, Now
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.utils import timezone
+from django.template.loader import render_to_string
 import datetime
 import hmac
 import hashlib
@@ -22,18 +23,92 @@ from ..models import (
     OffreEmploi, ProfilCandidat, ProfilEntreprise, EntreprisePhoto,
     ProfilCandidatFavori, CandidatureSpontanee,
     Questionnaire, QuestionQuestionnaire, ReponseChoix, Candidature,
-    DemandeActivationPremium, AuditLog, MembreEquipe
+    DemandeActivationPremium, AuditLog, MembreEquipe,
+    InvitationCVTheque, RechercheSauvegardee, EquipeActionLog, Notification,
 )
 from .equipe import get_entreprise_for_user, get_membre_role
-from ..throttles import WriteActionThrottle, EmailRateThrottle
+from ..throttles import WriteActionThrottle, EmailRateThrottle, InvitationCVThequeThrottle
 from ..matcher import calculer_score_matching
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
     ProfilCandidatDTO, CandidatureSpontaneeSerializer,
-    QuestionnaireSerializer
+    QuestionnaireSerializer, CandidatureRecruteurDTO,
 )
 
 User = get_user_model()
+
+
+def _calculer_kpis_periode(entreprise, date_debut, date_fin):
+    """Calcule les 5 KPIs du dashboard sur [date_debut, date_fin] et la variation % vs la
+    période précédente de même durée. Voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    duree = (date_fin - date_debut).days + 1
+    debut_precedent = date_debut - datetime.timedelta(days=duree)
+    fin_precedent = date_debut - datetime.timedelta(days=1)
+
+    def _kpis_sur_fenetre(debut, fin):
+        candidatures = Candidature.objects.filter(
+            offre__entreprise=entreprise,
+            date_postulation__date__gte=debut, date_postulation__date__lte=fin,
+        )
+        recues = candidatures.count()
+        entretien = candidatures.filter(statut='ENTRETIEN').count()
+        recrutements = candidatures.filter(statut='RETENU').count()
+        taux = round((recrutements / recues * 100), 2) if recues else 0.0
+        return recues, entretien, recrutements, taux
+
+    recues, entretien, recrutements, taux = _kpis_sur_fenetre(date_debut, date_fin)
+    recues_prec, entretien_prec, recrutements_prec, taux_prec = _kpis_sur_fenetre(debut_precedent, fin_precedent)
+
+    def _variation(actuel, precedent):
+        if not precedent:
+            return None
+        return round(((actuel - precedent) / precedent) * 100, 1)
+
+    offres_actives = OffreEmploi.objects.filter(
+        entreprise=entreprise, est_active=True, est_cloturee=False, statut_moderation='APPROUVEE',
+    ).count()
+    offres_actives_avant = OffreEmploi.objects.filter(
+        entreprise=entreprise, est_active=True, est_cloturee=False, statut_moderation='APPROUVEE',
+        date_publication__date__lte=debut_precedent,
+    ).count()
+
+    return {
+        "offres_actives": {"valeur": offres_actives, "variation_pct": _variation(offres_actives, offres_actives_avant)},
+        "candidatures_recues": {"valeur": recues, "variation_pct": _variation(recues, recues_prec)},
+        "candidats_entretien": {"valeur": entretien, "variation_pct": _variation(entretien, entretien_prec)},
+        "recrutements": {"valeur": recrutements, "variation_pct": _variation(recrutements, recrutements_prec)},
+        "taux_conversion": {"valeur": taux, "variation_pct": _variation(taux, taux_prec)},
+    }
+
+
+def _phrase_activite(log, request_user):
+    """Formate un EquipeActionLog en phrase lisible, à la 2ᵉ personne ("Vous avez...") si
+    l'auteur est l'utilisateur connecté, sinon à son prénom ("Zoheir a...") — voir mockup
+    "Activité récente" (docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md)."""
+    est_vous = log.membre_id == request_user.id
+    sujet = "Vous" if est_vous else ((log.membre.first_name or log.membre.email) if log.membre else "Un membre")
+    verbe_avoir = "avez" if est_vous else "a"
+    detail = log.detail or ""
+    if log.action == 'CREER_OFFRE':
+        return f"{sujet} {verbe_avoir} publié une nouvelle offre : {detail}"
+    if log.action == 'MODIFIER_OFFRE':
+        return f"{sujet} {verbe_avoir} modifié une offre : {detail}"
+    if log.action == 'CLOTURER_OFFRE':
+        return f"{sujet} {verbe_avoir} clôturé une offre : {detail}"
+    if log.action == 'STATUT_CANDIDATURE':
+        # `detail` est déjà une continuation naturelle du verbe (voir candidatures.py),
+        # ex. "programmé un entretien avec Karim H. pour « Ingénieur Méthodes »"
+        return f"{sujet} {verbe_avoir} {detail}"
+    if log.action == 'EVALUER_CANDIDATURE':
+        return f"{sujet} {verbe_avoir} évalué une candidature : {detail}"
+    if log.action == 'INVITER_MEMBRE':
+        return f"{sujet} {verbe_avoir} invité un membre : {detail}"
+    if log.action == 'RETIRER_MEMBRE':
+        return f"{sujet} {verbe_avoir} retiré un membre : {detail}"
+    if log.action == 'CHANGER_ROLE':
+        return f"{sujet} {verbe_avoir} changé un rôle : {detail}"
+    # AUTRE — déjà une phrase complète (candidature reçue, favori ajouté, invitation CVthèque)
+    return detail
 
 
 class DashboardRecruteurAPIView(APIView):
@@ -50,8 +125,23 @@ class DashboardRecruteurAPIView(APIView):
                 {"error": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        date_fin_str = request.GET.get('date_fin')
+        date_debut_str = request.GET.get('date_debut')
+        aujourdhui = timezone.now().date()
+        try:
+            date_fin = datetime.date.fromisoformat(date_fin_str) if date_fin_str else aujourdhui
+            date_debut = datetime.date.fromisoformat(date_debut_str) if date_debut_str else (date_fin - datetime.timedelta(days=30))
+        except ValueError:
+            return Response({"error": "Format de date invalide (attendu YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+        if date_fin < date_debut:
+            return Response({"error": "date_fin doit être postérieure ou égale à date_debut."}, status=status.HTTP_400_BAD_REQUEST)
+        kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
+
         offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
         derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,
             "offres": OffreDashboardDTO(offres, many=True).data,
@@ -60,8 +150,171 @@ class DashboardRecruteurAPIView(APIView):
             "premium_active_since": derniere_activation.date_traitement.strftime('%d/%m/%Y') if derniere_activation else None,
             "premium_nb_mois": derniere_activation.nb_mois if derniere_activation else None,
             "membre_role": mon_role,
+            "palier_actif": palier.nom if palier else None,
+            "acces_equipe": bool(palier and palier.acces_equipe),
+            "acces_ia_recommandes": bool(palier and palier.acces_ia_recommandes),
+            "acces_ia_avancee": bool(palier and palier.acces_ia_avancee),
+            "kpis": kpis,
+            "periode": {"date_debut": date_debut.isoformat(), "date_fin": date_fin.isoformat()},
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+class ActiviteRecenteAPIView(APIView):
+    """Fil d'activité récente de l'entreprise, formaté en phrases lisibles — voir
+    docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md.
+    `?limit=N` (défaut 10, max 50) pour la page complète "Voir tout".
+    Visibilité : PROPRIETAIRE/ADMIN voient toute l'activité de l'entreprise, UTILISATEUR/INVITE
+    ne voient que leurs propres actions (cohérent avec le reste des permissions d'équipe)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        try:
+            limite = min(int(request.GET.get('limit', 10)), 50)
+        except (TypeError, ValueError):
+            limite = 10
+        mon_role = get_membre_role(request.user, entreprise)
+        qs = EquipeActionLog.objects.filter(entreprise=entreprise).exclude(action='CONNEXION')
+        if mon_role not in ('PROPRIETAIRE', 'ADMIN'):
+            qs = qs.filter(membre=request.user)
+        logs = qs.select_related('membre').order_by('-date')[:limite]
+        resultats = [
+            {"id": log.id, "action": log.action, "phrase": _phrase_activite(log, request.user).strip(), "date": log.date.isoformat()}
+            for log in logs
+        ]
+        return Response(resultats)
+
+
+class RecherchesSauvegardeesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        recherches = RechercheSauvegardee.objects.filter(entreprise=entreprise)
+        return Response([
+            {"id": r.id, "nom": r.nom, "filtres": r.filtres, "date_creation": r.date_creation.isoformat()}
+            for r in recherches
+        ])
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=403)
+        if RechercheSauvegardee.objects.filter(entreprise=entreprise).count() >= 20:
+            return Response({"error": "Limite de 20 recherches sauvegardées atteinte."}, status=400)
+        nom = (request.data.get('nom') or '').strip()
+        filtres = request.data.get('filtres') or {}
+        if not nom:
+            return Response({"error": "Le nom de la recherche est requis."}, status=400)
+        recherche = RechercheSauvegardee.objects.create(entreprise=entreprise, nom=nom[:100], filtres=filtres)
+        return Response({"id": recherche.id, "nom": recherche.nom, "filtres": recherche.filtres}, status=201)
+
+    def delete(self, request, pk=None):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=403)
+        try:
+            RechercheSauvegardee.objects.get(id=pk, entreprise=entreprise).delete()
+            return Response({"message": "Supprimée."})
+        except RechercheSauvegardee.DoesNotExist:
+            return Response({"error": "Introuvable."}, status=404)
+
+
+class RapportDashboardPDFAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        date_fin_str = request.GET.get('date_fin')
+        date_debut_str = request.GET.get('date_debut')
+        aujourdhui = timezone.now().date()
+        try:
+            date_fin = datetime.date.fromisoformat(date_fin_str) if date_fin_str else aujourdhui
+            date_debut = datetime.date.fromisoformat(date_debut_str) if date_debut_str else (date_fin - datetime.timedelta(days=30))
+        except ValueError:
+            return Response({"error": "Format de date invalide."}, status=400)
+
+        kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
+
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import ParagraphStyle
+        import io
+
+        INDIGO = colors.HexColor("#204883")
+        SLATE = colors.HexColor("#1e293b")
+        BG_LIGHT = colors.HexColor("#f8fafc")
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20 * mm, leftMargin=20 * mm, topMargin=15 * mm, bottomMargin=20 * mm)
+        story = []
+        s_title = ParagraphStyle("title", fontSize=16, textColor=colors.white, fontName="Helvetica-Bold")
+        s_h2 = ParagraphStyle("h2", fontSize=12, textColor=INDIGO, fontName="Helvetica-Bold", spaceBefore=12, spaceAfter=6)
+        s_body = ParagraphStyle("body", fontSize=9, textColor=SLATE, fontName="Helvetica")
+
+        header_table = Table([[Paragraph(f"TafTech — Rapport dashboard<br/>{entreprise.nom_entreprise}", s_title)]], colWidths=[170 * mm])
+        header_table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, -1), INDIGO), ('TOPPADDING', (0, 0), (-1, -1), 12), ('BOTTOMPADDING', (0, 0), (-1, -1), 12), ('LEFTPADDING', (0, 0), (-1, -1), 12)]))
+        story.append(header_table)
+        story.append(Spacer(1, 10))
+        story.append(Paragraph(f"Période : {date_debut.strftime('%d/%m/%Y')} — {date_fin.strftime('%d/%m/%Y')}", s_body))
+        story.append(Paragraph("Indicateurs clés", s_h2))
+
+        kpi_rows = [["Indicateur", "Valeur"]]
+        libelles = {
+            "offres_actives": "Offres actives", "candidatures_recues": "Candidatures reçues",
+            "candidats_entretien": "Candidats en entretien", "recrutements": "Recrutements",
+            "taux_conversion": "Taux de conversion (%)",
+        }
+        for cle, libelle in libelles.items():
+            kpi_rows.append([libelle, str(kpis[cle]["valeur"])])
+        kpi_table = Table(kpi_rows, colWidths=[110 * mm, 60 * mm])
+        kpi_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(kpi_table)
+        story.append(Spacer(1, 14))
+
+        story.append(Paragraph("Top 5 offres (candidatures reçues sur la période)", s_h2))
+        offres_periode = OffreEmploi.objects.filter(entreprise=entreprise).annotate(
+            nb_candidatures_periode=Count(
+                'candidatures', filter=Q(
+                    candidatures__date_postulation__date__gte=date_debut,
+                    candidatures__date_postulation__date__lte=date_fin,
+                )
+            )
+        ).order_by('-nb_candidatures_periode')[:5]
+        offres_rows = [["Offre", "Candidatures"]]
+        for o in offres_periode:
+            offres_rows.append([o.titre, str(o.nb_candidatures_periode)])
+        offres_table = Table(offres_rows, colWidths=[130 * mm, 40 * mm])
+        offres_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(offres_table)
+
+        doc.build(story)
+        buffer.seek(0)
+        from django.http import HttpResponse
+        response = HttpResponse(buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="rapport_taftech_{date_debut}_{date_fin}.pdf"'
+        return response
 
 
 def _construire_classeur_candidatures(candidatures, inclure_offre=False):
@@ -195,7 +448,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
         # Sauvegarder les infos personnelles de l'utilisateur
         user = request.user
         user_fields = []
-        for field in ('first_name', 'last_name', 'telephone'):
+        for field in ('first_name', 'last_name', 'telephone', 'intitule_poste'):
             if field in data:
                 val = data[field]
                 model_field = user._meta.get_field(field)
@@ -303,6 +556,71 @@ class CVthequePagination(PageNumberPagination):
     page_size = 10
 
 
+class CandidatsRecommandesAPIView(APIView):
+    """Candidats les mieux classés (score de matching IA) toutes offres confondues de
+    l'entreprise — page dédiée sidebar "Candidats recommandés". Gatée Pro+ (acces_ia_recommandes)
+    côté serveur, pas seulement en façade frontend — contrairement au score de matching affiché
+    au fil de l'eau dans GestionOffre (jamais restreint), cette vue agrégée classée est bien la
+    fonctionnalité vendue comme premium."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if palier is None or not palier.acces_ia_recommandes:
+            return Response({"error": "Fonctionnalité réservée au palier Pro ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
+
+        masquer_decides = request.GET.get('masquer_decides', 'true') == 'true'
+        qs = Candidature.objects.select_related('candidat', 'offre').filter(
+            offre__entreprise=entreprise, est_rapide=False, score_matching__isnull=False,
+        )
+        if masquer_decides:
+            qs = qs.exclude(statut__in=['RETENU', 'REFUSE'])
+        qs = qs.order_by('-score_matching')
+
+        paginator = CVthequePagination()
+        paginator.page_size = 12
+        page = paginator.paginate_queryset(qs, request)
+        serializer = CandidatureRecruteurDTO(page, many=True)
+        results = serializer.data
+        for item, candidature in zip(results, page):
+            item['offre_id'] = candidature.offre_id
+            item['offre_titre'] = candidature.offre.titre
+        return paginator.get_paginated_response(results)
+
+
+class StatistiquesAvanceesAPIView(APIView):
+    """Répartition des candidatures par tranche de score de matching — gatée Business+
+    (acces_ia_avancee) côté serveur, même principe que CandidatsRecommandesAPIView."""
+    permission_classes = [IsAuthenticated]
+
+    TRANCHES = [(0, 20), (20, 40), (40, 60), (60, 80), (80, 101)]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if palier is None or not palier.acces_ia_avancee:
+            return Response({"error": "Fonctionnalité réservée au palier Business ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
+
+        scores = Candidature.objects.filter(
+            offre__entreprise=entreprise, score_matching__isnull=False,
+        ).values_list('score_matching', flat=True)
+        repartition = [0] * len(self.TRANCHES)
+        for score in scores:
+            score = float(score)
+            for i, (mini, maxi) in enumerate(self.TRANCHES):
+                if mini <= score < maxi:
+                    repartition[i] += 1
+                    break
+        return Response({"repartition_score": repartition})
+
+
 class CVThequeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -361,15 +679,22 @@ class CVThequeView(APIView):
             candidats = candidats.filter(vehicule_personnel=True)
         if passeport:
             candidats = candidats.filter(passeport_valide=True)
-        if service_militaire:
+        # Filtres "recherche avancée" — réservés Business+ (palier.acces_ia_avancee). Un palier
+        # inférieur voit ces filtres dans l'UI (CVTheque.jsx) mais ils sont silencieusement
+        # ignorés côté API plutôt que de renvoyer une erreur — dégrade la recherche à "basique"
+        # sans casser la page pour Starter/Pro.
+        from ..paliers_utils import get_palier_actif as _get_palier_pour_filtres
+        _palier_filtres = _get_palier_pour_filtres(entreprise_user)
+        _recherche_avancee_ok = bool(_palier_filtres and _palier_filtres.acces_ia_avancee)
+        if service_militaire and _recherche_avancee_ok:
             candidats = candidats.filter(service_militaire=service_militaire)
-        if niveau_experience:
+        if niveau_experience and _recherche_avancee_ok:
             candidats = candidats.filter(niveau_experience=niveau_experience)
         # `langues`/`competences` sont des champs texte libre (pas de référentiel structuré
         # côté candidat) — filtrage par sous-chaîne, pas par égalité exacte.
-        if langues:
+        if langues and _recherche_avancee_ok:
             candidats = candidats.filter(langues__icontains=langues)
-        if competences:
+        if competences and _recherche_avancee_ok:
             candidats = candidats.filter(competences__icontains=competences)
         if avec_photo:
             candidats = candidats.exclude(photo_profil='').exclude(photo_profil__isnull=True)
@@ -407,9 +732,13 @@ class CVThequeView(APIView):
                 result = calculer_score_matching(profil.user, offre_match)
                 scored.append((profil, round(result['total'])))
             scored.sort(key=lambda x: x[1], reverse=True)
-            is_premium = entreprise_user.est_premium_actif if entreprise_user else False
-            if not is_premium:
-                return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
+            from ..paliers_utils import get_palier_actif
+            palier = get_palier_actif(entreprise_user)
+            if palier is None:
+                return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
+            if not palier.acces_ia_recommandes:
+                return Response({"error": "Le classement par compatibilité IA nécessite le palier Pro ou supérieur.", "is_premium": False}, status=403)
+            is_premium = palier.acces_coordonnees
             # Pagination manuelle
             page_size = 10
             page = int(request.GET.get('page', 1))
@@ -423,12 +752,32 @@ class CVThequeView(APIView):
             results = serializer.data
             for item in results:
                 item['score_offre'] = scores_map.get(item['user_id'], 0)
+            # Fil d'activité candidat "profil recommandé" (dashboard candidat, session
+            # specs/important-features) — uniquement si score élevé, pas une simple
+            # consultation (décision utilisateur). Throttlé à 1 entrée/24h par candidat pour
+            # ne pas spammer à chaque rafraîchissement de la recherche CVthèque.
+            from ..models import ActiviteProfil
+            from django.utils import timezone
+            import datetime as _dt
+            seuil_recent = timezone.now() - _dt.timedelta(hours=24)
+            for profil, sc in page_items:
+                if sc >= ActiviteProfil.SEUIL_SCORE_RECOMMANDE:
+                    deja_recent = ActiviteProfil.objects.filter(
+                        candidat=profil.user, entreprise=entreprise_user,
+                        type_activite='PROFIL_RECOMMANDE', date_creation__gte=seuil_recent,
+                    ).exists()
+                    if not deja_recent:
+                        ActiviteProfil.objects.create(
+                            candidat=profil.user, entreprise=entreprise_user,
+                            type_activite='PROFIL_RECOMMANDE', score=sc,
+                        )
             return Response({
                 'count': total,
                 'next': None,
                 'previous': None,
                 'results': results,
                 'is_premium': is_premium,
+                'recherche_avancee': _recherche_avancee_ok,
             })
 
         if tri == 'nom_asc':
@@ -446,15 +795,95 @@ class CVThequeView(APIView):
             candidats = candidats.order_by(F('duree_totale').desc(nulls_last=True))
         else:
             candidats = candidats.order_by('-user__date_joined')
-        is_premium = entreprise_user.est_premium_actif if entreprise_user else False
-        if not is_premium:
-            return Response({"error": "Accès réservé aux recruteurs premium.", "is_premium": False}, status=403)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise_user)
+        if palier is None:
+            return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
+        is_premium = palier.acces_coordonnees
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
         response = paginator.get_paginated_response(serializer.data)
         response.data['is_premium'] = is_premium
+        response.data['recherche_avancee'] = _recherche_avancee_ok
         return response
+
+
+class InviterCandidatCVThequeAPIView(APIView):
+    """Invite un candidat de la CVthèque à postuler à une offre précise — voir
+    docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md."""
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [InvitationCVThequeThrottle]
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        mon_role = get_membre_role(request.user, entreprise)
+        if mon_role == 'INVITE':
+            return Response({"error": "Action non autorisée pour votre rôle."}, status=status.HTTP_403_FORBIDDEN)
+
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if not palier or not palier.acces_coordonnees:
+            return Response(
+                {"error": "L'invitation de candidats nécessite un abonnement Pro ou supérieur.", "code": "PALIER_INSUFFISANT"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        candidat_id = request.data.get('candidat_id')
+        offre_id = request.data.get('offre_id')
+        try:
+            candidat = User.objects.get(id=candidat_id, role='CANDIDAT')
+        except (User.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Candidat introuvable."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            offre = OffreEmploi.objects.get(
+                id=offre_id, entreprise=entreprise, statut_moderation='APPROUVEE',
+                est_active=True, est_cloturee=False,
+            )
+        except (OffreEmploi.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Offre introuvable ou non active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if InvitationCVTheque.objects.filter(entreprise=entreprise, candidat=candidat, offre=offre).exists():
+            return Response({"error": "Ce candidat a déjà été invité à cette offre.", "code": "DEJA_INVITE"}, status=status.HTTP_409_CONFLICT)
+
+        invitation = InvitationCVTheque.objects.create(entreprise=entreprise, candidat=candidat, offre=offre)
+
+        Notification.objects.create(
+            destinataire=candidat,
+            type_notif='INFO',
+            titre="Une entreprise s'intéresse à votre profil",
+            message=f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} ».",
+        )
+
+        lien_offre = f"{settings.SITE_URL}/jobs/{offre.id}/?invitation={invitation.token}"
+        if candidat.email:
+            try:
+                ctx = {
+                    'prenom_candidat': candidat.first_name,
+                    'nom_entreprise': entreprise.nom_entreprise,
+                    'titre_offre': offre.titre,
+                    'lien_offre': lien_offre,
+                    'annee': timezone.now().year,
+                }
+                html_body = render_to_string('emails/invitation_cvtheque.html', ctx)
+                msg = EmailMultiAlternatives(
+                    f"{entreprise.nom_entreprise} vous invite à postuler",
+                    f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} » : {lien_offre}",
+                    settings.EMAIL_HOST_USER, [candidat.email],
+                )
+                msg.attach_alternative(html_body, 'text/html')
+                msg.send(fail_silently=True)
+            except Exception as e:
+                logger.error("Erreur envoi email invitation CVthèque : %s", e)
+
+        EquipeActionLog.objects.create(
+            entreprise=entreprise, membre=request.user, action='AUTRE',
+            detail=f"Invitation CVthèque envoyée à {candidat.email} pour l'offre « {offre.titre} »",
+        )
+
+        return Response({"message": "Invitation envoyée."}, status=status.HTTP_201_CREATED)
 
 
 class ToggleFavoriCVAPIView(APIView):
@@ -471,6 +900,11 @@ class ToggleFavoriCVAPIView(APIView):
         if not created:
             favori.delete()
             return Response({"action": "retire", "is_favori": False}, status=200)
+        entreprise = get_entreprise_for_user(request.user)
+        EquipeActionLog.objects.create(
+            entreprise=entreprise, membre=request.user, action='AUTRE',
+            detail=f"{candidat.first_name} {candidat.last_name} a été ajouté(e) aux favoris",
+        )
         return Response({"action": "ajoute", "is_favori": True}, status=201)
 
 
@@ -732,6 +1166,113 @@ class ChargilyCheckoutAPIView(APIView):
         return Response({'checkout_url': checkout_url}, status=200)
 
 
+class ChargilyCheckoutPalierAPIView(APIView):
+    """Crée une session de paiement Chargily pour un des 4 nouveaux paliers d'abonnement
+    (Starter/Pro/Business/Enterprise) — même mécanisme que ChargilyCheckoutAPIView (ancien
+    système PremiumPlan), adapté au nouveau modèle Palier. Enterprise (sur devis, pas de prix)
+    n'est pas payable ici — le CTA de la page Abonnements le redirige vers /contact."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({'error': 'Profil entreprise introuvable.'}, status=404)
+        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
+            return Response({'error': 'Réservé au propriétaire.'}, status=403)
+
+        from ..models import Palier
+        palier_nom = request.data.get('palier_nom', '').upper()
+        periode = request.data.get('periode', 'MENSUEL').upper()
+        if periode not in ('MENSUEL', 'ANNUEL'):
+            return Response({'error': 'periode doit être MENSUEL ou ANNUEL.'}, status=400)
+        try:
+            palier = Palier.objects.get(nom=palier_nom, actif=True)
+        except Palier.DoesNotExist:
+            return Response({'error': "Ce palier n'existe pas ou n'est plus disponible."}, status=400)
+
+        montant = palier.prix_annuel_da if periode == 'ANNUEL' else palier.prix_mensuel_da
+        if not montant:
+            return Response({'error': "Ce palier n'a pas de prix en libre-service — contactez-nous."}, status=400)
+
+        site_url = settings.SITE_URL.rstrip('/')
+        success_url = f"{site_url}/recruteurs/abonnements?paid=1"
+        failure_url = f"{site_url}/recruteurs/abonnements"
+
+        payload = {
+            "amount": montant,
+            "currency": "dzd",
+            "success_url": success_url,
+            "failure_url": failure_url,
+            "locale": "fr",
+            "metadata": {
+                "palier_nom": palier.nom,
+                "periode": periode,
+                "entreprise_id": entreprise.id,
+                "user_id": request.user.id,
+            },
+        }
+
+        try:
+            resp = http_requests.post(
+                "https://pay.chargily.net/test/api/v2/checkouts",
+                headers={
+                    "Authorization": f"Bearer {settings.CHARGILY_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=10,
+            )
+        except Exception as e:
+            logger.error(f"[CHARGILY] Erreur connexion (palier) : {e}")
+            return Response({'error': 'Impossible de contacter Chargily.'}, status=502)
+
+        if resp.status_code not in (200, 201):
+            logger.error(f"[CHARGILY] Erreur {resp.status_code} (palier) : {resp.text}")
+            return Response({'error': 'Erreur Chargily.', 'detail': resp.text}, status=502)
+
+        checkout_url = resp.json().get('checkout_url')
+        return Response({'checkout_url': checkout_url}, status=200)
+
+
+class MonAbonnementAPIView(APIView):
+    """Statut de l'abonnement (palier) de l'entreprise connectée + résiliation du renouvellement
+    automatique. « Résilier » ne coupe jamais l'accès immédiatement (voir badge "Sans engagement"
+    de la page Abonnements) : l'entreprise garde son palier jusqu'à date_expiration, puis
+    retombe naturellement sur Gratuit — aucun remboursement au prorata, cohérent avec le
+    paiement manuel/Chargily non récurrent actuel."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        if not abonnement:
+            return Response({"palier": None})
+        return Response({
+            "palier": abonnement.palier.nom,
+            "date_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement.date_expiration else None,
+            "renouvellement_auto": abonnement.renouvellement_auto,
+        })
+
+    def patch(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Profil entreprise introuvable."}, status=404)
+        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
+            return Response({"error": "Réservé au propriétaire."}, status=403)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        if not abonnement:
+            return Response({"error": "Aucun abonnement actif."}, status=404)
+        if 'renouvellement_auto' in request.data:
+            abonnement.renouvellement_auto = bool(request.data['renouvellement_auto'])
+            abonnement.save(update_fields=['renouvellement_auto'])
+        return Response({
+            "renouvellement_auto": abonnement.renouvellement_auto,
+            "date_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement.date_expiration else None,
+        })
+
+
 class ChargilyWebhookAPIView(APIView):
     """
     Endpoint appelé automatiquement par Chargily après un paiement réussi.
@@ -771,16 +1312,55 @@ class ChargilyWebhookAPIView(APIView):
         # Structure Chargily : event.data.metadata (pas event.data.object.metadata)
         metadata = data.get('data', {}).get('metadata', {})
         entreprise_id = metadata.get('entreprise_id')
-        # Plafond large (5 ans) en filet de sécurité si le webhook est appelé avec un payload
-        # corrompu/falsifié — le vrai contrôle (durée valide = palier actif) a déjà eu lieu à la
-        # création du checkout ; les paliers n'étant plus figés à 12 mois (admin peut en ajouter
-        # au-delà), on ne recale plus sur l'ancien plafond fixe.
-        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 60))
 
         try:
             entreprise = ProfilEntreprise.objects.get(id=entreprise_id)
         except ProfilEntreprise.DoesNotExist:
             return Response({'error': 'Entreprise introuvable.'}, status=404)
+
+        # Nouveau flux (page Abonnements, palier_nom présent) vs ancien flux (page Premium,
+        # nb_mois seul) — les deux systèmes coexistent tant que l'ancien PremiumPlan n'est pas
+        # retiré. Voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md.
+        palier_nom = metadata.get('palier_nom')
+        if palier_nom:
+            from ..models import Palier, AbonnementEntreprise, PaiementAbonnement
+            periode = metadata.get('periode', 'MENSUEL')
+            try:
+                palier = Palier.objects.get(nom=palier_nom)
+            except Palier.DoesNotExist:
+                return Response({'error': 'Palier introuvable.'}, status=404)
+            montant = palier.prix_annuel_da if periode == 'ANNUEL' else palier.prix_mensuel_da
+            duree_jours = 365 if periode == 'ANNUEL' else 30
+            now = timezone.now()
+            abonnement = getattr(entreprise, 'abonnement', None)
+            if abonnement and abonnement.palier_id == palier.id and abonnement.est_actif:
+                abonnement.date_expiration = (abonnement.date_expiration or now) + datetime.timedelta(days=duree_jours)
+                abonnement.save(update_fields=['date_expiration'])
+            else:
+                AbonnementEntreprise.objects.update_or_create(
+                    entreprise=entreprise,
+                    defaults={'palier': palier, 'date_expiration': now + datetime.timedelta(days=duree_jours)},
+                )
+            PaiementAbonnement.objects.create(
+                entreprise=entreprise, palier_nom=palier.nom, montant_da=montant or 0,
+                periode=periode, moyen_paiement='CHARGILY',
+            )
+            # Garder les anciens champs legacy en phase (encore lus par la page Premium/Navbar/
+            # get_palier_actif en repli) — même mapping que la migration 0080.
+            entreprise.est_premium = True
+            entreprise.premium_expire_at = now + datetime.timedelta(days=duree_jours)
+            entreprise.save(update_fields=['est_premium', 'premium_expire_at'])
+            AuditLog.objects.create(
+                admin=None, action='AUTRE',
+                detail=f"Paiement Chargily palier {palier.nom} ({periode}) — {entreprise.nom_entreprise}",
+            )
+            return Response({'status': 'ok'}, status=200)
+
+        # Plafond large (5 ans) en filet de sécurité si le webhook est appelé avec un payload
+        # corrompu/falsifié — le vrai contrôle (durée valide = palier actif) a déjà eu lieu à la
+        # création du checkout ; les paliers n'étant plus figés à 12 mois (admin peut en ajouter
+        # au-delà), on ne recale plus sur l'ancien plafond fixe.
+        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 60))
 
         # Activation ou prolongation du premium
         now = timezone.now()

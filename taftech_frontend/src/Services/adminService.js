@@ -320,6 +320,27 @@ export const adminService = {
     }
   },
 
+  // Paliers d'abonnement recruteur (Starter/Pro/Business/Enterprise)
+  getAdminPaliers: async () => {
+    try {
+      const response = await api.get("jobs/admin/paliers/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_PALIERS", err);
+      throw err;
+    }
+  },
+
+  updatePalier: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/paliers/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_PALIER", err);
+      throw err;
+    }
+  },
+
   // Premium — avantages
   getAdminPremiumAvantages: async () => {
     try {

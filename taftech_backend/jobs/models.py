@@ -59,6 +59,9 @@ class ProfilEntreprise(models.Model):
     culture_entreprise = models.TextField(blank=True, null=True, verbose_name="Culture d'entreprise")
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
     premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
+    mise_en_avant_accueil = models.BooleanField(
+        default=False, verbose_name='Afficher dans "Ils nous font confiance" (logos clients)'
+    )
 
     @property
     def est_premium_actif(self):
@@ -239,6 +242,13 @@ class Candidature(models.Model):
     # 👇 MODIFIÉ : null=True, blank=True car un visiteur rapide n'a pas de compte
     candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='candidatures', null=True, blank=True)
     
+    SOURCE_CHOICES = (
+        ('SITE', 'Site TafTech'),
+        ('CVTHEQUE', 'Invitation CVthèque'),
+        ('AUTRE', 'Autre'),
+    )
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='SITE', verbose_name="Source de la candidature")
+
     # 👇 NOUVEAUX CHAMPS POUR LA POSTULATION RAPIDE 👇
     est_rapide = models.BooleanField(default=False, verbose_name="Postulation Rapide")
     nom_rapide = models.CharField(max_length=150, blank=True, null=True)
@@ -467,6 +477,11 @@ class AlerteEmploi(models.Model):
     
     date_creation = models.DateTimeField(auto_now_add=True)
     est_active = models.BooleanField(default=True, verbose_name="Alerte activée")
+    derniere_consultation = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Dernière consultation",
+        help_text="Mise à jour quand le candidat consulte les offres de cette alerte — sert à calculer le compteur \"nouvelles offres\".",
+    )
 
     class Meta:
         ordering = ['-date_creation']
@@ -748,6 +763,134 @@ class PremiumAvantage(models.Model):
         return self.titre
 
 
+class Palier(models.Model):
+    """Palier d'abonnement recruteur (Starter/Pro/Business/Enterprise) — remplace le système
+    Premium binaire (voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md).
+    'Gratuit' n'est PAS une ligne ici : c'est l'absence d'AbonnementEntreprise actif pour une
+    entreprise (voir Phase 2b, non câblée dans cette migration)."""
+    NOM_CHOICES = [
+        ('STARTER', 'Starter'),
+        ('PRO', 'Pro'),
+        ('BUSINESS', 'Business'),
+        ('ENTERPRISE', 'Enterprise'),
+    ]
+    nom = models.CharField(max_length=20, choices=NOM_CHOICES, unique=True, verbose_name="Palier")
+    prix_mensuel_da = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Prix mensuel (DA)", validators=[MinValueValidator(1)]
+    )
+    prix_annuel_da = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Prix annuel (DA)", validators=[MinValueValidator(1)]
+    )
+    remise_annuelle_active = models.BooleanField(default=False, verbose_name="Remise annuelle affichée")
+    limite_offres = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Limite offres actives (vide = illimité)",
+        validators=[MinValueValidator(1)],
+    )
+    limite_cv_mois = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Limite téléchargements CV/mois (vide = illimité)",
+        validators=[MinValueValidator(1)],
+    )
+    acces_coordonnees = models.BooleanField(default=False, verbose_name="Coordonnées candidats visibles")
+    acces_ia_recommandes = models.BooleanField(default=False, verbose_name="Candidats recommandés (IA)")
+    acces_ia_avancee = models.BooleanField(default=False, verbose_name="Recherche/filtres/stats IA avancés")
+    acces_equipe = models.BooleanField(default=False, verbose_name="Gestion d'équipe multi-utilisateurs")
+    support_label = models.CharField(max_length=100, blank=True, verbose_name="Support (texte libre)")
+    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
+    actif = models.BooleanField(default=True, verbose_name="Visible/achetable")
+
+    class Meta:
+        ordering = ['ordre']
+
+    def __str__(self):
+        return self.get_nom_display()
+
+
+class AbonnementEntreprise(models.Model):
+    """Abonnement actif d'une entreprise à un Palier. Remplace ProfilEntreprise.est_premium/
+    premium_expire_at comme future source de vérité — ces 2 champs restent en base pour
+    compatibilité (le gating existant les lit encore, voir Phase 2b) mais ne sont plus la
+    source de vérité une fois la Phase 2b câblée."""
+    entreprise = models.OneToOneField(
+        ProfilEntreprise, on_delete=models.CASCADE, related_name='abonnement'
+    )
+    palier = models.ForeignKey(Palier, on_delete=models.PROTECT, related_name='abonnements')
+    date_debut = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateTimeField(
+        null=True, blank=True, verbose_name="Expire le (vide = illimité)"
+    )
+    renouvellement_auto = models.BooleanField(default=True)
+
+    @property
+    def est_actif(self):
+        if self.date_expiration is None:
+            return True
+        from django.utils import timezone
+        return self.date_expiration > timezone.now()
+
+    def __str__(self):
+        return f"{self.entreprise.nom_entreprise} — {self.palier.get_nom_display()}"
+
+
+class MentionsLegalesEntreprise(models.Model):
+    """Mentions légales TafTech affichées sur les factures — singleton (`get_solo()`, même
+    pattern que AIConfig/ConfigRendezVous). Placeholders vides au départ, complétables par
+    l'admin sans déploiement (même logique que les CGU provisoires, mais directement éditable)."""
+    raison_sociale = models.CharField(max_length=200, blank=True, default="TafTech")
+    registre_commerce = models.CharField(max_length=50, blank=True)
+    nif = models.CharField(max_length=50, blank=True, verbose_name="NIF")
+    adresse = models.CharField(max_length=255, blank=True)
+    tva = models.CharField(max_length=50, blank=True, verbose_name="N° TVA (le cas échéant)")
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Mentions légales TafTech"
+
+
+class PaiementAbonnement(models.Model):
+    """Historique des paiements de paliers — source des factures PDF (page Facturation).
+    Champs dénormalisés (palier_nom/montant_da au moment du paiement, pas de FK vers Palier) :
+    supprimer/modifier un palier plus tard ne doit jamais altérer une facture déjà émise, même
+    principe déjà appliqué à PremiumPlan (voir CLAUDE.md, chantier CMS Premium)."""
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='paiements_abonnement')
+    palier_nom = models.CharField(max_length=20, choices=Palier.NOM_CHOICES)
+    montant_da = models.PositiveIntegerField()
+    periode = models.CharField(max_length=10, choices=[('MENSUEL', 'Mensuel'), ('ANNUEL', 'Annuel')], default='MENSUEL')
+    moyen_paiement = models.CharField(max_length=50, blank=True)
+    date_paiement = models.DateTimeField(auto_now_add=True)
+    numero_facture = models.CharField(max_length=30, unique=True, editable=False)
+
+    class Meta:
+        ordering = ['-date_paiement']
+
+    def save(self, *args, **kwargs):
+        if not self.numero_facture:
+            from django.utils import timezone
+            annee = timezone.now().year
+            dernier = PaiementAbonnement.objects.filter(numero_facture__startswith=f"TT-{annee}-").order_by('-id').first()
+            prochain_numero = (int(dernier.numero_facture.split('-')[-1]) + 1) if dernier else 1
+            self.numero_facture = f"TT-{annee}-{prochain_numero:05d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.numero_facture} — {self.entreprise.nom_entreprise}"
+
+
+class TelechargementCV(models.Model):
+    """Log d'un téléchargement de CV depuis la CVthèque — sert uniquement à compter le quota
+    mensuel `Palier.limite_cv_mois` (toujours recalculé à partir des logs du mois en cours, pas
+    un compteur stocké à incrémenter — même principe que AlerteEmploiSerializer.nb_nouvelles_offres,
+    voir CLAUDE.md). Ne trace PAS les téléchargements via une vraie candidature reçue (accès
+    toujours autorisé, jamais compté dans le quota) ni les téléchargements par le candidat
+    lui-même/un admin."""
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='telechargements_cv')
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date_telechargement = models.DateTimeField(auto_now_add=True)
+
+
 class AIConfig(models.Model):
     """Configuration IA du site — singleton (une seule ligne, `AIConfig.get_solo()`). Permet à
     l'admin de couper une fonctionnalité IA en panne (ex: Groq a déjà changé de modèle sans
@@ -806,6 +949,13 @@ class AIConfig(models.Model):
             "Variables disponibles : {titre}, {specialite}, {diplome}, {experience}, {contrat}, {wilaya}. "
             "Si vide, le prompt par défaut du code est utilisé."
         ),
+    )
+
+    conseils_dashboard_actif = models.BooleanField(default=True, verbose_name="Conseils personnalisés (tableau de bord) actifs")
+    conseils_dashboard_max_tokens = models.PositiveIntegerField(default=600, validators=[MinValueValidator(100)])
+    conseils_dashboard_prompt = models.TextField(
+        blank=True, verbose_name="Prompt Conseils personnalisés",
+        help_text="Instructions système (le profil/score/activité du candidat sont envoyés séparément). Si vide, le prompt par défaut du code est utilisé.",
     )
 
     date_modification = models.DateTimeField(auto_now=True)
@@ -991,6 +1141,7 @@ class FaqItem(models.Model):
         ('GENERAL', 'Général (page Contact)'),
         ('RECRUTEUR', 'Recruteur (landing)'),
         ('PREMIUM', 'Premium'),
+        ('PALIERS', 'Paliers (page Abonnements)'),
     ]
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES, verbose_name="Catégorie")
     question = models.CharField(max_length=300, verbose_name="Question")
@@ -1003,3 +1154,238 @@ class FaqItem(models.Model):
 
     def __str__(self):
         return f"[{self.categorie}] {self.question}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NOUVEAU TABLEAU DE BORD CANDIDAT (session specs/important-features) — refonte
+# demandée par l'employeur sur mockup IA. Modèles pour : compétences structurées
+# avec niveau, documents privés, prise de rendez-vous, activité de profil.
+# ═══════════════════════════════════════════════════════════════════════════
+
+class CompetenceCandidat(models.Model):
+    """Compétence structurée d'un candidat, avec niveau — remplace progressivement le champ
+    texte libre `ProfilCandidat.competences` pour l'UI (page "Mes compétences"), mais ce
+    dernier reste synchronisé automatiquement à chaque sauvegarde (matcher.py/cv_parser.py
+    continuent de lire le texte libre sans modification)."""
+    NIVEAU_CHOICES = [
+        ('DEBUTANT', 'Débutant'),
+        ('INTERMEDIAIRE', 'Intermédiaire'),
+        ('AVANCE', 'Avancé'),
+        ('CONFIRME', 'Confirmé / Expert'),
+    ]
+    SOURCE_CHOICES = [
+        ('DECLARE', 'Auto-déclaré'),
+        ('TESTE', 'Vérifié par test'),  # anticipe le futur module "Mes tests", pas encore actif
+    ]
+    NIVEAU_POINTS = {'DEBUTANT': 1, 'INTERMEDIAIRE': 2, 'AVANCE': 3, 'CONFIRME': 4}
+
+    profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='competences_detail')
+    label = models.CharField(max_length=100, verbose_name="Compétence")
+    niveau = models.CharField(max_length=20, choices=NIVEAU_CHOICES, default='DEBUTANT')
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='DECLARE')
+    date_ajout = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['label']
+        unique_together = [('profil', 'label')]
+
+    def __str__(self):
+        return f"{self.label} ({self.get_niveau_display()}) — {self.profil}"
+
+
+class TypeDocument(models.Model):
+    """Référentiel des catégories de documents privés candidat, éditable par l'admin (pattern
+    CompetenceReferentiel) — pas figé dans le code, l'admin peut en ajouter/retirer."""
+    label = models.CharField(max_length=100, unique=True, verbose_name="Type de document")
+    ordre = models.PositiveIntegerField(default=0)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['ordre', 'label']
+
+    def __str__(self):
+        return self.label
+
+
+class DocumentCandidat(models.Model):
+    """Espace documents 100% privé du candidat — jamais exposé aux recruteurs ni attaché
+    automatiquement à une candidature (contrairement au CV/lettre de motivation "officiels"
+    de ProfilCandidat, qui restent inchangés et sont la seule chose qu'un recruteur voit)."""
+    profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='documents')
+    type_document = models.ForeignKey(TypeDocument, on_delete=models.SET_NULL, null=True, related_name='documents')
+    nom_personnalise = models.CharField(max_length=150, blank=True, verbose_name="Nom (ex: CV version IT)")
+    fichier = models.FileField(
+        upload_to='documents_candidats/',
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']),
+            validate_document_mime,
+            validate_file_size(5),
+        ]
+    )
+    date_upload = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_upload']
+
+    def __str__(self):
+        return self.nom_personnalise or (self.type_document.label if self.type_document else "Document")
+
+
+class ConfigRendezVous(models.Model):
+    """Réglages globaux du système de prise de rendez-vous — singleton (pattern AIConfig),
+    éditable par l'admin. Un seul conseiller/agenda pour l'instant (décision utilisateur)."""
+    delai_min_reservation_heures = models.PositiveIntegerField(
+        default=24, verbose_name="Délai minimum avant un RDV (heures)",
+        help_text="Ex: 24 = un candidat ne peut pas réserver un créneau dans les 24h à venir.",
+    )
+    horizon_max_jours = models.PositiveIntegerField(
+        default=30, verbose_name="Horizon maximum de réservation (jours)",
+        help_text="Un candidat ne peut pas réserver au-delà de cet horizon.",
+    )
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Configuration Rendez-vous"
+
+
+class DisponibiliteRecurrente(models.Model):
+    """Template hebdomadaire de disponibilité du conseiller, géré par l'admin — se répète
+    chaque semaine. Les créneaux réellement proposés au candidat sont calculés à la volée
+    (template + jours bloqués + créneaux déjà réservés), jamais stockés un par un."""
+    JOURS_SEMAINE = [
+        (0, 'Lundi'), (1, 'Mardi'), (2, 'Mercredi'), (3, 'Jeudi'),
+        (4, 'Vendredi'), (5, 'Samedi'), (6, 'Dimanche'),
+    ]
+    jour_semaine = models.PositiveSmallIntegerField(choices=JOURS_SEMAINE)
+    heure_debut = models.TimeField()
+    heure_fin = models.TimeField()
+    duree_creneau_minutes = models.PositiveIntegerField(default=30)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['jour_semaine', 'heure_debut']
+
+    def __str__(self):
+        return f"{self.get_jour_semaine_display()} {self.heure_debut}-{self.heure_fin}"
+
+
+class JourBloque(models.Model):
+    """Exception ponctuelle au template récurrent (jour férié, absence) — géré par l'admin."""
+    date = models.DateField(unique=True)
+    motif = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.date} — {self.motif or 'Bloqué'}"
+
+
+class RendezVous(models.Model):
+    """Rendez-vous d'accompagnement carrière réservé par un candidat sur un créneau généré
+    depuis DisponibiliteRecurrente."""
+    STATUT_CHOICES = [
+        ('CONFIRME', 'Confirmé'),
+        ('ANNULE', 'Annulé'),
+        ('TERMINE', 'Terminé'),
+        ('ABSENT', 'Absent'),
+    ]
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rendez_vous')
+    date_heure = models.DateTimeField()
+    motif = models.CharField(max_length=300, blank=True, verbose_name="Motif de la demande")
+    statut = models.CharField(max_length=10, choices=STATUT_CHOICES, default='CONFIRME')
+    notes_admin = models.TextField(blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_annulation = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_heure']
+
+    def __str__(self):
+        return f"RDV {self.candidat} — {self.date_heure} ({self.get_statut_display()})"
+
+
+class ActiviteProfil(models.Model):
+    """Fil d'activité candidat — actions des recruteurs sur son profil/ses candidatures.
+    "Profil recommandé" ne se déclenche que si un score de matching ≥ 80% est impliqué
+    (décision utilisateur — pas une simple consultation sans contexte)."""
+    TYPE_CHOICES = [
+        ('CANDIDATURE_CONSULTEE', 'Candidature consultée'),
+        ('PROFIL_RECOMMANDE', 'Profil recommandé (score élevé)'),
+    ]
+    SEUIL_SCORE_RECOMMANDE = 80.0
+
+    candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activites_profil')
+    type_activite = models.CharField(max_length=25, choices=TYPE_CHOICES)
+    entreprise = models.ForeignKey('ProfilEntreprise', on_delete=models.CASCADE, related_name='+')
+    candidature = models.ForeignKey('Candidature', on_delete=models.CASCADE, null=True, blank=True, related_name='+')
+    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"{self.get_type_activite_display()} — {self.candidat} / {self.entreprise}"
+
+
+class InvitationCVTheque(models.Model):
+    """Invitation d'un recruteur à un candidat de la CVthèque pour postuler à une offre
+    précise — permet de tracer Candidature.source='CVTHEQUE' (voir
+    docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md)."""
+    entreprise = models.ForeignKey(
+        'ProfilEntreprise', on_delete=models.CASCADE, related_name='invitations_cvtheque'
+    )
+    candidat = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='invitations_recues'
+    )
+    offre = models.ForeignKey('OffreEmploi', on_delete=models.CASCADE, related_name='invitations')
+    token = models.CharField(max_length=64, unique=True)
+    date_envoi = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateTimeField()
+
+    class Meta:
+        unique_together = [('entreprise', 'candidat', 'offre')]
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            import uuid
+            self.token = uuid.uuid4().hex
+        if not self.date_expiration:
+            import datetime
+            from django.utils import timezone
+            self.date_expiration = timezone.now() + datetime.timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    @property
+    def est_valide(self):
+        from django.utils import timezone
+        return timezone.now() <= self.date_expiration
+
+    def __str__(self):
+        return f"{self.entreprise.nom_entreprise} → {self.candidat.email} ({self.offre.titre})"
+
+
+class RechercheSauvegardee(models.Model):
+    """Filtres CVthèque sauvegardés par un recruteur pour être rappelés plus tard — voir
+    docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    entreprise = models.ForeignKey(
+        'ProfilEntreprise', on_delete=models.CASCADE, related_name='recherches_sauvegardees'
+    )
+    nom = models.CharField(max_length=100, verbose_name="Nom de la recherche")
+    filtres = models.JSONField(default=dict, verbose_name="Filtres (query params CVthèque)")
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"{self.nom} ({self.entreprise.nom_entreprise})"

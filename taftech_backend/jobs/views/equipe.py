@@ -203,6 +203,10 @@ class InviterMembreAPIView(APIView):
             return Response({'error': 'Entreprise introuvable.'}, status=404)
         if get_membre_role(request.user, entreprise) not in ('PROPRIETAIRE', 'ADMIN'):
             return Response({'error': 'Action réservée au propriétaire ou admin.'}, status=403)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        if palier is None or not palier.acces_equipe:
+            return Response({'error': "La gestion d'équipe nécessite le palier Business ou supérieur."}, status=403)
 
         email = request.data.get('email', '').strip().lower()
         role = request.data.get('role', 'UTILISATEUR')

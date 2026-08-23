@@ -6,9 +6,11 @@ import { candidatService } from "./candidatService";
 import { recruteurService } from "./recruteurService";
 import { adminService } from "./adminService";
 import { iaService } from "./iaService";
+import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
 let _premiumPlansCache = null;
+let _paliersCache = null;
 let _premiumAvantagesCache = null;
 const _faqCacheParCategorie = {};
 
@@ -93,6 +95,103 @@ const offresPubliquesService = {
         });
     }
     return _premiumPlansCache;
+  },
+
+  getCandidatsRecommandes: async (page = 1, masquerDecides = true) => {
+    try {
+      const response = await api.get(`jobs/dashboard/candidats-recommandes/?page=${page}&masquer_decides=${masquerDecides}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_CANDIDATS_RECOMMANDES", err);
+      throw err;
+    }
+  },
+
+  getStatistiquesAvancees: async () => {
+    try {
+      const response = await api.get("jobs/dashboard/statistiques-avancees/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_STATISTIQUES_AVANCEES", err);
+      throw err;
+    }
+  },
+
+  getMonAbonnement: async () => {
+    try {
+      const response = await api.get("jobs/paliers/mon-abonnement/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_MON_ABONNEMENT", err);
+      throw err;
+    }
+  },
+
+  toggleRenouvellementAuto: async (renouvellementAuto) => {
+    try {
+      const response = await api.patch("jobs/paliers/mon-abonnement/", { renouvellement_auto: renouvellementAuto });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_TOGGLE_RENOUVELLEMENT", err);
+      throw err;
+    }
+  },
+
+  chargilyCheckoutPalier: async (palierNom, periode) => {
+    try {
+      const response = await api.post("jobs/paliers/chargily/checkout/", { palier_nom: palierNom, periode });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CHARGILY_CHECKOUT_PALIER", err);
+      throw err;
+    }
+  },
+
+  // Factures (historique paiements de palier)
+  getFactures: async () => {
+    try {
+      const response = await api.get("jobs/factures/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_FACTURES", err);
+      throw err;
+    }
+  },
+
+  telechargerFacturePDF: async (paiementId) => {
+    try {
+      const response = await api.get(`jobs/factures/${paiementId}/pdf/`, { responseType: "blob" });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DOWNLOAD_FACTURE_PDF", err);
+      throw err;
+    }
+  },
+
+  // Paliers d'abonnement (Starter/Pro/Business/Enterprise) — remplace getPremiumPlans à terme.
+  getPaliers: async () => {
+    if (!_paliersCache) {
+      _paliersCache = api
+        .get("jobs/paliers/")
+        .then((response) => response.data)
+        .catch((err) => {
+          _paliersCache = null;
+          reportError("ECHEC_GET_PALIERS_API", err);
+          throw err;
+        });
+    }
+    return _paliersCache;
+  },
+
+  // Entreprises mises en avant côté admin ("Ils nous font confiance", page Abonnements).
+  getEntreprisesMisesEnAvant: async () => {
+    try {
+      const response = await api.get("jobs/entreprises/?mise_en_avant=true");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ENTREPRISES_MISES_EN_AVANT", err);
+      throw err;
+    }
   },
 
   getPremiumAvantages: async () => {
@@ -217,4 +316,7 @@ export const jobsService = {
 
   // IA
   ...iaService,
+
+  // Nouveau tableau de bord candidat
+  ...dashboardCandidatService,
 };

@@ -14,6 +14,9 @@ import {
   Settings,
   LogOut,
   Sparkles,
+  Star,
+  FolderLock,
+  CalendarClock,
 } from "lucide-react";
 
 const CandidatLayout = () => {
@@ -53,15 +56,18 @@ const CandidatLayout = () => {
       path: "/suggestions-carriere",
       icon: Sparkles,
     },
+    { name: "Mes compétences", path: "/mes-competences", icon: Star },
+    { name: "Mes documents", path: "/mes-documents", icon: FolderLock },
+    { name: "Prendre rendez-vous", path: "/rendez-vous", icon: CalendarClock },
     { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
   ], [unreadCount]);
 
   return (
-    <div className={`max-w-7xl mx-auto flex flex-col md:flex-row gap-4 md:gap-6 px-4 md:px-6 py-5 md:py-8 min-h-screen ${tw.surfaceSubtle}`}>
+    <div className={`max-w-7xl mx-auto flex flex-col md:flex-row gap-4 md:gap-5 px-4 md:px-6 py-5 md:py-6 min-h-screen ${tw.surfaceSubtle}`}>
       {/* Sur mobile, ce menu est déjà couvert par le hamburger de la Navbar (mêmes liens) —
           l'afficher aussi ici doublerait la navigation en haut de chaque page candidat. */}
-      <aside className="hidden md:block md:w-60 shrink-0">
-        <div className={`${tw.sidebarShell} rounded-2xl overflow-hidden sticky top-20`}>
+      <aside className="hidden md:block md:w-56 shrink-0">
+        <div className={`${tw.sidebarShell} rounded-xl overflow-hidden sticky top-20`}>
           <nav className="p-2">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -69,13 +75,13 @@ const CandidatLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center justify-between px-3 py-3 rounded-xl font-medium transition-colors mb-0.5 ${
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-colors mb-0.5 ${
                     isActive ? tw.sidebarLinkActive : tw.sidebarLinkInactive
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <item.icon
-                      size={17}
+                      size={16}
                       className={isActive ? tw.sidebarLinkIconActive : tw.sidebarLinkIconInactive}
                     />
                     <span className="text-sm font-semibold">{item.name}</span>
@@ -95,9 +101,9 @@ const CandidatLayout = () => {
             <div className={`${tw.sidebarDivider} mt-2 pt-2`}>
               <button
                 onClick={() => authService.logout()}
-                className={`w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${tw.sidebarLogoutButton}`}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${tw.sidebarLogoutButton}`}
               >
-                <LogOut size={17} />
+                <LogOut size={16} />
                 Déconnexion
               </button>
             </div>

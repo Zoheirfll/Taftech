@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
@@ -153,6 +153,8 @@ const JobDetail = () => {
   const { idSlug, titreCode } = useParams();
   const routeCode = titreCode ? titreCode.split("-").pop() : idSlug?.split("-")[0];
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get("invitation");
   const panelRef = useRef(null);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -202,7 +204,11 @@ const JobDetail = () => {
     }
     setIsSubmitting(true);
     try {
-      await jobsService.postuler(job.id, { lettre_motivation: lettreMotivation, reponses: JSON.stringify(reponses) });
+      await jobsService.postuler(job.id, {
+        lettre_motivation: lettreMotivation,
+        reponses: JSON.stringify(reponses),
+        ...(invitationToken ? { invitation_token: invitationToken } : {}),
+      });
       setPostulerStatus("success");
     } catch (err) {
       setPostulerStatus("error");

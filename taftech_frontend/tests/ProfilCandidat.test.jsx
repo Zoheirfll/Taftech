@@ -38,6 +38,9 @@ vi.mock("../src/Services/jobsService", () => ({
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
       sous_domaines: [],
     }),
+    searchCompetences: vi.fn().mockResolvedValue([]),
+    ajouterCompetence: vi.fn(),
+    supprimerCompetence: vi.fn(),
   },
 }));
 
@@ -75,6 +78,10 @@ const mockProfil = {
   ],
   formations_detail: [],
   competences: "React,Tailwind",
+  competences_detail: [
+    { id: 1, label: "React", niveau: "AVANCE", niveau_libelle: "Avancé", source: "DECLARE" },
+    { id: 2, label: "Tailwind", niveau: "INTERMEDIAIRE", niveau_libelle: "Intermédiaire", source: "DECLARE" },
+  ],
   langues: "Français:Avancé",
 };
 
@@ -177,7 +184,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
   it("🟢 HP4 (Tags Dynamiques) : Gestion des compétences", async () => {
     profilService.getProfil.mockResolvedValue(mockProfil);
     jobsService.getConstants.mockResolvedValue(mockConstants);
-    profilService.updateProfil.mockResolvedValue({});
+    jobsService.ajouterCompetence.mockResolvedValue({ id: 3, label: "Docker", niveau: "DEBUTANT", niveau_libelle: "Débutant" });
 
     render(
       <MemoryRouter>
@@ -191,9 +198,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     fireEvent.keyDown(inputSkills, { key: "Enter", code: "Enter" });
 
     await waitFor(() => {
-      expect(profilService.updateProfil).toHaveBeenCalled();
-      const sentFormData = profilService.updateProfil.mock.calls[0][0];
-      expect(sentFormData.get("competences")).toContain("Docker");
+      expect(jobsService.ajouterCompetence).toHaveBeenCalledWith("Docker", "DEBUTANT");
     });
   });
 

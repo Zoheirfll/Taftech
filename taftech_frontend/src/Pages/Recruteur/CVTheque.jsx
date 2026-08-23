@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import InfoBanner from "../../Components/InfoBanner";
 import DomaineLabel from "../../Components/DomaineLabel";
 import { jobsService } from "../../Services/jobsService";
@@ -30,6 +30,7 @@ import {
   Zap,
   Copy,
   ExternalLink,
+  Send,
 } from "lucide-react";
 
 const OPTIONS_EXPERIENCE = [
@@ -90,8 +91,24 @@ const CVTheque = () => {
   // UI
   const [selectedCandidat, setSelectedCandidat] = useState(null);
   const [showFiltres, setShowFiltres] = useState(false);
-  const [activeTab, setActiveTab] = useState("tous"); // "tous" ou "favoris"
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("favoris") === "true" ? "favoris" : "tous",
+  ); // "tous" ou "favoris"
+
+  // Resynchronise l'onglet actif et la recherche avec l'URL à chaque navigation
+  // (mount ET changement de query string sur la même route — React Router ne
+  // remonte pas le composant quand seule la query string change).
+  useEffect(() => {
+    setActiveTab(searchParams.get("favoris") === "true" ? "favoris" : "tous");
+    const searchParam = searchParams.get("search");
+    if (searchParam !== null) {
+      setSearch(searchParam);
+    }
+    setCurrentPage(1);
+  }, [searchParams]);
   const [isPremium, setIsPremium] = useState(false);
+  const [rechercheAvancee, setRechercheAvancee] = useState(true);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
@@ -100,6 +117,11 @@ const CVTheque = () => {
   const [offreId, setOffreId] = useState("");
   const [offresActives, setOffresActives] = useState([]);
   const [showMatchingPanel, setShowMatchingPanel] = useState(false);
+
+  // Invitation à postuler (sous-projet source candidature)
+  const [inviterCandidat, setInviterCandidat] = useState(null);
+  const [offreInvitation, setOffreInvitation] = useState("");
+  const [envoiInvitation, setEnvoiInvitation] = useState(false);
 
   // Accordéon détail
   const [openSections, setOpenSections] = useState({ competences: true, langues: true });
@@ -190,6 +212,7 @@ const CVTheque = () => {
       setTotalCandidats(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / 10));
       if (data.is_premium !== undefined) setIsPremium(data.is_premium);
+      if (data.recherche_avancee !== undefined) setRechercheAvancee(data.recherche_avancee);
 
       // Auto-sélection du premier candidat sur desktop
       if (data.results && data.results.length > 0) {
@@ -299,6 +322,26 @@ const CVTheque = () => {
     }
   };
 
+  const handleOuvrirInvitation = (candidat, e) => {
+    e.stopPropagation();
+    setOffreInvitation("");
+    setInviterCandidat(candidat);
+  };
+
+  const handleEnvoyerInvitation = async () => {
+    if (!offreInvitation || !inviterCandidat) return;
+    setEnvoiInvitation(true);
+    try {
+      await jobsService.inviterCandidatCVTheque(inviterCandidat.user_id, offreInvitation);
+      toast.success("Invitation envoyée !");
+      setInviterCandidat(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      reportError("ECHEC_INVITER_CANDIDAT_CVTHEQUE", err);
+    } finally {
+      setEnvoiInvitation(false);
+    }
+  };
 
   const isRecent = (dateString) => {
     if (!dateString) return false;
@@ -656,23 +699,28 @@ const CVTheque = () => {
               type="text"
               value={langues}
               onChange={(e) => { setLangues(e.target.value); setCurrentPage(1); }}
-              placeholder="Langue (ex: Anglais)"
-              className={tw.input}
+              placeholder={rechercheAvancee ? "Langue (ex: Anglais)" : "Langue (palier Business+)"}
+              disabled={!rechercheAvancee}
+              title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
+              className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
             />
             <input
               type="text"
               value={competencesFiltre}
               onChange={(e) => { setCompetencesFiltre(e.target.value); setCurrentPage(1); }}
-              placeholder="Compétence (ex: React)"
-              className={tw.input}
+              placeholder={rechercheAvancee ? "Compétence (ex: React)" : "Compétence (palier Business+)"}
+              disabled={!rechercheAvancee}
+              title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
+              className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <Select
               options={constants.experiences || []}
-              placeholder="Niveau d'expérience déclaré"
+              placeholder={rechercheAvancee ? "Niveau d'expérience déclaré" : "Niveau d'expérience (palier Business+)"}
               isClearable
+              isDisabled={!rechercheAvancee}
               value={(constants.experiences || []).find((n) => n.value === niveauExperience) || null}
               onChange={(val) => {
                 setNiveauExperience(val ? val.value : "");
@@ -682,8 +730,9 @@ const CVTheque = () => {
             />
             <Select
               options={constants.services_militaires || []}
-              placeholder="Service militaire"
+              placeholder={rechercheAvancee ? "Service militaire" : "Service militaire (palier Business+)"}
               isClearable
+              isDisabled={!rechercheAvancee}
               value={(constants.services_militaires || []).find((s) => s.value === serviceMilitaire) || null}
               onChange={(val) => {
                 setServiceMilitaire(val ? val.value : "");
@@ -692,6 +741,12 @@ const CVTheque = () => {
               styles={selectStylesTeal}
             />
           </div>
+          {!rechercheAvancee && (
+            <p className={`text-xs ${tw.textMuted} -mt-2 mb-4`}>
+              🔒 Filtres langues/compétences/expérience/service militaire réservés au palier Business ou supérieur.{" "}
+              <Link to="/recruteurs/abonnements" className="text-teal-700 font-semibold hover:underline">Voir les paliers</Link>
+            </p>
+          )}
 
           {/* Filtres rapides en checkboxes */}
           <div className={`flex flex-wrap gap-2 items-center pt-3 border-t ${tw.borderSubtle}`}>
@@ -945,6 +1000,16 @@ const CVTheque = () => {
                     className={`absolute top-3 right-3 p-1 rounded-md transition-colors group/star ${tw.hoverSurfaceSubtle}`}
                   >
                     <Star size={14} className={candidat.is_favori ? tw.starFavoriActive : tw.starFavoriInactiveGroupHover} />
+                  </button>
+
+                  {/* INVITER À POSTULER (Pro+, réservé à l'accès coordonnées) */}
+                  <button
+                    onClick={(e) => (isPremium ? handleOuvrirInvitation(candidat, e) : e.stopPropagation())}
+                    disabled={!isPremium}
+                    title={isPremium ? "Inviter à postuler" : "Nécessite un abonnement Pro ou supérieur"}
+                    className={`absolute top-3 right-10 p-1 rounded-md transition-colors group/send ${isPremium ? tw.hoverSurfaceSubtle : "opacity-30 cursor-not-allowed"}`}
+                  >
+                    <Send size={14} className={tw.iconMuted} />
                   </button>
                 </div>
               );
@@ -1307,6 +1372,43 @@ const CVTheque = () => {
           )}
         </div>
       </div>
+
+      {inviterCandidat && (
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-4`}>
+              Inviter {inviterCandidat.first_name || inviterCandidat.titre_professionnel || "ce candidat"} à postuler
+            </h3>
+            <select
+              value={offreInvitation}
+              onChange={(e) => setOffreInvitation(e.target.value)}
+              className={`w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm mb-4`}
+            >
+              <option value="" disabled>Choisir une offre</option>
+              {offresActives.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInviterCandidat(null)}
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!offreInvitation || envoiInvitation}
+                onClick={handleEnvoyerInvitation}
+                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg disabled:opacity-50`}
+              >
+                {envoiInvitation ? "Envoi..." : "Envoyer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -90,6 +90,7 @@ import BottomNavRecruteur from "./Components/BottomNavRecruteur";
 
 // Layouts — chargés immédiatement (enveloppes de routes)
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
+import RecruteurLayout from "./Pages/Recruteur/RecruteurLayout";
 const AdminLayout = lazy(() => import("./Pages/Admin/AdminLayout"));
 
 // Pages Publiques — visibles sans connexion, on garde quelques-unes immédiates
@@ -118,7 +119,6 @@ const ResetPassword      = lazy(() => import("./Pages/Auth/ResetPassword"));
 
 // Portail Recruteur
 const LandingRecruteur          = lazy(() => import("./Pages/Recruteur/Portal/LandingRecruteur"));
-const PremiumPage               = lazy(() => import("./Pages/Recruteur/Portal/PremiumPage"));
 const PremiumSuccessPage        = lazy(() => import("./Pages/Recruteur/Portal/PremiumSuccessPage"));
 const ForgotPasswordRecruteur   = lazy(() => import("./Pages/Recruteur/Portal/ForgotPasswordRecruteur"));
 const AccepterInvitation = lazy(() => import("./Pages/Recruteur/AccepterInvitation"));
@@ -133,6 +133,16 @@ const Questionnaires         = lazy(() => import("./Pages/Recruteur/Questionnair
 const ParametresRecruteur    = lazy(() => import("./Pages/Recruteur/ParametresRecruteur"));
 const ReviewCandidature      = lazy(() => import("./Pages/Recruteur/ReviewCandidature"));
 const MonEquipe              = lazy(() => import("./Pages/Recruteur/MonEquipe"));
+const AbonnementsPage        = lazy(() => import("./Pages/Recruteur/AbonnementsPage"));
+const OffresListPage         = lazy(() => import("./Pages/Recruteur/OffresListPage"));
+const CandidaturesListPage   = lazy(() => import("./Pages/Recruteur/CandidaturesListPage"));
+const RecrutementsPage       = lazy(() => import("./Pages/Recruteur/RecrutementsPage"));
+const CandidatsRecommandesPage = lazy(() => import("./Pages/Recruteur/CandidatsRecommandesPage"));
+const StatistiquesPage       = lazy(() => import("./Pages/Recruteur/StatistiquesPage"));
+const EvaluationsPage        = lazy(() => import("./Pages/Recruteur/EvaluationsPage"));
+const ActiviteCompletePage   = lazy(() => import("./Pages/Recruteur/ActiviteCompletePage"));
+const EntretiensPage         = lazy(() => import("./Pages/Recruteur/EntretiensPage"));
+const FacturationPage        = lazy(() => import("./Pages/Recruteur/FacturationPage"));
 
 // Espace Candidat
 const CandidatDashboard = lazy(() => import("./Pages/Candidat/CandidatDashboard"));
@@ -143,6 +153,9 @@ const Settings          = lazy(() => import("./Pages/Candidat/Settings"));
 const AlertesEmploi     = lazy(() => import("./Pages/Candidat/AlertesEmploi"));
 const OffresSauvegardees = lazy(() => import("./Pages/Candidat/OffresSauvegardees"));
 const SuggestionsCarriere = lazy(() => import("./Pages/Candidat/SuggestionsCarriere"));
+const MesCompetences    = lazy(() => import("./Pages/Candidat/MesCompetences"));
+const MesDocuments      = lazy(() => import("./Pages/Candidat/MesDocuments"));
+const PrendreRendezVous = lazy(() => import("./Pages/Candidat/PrendreRendezVous"));
 
 // Admin
 const AdminEntreprises  = lazy(() => import("./Pages/Admin/AdminEntreprises"));
@@ -154,12 +167,16 @@ const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminMetiers      = lazy(() => import("./Pages/Admin/AdminMetiers"));
 const AdminPremium      = lazy(() => import("./Pages/Admin/AdminPremium"));
+const AdminPaliers      = lazy(() => import("./Pages/Admin/AdminPaliers"));
+const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
 const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
 const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
+const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
+const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
 const AdminCandidatures = lazy(() => import("./Pages/Admin/AdminCandidatures"));
@@ -273,20 +290,34 @@ function AppContent() {
             <Route path="/recruteurs" element={<LandingRecruteur />} />
             <Route path="/recruteurs/connexion" element={<GuestRoute portal="recruteur"><LoginRecruteur /></GuestRoute>} />
             <Route path="/recruteurs/mot-de-passe-oublie" element={<GuestRoute portal="recruteur"><ForgotPasswordRecruteur /></GuestRoute>} />
-            <Route path="/recruteurs/premium" element={<RecruteurRoute><PremiumPage /></RecruteurRoute>} />
+            {/* Ancienne page Premium — remplacée par /recruteurs/abonnements (4 paliers, paiement Chargily réel).
+                Redirection conservée pour ne pas casser d'anciens liens/favoris. */}
+            <Route path="/recruteurs/premium" element={<Navigate to="/recruteurs/abonnements" replace />} />
             <Route path="/recruteurs/premium/success" element={<RecruteurRoute><PremiumSuccessPage /></RecruteurRoute>} />
             <Route path="/invitation/equipe/:token" element={<AccepterInvitation />} />
             <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />
 
             {/* ESPACE RECRUTEUR CONNECTÉ */}
-            <Route path="/creer-offre" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard></RecruteurRoute>} />
-            <Route path="/dashboard" element={<RecruteurRoute><DashboardRecruteur /></RecruteurRoute>} />
-            <Route path="/dashboard/offres/:id" element={<RecruteurRoute><GestionOffre /></RecruteurRoute>} />
-            <Route path="/cvtheque" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard></RecruteurRoute>} />
-            <Route path="/candidatures-spontanees" element={<RecruteurRoute><CandidaturesSpontanees /></RecruteurRoute>} />
-            <Route path="/questionnaires" element={<RecruteurRoute><RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard></RecruteurRoute>} />
-            <Route path="/parametres" element={<RecruteurRoute><ParametresRecruteur /></RecruteurRoute>} />
-            <Route path="/mon-equipe" element={<RecruteurRoute><MonEquipe /></RecruteurRoute>} />
+            <Route element={<RecruteurRoute><RecruteurLayout /></RecruteurRoute>}>
+              <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard>} />
+              <Route path="/dashboard" element={<DashboardRecruteur />} />
+              <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
+              <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
+              <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
+              <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
+              <Route path="/parametres" element={<ParametresRecruteur />} />
+              <Route path="/mon-equipe" element={<MonEquipe />} />
+              <Route path="/recruteurs/abonnements" element={<AbonnementsPage />} />
+              <Route path="/offres-emploi" element={<OffresListPage />} />
+              <Route path="/candidatures" element={<CandidaturesListPage />} />
+              <Route path="/recrutements" element={<RecrutementsPage />} />
+              <Route path="/candidats-recommandes" element={<CandidatsRecommandesPage />} />
+              <Route path="/statistiques" element={<StatistiquesPage />} />
+              <Route path="/evaluations" element={<EvaluationsPage />} />
+              <Route path="/activite" element={<ActiviteCompletePage />} />
+              <Route path="/entretiens" element={<EntretiensPage />} />
+              <Route path="/facturation" element={<FacturationPage />} />
+            </Route>
 
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>
@@ -298,6 +329,9 @@ function AppContent() {
               <Route path="/suggestions-carriere" element={<SuggestionsCarriere />} />
               <Route path="/alertes" element={<AlertesEmploi />} />
               <Route path="/offres-sauvegardees" element={<OffresSauvegardees />} />
+              <Route path="/mes-competences" element={<MesCompetences />} />
+              <Route path="/mes-documents" element={<MesDocuments />} />
+              <Route path="/rendez-vous" element={<PrendreRendezVous />} />
             </Route>
             <Route path="/jobs/:id/postuler" element={<CandidatRoute><ReviewCandidature /></CandidatRoute>} />
 
@@ -313,12 +347,16 @@ function AppContent() {
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
               <Route path="/admin-taftech/premium-config" element={<AdminPremium />} />
+              <Route path="/admin-taftech/paliers" element={<AdminPaliers />} />
+              <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
               <Route path="/admin-taftech/pages" element={<AdminPages />} />
               <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
+              <Route path="/admin-taftech/rendez-vous" element={<AdminRendezVous />} />
+              <Route path="/admin-taftech/types-documents" element={<AdminTypesDocuments />} />
               <Route path="audit" element={<AdminAuditLogs />} />
               <Route path="comptes-admins" element={<AdminComptes />} />
               <Route path="erreurs-systeme" element={<AdminSystemLogs />} />

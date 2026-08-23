@@ -39,6 +39,12 @@ const FEATURES = [
     desc: "Pré-remplissage IA du formulaire de publication d'offre (Premium).",
     tokens: ["{titre}", "{specialite}", "{diplome}", "{experience}", "{contrat}", "{wilaya}"],
   },
+  {
+    key: "conseils_dashboard",
+    label: "Conseils personnalisés (tableau de bord candidat)",
+    desc: "Conseils générés par IA à partir du profil, du score et des candidatures réels du candidat.",
+    tokens: [],
+  },
 ];
 
 const AdminIAConfig = () => {

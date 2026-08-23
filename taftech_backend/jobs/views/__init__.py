@@ -37,13 +37,20 @@ from .candidatures import (
     DeleteCandidatureAPIView,
     EvaluerCandidatureAPIView,
     Top5CandidatsAPIView,
+    CandidatureMarquerConsulteeAPIView,
 )
 from .recruteur import (
     DashboardRecruteurAPIView,
+    ActiviteRecenteAPIView,
+    RecherchesSauvegardeesAPIView,
+    RapportDashboardPDFAPIView,
     UpdateProfilEntrepriseAPIView,
     EntreprisePhotosAPIView,
     ParametresRecruteurAPIView,
     CVThequeView,
+    CandidatsRecommandesAPIView,
+    StatistiquesAvanceesAPIView,
+    InviterCandidatCVThequeAPIView,
     ToggleFavoriCVAPIView,
     EnvoyerCandidatureSpontaneeAPIView,
     ListeCandidaturesSpontaneesAPIView,
@@ -54,7 +61,9 @@ from .recruteur import (
     DemanderActivationPremiumAPIView,
     EnvoyerRecuPremiumAPIView,
     ChargilyCheckoutAPIView,
+    ChargilyCheckoutPalierAPIView,
     ChargilyWebhookAPIView,
+    MonAbonnementAPIView,
     ExportCandidaturesOffreExcelAPIView,
     ExportCandidaturesExcelAPIView,
 )
@@ -105,6 +114,15 @@ from .premium_admin import (
     CompetencesAutocompleteAPIView,
     CompetencesAdminAPIView,
 )
+from .paliers_admin import (
+    PaliersPublicAPIView,
+    PaliersAdminAPIView,
+)
+from .facturation import (
+    FacturesListAPIView,
+    FacturePDFAPIView,
+    MentionsLegalesAdminAPIView,
+)
 from .articles import (
     ArticleListPublicAPIView,
     ArticleDetailPublicAPIView,
@@ -124,3 +142,20 @@ from .pages import (
     PageStatiqueAdminAPIView,
 )
 from .ai_config import AIConfigAdminAPIView
+from .candidat_dashboard import (
+    ScoreProfilAPIView,
+    ConseilsPersonnalisesIAAPIView,
+    CompetenceCandidatAPIView,
+    TypeDocumentPublicAPIView,
+    DocumentCandidatAPIView,
+    DisponibilitesAPIView,
+    RendezVousAPIView,
+    RendezVousAnnulerAPIView,
+    ActiviteProfilAPIView,
+    ConfigRendezVousAdminAPIView,
+    DisponibiliteRecurrenteAdminAPIView,
+    JourBloqueAdminAPIView,
+    RendezVousAdminListAPIView,
+    TypeDocumentAdminAPIView,
+)
+from .profils import AlerteMarquerVueAPIView

@@ -37,6 +37,9 @@ vi.mock("../src/Services/jobsService", () => ({
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
       sous_domaines: [],
     }),
+    searchCompetences: vi.fn().mockResolvedValue([]),
+    ajouterCompetence: vi.fn(),
+    supprimerCompetence: vi.fn(),
   },
 }));
 
@@ -74,6 +77,10 @@ const mockProfil = {
   ],
   formations_detail: [],
   competences: "React,Tailwind",
+  competences_detail: [
+    { id: 1, label: "React", niveau: "AVANCE", niveau_libelle: "Avancé", source: "DECLARE" },
+    { id: 2, label: "Tailwind", niveau: "INTERMEDIAIRE", niveau_libelle: "Intermédiaire", source: "DECLARE" },
+  ],
   langues: "Français:Avancé",
 };
 

@@ -8,7 +8,7 @@ from .views import (
     # Candidatures
     PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView,
     UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView,
-    EvaluerCandidatureAPIView, Top5CandidatsAPIView,
+    EvaluerCandidatureAPIView, Top5CandidatsAPIView, CandidatureMarquerConsulteeAPIView,
 
     # Profil candidat
     ProfilCandidatAPIView, ExperienceAPIView, ExperienceDetailAPIView,
@@ -20,12 +20,13 @@ from .views import (
 
     # Recruteur
     DashboardRecruteurAPIView, UpdateProfilEntrepriseAPIView, EntreprisePhotosAPIView,
-    ParametresRecruteurAPIView, CVThequeView, ToggleFavoriCVAPIView,
+    ParametresRecruteurAPIView, CVThequeView, ToggleFavoriCVAPIView, CandidatsRecommandesAPIView, StatistiquesAvanceesAPIView,
+    InviterCandidatCVThequeAPIView, ActiviteRecenteAPIView, RecherchesSauvegardeesAPIView, RapportDashboardPDFAPIView,
     EnvoyerCandidatureSpontaneeAPIView, ListeCandidaturesSpontaneesAPIView,
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
-    ChargilyCheckoutAPIView, ChargilyWebhookAPIView,
+    ChargilyCheckoutAPIView, ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
@@ -54,6 +55,8 @@ from .views import (
     # Premium (plans/avantages)
     PremiumPlansPublicAPIView, PremiumAvantagesPublicAPIView,
     PremiumPlansAdminAPIView, PremiumAvantagesAdminAPIView,
+    PaliersPublicAPIView, PaliersAdminAPIView,
+    FacturesListAPIView, FacturePDFAPIView, MentionsLegalesAdminAPIView,
 
     # FAQ
     FaqPublicAPIView, FaqAdminAPIView,
@@ -74,6 +77,14 @@ from .views import (
 
     # Config IA
     AIConfigAdminAPIView,
+
+    # Nouveau tableau de bord candidat (specs/important-features)
+    ScoreProfilAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
+    TypeDocumentPublicAPIView, DocumentCandidatAPIView,
+    DisponibilitesAPIView, RendezVousAPIView, RendezVousAnnulerAPIView,
+    ActiviteProfilAPIView, AlerteMarquerVueAPIView,
+    ConfigRendezVousAdminAPIView, DisponibiliteRecurrenteAdminAPIView,
+    JourBloqueAdminAPIView, RendezVousAdminListAPIView, TypeDocumentAdminAPIView,
 )
 
 urlpatterns = [
@@ -99,6 +110,7 @@ urlpatterns = [
     path('candidatures/<int:candidature_id>/analyse-groq/', AnalyseGroqRecruteurAPIView.as_view(), name='analyse-groq'),
     path('ia/generer-offre/', GenererOffreIAAPIView.as_view(), name='generer-offre-ia'),
     path('jobs/<int:offre_id>/top5/', Top5CandidatsAPIView.as_view(), name='offre-top5'),
+    path('candidatures/<int:candidature_id>/marquer-consultee/', CandidatureMarquerConsulteeAPIView.as_view(), name='candidature-marquer-consultee'),
 
     # Profil candidat
     path('profil/', ProfilCandidatAPIView.as_view(), name='profil-candidat'),
@@ -110,6 +122,7 @@ urlpatterns = [
     path('sauvegardes/<int:pk>/', OffreSauvegardeeDeleteAPIView.as_view(), name='supprimer-sauvegarde'),
     path('alertes/', AlerteEmploiListCreateAPIView.as_view(), name='liste-alertes'),
     path('alertes/<int:pk>/', AlerteEmploiDetailAPIView.as_view(), name='detail-alerte'),
+    path('alertes/<int:pk>/marquer-vue/', AlerteMarquerVueAPIView.as_view(), name='alerte-marquer-vue'),
     path('parametres/notifications/', ParametresNotificationsAPIView.as_view(), name='parametres-notifications'),
     path('media-prive/candidat/<int:candidat_id>/<str:type_fichier>/', CandidatFichierPriveAPIView.as_view(), name='candidat-fichier-prive'),
 
@@ -120,7 +133,14 @@ urlpatterns = [
     path('entreprise/photos/<int:photo_id>/', EntreprisePhotosAPIView.as_view(), name='entreprise-photo-delete'),
     path('parametres/recruteur/', ParametresRecruteurAPIView.as_view(), name='parametres-recruteur'),
     path('employeur/cvtheque/', CVThequeView.as_view(), name='cvtheque'),
+    path('dashboard/candidats-recommandes/', CandidatsRecommandesAPIView.as_view(), name='candidats-recommandes'),
+    path('dashboard/statistiques-avancees/', StatistiquesAvanceesAPIView.as_view(), name='statistiques-avancees'),
+    path('dashboard/activite-recente/', ActiviteRecenteAPIView.as_view(), name='dashboard-activite-recente'),
+    path('dashboard/rapport-pdf/', RapportDashboardPDFAPIView.as_view(), name='dashboard-rapport-pdf'),
     path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-favori'),
+    path('cvtheque/inviter/', InviterCandidatCVThequeAPIView.as_view(), name='cvtheque-inviter'),
+    path('cvtheque/recherches-sauvegardees/', RecherchesSauvegardeesAPIView.as_view(), name='recherches-sauvegardees'),
+    path('cvtheque/recherches-sauvegardees/<int:pk>/', RecherchesSauvegardeesAPIView.as_view(), name='recherche-sauvegardee-detail'),
     path('entreprises/<slug:slug>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view(), name='candidature-spontanee'),
     path('dashboard/candidatures-spontanees/', ListeCandidaturesSpontaneesAPIView.as_view(), name='liste-spontanees'),
     path('dashboard/candidatures-spontanees/<int:pk>/lire/', MarquerSpontaneeLueAPIView.as_view(), name='spontanee-lire'),
@@ -154,6 +174,8 @@ urlpatterns = [
     path('premium/envoyer-recu/', EnvoyerRecuPremiumAPIView.as_view(), name='envoyer-recu-premium'),
     # Chargily Pay — paiement en ligne
     path('premium/chargily/checkout/', ChargilyCheckoutAPIView.as_view(), name='chargily-checkout'),
+    path('paliers/chargily/checkout/', ChargilyCheckoutPalierAPIView.as_view(), name='chargily-checkout-palier'),
+    path('paliers/mon-abonnement/', MonAbonnementAPIView.as_view(), name='mon-abonnement'),
     path('premium/chargily/webhook/', ChargilyWebhookAPIView.as_view(), name='chargily-webhook'),
     # Équipe
     path('equipe/', EquipeAPIView.as_view(), name='equipe-list'),
@@ -176,6 +198,12 @@ urlpatterns = [
     path('admin/premium/avantages/<int:pk>/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantage-detail'),
     path('premium/plans/', PremiumPlansPublicAPIView.as_view(), name='premium-plans-public'),
     path('premium/avantages/', PremiumAvantagesPublicAPIView.as_view(), name='premium-avantages-public'),
+    path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),
+    path('admin/paliers/<int:pk>/', PaliersAdminAPIView.as_view(), name='admin-palier-detail'),
+    path('paliers/', PaliersPublicAPIView.as_view(), name='paliers-public'),
+    path('factures/', FacturesListAPIView.as_view(), name='factures-list'),
+    path('factures/<int:paiement_id>/pdf/', FacturePDFAPIView.as_view(), name='facture-pdf'),
+    path('admin/mentions-legales/', MentionsLegalesAdminAPIView.as_view(), name='admin-mentions-legales'),
     path('admin/faq/', FaqAdminAPIView.as_view(), name='admin-faq'),
     path('admin/faq/<int:pk>/', FaqAdminAPIView.as_view(), name='admin-faq-detail'),
     path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),
@@ -199,6 +227,26 @@ urlpatterns = [
     path('admin/pages/<int:pk>/', PageStatiqueAdminAPIView.as_view(), name='admin-page-detail'),
     path('pages/<slug:slug>/', PageStatiquePublicAPIView.as_view(), name='page-statique-public'),
     path('admin/ai-config/', AIConfigAdminAPIView.as_view(), name='admin-ai-config'),
+
+    # Nouveau tableau de bord candidat
+    path('score-profil/', ScoreProfilAPIView.as_view(), name='score-profil'),
+    path('conseils-personnalises/', ConseilsPersonnalisesIAAPIView.as_view(), name='conseils-personnalises'),
+    path('mes-competences/', CompetenceCandidatAPIView.as_view(), name='mes-competences'),
+    path('types-documents/', TypeDocumentPublicAPIView.as_view(), name='types-documents-public'),
+    path('mes-documents/', DocumentCandidatAPIView.as_view(), name='mes-documents'),
+    path('rendez-vous/disponibilites/', DisponibilitesAPIView.as_view(), name='rdv-disponibilites'),
+    path('rendez-vous/', RendezVousAPIView.as_view(), name='rendez-vous'),
+    path('rendez-vous/<int:pk>/annuler/', RendezVousAnnulerAPIView.as_view(), name='rdv-annuler'),
+    path('activite-profil/', ActiviteProfilAPIView.as_view(), name='activite-profil'),
+    path('admin/rendez-vous/config/', ConfigRendezVousAdminAPIView.as_view(), name='admin-rdv-config'),
+    path('admin/rendez-vous/disponibilites/', DisponibiliteRecurrenteAdminAPIView.as_view(), name='admin-rdv-disponibilites'),
+    path('admin/rendez-vous/disponibilites/<int:pk>/', DisponibiliteRecurrenteAdminAPIView.as_view(), name='admin-rdv-disponibilite-detail'),
+    path('admin/rendez-vous/jours-bloques/', JourBloqueAdminAPIView.as_view(), name='admin-rdv-jours-bloques'),
+    path('admin/rendez-vous/jours-bloques/<int:pk>/', JourBloqueAdminAPIView.as_view(), name='admin-rdv-jour-bloque-detail'),
+    path('admin/rendez-vous/', RendezVousAdminListAPIView.as_view(), name='admin-rendez-vous'),
+    path('admin/rendez-vous/<int:pk>/', RendezVousAdminListAPIView.as_view(), name='admin-rendez-vous-detail'),
+    path('admin/types-documents/', TypeDocumentAdminAPIView.as_view(), name='admin-types-documents'),
+    path('admin/types-documents/<int:pk>/', TypeDocumentAdminAPIView.as_view(), name='admin-type-document-detail'),
 
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),

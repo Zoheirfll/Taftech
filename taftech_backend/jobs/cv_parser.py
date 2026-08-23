@@ -876,6 +876,7 @@ Si vraiment aucun ne correspond : "".
 - nom_complet : nom + prénom du candidat (ex: "FILALI Zoheir"), PAS son titre professionnel. Si absent : null.
 - telephone : tous les chiffres, format brut. Si absent : null.
 - competences : TOUTES les compétences techniques (langages, outils, logiciels, soft skills), séparées par virgules. Si absent : null.
+- competences_niveaux : pour CHAQUE compétence listée ci-dessus, estime un niveau de maîtrise d'après le contexte du CV (ancienneté, nombre de mentions, poste occupé, mots comme "maîtrise"/"notions"/"expert"). Format "Compétence:Niveau" séparés par virgules, niveau parmi EXACTEMENT : "Débutant", "Intermédiaire", "Avancé", "Confirmé". Si le contexte ne permet vraiment aucune estimation : "Intermédiaire" par défaut. Si absent : null.
 - langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
 - linkedin : URL complète du profil LinkedIn si présente. Sinon null.
 - github : URL complète du profil GitHub si présente. Sinon null.
@@ -893,6 +894,7 @@ FORMAT EXIGÉ (JSON strict, un seul objet) :
   "nom_complet": "string ou null",
   "telephone": "string ou null",
   "competences": "string ou null",
+  "competences_niveaux": "string ou null",
   "langues": "string ou null",
   "linkedin": "string ou null",
   "github": "string ou null",
@@ -985,6 +987,27 @@ def _domaines_list_pour_prompt():
     return domaines_list_pour_prompt()
 
 
+_NIVEAU_LABEL_VERS_CODE = {
+    'débutant': 'DEBUTANT', 'intermédiaire': 'INTERMEDIAIRE', 'avancé': 'AVANCE', 'confirmé': 'CONFIRME',
+}
+
+
+def _parser_niveaux_competences(brut):
+    """Convertit "Compétence:Niveau, Compétence:Niveau" (sortie Groq) en dict {label: code
+    NIVEAU_CHOICES de CompetenceCandidat} — même format texte que les langues, code aligné
+    sur jobs.models.CompetenceCandidat.NIVEAU_CHOICES."""
+    resultat = {}
+    for item in brut.split(','):
+        item = item.strip()
+        if ':' not in item:
+            continue
+        label, niveau = item.split(':', 1)
+        label, niveau = label.strip(), niveau.strip().lower()
+        if label:
+            resultat[label] = _NIVEAU_LABEL_VERS_CODE.get(niveau, 'INTERMEDIAIRE')
+    return resultat
+
+
 def parse_with_groq(text):
     """
     Appelle Groq UNE SEULE FOIS pour tout extraire (titre, expériences, formations, infos perso).
@@ -1003,6 +1026,7 @@ def parse_with_groq(text):
         "nom_complet": None,
         "telephone": None,
         "competences": None,
+        "competences_niveaux": {},
         "langues": None,
         "linkedin": None,
         "github": None,
@@ -1050,6 +1074,8 @@ def parse_with_groq(text):
         result["telephone"] = tel
     if infos.get("competences"):
         result["competences"] = str(infos["competences"]).strip()
+    if infos.get("competences_niveaux"):
+        result["competences_niveaux"] = _parser_niveaux_competences(str(infos["competences_niveaux"]))
     if infos.get("langues"):
         result["langues"] = str(infos["langues"]).strip()
 
@@ -1132,6 +1158,7 @@ def parse_cv(file_path, file_name):
     else:
         result["competences"] = extract_competences(sections.get('competences', ''))
         methods_used.append("comp:regex")
+    result["competences_niveaux"] = (ai_data or {}).get("competences_niveaux") or {}
 
     # Langues
     if ai_data and ai_data.get("langues"):

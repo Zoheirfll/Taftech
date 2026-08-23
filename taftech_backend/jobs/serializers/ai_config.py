@@ -11,5 +11,6 @@ class AIConfigSerializer(serializers.ModelSerializer):
             'analyse_carriere_actif', 'analyse_carriere_max_tokens', 'analyse_carriere_prompt',
             'analyse_recruteur_actif', 'analyse_recruteur_max_tokens', 'analyse_recruteur_prompt',
             'generation_offre_actif', 'generation_offre_max_tokens', 'generation_offre_prompt',
+            'conseils_dashboard_actif', 'conseils_dashboard_max_tokens', 'conseils_dashboard_prompt',
             'date_modification',
         ]

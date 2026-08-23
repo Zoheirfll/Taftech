@@ -15,6 +15,7 @@ User = get_user_model()
 def make_entreprise(username, est_premium=False, palier_nom=None, expire_dans_jours=None):
     user = User.objects.create_user(
         username=username, email=f"{username}@test.dz", password="pwd", role="RECRUTEUR",
+        consentement_cvtheque=True,
     )
     entreprise = ProfilEntreprise.objects.create(
         user=user, nom_entreprise=f"Co-{username}", secteur_activite="IT",
@@ -68,7 +69,7 @@ class LimiteOffresPublicationAPITest(APITestCase):
     def _offre_payload(self):
         return {
             "titre": "Dev Test", "wilaya": "16 - Alger", "specialite": "IT",
-            "diplome": "MASTER", "experience_requise": "1", "type_contrat": "CDI",
+            "diplome": "MASTER_2", "experience_requise": "CONFIRME", "type_contrat": "CDI",
             "description": "desc", "missions": "m", "profil_recherche": "p",
         }
 

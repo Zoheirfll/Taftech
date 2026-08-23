@@ -342,7 +342,10 @@ class InviterMembreTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@inv.dz", "owner_inv")
-        self.entreprise = _make_entreprise(self.owner, nom="InvCorp", rc="RC_INV")
+        # premium=True → repli legacy vers le palier BUSINESS (acces_equipe=True), voir
+        # jobs/paliers_utils.py::get_palier_actif — InviterMembreAPIView est gatée Business+
+        # depuis la Phase 2b (session 22-23/08/2026).
+        self.entreprise = _make_entreprise(self.owner, nom="InvCorp", rc="RC_INV", premium=True)
 
         # Un utilisateur UTILISATEUR (sans droit d'invitation)
         self.util = _make_recruteur("util@inv.dz", "util_inv")

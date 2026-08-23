@@ -53,7 +53,7 @@ Les fonctionnalités avancées de l'ancien `DashboardRecruteur.jsx` (toggle cour
 
 ### Mes offres d'emploi actives (table)
 
-`titre`, `candidatures` (count), `entretiens` (count statut=ENTRETIEN), `date_publication`, `statut` (badge Actif/Clôturée), lien "..." vers `GestionOffre`. Réutilise `dash.offres` déjà chargé, pas de nouvel endpoint. Tri par `date_publication` desc, limité aux 5-8 premières + lien "Voir toutes" vers `/dashboard/offres` (page déjà construite en Phase 2b).
+`titre`, `candidatures` (count), `entretiens` (count statut=ENTRETIEN), `date_publication`, `statut` (badge Actif/Clôturée), bouton "..." → menu dropdown actions rapides (Voir les candidatures → `GestionOffre`, Modifier → modale déjà existante dans l'ancien dashboard, Clôturer → `CloturerOffreAPIView` déjà existant, réutilisés tels quels — pas de nouvelle logique métier, juste le regroupement dans un menu compact au lieu de boutons séparés). Réutilise `dash.offres` déjà chargé, pas de nouvel endpoint. Tri par `date_publication` desc, limité aux 5-8 premières + lien "Voir toutes" vers `/dashboard/offres` (page déjà construite en Phase 2b).
 
 ### Sources des candidatures (donut)
 
@@ -62,6 +62,10 @@ Consomme `Candidature.source` (sous-projet 1). 3 tranches réelles : Site TafTec
 ### Candidats recommandés par IA
 
 Réutilise `CandidatsRecommandesAPIView` existant (Phase 2b), top 3 affichés dans la colonne latérale (au lieu de la page dédiée qui en montre 12/page), carte compacte (avatar, nom, poste, %, wilaya, 2-3 tags compétences), lien "Voir tout" vers `/dashboard/candidats-recommandes`. Gate `acces_ia_recommandes` (Pro+) déjà en place côté API — si palier insuffisant, widget affiche un état verrouillé avec CTA vers Abonnements (pas caché silencieusement).
+
+Deux icônes d'action par carte (mockup) :
+- **Message** : ouvre la même modale "Inviter à postuler" que dans la CVthèque (sous-projet 1, `InviterCandidatCVThequeAPIView`) — select d'une offre active de l'entreprise, réutilise le même composant modale que `CVTheque.jsx` (extrait en composant partagé `Components/InviterCandidatModal.jsx` pour éviter la duplication entre les deux écrans). Même gate `acces_coordonnees` (Pro+).
+- **Bookmark** : ajoute/retire le candidat des favoris — endpoint favoris déjà existant (`ProfilCandidatFavori`, utilisé par `CVTheque.jsx`), même appel `jobsService.toggleFavori(candidatId)` réutilisé tel quel.
 
 ### Activité récente
 
@@ -89,7 +93,9 @@ Nouveau champ `CustomUser.intitule_poste` (`CharField`, `blank=True`, max 100 �
 
 ### Générez vos offres avec l'IA (CTA)
 
-Carte statique, bouton "Générer avec l'IA" → `navigate("/creer-offre")` (le formulaire `CreateJob.jsx` gère déjà la génération IA). Gate visuel : si palier absent (Gratuit), bouton désactivé + tooltip "Nécessite un abonnement actif" (cohérent avec `GenererOffreIAAPIView` qui exige déjà un palier actif, Phase 2b).
+Carte avec **champ de saisie inline** (placeholder "Ex: Ingénieur qualité avec 5 ans d'expérience") + bouton "Générer avec l'IA". Le recruteur tape un intitulé de poste directement dans le dashboard ; au clic, `navigate("/creer-offre?titre=" + encodeURIComponent(valeur))`. `CreateJob.jsx` : nouveau `useEffect` au montage qui lit `?titre=` (`useSearchParams`), pré-remplit le champ titre, et **lance automatiquement la génération IA** si le champ est présent et non vide (appelle le même handler que le bouton "Générer avec l'IA" existant, une seule fois) — pas de duplication de la logique de génération, le dashboard ne fait que transmettre l'intitulé. Champ vide au clic → navigue simplement vers `/creer-offre` sans déclenchement auto (comportement actuel inchangé). Lien "En savoir plus" sous le bouton → ancre vers la section pertinente de `/contact` (FAQ) ou `/qui-sommes-nous`, pas de nouvelle page.
+
+Gate visuel : si palier absent (Gratuit), champ + bouton désactivés + tooltip "Nécessite un abonnement actif" (cohérent avec `GenererOffreIAAPIView` qui exige déjà un palier actif, Phase 2b).
 
 ### Besoin d'aide
 

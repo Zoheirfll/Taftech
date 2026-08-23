@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import Select from "react-select";
@@ -45,6 +45,7 @@ const textareaClass = `w-full px-4 py-3 rounded-lg text-sm transition-colors res
 
 const CreateJob = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [iaLoading, setIaLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
@@ -95,6 +96,15 @@ const CreateJob = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const titreQuery = searchParams.get("titre");
+    if (titreQuery) {
+      setFormData((prev) => ({ ...prev, titre: titreQuery }));
+      handleGenererIA(titreQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleTitreChange = async (value) => {
     setFormData({ ...formData, titre: value });
     if (value.length >= 2) {
@@ -124,8 +134,9 @@ const CreateJob = () => {
       .map((c) => ({ value: c.commune_name_ascii, label: c.commune_name_ascii }));
   };
 
-  const handleGenererIA = async () => {
-    if (!formData.titre) {
+  const handleGenererIA = async (titreOverride) => {
+    const titrePourGeneration = titreOverride || formData.titre;
+    if (!titrePourGeneration) {
       toast.error("Saisissez au moins le titre du poste avant de générer.");
       return;
     }
@@ -133,7 +144,7 @@ const CreateJob = () => {
     const toastId = toast.loading("L'IA génère le contenu de votre offre...");
     try {
       const result = await iaService.genererOffreIA({
-        titre: formData.titre,
+        titre: titrePourGeneration,
         specialite: formData.specialite,
         diplome: formData.diplome,
         wilaya: formData.wilaya,

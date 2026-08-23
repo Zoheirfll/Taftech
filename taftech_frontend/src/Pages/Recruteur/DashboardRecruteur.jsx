@@ -34,10 +34,19 @@ import {
   BarChart3,
   History,
   Percent,
+  Calendar,
+  FileDown,
+  Send,
+  Bookmark,
+  Activity,
+  LifeBuoy,
+  Mail,
+  GraduationCap,
 } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import MiniAreaChart from "../../Components/MiniAreaChart";
+import FunnelChart from "../../Components/FunnelChart";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
 
 // ─── Constantes grille ────────────────────────────────────────────────────────
@@ -106,11 +115,32 @@ const DashboardRecruteur = () => {
   const [showComparaison, setShowComparaison] = useState(false);
   const [showConversion, setShowConversion] = useState(false);
 
+  // Période globale + KPIs comparatifs
+  const [dateDebut, setDateDebut] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [dateFin, setDateFin] = useState(() => new Date().toISOString().slice(0, 10));
+  const [kpis, setKpis] = useState(null);
+  const [palierActif, setPalierActif] = useState(null);
+
+  // Activité récente + recherches sauvegardées
+  const [activite, setActivite] = useState([]);
+  const [recherches, setRecherches] = useState([]);
+
+  // Mini-recherche CVthèque + CTA IA
+  const [rechercheMotsCles, setRechercheMotsCles] = useState("");
+  const [titreIA, setTitreIA] = useState("");
+
+  // Sources des candidatures — période indépendante
+  const [periodeSources, setPeriodeSources] = useState("30j");
+
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const [dashData, constData] = await Promise.all([
-          jobsService.getDashboard(),
+          jobsService.getDashboard(dateDebut, dateFin),
           jobsService.getConstants(),
         ]);
         setConstants(constData);
@@ -118,6 +148,8 @@ const DashboardRecruteur = () => {
         setOffres(dashData.offres);
         setIsPremium(dashData.est_premium || false);
         setPremiumExpire(dashData.premium_expire_at || null);
+        setKpis(dashData.kpis || null);
+        setPalierActif(dashData.palier_actif || null);
       } catch (err) {
         if (err.response?.data?.code === "PREMIUM_EXPIRE") {
           setError("PREMIUM_EXPIRE");
@@ -132,7 +164,36 @@ const DashboardRecruteur = () => {
       }
     };
     fetchDashboard();
-  }, [navigate]);
+  }, [navigate, dateDebut, dateFin]);
+
+  useEffect(() => {
+    jobsService.getActiviteRecente().then(setActivite).catch(() => {});
+    jobsService.getRecherchesSauvegardees().then(setRecherches).catch(() => {});
+  }, []);
+
+  const handleTelechargerRapport = async () => {
+    try {
+      await jobsService.telechargerRapportDashboard(dateDebut, dateFin);
+    } catch (err) {
+      toast.error("Erreur lors du téléchargement du rapport.");
+    }
+  };
+
+  const handleRechercheCVTheque = () => {
+    const params = new URLSearchParams();
+    if (rechercheMotsCles) params.set("search", rechercheMotsCles);
+    navigate(`/cvtheque?${params.toString()}`);
+  };
+
+  const handleAppliquerRecherche = (recherche) => {
+    const params = new URLSearchParams(recherche.filtres || {});
+    navigate(`/cvtheque?${params.toString()}`);
+  };
+
+  const handleGenererOffreIA = () => {
+    const params = titreIA ? `?titre=${encodeURIComponent(titreIA)}` : "";
+    navigate(`/creer-offre${params}`);
+  };
 
   const handleOuvrirModification = (offre) => {
     setOffreAModifier(offre);
@@ -210,6 +271,36 @@ const DashboardRecruteur = () => {
     } finally {
       setChangingStatutId(null);
       setStatutMenuOuvertId(null);
+    }
+  };
+
+  const handleToggleFavoriRecommande = async (candidatUserId) => {
+    if (!candidatUserId) return;
+    try {
+      await jobsService.toggleFavoriCV(candidatUserId);
+      toast.success("Favoris mis à jour.");
+    } catch (err) {
+      toast.error("Erreur lors de la mise à jour des favoris.");
+      reportError("ECHEC_TOGGLE_FAVORI_DASHBOARD", err);
+    }
+  };
+
+  const [inviterCandidat, setInviterCandidat] = useState(null);
+  const [offreInvitation, setOffreInvitation] = useState("");
+  const [envoiInvitation, setEnvoiInvitation] = useState(false);
+
+  const handleEnvoyerInvitation = async () => {
+    if (!offreInvitation || !inviterCandidat) return;
+    setEnvoiInvitation(true);
+    try {
+      await jobsService.inviterCandidatCVTheque(inviterCandidat.candidat?.id, offreInvitation);
+      toast.success("Invitation envoyée !");
+      setInviterCandidat(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      reportError("ECHEC_INVITER_CANDIDAT_DASHBOARD", err);
+    } finally {
+      setEnvoiInvitation(false);
     }
   };
 
@@ -336,6 +427,44 @@ const DashboardRecruteur = () => {
   })();
   const pipelineTotal = Object.values(pipelineCounts).reduce((a, b) => a + b, 0);
   const pipelineMax = Math.max(1, ...Object.values(pipelineCounts));
+
+  // ─── Funnel 4 étapes (Candidatures reçues → Présélection → Entretiens → Recrutements) ──
+  const funnelEtapes = (() => {
+    const candidatures = offresPourAnalyse.flatMap((o) => o.candidatures || []);
+    const total = candidatures.length || 1;
+    const presel = candidatures.filter((c) => ["PRESELECTION", "ENTRETIEN", "RETENU", "REFUSE"].includes(c.statut)).length;
+    const entretien = candidatures.filter((c) => ["ENTRETIEN", "RETENU"].includes(c.statut)).length;
+    const retenu = candidatures.filter((c) => c.statut === "RETENU").length;
+    return [
+      { label: "Candidatures reçues", count: candidatures.length, pct: 100, couleur: "#4f46e5" },
+      { label: "Présélection", count: presel, pct: Math.round((presel / total) * 100), couleur: "#6366f1" },
+      { label: "Entretiens", count: entretien, pct: Math.round((entretien / total) * 100), couleur: "#0ea5e9" },
+      { label: "Recrutements", count: retenu, pct: Math.round((retenu / total) * 100), couleur: "#10b981" },
+    ];
+  })();
+
+  // ─── Sources des candidatures (donut, période indépendante) ─────────────────
+  const sourcesDonut = (() => {
+    const joursParPeriode = { "7j": 7, "30j": 30, "6m": 180, "1a": 365 };
+    const seuil = new Date();
+    seuil.setDate(seuil.getDate() - (joursParPeriode[periodeSources] || 30));
+    const candidatures = offres.flatMap((o) => o.candidatures || []).filter((c) => {
+      if (!c.date_postulation) return false;
+      return new Date(c.date_postulation) >= seuil;
+    });
+    const counts = { SITE: 0, CVTHEQUE: 0, AUTRE: 0 };
+    candidatures.forEach((c) => {
+      const src = c.source || "SITE";
+      if (counts[src] !== undefined) counts[src]++;
+      else counts.AUTRE++;
+    });
+    const total = candidatures.length || 1;
+    return [
+      { key: "SITE", label: "Site TafTech", count: counts.SITE, pct: Math.round((counts.SITE / total) * 100), couleur: "#4f46e5" },
+      { key: "CVTHEQUE", label: "CVthèque", count: counts.CVTHEQUE, pct: Math.round((counts.CVTHEQUE / total) * 100), couleur: "#0ea5e9" },
+      { key: "AUTRE", label: "Autres", count: counts.AUTRE, pct: Math.round((counts.AUTRE / total) * 100), couleur: "#94a3b8" },
+    ];
+  })();
 
   // ─── Candidats recommandés : meilleurs scores, filtrables par offre/statut ──
   const candidatsRecommandesTous = (() => {
@@ -499,6 +628,65 @@ const DashboardRecruteur = () => {
         </div>
       </div>
 
+      {/* ── SÉLECTEUR DE PÉRIODE + KPIs + RAPPORT ──────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar size={14} className={tw.textMuted} />
+          <input
+            type="date"
+            value={dateDebut}
+            onChange={(e) => setDateDebut(e.target.value)}
+            className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+          />
+          <span className={`text-xs ${tw.textMuted}`}>→</span>
+          <input
+            type="date"
+            value={dateFin}
+            onChange={(e) => setDateFin(e.target.value)}
+            className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleTelechargerRapport}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-xs font-semibold rounded-lg transition-colors ${tw.surface} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
+        >
+          <FileDown size={14} /> Télécharger le rapport
+        </button>
+      </div>
+
+      {kpis && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+          {[
+            { cle: "offres_actives", label: "Offres actives", icon: Building2 },
+            { cle: "candidatures_recues", label: "Candidatures reçues", icon: Users },
+            { cle: "candidats_entretien", label: "Candidats en entretien", icon: Calendar },
+            { cle: "recrutements", label: "Recrutements", icon: CheckCircle },
+            { cle: "taux_conversion", label: "Taux de conversion", icon: TrendingUp, suffixe: "%" },
+          ].map(({ cle, label, icon: Icon, suffixe }) => {
+            const kpi = kpis[cle];
+            if (!kpi) return null;
+            const variation = kpi.variation_pct;
+            return (
+              <div key={cle} className={`${tw.cardColors} rounded-2xl p-4`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-xs ${tw.textMuted}`}>{label}</p>
+                    <p className={`text-2xl font-bold ${tw.textStrong}`}>{kpi.valeur}{suffixe || ""}</p>
+                    {variation !== null && variation !== undefined && (
+                      <p className={`text-xs font-medium ${variation >= 0 ? tw.scoreTextSuccess : tw.textRed400}`}>
+                        {variation >= 0 ? "↗" : "↘"} {Math.abs(variation)}% vs période précédente
+                      </p>
+                    )}
+                  </div>
+                  <Icon size={18} className={tw.textMuted} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── GRAPHIQUES ─────────────────────────────────────────────────────── */}
       {offres.length > 0 && (
         <>
@@ -589,6 +777,9 @@ const DashboardRecruteur = () => {
               <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
                 <GitBranch size={15} className={tw.textTeal} /> Pipeline de recrutement
               </h2>
+              <div className="flex justify-center mb-4">
+                <FunnelChart etapes={funnelEtapes} />
+              </div>
               <div className="space-y-2.5">
                 {PIPELINE_STAGES.map((stage) => {
                   const count = pipelineCounts[stage.key];
@@ -670,6 +861,25 @@ const DashboardRecruteur = () => {
                       {score}%
                     </span>
                   </button>
+
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
+                      title="Inviter à postuler"
+                      className={`p-1.5 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                    >
+                      <Send size={13} className={tw.iconMuted} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
+                      title="Ajouter aux favoris"
+                      className={`p-1.5 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                    >
+                      <Bookmark size={13} className={tw.iconMuted} />
+                    </button>
+                  </div>
 
                   {pointsForts.length > 0 && (
                     <div className="mt-2">
@@ -790,6 +1000,137 @@ const DashboardRecruteur = () => {
           )}
         </div>
       )}
+
+      {/* ── SOURCES DES CANDIDATURES + ACTIVITÉ RÉCENTE ────────────────────── */}
+      {offres.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+          <div className={`${tw.cardColors} rounded-2xl p-5`}>
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+              <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+                Sources des candidatures
+              </h2>
+              <select
+                value={periodeSources}
+                onChange={(e) => setPeriodeSources(e.target.value)}
+                className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5`}
+              >
+                {PERIODES_EVOLUTION.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2.5">
+              {sourcesDonut.map((s) => (
+                <div key={s.key} className="flex items-center gap-3">
+                  <span className={`text-xs w-24 shrink-0 ${tw.textMuted700}`}>{s.label}</span>
+                  <div className={`flex-1 h-2.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.pct}%`, backgroundColor: s.couleur }} />
+                  </div>
+                  <span className={`text-xs font-bold w-8 text-right shrink-0 ${tw.textStrong}`}>{s.count}</span>
+                  <span className={`text-[10px] w-9 text-right shrink-0 ${tw.textMuted}`}>{s.count > 0 ? `${s.pct}%` : ""}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${tw.cardColors} rounded-2xl p-5`}>
+            <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+              <Activity size={15} className={tw.textTeal} /> Activité récente
+            </h2>
+            {activite.length === 0 ? (
+              <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {activite.map((a) => (
+                  <li key={a.id} className={`text-xs ${tw.textMuted700}`}>
+                    {a.phrase}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── RECHERCHE CVTHÈQUE + GÉNÉRER OFFRE IA + BESOIN D'AIDE ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={`text-sm font-bold ${tw.textStrong}`}>Recherche avancée dans la CVthèque</h2>
+            {recherches.length > 0 && (
+              <div className="relative group">
+                <button type="button" className={`text-xs font-semibold ${tw.textTeal}`}>Recherche enregistrée</button>
+                <div className={`absolute right-0 top-full mt-1 hidden group-hover:block ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]`}>
+                  {recherches.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => handleAppliquerRecherche(r)}
+                      className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50"
+                    >
+                      {r.nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <input
+            type="text"
+            value={rechercheMotsCles}
+            onChange={(e) => setRechercheMotsCles(e.target.value)}
+            placeholder="Mots-clés (compétence, métier...)"
+            className={`w-full px-3 py-2 rounded-lg text-sm mb-3 ${tw.inputColorsWhite}`}
+          />
+          <button
+            type="button"
+            onClick={handleRechercheCVTheque}
+            className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors ${tw.bgTealSolid}`}
+          >
+            Rechercher
+          </button>
+        </div>
+
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <h2 className={`text-sm font-bold ${tw.textStrong} mb-1`}>Générez vos offres avec l'IA</h2>
+          <p className={`text-xs mb-3 ${tw.textMuted}`}>Créez une offre complète en quelques secondes.</p>
+          <input
+            type="text"
+            value={titreIA}
+            onChange={(e) => setTitreIA(e.target.value)}
+            placeholder="Ex: Ingénieur qualité avec 5 ans d'expérience"
+            disabled={!palierActif}
+            className={`w-full px-3 py-2 rounded-lg text-sm mb-3 ${tw.inputColorsWhite} disabled:opacity-50`}
+          />
+          <button
+            type="button"
+            onClick={handleGenererOffreIA}
+            disabled={!palierActif}
+            className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors ${tw.bgTealSolid} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={!palierActif ? "Nécessite un abonnement actif" : ""}
+          >
+            Générer avec l'IA
+          </button>
+          <Link to="/contact" className={`block text-center text-xs mt-2 ${tw.textTeal}`}>En savoir plus</Link>
+        </div>
+
+        <div className={`${tw.cardColors} rounded-2xl p-5`}>
+          <h2 className={`text-sm font-bold ${tw.textStrong} mb-3 flex items-center gap-2`}>
+            <LifeBuoy size={15} className={tw.textTeal} /> Besoin d'aide ?
+          </h2>
+          <div className="space-y-2.5">
+            <Link to="/contact" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <LifeBuoy size={13} /> Centre d'aide
+            </Link>
+            <a href="mailto:taftech963@gmail.com" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <Mail size={13} /> Contacter un conseiller
+            </a>
+            <Link to="/pages/formation-recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <GraduationCap size={13} /> Formation recruteur
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* ── ONGLETS principaux ─────────────────────────────────────────────── */}
       <div className={`flex gap-1 border-b ${tw.borderBase} mb-5`}>
@@ -1174,6 +1515,43 @@ const DashboardRecruteur = () => {
                 <button onClick={() => setShowModifierModal(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">Annuler</button>
                 <button onClick={handleSauvegarderModification} className="flex-1 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors">Soumettre pour revalidation</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inviterCandidat && (
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className={`${tw.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-4`}>
+              Inviter {inviterCandidat.candidat?.first_name || "ce candidat"} à postuler
+            </h3>
+            <select
+              value={offreInvitation}
+              onChange={(e) => setOffreInvitation(e.target.value)}
+              className={`w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm mb-4`}
+            >
+              <option value="" disabled>Choisir une offre</option>
+              {offres.filter((o) => o.est_active && !o.est_cloturee && o.statut_moderation === "APPROUVEE").map((o) => (
+                <option key={o.id} value={o.id}>{o.titre}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInviterCandidat(null)}
+                className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!offreInvitation || envoiInvitation}
+                onClick={handleEnvoyerInvitation}
+                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg disabled:opacity-50`}
+              >
+                {envoiInvitation ? "Envoi..." : "Envoyer"}
+              </button>
             </div>
           </div>
         </div>

@@ -34,6 +34,22 @@ _Dernière mise à jour : 23/08/2026 — Branche `specs/important-features` : re
 
 **Tests** : `FunnelChart.test.jsx` 2/2 ✅ (inchangé, compatible avec la réécriture), `DashboardRecruteur.test.jsx` — 2 tests obsolètes supprimés (HP2/HP4 testaient la navigation d'onglets Offres en cours/Archives, fonctionnalité déplacée), 8/8 ✅. Nouveau `OffresListPage.test.jsx` (4/4 ✅ : bascule onglets, recherche, suppression avec confirmation, erreur de chargement/télémétrie) — la page n'avait aucun test avant cette session. Frontend 426/426 ✅, backend `test_api_recruteur` 9/9 ✅ (champ `action` ajouté sans casser le format existant), `npx vite build` propre, `python manage.py check` propre.
 
+## 🆕 SESSION 23/08/2026 (suite 3) — Widget recommandés capé à 3 + grille 2 lignes × 3 colonnes (fin des zones vides)
+
+**Contexte** : itérations rapides sur la sidebar "Candidats recommandés" — d'abord demande explicite de limiter l'affichage à 3 candidats (`slice(0, 6)` → `slice(0, 3)`), ce qui a raccourci la sidebar et laissé un vide sous "Mes offres actives/Sources" (2 lignes de contenu vs 1 seule carte courte en face). Une 1ʳᵉ tentative a déplacé "Activité récente" dans la sidebar sous les recommandés — a résolu le vide côté contenu mais en a créé un nouveau côté contenu cette fois (la sidebar recommandés+activité devenait plus haute que les 2 lignes de contenu). L'utilisateur a explicitement rejeté cette 2ᵉ tentative ("non, je veux organiser bien sans espace vide").
+
+**Solution retenue — grille à 2 lignes de 3 colonnes strictement alignées** (au lieu d'une colonne "contenu" 2/3 + une colonne "sidebar" 1/3 séparées) :
+- **Ligne 1** (`grid grid-cols-1 lg:grid-cols-3 items-stretch`) : Évolution | Pipeline de recrutement | Candidats recommandés (top 3).
+- **Ligne 2** (même pattern) : Mes offres d'emploi actives | Sources des candidatures | Activité récente.
+
+`items-stretch` (comportement par défaut de CSS Grid, explicité ici) fait que les 3 cartes d'une même ligne s'étirent toujours à la hauteur de la plus haute — le vide résiduel (ex. si Candidats recommandés n'a que 3 petites cartes face à un graphique Évolution plus haut) reste **à l'intérieur** de la carte elle-même (padding en bas, fond de carte visible) au lieu d'un trou de fond de page entre deux colonnes de hauteurs différentes — c'est ce qui donne l'effet "rien d'espace vide" demandé, sans calcul de hauteur manuel ni JS.
+- Sidebar sticky abandonnée (n'a plus de sens dans ce pattern — chaque widget vit désormais dans sa propre ligne, pas dans une colonne qui défile indépendamment).
+- Widget recommandés : toujours capé à 3 (`candidatsRecommandesTous.slice(0, 3)`), lien "Voir plus de candidats recommandés →" vers `/candidats-recommandes` inchangé.
+- **Filtre "masquer retenus/refusés" retiré silencieusement de ce widget compact** (`masquerDecides` supprimé, plus de checkbox depuis la session précédente) — les candidats recommandés affichés ici sont désormais TOUS les candidats scorés, décidés ou non, pour éviter qu'ils disparaissent sans moyen de les revoir (la page dédiée `/candidats-recommandes` garde son propre toggle indépendant).
+- **Nettoyage further** : `handleChangerStatutRecommande`, `expandedMatchId`, `statutMenuOuvertId`, `changingStatutId`, `recommandesLimit`/`setRecommandesLimit` — tous du state/handlers morts issus d'une ancienne version plus riche du widget (détail matching dépliable + dropdown statut inline), jamais consommés dans le JSX actuel, supprimés.
+
+**Tests** : `DashboardRecruteur.test.jsx` 8/8 ✅ (aucune régression, la disposition CSS n'était pas testée), frontend 426/426 ✅, `npx vite build` propre.
+
 ## 🆕 SESSION 22-23/08/2026 (suite) — Refonte portail recruteur : gating réel, paiement Chargily, facturation, audit
 
 **Contexte** : suite directe des Phases 1/2a. Toutes les pages sidebar restantes construites, le gating par palier réellement câblé côté serveur (pas seulement affiché), le paiement réel branché, et plusieurs failles trouvées en auditant l'implémentation face au mockup — corrigées le jour même.

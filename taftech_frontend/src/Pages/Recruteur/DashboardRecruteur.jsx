@@ -110,11 +110,6 @@ const DashboardRecruteur = () => {
   const [error, setError] = useState("");
   const [filtreOffreId, setFiltreOffreId] = useState("toutes");
   const [periodeEvolution, setPeriodeEvolution] = useState("6m");
-  const [masquerDecides, setMasquerDecides] = useState(true);
-  const [recommandesLimit, setRecommandesLimit] = useState(3);
-  const [expandedMatchId, setExpandedMatchId] = useState(null);
-  const [statutMenuOuvertId, setStatutMenuOuvertId] = useState(null);
-  const [changingStatutId, setChangingStatutId] = useState(null);
   const [chartType, setChartType] = useState("area");
   const [showComparaison, setShowComparaison] = useState(false);
   const [showConversion, setShowConversion] = useState(false);
@@ -201,27 +196,6 @@ const DashboardRecruteur = () => {
     } catch (err) {
       toast.error("Erreur lors de l'export Excel.");
       reportError("ECHEC_EXPORT_EXCEL_GLOBAL", err);
-    }
-  };
-
-  const handleChangerStatutRecommande = async (candidatureId, offreId, nouveauStatut) => {
-    setChangingStatutId(candidatureId);
-    try {
-      await jobsService.updateStatutCandidature(candidatureId, { statut: nouveauStatut });
-      setOffres((prev) =>
-        prev.map((o) =>
-          o.id !== offreId
-            ? o
-            : { ...o, candidatures: o.candidatures.map((c) => (c.id === candidatureId ? { ...c, statut: nouveauStatut } : c)) },
-        ),
-      );
-      toast.success("Statut mis à jour.");
-    } catch (err) {
-      toast.error("Erreur lors de la mise à jour du statut.");
-      reportError("ECHEC_CHANGER_STATUT_RECOMMANDE", err);
-    } finally {
-      setChangingStatutId(null);
-      setStatutMenuOuvertId(null);
     }
   };
 
@@ -414,12 +388,14 @@ const DashboardRecruteur = () => {
     ];
   })();
 
-  // ─── Candidats recommandés : meilleurs scores, filtrables par offre/statut ──
+  // ─── Candidats recommandés : meilleurs scores toutes offres confondues ──
+  // Pas de filtre "masquer retenus/refusés" ici (widget compact sans toggle,
+  // contrairement à la page dédiée /candidats-recommandes) — sinon des
+  // candidats scorés disparaissent silencieusement sans moyen de les revoir.
   const candidatsRecommandesTous = (() => {
     const all = [];
     offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
       if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined) {
-        if (masquerDecides && (c.statut === "RETENU" || c.statut === "REFUSE")) return;
         all.push({ ...c, offreTitre: o.titre, offreId: o.id });
       }
     }));
@@ -585,7 +561,7 @@ const DashboardRecruteur = () => {
             <SlidersHorizontal size={13} className={tw.textMuted} />
             <select
               value={filtreOffreId}
-              onChange={(e) => { setFiltreOffreId(e.target.value); setRecommandesLimit(3); }}
+              onChange={(e) => setFiltreOffreId(e.target.value)}
               className={`${tw.inputColorsWhite} rounded-lg text-xs px-2.5 py-1.5 max-w-[220px]`}
             >
               <option value="toutes">Toutes les offres</option>
@@ -604,10 +580,8 @@ const DashboardRecruteur = () => {
             </select>
           </div>
 
-          {/* ── GRILLE APERÇU : contenu (s'étend vers la droite) + sidebar recommandés ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-5 items-start">
-            {/* Colonne contenu — Évolution / Pipeline / Offres actives / Sources / Activité récente */}
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+          {/* ── LIGNE 1 : Évolution | Pipeline | Candidats recommandés (hauteur alignée) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-2.5 items-stretch">
               <div className={`${tw.cardColors} rounded-2xl p-5`}>
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                   <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
@@ -697,6 +671,91 @@ const DashboardRecruteur = () => {
                 </div>
               </div>
 
+              {candidatsRecommandesTous.length > 0 ? (
+                <div className={`${tw.cardColors} rounded-2xl p-5 flex flex-col`}>
+                  <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
+                    <Star size={15} className={tw.textTeal} /> Candidats recommandés
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
+                  </h2>
+                  <div className="grid grid-cols-1 gap-3">
+                    {candidatsRecommandesTous.slice(0, 3).map((cand) => {
+                      const score = Math.round(parseFloat(cand.score_matching));
+                      const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
+                        .trim();
+                      const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
+                      return (
+                        <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                              className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
+                            >
+                              {cand.candidat.photo_profil ? (
+                                <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Users size={16} className={tw.textMuted} />
+                              )}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                                  className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
+                                >
+                                  {nomAffiche}
+                                </button>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
+                                  {score}% compatible
+                                </span>
+                              </div>
+                              <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
+                              {cand.candidat.wilaya && (
+                                <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
+                              )}
+                              {tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {tags.map((t) => (
+                                    <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
+                                title="Ajouter aux favoris"
+                                className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                              >
+                                <Bookmark size={14} className={tw.iconMuted} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
+                                title="Inviter à postuler"
+                                className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                              >
+                                <Send size={14} className={tw.iconMuted} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 text-center">
+                    <Link to="/candidats-recommandes" className={`text-xs font-semibold ${tw.textTeal}`}>
+                      Voir plus de candidats recommandés →
+                    </Link>
+                  </div>
+                </div>
+              ) : <div />}
+          </div>
+
+          {/* ── LIGNE 2 : Offres actives | Sources | Activité récente (hauteur alignée) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 mb-5 items-stretch">
               <div className={`${tw.cardColors} rounded-2xl p-5 overflow-hidden`}>
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                   <h2 className={`text-sm font-bold ${tw.textStrong}`}>Mes offres d'emploi actives</h2>
@@ -766,7 +825,7 @@ const DashboardRecruteur = () => {
                 </div>
               )}
 
-              <div className={`${tw.cardColors} rounded-2xl p-5 md:col-span-2`}>
+              <div className={`${tw.cardColors} rounded-2xl p-5`}>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
                     <Activity size={15} className={tw.textTeal} /> Activité récente
@@ -793,92 +852,6 @@ const DashboardRecruteur = () => {
                   </ul>
                 )}
               </div>
-            </div>
-
-            {/* Sidebar — Candidats recommandés, sticky sur toute la hauteur (desktop) */}
-            {candidatsRecommandesTous.length > 0 && (
-              <div className="lg:col-span-1 lg:sticky lg:top-20">
-                <div className={`${tw.cardColors} rounded-2xl p-5`}>
-                  <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
-                    <Star size={15} className={tw.textTeal} /> Candidats recommandés
-                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${tw.tagSlateSoft700}`}>{candidatsRecommandesTous.length}</span>
-                  </h2>
-                  <div className="grid grid-cols-1 gap-3">
-                    {candidatsRecommandesTous.slice(0, 6).map((cand) => {
-                const score = Math.round(parseFloat(cand.score_matching));
-                const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
-                  .trim();
-                const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
-                return (
-                  <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
-                    <div className="flex items-start gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                        className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
-                      >
-                        {cand.candidat.photo_profil ? (
-                          <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Users size={16} className={tw.textMuted} />
-                        )}
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                            className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
-                          >
-                            {nomAffiche}
-                          </button>
-                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
-                            {score}% compatible
-                          </span>
-                        </div>
-                        <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
-                        {cand.candidat.wilaya && (
-                          <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
-                        )}
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {tags.map((t) => (
-                              <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
-                          title="Ajouter aux favoris"
-                          className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                        >
-                          <Bookmark size={14} className={tw.iconMuted} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
-                          title="Inviter à postuler"
-                          className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                        >
-                          <Send size={14} className={tw.iconMuted} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-                  </div>
-                  <div className="mt-3 text-center">
-                    <Link to="/candidats-recommandes" className={`text-xs font-semibold ${tw.textTeal}`}>
-                      Voir plus de candidats recommandés →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </>
       )}

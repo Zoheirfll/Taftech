@@ -119,7 +119,7 @@ const DashboardRecruteur = () => {
   const [filtreOffreId, setFiltreOffreId] = useState("toutes");
   const [periodeEvolution, setPeriodeEvolution] = useState("6m");
   const [masquerDecides, setMasquerDecides] = useState(true);
-  const [recommandesLimit, setRecommandesLimit] = useState(6);
+  const [recommandesLimit, setRecommandesLimit] = useState(3);
   const [expandedMatchId, setExpandedMatchId] = useState(null);
   const [statutMenuOuvertId, setStatutMenuOuvertId] = useState(null);
   const [changingStatutId, setChangingStatutId] = useState(null);
@@ -842,175 +842,79 @@ const DashboardRecruteur = () => {
           <div className="grid grid-cols-1 gap-3">
             {candidatsRecommandes.map((cand) => {
               const score = Math.round(parseFloat(cand.score_matching));
-              const pointsForts = cand.details_matching?.highlights?.points_forts || [];
-              const pointsVigilance = cand.details_matching?.highlights?.ecarts || [];
-              const DM = cand.details_matching || {};
-              const scores = DM.scores || DM;
-              const explics = DM.explications || {};
-              const explicationPrincipale = explics.specialite || explics.experience || Object.values(explics)[0];
-              const nomComplet = `${cand.candidat.first_name} ${cand.candidat.last_name}`
-                .toLowerCase()
-                .replace(/\b\w/g, (c) => c.toUpperCase());
-              const isExpanded = expandedMatchId === cand.id;
-              const menuOuvert = statutMenuOuvertId === cand.id;
+              const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
+                .trim();
+              const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
               return (
-                <div key={cand.id} className={`p-4 rounded-xl border ${tw.borderBase}`}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                    className="flex items-start justify-between gap-2 mb-1.5 w-full text-left"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-9 h-9 rounded-lg ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}>
-                        {cand.candidat.photo_profil ? (
-                          <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Users size={14} className={tw.textMuted} />
-                        )}
+                <div key={cand.id} className={`p-3.5 rounded-xl border ${tw.borderBase}`}>
+                  <div className="flex items-start gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                      className={`w-10 h-10 rounded-full ${tw.surfaceSubtle} flex items-center justify-center overflow-hidden shrink-0`}
+                    >
+                      {cand.candidat.photo_profil ? (
+                        <img src={candidatFichierUrl(cand.candidat.id, "photo")} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Users size={16} className={tw.textMuted} />
+                      )}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
+                          className={`text-sm font-semibold ${tw.textStrong} hover:underline`}
+                        >
+                          {nomAffiche}
+                        </button>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${score >= 80 ? tw.bgSuccessSoft + " " + tw.textSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
+                          {score}% compatible
+                        </span>
                       </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{nomComplet}</p>
-                        <p className={`text-xs truncate ${tw.textMuted700}`}>{cand.offreTitre}</p>
-                      </div>
-                    </div>
-                    <span className={`shrink-0 px-2 py-1 rounded-lg text-xs font-bold ${score >= 80 ? tw.scoreTextSuccess : score >= 60 ? tw.textAmber500 : tw.textRed400}`}>
-                      {score}%
-                    </span>
-                  </button>
-
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <button
-                      type="button"
-                      onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
-                      title="Inviter à postuler"
-                      className={`p-1.5 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                    >
-                      <Send size={13} className={tw.iconMuted} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
-                      title="Ajouter aux favoris"
-                      className={`p-1.5 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
-                    >
-                      <Bookmark size={13} className={tw.iconMuted} />
-                    </button>
-                  </div>
-
-                  {pointsForts.length > 0 && (
-                    <div className="mt-2">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.scoreTextSuccess}`}>Points forts</p>
-                      <ul className="space-y-0.5">
-                        {pointsForts.slice(0, 2).map((p) => (
-                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
-                            <CheckCircle size={11} className={`${tw.scoreTextSuccess} mt-0.5 shrink-0`} /> {p}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {pointsVigilance.length > 0 && (
-                    <div className="mt-2">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tw.textAmber500}`}>Points de vigilance</p>
-                      <ul className="space-y-0.5">
-                        {pointsVigilance.slice(0, 2).map((p) => (
-                          <li key={p} className={`text-xs ${tw.textMuted700} flex items-start gap-1`}>
-                            <AlertTriangle size={11} className={`${tw.textAmber500} mt-0.5 shrink-0`} /> {p}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {explicationPrincipale && (
-                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} flex items-start gap-1.5`}>
-                      <HelpCircle size={12} className={`${tw.textMuted} mt-0.5 shrink-0`} />
-                      <p className={`text-xs italic ${tw.textMuted}`}>{explicationPrincipale}</p>
-                    </div>
-                  )}
-
-                  {DM.scores && (
-                    <button
-                      type="button"
-                      onClick={() => setExpandedMatchId(isExpanded ? null : cand.id)}
-                      className={`mt-2 flex items-center gap-1 text-xs font-semibold ${tw.textTeal}`}
-                    >
-                      <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                      {isExpanded ? "Masquer le détail du matching" : "Voir le détail du matching"}
-                    </button>
-                  )}
-
-                  {isExpanded && (
-                    <div className={`mt-2.5 pt-2.5 border-t ${tw.borderSubtle} space-y-2.5`}>
-                      {CRITERES_MATCHING.map(({ key, label, max }) => {
-                        const val = scores[key] || 0;
-                        const pct = (val / max) * 100;
-                        const color = pct >= 100 ? tw.progressBarSuccess : pct >= 50 ? tw.progressBarWarning : tw.progressBarDanger;
-                        return (
-                          <div key={key}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className={`text-xs font-semibold ${tw.textMuted700}`}>{label}</span>
-                              <span className={`text-xs font-bold ${tw.textStrong}`}>{val}/{max}</span>
-                            </div>
-                            <div className={`w-full ${tw.progressTrack}`}>
-                              <div className={`${color} duration-700`} style={{ width: `${pct}%` }} />
-                            </div>
-                            {explics[key] && <p className={`text-xs ${tw.textMuted700} mt-1`}>{explics[key]}</p>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className={`mt-3 pt-3 border-t ${tw.borderSubtle} flex items-center justify-between gap-2`}>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => authService.peutFaire("UTILISATEUR") && setStatutMenuOuvertId(menuOuvert ? null : cand.id)}
-                        disabled={changingStatutId === cand.id}
-                        className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${tw.candidatureStatutStyles[cand.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"}`}
-                      >
-                        {STATUTS_LABELS[cand.statut] || cand.statut}
-                        {authService.peutFaire("UTILISATEUR") && <ChevronDown size={11} />}
-                      </button>
-                      {menuOuvert && authService.peutFaire("UTILISATEUR") && (
-                        <div className={`absolute left-0 top-full mt-1 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[170px]`}>
-                          {Object.entries(STATUTS_LABELS).map(([key, label]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => handleChangerStatutRecommande(cand.id, cand.offreId, key)}
-                              className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === cand.statut ? tw.surfaceMuted : ""}`}
-                            >
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${tw.candidatureStatutStyles[key]}`}>
-                                {label}
-                              </span>
-                            </button>
+                      <p className={`text-xs mt-0.5 ${tw.textTeal}`}>{cand.offreTitre}</p>
+                      {cand.candidat.wilaya && (
+                        <p className={`text-xs mt-0.5 ${tw.textMuted}`}>{cand.candidat.wilaya.split(" - ")[1] || cand.candidat.wilaya}, Algérie</p>
+                      )}
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {tags.map((t) => (
+                            <span key={t} className={`px-1.5 py-0.5 text-[10px] rounded ${tw.tagSlateSoft}`}>{t}</span>
                           ))}
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/dashboard/offres/${cand.offreId}`)}
-                      className={`flex items-center gap-1 text-xs font-semibold ${tw.textMuted700} hover:${tw.textTeal}`}
-                    >
-                      Voir la candidature <ChevronRight size={12} />
-                    </button>
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFavoriRecommande(cand.candidat.id)}
+                        title="Ajouter aux favoris"
+                        className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                      >
+                        <Bookmark size={14} className={tw.iconMuted} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setOffreInvitation(""); setInviterCandidat(cand); }}
+                        title="Inviter à postuler"
+                        className={`p-1 rounded-md transition-colors ${tw.hoverSurfaceSubtle}`}
+                      >
+                        <Send size={14} className={tw.iconMuted} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
           {hasMoreRecommandes && (
-            <div className="mt-4 text-center">
+            <div className="mt-3 text-center">
               <button
                 type="button"
-                onClick={() => setRecommandesLimit((n) => n + 6)}
-                className={`text-xs font-semibold px-4 py-2 rounded-lg border ${tw.borderBase} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
+                onClick={() => setRecommandesLimit((n) => n + 3)}
+                className={`text-xs font-semibold ${tw.textTeal}`}
               >
-                Voir plus de candidats ({candidatsRecommandesTous.length - recommandesLimit} restants)
+                Voir plus de candidats recommandés →
               </button>
             </div>
           )}

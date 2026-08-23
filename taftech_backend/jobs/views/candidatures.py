@@ -119,7 +119,7 @@ class PostulerAPIView(APIView):
         )
 
         from .equipe import _log
-        _log(None, offre.entreprise, 'AUTRE', f"Nouvelle candidature reçue pour « {offre.titre} » ({request.user.first_name} {request.user.last_name})")
+        _log(None, offre.entreprise, 'AUTRE', f"{request.user.first_name} {request.user.last_name} a postulé sur « {offre.titre} »")
 
         # Réponses questionnaire + détection disqualification
         reponses_raw = request.data.get('reponses', None)
@@ -212,6 +212,10 @@ class PostulerRapideAPIView(APIView):
                 details_matching={"message": "Candidature rapide, pas d'analyse IA disponible."},
                 statut='RECUE'
             )
+            from .equipe import _log
+            prenom_rapide = serializer.validated_data.get('prenom_rapide', '') or ''
+            nom_rapide = serializer.validated_data.get('nom_rapide', '') or ''
+            _log(None, offre.entreprise, 'AUTRE', f"{prenom_rapide} {nom_rapide} a postulé sur « {offre.titre} »")
             return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -348,8 +352,16 @@ class UpdateCandidatureStatusAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if entreprise:
             nom_candidat = candidature.candidat.get_full_name() if candidature.candidat else 'Candidat rapide'
+            phrases_statut = {
+                'ENTRETIEN': f"programmé un entretien avec {nom_candidat} pour « {candidature.offre.titre} »",
+                'RETENU': f"retenu la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'REFUSE': f"refusé la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'PRESELECTION': f"présélectionné {nom_candidat} pour « {candidature.offre.titre} »",
+                'EN_COURS': f"mis en cours d'étude la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+                'RECUE': f"remis en attente la candidature de {nom_candidat} pour « {candidature.offre.titre} »",
+            }
             _log(request.user, entreprise, 'STATUT_CANDIDATURE',
-                 f"{nom_candidat} — {candidature.offre.titre} → {nouveau_statut}")
+                 phrases_statut.get(nouveau_statut, f"changé le statut de {nom_candidat} vers {nouveau_statut}"))
 
         return Response({"message": "Statut mis à jour !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
 

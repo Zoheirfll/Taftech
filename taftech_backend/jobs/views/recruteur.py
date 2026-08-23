@@ -81,18 +81,34 @@ def _calculer_kpis_periode(entreprise, date_debut, date_fin):
     }
 
 
-_TEMPLATES_ACTIVITE = {
-    'CONNEXION': "{membre} s'est connecté(e)",
-    'CREER_OFFRE': "{membre} a publié une nouvelle offre : {detail}",
-    'MODIFIER_OFFRE': "{membre} a modifié une offre : {detail}",
-    'CLOTURER_OFFRE': "{membre} a clôturé une offre : {detail}",
-    'STATUT_CANDIDATURE': "{membre} a changé le statut d'une candidature : {detail}",
-    'EVALUER_CANDIDATURE': "{membre} a évalué une candidature : {detail}",
-    'INVITER_MEMBRE': "{membre} a invité un membre : {detail}",
-    'RETIRER_MEMBRE': "{membre} a retiré un membre : {detail}",
-    'CHANGER_ROLE': "{membre} a changé un rôle : {detail}",
-    'AUTRE': "{detail}",
-}
+def _phrase_activite(log, request_user):
+    """Formate un EquipeActionLog en phrase lisible, à la 2ᵉ personne ("Vous avez...") si
+    l'auteur est l'utilisateur connecté, sinon à son prénom ("Zoheir a...") — voir mockup
+    "Activité récente" (docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md)."""
+    est_vous = log.membre_id == request_user.id
+    sujet = "Vous" if est_vous else ((log.membre.first_name or log.membre.email) if log.membre else "Un membre")
+    verbe_avoir = "avez" if est_vous else "a"
+    detail = log.detail or ""
+    if log.action == 'CREER_OFFRE':
+        return f"{sujet} {verbe_avoir} publié une nouvelle offre : {detail}"
+    if log.action == 'MODIFIER_OFFRE':
+        return f"{sujet} {verbe_avoir} modifié une offre : {detail}"
+    if log.action == 'CLOTURER_OFFRE':
+        return f"{sujet} {verbe_avoir} clôturé une offre : {detail}"
+    if log.action == 'STATUT_CANDIDATURE':
+        # `detail` est déjà une continuation naturelle du verbe (voir candidatures.py),
+        # ex. "programmé un entretien avec Karim H. pour « Ingénieur Méthodes »"
+        return f"{sujet} {verbe_avoir} {detail}"
+    if log.action == 'EVALUER_CANDIDATURE':
+        return f"{sujet} {verbe_avoir} évalué une candidature : {detail}"
+    if log.action == 'INVITER_MEMBRE':
+        return f"{sujet} {verbe_avoir} invité un membre : {detail}"
+    if log.action == 'RETIRER_MEMBRE':
+        return f"{sujet} {verbe_avoir} retiré un membre : {detail}"
+    if log.action == 'CHANGER_ROLE':
+        return f"{sujet} {verbe_avoir} changé un rôle : {detail}"
+    # AUTRE — déjà une phrase complète (candidature reçue, favori ajouté, invitation CVthèque)
+    return detail
 
 
 class DashboardRecruteurAPIView(APIView):
@@ -145,21 +161,30 @@ class DashboardRecruteurAPIView(APIView):
 
 
 class ActiviteRecenteAPIView(APIView):
-    """Fil d'activité récente de l'entreprise (10 derniers événements), formaté en phrases
-    lisibles — voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    """Fil d'activité récente de l'entreprise, formaté en phrases lisibles — voir
+    docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md.
+    `?limit=N` (défaut 10, max 50) pour la page complète "Voir tout".
+    Visibilité : PROPRIETAIRE/ADMIN voient toute l'activité de l'entreprise, UTILISATEUR/INVITE
+    ne voient que leurs propres actions (cohérent avec le reste des permissions d'équipe)."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=404)
-        logs = EquipeActionLog.objects.filter(entreprise=entreprise).exclude(action='CONNEXION').select_related('membre').order_by('-date')[:10]
-        resultats = []
-        for log in logs:
-            membre_nom = (log.membre.first_name or log.membre.email) if log.membre else "Un membre"
-            template = _TEMPLATES_ACTIVITE.get(log.action, "{detail}")
-            phrase = template.format(membre=membre_nom, detail=log.detail or "")
-            resultats.append({"id": log.id, "phrase": phrase.strip(), "date": log.date.isoformat()})
+        try:
+            limite = min(int(request.GET.get('limit', 10)), 50)
+        except (TypeError, ValueError):
+            limite = 10
+        mon_role = get_membre_role(request.user, entreprise)
+        qs = EquipeActionLog.objects.filter(entreprise=entreprise).exclude(action='CONNEXION')
+        if mon_role not in ('PROPRIETAIRE', 'ADMIN'):
+            qs = qs.filter(membre=request.user)
+        logs = qs.select_related('membre').order_by('-date')[:limite]
+        resultats = [
+            {"id": log.id, "phrase": _phrase_activite(log, request.user).strip(), "date": log.date.isoformat()}
+            for log in logs
+        ]
         return Response(resultats)
 
 

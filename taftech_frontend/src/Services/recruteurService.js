@@ -16,9 +16,9 @@ export const recruteurService = {
     }
   },
 
-  getActiviteRecente: async () => {
+  getActiviteRecente: async (limit) => {
     try {
-      const response = await api.get("jobs/dashboard/activite-recente/");
+      const response = await api.get("jobs/dashboard/activite-recente/", { params: limit ? { limit } : {} });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ACTIVITE_RECENTE", err);

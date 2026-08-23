@@ -1019,9 +1019,14 @@ const DashboardRecruteur = () => {
 
       {/* ── ACTIVITÉ RÉCENTE (colonne latérale, sous Candidats recommandés) ── */}
       <div className={`${tw.cardColors} rounded-2xl p-5`}>
-        <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2 mb-4`}>
-          <Activity size={15} className={tw.textTeal} /> Activité récente
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-2`}>
+            <Activity size={15} className={tw.textTeal} /> Activité récente
+          </h2>
+          {activite.length > 5 && (
+            <Link to="/activite" className={`text-xs font-semibold ${tw.textTeal}`}>Voir tout</Link>
+          )}
+        </div>
         {activite.length === 0 ? (
           <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
         ) : (

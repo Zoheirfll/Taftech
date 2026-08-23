@@ -54,7 +54,12 @@ _Dernière mise à jour : 23/08/2026 — Branche `specs/important-features` : re
 
 **Audit sécurité** : tous les nouveaux endpoints (`CandidatsRecommandesAPIView`, `StatistiquesAvanceesAPIView`, `MonAbonnementAPIView`, `FacturesListAPIView`, `FacturePDFAPIView`) vérifient `get_entreprise_for_user()` + scopent strictement à l'entreprise de l'utilisateur connecté (sauf ADMIN pour les factures). `MentionsLegalesAdminAPIView` : `IsAdminUser` + vérif rôle. Webhook Chargily : signature HMAC-SHA256 déjà vérifiée avant tout traitement (inchangé), le nouveau branchement `palier_nom` est en aval de cette vérification.
 
-**Tests** : vérification complète (backend + frontend + build) lancée en fin de session — voir résultat dans la section suivante ou le dernier commit `docs:` si postérieur à celui-ci.
+**Tests** : vérification complète lancée en fin de session — **11 régressions trouvées et corrigées** dans les fixtures de tests existantes (pas dans le code applicatif) :
+- `test_api_equipe.py::InviterMembreTests` (6 tests) — l'entreprise de test n'avait aucun palier ; le nouveau gate `acces_equipe` la bloquait avant même d'atteindre la logique testée. Fix : `_make_entreprise(..., premium=True)` (repli legacy → Business).
+- `test_api_paliers_gating.py::CVThequeGatingAPITest` (2 tests) — `make_entreprise()` ne mettait pas `consentement_cvtheque=True`, `CVThequeView` bloquait avant même d'atteindre le nouveau check palier. Fix : ajouté à la fixture.
+- `test_api_paliers_gating.py::LimiteOffresPublicationAPITest` (2 tests) — payload de test avec `diplome="MASTER"`/`experience_requise="1"`, valeurs invalides (les vrais choix sont `MASTER_2`/`CONFIRME`) — 400 de validation avant même d'atteindre la logique de quota testée. Fix : payload corrigé.
+
+Après corrections : **backend 317/317 ✅** (suite complète `jobs.tests`), **frontend 419/419 ✅**, `npx vite build` propre, `python manage.py check` propre.
 
 ## 🆕 SESSION 22/08/2026 (suite) — Refonte portail recruteur (Phase 2a : modèle Paliers backend + admin)
 

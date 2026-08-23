@@ -1025,8 +1025,8 @@ const DashboardRecruteur = () => {
         {activite.length === 0 ? (
           <p className={`text-xs italic ${tw.textMuted}`}>Aucune activité récente.</p>
         ) : (
-          <ul className="space-y-3.5">
-            {activite.map((a) => (
+          <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
+            {activite.slice(0, 5).map((a) => (
               <li key={a.id} className="flex items-start gap-2.5">
                 <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${tw.bgTealSolid}`} />
                 <div className="min-w-0 flex-1">

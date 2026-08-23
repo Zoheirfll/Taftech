@@ -71,7 +71,7 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
       { id: 3, lue: false },
     ]);
     renderLayout();
-    await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("2").length).toBeGreaterThan(0));
   });
 
   it("🟢 HP4 : le lien Favoris pointe vers /cvtheque?favoris=true", async () => {

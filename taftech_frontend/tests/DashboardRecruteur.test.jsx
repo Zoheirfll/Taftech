@@ -39,6 +39,11 @@ vi.mock("../src/Services/jobsService", () => ({
     getDashboard: vi.fn(),
     getConstants: vi.fn(),
     updateProfilEntreprise: vi.fn(),
+    getActiviteRecente: vi.fn().mockResolvedValue([]),
+    getRecherchesSauvegardees: vi.fn().mockResolvedValue([]),
+    telechargerRapportDashboard: vi.fn().mockResolvedValue(null),
+    toggleFavoriCV: vi.fn().mockResolvedValue({ is_favori: true }),
+    inviterCandidatCVTheque: vi.fn().mockResolvedValue({}),
   },
 }));
 

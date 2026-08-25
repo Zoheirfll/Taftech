@@ -33,7 +33,7 @@ class ProfilEntreprise(models.Model):
         blank=True,
         null=True,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(2),
         ]
@@ -51,7 +51,7 @@ class ProfilEntreprise(models.Model):
         null=True,
         verbose_name="Bannière (page vitrine)",
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(5),
         ]
@@ -107,7 +107,7 @@ class EntreprisePhoto(models.Model):
     image = models.ImageField(
         upload_to='photos_entreprises/',
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(3),
         ]
@@ -1040,7 +1040,7 @@ class BanniereAccueil(models.Model):
     image = models.ImageField(
         upload_to='bannieres_accueil/',
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(5),
         ]
@@ -1087,7 +1087,7 @@ class Article(models.Model):
         blank=True,
         null=True,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(3),
         ]

@@ -5,7 +5,31 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
 import { tw } from "../../theme";
 import Seo from "../../Components/Seo";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight, Newspaper } from "lucide-react";
+
+// Bandeau dégradé de secours quand l'article n'a pas de photo de couverture — coloré selon la
+// catégorie (hash simple du libellé) plutôt qu'un carré vide, sans dépendre de vraies photos.
+const GRADIENTS = [
+  "from-indigo-500 to-indigo-700",
+  "from-teal-500 to-teal-700",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-sky-500 to-blue-700",
+];
+const gradientFor = (label) => {
+  if (!label) return GRADIENTS[0];
+  const hash = [...label].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return GRADIENTS[hash % GRADIENTS.length];
+};
+
+const ArticleBanner = ({ article, className = "h-40" }) =>
+  article.image_couverture ? (
+    <img src={mediaUrl(article.image_couverture)} alt={article.titre} className={`w-full ${className} object-cover`} loading="lazy" />
+  ) : (
+    <div className={`w-full ${className} bg-linear-to-br ${gradientFor(article.categorie_label)} flex items-center justify-center`}>
+      <Newspaper size={32} className="text-white/70" />
+    </div>
+  );
 
 const Blog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,26 +106,56 @@ const Blog = () => {
         ) : articles.length === 0 ? (
           <p className={`text-center ${tw.textMuted} py-12`}>Aucun article pour l'instant.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.map((a) => (
-              <Link key={a.id} to={`/blog/${a.slug}`} className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group`}>
-                {a.image_couverture && (
-                  <img src={mediaUrl(a.image_couverture)} alt={a.titre} className="w-full h-40 object-cover" loading="lazy" />
+          (() => {
+            // Article vedette : uniquement en première page, sans filtre de catégorie —
+            // sinon "le premier article de la catégorie X" n'a pas de sens à mettre en avant.
+            const mettreEnAvant = page === 1 && !categorieActive && articles.length > 1;
+            const [vedette, ...reste] = mettreEnAvant ? articles : [null, ...articles];
+
+            return (
+              <>
+                {vedette && (
+                  <Link
+                    to={`/blog/${vedette.slug}`}
+                    className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col md:flex-row mb-6`}
+                  >
+                    <div className="md:w-1/2">
+                      <ArticleBanner article={vedette} className="h-48 md:h-full" />
+                    </div>
+                    <div className="p-6 md:w-1/2 flex flex-col justify-center">
+                      {vedette.categorie_label && (
+                        <span className={`inline-block w-fit px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{vedette.categorie_label}</span>
+                      )}
+                      <h2 className={`text-xl font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{vedette.titre}</h2>
+                      <p className={`text-sm ${tw.textMuted} mt-2 line-clamp-3`}>{vedette.extrait}</p>
+                      <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-4`}>
+                        <Calendar size={12} />
+                        {vedette.date_publication && new Date(vedette.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </div>
+                    </div>
+                  </Link>
                 )}
-                <div className="p-5">
-                  {a.categorie_label && (
-                    <span className={`inline-block px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{a.categorie_label}</span>
-                  )}
-                  <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{a.titre}</h2>
-                  <p className={`text-sm ${tw.textMuted} mt-1.5 line-clamp-2`}>{a.extrait}</p>
-                  <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-3`}>
-                    <Calendar size={12} />
-                    {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {reste.map((a) => (
+                    <Link key={a.id} to={`/blog/${a.slug}`} className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group`}>
+                      <ArticleBanner article={a} />
+                      <div className="p-5">
+                        {a.categorie_label && (
+                          <span className={`inline-block px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{a.categorie_label}</span>
+                        )}
+                        <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{a.titre}</h2>
+                        <p className={`text-sm ${tw.textMuted} mt-1.5 line-clamp-2`}>{a.extrait}</p>
+                        <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-3`}>
+                          <Calendar size={12} />
+                          {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </Link>
-            ))}
-          </div>
+              </>
+            );
+          })()
         )}
 
         {(pagination.next || pagination.previous) && (

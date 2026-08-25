@@ -125,6 +125,7 @@ const ParametresRecruteur = () => {
             taille_entreprise: e.taille_entreprise || "",
             description: e.description || "",
             culture_entreprise: e.culture_entreprise || "",
+            annee_creation: e.annee_creation || "",
             telephone: e.telephone || "",
             linkedin: e.linkedin || "",
             site_web: e.site_web || "",
@@ -163,6 +164,7 @@ const ParametresRecruteur = () => {
               taille_entreprise: e.taille_entreprise || "",
               description: e.description || "",
               culture_entreprise: e.culture_entreprise || "",
+              annee_creation: e.annee_creation || "",
               telephone: e.telephone || "",
               linkedin: e.linkedin || "",
               site_web: e.site_web || "",
@@ -877,6 +879,26 @@ const ParametresRecruteur = () => {
                   }
                   styles={selectStylesTeal}
                   placeholder="Sélectionnez une taille"
+                />
+              </div>
+              <div className="md:col-span-1">
+                <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`} htmlFor="annee_creation">
+                  Année de création (optionnel)
+                </label>
+                <input
+                  id="annee_creation"
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  value={entrepriseForm.annee_creation || ""}
+                  onChange={(e) =>
+                    setEntrepriseForm({
+                      ...entrepriseForm,
+                      annee_creation: e.target.value,
+                    })
+                  }
+                  placeholder="Ex : 2015"
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
                 />
               </div>
               <div className="md:col-span-2">

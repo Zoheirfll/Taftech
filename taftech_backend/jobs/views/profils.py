@@ -1,5 +1,6 @@
 import os
 from django.utils import timezone
+from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse, Http404
 from rest_framework.views import APIView
@@ -77,11 +78,20 @@ class ProfilCandidatAPIView(APIView):
         data = request.data.copy()
         if 'langues' in data and isinstance(data['langues'], str):
             data['langues'] = data['langues'][:255]
-        # Les CV mentionnent souvent "linkedin.com/in/..." sans protocole → rejeté par le URLField
+        # Les CV mentionnent souvent "linkedin.com/in/..." sans protocole → rejeté par le URLField.
+        # L'IA du parser peut aussi renvoyer un texte qui n'est pas du tout une URL (ex: "Non spécifié") —
+        # dans ce cas on abandonne silencieusement ce seul champ plutôt que de faire échouer tout le PUT.
+        url_validator = URLValidator()
         for champ_url in ('linkedin', 'github'):
             valeur = data.get(champ_url)
-            if valeur and isinstance(valeur, str) and not valeur.startswith(('http://', 'https://')):
-                data[champ_url] = f"https://{valeur}"
+            if valeur and isinstance(valeur, str):
+                if not valeur.startswith(('http://', 'https://')):
+                    valeur = f"https://{valeur}"
+                try:
+                    url_validator(valeur)
+                    data[champ_url] = valeur
+                except DjangoValidationError:
+                    data[champ_url] = ""
         serializer = ProfilCandidatDTO(profil, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()

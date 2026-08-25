@@ -279,7 +279,7 @@ const EntreprisePublic = () => {
               <div className="md:col-span-2 space-y-5">
                 {entreprise.description && (
                   <div>
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Présentation</p>
+                    <p className="text-base font-bold text-slate-900 mb-2">Présentation</p>
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                       {entreprise.description}
                     </p>
@@ -287,7 +287,7 @@ const EntreprisePublic = () => {
                 )}
                 {entreprise.culture_entreprise && (
                   <div>
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Culture d'entreprise</p>
+                    <p className="text-base font-bold text-slate-900 mb-2">Culture d'entreprise</p>
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                       {entreprise.culture_entreprise}
                     </p>

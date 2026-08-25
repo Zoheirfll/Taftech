@@ -276,9 +276,9 @@ const EntreprisePublic = () => {
           {/* Onglet À propos */}
           {activeTab === "apropos" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 space-y-4">
+              <div className="md:col-span-2 space-y-5">
                 {entreprise.description && (
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
+                  <div>
                     <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Présentation</p>
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                       {entreprise.description}
@@ -286,7 +286,7 @@ const EntreprisePublic = () => {
                   </div>
                 )}
                 {entreprise.culture_entreprise && (
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
+                  <div>
                     <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Culture d'entreprise</p>
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                       {entreprise.culture_entreprise}

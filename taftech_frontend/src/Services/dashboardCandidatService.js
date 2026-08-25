@@ -14,6 +14,16 @@ export const dashboardCandidatService = {
     }
   },
 
+  getMetiersAccessibles: async (limit) => {
+    try {
+      const response = await api.get("jobs/metiers-accessibles/", { params: limit ? { limit } : {} });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_METIERS_ACCESSIBLES", err);
+      throw err;
+    }
+  },
+
   getConseilsPersonnalises: async () => {
     try {
       const response = await api.get("jobs/conseils-personnalises/");

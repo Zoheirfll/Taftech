@@ -17,11 +17,13 @@ import { tw } from "../../theme";
 
 const PER_PAGE = 5;
 
-const SECTION_KEYS = ["MÉTIERS POSSIBLES", "POINTS FORTS", "COMPÉTENCES MANQUANTES", "FORMATIONS RECOMMANDÉES", "ÉVOLUTION PROFESSIONNELLE"];
+// "MÉTIERS POSSIBLES" volontairement absent — remplacé par la liste déterministe
+// (% réel par domaine, calculé côté serveur) affichée dans le widget au-dessus,
+// jamais un pourcentage inventé par le LLM.
+const SECTION_KEYS = ["POINTS FORTS", "COMPÉTENCES MANQUANTES", "FORMATIONS RECOMMANDÉES", "ÉVOLUTION PROFESSIONNELLE"];
 const SECTION_ALTERNATION = SECTION_KEYS.join("|");
 
 const SECTIONS_CONFIG = [
-  { key: "MÉTIERS POSSIBLES", icon: Briefcase, color: "indigo" },
   { key: "POINTS FORTS", icon: Star, color: "emerald" },
   { key: "COMPÉTENCES MANQUANTES", icon: AlertTriangle, color: "amber" },
   { key: "FORMATIONS RECOMMANDÉES", icon: GraduationCap, color: "blue" },
@@ -69,7 +71,7 @@ const parseAnalyse = (text) => {
 };
 
 const SuggestionsCarriere = () => {
-  const [suggestions, setSuggestions] = useState(null);
+  const [metiers, setMetiers] = useState([]);
   const [analyse, setAnalyse] = useState(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const [loadingAnalyse, setLoadingAnalyse] = useState(false);
@@ -80,10 +82,10 @@ const SuggestionsCarriere = () => {
     setLoadingSuggestions(true);
     setPage(1);
     try {
-      const data = await jobsService.getSuggestionsCarriere();
-      setSuggestions(data);
+      const data = await jobsService.getMetiersAccessibles();
+      setMetiers(data);
     } catch (err) {
-      reportError("ECHEC_GET_SUGGESTIONS_CARRIERE", err);
+      reportError("ECHEC_GET_METIERS_ACCESSIBLES", err);
     } finally {
       setLoadingSuggestions(false);
     }
@@ -112,7 +114,6 @@ const SuggestionsCarriere = () => {
 
   const parsedAnalyse = useMemo(() => parseAnalyse(analyse), [analyse]);
 
-  const metiers = suggestions?.metiers || [];
   const totalPages = Math.ceil(metiers.length / PER_PAGE);
   const paginated = metiers.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -136,9 +137,9 @@ const SuggestionsCarriere = () => {
       </div>
 
       <InfoBanner storageKey="suggestions_carriere" title="Comment fonctionnent les suggestions ?">
-        L'IA analyse votre spécialité, diplôme et expériences pour vous proposer des métiers compatibles.
-        Cliquez sur <strong>Analyser ma carrière avec l'IA</strong> pour obtenir un bilan personnalisé rédigé par Groq (llama-3.1).
-        Plus votre profil est complet, plus les suggestions sont précises.
+        Le % de compatibilité par métier est calculé directement depuis votre spécialité et vos expériences (pas d'IA, un vrai calcul reproductible).
+        Cliquez sur <strong>Analyser ma carrière avec l'IA</strong> pour obtenir en plus un bilan rédigé par Groq (atouts, axes de progression, formations, évolution).
+        Plus votre profil est complet, plus les résultats sont précis.
       </InfoBanner>
 
       {/* MÉTIERS */}
@@ -146,13 +147,8 @@ const SuggestionsCarriere = () => {
         <div className={`px-5 py-4 border-b ${tw.borderSubtle} flex items-center gap-2`}>
           <Briefcase size={16} className={tw.textPrimary} />
           <h2 className={`text-sm font-bold ${tw.textStrong}`}>
-            Métiers correspondant à votre profil
+            Métiers accessibles pour vous
           </h2>
-          {suggestions?.profil_secteur && (
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
-              {suggestions.profil_secteur}
-            </span>
-          )}
           <button
             onClick={fetchSuggestions}
             className={`ml-auto flex items-center gap-1 text-xs font-medium hover:underline ${tw.textPrimary}`}
@@ -177,25 +173,15 @@ const SuggestionsCarriere = () => {
             <div className={`divide-y ${tw.divideBase}`}>
               {paginated.map((m) => (
                 <div
-                  key={m.id}
+                  key={m.domaine_code}
                   className={`flex items-center justify-between px-5 py-3 ${tw.hoverSurfaceMuted} transition-colors`}
                 >
-                  <div>
-                    <p className={`text-sm font-medium ${tw.textStrong}`}>
-                      {m.titre}
-                    </p>
-                    {m.niveau_experience && (
-                      <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                        {m.niveau_experience}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-0.5 text-xs rounded-full ${tw.tagNeutralSolid}`}>
-                      {m.domaine_label}
-                    </span>
-                    <ChevronRight size={14} className={tw.textSubtle} />
-                  </div>
+                  <p className={`text-sm font-medium ${tw.textStrong}`}>
+                    {m.libelle}
+                  </p>
+                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
+                    {m.score}% compatible
+                  </span>
                 </div>
               ))}
             </div>

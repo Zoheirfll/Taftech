@@ -181,16 +181,18 @@ const NavbarRecruteur = () => {
                 <div className={`${tw.dropdownPanel.replace("shadow-lg","shadow-xl")}`}>
                   {[
                     { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", minRole: "INVITE" },
+                    { to: "/offres-emploi", icon: FileText, label: "Offres d'emploi", minRole: "INVITE" },
+                    { to: "/candidatures", icon: UserCheck, label: "Candidatures", minRole: "INVITE" },
                     { to: "/cvtheque", icon: Search, label: "CVthèque", minRole: "UTILISATEUR" },
-                    { to: "/candidatures-spontanees", icon: Inbox, label: "Candidatures spontanées", minRole: "INVITE" },
+                    { to: "/candidatures-spontanees", icon: Inbox, label: "Messages", minRole: "INVITE" },
                     { to: "/creer-offre", icon: Briefcase, label: "Publier une offre", minRole: "UTILISATEUR" },
                     { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires", minRole: "UTILISATEUR" },
-                    { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
                     { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
                     { to: "/cvtheque?favoris=true", icon: Star, label: "Favoris", minRole: "UTILISATEUR" },
                     ...(authService.peutFaire("PROPRIETAIRE")
                       ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? `Mon ${NOM_PALIERS[palierNom] || "Premium"} ⭐` : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
+                    { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
                   ]
                     .filter(({ minRole }) => authService.peutFaire(minRole))
                     .map(({ to, icon, label, accent }) => {
@@ -273,7 +275,7 @@ const NavbarRecruteur = () => {
                 { to: "/candidatures", label: "Candidatures", icon: UserCheck, minRole: "INVITE" },
                 { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR" },
                 { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
-                { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
+                { to: "/candidatures-spontanees", label: "Messages", icon: Inbox, minRole: "INVITE" },
                 { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
                 { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
                 { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },

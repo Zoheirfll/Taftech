@@ -440,6 +440,15 @@ class UpdateProfilEntrepriseAPIView(APIView):
                 if isinstance(valeur, str) and max_length:
                     valeur = valeur[:max_length]
                 setattr(profil, champ, valeur)
+        if 'annee_creation' in data:
+            valeur_annee = data['annee_creation']
+            if valeur_annee in ('', None):
+                profil.annee_creation = None
+            else:
+                try:
+                    profil.annee_creation = int(valeur_annee)
+                except (TypeError, ValueError):
+                    return Response({"error": "Année de création invalide."}, status=400)
         if 'logo' in request.FILES:
             profil.logo = request.FILES['logo']
         if 'banniere' in request.FILES:
@@ -470,6 +479,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "message": "Informations mises à jour.",
             "description": profil.description,
             "culture_entreprise": profil.culture_entreprise,
+            "annee_creation": profil.annee_creation,
             "wilaya_siege": profil.wilaya_siege,
             "commune_siege": profil.commune_siege,
             "adresse_complete": profil.adresse_complete,

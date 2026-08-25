@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Image as ImageIcon } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { mediaUrl } from "../../utils/mediaUrl";
+import ImageCropperModal from "../../Components/ImageCropperModal";
 
 const ANNONCE_VIDE = { texte: "", lien_url: "", lien_label: "", type_annonce: "INFO", actif: false };
 const BANNIERE_VIDE = { titre: "", lien_url: "", ordre: 0, actif: true, image: null };
@@ -65,11 +66,19 @@ const AdminBannieres = () => {
     setShowModal(true);
   };
 
+  const [cropperFile, setCropperFile] = useState(null);
+
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setFormBanniere({ ...formBanniere, image: file });
-    setPreviewImage(URL.createObjectURL(file));
+    setCropperFile(file);
+  };
+
+  const appliquerImageRecadree = (fichierRecadre) => {
+    setCropperFile(null);
+    setFormBanniere({ ...formBanniere, image: fichierRecadre });
+    setPreviewImage(URL.createObjectURL(fichierRecadre));
   };
 
   const handleSubmitAnnonce = async (e) => {
@@ -317,6 +326,16 @@ const AdminBannieres = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {cropperFile && (
+        <ImageCropperModal
+          file={cropperFile}
+          aspect={21 / 9}
+          cropShape="rect"
+          onCancel={() => setCropperFile(null)}
+          onValidate={appliquerImageRecadree}
+        />
       )}
     </div>
   );

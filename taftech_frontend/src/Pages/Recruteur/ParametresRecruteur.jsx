@@ -27,6 +27,7 @@ import {
 import api from "../../api/axiosConfig";
 import MonEquipe from "./MonEquipe";
 import InfoBanner from "../../Components/InfoBanner";
+import ImageCropperModal from "../../Components/ImageCropperModal";
 
 const TAILLES_ENTREPRISE_OPTIONS = [
   { value: "TPE", label: "1 à 10 employés" },
@@ -223,19 +224,30 @@ const ParametresRecruteur = () => {
       }));
   };
 
+  const [cropper, setCropper] = useState(null); // { file, aspect, shape, apply }
+  const fermerCropper = () => setCropper(null);
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
+    e.target.value = "";
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Fichier trop volumineux (max 5 Mo).");
       return;
     }
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    setCropper({
+      file, aspect: 1, shape: "round",
+      apply: (cropped) => {
+        setPhotoFile(cropped);
+        setPhotoPreview(URL.createObjectURL(cropped));
+        fermerCropper();
+      },
+    });
   };
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
+    e.target.value = "";
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
@@ -246,12 +258,19 @@ const ParametresRecruteur = () => {
       toast.error("Logo trop volumineux (max 2 Mo).");
       return;
     }
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    setCropper({
+      file, aspect: 1, shape: "round",
+      apply: (cropped) => {
+        setLogoFile(cropped);
+        setLogoPreview(URL.createObjectURL(cropped));
+        fermerCropper();
+      },
+    });
   };
 
   const handleBannerChange = (e) => {
     const file = e.target.files[0];
+    e.target.value = "";
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
@@ -262,11 +281,17 @@ const ParametresRecruteur = () => {
       toast.error("Bannière trop volumineuse (max 5 Mo).");
       return;
     }
-    setBannerFile(file);
-    setBannerPreview(URL.createObjectURL(file));
+    setCropper({
+      file, aspect: 3.5, shape: "rect",
+      apply: (cropped) => {
+        setBannerFile(cropped);
+        setBannerPreview(URL.createObjectURL(cropped));
+        fermerCropper();
+      },
+    });
   };
 
-  const handleAjouterPhoto = async (e) => {
+  const handleAjouterPhoto = (e) => {
     const file = e.target.files[0];
     e.target.value = "";
     if (!file) return;
@@ -283,6 +308,10 @@ const ParametresRecruteur = () => {
       toast.error("Maximum 12 photos dans la galerie.");
       return;
     }
+    setCropper({ file, aspect: 4 / 3, shape: "rect", apply: (cropped) => { fermerCropper(); envoyerPhotoGalerie(cropped); } });
+  };
+
+  const envoyerPhotoGalerie = async (file) => {
     setUploadingPhoto(true);
     try {
       const photo = await jobsService.ajouterPhotoEntreprise(file, newPhotoLegende);
@@ -1181,6 +1210,16 @@ const ParametresRecruteur = () => {
 
       {/* ONGLET ÉQUIPE */}
       {activeTab === "equipe" && <MonEquipe />}
+
+      {cropper && (
+        <ImageCropperModal
+          file={cropper.file}
+          aspect={cropper.aspect}
+          cropShape={cropper.shape}
+          onCancel={fermerCropper}
+          onValidate={cropper.apply}
+        />
+      )}
     </div>
     </div>
   );

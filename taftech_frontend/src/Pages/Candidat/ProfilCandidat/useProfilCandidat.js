@@ -264,11 +264,13 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const [cropperPhoto, setCropperPhoto] = useState(null);
+  const fermerCropperPhoto = () => setCropperPhoto(null);
+
+  const uploaderPhotoRecadree = async (fichierRecadre) => {
+    fermerCropperPhoto();
     const formData = new FormData();
-    formData.append("photo_profil", file);
+    formData.append("photo_profil", fichierRecadre);
     try {
       await profilService.updateProfil(formData);
       toast.success("Photo mise à jour !");
@@ -277,6 +279,13 @@ export const useProfilCandidat = () => {
       toast.error("Erreur lors du téléchargement.");
       reportError("ECHEC_UPDATE_PHOTO", err);
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setCropperPhoto(file);
   };
 
   const handleAddExperience = async (e) => {
@@ -785,6 +794,9 @@ export const useProfilCandidat = () => {
     handleUpdateCV,
     handleDeleteCV,
     handlePhotoChange,
+    cropperPhoto,
+    fermerCropperPhoto,
+    uploaderPhotoRecadree,
     handleAddExperience,
     handleDeleteExp,
     handleEditExp,

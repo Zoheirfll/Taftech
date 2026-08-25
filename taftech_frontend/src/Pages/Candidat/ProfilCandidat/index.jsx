@@ -20,6 +20,7 @@ import {
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
 import InfoBanner from "../../../Components/InfoBanner";
+import ImageCropperModal from "../../../Components/ImageCropperModal";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
 import { confirmToast } from "../../../utils/confirmToast";
@@ -105,6 +106,9 @@ const ProfilCandidat = () => {
     formatDate,
     getCommunesOptions,
     handlePhotoChange,
+    cropperPhoto,
+    fermerCropperPhoto,
+    uploaderPhotoRecadree,
     handleAddTag,
     handleRemoveTag,
     handleAjouterCompetence,
@@ -772,6 +776,15 @@ const ProfilCandidat = () => {
         handleValiderParsing={handleValiderParsing}
         getCommunesOptions={getCommunesOptions}
       />
+      {cropperPhoto && (
+        <ImageCropperModal
+          file={cropperPhoto}
+          aspect={1}
+          cropShape="round"
+          onCancel={fermerCropperPhoto}
+          onValidate={uploaderPhotoRecadree}
+        />
+      )}
     </div>
   );
 };

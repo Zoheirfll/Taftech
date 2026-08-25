@@ -77,7 +77,7 @@ const Blog = () => {
           <div className="flex gap-2 flex-wrap justify-center mb-8">
             <button
               onClick={() => handleCategorie("")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${!categorieActive ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted}`}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${!categorieActive ? "bg-indigo-600 border-indigo-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted}`}`}
             >
               Tous
             </button>
@@ -85,7 +85,7 @@ const Blog = () => {
               <button
                 key={c.id}
                 onClick={() => handleCategorie(String(c.id))}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${categorieActive === String(c.id) ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted}`}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${categorieActive === String(c.id) ? "bg-indigo-600 border-indigo-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted}`}`}
               >
                 {c.label}
               </button>
@@ -125,7 +125,7 @@ const Blog = () => {
                         {vedette.categorie_label && (
                           <span className={`inline-block w-fit px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{vedette.categorie_label}</span>
                         )}
-                        <h2 className={`text-lg font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{vedette.titre}</h2>
+                        <h2 className={`text-lg font-bold ${tw.textStrong} group-hover:text-indigo-600 transition-colors`}>{vedette.titre}</h2>
                         <p className={`text-sm ${tw.textMuted} mt-2 line-clamp-3`}>{vedette.extrait}</p>
                         <div className="flex items-center justify-between mt-4">
                           <span className={`flex items-center gap-1 text-xs font-semibold ${tw.textPrimary}`}>
@@ -148,7 +148,7 @@ const Blog = () => {
                             {a.categorie_label && (
                               <span className={`inline-block px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[11px] font-medium rounded-full mb-1`}>{a.categorie_label}</span>
                             )}
-                            <h2 className={`text-sm font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors line-clamp-2`}>{a.titre}</h2>
+                            <h2 className={`text-sm font-bold ${tw.textStrong} group-hover:text-indigo-600 transition-colors line-clamp-2`}>{a.titre}</h2>
                             <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-1`}>
                               <Calendar size={11} />
                               {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
@@ -167,7 +167,7 @@ const Blog = () => {
                       {a.categorie_label && (
                         <span className={`inline-block px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{a.categorie_label}</span>
                       )}
-                      <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{a.titre}</h2>
+                      <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-indigo-600 transition-colors`}>{a.titre}</h2>
                       <p className={`text-sm ${tw.textMuted} mt-1.5 line-clamp-2`}>{a.extrait}</p>
                       <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-3`}>
                         <Calendar size={12} />
@@ -188,7 +188,7 @@ const Blog = () => {
                 key={n}
                 onClick={() => setPage(n)}
                 className={`w-9 h-9 text-sm font-semibold rounded-lg border transition-colors ${
-                  n === page ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted} hover:bg-slate-50`
+                  n === page ? "bg-indigo-600 border-indigo-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted} hover:bg-slate-50`
                 }`}
               >
                 {n}

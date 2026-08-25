@@ -392,13 +392,25 @@ const DashboardRecruteur = () => {
   // Pas de filtre "masquer retenus/refusés" ici (widget compact sans toggle,
   // contrairement à la page dédiée /candidats-recommandes) — sinon des
   // candidats scorés disparaissent silencieusement sans moyen de les revoir.
+  // Restreint aux offres encore actives (est_active, non clôturée, non expirée) ET aux
+  // candidatures des 90 derniers jours — sinon une offre postée il y a des mois (jamais
+  // clôturée, ou sans date d'expiration) continue de faire remonter indéfiniment son meilleur
+  // candidat en tête du "top match", même vieux de plusieurs mois.
+  const RECOMMANDES_FENETRE_JOURS = 60;
   const candidatsRecommandesTous = (() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const seuilRecence = new Date(Date.now() - RECOMMANDES_FENETRE_JOURS * 24 * 60 * 60 * 1000);
     const all = [];
-    offresPourAnalyse.forEach((o) => o.candidatures?.forEach((c) => {
-      if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined) {
-        all.push({ ...c, offreTitre: o.titre, offreId: o.id });
-      }
-    }));
+    offresPourAnalyse.forEach((o) => {
+      const offreActive = o.est_active !== false && !o.est_cloturee && (!o.date_expiration || o.date_expiration >= today);
+      if (!offreActive) return;
+      o.candidatures?.forEach((c) => {
+        if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined
+          && c.date_postulation && new Date(c.date_postulation) >= seuilRecence) {
+          all.push({ ...c, offreTitre: o.titre, offreId: o.id });
+        }
+      });
+    });
     return all.sort((a, b) => parseFloat(b.score_matching) - parseFloat(a.score_matching));
   })();
 

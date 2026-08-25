@@ -212,6 +212,7 @@ class OffreEmploi(models.Model):
     statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
     motif_rejet = models.TextField(blank=True, null=True)
     est_cloturee = models.BooleanField(default=False)
+    date_cloture = models.DateTimeField(null=True, blank=True, verbose_name="Date de clôture")
     questionnaire = models.ForeignKey('Questionnaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='offres')
 
     def save(self, *args, **kwargs):

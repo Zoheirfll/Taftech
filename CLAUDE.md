@@ -2,7 +2,23 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 25/08/2026 (suite) — Branche `specs/important-features` : audit visuel complet du mockup employeur (13 puis 15 points), refonte page vitrine entreprise (hero neutre + onglets + ancienneté), navbar candidat restructurée (dropdown Recherche avancée + Blog), métiers accessibles déterministes (%), refonte blog (contenu réel + design 2 colonnes), recadrage d'image sur tous les uploads, et une série de bugs réels trouvés/corrigés en testant en direct avec l'utilisateur (linkedin/parser CV, NIN, navbar admin, .jfif). Voir section ci-dessous._
+_Dernière mise à jour : 25/08/2026 (suite 2) — Branche `specs/important-features` : fix "Candidats recommandés"/top match restreint aux offres actives + fenêtre 60j ; offres clôturées désormais visibles 60 jours dans `/jobs` (badge "Poste pourvu", candidature bloquée) au lieu de disparaître instantanément. Voir sections ci-dessous._
+
+## 🆕 SESSION 25/08/2026 (suite 2) — Offres clôturées visibles 60 jours (badge "Poste pourvu")
+
+**Contexte** : en creusant le fix "Candidats recommandés" (session juste en dessous), l'utilisateur a soulevé un vrai risque produit — si les recruteurs clôturent correctement leurs offres pourvues (bonne pratique déjà encouragée par ce fix), le catalogue public `/jobs` se réduit et le site risque de paraître vide/mort. Décision validée : au lieu de disparaître instantanément, une offre clôturée reste visible dans le flux public le temps d'une fenêtre de rétention, clairement badgée et non-candidatable — donne l'impression d'un site actif sans mentir sur la disponibilité réelle.
+
+**Nouveau champ `OffreEmploi.date_cloture`** (`DateTimeField` nullable, migration `0089`) — horodate le moment de clôture, alimenté par `CloturerOffreAPIView.patch()` (clôture manuelle recruteur) et `archiver_offres_expirees` (clôture auto sur expiration). Nécessaire pour calculer la fenêtre de rétention (`est_cloturee` seul n'indique pas depuis quand).
+
+**Backend** (`jobs/views/offres.py`, constante module-level `RETENTION_OFFRES_CLOTUREES_JOURS = 60`) :
+- `JobListAPIView` : filtre `Q(est_cloturee=False) | Q(est_cloturee=True, date_cloture__gte=seuil_60j)` au lieu de `est_cloturee=False` strict. Tri `.annotate(priorite_cloture=Case(...)).order_by('priorite_cloture', '-date_publication')` — **les offres actives apparaissent toujours avant les clôturées récentes**, jamais mélangées par simple date, pour ne pas noyer les vraies opportunités.
+- `JobDetailAPIView` : même filtre — une offre clôturée récente reste accessible en détail (pas de 404) pour afficher le badge/état "Poste pourvu", au lieu de disparaître.
+- **Bug réel trouvé en implémentant** : `PostulerAPIView`/`PostulerRapideAPIView` (`jobs/views/candidatures.py`) ne vérifiaient `est_cloturee` nulle part — ça ne posait pas de risque avant car l'offre 404ait dès la clôture (page de candidature inatteignable). Une fois la page de détail conservée 60 jours, un candidat aurait pu techniquement soumettre une candidature à une offre pourvue (le bouton frontend est désactivé, mais rien ne bloquait un appel API direct). Fix : 400 explicite `"Cette offre est clôturée..."` ajouté aux deux vues.
+- Endpoints non touchés intentionnellement (gardent `est_cloturee=False` strict) : `OffresRecommandeesAPIView` (`ia.py`), `AlerteEmploi` (`envoyer_alertes.py`), `profile_score.py`, `sitemap.xml` (`seo_views.py`), `NotificationsAPIView`/stats — une offre clôturée ne doit jamais être recommandée, alertée, ou comptée comme opportunité active, seule la page de *navigation* publique bénéficie de la rétention visuelle.
+
+**Frontend** : nouveaux tokens `theme.js` (`jobCardBadgeCloturee`, `jobCardDisabledButton`). `Components/JobCard.jsx` : badge "Poste pourvu" (remplace le badge type de contrat) + bouton "Postuler" désactivé (`disabled`, tooltip) quand `job.est_cloturee`. `Pages/Public/JobDetail.jsx` : panneau de candidature remplacé par un état "Poste pourvu" explicite, badge "Poste pourvu" à la place du badge d'expiration, bouton flottant mobile masqué. `JobsList.jsx`/`OffresParSecteur.jsx`/`OffresParRegion.jsx` héritent automatiquement (consomment `JobCard`, aucun changement nécessaire).
+
+**Tests** : backend `test_api_candidat`/`test_serializers_offres`/`test_jobs_models`/`test_api_gestion_recruteur` 29/29 ✅, suite `jobs.tests` complète relancée en arrière-plan, frontend `JobCard`/`JobDetail`/`JobsList` 19/19 ✅, `npx vite build` propre.
 
 ## 🆕 SESSION 25/08/2026 (suite) — Audit mockup, refonte entreprise/blog/navbar, recadrage image, corrections en direct
 

@@ -23,5 +23,5 @@ class Command(BaseCommand):
             for o in offres:
                 self.stdout.write(f"  - {o.titre} ({o.entreprise.nom_entreprise}) — expirée le {o.date_expiration}")
             return
-        offres.update(est_cloturee=True)
+        offres.update(est_cloturee=True, date_cloture=timezone.now())
         self.stdout.write(self.style.SUCCESS(f"{count} offre(s) clôturée(s) automatiquement."))

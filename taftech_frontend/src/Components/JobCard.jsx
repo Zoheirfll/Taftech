@@ -19,7 +19,10 @@ const JobCard = ({ job }) => {
   const [statusMessage, setStatusMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  const estCloturee = !!job.est_cloturee;
+
   const handlePostuler = async () => {
+    if (estCloturee) return;
     try {
       const data = await jobsService.postuler(job.id);
       setStatusMessage(data.message);
@@ -50,9 +53,15 @@ const JobCard = ({ job }) => {
               {job.entreprise?.nom_entreprise}
             </p>
           </div>
-          <span className={tw.jobCardBadgeNeutral}>
-            {job.type_contrat}
-          </span>
+          {estCloturee ? (
+            <span className={tw.jobCardBadgeCloturee}>
+              Poste pourvu
+            </span>
+          ) : (
+            <span className={tw.jobCardBadgeNeutral}>
+              {job.type_contrat}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2 mt-3 mb-4">
@@ -93,7 +102,11 @@ const JobCard = ({ job }) => {
             >
               Voir les détails
             </Link>
-            {isLogged ? (
+            {estCloturee ? (
+              <button disabled className={tw.jobCardDisabledButton} title="Cette offre n'accepte plus de candidatures">
+                Postuler
+              </button>
+            ) : isLogged ? (
               <button
                 onClick={handlePostuler}
                 className={tw.jobCardApplyButton}

@@ -340,7 +340,13 @@ const JobDetail = () => {
       </div>
 
       <div className="p-5">
-        {postulerStatus === "success" ? (
+        {job.est_cloturee ? (
+          <div className="text-center py-4">
+            <XCircle size={36} className={`${tw.textMuted} mx-auto mb-3`} />
+            <h3 className={`text-base font-bold ${tw.textStrong} mb-1`}>Poste pourvu</h3>
+            <p className={`text-sm ${tw.textMuted700}`}>Cette offre n'accepte plus de candidatures — le recrutement est terminé.</p>
+          </div>
+        ) : postulerStatus === "success" ? (
           <div className="text-center py-4">
             <CheckCircle size={36} className={`${tw.textSuccessIcon} mx-auto mb-3`} />
             <h3 className={`text-base font-bold ${tw.textStrong} mb-1`}>Candidature envoyée !</h3>
@@ -586,7 +592,11 @@ const JobDetail = () => {
                   <Calendar size={12} />
                   Publié le {new Date(job.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                 </span>
-                {job.jours_restants !== null && job.jours_restants !== undefined && (
+                {job.est_cloturee ? (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tw.tagSlateSoft700}`}>
+                    Poste pourvu
+                  </span>
+                ) : job.jours_restants !== null && job.jours_restants !== undefined && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${job.jours_restants <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : job.jours_restants <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`}`}>
                     {job.jours_restants === 0 ? "Expire aujourd'hui" : `Expire dans ${job.jours_restants} jour${job.jours_restants > 1 ? "s" : ""}`}
                   </span>
@@ -656,7 +666,7 @@ const JobDetail = () => {
       </div>
 
       {/* BOUTON FLOTTANT MOBILE */}
-      {postulerStatus !== "success" && (
+      {postulerStatus !== "success" && !job.est_cloturee && (
         <div className={`lg:hidden fixed bottom-0 left-0 right-0 ${tw.surface} border-t ${tw.borderBase} px-4 py-3 z-40 shadow-lg`}>
           <button
             onClick={() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}

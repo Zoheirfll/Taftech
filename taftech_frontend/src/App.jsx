@@ -175,6 +175,7 @@ const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
 const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
 const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
+const AdminSeo          = lazy(() => import("./Pages/Admin/AdminSeo"));
 const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
 const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
@@ -355,6 +356,7 @@ function AppContent() {
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
               <Route path="/admin-taftech/pages" element={<AdminPages />} />
               <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
+              <Route path="/admin-taftech/seo" element={<AdminSeo />} />
               <Route path="/admin-taftech/rendez-vous" element={<AdminRendezVous />} />
               <Route path="/admin-taftech/types-documents" element={<AdminTypesDocuments />} />
               <Route path="audit" element={<AdminAuditLogs />} />

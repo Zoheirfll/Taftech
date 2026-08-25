@@ -138,9 +138,9 @@ const Blog = () => {
                         </div>
                       </div>
                     </Link>
-                    <div className={`${tw.card} rounded-2xl divide-y ${tw.divideBase} overflow-hidden`}>
+                    <div className="space-y-3">
                       {reste.map((a) => (
-                        <Link key={a.id} to={`/blog/${a.slug}`} className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group">
+                        <Link key={a.id} to={`/blog/${a.slug}`} className={`${tw.card} rounded-2xl flex items-center gap-4 p-4 hover:shadow-md transition-shadow group`}>
                           <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0">
                             <ArticleBanner article={a} className="h-16" />
                           </div>

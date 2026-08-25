@@ -229,7 +229,11 @@ function AppContent() {
 
   const role = authService.getUserRole();
   const portal = authService.getLoginPortal();
-  const estRecruteurConnecte = role === "ADMIN" || (!!role && portal === "recruteur");
+  // Un ADMIN n'est ni recruteur ni membre d'équipe — il ne doit basculer sur la navbar
+  // recruteur (NavbarRecruteur, dont la plupart des liens sont gatés par isRecruteurOuMembre())
+  // que sur les vraies routes recruteur (déjà couvert par isRecruteurRoute ci-dessous), jamais
+  // par défaut sur les pages publiques partagées (blog, offres, entreprises...).
+  const estRecruteurConnecte = !!role && portal === "recruteur";
   const forcePortalParam = new URLSearchParams(location.search).get("portail");
   const recruteurPortal =
     !isAdminRoute(location.pathname) &&

@@ -7,6 +7,8 @@ import { tw } from "../../theme";
 import Seo from "../../Components/Seo";
 import { Calendar, ArrowRight, Newspaper } from "lucide-react";
 
+const PAGE_SIZE = 9; // doit rester aligné sur la pagination du backend (ArticleListPublicAPIView)
+
 // Bandeau dégradé de secours quand l'article n'a pas de photo de couverture — coloré selon la
 // catégorie (hash simple du libellé) plutôt qu'un carré vide, sans dépendre de vraies photos.
 const GRADIENTS = [
@@ -135,21 +137,25 @@ const Blog = () => {
                     </div>
                   </Link>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className={`${tw.card} rounded-2xl divide-y ${tw.divideBase} overflow-hidden`}>
                   {reste.map((a) => (
-                    <Link key={a.id} to={`/blog/${a.slug}`} className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group`}>
-                      <ArticleBanner article={a} />
-                      <div className="p-5">
+                    <Link key={a.id} to={`/blog/${a.slug}`} className={`flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group`}>
+                      <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                        <ArticleBanner article={a} className="h-20" />
+                      </div>
+                      <div className="flex-1 min-w-0">
                         {a.categorie_label && (
-                          <span className={`inline-block px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{a.categorie_label}</span>
+                          <span className={`inline-block px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[11px] font-medium rounded-full mb-1`}>{a.categorie_label}</span>
                         )}
-                        <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{a.titre}</h2>
-                        <p className={`text-sm ${tw.textMuted} mt-1.5 line-clamp-2`}>{a.extrait}</p>
-                        <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-3`}>
-                          <Calendar size={12} />
+                        <h2 className={`text-sm font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors truncate`}>{a.titre}</h2>
+                        <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-1`}>
+                          <Calendar size={11} />
                           {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                         </div>
                       </div>
+                      <span className={`hidden sm:flex items-center gap-1 text-xs font-semibold ${tw.textPrimary} shrink-0`}>
+                        Lire la suite <ArrowRight size={12} />
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -158,14 +164,19 @@ const Blog = () => {
           })()
         )}
 
-        {(pagination.next || pagination.previous) && (
-          <div className="flex items-center justify-center gap-3 mt-8">
-            <button disabled={!pagination.previous} onClick={() => setPage((p) => p - 1)} className={`px-4 py-2 text-sm font-medium rounded-lg border ${tw.borderBase} disabled:opacity-40`}>
-              Précédent
-            </button>
-            <button disabled={!pagination.next} onClick={() => setPage((p) => p + 1)} className={`px-4 py-2 text-sm font-medium rounded-lg border ${tw.borderBase} disabled:opacity-40 flex items-center gap-1`}>
-              Suivant <ArrowRight size={14} />
-            </button>
+        {pagination.count > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            {Array.from({ length: Math.ceil(pagination.count / PAGE_SIZE) }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setPage(n)}
+                className={`w-9 h-9 text-sm font-semibold rounded-lg border transition-colors ${
+                  n === page ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted} hover:bg-slate-50`
+                }`}
+              >
+                {n}
+              </button>
+            ))}
           </div>
         )}
       </div>

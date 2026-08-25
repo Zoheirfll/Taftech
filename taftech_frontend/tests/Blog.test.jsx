@@ -105,6 +105,25 @@ describe("📰 UI & Logique - Composant <Blog />", () => {
     });
   });
 
+  it("🟢 HP4 : Pagination numérotée affichée au-delà d'une page, clic relance getArticles", async () => {
+    jobsService.getArticles.mockResolvedValue({ ...mockArticles, count: 15 });
+
+    render(
+      <MemoryRouter>
+        <Blog />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByRole("button", { name: "2" }));
+    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+
+    await waitFor(() => {
+      expect(jobsService.getArticles).toHaveBeenCalledWith(2, "");
+    });
+  });
+
   it("🔴 EC2 : Aucun article", async () => {
     jobsService.getArticles.mockResolvedValue({ results: [], next: null, previous: null, count: 0 });
 

@@ -114,52 +114,69 @@ const Blog = () => {
             const mettreEnAvant = page === 1 && !categorieActive && articles.length > 1;
             const [vedette, ...reste] = mettreEnAvant ? articles : [null, ...articles];
 
-            return (
-              <>
-                {vedette && (
-                  <Link
-                    to={`/blog/${vedette.slug}`}
-                    className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col md:flex-row mb-6`}
-                  >
-                    <div className="md:w-1/2">
-                      <ArticleBanner article={vedette} className="h-48 md:h-full" />
+            return vedette ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <Link
+                      to={`/blog/${vedette.slug}`}
+                      className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group`}
+                    >
+                      <ArticleBanner article={vedette} className="h-56" />
+                      <div className="p-5">
+                        {vedette.categorie_label && (
+                          <span className={`inline-block w-fit px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{vedette.categorie_label}</span>
+                        )}
+                        <h2 className={`text-lg font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{vedette.titre}</h2>
+                        <p className={`text-sm ${tw.textMuted} mt-2 line-clamp-3`}>{vedette.extrait}</p>
+                        <div className="flex items-center justify-between mt-4">
+                          <span className={`flex items-center gap-1 text-xs font-semibold ${tw.textPrimary}`}>
+                            Lire la suite <ArrowRight size={12} />
+                          </span>
+                          <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted}`}>
+                            <Calendar size={11} />
+                            {vedette.date_publication && new Date(vedette.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                    <div className={`${tw.card} rounded-2xl divide-y ${tw.divideBase} overflow-hidden`}>
+                      {reste.map((a) => (
+                        <Link key={a.id} to={`/blog/${a.slug}`} className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0">
+                            <ArticleBanner article={a} className="h-16" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {a.categorie_label && (
+                              <span className={`inline-block px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[11px] font-medium rounded-full mb-1`}>{a.categorie_label}</span>
+                            )}
+                            <h2 className={`text-sm font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors line-clamp-2`}>{a.titre}</h2>
+                            <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-1`}>
+                              <Calendar size={11} />
+                              {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <div className="p-6 md:w-1/2 flex flex-col justify-center">
-                      {vedette.categorie_label && (
-                        <span className={`inline-block w-fit px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{vedette.categorie_label}</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {reste.map((a) => (
+                  <Link key={a.id} to={`/blog/${a.slug}`} className={`${tw.card} rounded-2xl overflow-hidden hover:shadow-md transition-shadow group`}>
+                    <ArticleBanner article={a} />
+                    <div className="p-5">
+                      {a.categorie_label && (
+                        <span className={`inline-block px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full mb-2`}>{a.categorie_label}</span>
                       )}
-                      <h2 className={`text-xl font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{vedette.titre}</h2>
-                      <p className={`text-sm ${tw.textMuted} mt-2 line-clamp-3`}>{vedette.extrait}</p>
-                      <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-4`}>
+                      <h2 className={`text-base font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors`}>{a.titre}</h2>
+                      <p className={`text-sm ${tw.textMuted} mt-1.5 line-clamp-2`}>{a.extrait}</p>
+                      <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-3`}>
                         <Calendar size={12} />
-                        {vedette.date_publication && new Date(vedette.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                        {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
                     </div>
                   </Link>
-                )}
-                <div className={`${tw.card} rounded-2xl divide-y ${tw.divideBase} overflow-hidden`}>
-                  {reste.map((a) => (
-                    <Link key={a.id} to={`/blog/${a.slug}`} className={`flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group`}>
-                      <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                        <ArticleBanner article={a} className="h-20" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {a.categorie_label && (
-                          <span className={`inline-block px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-[11px] font-medium rounded-full mb-1`}>{a.categorie_label}</span>
-                        )}
-                        <h2 className={`text-sm font-bold ${tw.textStrong} group-hover:text-teal-700 transition-colors truncate`}>{a.titre}</h2>
-                        <div className={`flex items-center gap-1.5 text-xs ${tw.textMuted} mt-1`}>
-                          <Calendar size={11} />
-                          {a.date_publication && new Date(a.date_publication).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-                        </div>
-                      </div>
-                      <span className={`hidden sm:flex items-center gap-1 text-xs font-semibold ${tw.textPrimary} shrink-0`}>
-                        Lire la suite <ArrowRight size={12} />
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </>
+                ))}
+              </div>
             );
           })()
         )}

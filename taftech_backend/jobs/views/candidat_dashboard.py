@@ -16,6 +16,7 @@ from ..models import (
     ActiviteProfil, Candidature,
 )
 from ..profile_score import calculer_score_profil
+from ..metiers_matching import calculer_metiers_accessibles
 from .ia import GroqThrottle
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,18 @@ class ScoreProfilAPIView(APIView):
         if request.user.role != 'CANDIDAT' or not hasattr(request.user, 'profil_candidat'):
             return Response({"error": "Réservé aux candidats."}, status=403)
         return Response(calculer_score_profil(request.user), status=200)
+
+
+class MetiersAccessiblesAPIView(APIView):
+    """Domaines (nomenclature ANEM) les plus compatibles avec le profil — calcul déterministe, pas d'IA."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'CANDIDAT' or not hasattr(request.user, 'profil_candidat'):
+            return Response({"error": "Réservé aux candidats."}, status=403)
+        top_n = request.query_params.get('limit')
+        top_n = int(top_n) if top_n and top_n.isdigit() else None
+        return Response(calculer_metiers_accessibles(request.user, top_n=top_n), status=200)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

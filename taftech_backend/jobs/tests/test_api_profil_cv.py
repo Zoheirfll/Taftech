@@ -68,6 +68,18 @@ class ProfilAndCVTests(APITestCase):
         self.profil_a.refresh_from_db()
         self.assertEqual(self.profil_a.linkedin, "https://linkedin.com/in/samira-test")
 
+    def test_update_profil_linkedin_noye_dans_une_phrase_extrait(self):
+        """ Le parser IA renvoie parfois l'URL entourée de texte (ex: 'LinkedIn : linkedin.com/in/x.') """
+        self.client.force_authenticate(user=self.cand_a)
+        url = reverse('profil-candidat')
+
+        data = {"linkedin": "LinkedIn : linkedin.com/in/samira-belamri."}
+        response = self.client.put(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.profil_a.refresh_from_db()
+        self.assertEqual(self.profil_a.linkedin, "https://linkedin.com/in/samira-belamri")
+
     def test_crud_experience_success(self):
         """ US-CV-01: Ajouter et supprimer une expérience """
         self.client.force_authenticate(user=self.cand_a)

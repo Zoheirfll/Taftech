@@ -1,4 +1,5 @@
 import os
+import re
 from django.utils import timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -79,12 +80,19 @@ class ProfilCandidatAPIView(APIView):
         if 'langues' in data and isinstance(data['langues'], str):
             data['langues'] = data['langues'][:255]
         # Les CV mentionnent souvent "linkedin.com/in/..." sans protocole → rejeté par le URLField.
-        # L'IA du parser peut aussi renvoyer un texte qui n'est pas du tout une URL (ex: "Non spécifié") —
-        # dans ce cas on abandonne silencieusement ce seul champ plutôt que de faire échouer tout le PUT.
+        # L'IA du parser peut aussi noyer l'URL dans une phrase (ex: "LinkedIn : linkedin.com/in/x")
+        # ou renvoyer un texte qui n'est pas du tout une URL (ex: "Non spécifié") — dans ce dernier
+        # cas on abandonne silencieusement ce seul champ plutôt que de faire échouer tout le PUT.
         url_validator = URLValidator()
+        DOMAINES_URL = {'linkedin': r'linkedin\.com/\S+', 'github': r'github\.com/\S+'}
         for champ_url in ('linkedin', 'github'):
             valeur = data.get(champ_url)
             if valeur and isinstance(valeur, str):
+                valeur = valeur.strip()
+                match = re.search(DOMAINES_URL[champ_url], valeur, re.IGNORECASE)
+                if match:
+                    valeur = match.group(0)
+                valeur = valeur.rstrip('.,;)')
                 if not valeur.startswith(('http://', 'https://')):
                     valeur = f"https://{valeur}"
                 try:

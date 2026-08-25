@@ -43,7 +43,6 @@ const RegisterCandidat = () => {
     last_name: "",
     date_naissance: "",
     telephone: "",
-    nin: "",
     wilaya: "",
     adresse: "",
     email: "",
@@ -93,10 +92,6 @@ const RegisterCandidat = () => {
     }
     if (!formData.wilaya) {
       toast.error("Veuillez sélectionner votre wilaya.");
-      return;
-    }
-    if (!/^\d{18}$/.test(formData.nin)) {
-      toast.error("Le NIN doit contenir exactement 18 chiffres.");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -276,13 +271,6 @@ const RegisterCandidat = () => {
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Adresse *</label>
                   <input type="text" name="adresse" required value={formData.adresse} onChange={handleChange}
-                    className={tw.authInput} />
-                </div>
-                <div>
-                  <label className={`${tw.authLabel} mb-1.5`}>NIN (Numéro d'Identification Nationale) *</label>
-                  <input type="text" name="nin" required maxLength={18} pattern="\d{18}" title="Le NIN doit contenir exactement 18 chiffres."
-                    placeholder="18 chiffres" value={formData.nin}
-                    onChange={(e) => setFormData({ ...formData, nin: e.target.value.replace(/\D/g, "") })}
                     className={tw.authInput} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

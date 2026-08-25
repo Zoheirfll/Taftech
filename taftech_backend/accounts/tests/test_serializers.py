@@ -54,6 +54,25 @@ class CandidatSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('nin', serializer.errors)
 
+    def test_candidat_creation_sans_nin(self):
+        """ Le NIN n'est plus collecté à l'inscription — deux comptes sans NIN ne doivent pas
+        se percuter sur la contrainte unique (nin doit être stocké NULL, pas ""). """
+        data_sans_nin = self.valid_data.copy()
+        del data_sans_nin['nin']
+
+        serializer1 = RegisterCandidatDTO(data=data_sans_nin)
+        self.assertTrue(serializer1.is_valid(), serializer1.errors)
+        user1 = serializer1.save()
+        self.assertIsNone(user1.nin)
+
+        data2 = data_sans_nin.copy()
+        data2['username'] = "deuxieme_candidat"
+        data2['email'] = "candidat2@test.com"
+        serializer2 = RegisterCandidatDTO(data=data2)
+        self.assertTrue(serializer2.is_valid(), serializer2.errors)
+        user2 = serializer2.save()
+        self.assertIsNone(user2.nin)
+
     def test_candidat_missing_consent(self):
         """ Vérifie le rejet strict si la loi 18-07 n'est pas acceptée. """
         invalid_data = self.valid_data.copy()

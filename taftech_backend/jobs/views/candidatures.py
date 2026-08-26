@@ -38,6 +38,8 @@ class PostulerAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
+        if offre.est_cloturee:
+            return Response({"error": "Cette offre est clôturée, elle n'accepte plus de candidatures."}, status=status.HTTP_400_BAD_REQUEST)
         if Candidature.objects.filter(offre=offre, candidat=request.user).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre."}, status=status.HTTP_400_BAD_REQUEST)
         serializer = PostulerDTO(data=request.data)
@@ -193,6 +195,8 @@ class PostulerRapideAPIView(APIView):
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Cette offre n'existe pas ou n'est plus active."}, status=status.HTTP_404_NOT_FOUND)
+        if offre.est_cloturee:
+            return Response({"error": "Cette offre est clôturée, elle n'accepte plus de candidatures."}, status=status.HTTP_400_BAD_REQUEST)
         email = (request.data.get('email_rapide') or '').strip()
         if Candidature.objects.filter(offre=offre, email_rapide__iexact=email).exists():
             return Response({"error": "Vous avez déjà postulé à cette offre avec cet email."}, status=status.HTTP_400_BAD_REQUEST)

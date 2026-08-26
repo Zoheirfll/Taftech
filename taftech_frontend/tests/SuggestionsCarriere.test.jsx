@@ -16,30 +16,29 @@ import * as reporter from "../src/utils/errorReporter";
 // --- MOCKS ---
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
-    getSuggestionsCarriere: vi.fn(),
+    getMetiersAccessibles: vi.fn(),
     getAnalyseCarriere: vi.fn(),
   },
 }));
 
-const mockSuggestions = {
-  profil_secteur: "Informatique",
-  metiers: [
-    { id: 1, titre: "Développeur React", secteur: "IT", niveau_experience: "2 ans" },
-    { id: 2, titre: "Tech Lead", secteur: "IT", niveau_experience: "5 ans" },
-    { id: 3, titre: "DevOps Engineer", secteur: "IT", niveau_experience: "3 ans" },
-    { id: 4, titre: "Data Scientist", secteur: "IT", niveau_experience: "2 ans" },
-    { id: 5, titre: "Architecte Cloud", secteur: "IT", niveau_experience: "7 ans" },
-    { id: 6, titre: "Product Manager", secteur: "IT", niveau_experience: "4 ans" },
-  ],
-};
+const mockMetiers = [
+  { domaine_code: "L18", libelle: "Systèmes d'information et de télécommunication", score: 88 },
+  { domaine_code: "L14", libelle: "Organisation et études", score: 75 },
+  { domaine_code: "L12", libelle: "Comptabilité et finance", score: 60 },
+  { domaine_code: "L11", libelle: "Achats", score: 55 },
+  { domaine_code: "L16", libelle: "Secrétariat et assistance", score: 50 },
+  { domaine_code: "L13", libelle: "Direction d'entreprise", score: 45 },
+];
 
 const mockAnalyse = {
-  analyse: `### ÉVOLUTION POSSIBLE ###
-Vous pouvez devenir Tech Lead.
-### COMPÉTENCES À ACQUÉRIR ###
+  analyse: `### POINTS FORTS ###
+5 ans d'expérience en développement web.
+### COMPÉTENCES MANQUANTES ###
 Approfondissez Node.js et TypeScript.
-### CONSEIL PERSONNALISÉ ###
-Faites du networking et présentez-vous dans des conférences.`,
+### FORMATIONS RECOMMANDÉES ###
+Formation TypeScript avancé.
+### ÉVOLUTION PROFESSIONNELLE ###
+Vous pouvez évoluer vers un poste de Tech Lead.`,
 };
 
 describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
@@ -54,53 +53,53 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
 
   // --- 🟢 HAPPY PATHS ---
 
-  it("🟢 HP1 : Chargement et affichage de la liste de métiers", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+  it("🟢 HP1 : Chargement et affichage de la liste de métiers accessibles avec %", async () => {
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
 
     render(<SuggestionsCarriere />);
 
     await waitFor(() => {
       expect(screen.getByText("Suggestions de carrière")).toBeInTheDocument();
-      expect(screen.getByText("Développeur React")).toBeInTheDocument();
-      expect(screen.getByText("Informatique")).toBeInTheDocument();
+      expect(screen.getByText("Systèmes d'information et de télécommunication")).toBeInTheDocument();
+      expect(screen.getByText("88% compatible")).toBeInTheDocument();
     });
   });
 
   it("🟢 HP2 : Pagination — navigation vers la page suivante", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
 
     render(<SuggestionsCarriere />);
 
-    await waitFor(() => screen.getByText("Développeur React"));
+    await waitFor(() => screen.getByText("Systèmes d'information et de télécommunication"));
 
     // 6 métiers, 5 par page → 2 pages
     expect(screen.getByText(/Page 1 \/ 2/i)).toBeInTheDocument();
-    expect(screen.queryByText("Product Manager")).not.toBeInTheDocument();
+    expect(screen.queryByText("Direction d'entreprise")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
 
-    expect(screen.getByText("Product Manager")).toBeInTheDocument();
-    expect(screen.queryByText("Développeur React")).not.toBeInTheDocument();
+    expect(screen.getByText("Direction d'entreprise")).toBeInTheDocument();
+    expect(screen.queryByText("Systèmes d'information et de télécommunication")).not.toBeInTheDocument();
     expect(screen.getByText(/Page 2 \/ 2/i)).toBeInTheDocument();
   });
 
-  it("🟢 HP3 : Bouton Actualiser recharge les suggestions", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+  it("🟢 HP3 : Bouton Actualiser recharge les métiers accessibles", async () => {
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
 
     render(<SuggestionsCarriere />);
 
-    await waitFor(() => screen.getByText("Développeur React"));
+    await waitFor(() => screen.getByText("Systèmes d'information et de télécommunication"));
 
-    jobsService.getSuggestionsCarriere.mockClear();
+    jobsService.getMetiersAccessibles.mockClear();
     fireEvent.click(screen.getByText(/Actualiser/i));
 
     await waitFor(() => {
-      expect(jobsService.getSuggestionsCarriere).toHaveBeenCalledTimes(1);
+      expect(jobsService.getMetiersAccessibles).toHaveBeenCalledTimes(1);
     });
   });
 
-  it("🟢 HP4 : Analyse IA — affichage des sections parsées", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+  it("🟢 HP4 : Analyse IA — affichage des sections parsées (sans Métiers possibles)", async () => {
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
     jobsService.getAnalyseCarriere.mockResolvedValue(mockAnalyse);
 
     render(<SuggestionsCarriere />);
@@ -109,15 +108,17 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
     fireEvent.click(screen.getByText("Analyser mon profil"));
 
     await waitFor(() => {
-      expect(screen.getByText(/ÉVOLUTION POSSIBLE/i)).toBeInTheDocument();
-      expect(screen.getByText(/COMPÉTENCES À ACQUÉRIR/i)).toBeInTheDocument();
-      expect(screen.getByText(/CONSEIL PERSONNALISÉ/i)).toBeInTheDocument();
-      expect(screen.getByText(/Vous pouvez devenir Tech Lead/i)).toBeInTheDocument();
+      expect(screen.getByText(/POINTS FORTS/i)).toBeInTheDocument();
+      expect(screen.getByText(/COMPÉTENCES MANQUANTES/i)).toBeInTheDocument();
+      expect(screen.getByText(/FORMATIONS RECOMMANDÉES/i)).toBeInTheDocument();
+      expect(screen.getByText(/ÉVOLUTION PROFESSIONNELLE/i)).toBeInTheDocument();
+      expect(screen.queryByText(/MÉTIERS POSSIBLES/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Vous pouvez évoluer vers un poste de Tech Lead/i)).toBeInTheDocument();
     });
   });
 
   it("🟢 HP5 : Réinitialiser l'analyse cache les sections et réaffiche le bouton", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
     jobsService.getAnalyseCarriere.mockResolvedValue(mockAnalyse);
 
     render(<SuggestionsCarriere />);
@@ -125,20 +126,20 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
     await waitFor(() => screen.getByText("Analyser mon profil"));
     fireEvent.click(screen.getByText("Analyser mon profil"));
 
-    await waitFor(() => screen.getByText(/ÉVOLUTION POSSIBLE/i));
+    await waitFor(() => screen.getByText(/POINTS FORTS/i));
 
     fireEvent.click(screen.getByText("Réinitialiser"));
 
     await waitFor(() => {
-      expect(screen.queryByText(/ÉVOLUTION POSSIBLE/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/POINTS FORTS/i)).not.toBeInTheDocument();
       expect(screen.getByText("Analyser mon profil")).toBeInTheDocument();
     });
   });
 
   // --- 🔴 EDGE CASES ---
 
-  it("🔴 EC1 : Aucune suggestion → message de profil incomplet", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue({ metiers: [] });
+  it("🔴 EC1 : Aucun métier accessible → message de profil incomplet", async () => {
+    jobsService.getMetiersAccessibles.mockResolvedValue([]);
 
     render(<SuggestionsCarriere />);
 
@@ -149,14 +150,14 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
     });
   });
 
-  it("🔴 EC2 : Crash chargement suggestions → Télémétrie (composant ne crashe pas)", async () => {
-    jobsService.getSuggestionsCarriere.mockRejectedValue(new Error("API Down"));
+  it("🔴 EC2 : Crash chargement métiers accessibles → Télémétrie (composant ne crashe pas)", async () => {
+    jobsService.getMetiersAccessibles.mockRejectedValue(new Error("API Down"));
 
     render(<SuggestionsCarriere />);
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_GET_SUGGESTIONS_CARRIERE",
+        "ECHEC_GET_METIERS_ACCESSIBLES",
         expect.anything(),
       );
       expect(screen.getByText("Suggestions de carrière")).toBeInTheDocument();
@@ -164,7 +165,7 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
   });
 
   it("🔴 EC3 : Crash API Analyse IA → fallback message affiché", async () => {
-    jobsService.getSuggestionsCarriere.mockResolvedValue(mockSuggestions);
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
     jobsService.getAnalyseCarriere.mockRejectedValue(new Error("IA Down"));
 
     render(<SuggestionsCarriere />);

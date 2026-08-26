@@ -40,6 +40,46 @@ class ProfilAndCVTests(APITestCase):
         self.assertEqual(self.cand_a.telephone, "0555998877")
         self.assertEqual(self.profil_a.wilaya, "31 - Oran")
 
+    def test_update_profil_linkedin_invalide_ignore_sans_bloquer_le_reste(self):
+        """ Un linkedin non-URL (texte libre extrait par le parser CV) ne doit pas faire échouer tout le PUT. """
+        self.client.force_authenticate(user=self.cand_a)
+        url = reverse('profil-candidat')
+
+        data = {
+            "telephone": "0555998877",
+            "linkedin": "Non spécifié",
+        }
+        response = self.client.put(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.cand_a.refresh_from_db()
+        self.profil_a.refresh_from_db()
+        self.assertEqual(self.cand_a.telephone, "0555998877")
+        self.assertEqual(self.profil_a.linkedin, "")
+
+    def test_update_profil_linkedin_sans_protocole_prefixe_automatiquement(self):
+        self.client.force_authenticate(user=self.cand_a)
+        url = reverse('profil-candidat')
+
+        data = {"linkedin": "linkedin.com/in/samira-test"}
+        response = self.client.put(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.profil_a.refresh_from_db()
+        self.assertEqual(self.profil_a.linkedin, "https://linkedin.com/in/samira-test")
+
+    def test_update_profil_linkedin_noye_dans_une_phrase_extrait(self):
+        """ Le parser IA renvoie parfois l'URL entourée de texte (ex: 'LinkedIn : linkedin.com/in/x.') """
+        self.client.force_authenticate(user=self.cand_a)
+        url = reverse('profil-candidat')
+
+        data = {"linkedin": "LinkedIn : linkedin.com/in/samira-belamri."}
+        response = self.client.put(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.profil_a.refresh_from_db()
+        self.assertEqual(self.profil_a.linkedin, "https://linkedin.com/in/samira-belamri")
+
     def test_crud_experience_success(self):
         """ US-CV-01: Ajouter et supprimer une expérience """
         self.client.force_authenticate(user=self.cand_a)

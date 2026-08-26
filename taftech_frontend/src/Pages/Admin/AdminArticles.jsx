@@ -7,6 +7,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { mediaUrl } from "../../utils/mediaUrl";
 import RichTextEditor from "../../Components/RichTextEditor";
+import ImageCropperModal from "../../Components/ImageCropperModal";
 
 const FORM_VIDE = { titre: "", categorie: "", extrait: "", contenu_html: "", statut: "BROUILLON", image_couverture: null };
 
@@ -71,11 +72,19 @@ const AdminArticles = () => {
     }
   };
 
+  const [cropperFile, setCropperFile] = useState(null);
+
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setForm({ ...form, image_couverture: file });
-    setPreviewImage(URL.createObjectURL(file));
+    setCropperFile(file);
+  };
+
+  const appliquerImageRecadree = (fichierRecadre) => {
+    setCropperFile(null);
+    setForm({ ...form, image_couverture: fichierRecadre });
+    setPreviewImage(URL.createObjectURL(fichierRecadre));
   };
 
   const handleAjouterCategorie = async () => {
@@ -201,6 +210,15 @@ const AdminArticles = () => {
             </button>
           </div>
         </form>
+        {cropperFile && (
+          <ImageCropperModal
+            file={cropperFile}
+            aspect={16 / 9}
+            cropShape="rect"
+            onCancel={() => setCropperFile(null)}
+            onValidate={appliquerImageRecadree}
+          />
+        )}
       </div>
     );
   }

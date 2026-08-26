@@ -175,6 +175,7 @@ const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
 const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
 const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
+const AdminSeo          = lazy(() => import("./Pages/Admin/AdminSeo"));
 const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
 const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
@@ -228,7 +229,11 @@ function AppContent() {
 
   const role = authService.getUserRole();
   const portal = authService.getLoginPortal();
-  const estRecruteurConnecte = role === "ADMIN" || (!!role && portal === "recruteur");
+  // Un ADMIN n'est ni recruteur ni membre d'équipe — il ne doit basculer sur la navbar
+  // recruteur (NavbarRecruteur, dont la plupart des liens sont gatés par isRecruteurOuMembre())
+  // que sur les vraies routes recruteur (déjà couvert par isRecruteurRoute ci-dessous), jamais
+  // par défaut sur les pages publiques partagées (blog, offres, entreprises...).
+  const estRecruteurConnecte = !!role && portal === "recruteur";
   const forcePortalParam = new URLSearchParams(location.search).get("portail");
   const recruteurPortal =
     !isAdminRoute(location.pathname) &&
@@ -355,6 +360,7 @@ function AppContent() {
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
               <Route path="/admin-taftech/pages" element={<AdminPages />} />
               <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
+              <Route path="/admin-taftech/seo" element={<AdminSeo />} />
               <Route path="/admin-taftech/rendez-vous" element={<AdminRendezVous />} />
               <Route path="/admin-taftech/types-documents" element={<AdminTypesDocuments />} />
               <Route path="audit" element={<AdminAuditLogs />} />

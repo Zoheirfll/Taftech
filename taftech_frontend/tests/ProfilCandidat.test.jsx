@@ -17,6 +17,17 @@ import * as reporter from "../src/utils/errorReporter";
 import selectEvent from "react-select-event";
 import toast from "react-hot-toast";
 
+// ImageCropperModal utilise react-easy-crop + canvas, non supportés en jsdom — on simule le
+// recadrage en appelant directement onValidate avec le fichier d'origine.
+vi.mock("../src/Components/ImageCropperModal", () => ({
+  default: ({ file, onValidate, onCancel }) => (
+    <div data-testid="image-cropper-mock">
+      <button onClick={() => onValidate(file)}>Valider (mock)</button>
+      <button onClick={onCancel}>Annuler (mock)</button>
+    </div>
+  ),
+}));
+
 // --- MOCKS SERVICES ---
 vi.mock("../src/Services/profilService", () => ({
   profilService: {
@@ -221,6 +232,9 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     const inputPhoto = container.querySelector('input[accept="image/*"]');
 
     fireEvent.change(inputPhoto, { target: { files: [file] } });
+
+    await screen.findByText("Valider (mock)");
+    fireEvent.click(screen.getByText("Valider (mock)"));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(

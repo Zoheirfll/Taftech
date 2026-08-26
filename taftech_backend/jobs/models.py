@@ -33,7 +33,7 @@ class ProfilEntreprise(models.Model):
         blank=True,
         null=True,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(2),
         ]
@@ -51,12 +51,17 @@ class ProfilEntreprise(models.Model):
         null=True,
         verbose_name="Bannière (page vitrine)",
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(5),
         ]
     )
     culture_entreprise = models.TextField(blank=True, null=True, verbose_name="Culture d'entreprise")
+    annee_creation = models.PositiveIntegerField(
+        blank=True, null=True,
+        validators=[MinValueValidator(1900)],
+        verbose_name="Année de création de l'entreprise",
+    )
     est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
     premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
     mise_en_avant_accueil = models.BooleanField(
@@ -102,7 +107,7 @@ class EntreprisePhoto(models.Model):
     image = models.ImageField(
         upload_to='photos_entreprises/',
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(3),
         ]
@@ -207,6 +212,7 @@ class OffreEmploi(models.Model):
     statut_moderation = models.CharField(max_length=20, choices=STATUTS_MODERATION, default='EN_ATTENTE')
     motif_rejet = models.TextField(blank=True, null=True)
     est_cloturee = models.BooleanField(default=False)
+    date_cloture = models.DateTimeField(null=True, blank=True, verbose_name="Date de clôture")
     questionnaire = models.ForeignKey('Questionnaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='offres')
 
     def save(self, *args, **kwargs):
@@ -1035,7 +1041,7 @@ class BanniereAccueil(models.Model):
     image = models.ImageField(
         upload_to='bannieres_accueil/',
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(5),
         ]
@@ -1082,7 +1088,7 @@ class Article(models.Model):
         blank=True,
         null=True,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp']),
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'jfif', 'png', 'webp']),
             validate_image_mime,
             validate_file_size(3),
         ]

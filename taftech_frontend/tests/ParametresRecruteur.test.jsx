@@ -68,6 +68,7 @@ const mockDashboard = {
     commune_siege: "Bir El Djir",
     taille_entreprise: "PME",
     description: "Une super entreprise",
+    annee_creation: 2019,
     telephone: "0664540375",
     email: "recruteur@test.dz",
     first_name: "Zoheir",
@@ -151,6 +152,32 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     await waitFor(() => {
       expect(screen.getByText("TechCorp")).toBeInTheDocument();
       expect(screen.getByText("RC123")).toBeInTheDocument();
+    });
+  });
+
+  it("🟢 HP3b : Affiche et modifie l'année de création de l'entreprise", async () => {
+    jobsService.updateProfilEntreprise.mockResolvedValue({});
+    render(
+      <MemoryRouter>
+        <ParametresRecruteur />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByRole("button", { name: /Mon entreprise/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Mon entreprise/i }));
+
+    await waitFor(() => screen.getByDisplayValue("2019"));
+
+    const input = screen.getByLabelText(/Année de création/i);
+    fireEvent.change(input, { target: { value: "2021" } });
+
+    const saveBtn = screen.getByRole("button", { name: /sauvegarder/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(jobsService.updateProfilEntreprise).toHaveBeenCalledWith(
+        expect.objectContaining({ annee_creation: "2021" }),
+      );
     });
   });
 

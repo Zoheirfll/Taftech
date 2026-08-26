@@ -23,6 +23,7 @@ import {
   Bot,
   CalendarClock,
   FolderLock,
+  TrendingUp,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
@@ -61,6 +62,7 @@ const NAV_GROUPS = [
       { to: "/admin-taftech/bannieres", icon: GalleryHorizontal, label: "Bannières" },
       { to: "/admin-taftech/pages", icon: FileEdit, label: "Pages du site" },
       { to: "/admin-taftech/ia-config", icon: Bot, label: "Configuration IA" },
+      { to: "/admin-taftech/seo", icon: TrendingUp, label: "SEO" },
     ],
   },
   {

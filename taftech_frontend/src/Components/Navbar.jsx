@@ -11,6 +11,7 @@ import {
   User, Bookmark, Briefcase, Bell, Settings, LayoutDashboard,
   Search, Mail, LogOut, Inbox, ClipboardList, Shield, Menu, X,
   Sparkles, MapPin, Building2, LogIn, Home, GraduationCap,
+  ChevronDown, Newspaper,
 } from "lucide-react";
 
 const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
@@ -30,10 +31,12 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
+  const searchDropdownRef = useRef(null);
 
   const isActive = (path) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
@@ -86,6 +89,8 @@ const Navbar = () => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target))
         setIsDropdownOpen(false);
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target))
+        setIsSearchDropdownOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -109,14 +114,20 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  const NAV_LINKS = [
+  const MAIN_LINKS = [
     { to: "/", label: "Accueil", icon: Home },
-    { to: "/offres", label: "Recherche avancée", icon: Search },
-    { to: "/secteurs", label: "Par secteur", icon: Briefcase },
-    { to: "/metiers", label: "Par métier", icon: GraduationCap },
-    { to: "/regions", label: "Par région", icon: MapPin },
-    { to: "/entreprises", label: "Entreprises", icon: Building2 },
+    { to: "/offres", label: "Offres d'emplois", icon: Search },
   ];
+  const RECHERCHE_SUBLINKS = [
+    { to: "/secteurs", label: "Par secteur", icon: Briefcase },
+    { to: "/regions", label: "Par région", icon: MapPin },
+    { to: "/metiers", label: "Par métier", icon: GraduationCap },
+  ];
+  const TAIL_LINKS = [
+    { to: "/entreprises", label: "Entreprises", icon: Building2 },
+    { to: "/blog", label: "Blog", icon: Newspaper },
+  ];
+  const isRechercheActive = RECHERCHE_SUBLINKS.some((l) => isActive(l.to));
 
   return (
     <nav className={tw.navbarShell}>
@@ -128,7 +139,36 @@ const Navbar = () => {
             <img src={logoTafTech} alt="TAFTECH" width={48} height={48} className="h-12 w-auto object-contain" />
           </Link>
           <div className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
+            {MAIN_LINKS.map(({ to, label, icon: Icon }) => (
+              <Link key={to} to={to} className={navLinkClass(to)}>
+                <Icon size={14} className="shrink-0" />
+                {label}
+              </Link>
+            ))}
+
+            <div className="relative" ref={searchDropdownRef}>
+              <button
+                onClick={() => setIsSearchDropdownOpen(!isSearchDropdownOpen)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 ${
+                  isRechercheActive ? tw.navLinkDesktopActive : tw.navLinkDesktopInactive
+                }`}
+              >
+                <Search size={14} className="shrink-0" />
+                Recherche avancée
+                <ChevronDown size={13} className={`shrink-0 transition-transform ${isSearchDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isSearchDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50">
+                  {RECHERCHE_SUBLINKS.map(({ to, label, icon: Icon }) => (
+                    <DropdownLink key={to} to={to} icon={Icon} onClick={() => setIsSearchDropdownOpen(false)}>
+                      {label}
+                    </DropdownLink>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {TAIL_LINKS.map(({ to, label, icon: Icon }) => (
               <Link key={to} to={to} className={navLinkClass(to)}>
                 <Icon size={14} className="shrink-0" />
                 {label}
@@ -244,9 +284,32 @@ const Navbar = () => {
         <>
           <div className={`lg:hidden ${tw.mobileMenuBackdrop}`} onClick={closeMobile} />
           <div className={`lg:hidden ${tw.mobileMenuSheet} px-4 py-3 space-y-1`}>
-          {NAV_LINKS.map(({ to, label, icon: Icon }) => {
+          {MAIN_LINKS.map(({ to, label, icon: Icon }) => {
             // Bottom nav guest : Accueil/Offres/Secteurs/Entreprises. Bottom nav candidat : Accueil/Offres.
-            const dup = isLogged ? ["/", "/offres"].includes(to) : ["/", "/offres", "/secteurs", "/entreprises"].includes(to);
+            const dup = isLogged ? ["/", "/offres"].includes(to) : ["/", "/offres"].includes(to);
+            return (
+              <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
+                <Icon size={16} className="shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
+
+          <p className={`px-4 pt-2 pb-1 text-xs font-bold uppercase tracking-wider ${tw.textMuted}`}>
+            Recherche avancée
+          </p>
+          {RECHERCHE_SUBLINKS.map(({ to, label, icon: Icon }) => {
+            const dup = !isLogged && to === "/secteurs";
+            return (
+              <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
+                <Icon size={16} className="shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
+
+          {TAIL_LINKS.map(({ to, label, icon: Icon }) => {
+            const dup = !isLogged && to === "/entreprises";
             return (
               <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
                 <Icon size={16} className="shrink-0" />

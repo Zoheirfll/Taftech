@@ -440,6 +440,15 @@ class UpdateProfilEntrepriseAPIView(APIView):
                 if isinstance(valeur, str) and max_length:
                     valeur = valeur[:max_length]
                 setattr(profil, champ, valeur)
+        if 'annee_creation' in data:
+            valeur_annee = data['annee_creation']
+            if valeur_annee in ('', None):
+                profil.annee_creation = None
+            else:
+                try:
+                    profil.annee_creation = int(valeur_annee)
+                except (TypeError, ValueError):
+                    return Response({"error": "Année de création invalide."}, status=400)
         if 'logo' in request.FILES:
             profil.logo = request.FILES['logo']
         if 'banniere' in request.FILES:
@@ -470,6 +479,7 @@ class UpdateProfilEntrepriseAPIView(APIView):
             "message": "Informations mises à jour.",
             "description": profil.description,
             "culture_entreprise": profil.culture_entreprise,
+            "annee_creation": profil.annee_creation,
             "wilaya_siege": profil.wilaya_siege,
             "commune_siege": profil.commune_siege,
             "adresse_complete": profil.adresse_complete,
@@ -557,12 +567,20 @@ class CVthequePagination(PageNumberPagination):
 
 
 class CandidatsRecommandesAPIView(APIView):
-    """Candidats les mieux classés (score de matching IA) toutes offres confondues de
+    """Candidats les mieux classés (score de matching IA) sur les offres encore ACTIVES de
     l'entreprise — page dédiée sidebar "Candidats recommandés". Gatée Pro+ (acces_ia_recommandes)
     côté serveur, pas seulement en façade frontend — contrairement au score de matching affiché
     au fil de l'eau dans GestionOffre (jamais restreint), cette vue agrégée classée est bien la
-    fonctionnalité vendue comme premium."""
+    fonctionnalité vendue comme premium.
+    Restreint aux offres est_active=True/est_cloturee=False/non expirées ET aux candidatures
+    déposées dans les RECOMMANDES_FENETRE_JOURS derniers jours : sans ces deux filtres, une offre
+    publiée il y a des mois (jamais clôturée, ou sans date_expiration renseignée — champ nullable)
+    continue de faire remonter indéfiniment son meilleur candidat en tête, même vieux de plusieurs
+    mois (signalé par l'utilisateur avec un scénario concret : 500 offres postées en 6 mois, le
+    "top match" recommandé pouvait provenir d'une candidature ancienne sur une offre toujours
+    techniquement ouverte). Fenêtre à 60 jours (2 mois) — cohérent avec `relance_maj_cv`."""
     permission_classes = [IsAuthenticated]
+    RECOMMANDES_FENETRE_JOURS = 60
 
     def get(self, request):
         entreprise = get_entreprise_for_user(request.user)
@@ -574,8 +592,13 @@ class CandidatsRecommandesAPIView(APIView):
             return Response({"error": "Fonctionnalité réservée au palier Pro ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
 
         masquer_decides = request.GET.get('masquer_decides', 'true') == 'true'
+        seuil_recence = timezone.now() - datetime.timedelta(days=self.RECOMMANDES_FENETRE_JOURS)
         qs = Candidature.objects.select_related('candidat', 'offre').filter(
             offre__entreprise=entreprise, est_rapide=False, score_matching__isnull=False,
+            offre__est_active=True, offre__est_cloturee=False,
+            date_postulation__gte=seuil_recence,
+        ).filter(
+            Q(offre__date_expiration__isnull=True) | Q(offre__date_expiration__gte=timezone.now().date())
         )
         if masquer_decides:
             qs = qs.exclude(statut__in=['RETENU', 'REFUSE'])

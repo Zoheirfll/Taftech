@@ -4,7 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField
+from django.utils import timezone
+import datetime
 from ..models import OffreEmploi, Candidature, EquipeActionLog
 from .equipe import get_entreprise_for_user, get_membre_role, _log
 from ..serializers import (
@@ -13,6 +15,13 @@ from ..serializers import (
     OffreDashboardDTO,
 )
 from ..throttles import PublicReadThrottle
+
+
+# Une offre clôturée reste visible dans le flux public (badge "Poste pourvu", candidature
+# désactivée) pendant cette durée au lieu de disparaître instantanément — évite que le site
+# paraisse vide quand les recruteurs clôturent correctement leurs offres pourvues. Passé ce
+# délai, elle disparaît réellement (pas de valeur à afficher une offre morte depuis des mois).
+RETENTION_OFFRES_CLOTUREES_JOURS = 60
 
 
 class JobListAPIView(APIView):
@@ -26,7 +35,12 @@ class JobListAPIView(APIView):
         specialite = request.query_params.get('specialite', '')
         experience = request.query_params.get('experience', '')
         contrat = request.query_params.get('contrat', '')
-        offres = OffreEmploi.objects.select_related('entreprise').filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
+        seuil_retention = timezone.now() - datetime.timedelta(days=RETENTION_OFFRES_CLOTUREES_JOURS)
+        offres = OffreEmploi.objects.select_related('entreprise').filter(
+            est_active=True, statut_moderation='APPROUVEE',
+        ).filter(
+            Q(est_cloturee=False) | Q(est_cloturee=True, date_cloture__gte=seuil_retention)
+        )
         if mot_cle:
             offres = offres.filter(Q(titre__icontains=mot_cle) | Q(missions__icontains=mot_cle))
         if wilaya:
@@ -46,7 +60,10 @@ class JobListAPIView(APIView):
             offres = offres.filter(experience_requise=experience)
         if contrat:
             offres = offres.filter(type_contrat=contrat)
-        offres = offres.order_by('-date_publication')
+        # Actives toujours avant les clôturées récentes, peu importe le tri secondaire
+        offres = offres.annotate(
+            priorite_cloture=Case(When(est_cloturee=True, then=Value(1)), default=Value(0), output_field=IntegerField())
+        ).order_by('priorite_cloture', '-date_publication')
         paginator = PageNumberPagination()
         paginator.page_size = 5
         page = paginator.paginate_queryset(offres, request)
@@ -62,10 +79,11 @@ class JobDetailAPIView(APIView):
         # admin, favoris, retour de candidature), soit le `code_public` court utilisé
         # dans les URLs SEO imbriquées (/entreprises/.../offres-d-emploi/.../titre-code).
         lookup = {'id': offre_id} if str(offre_id).isdigit() else {'code_public': offre_id}
+        seuil_retention = timezone.now() - datetime.timedelta(days=RETENTION_OFFRES_CLOTUREES_JOURS)
         try:
-            offre = OffreEmploi.objects.select_related('entreprise').get(
-                est_active=True, statut_moderation='APPROUVEE', est_cloturee=False, **lookup
-            )
+            offre = OffreEmploi.objects.select_related('entreprise').filter(
+                Q(est_cloturee=False) | Q(est_cloturee=True, date_cloture__gte=seuil_retention)
+            ).get(est_active=True, statut_moderation='APPROUVEE', **lookup)
             serializer = OffreEmploiSerializer(offre)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except OffreEmploi.DoesNotExist:
@@ -157,7 +175,9 @@ class CloturerOffreAPIView(APIView):
             return Response({"error": "Vous n'êtes pas autorisé à modifier cette offre."}, status=status.HTTP_403_FORBIDDEN)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Accès refusé."}, status=403)
+        from django.utils import timezone
         offre.est_cloturee = True
+        offre.date_cloture = timezone.now()
         offre.save()
         _log(request.user, offre.entreprise, 'CLOTURER_OFFRE', offre.titre)
         return Response({"message": "Offre clôturée avec succès."}, status=status.HTTP_200_OK)

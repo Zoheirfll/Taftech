@@ -256,6 +256,8 @@ export const tw = {
   jobCardStatusError: "flex items-center gap-2 px-3 py-2 rounded-lg mb-3 text-xs font-medium bg-red-50 text-red-600",
   jobCardApplyButton: "px-3 py-2.5 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-xs font-semibold rounded-lg transition-colors",
   jobCardGhostButton: "px-3 py-2.5 sm:py-1.5 border border-slate-200 text-slate-700 text-sm sm:text-xs rounded-lg hover:bg-slate-50 transition-colors",
+  jobCardBadgeCloturee: "flex-shrink-0 px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full",
+  jobCardDisabledButton: "px-3 py-2.5 sm:py-1.5 bg-slate-100 text-slate-400 text-sm sm:text-xs font-semibold rounded-lg cursor-not-allowed",
 
   // === BANNIÈRES / TOOLTIPS (variantes couleur) ===
   bannerColors: {

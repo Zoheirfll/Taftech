@@ -17,7 +17,7 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     # 👇 AJOUT : On récupère la wilaya depuis React
     wilaya = serializers.CharField(write_only=True, required=True)
-    nin = serializers.CharField(required=True)
+    nin = serializers.CharField(required=False, allow_blank=True)
     adresse = serializers.CharField(write_only=True, required=True)
 
     class Meta:
@@ -70,6 +70,10 @@ class RegisterCandidatDTO(serializers.ModelSerializer):
         password = validated_data.pop('password')
         wilaya_saisie = validated_data.pop('wilaya')
         adresse_saisie = validated_data.pop('adresse')
+        # NIN non collecté à l'inscription depuis cette session — on force explicitement
+        # None (pas "") pour ne jamais violer la contrainte unique entre 2 comptes sans NIN.
+        if not validated_data.get('nin'):
+            validated_data['nin'] = None
 
         # On crée l'utilisateur
         user = User.objects.create_user(

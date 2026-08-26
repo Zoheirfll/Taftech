@@ -10,7 +10,6 @@ import { jobUrl } from "../../utils/slugify";
 import {
   MapPin,
   Briefcase,
-  Users,
   Building2,
   Send,
   FileText,
@@ -42,6 +41,7 @@ const EntreprisePublic = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("apropos");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [] });
   const [form, setForm] = useState({
@@ -153,41 +153,55 @@ const EntreprisePublic = () => {
 
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
-        {/* Bannière */}
+        {/* Photo de couverture */}
         {entreprise.banniere_url && (
-          <div className="h-32 md:h-48 w-full overflow-hidden">
+          <div className="h-48 md:h-64 w-full overflow-hidden">
             <img src={getMediaUrl(entreprise.banniere_url)} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-        {/* Bandeau indigo : logo + nom + bouton */}
-        <div className="bg-linear-to-br from-indigo-600 to-indigo-900 px-6 md:px-8 py-6">
+        {/* Bandeau neutre : logo + nom + bouton */}
+        <div className="px-6 md:px-8 py-6 border-b border-slate-100">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 bg-white rounded-2xl border-2 border-white/30 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-20 h-20 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
               {entreprise.logo_url
                 ? <img src={getMediaUrl(entreprise.logo_url)} alt={entreprise.nom_entreprise} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 : <Building2 size={28} className="text-slate-300" />}
             </div>
-            <div className="text-white min-w-0 flex-1">
-              <h1 className="text-2xl font-extrabold leading-tight truncate">{entreprise.nom_entreprise}</h1>
-              <div className="flex items-center gap-2 mt-1.5 text-indigo-100 text-sm overflow-hidden">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-extrabold leading-tight truncate text-slate-900">{entreprise.nom_entreprise}</h1>
+              <div className="flex items-center gap-2 mt-1.5 text-slate-700 text-sm overflow-hidden">
                 <span className="flex items-center gap-1 shrink-0"><Briefcase size={13} /> {secteurCourt}</span>
-                <span className="text-indigo-400 shrink-0">·</span>
+                <span className="text-slate-300 shrink-0">·</span>
                 <span className="flex items-center gap-1 shrink-0"><MapPin size={13} /> {lieuAffiche}</span>
-                {tailleLabel && (
-                  <>
-                    <span className="text-indigo-400 shrink-0">·</span>
-                    <span className="flex items-center gap-1 shrink-0"><Users size={13} /> {tailleLabel}</span>
-                  </>
-                )}
               </div>
             </div>
             {/* Bouton dans le hero, aligné à droite */}
             <button
               onClick={() => setShowModal(true)}
-              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white text-sm font-semibold rounded-xl transition-colors shrink-0 backdrop-blur-sm"
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-800 text-white text-sm font-semibold rounded-xl transition-colors shrink-0"
             >
               <Send size={14} /> Candidature spontanée
             </button>
+          </div>
+
+          {/* Stats clés */}
+          <div className="flex flex-wrap items-center gap-6 mt-5 pt-5 border-t border-slate-100">
+            <div>
+              <p className="text-xl font-extrabold text-slate-900">{entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0}</p>
+              <p className="text-xs text-slate-600">Offres en ligne</p>
+            </div>
+            {tailleLabel && (
+              <div>
+                <p className="text-xl font-extrabold text-slate-900">{tailleLabel}</p>
+                <p className="text-xs text-slate-600">Employés</p>
+              </div>
+            )}
+            {entreprise.annee_creation && (
+              <div>
+                <p className="text-xl font-extrabold text-slate-900">{new Date().getFullYear() - entreprise.annee_creation} ans</p>
+                <p className="text-xs text-slate-600">D'existence</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -203,15 +217,15 @@ const EntreprisePublic = () => {
             </button>
           </div>
 
-          {/* Liens web */}
+          {/* Liens web en texte simple */}
           {(entreprise.linkedin || entreprise.site_web) && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-4 mb-5">
               {entreprise.linkedin && (
                 <a
                   href={entreprise.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0A66C2]/10 text-[#0A66C2] text-xs font-semibold rounded-lg border border-[#0A66C2]/20 hover:bg-[#0A66C2]/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
                 >
                   <LinkedinIcon /> LinkedIn
                 </a>
@@ -221,57 +235,160 @@ const EntreprisePublic = () => {
                   href={entreprise.site_web}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
                 >
-                  <Globe size={13} /> Site web
+                  <Globe size={14} /> Site web
                 </a>
               )}
             </div>
           )}
 
-          {/* Présentation */}
-          {entreprise.description && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Présentation</p>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {entreprise.description}
-              </p>
-            </div>
-          )}
+          {/* Barre d'onglets */}
+          <div className="flex items-center gap-1 border-b border-slate-200 mb-5">
+            <button
+              onClick={() => setActiveTab("apropos")}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "apropos" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              À propos
+            </button>
+            <button
+              onClick={() => setActiveTab("offres")}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "offres" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Offres <span className="ml-1 text-xs text-slate-600">({entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0})</span>
+            </button>
+            {entreprise.photos?.length > 0 && (
+              <button
+                onClick={() => setActiveTab("photos")}
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                  activeTab === "photos" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Photos <span className="ml-1 text-xs text-slate-600">({entreprise.photos.length})</span>
+              </button>
+            )}
+          </div>
 
-          {/* Culture d'entreprise */}
-          {entreprise.culture_entreprise && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Culture d'entreprise</p>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {entreprise.culture_entreprise}
-              </p>
-            </div>
-          )}
-
-          {/* Galerie photo */}
-          {entreprise.photos?.length > 0 && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mb-4">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Photos</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {entreprise.photos.map((p) => (
-                  <img
-                    key={p.id}
-                    src={getMediaUrl(p.image)}
-                    alt={p.legende || ""}
-                    title={p.legende || ""}
-                    className="w-full h-24 object-cover rounded-lg border border-slate-200"
-                  />
-                ))}
+          {/* Onglet À propos */}
+          {activeTab === "apropos" && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2 space-y-5">
+                {entreprise.description && (
+                  <div>
+                    <p className="text-base font-bold text-slate-900 mb-2">Présentation</p>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                      {entreprise.description}
+                    </p>
+                  </div>
+                )}
+                {entreprise.culture_entreprise && (
+                  <div>
+                    <p className="text-base font-bold text-slate-900 mb-2">Culture d'entreprise</p>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                      {entreprise.culture_entreprise}
+                    </p>
+                  </div>
+                )}
               </div>
+              {entreprise.photos?.length > 0 && (
+                <div className="md:col-span-1">
+                  <img
+                    src={getMediaUrl(entreprise.photos[0].image)}
+                    alt={entreprise.photos[0].legende || ""}
+                    className="w-full h-full min-h-[160px] object-cover rounded-xl border border-slate-200"
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {/* Localisation */}
+          {/* Onglet Offres */}
+          {activeTab === "offres" && (
+            <div>
+              {entreprise.offres_actives?.length > 0 ? (
+                <div className="space-y-3">
+                  {entreprise.offres_actives.map((offre) => (
+                    <div
+                      key={offre.id}
+                      className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={jobUrl(offre, entreprise.slug)}
+                          className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+                        >
+                          {offre.titre}
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <span className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${CONTRAT_BADGES[offre.type_contrat] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                            {offre.type_contrat}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-slate-700">
+                            <MapPin size={11} /> {offre.wilaya?.split(" - ")[1] || offre.wilaya}
+                          </span>
+                          {offre.experience_requise && (
+                            <span className="flex items-center gap-1 text-xs text-slate-700">
+                              <Clock size={11} /> {expLabel(offre.experience_requise)}
+                            </span>
+                          )}
+                          {offre.date_publication && (
+                            <span className="flex items-center gap-1 text-xs text-slate-600">
+                              <Calendar size={11} /> {formatDate(offre.date_publication)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Link
+                        to={jobUrl(offre, entreprise.slug)}
+                        className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                      >
+                        Voir l'offre →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-3">
+                    <Briefcase size={20} className="text-slate-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700 mb-1">Aucune offre ouverte</p>
+                  <p className="text-xs text-slate-600 mb-4">L'entreprise ne recrute pas en ce moment.</p>
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
+                  >
+                    <Send size={13} /> Envoyer une candidature spontanée
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Onglet Photos */}
+          {activeTab === "photos" && entreprise.photos?.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {entreprise.photos.map((p) => (
+                <img
+                  key={p.id}
+                  src={getMediaUrl(p.image)}
+                  alt={p.legende || ""}
+                  title={p.legende || ""}
+                  className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Localisation — toujours visible, hors onglets */}
           {(entreprise.adresse_complete || wilayaVille) && (() => {
             const lieuRecherche = entreprise.adresse_complete || [communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ");
             return (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mt-4">
                 <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Localisation</p>
                 <div className="rounded-lg overflow-hidden border border-slate-200">
                   <iframe
@@ -295,74 +412,6 @@ const EntreprisePublic = () => {
             );
           })()}
         </div>
-      </div>
-
-      {/* ── OFFRES ──────────────────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-lg font-bold text-slate-900">Offres disponibles</h2>
-          <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-full">
-            {entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0}
-          </span>
-        </div>
-
-        {entreprise.offres_actives?.length > 0 ? (
-          <div className="space-y-3">
-            {entreprise.offres_actives.map((offre) => (
-              <div
-                key={offre.id}
-                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <Link
-                    to={jobUrl(offre, entreprise.slug)}
-                    className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
-                  >
-                    {offre.titre}
-                  </Link>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <span className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${CONTRAT_BADGES[offre.type_contrat] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                      {offre.type_contrat}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-700">
-                      <MapPin size={11} /> {offre.wilaya?.split(" - ")[1] || offre.wilaya}
-                    </span>
-                    {offre.experience_requise && (
-                      <span className="flex items-center gap-1 text-xs text-slate-700">
-                        <Clock size={11} /> {expLabel(offre.experience_requise)}
-                      </span>
-                    )}
-                    {offre.date_publication && (
-                      <span className="flex items-center gap-1 text-xs text-slate-600">
-                        <Calendar size={11} /> {formatDate(offre.date_publication)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Link
-                  to={jobUrl(offre, entreprise.slug)}
-                  className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
-                >
-                  Voir l'offre →
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
-            <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-3">
-              <Briefcase size={20} className="text-slate-300" />
-            </div>
-            <p className="text-sm font-semibold text-slate-700 mb-1">Aucune offre ouverte</p>
-            <p className="text-xs text-slate-600 mb-4">L'entreprise ne recrute pas en ce moment.</p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
-            >
-              <Send size={13} /> Envoyer une candidature spontanée
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ── MODAL CANDIDATURE SPONTANÉE ─────────────────────────────────────── */}

@@ -251,6 +251,7 @@ describe("🏢 UI & Logique - Composant <DashboardRecruteur />", () => {
               statut: "RECUE",
               score_matching: 85,
               est_rapide: false,
+              date_postulation: new Date().toISOString().slice(0, 10),
               candidat: {
                 id: 20,
                 first_name: "Amine",

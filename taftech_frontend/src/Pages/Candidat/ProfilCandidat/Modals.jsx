@@ -196,14 +196,16 @@ export const Modals = ({
                   }
                 />
               </div>
-              <div>
-                <label className={tw.formLabel}>
-                  NIN (Numéro d'Identification Nationale)
-                </label>
-                <p className={`w-full px-4 py-2.5 rounded-xl text-sm font-mono ${tw.ninDisplayBox}`}>
-                  {editInfo.nin || "Non renseigné"}
-                </p>
-              </div>
+              {editInfo.nin && (
+                <div>
+                  <label className={tw.formLabel}>
+                    NIN (Numéro d'Identification Nationale)
+                  </label>
+                  <p className={`w-full px-4 py-2.5 rounded-xl text-sm font-mono ${tw.ninDisplayBox}`}>
+                    {editInfo.nin}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={tw.formLabel}>

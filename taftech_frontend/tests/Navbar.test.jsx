@@ -62,6 +62,26 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
     expect(screen.queryByText(/Mon Compte/i)).not.toBeInTheDocument();
   });
 
+  it("🟢 Happy Path 5 : Dropdown Recherche avancée regroupe secteur/région/métier", () => {
+    authService.isAuthenticated.mockReturnValue(false);
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Offres d'emplois/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Blog$/i })).toHaveAttribute("href", "/blog");
+    expect(screen.queryByRole("link", { name: /Par secteur/i })).not.toBeInTheDocument();
+
+    const trigger = screen.getAllByText(/Recherche avancée/i)[0];
+    fireEvent.click(trigger);
+
+    expect(screen.getAllByText(/Par secteur/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Par région/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Par métier/i).length).toBeGreaterThan(0);
+  });
+
   it("🟢 Happy Path 2 : Rendu Candidat avec Notifications et Photo", async () => {
     authService.isAuthenticated.mockReturnValue(true);
     authService.getUserRole.mockReturnValue("CANDIDAT");

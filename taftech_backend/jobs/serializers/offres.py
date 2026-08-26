@@ -80,6 +80,7 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'slug', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
             'adresse_complete', 'taille_entreprise', 'description', 'culture_entreprise',
+            'annee_creation',
             'logo_url', 'banniere_url', 'photos', 'linkedin', 'site_web',
             'offres_actives', 'nombre_offres_actives',
         )

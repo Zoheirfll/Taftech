@@ -370,15 +370,35 @@ class InviterMembreTests(APITestCase):
             EquipeActionLog.objects.filter(entreprise=self.entreprise, action="INVITER_MEMBRE").exists()
         )
 
-    def test_ajout_direct_compte_existant(self):
-        """Si l'email a déjà un compte TafTech, ajout direct sans invitation."""
+    def test_compte_existant_recoit_invitation_pas_ajout_direct(self):
+        """Si l'email a déjà un compte TafTech classique, une invitation à accepter est envoyée
+        (jamais d'ajout direct sans consentement — évite l'ajout non désiré à une équipe)."""
         existant = _make_recruteur("existant@taftech.dz", "existant_inv")
         self.client.force_authenticate(user=self.owner)
         response = self.client.post(self.url, {"email": "existant@taftech.dz", "role": "INVITE"})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data.get("direct"))
-        self.assertTrue(
+        self.assertNotIn("direct", response.data)
+        self.assertFalse(
             MembreEquipe.objects.filter(user=existant, entreprise=self.entreprise).exists()
+        )
+        self.assertTrue(
+            InvitationEquipe.objects.filter(
+                entreprise=self.entreprise, email="existant@taftech.dz", est_acceptee=False
+            ).exists()
+        )
+
+    def test_message_invitation_identique_compte_existant_ou_non(self):
+        """Le message de réponse ne doit pas révéler si l'email correspond à un compte
+        TafTech existant (évite l'énumération de comptes via ce endpoint)."""
+        _make_recruteur("existant2@taftech.dz", "existant_inv2")
+        self.client.force_authenticate(user=self.owner)
+        r_existant = self.client.post(self.url, {"email": "existant2@taftech.dz", "role": "INVITE"})
+        r_inconnu = self.client.post(self.url, {"email": "totalement.inconnu@x.dz", "role": "INVITE"})
+        self.assertEqual(r_existant.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r_inconnu.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            r_existant.data["message"].replace("existant2@taftech.dz", "{email}"),
+            r_inconnu.data["message"].replace("totalement.inconnu@x.dz", "{email}"),
         )
 
     def test_doublon_membre_rejete(self):

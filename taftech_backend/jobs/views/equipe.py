@@ -64,33 +64,6 @@ def _envoyer_email_invitation(invitation, request):
     msg.send(fail_silently=True)
 
 
-def _envoyer_email_bienvenue(user, entreprise, role):
-    role_display = dict(MembreEquipe.ROLES).get(role, role)
-    site_url = getattr(settings, 'SITE_URL', 'http://localhost:5173')
-    sujet = f"Vous avez été ajouté(e) à l'équipe {entreprise.nom_entreprise} sur TafTech"
-    texte = (
-        f"Bonjour {user.first_name or user.email},\n\n"
-        f"Vous avez été ajouté(e) à l'équipe de {entreprise.nom_entreprise} "
-        f"en tant que {role_display}.\n\n"
-        f"Connectez-vous à votre espace recruteur : {site_url}/recruteurs/connexion\n\n"
-        f"L'équipe TafTech"
-    )
-    html = f"""
-    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f8fafc;border-radius:12px">
-      <h2 style="color:#1e293b">Vous rejoignez <strong>{entreprise.nom_entreprise}</strong></h2>
-      <p style="color:#475569">Bonjour {user.first_name or ''},<br>
-      Vous avez été ajouté(e) en tant que <strong>{role_display}</strong>.</p>
-      <a href="{site_url}/recruteurs/connexion" style="display:inline-block;margin:20px 0;padding:14px 28px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">
-        Accéder à mon espace recruteur
-      </a>
-      <p style="color:#94a3b8;font-size:12px">Utilisez votre email et mot de passe habituels TafTech.</p>
-    </div>
-    """
-    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
-    msg.attach_alternative(html, "text/html")
-    msg.send(fail_silently=True)
-
-
 class EquipeAPIView(APIView):
     """Liste les membres et gère les actions sur un membre existant."""
     permission_classes = [IsAuthenticated]
@@ -224,30 +197,9 @@ class InviterMembreAPIView(APIView):
         if entreprise.user.email == email:
             return Response({'error': 'Vous êtes déjà le propriétaire.'}, status=400)
 
-        # Si l'utilisateur a déjà un compte TafTech
-        existing_user = User.objects.filter(email=email).first()
-        if existing_user:
-            if getattr(existing_user, 'est_compte_google', False):
-                # Compte Google : envoyer lien invitation pour qu'il définisse un mot de passe recruteur
-                InvitationEquipe.objects.filter(entreprise=entreprise, email=email, est_acceptee=False).delete()
-                token = secrets.token_urlsafe(32)
-                invitation = InvitationEquipe.objects.create(
-                    entreprise=entreprise,
-                    email=email,
-                    token=token,
-                    role=role,
-                    expire_at=timezone.now() + timedelta(hours=INVITATION_EXPIRY_HOURS),
-                )
-                _envoyer_email_invitation(invitation, request)
-                _log(request.user, entreprise, 'INVITER_MEMBRE', f"{email} ({role}) — invitation Google (mdp requis)")
-                return Response({'message': f'Invitation envoyée à {email} (compte Google — définition mot de passe requise).'}, status=201)
-            # Compte email classique → ajout direct
-            MembreEquipe.objects.create(entreprise=entreprise, user=existing_user, role=role)
-            _envoyer_email_bienvenue(existing_user, entreprise, role)
-            _log(request.user, entreprise, 'INVITER_MEMBRE', f"{email} ({role}) — ajout direct")
-            return Response({'message': f'{email} a été ajouté(e) directement à votre équipe.', 'direct': True}, status=201)
-
-        # Supprimer ancienne invitation non acceptée pour re-inviter
+        # Toujours passer par une invitation avec acceptation explicite — qu'un compte existe déjà
+        # ou non, qu'il soit Google ou classique. Un compte classique existant devra confirmer son
+        # mot de passe pour accepter (AccepterInvitationAPIView), jamais d'ajout direct sans consentement.
         InvitationEquipe.objects.filter(entreprise=entreprise, email=email, est_acceptee=False).delete()
 
         token = secrets.token_urlsafe(32)
@@ -260,6 +212,8 @@ class InviterMembreAPIView(APIView):
         )
         _envoyer_email_invitation(invitation, request)
         _log(request.user, entreprise, 'INVITER_MEMBRE', f"{email} ({role}) — invitation envoyée")
+        # Message volontairement identique quelle que soit l'existence/le type du compte cible —
+        # évite l'énumération de comptes par email via ce endpoint.
         return Response({'message': f'Invitation envoyée à {email}.'}, status=201)
 
     def delete(self, request, invitation_id):

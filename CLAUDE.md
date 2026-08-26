@@ -2,7 +2,20 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 25/08/2026 (suite 2) — Branche `specs/important-features` : fix "Candidats recommandés"/top match restreint aux offres actives + fenêtre 60j ; offres clôturées désormais visibles 60 jours dans `/jobs` (badge "Poste pourvu", candidature bloquée) au lieu de disparaître instantanément. Voir sections ci-dessous._
+_Dernière mise à jour : 26/08/2026 — Merge de `specs/important-features` dans `main`. Fix sécurité : `InviterMembreAPIView` n'ajoute plus un compte existant directement à une équipe sans consentement (passe désormais par invitation + acceptation, comme les autres cas), et les 3 messages de réponse sont unifiés pour ne plus permettre l'énumération de comptes par email. Voir sections ci-dessous._
+
+## 🆕 SESSION 26/08/2026 — Audit sécurité complet (codebase entier) + fix ajout d'équipe non consenti
+
+**Contexte** : audit sécurité demandé sur tout le codebase (pas juste un diff, branche `main` propre après merge). Méthodologie : sous-agent d'exploration + sous-agent de contre-vérification indépendant par finding, seuil de confiance ≥8/10 pour retenir un finding.
+
+**Résultat** : un seul finding retenu, corrigé le jour même. Toutes les autres catégories vérifiées RAS (injection SQL/commande/template, path traversal, JWT/session, désérialisation, XSS via `dangerouslySetInnerHTML`, secrets en dur, contournement signature webhook Chargily, permissions endpoints admin, IDOR fichiers privés candidats, escalade de rôle d'équipe, CORS).
+
+**Fix — `InviterMembreAPIView` (`jobs/views/equipe.py`)** : la branche "compte email classique existant" ajoutait l'utilisateur **directement** à `MembreEquipe` sans aucune étape de consentement (contrairement aux 2 autres branches — compte Google et email inconnu — qui passaient déjà par `InvitationEquipe` + acceptation via token). Deux problèmes cumulés : (1) un recruteur pouvait faire rejoindre n'importe quel compte TafTech existant à son équipe (avec un rôle qu'il contrôle, potentiellement `ADMIN`) sans que la cible ait rien demandé, seul un email a posteriori l'informait ; (2) les 3 messages de réponse distincts (`'ajouté(e) directement'` / `'invitation (Google)'` / `'Invitation envoyée'`) permettaient d'énumérer si un email correspond à un compte TafTech et son type.
+- **Fix** : les 3 branches passent désormais toutes par le même mécanisme `InvitationEquipe` (token, expiration 72h, acceptation explicite via `AccepterInvitationAPIView`) — `AccepterInvitationAPIView.post()` gérait déjà le cas "compte existant non-Google" en exigeant la confirmation du mot de passe (`user.check_password()`), donc aucun nouveau code d'acceptation à écrire. Message de réponse unifié (`"Invitation envoyée à {email}."`) quelle que soit l'existence/le type du compte cible.
+- `_envoyer_email_bienvenue()` (devenue morte, plus jamais appelée) supprimée.
+- **Test cassé par le fix** (verrouillait l'ancien comportement vulnérable) : `test_ajout_direct_compte_existant` → remplacé par `test_compte_existant_recoit_invitation_pas_ajout_direct` (vérifie qu'aucun `MembreEquipe` n'est créé avant acceptation, qu'une `InvitationEquipe` l'est) + nouveau `test_message_invitation_identique_compte_existant_ou_non` (anti-énumération).
+
+**Tests** : `jobs.tests.test_api_equipe` 50/50 ✅.
 
 ## 🆕 SESSION 25/08/2026 (suite 2) — Offres clôturées visibles 60 jours (badge "Poste pourvu")
 

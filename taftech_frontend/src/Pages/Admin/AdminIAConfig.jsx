@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import toast from "react-hot-toast";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
@@ -60,7 +61,7 @@ const AdminIAConfig = () => {
       setConfig(data);
     } catch (err) {
       reportError("ECHEC_GET_AI_CONFIG", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ const AdminIAConfig = () => {
       toast.success("Configuration IA mise à jour !");
     } catch (err) {
       reportError("ECHEC_UPDATE_AI_CONFIG", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     } finally {
       setSaving(false);
     }

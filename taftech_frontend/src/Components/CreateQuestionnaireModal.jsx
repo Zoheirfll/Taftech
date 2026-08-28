@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
+import { apiErrMsg } from "../utils/apiErrMsg";
 import toast from "react-hot-toast";
 import { Plus, X, GripVertical } from "lucide-react";
 import { tw } from "../theme";
@@ -124,7 +125,7 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
       handleClose();
     } catch (err) {
       reportError("ECHEC_CREATE_QUESTIONNAIRE_MODAL", err);
-      toast.error("Erreur lors de la création.");
+      toast.error(apiErrMsg(err, "Erreur lors de la création."));
     } finally {
       setSaving(false);
     }

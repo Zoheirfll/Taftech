@@ -11,6 +11,8 @@ import {
   Zap,
   Eye,
   Download,
+  X,
+  Scale,
 } from "lucide-react";
 import { useGestionOffre } from "./useGestionOffre";
 import { DetailCandidature } from "./DetailCandidature";
@@ -148,7 +150,7 @@ const GestionOffre = () => {
                 />
               </label>
               {offre.date_expiration && (
-                <button onClick={() => handleSetExpiration(null)} className={`text-xs ${tw.textMuted} hover:text-red-500 transition-colors`} title="Supprimer la date de clôture">✕ Sans limite</button>
+                <button onClick={() => handleSetExpiration(null)} className={`flex items-center gap-1 text-xs ${tw.textMuted} hover:text-red-500 transition-colors`} title="Supprimer la date de clôture"><X size={12} /> Sans limite</button>
               )}
             </div>
           )}
@@ -284,7 +286,7 @@ const GestionOffre = () => {
                     onClick={() => setShowCompare(true)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${tw.bgTealSolid} transition-colors`}
                   >
-                    Comparer
+                    <Scale size={13} /> Comparer
                   </button>
                 )}
                 {candidaturesTriees.length > 0 && (

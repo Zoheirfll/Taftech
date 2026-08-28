@@ -108,7 +108,7 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
     });
 
     fireEvent.click(screen.getByText(/Mon Compte/i));
-    expect(screen.getByText(/Mes candidatures/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mon profil/i)).toBeInTheDocument();
   });
 
   it("🟢 Happy Path 3 : Menu Déroulant Recruteur", async () => {
@@ -124,7 +124,6 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
     fireEvent.click(screen.getByText(/Mon Compte/i));
 
     await waitFor(() => {
-      expect(screen.getByText(/CVthèque/i)).toBeInTheDocument();
       expect(screen.getByText(/Publier une offre/i)).toBeInTheDocument();
       expect(screen.queryByText(/Mes candidatures/i)).not.toBeInTheDocument();
     });

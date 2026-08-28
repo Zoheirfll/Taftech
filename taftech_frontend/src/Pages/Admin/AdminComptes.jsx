@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { adminService } from "../../Services/adminService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, Shield } from "lucide-react";
 import { tw } from "../../theme";
 
@@ -21,7 +22,7 @@ const AdminComptes = () => {
       const data = await adminService.getAdmins();
       setAdmins(data);
     } catch (err) {
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
       reportError("ECHEC_GET_ADMINS", err);
     } finally {
       setLoading(false);
@@ -75,8 +76,7 @@ const AdminComptes = () => {
       charger();
     } catch (err) {
       reportError("ECHEC_SAVE_ADMIN_COMPTE", err);
-      const msg = err.response?.data?.error || "Erreur lors de l'enregistrement.";
-      toast.error(msg);
+      toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement."));
     } finally {
       setSaving(false);
     }
@@ -91,8 +91,7 @@ const AdminComptes = () => {
       charger();
     } catch (err) {
       reportError("ECHEC_DELETE_ADMIN_COMPTE", err);
-      const msg = err.response?.data?.error || "Erreur lors de la suppression.";
-      toast.error(msg);
+      toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
     } finally {
       setSaving(false);
     }

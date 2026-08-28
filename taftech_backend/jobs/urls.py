@@ -26,7 +26,7 @@ from .views import (
     MarquerSpontaneeLueAPIView, SupprimerSpontaneeAPIView,
     QuestionnaireListCreateAPIView, QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
-    ChargilyCheckoutAPIView, ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
+    ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
@@ -36,7 +36,7 @@ from .views import (
     # Admin
     AdminOffresListAPIView, AdminOffreModerateAPIView,
     AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView,
-    AdminStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView,
+    AdminStatsAPIView, AdminSeoStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
     ExportCandidaturesCSVAPIView, ExportEntreprisesCSVAPIView,
     ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView,
@@ -52,9 +52,7 @@ from .views import (
     # Bulletin PDF
     GenererBulletinPDFAPIView,
 
-    # Premium (plans/avantages)
-    PremiumPlansPublicAPIView, PremiumAvantagesPublicAPIView,
-    PremiumPlansAdminAPIView, PremiumAvantagesAdminAPIView,
+    # Paliers d'abonnement
     PaliersPublicAPIView, PaliersAdminAPIView,
     FacturesListAPIView, FacturePDFAPIView, MentionsLegalesAdminAPIView,
 
@@ -73,7 +71,7 @@ from .views import (
     SiteAnnonceAdminAPIView, BanniereAccueilAdminAPIView,
 
     # Pages statiques
-    PageStatiquePublicAPIView, PageStatiqueAdminAPIView,
+    PageStatiquePublicAPIView, PageStatiqueAdminAPIView, PageStatiqueListePublicAPIView,
 
     # Config IA
     AIConfigAdminAPIView,
@@ -162,6 +160,7 @@ urlpatterns = [
     path('admin/entreprises/', AdminEntreprisesListAPIView.as_view(), name='admin-entreprises'),
     path('admin/entreprises/<int:entreprise_id>/moderer/', AdminEntrepriseModerateAPIView.as_view(), name='admin-entreprise-moderer'),
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
+    path('admin/seo/', AdminSeoStatsAPIView.as_view(), name='admin-seo-stats'),
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderer'),
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast'),
@@ -173,7 +172,6 @@ urlpatterns = [
     path('premium/demande/', DemanderActivationPremiumAPIView.as_view(), name='demande-premium'),
     path('premium/envoyer-recu/', EnvoyerRecuPremiumAPIView.as_view(), name='envoyer-recu-premium'),
     # Chargily Pay — paiement en ligne
-    path('premium/chargily/checkout/', ChargilyCheckoutAPIView.as_view(), name='chargily-checkout'),
     path('paliers/chargily/checkout/', ChargilyCheckoutPalierAPIView.as_view(), name='chargily-checkout-palier'),
     path('paliers/mon-abonnement/', MonAbonnementAPIView.as_view(), name='mon-abonnement'),
     path('premium/chargily/webhook/', ChargilyWebhookAPIView.as_view(), name='chargily-webhook'),
@@ -192,12 +190,6 @@ urlpatterns = [
     path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view(), name='admin-metier-detail'),
     path('admin/comptes-admins/', AdminCompteAdminsAPIView.as_view(), name='admin-comptes-admins'),
     path('admin/comptes-admins/<int:admin_id>/', AdminCompteAdminsAPIView.as_view(), name='admin-compte-admin-detail'),
-    path('admin/premium/plans/', PremiumPlansAdminAPIView.as_view(), name='admin-premium-plans'),
-    path('admin/premium/plans/<int:pk>/', PremiumPlansAdminAPIView.as_view(), name='admin-premium-plan-detail'),
-    path('admin/premium/avantages/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantages'),
-    path('admin/premium/avantages/<int:pk>/', PremiumAvantagesAdminAPIView.as_view(), name='admin-premium-avantage-detail'),
-    path('premium/plans/', PremiumPlansPublicAPIView.as_view(), name='premium-plans-public'),
-    path('premium/avantages/', PremiumAvantagesPublicAPIView.as_view(), name='premium-avantages-public'),
     path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),
     path('admin/paliers/<int:pk>/', PaliersAdminAPIView.as_view(), name='admin-palier-detail'),
     path('paliers/', PaliersPublicAPIView.as_view(), name='paliers-public'),
@@ -225,6 +217,7 @@ urlpatterns = [
     path('bannieres-accueil/', BanniereAccueilPublicAPIView.as_view(), name='bannieres-accueil-public'),
     path('admin/pages/', PageStatiqueAdminAPIView.as_view(), name='admin-pages'),
     path('admin/pages/<int:pk>/', PageStatiqueAdminAPIView.as_view(), name='admin-page-detail'),
+    path('pages/', PageStatiqueListePublicAPIView.as_view(), name='pages-statiques-liste'),
     path('pages/<slug:slug>/', PageStatiquePublicAPIView.as_view(), name='page-statique-public'),
     path('admin/ai-config/', AIConfigAdminAPIView.as_view(), name='admin-ai-config'),
 

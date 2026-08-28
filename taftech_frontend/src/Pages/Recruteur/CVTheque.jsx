@@ -10,6 +10,7 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   Search,
   SlidersHorizontal,
@@ -157,7 +158,7 @@ const CVTheque = () => {
       await authService.accepterConsentementCVTheque();
       setConsentGiven(true);
     } catch (err) {
-      toast.error("Erreur lors de l'enregistrement du consentement.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement du consentement."));
     } finally {
       setConsentLoading(false);
     }
@@ -175,7 +176,7 @@ const CVTheque = () => {
         const offres = (dash.offres || []).filter(o => o.est_active && !o.est_cloturee && o.statut_moderation === 'APPROUVEE');
         setOffresActives(offres.map(o => ({ value: String(o.id), label: o.titre })));
       } catch (err) {
-        toast.error("Erreur de chargement des filtres.");
+        toast.error(apiErrMsg(err, "Erreur de chargement des filtres."));
         reportError("ECHEC_CHARGEMENT_FILTRES_CVTHEQUE", err);
       }
     };
@@ -317,7 +318,7 @@ const CVTheque = () => {
         toast.success("Retiré des favoris");
       }
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour des favoris.");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour des favoris."));
       reportError("ECHEC_TOGGLE_FAVORI_CV", err);
     }
   };
@@ -336,7 +337,7 @@ const CVTheque = () => {
       toast.success("Invitation envoyée !");
       setInviterCandidat(null);
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de l'invitation."));
       reportError("ECHEC_INVITER_CANDIDAT_CVTHEQUE", err);
     } finally {
       setEnvoiInvitation(false);
@@ -997,6 +998,7 @@ const CVTheque = () => {
                   {/* ÉTOILE FAVORI */}
                   <button
                     onClick={(e) => handleToggleFavori(candidat, e)}
+                    title={candidat.is_favori ? "Retirer des favoris" : "Ajouter aux favoris"}
                     className={`absolute top-3 right-3 p-1 rounded-md transition-colors group/star ${tw.hoverSurfaceSubtle}`}
                   >
                     <Star size={14} className={candidat.is_favori ? tw.starFavoriActive : tw.starFavoriInactiveGroupHover} />

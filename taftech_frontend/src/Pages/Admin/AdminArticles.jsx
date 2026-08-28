@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
@@ -35,7 +36,7 @@ const AdminArticles = () => {
       setCategories(c);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_ARTICLES", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ const AdminArticles = () => {
       setVue("form");
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_ARTICLE", err);
-      toast.error("Erreur de chargement de l'article.");
+      toast.error(apiErrMsg(err, "Erreur de chargement de l'article."));
     }
   };
 
@@ -97,7 +98,7 @@ const AdminArticles = () => {
       toast.success("Catégorie ajoutée !");
     } catch (err) {
       reportError("ECHEC_CREATE_ARTICLE_CATEGORY", err);
-      toast.error("Erreur — cette catégorie existe peut-être déjà.");
+      toast.error(apiErrMsg(err, "Erreur — cette catégorie existe peut-être déjà."));
     }
   };
 
@@ -122,7 +123,7 @@ const AdminArticles = () => {
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_ARTICLE", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     } finally {
       setSaving(false);
     }
@@ -136,7 +137,7 @@ const AdminArticles = () => {
         toast.success("Article supprimé.");
       } catch (err) {
         reportError("ECHEC_DELETE_ARTICLE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

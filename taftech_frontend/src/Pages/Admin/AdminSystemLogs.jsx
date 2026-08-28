@@ -5,6 +5,7 @@ import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const AdminSystemLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -24,7 +25,7 @@ const AdminSystemLogs = () => {
       setPage(res.data.page);
     } catch (err) {
       reportError("ADMIN_SYSTEM_LOGS_FETCH", err);
-      toast.error("Impossible de charger les erreurs.");
+      toast.error(apiErrMsg(err, "Impossible de charger les erreurs."));
     } finally {
       setLoading(false);
     }
@@ -42,7 +43,7 @@ const AdminSystemLogs = () => {
         setTotalPages(1);
       } catch (err) {
         reportError("ADMIN_SYSTEM_LOGS_DELETE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

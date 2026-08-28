@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { Mail, ArrowLeft } from "lucide-react";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -20,7 +21,7 @@ const ForgotPassword = () => {
       setSent(true);
     } catch (err) {
       reportError("ECHEC_FORGOT_PASSWORD", err);
-      toast.error("Une erreur est survenue.");
+      toast.error(apiErrMsg(err, "Une erreur est survenue."));
     } finally {
       setLoading(false);
     }

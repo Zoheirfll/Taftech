@@ -4,16 +4,17 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
 import toast from "react-hot-toast";
-import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
+import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User, CheckCircle2 } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import Select from "react-select";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import DomaineLabel from "../../Components/DomaineLabel";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedIds, setExpandedIds] = useState({});
   const toggleExpand = (id) => setExpandedIds(p => ({ ...p, [id]: !p[id] }));
   const [filtres, setFiltres] = useState({
@@ -54,21 +55,21 @@ const CandidaturesSpontanees = () => {
       );
     } catch (err) {
       reportError("ECHEC_MARK_SPONTANEE_LUE", err);
-      toast.error("Erreur.");
+      toast.error(apiErrMsg(err, "Erreur."));
     }
   };
 
-  const handleSupprimer = async (id) => {
-    try {
-      await jobsService.supprimerCandidatureSpontanee(id);
-      setSpontanees(spontanees.filter((s) => s.id !== id));
-      toast.success("Candidature supprimée.");
-    } catch (err) {
-      reportError("ECHEC_SUPPRIMER_SPONTANEE", err);
-      toast.error("Erreur lors de la suppression.");
-    } finally {
-      setConfirmDeleteId(null);
-    }
+  const handleSupprimer = (id) => {
+    confirmToast("Supprimer définitivement cette candidature spontanée ?", async () => {
+      try {
+        await jobsService.supprimerCandidatureSpontanee(id);
+        setSpontanees(spontanees.filter((s) => s.id !== id));
+        toast.success("Candidature supprimée.");
+      } catch (err) {
+        reportError("ECHEC_SUPPRIMER_SPONTANEE", err);
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+      }
+    });
   };
 
   const toTitleCase = (str) =>
@@ -270,35 +271,19 @@ const CandidaturesSpontanees = () => {
                     {!c.lue && (
                       <button
                         onClick={() => handleMarquerLue(c.id)}
-                        className={`px-3 py-1.5 ${tw.buttonNeutralSoft} text-xs font-medium rounded-lg transition-colors whitespace-nowrap`}
+                        title="Marquer comme lue"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.buttonNeutralSoft} text-xs font-medium rounded-lg transition-colors whitespace-nowrap`}
                       >
-                        Marquer lue
+                        <CheckCircle2 size={12} /> Marquer lue
                       </button>
                     )}
-                    {/* Fix 1 — Confirmation inline */}
-                    {confirmDeleteId === c.id ? (
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => handleSupprimer(c.id)}
-                          className={`px-3 py-1.5 ${tw.buttonDangerSolid} text-xs font-semibold rounded-lg transition-colors`}
-                        >
-                          Confirmer
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className={`px-3 py-1.5 ${tw.buttonNeutralSoft} text-xs font-medium rounded-lg transition-colors`}
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(c.id)}
-                        className={`p-1.5 ${tw.iconButtonHoverDanger} rounded-lg transition-colors flex items-center justify-center`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleSupprimer(c.id)}
+                      title="Supprimer la candidature"
+                      className={`p-1.5 ${tw.iconButtonHoverDanger} rounded-lg transition-colors flex items-center justify-center`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               </div>

@@ -34,18 +34,18 @@ const BanniereCarousel = () => {
 
   const Wrapper = ({ children }) =>
     banniere.lien_url ? (
-      <a href={banniere.lien_url} className="block relative rounded-2xl overflow-hidden">{children}</a>
+      <a href={banniere.lien_url} className="block rounded-2xl overflow-hidden bg-white border border-slate-200">{children}</a>
     ) : (
-      <div className="relative rounded-2xl overflow-hidden">{children}</div>
+      <div className="rounded-2xl overflow-hidden bg-white border border-slate-200">{children}</div>
     );
 
   return (
     <div className="max-w-5xl mx-auto px-4 mt-8" onMouseEnter={() => setPause(true)} onMouseLeave={() => setPause(false)}>
       <Wrapper>
-        <img src={mediaUrl(banniere.image)} alt={banniere.titre || "Bannière promotionnelle"} className="w-full h-40 sm:h-56 object-cover" loading="lazy" />
+        <img src={mediaUrl(banniere.image)} alt={banniere.titre || "Bannière promotionnelle"} className="w-full h-60 sm:h-80 object-contain bg-white" loading="lazy" />
         {banniere.titre && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-5 py-4">
-            <p className="text-white font-bold text-sm sm:text-base">{banniere.titre}</p>
+          <div className="px-5 py-3 border-t border-slate-100">
+            <p className="text-slate-800 font-semibold text-sm sm:text-base">{banniere.titre}</p>
           </div>
         )}
       </Wrapper>

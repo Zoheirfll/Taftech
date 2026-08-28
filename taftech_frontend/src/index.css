@@ -25,6 +25,40 @@ body {
   font-family: "JetBrains Mono", "Courier New", monospace;
 }
 
+/* Barre de défilement personnalisée — remplace la barre grise/carrée par défaut du
+   navigateur. Bleu (candidat/visiteur) par défaut, vert sur le portail recruteur
+   (classe `portal-recruteur` posée sur <body> par App.jsx). Teinte claire au repos,
+   plus soutenue au survol — reste identifiable sans être criarde sur les pages denses. */
+html {
+  scrollbar-width: auto;
+  scrollbar-color: #b3c6e3 transparent; /* indigo-200 TafTech */
+}
+html.portal-recruteur {
+  scrollbar-color: #bce69f transparent; /* teal-200 TafTech */
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #b3c6e3; /* indigo-200 */
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #204883; /* indigo-600 */
+}
+html.portal-recruteur::-webkit-scrollbar-thumb {
+  background-color: #bce69f; /* teal-200 */
+}
+html.portal-recruteur::-webkit-scrollbar-thumb:hover {
+  background-color: #3a8226; /* teal-600 */
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }

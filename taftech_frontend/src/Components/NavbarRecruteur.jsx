@@ -10,10 +10,58 @@ import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
   LogIn, Zap, HelpCircle, MessageCircle, Users,
-  FileText, UserCheck, Award, CalendarClock, Trophy, BarChart3, Receipt,
+  FileText, UserCheck, Award, CalendarClock, Trophy, BarChart3, Receipt, ClipboardCheck,
 } from "lucide-react";
 
 const NOM_PALIERS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
+
+// Même regroupement que la sidebar desktop (RecruteurLayout.jsx) — un seul endroit référence
+// désormais tous les liens recruteur, y compris "Évaluations" (absent avant, jamais atteignable
+// sur mobile car RecruteurLayout est hidden md:block).
+const MOBILE_MENU_GROUPS = [
+  {
+    label: "Principal",
+    items: [{ to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" }],
+  },
+  {
+    label: "Offres",
+    items: [
+      { to: "/offres-emploi", label: "Offres d'emploi", icon: FileText, minRole: "INVITE" },
+      { to: "/candidatures", label: "Candidatures", icon: UserCheck, minRole: "INVITE" },
+      { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR" },
+      { to: "/questionnaires", label: "Questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
+    ],
+  },
+  {
+    label: "Candidats",
+    items: [
+      { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
+      { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
+      { to: "/candidatures-spontanees", label: "Messages", icon: Inbox, minRole: "INVITE" },
+      { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
+      { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
+      { to: "/evaluations", label: "Évaluations", icon: ClipboardCheck, minRole: "INVITE" },
+      { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },
+    ],
+  },
+  {
+    label: "Analyse",
+    items: [{ to: "/statistiques", label: "Statistiques", icon: BarChart3, minRole: "INVITE" }],
+  },
+  {
+    label: "Compte",
+    items: [
+      { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE" },
+      { to: "/facturation", label: "Facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
+      { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
+    ],
+  },
+];
+
+// BottomNavRecruteur couvre déjà 5 liens de base (dashboard/creer-offre/cvtheque/
+// candidatures-spontanees/parametres) — masqués ici sous 768px, réaffichés en tablette
+// portrait où la bottom nav est cachée (la sidebar RecruteurLayout étant hidden md:block).
+const DUP_BOTTOM_NAV = ["/dashboard", "/creer-offre", "/cvtheque", "/candidatures-spontanees", "/parametres"];
 
 const NavbarRecruteur = () => {
   const isLogged = authService.isAuthenticated();
@@ -50,9 +98,11 @@ const NavbarRecruteur = () => {
         try {
           const dash = await jobsService.getDashboard();
           if (dash.entreprise?.logo) setUserPhoto(mediaUrl(dash.entreprise.logo));
-          if (dash.est_premium) setIsPremium(true);
-          if (dash.premium_expire_at) setPremiumExpire(dash.premium_expire_at);
-          if (dash.palier_actif) setPalierNom(dash.palier_actif);
+          if (dash.palier_actif) {
+            setIsPremium(true);
+            setPalierNom(dash.palier_actif);
+          }
+          if (dash.palier_expiration) setPremiumExpire(dash.palier_expiration);
           if (dash.membre_role) authService.setMembreRole(dash.membre_role);
         } catch (err) {
           reportError("ECHEC_PHOTO_NAVBAR_RECRUTEUR", err);
@@ -179,16 +229,11 @@ const NavbarRecruteur = () => {
 
               {isDropdownOpen && (
                 <div className={`${tw.dropdownPanel.replace("shadow-lg","shadow-xl")}`}>
+                  {/* Liste volontairement courte — la sidebar RecruteurLayout couvre déjà
+                      toute la navigation détaillée (Offres/Candidats/Analyse/Compte), ce menu
+                      ne garde que les raccourcis les plus utilisés + ce qui n'est pas dans la sidebar. */}
                   {[
-                    { to: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", minRole: "INVITE" },
-                    { to: "/offres-emploi", icon: FileText, label: "Offres d'emploi", minRole: "INVITE" },
-                    { to: "/candidatures", icon: UserCheck, label: "Candidatures", minRole: "INVITE" },
-                    { to: "/cvtheque", icon: Search, label: "CVthèque", minRole: "UTILISATEUR" },
-                    { to: "/candidatures-spontanees", icon: Inbox, label: "Messages", minRole: "INVITE" },
-                    { to: "/creer-offre", icon: Briefcase, label: "Publier une offre", minRole: "UTILISATEUR" },
-                    { to: "/questionnaires", icon: ClipboardList, label: "Questionnaires", minRole: "UTILISATEUR" },
                     { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
-                    { to: "/cvtheque?favoris=true", icon: Star, label: "Favoris", minRole: "UTILISATEUR" },
                     ...(authService.peutFaire("PROPRIETAIRE")
                       ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? `Mon ${NOM_PALIERS[palierNom] || "Premium"} ⭐` : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
@@ -269,37 +314,26 @@ const NavbarRecruteur = () => {
 
           {isLogged && estRecruteurOuMembre && (
             <>
-              {[
-                { to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" },
-                { to: "/offres-emploi", label: "Offres d'emploi", icon: FileText, minRole: "INVITE" },
-                { to: "/candidatures", label: "Candidatures", icon: UserCheck, minRole: "INVITE" },
-                { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR" },
-                { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
-                { to: "/candidatures-spontanees", label: "Messages", icon: Inbox, minRole: "INVITE" },
-                { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
-                { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
-                { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },
-                { to: "/statistiques", label: "Statistiques", icon: BarChart3, minRole: "INVITE" },
-                { to: "/questionnaires", label: "Questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
-                { to: "/facturation", label: "Facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
-                { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
-                { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE" },
-                { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
-              ]
-                .filter(({ minRole }) => authService.peutFaire(minRole))
-                .map(({ to, label, icon }) => {
-                  const ItemIcon = icon;
-                  // BottomNavRecruteur couvre déjà 5 liens de base (dashboard/creer-offre/cvtheque/
-                  // candidatures-spontanees/parametres) — tous les autres restent toujours visibles
-                  // dans le hamburger (sinon aucun accès mobile possible, la sidebar RecruteurLayout
-                  // étant hidden md:block).
-                  const dup = ["/dashboard", "/creer-offre", "/cvtheque", "/candidatures-spontanees", "/parametres"].includes(to);
-                  return (
-                    <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
-                      <ItemIcon size={16} className="shrink-0" /> {label}
-                    </Link>
-                  );
-                })}
+              {MOBILE_MENU_GROUPS.map((group) => {
+                const items = group.items.filter(({ minRole }) => authService.peutFaire(minRole));
+                if (items.length === 0) return null;
+                return (
+                  <div key={group.label} className="mb-1">
+                    <p className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {group.label}
+                    </p>
+                    {items.map(({ to, label, icon }) => {
+                      const ItemIcon = icon;
+                      const dup = DUP_BOTTOM_NAV.includes(to);
+                      return (
+                        <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
+                          <ItemIcon size={16} className="shrink-0" /> {label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              })}
               {authService.peutFaire("PROPRIETAIRE") && (
                 <Link
                   to="/recruteurs/abonnements"

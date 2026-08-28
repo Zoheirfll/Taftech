@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
@@ -31,7 +32,7 @@ const AdminFaq = () => {
       setItems(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_FAQ", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -72,7 +73,7 @@ const AdminFaq = () => {
       fetchItems();
     } catch (err) {
       reportError("ECHEC_SAVE_FAQ_ITEM", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -84,7 +85,7 @@ const AdminFaq = () => {
         toast.success("Question supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_FAQ_ITEM", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

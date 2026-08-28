@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { adminService } from "../../Services/adminService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Star, Check } from "lucide-react";
 import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
@@ -10,7 +11,9 @@ const AdminDemandesPremium = () => {
   const [demandes, setDemandes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nbMoisParDemande, setNbMoisParDemande] = useState({});
+  const [palierParDemande, setPalierParDemande] = useState({});
   const [filtre, setFiltre] = useState("attente");
+  const PALIERS = ["STARTER", "PRO", "BUSINESS", "ENTERPRISE"];
 
   const charger = useCallback(async () => {
     setLoading(true);
@@ -18,7 +21,7 @@ const AdminDemandesPremium = () => {
       const data = await adminService.getDemandesPremium();
       setDemandes(data || []);
     } catch (err) {
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
       reportError("ECHEC_CHARGEMENT_DEMANDES_PREMIUM", err);
     } finally {
       setLoading(false);
@@ -31,12 +34,13 @@ const AdminDemandesPremium = () => {
 
   const handleActiver = async (demande) => {
     const nb_mois = nbMoisParDemande[demande.id] || demande.nb_mois;
+    const palier = palierParDemande[demande.id] || "BUSINESS";
     try {
-      await adminService.activerPremium(demande.id, nb_mois);
-      toast.success("Premium activé !");
+      await adminService.activerPremium(demande.id, nb_mois, palier);
+      toast.success("Abonnement activé !");
       charger();
     } catch (err) {
-      toast.error("Erreur lors de l'activation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'activation."));
       reportError("ECHEC_ACTIVER_PREMIUM_ADMIN", err);
     }
   };
@@ -82,10 +86,10 @@ const AdminDemandesPremium = () => {
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3">
                 <span className="inline-flex items-center gap-1">
-                  Demande <TooltipIcon text="Tarif : 2000 DA/mois, avec remise de 8% pour 6 mois et 17% pour 12 mois." />
+                  Demande <TooltipIcon text="Durée demandée par le recruteur — l'admin choisit le palier et confirme la durée à l'activation." />
                 </span>
               </th>
-              <th className="px-5 py-3">Statut Premium</th>
+              <th className="px-5 py-3">Abonnement</th>
               <th className="px-5 py-3 text-right">Action</th>
             </tr>
           </thead>
@@ -114,17 +118,17 @@ const AdminDemandesPremium = () => {
                     <p className={`text-xs ${tw.textPrimary} mt-0.5`}>{d.telephone}</p>
                   </td>
                   <td className="px-5 py-4">
-                    <p className={`text-sm font-semibold ${tw.textStrong}`}>{d.nb_mois} mois — {d.montant.toLocaleString("fr-FR")} DA</p>
+                    <p className={`text-sm font-semibold ${tw.textStrong}`}>{d.nb_mois} mois demandés</p>
                     <p className={`text-xs ${tw.textMuted} mt-0.5 uppercase`}>{d.moyen_paiement}</p>
                   </td>
                   <td className="px-5 py-4">
-                    {d.est_premium_actif ? (
+                    {d.palier_actif ? (
                       <span className={`px-2.5 py-1 ${tw.bgWarningSoft} ${tw.textWarning} border ${tw.borderWarning} text-[10px] font-semibold rounded-full`}>
-                        ⭐ Actif — expire {d.premium_expire_at}
+                        ⭐ {d.palier_actif} — expire {d.abonnement_expire_at || "jamais"}
                       </span>
                     ) : (
                       <span className={`px-2.5 py-1 ${tw.surfaceMuted} ${tw.textMuted} border ${tw.borderBase} text-[10px] font-semibold rounded-full`}>
-                        Standard
+                        Gratuit
                       </span>
                     )}
                   </td>
@@ -135,6 +139,17 @@ const AdminDemandesPremium = () => {
                       </span>
                     ) : (
                       <div className="flex items-center justify-end gap-2">
+                        <select
+                          value={palierParDemande[d.id] || "BUSINESS"}
+                          onChange={(e) =>
+                            setPalierParDemande((prev) => ({ ...prev, [d.id]: e.target.value }))
+                          }
+                          className={`${tw.inputColorsWhite} rounded-lg text-xs px-2 py-1.5`}
+                        >
+                          {PALIERS.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
                         <select
                           value={nbMoisParDemande[d.id] || d.nb_mois}
                           onChange={(e) =>

@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Image as ImageIcon } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { mediaUrl } from "../../utils/mediaUrl";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import ImageCropperModal from "../../Components/ImageCropperModal";
 
 const ANNONCE_VIDE = { texte: "", lien_url: "", lien_label: "", type_annonce: "INFO", actif: false };
@@ -35,7 +36,7 @@ const AdminBannieres = () => {
       setBannieres(b);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_BANNIERES", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ const AdminBannieres = () => {
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_SITE_ANNONCE", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -117,7 +118,7 @@ const AdminBannieres = () => {
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_BANNIERE", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -129,7 +130,7 @@ const AdminBannieres = () => {
         toast.success("Annonce supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_SITE_ANNONCE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };
@@ -142,7 +143,7 @@ const AdminBannieres = () => {
         toast.success("Bannière supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_BANNIERE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };
@@ -331,7 +332,7 @@ const AdminBannieres = () => {
       {cropperFile && (
         <ImageCropperModal
           file={cropperFile}
-          aspect={21 / 9}
+          aspect={2}
           cropShape="rect"
           onCancel={() => setCropperFile(null)}
           onValidate={appliquerImageRecadree}

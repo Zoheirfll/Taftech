@@ -221,6 +221,8 @@ const Home = () => {
         </div>
       </section>
 
+      <BanniereCarousel />
+
       {/* ─── COMMENT ÇA MARCHE (visiteurs non connectés uniquement) ─── */}
       {!isLogged && (
         <section className={`py-20 ${tw.surface} px-4 border-b ${tw.borderSubtle}`}>
@@ -331,8 +333,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      <BanniereCarousel />
 
       {/* ─── POURQUOI TAFTECH ─── */}
       <section className={`py-20 ${tw.surface} px-4 border-t ${tw.borderSubtle}`}>

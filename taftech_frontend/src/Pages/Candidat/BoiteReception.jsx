@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   Inbox,
   Mail,
@@ -44,7 +45,7 @@ const BoiteReception = () => {
         const data = await jobsService.getNotifications();
         setNotifications(data);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_INBOX", error);
       } finally {
         setLoading(false);

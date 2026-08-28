@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2, X, Zap, ShieldCheck, CreditCard, Headset, ChevronDown, ChevronUp,
-  Clock, Users2, TrendingUp, Award, Loader2,
+  Clock, Users2, TrendingUp, Award, Loader2, Banknote, Send,
 } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 
@@ -50,6 +51,11 @@ const AbonnementsPage = () => {
   const [renouvellementAuto, setRenouvellementAuto] = useState(true);
   const [resiliationEnCours, setResiliationEnCours] = useState(false);
   const [checkoutEnCours, setCheckoutEnCours] = useState(null);
+  const [paiementManuel, setPaiementManuel] = useState(null); // nom du palier choisi, ou null
+  const [moyenManuel, setMoyenManuel] = useState("CIB");
+  const [messageManuel, setMessageManuel] = useState("");
+  const [envoiManuelEnCours, setEnvoiManuelEnCours] = useState(false);
+  const [etapeManuelle, setEtapeManuelle] = useState("choix"); // choix | confirme
 
   useEffect(() => {
     const load = async () => {
@@ -79,9 +85,7 @@ const AbonnementsPage = () => {
         const dash = await jobsService.getDashboard();
         setPalierActif(dash.palier_actif);
         setDetailsAbonnement({
-          activeDepuis: dash.premium_active_since,
-          expireLe: dash.premium_expire_at,
-          nbMois: dash.premium_nb_mois,
+          expireLe: dash.palier_expiration,
         });
         const isPaidReturn = new URLSearchParams(window.location.search).get("paid");
         if (!dash.palier_actif && isPaidReturn && tentatives < MAX) {
@@ -119,7 +123,7 @@ const AbonnementsPage = () => {
           setRenouvellementAuto(false);
           toast.success("Renouvellement automatique désactivé.");
         } catch (err) {
-          toast.error("Erreur lors de la résiliation.");
+          toast.error(apiErrMsg(err, "Erreur lors de la résiliation."));
         } finally {
           setResiliationEnCours(false);
         }
@@ -134,7 +138,7 @@ const AbonnementsPage = () => {
       setRenouvellementAuto(true);
       toast.success("Renouvellement automatique réactivé.");
     } catch (err) {
-      toast.error("Erreur lors de la réactivation.");
+      toast.error(apiErrMsg(err, "Erreur lors de la réactivation."));
     } finally {
       setResiliationEnCours(false);
     }
@@ -147,9 +151,30 @@ const AbonnementsPage = () => {
       const data = await jobsService.chargilyCheckoutPalier(palierNom, periodeAPI);
       window.location.href = data.checkout_url;
     } catch (err) {
-      const msg = err.response?.data?.error || "Erreur lors de la création du paiement.";
-      toast.error(msg);
+      toast.error(apiErrMsg(err, "Erreur lors de la création du paiement."));
       setCheckoutEnCours(null);
+    }
+  };
+
+  const handleOuvrirPaiementManuel = (palierNom) => {
+    setPaiementManuel(palierNom);
+    setMoyenManuel("CIB");
+    setMessageManuel("");
+    setEtapeManuelle("choix");
+  };
+
+  const handleEnvoyerDemandeManuelle = async () => {
+    setEnvoiManuelEnCours(true);
+    const nbMois = periode === "annuel" ? 12 : 1;
+    try {
+      await jobsService.demanderPremium(moyenManuel, nbMois);
+      const messageComplet = `Palier demandé : ${NOM_LABELS[paiementManuel] || paiementManuel}. ${messageManuel}`.trim();
+      await jobsService.envoyerRecuPremium(moyenManuel, nbMois, messageComplet);
+      setEtapeManuelle("confirme");
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de la demande."));
+    } finally {
+      setEnvoiManuelEnCours(false);
     }
   };
 
@@ -177,8 +202,7 @@ const AbonnementsPage = () => {
               <p className="text-sm font-bold text-emerald-900">Abonnement {NOM_LABELS[palierActif] || palierActif} actif</p>
               {detailsAbonnement?.expireLe && (
                 <p className="text-xs text-emerald-700">
-                  Actif depuis le {detailsAbonnement.activeDepuis || "—"} · Expire le {detailsAbonnement.expireLe}
-                  {detailsAbonnement.nbMois ? ` (${detailsAbonnement.nbMois} mois)` : ""}
+                  Expire le {detailsAbonnement.expireLe}
                   {!renouvellementAuto && " · Renouvellement automatique désactivé"}
                 </p>
               )}
@@ -338,13 +362,21 @@ const AbonnementsPage = () => {
                   <CheckCircle2 size={15} /> Palier actuel
                 </span>
               ) : (
-                <button
-                  onClick={() => handleChoisir(p.nom)}
-                  disabled={checkoutEnCours === p.nom}
-                  className={`mt-4 w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 ${p.nom === "PRO" ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
-                >
-                  {checkoutEnCours === p.nom ? <><Loader2 size={14} className="animate-spin" /> Connexion à Chargily...</> : `Choisir ${NOM_LABELS[p.nom]}`}
-                </button>
+                <>
+                  <button
+                    onClick={() => handleChoisir(p.nom)}
+                    disabled={checkoutEnCours === p.nom}
+                    className={`mt-4 w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 ${p.nom === "PRO" ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
+                  >
+                    {checkoutEnCours === p.nom ? <><Loader2 size={14} className="animate-spin" /> Connexion à Chargily...</> : `Choisir ${NOM_LABELS[p.nom]}`}
+                  </button>
+                  <button
+                    onClick={() => handleOuvrirPaiementManuel(p.nom)}
+                    className="mt-2 w-full py-1.5 text-center text-xs font-medium text-slate-600 hover:text-teal-700 hover:underline transition-colors"
+                  >
+                    ou payer par virement (CIB/EDAHABIA)
+                  </button>
+                </>
               )}
             </div>
           );
@@ -462,6 +494,80 @@ const AbonnementsPage = () => {
           </div>
         </div>
       </div>
+
+      {paiementManuel && (
+        <div className={`${tw.modalOverlay} p-4`}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                Paiement manuel — {NOM_LABELS[paiementManuel] || paiementManuel}
+              </h3>
+              <button onClick={() => setPaiementManuel(null)} className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {etapeManuelle === "choix" ? (
+              <div className="px-5 py-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {["CIB", "EDAHABIA"].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMoyenManuel(m)}
+                      className={`p-3 rounded-xl border-2 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${moyenManuel === m ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-200 text-slate-700 hover:border-slate-300"}`}
+                    >
+                      <Banknote size={15} /> {m}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Bénéficiaire</span><span className="font-semibold">FILALI Zoheir</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{moyenManuel === "CIB" ? "RIB" : "N° CCP"}</span><span className="font-mono text-slate-400 italic">À demander au support</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Motif</span><span className="font-semibold">Palier {NOM_LABELS[paiementManuel] || paiementManuel} — {periode === "annuel" ? "Annuel" : "Mensuel"}</span></div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Référence de virement (optionnel)</label>
+                  <textarea
+                    value={messageManuel}
+                    onChange={(e) => setMessageManuel(e.target.value)}
+                    rows={3}
+                    placeholder="Ex : Virement CIB effectué le 12/06/2026, référence #XXXXXXXX"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleEnvoyerDemandeManuelle}
+                  disabled={envoiManuelEnCours}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-teal-700 text-white text-sm font-bold rounded-lg hover:bg-teal-800 transition-colors disabled:opacity-60"
+                >
+                  <Send size={15} /> {envoiManuelEnCours ? "Envoi..." : "Envoyer ma demande"}
+                </button>
+                <p className="text-center text-[11px] text-slate-500">
+                  Votre demande sera transmise à notre équipe pour vérification manuelle — activation sous 24h ouvrables.
+                </p>
+              </div>
+            ) : (
+              <div className="px-5 py-6 text-center space-y-3">
+                <div className="w-12 h-12 mx-auto bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 size={22} className="text-emerald-600" />
+                </div>
+                <p className="text-sm font-bold text-slate-900">Demande envoyée ✓</p>
+                <p className="text-xs text-slate-600">Notre équipe vérifie votre paiement et activera votre abonnement sous 24h ouvrables.</p>
+                <button
+                  onClick={() => setPaiementManuel(null)}
+                  className="mt-2 px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

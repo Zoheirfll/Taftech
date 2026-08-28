@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const StatCard = ({ icon: Icon, label, value, color, info }) => (
   <div
@@ -64,7 +65,7 @@ const AdminStatistiques = () => {
       const data = await jobsService.getAdminStats();
       setStats(data);
     } catch (err) {
-      toast.error("Erreur lors du chargement des statistiques.");
+      toast.error(apiErrMsg(err, "Erreur lors du chargement des statistiques."));
       reportError("ECHEC_CHARGEMENT_STATS_ADMIN", err);
     } finally {
       setLoading(false);
@@ -77,7 +78,7 @@ const AdminStatistiques = () => {
       const data = await jobsService.getAdminMarche();
       setMarche(data);
     } catch (err) {
-      toast.error("Erreur lors du chargement des données marché.");
+      toast.error(apiErrMsg(err, "Erreur lors du chargement des données marché."));
       reportError("ECHEC_CHARGEMENT_MARCHE_ADMIN", err);
     } finally {
       setLoadingMarche(false);

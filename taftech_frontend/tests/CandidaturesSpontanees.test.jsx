@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import CandidaturesSpontanees from "../src/Pages//Recruteur/CandidaturesSpontanees";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import toast from "react-hot-toast";
 
 vi.mock("../src/Services/jobsService", () => ({
@@ -150,18 +151,16 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     render(
       <MemoryRouter>
         <CandidaturesSpontanees />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    // 1er clic → inline confirm (Confirmer/Annuler remplace la corbeille)
     const deleteButtons = screen
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(deleteButtons[0]);
-    // 2e clic → confirme la suppression
-    await waitFor(() => screen.getByText("Confirmer"));
-    fireEvent.click(screen.getByText("Confirmer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.supprimerCandidatureSpontanee).toHaveBeenCalled();
@@ -233,6 +232,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
     render(
       <MemoryRouter>
         <CandidaturesSpontanees />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
@@ -241,9 +241,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(deleteButtons[0]);
-    // Confirme la suppression (inline confirm)
-    await waitFor(() => screen.getByText("Confirmer"));
-    fireEvent.click(screen.getByText("Confirmer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -257,7 +255,6 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
   });
 
   it("🔴 EC3 : Confirmation annulée ne supprime pas", async () => {
-    window.confirm = vi.fn(() => false);
     jobsService.getCandidaturesSpontanees.mockResolvedValue(mockCandidatures);
     jobsService.getConstants.mockResolvedValue(mockConstants);
 

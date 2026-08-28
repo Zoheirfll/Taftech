@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { tw } from "../../theme";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Search } from "lucide-react";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 
@@ -11,6 +12,8 @@ const FacturationPage = () => {
   const [factures, setFactures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [telechargementId, setTelechargementId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [annee, setAnnee] = useState("toutes");
 
   useEffect(() => {
     const load = async () => {
@@ -39,11 +42,30 @@ const FacturationPage = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("Erreur lors du téléchargement de la facture.");
+      toast.error(apiErrMsg(err, "Erreur lors du téléchargement de la facture."));
     } finally {
       setTelechargementId(null);
     }
   };
+
+  const annees = useMemo(() => {
+    const set = new Set(
+      factures.map((f) => (f.date_paiement ? new Date(f.date_paiement).getFullYear() : null)).filter(Boolean),
+    );
+    return Array.from(set).sort((a, b) => b - a);
+  }, [factures]);
+
+  const facturesFiltrees = useMemo(() => {
+    let liste = factures;
+    if (annee !== "toutes") {
+      liste = liste.filter((f) => f.date_paiement && new Date(f.date_paiement).getFullYear() === Number(annee));
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      liste = liste.filter((f) => (f.numero_facture || "").toLowerCase().includes(q));
+    }
+    return liste;
+  }, [factures, search, annee]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -51,6 +73,27 @@ const FacturationPage = () => {
         <h1 className="text-xl font-bold text-slate-900">Facturation</h1>
         <p className="text-sm text-slate-600 mt-1">Historique de vos factures d'abonnement, téléchargeables en PDF.</p>
       </div>
+
+      {factures.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un n° de facture..."
+              className={`${tw.input} w-full pl-9`}
+            />
+          </div>
+          <select value={annee} onChange={(e) => setAnnee(e.target.value)} className={tw.input}>
+            <option value="toutes">Toutes les années</option>
+            {annees.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
@@ -67,15 +110,17 @@ const FacturationPage = () => {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="5" className="py-12 text-center text-sm text-slate-500 animate-pulse">Chargement...</td></tr>
-              ) : factures.length === 0 ? (
+              ) : facturesFiltrees.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-12 text-center">
                     <FileText size={28} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500 italic">Aucune facture pour l'instant.</p>
+                    <p className="text-sm text-slate-500 italic">
+                      {factures.length === 0 ? "Aucune facture pour l'instant." : "Aucun résultat pour ces critères."}
+                    </p>
                   </td>
                 </tr>
               ) : (
-                factures.map((f) => (
+                facturesFiltrees.map((f) => (
                   <tr key={f.id} className={tw.rowHover}>
                     <td className="px-4 py-3 text-sm font-mono text-slate-900">{f.numero_facture}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{f.date_paiement}</td>

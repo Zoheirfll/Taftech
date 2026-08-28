@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Search, Download } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -37,7 +38,7 @@ const AdminCandidatures = () => {
       setCandidatures(data.results);
       setTotalPages(Math.ceil(data.count / 10));
     } catch (err) {
-      toast.error("Erreur lors du chargement.");
+      toast.error(apiErrMsg(err, "Erreur lors du chargement."));
       reportError("ECHEC_CHARGEMENT_CANDIDATURES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ const AdminCandidatures = () => {
       window.URL.revokeObjectURL(url);
       toast.success("Téléchargement réussi !");
     } catch (err) {
-      toast.error("Erreur lors de l'exportation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
       reportError("ECHEC_EXPORT_EXCEL_CANDIDATURES", err);
     } finally {
       toast.dismiss(toastId);

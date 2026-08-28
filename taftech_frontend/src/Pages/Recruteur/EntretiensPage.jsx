@@ -70,11 +70,11 @@ const EntretiensPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className={`lg:col-span-2 ${tw.card} p-4`}>
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() - 1, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <button onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() - 1, 1))} title="Mois précédent" className="p-1.5 hover:bg-slate-100 rounded-lg">
               <ChevronLeft size={18} />
             </button>
             <p className="text-sm font-bold text-slate-900 capitalize">{moisAffiche.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
-            <button onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + 1, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <button onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + 1, 1))} title="Mois suivant" className="p-1.5 hover:bg-slate-100 rounded-lg">
               <ChevronRight size={18} />
             </button>
           </div>

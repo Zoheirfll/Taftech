@@ -5,9 +5,8 @@ import { recruteurService } from "../../../Services/recruteurService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
+import { apiErrMsg } from "../../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-
-const apiErrMsg = (err, fallback) => err.response?.data?.error || fallback;
 
 export const useGestionOffre = () => {
   const { id } = useParams();
@@ -57,7 +56,7 @@ export const useGestionOffre = () => {
           jobsService.getConstants().catch(() => ({})),
         ]);
         if (constData) setConstants(constData);
-        if (dashData.est_premium) setIsPremium(true);
+        if (dashData.palier_actif) setIsPremium(true);
         const foundOffre = dashData.offres.find((o) => o.id === parseInt(id));
         if (foundOffre) {
           setOffre(foundOffre);
@@ -72,7 +71,7 @@ export const useGestionOffre = () => {
           navigate("/dashboard");
         }
       } catch (err) {
-        toast.error("Erreur de chargement.");
+        toast.error(apiErrMsg(err, "Erreur de chargement."));
         reportError("ECHEC_CHARGEMENT_OFFRE", err);
         navigate("/dashboard");
       } finally {
@@ -252,7 +251,7 @@ export const useGestionOffre = () => {
         offre.titre?.replace(/[^a-z0-9]+/gi, "_").slice(0, 40) || "offre",
       );
     } catch (err) {
-      toast.error("Erreur lors de l'export Excel.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'export Excel."));
       reportError("ECHEC_EXPORT_EXCEL_OFFRE", err);
     }
   };
@@ -305,7 +304,7 @@ export const useGestionOffre = () => {
       window.URL.revokeObjectURL(url);
       toast.success("Bulletin généré !");
     } catch (err) {
-      toast.error("Erreur lors de la génération.");
+      toast.error(apiErrMsg(err, "Erreur lors de la génération."));
       reportError("ECHEC_TELECHARGEMENT_BULLETIN", err);
     } finally {
       toast.dismiss(toastId);
@@ -321,7 +320,7 @@ export const useGestionOffre = () => {
       );
       setAnalyseGroq(data.analyse);
     } catch (err) {
-      toast.error("Service IA indisponible.");
+      toast.error(apiErrMsg(err, "Service IA indisponible."));
       reportError("ECHEC_ANALYSE_GROQ_RECRUTEUR", err);
     } finally {
       setLoadingGroq(false);
@@ -335,8 +334,8 @@ export const useGestionOffre = () => {
         selectedCandidature.id,
       );
       setResumeIA(data.analyse);
-    } catch {
-      toast.error("Service IA indisponible.");
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Service IA indisponible."));
     } finally {
       setLoadingResume(false);
     }

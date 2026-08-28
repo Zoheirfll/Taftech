@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from ..models import Candidature
-from .profils import ExperienceSerializer, FormationSerializer
+from .profils import ExperienceSerializer, FormationSerializer, CompetenceCandidatSerializer
 from .questionnaires import ReponseCandidatSerializer
 
 User = get_user_model()
@@ -17,6 +17,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     experiences = serializers.SerializerMethodField()
     formations = serializers.SerializerMethodField()
     competences = serializers.SerializerMethodField()
+    competences_detail = serializers.SerializerMethodField()
     langues = serializers.SerializerMethodField()
     service_militaire = serializers.SerializerMethodField()
     permis_conduire = serializers.SerializerMethodField()
@@ -40,7 +41,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'telephone',
             'titre_professionnel', 'cv_pdf', 'photo_profil',
-            'experiences', 'formations', 'competences', 'langues',
+            'experiences', 'formations', 'competences', 'competences_detail', 'langues',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
             'wilaya', 'commune', 'adresse', 'diplome', 'specialite', 'bio', 'linkedin', 'github',
@@ -76,6 +77,10 @@ class CandidatInfoDTO(serializers.ModelSerializer):
 
     def get_competences(self, obj):
         p = self._profil(obj); return p.competences if p else ""
+
+    def get_competences_detail(self, obj):
+        p = self._profil(obj)
+        return CompetenceCandidatSerializer(p.competences_detail.all(), many=True).data if p else []
 
     def get_langues(self, obj):
         p = self._profil(obj); return p.langues if p else ""

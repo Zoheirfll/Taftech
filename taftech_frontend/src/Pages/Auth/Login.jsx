@@ -4,6 +4,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { tw } from "../../theme";
 
@@ -40,7 +41,7 @@ const Login = () => {
         navigate("/register");
         return;
       }
-      toast.error("Email ou mot de passe incorrect.", { id: toastId });
+      toast.error(apiErrMsg(err, "Email ou mot de passe incorrect."), { id: toastId });
       reportError("ECHEC_CONNEXION", err);
     } finally {
       setLoading(false);
@@ -55,8 +56,7 @@ const Login = () => {
       navigate(next || "/dashboard-candidat");
       window.location.reload();
     } catch (err) {
-      const msg = err.response?.data?.error || "Échec de la connexion Google.";
-      toast.error(msg, { id: toastId });
+      toast.error(apiErrMsg(err, "Échec de la connexion Google."), { id: toastId });
     }
   };
 

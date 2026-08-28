@@ -5,6 +5,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bookmark, MapPin, Trash2 } from "lucide-react";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const OffresSauvegardees = () => {
   const [favoris, setFavoris] = useState([]);
@@ -16,7 +17,7 @@ const OffresSauvegardees = () => {
         const data = await jobsService.getOffresSauvegardees();
         setFavoris(data);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_FAVORIS", error);
       } finally {
         setIsLoading(false);
@@ -34,7 +35,7 @@ const OffresSauvegardees = () => {
     } catch (error) {
       setFavoris(previousFavoris);
       reportError("ECHEC_SUPPRESSION_FAVORI", error);
-      toast.error("Erreur lors de la suppression.");
+      toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
     }
   };
 

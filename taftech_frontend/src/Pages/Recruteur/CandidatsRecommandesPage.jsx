@@ -105,7 +105,11 @@ const CandidatsRecommandesPage = () => {
                   </Link>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-lg font-extrabold text-teal-700">{Math.round(c.score_matching)}%</span>
-                    <button onClick={() => setExpandedId(isOpen ? null : c.id)} className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg">
+                    <button
+                      onClick={() => setExpandedId(isOpen ? null : c.id)}
+                      title={isOpen ? "Masquer le détail du matching" : "Voir le détail du matching"}
+                      className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg"
+                    >
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
                   </div>

@@ -39,6 +39,29 @@ const MiniAreaChart = ({
   const scaleY2 = (v) => H - padY - (v / secondaryMax) * (H - padY * 2);
   const scaleX = (i) => padLeft + i * stepX;
 
+  // Lissage Catmull-Rom → Bézier : adoucit les angles vifs (ex. un seul mois avec de
+  // l'activité entouré de zéros) sans librairie externe. Les points de contrôle sont
+  // clampés dans la zone du graphique pour éviter tout dépassement visuel (overshoot)
+  // au-dessus du max ou en dessous de la ligne 0.
+  const clampY = (y) => Math.min(H - padY, Math.max(padY, y));
+  const smoothPath = (pts) => {
+    if (pts.length < 2) return "";
+    if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
+    let d = `M ${pts[0].x},${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = clampY(p1.y + (p2.y - p0.y) / 6);
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = clampY(p2.y - (p3.y - p1.y) / 6);
+      d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x},${p2.y}`;
+    }
+    return d;
+  };
+
   React.useEffect(() => {
     if (!showExportMenu) return;
     const handler = (e) => {
@@ -139,14 +162,6 @@ const MiniAreaChart = ({
                 stroke="#e2e8f0"
                 strokeWidth="1"
               />
-              <text x={padLeft - 6} y={scaleY(maxVal * f) + 3} textAnchor="end" fontSize="9" fill="#94a3b8">
-                {Math.round(maxVal * f)}
-              </text>
-              {secondarySeries && (
-                <text x={W - padRight + 6} y={scaleY(maxVal * f) + 3} textAnchor="start" fontSize="9" fill={secondarySeries.color}>
-                  {Math.round(secondaryMax * f)}%
-                </text>
-              )}
             </g>
           ))}
 
@@ -189,13 +204,14 @@ const MiniAreaChart = ({
                 </g>
               ))
             : series.map((s) => {
-                const points = data.map((d, i) => `${scaleX(i)},${scaleY(d[s.key] || 0)}`).join(" ");
-                const areaPoints = `${scaleX(0)},${scaleY(0)} ${points} ${scaleX(data.length - 1)},${scaleY(0)}`;
+                const pts = data.map((d, i) => ({ x: scaleX(i), y: scaleY(d[s.key] || 0) }));
+                const linePath = smoothPath(pts);
+                const areaPath = `${linePath} L ${scaleX(data.length - 1)},${scaleY(0)} L ${scaleX(0)},${scaleY(0)} Z`;
                 return (
                   <g key={s.key}>
-                    <polygon points={areaPoints} fill={s.color} fillOpacity="0.08" />
-                    <polyline
-                      points={points}
+                    <path d={areaPath} fill={s.color} fillOpacity="0.08" stroke="none" />
+                    <path
+                      d={linePath}
                       fill="none"
                       stroke={s.color}
                       strokeWidth="2.5"
@@ -242,9 +258,29 @@ const MiniAreaChart = ({
           )}
 
           {data.map((d, i) => (
-            <text key={i} x={scaleX(i)} y={H + 14} textAnchor="middle" fontSize="9" fill="#94a3b8">
+            <text key={i} x={scaleX(i)} y={H + 14} textAnchor="middle" fontSize="9" fill="#64748b" fontWeight="500">
               {d.label}
             </text>
+          ))}
+
+          {/* Labels d'axe Y rendus en dernier (au-dessus des lignes/points) — un fond blanc
+              derrière chaque chiffre évite qu'il se confonde avec une courbe posée pile sur
+              cette graduation (typiquement la ligne à 0). */}
+          {[0, 0.5, 1].map((f) => (
+            <g key={`ylabel-${f}`}>
+              <rect x={padLeft - 22} y={scaleY(maxVal * f) - 7} width="20" height="12" fill="white" />
+              <text x={padLeft - 6} y={scaleY(maxVal * f) + 3} textAnchor="end" fontSize="9" fill="#64748b" fontWeight="600">
+                {Math.round(maxVal * f)}
+              </text>
+              {secondarySeries && (
+                <React.Fragment>
+                  <rect x={W - padRight + 2} y={scaleY(maxVal * f) - 7} width="26" height="12" fill="white" />
+                  <text x={W - padRight + 6} y={scaleY(maxVal * f) + 3} textAnchor="start" fontSize="9" fill={secondarySeries.color} fontWeight="600">
+                    {Math.round(secondaryMax * f)}%
+                  </text>
+                </React.Fragment>
+              )}
+            </g>
           ))}
         </svg>
       </div>

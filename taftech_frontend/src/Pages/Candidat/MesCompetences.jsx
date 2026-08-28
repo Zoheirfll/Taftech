@@ -6,6 +6,7 @@ import { Star, Trash2, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -36,7 +37,7 @@ const MesCompetences = () => {
         const data = await jobsService.getMesCompetencesDetail();
         setCompetences(data);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_MES_COMPETENCES", error);
       } finally {
         setIsLoading(false);
@@ -68,7 +69,7 @@ const MesCompetences = () => {
       setSuggestions([]);
     } catch (error) {
       reportError("ECHEC_AJOUT_COMPETENCE_UI", error);
-      toast.error("Impossible d'ajouter cette compétence.");
+      toast.error(apiErrMsg(error, "Impossible d'ajouter cette compétence."));
     }
   };
 
@@ -79,7 +80,7 @@ const MesCompetences = () => {
         setCompetences((prev) => prev.filter((c) => c.id !== id));
         toast.success("Compétence supprimée.");
       } catch (error) {
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
         reportError("ECHEC_SUPPRESSION_COMPETENCE_UI", error);
       }
     });

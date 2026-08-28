@@ -4,6 +4,7 @@ import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Pencil, X } from "lucide-react";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 
@@ -23,7 +24,7 @@ const AdminPaliers = () => {
       setPaliers(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_PALIERS", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ const AdminPaliers = () => {
       fetchPaliers();
     } catch (err) {
       reportError("ECHEC_UPDATE_PALIER", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 

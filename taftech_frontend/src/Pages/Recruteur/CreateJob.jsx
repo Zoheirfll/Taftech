@@ -12,6 +12,7 @@ import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 import { CreateQuestionnaireModal } from "../../Components/CreateQuestionnaireModal";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const TYPE_QUESTION_LABELS = {
   COURT: "Texte court",
@@ -90,7 +91,7 @@ const CreateJob = () => {
         if (dash.palier_actif) setIsPremium(true);
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_CONSTANTES_JOB", error);
-        toast.error("Erreur lors du chargement des listes déroulantes.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement des listes déroulantes."));
       }
     };
     fetchData();
@@ -165,7 +166,7 @@ const CreateJob = () => {
       setQuestionsEntretien(result.questions_entretien || []);
       toast.success("Contenu généré ! Relisez et ajustez selon vos besoins.", { id: toastId });
     } catch (err) {
-      toast.error(err.response?.data?.error || "Service IA indisponible.", { id: toastId });
+      toast.error(apiErrMsg(err, "Service IA indisponible."), { id: toastId });
       reportError("ECHEC_GENERER_OFFRE_IA", err);
     } finally {
       setIaLoading(false);
@@ -195,10 +196,7 @@ const CreateJob = () => {
       setTimeout(() => navigate("/dashboard"), 2500);
     } catch (error) {
       reportError("ECHEC_PUBLICATION_OFFRE", error);
-      const message =
-        error.response?.data?.error ||
-        "Erreur lors de la publication. Vérifiez vos informations.";
-      toast.error(message, { id: toastId, duration: 6000 });
+      toast.error(apiErrMsg(error, "Erreur lors de la publication. Vérifiez vos informations."), { id: toastId, duration: 6000 });
       setLoading(false);
     }
   };

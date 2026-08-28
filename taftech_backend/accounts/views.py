@@ -265,7 +265,8 @@ class CookieTokenObtainView(TokenObtainPairView):
                 email = request.data.get('email') or request.data.get('username')
                 user_obj = User.objects.get(email=email)
                 entreprise = get_entreprise_for_user(user_obj)
-                if entreprise and not entreprise.est_premium_actif:
+                from jobs.paliers_utils import get_palier_actif
+                if entreprise and get_palier_actif(entreprise) is None:
                     return Response(
                         {"detail": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                         status=status.HTTP_403_FORBIDDEN,

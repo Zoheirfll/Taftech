@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import DomaineLabel from "../../Components/DomaineLabel";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   MapPin,
   GraduationCap,
@@ -37,7 +38,7 @@ const ReviewCandidature = () => {
         setJob(jobData);
         setProfil(profilData);
       } catch (err) {
-        toast.error("Erreur de chargement du profil.");
+        toast.error(apiErrMsg(err, "Erreur de chargement du profil."));
         reportError("ECHEC_CHARGEMENT_REVIEW_CANDIDATURE", err);
       } finally {
         setLoading(false);
@@ -82,11 +83,7 @@ const ReviewCandidature = () => {
       toast.success("Candidature envoyée !");
       navigate("/mes-candidatures");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Erreur ou candidature déjà envoyée.",
-      );
+      toast.error(apiErrMsg(err, "Erreur ou candidature déjà envoyée."));
       reportError("ECHEC_SOUMISSION_CANDIDATURE", err);
       setSubmitting(false);
     }
@@ -476,7 +473,21 @@ const ReviewCandidature = () => {
               <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
                 Compétences
               </p>
-              {renderTags(profil.competences)}
+              {profil.competences_detail?.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {profil.competences_detail.map((c) => (
+                    <span
+                      key={c.id}
+                      className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md flex items-center gap-1"
+                    >
+                      {c.label}
+                      <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                renderTags(profil.competences)
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">

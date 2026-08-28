@@ -4,6 +4,7 @@ import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../../utils/errorReporter";
 import { Mail, ArrowLeft, CheckCircle, Send } from "lucide-react";
+import { apiErrMsg } from "../../../utils/apiErrMsg";
 
 const ForgotPasswordRecruteur = () => {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ const ForgotPasswordRecruteur = () => {
       setSent(true);
     } catch (err) {
       reportError("ECHEC_FORGOT_PASSWORD_RECRUTEUR", err);
-      toast.error("Une erreur est survenue.");
+      toast.error(apiErrMsg(err, "Une erreur est survenue."));
     } finally {
       setLoading(false);
     }

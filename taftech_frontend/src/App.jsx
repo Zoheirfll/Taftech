@@ -166,7 +166,6 @@ const AdminBroadcast    = lazy(() => import("./Pages/admin/AdminBroadcast"));
 const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminMetiers      = lazy(() => import("./Pages/Admin/AdminMetiers"));
-const AdminPremium      = lazy(() => import("./Pages/Admin/AdminPremium"));
 const AdminPaliers      = lazy(() => import("./Pages/Admin/AdminPaliers"));
 const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
@@ -246,6 +245,10 @@ function AppContent() {
   const showBottomNavRecruteur =
     recruteurPortal && !isAdminPath && isLogged && authService.isRecruteurOuMembre();
   const showAnyBottomNav = showBottomNavCandidat || showBottomNavGuest || showBottomNavRecruteur;
+
+  React.useEffect(() => {
+    document.documentElement.classList.toggle("portal-recruteur", recruteurPortal && !isAdminPath);
+  }, [recruteurPortal, isAdminPath]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -351,7 +354,6 @@ function AppContent() {
               <Route path="candidatures" element={<AdminCandidatures />} />
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/metiers" element={<AdminMetiers />} />
-              <Route path="/admin-taftech/premium-config" element={<AdminPremium />} />
               <Route path="/admin-taftech/paliers" element={<AdminPaliers />} />
               <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />

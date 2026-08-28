@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Search, Download, X } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -27,7 +28,7 @@ const AdminEntreprises = () => {
       setTotalPages(Math.ceil(data.count / 5) || 1);
       setSelectedIds([]);
     } catch (err) {
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
       reportError("ECHEC_CHARGEMENT_ENTREPRISES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -63,23 +64,12 @@ const AdminEntreprises = () => {
         toast.success(`${selectedIds.length} entreprise(s) approuvée(s) !`);
         chargerEntreprises();
       } catch (err) {
-        toast.error("Erreur lors de l'approbation groupée.");
+        toast.error(apiErrMsg(err, "Erreur lors de l'approbation groupée."));
         reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", err);
       } finally {
         setBulkLoading(false);
       }
     });
-  };
-
-  const handleTogglePremium = async (id, statutActuel) => {
-    try {
-      await jobsService.moderateEntreprise(id, { est_premium: !statutActuel });
-      chargerEntreprises();
-      toast.success(statutActuel ? "Premium retiré." : "Compte Premium activé !");
-    } catch (err) {
-      toast.error("Erreur lors de la modification.");
-      reportError("ECHEC_TOGGLE_PREMIUM", err);
-    }
   };
 
   const handleToggleMiseEnAvant = async (id, statutActuel) => {
@@ -88,7 +78,7 @@ const AdminEntreprises = () => {
       chargerEntreprises();
       toast.success(statutActuel ? "Retirée des clients mis en avant." : "Ajoutée aux clients mis en avant !");
     } catch (err) {
-      toast.error("Erreur lors de la modification.");
+      toast.error(apiErrMsg(err, "Erreur lors de la modification."));
       reportError("ECHEC_TOGGLE_MISE_EN_AVANT", err);
     }
   };
@@ -100,7 +90,7 @@ const AdminEntreprises = () => {
         chargerEntreprises();
         toast.success("Statut mis à jour !");
       } catch (err) {
-        toast.error("Erreur lors de la modification.");
+        toast.error(apiErrMsg(err, "Erreur lors de la modification."));
         reportError("ECHEC_MODERATION_ENTREPRISE", err);
       }
     });
@@ -120,7 +110,7 @@ const AdminEntreprises = () => {
       window.URL.revokeObjectURL(url);
       toast.success("Téléchargement réussi !");
     } catch (err) {
-      toast.error("Erreur lors de l'exportation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
       reportError("ECHEC_EXPORT_EXCEL_ENTREPRISES", err);
     } finally {
       toast.dismiss(toastId);
@@ -256,10 +246,10 @@ const AdminEntreprises = () => {
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    {ent.est_premium ? (
-                      <span className={`px-2.5 py-1 ${tw.bgWarningSoft} ${tw.textWarning} border ${tw.borderWarning} text-[10px] font-semibold rounded-full`}>⭐ Premium</span>
+                    {ent.palier_actif ? (
+                      <span className={`px-2.5 py-1 ${tw.bgWarningSoft} ${tw.textWarning} border ${tw.borderWarning} text-[10px] font-semibold rounded-full`}>⭐ {ent.palier_actif}</span>
                     ) : (
-                      <span className={`px-2.5 py-1 ${tw.surfaceMuted} ${tw.textMuted} border ${tw.borderBase} text-[10px] font-semibold rounded-full`}>Standard</span>
+                      <span className={`px-2.5 py-1 ${tw.surfaceMuted} ${tw.textMuted} border ${tw.borderBase} text-[10px] font-semibold rounded-full`}>Gratuit</span>
                     )}
                   </td>
                   <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
@@ -275,15 +265,6 @@ const AdminEntreprises = () => {
                     >
                       {ent.est_approuvee ? "Bloquer" : "Approuver"}
                     </button>
-                    {/* Bouton premium : permet à l'admin de retirer le premium si besoin (ex: fraude) */}
-                    {ent.est_premium && (
-                      <button
-                        onClick={() => handleTogglePremium(ent.id, ent.est_premium)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tw.focusRing} ${tw.pillAmberSoft}`}
-                      >
-                        ⭐ Retirer
-                      </button>
-                    )}
                     {ent.est_approuvee && (
                       <button
                         onClick={() => handleToggleMiseEnAvant(ent.id, ent.mise_en_avant_accueil)}

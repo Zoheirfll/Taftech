@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework.test import APITestCase
 from rest_framework import status
-from jobs.models import ProfilCandidat, ProfilEntreprise, MembreEquipe
+from jobs.models import ProfilCandidat, ProfilEntreprise, MembreEquipe, Palier, AbonnementEntreprise
 
 User = get_user_model()
 
@@ -448,8 +448,14 @@ class PremiumExpireLoginTests(APITestCase):
             user=self.owner,
             nom_entreprise="PremCorp",
             registre_commerce="RC_PREM",
-            est_premium=True,
-            premium_expire_at=timezone.now() - timedelta(days=1),
+        )
+        palier, _ = Palier.objects.get_or_create(
+            nom='BUSINESS',
+            defaults=dict(acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, ordre=3),
+        )
+        self.abonnement = AbonnementEntreprise.objects.create(
+            entreprise=self.entreprise, palier=palier,
+            date_expiration=timezone.now() - timedelta(days=1),
         )
 
         self.membre = User.objects.create_user(
@@ -483,8 +489,8 @@ class PremiumExpireLoginTests(APITestCase):
 
     def test_membre_login_premium_actif_autorise(self):
         """Un membre se connecte normalement si le premium est encore actif."""
-        self.entreprise.premium_expire_at = timezone.now() + timedelta(days=30)
-        self.entreprise.save()
+        self.abonnement.date_expiration = timezone.now() + timedelta(days=30)
+        self.abonnement.save()
         response = self.client.post(self.login_url, {
             "username": "membre@prem.dz",
             "password": "pwd123!",

@@ -9,9 +9,7 @@ import { iaService } from "./iaService";
 import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
-let _premiumPlansCache = null;
 let _paliersCache = null;
-let _premiumAvantagesCache = null;
 const _faqCacheParCategorie = {};
 
 // ─── Offres publiques (reste ici car utilisé partout) ────────
@@ -80,21 +78,6 @@ const offresPubliquesService = {
       reportError("ECHEC_GET_STATS_GEO", err);
       return { wilayas: {}, secteurs: {} };
     }
-  },
-
-  // Paliers d'abonnement Premium — éditables par l'admin, quasi-statiques comme la nomenclature.
-  getPremiumPlans: async () => {
-    if (!_premiumPlansCache) {
-      _premiumPlansCache = api
-        .get("jobs/premium/plans/")
-        .then((response) => response.data)
-        .catch((err) => {
-          _premiumPlansCache = null;
-          reportError("ECHEC_GET_PREMIUM_PLANS_API", err);
-          throw err;
-        });
-    }
-    return _premiumPlansCache;
   },
 
   getCandidatsRecommandes: async (page = 1, masquerDecides = true) => {
@@ -168,7 +151,7 @@ const offresPubliquesService = {
     }
   },
 
-  // Paliers d'abonnement (Starter/Pro/Business/Enterprise) — remplace getPremiumPlans à terme.
+  // Paliers d'abonnement (Starter/Pro/Business/Enterprise) — unique système de facturation.
   getPaliers: async () => {
     if (!_paliersCache) {
       _paliersCache = api
@@ -192,20 +175,6 @@ const offresPubliquesService = {
       reportError("ECHEC_GET_ENTREPRISES_MISES_EN_AVANT", err);
       throw err;
     }
-  },
-
-  getPremiumAvantages: async () => {
-    if (!_premiumAvantagesCache) {
-      _premiumAvantagesCache = api
-        .get("jobs/premium/avantages/")
-        .then((response) => response.data)
-        .catch((err) => {
-          _premiumAvantagesCache = null;
-          reportError("ECHEC_GET_PREMIUM_AVANTAGES_API", err);
-          throw err;
-        });
-    }
-    return _premiumAvantagesCache;
   },
 
   // FAQ actives d'une catégorie ("GENERAL"/"RECRUTEUR"/"PREMIUM") — quasi-statique, cache par catégorie.
@@ -295,6 +264,16 @@ const offresPubliquesService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_PAGE_STATIQUE_API", err);
+      throw err;
+    }
+  },
+
+  getPagesLibres: async () => {
+    try {
+      const response = await api.get("jobs/pages/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_PAGES_LIBRES", err);
       throw err;
     }
   },

@@ -9,6 +9,7 @@ import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import DomaineLabel from "../../Components/DomaineLabel";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ROLE_TABS = [
   { key: "", label: "Tous", icon: Users2 },
@@ -38,7 +39,7 @@ const AdminUsers = () => {
         if (data.counts) setCounts(data.counts);
       } else setUsers(data);
     } catch (err) {
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
       reportError("ECHEC_CHARGEMENT_USERS_ADMIN", err);
     } finally {
       setLoading(false);
@@ -68,7 +69,7 @@ const AdminUsers = () => {
           if (selectedUser?.id === id)
             setSelectedUser({ ...selectedUser, is_active: !isActif });
         } catch (err) {
-          toast.error("Erreur lors de la modification.");
+          toast.error(apiErrMsg(err, "Erreur lors de la modification."));
           reportError("ECHEC_MODERATION_USER", err);
         }
       },
@@ -89,7 +90,7 @@ const AdminUsers = () => {
       window.URL.revokeObjectURL(url);
       toast.success("Téléchargement réussi !");
     } catch (err) {
-      toast.error("Erreur lors de l'exportation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
       reportError("ECHEC_EXPORT_EXCEL_USERS", err);
     } finally {
       toast.dismiss(toastId);

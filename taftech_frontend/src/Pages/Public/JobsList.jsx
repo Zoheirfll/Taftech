@@ -11,6 +11,7 @@ import { selectStyles, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   MapPin, Briefcase, Bookmark, Sparkles, Search,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
@@ -155,7 +156,7 @@ const JobsList = () => {
         toast.success("Offre retirée des favoris.");
       } catch (error) {
         setFavoris([...favoris, isDejaSauvegarde]);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
         reportError("ECHEC_SUPPRESSION_FAVORI", error);
       }
     } else {
@@ -164,7 +165,7 @@ const JobsList = () => {
         setFavoris([...favoris, response.data]);
         toast.success("Offre sauvegardée !");
       } catch (error) {
-        toast.error("Impossible de sauvegarder cette offre.");
+        toast.error(apiErrMsg(error, "Impossible de sauvegarder cette offre."));
         reportError("ECHEC_SAUVEGARDE_FAVORI", error);
       }
     }

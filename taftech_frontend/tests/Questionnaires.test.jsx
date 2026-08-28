@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import Questionnaires from "../src/Pages/Recruteur/Questionnaires";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import toast from "react-hot-toast";
 
 vi.mock("../src/Services/jobsService", () => ({
@@ -196,18 +197,16 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     render(
       <MemoryRouter>
         <Questionnaires />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getAllByRole("button"));
-    // 1er clic → inline confirm (Confirmer/Annuler remplace la corbeille)
     const trashButtons = screen
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(trashButtons[0]);
-    // 2e clic → confirme la suppression
-    await waitFor(() => screen.getByText("Confirmer"));
-    fireEvent.click(screen.getByText("Confirmer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(jobsService.deleteQuestionnaire).toHaveBeenCalled();
@@ -305,6 +304,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     render(
       <MemoryRouter>
         <Questionnaires />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
@@ -313,9 +313,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
       .getAllByRole("button")
       .filter((b) => b.className.includes("hover:text-red-500"));
     fireEvent.click(trashButtons[0]);
-    // Confirme la suppression (inline confirm)
-    await waitFor(() => screen.getByText("Confirmer"));
-    fireEvent.click(screen.getByText("Confirmer"));
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -329,7 +327,6 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
   });
 
   it("🔴 EC5 : Confirmation annulée ne supprime pas", async () => {
-    window.confirm = vi.fn(() => false);
     jobsService.getQuestionnaires.mockResolvedValue(mockQuestionnaires);
 
     render(

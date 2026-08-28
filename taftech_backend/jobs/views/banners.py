@@ -112,7 +112,13 @@ class BanniereAccueilAdminAPIView(APIView):
             banniere = BanniereAccueil.objects.get(pk=pk)
         except BanniereAccueil.DoesNotExist:
             return Response({'error': 'Introuvable.'}, status=404)
-        serializer = BanniereAccueilSerializer(banniere, data=request.data, partial=True)
+        data = request.data
+        # Une valeur 'image' vide/textuelle (pas un vrai fichier) ne doit jamais faire
+        # échouer la mise à jour — ça arrive si le champ est présent dans le form sans
+        # fichier réellement sélectionné. On la retire, l'image existante est conservée.
+        if 'image' in data and not hasattr(data.get('image'), 'read'):
+            data = {k: v for k, v in data.items() if k != 'image'}
+        serializer = BanniereAccueilSerializer(banniere, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             cache.delete(CACHE_BANNIERES)

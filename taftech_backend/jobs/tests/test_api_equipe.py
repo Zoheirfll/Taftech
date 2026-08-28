@@ -19,6 +19,8 @@ from jobs.models import (
     InvitationEquipe,
     MembreEquipe,
     ProfilEntreprise,
+    Palier,
+    AbonnementEntreprise,
 )
 from jobs.views.equipe import _log
 
@@ -35,15 +37,29 @@ def _make_recruteur(email, username=None):
     return u
 
 
+def _business_palier():
+    palier, _ = Palier.objects.get_or_create(
+        nom='BUSINESS',
+        defaults=dict(acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, ordre=3),
+    )
+    return palier
+
+
 def _make_entreprise(user, nom="TechCorp", rc="RC001", approuvee=True, premium=False, premium_expire=None):
-    return ProfilEntreprise.objects.create(
+    entreprise = ProfilEntreprise.objects.create(
         user=user,
         nom_entreprise=nom,
         registre_commerce=rc,
         est_approuvee=approuvee,
-        est_premium=premium,
-        premium_expire_at=premium_expire,
     )
+    if premium:
+        # Système Palier/AbonnementEntreprise (le legacy est_premium/premium_expire_at a été
+        # supprimé le 27/08/2026) — palier BUSINESS (acces_equipe=True) par défaut, cohérent
+        # avec l'ancien comportement de repli des tests qui utilisaient premium=True.
+        AbonnementEntreprise.objects.create(
+            entreprise=entreprise, palier=_business_palier(), date_expiration=premium_expire,
+        )
+    return entreprise
 
 
 # ---------------------------------------------------------------------------
@@ -342,9 +358,9 @@ class InviterMembreTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@inv.dz", "owner_inv")
-        # premium=True → repli legacy vers le palier BUSINESS (acces_equipe=True), voir
-        # jobs/paliers_utils.py::get_palier_actif — InviterMembreAPIView est gatée Business+
-        # depuis la Phase 2b (session 22-23/08/2026).
+        # premium=True → AbonnementEntreprise(palier=BUSINESS, acces_equipe=True) via le helper
+        # _make_entreprise — InviterMembreAPIView est gatée Business+ depuis la Phase 2b
+        # (session 22-23/08/2026).
         self.entreprise = _make_entreprise(self.owner, nom="InvCorp", rc="RC_INV", premium=True)
 
         # Un utilisateur UTILISATEUR (sans droit d'invitation)

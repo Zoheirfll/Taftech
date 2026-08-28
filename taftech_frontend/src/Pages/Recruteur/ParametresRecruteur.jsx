@@ -5,6 +5,7 @@ import { profilService } from "../../Services/profilService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { confirmToast } from "../../utils/confirmToast";
 import { mediaUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
 import communesAlgerie from "../../data/communes.json";
@@ -23,11 +24,13 @@ import {
   Lock,
   Eye,
   EyeOff,
+  X,
 } from "lucide-react";
 import api from "../../api/axiosConfig";
 import MonEquipe from "./MonEquipe";
 import InfoBanner from "../../Components/InfoBanner";
 import ImageCropperModal from "../../Components/ImageCropperModal";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const TAILLES_ENTREPRISE_OPTIONS = [
   { value: "TPE", label: "1 à 10 employés" },
@@ -114,7 +117,7 @@ const ParametresRecruteur = () => {
             jobsService.getConstants(),
             jobsService.getParametresRecruteur(),
           ]);
-          setIsPremium(!!dash.est_premium);
+          setIsPremium(!!dash.palier_actif);
           setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           setEntreprise(e);
@@ -152,7 +155,7 @@ const ParametresRecruteur = () => {
             jobsService.getConstants(),
           ]);
           setConstants(constData);
-          setIsPremium(!!dash.est_premium);
+          setIsPremium(!!dash.palier_actif);
           setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           if (e) {
@@ -205,7 +208,7 @@ const ParametresRecruteur = () => {
 
       } catch (err) {
         reportError("ECHEC_CHARGEMENT_PARAMETRES", err);
-        toast.error("Erreur de chargement.");
+        toast.error(apiErrMsg(err, "Erreur de chargement."));
       } finally {
         setLoading(false);
       }
@@ -319,22 +322,24 @@ const ParametresRecruteur = () => {
       setNewPhotoLegende("");
       toast.success("Photo ajoutée !");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'ajout de la photo.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'ajout de la photo."));
       reportError("ECHEC_AJOUTER_PHOTO_ENTREPRISE", err);
     } finally {
       setUploadingPhoto(false);
     }
   };
 
-  const handleSupprimerPhoto = async (photoId) => {
-    try {
-      await jobsService.supprimerPhotoEntreprise(photoId);
-      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-      toast.success("Photo supprimée.");
-    } catch (err) {
-      toast.error("Erreur lors de la suppression.");
-      reportError("ECHEC_SUPPRIMER_PHOTO_ENTREPRISE", err);
-    }
+  const handleSupprimerPhoto = (photoId) => {
+    confirmToast("Supprimer cette photo de la galerie ?", async () => {
+      try {
+        await jobsService.supprimerPhotoEntreprise(photoId);
+        setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+        toast.success("Photo supprimée.");
+      } catch (err) {
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        reportError("ECHEC_SUPPRIMER_PHOTO_ENTREPRISE", err);
+      }
+    });
   };
 
   const sauvegarderProfil = async () => {
@@ -358,7 +363,7 @@ const ParametresRecruteur = () => {
         toast.success("Profil mis à jour !");
       }
     } catch (err) {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
       reportError("ECHEC_SAVE_PROFIL_PARAMETRES", err);
     } finally {
       setSaving(false);
@@ -379,7 +384,7 @@ const ParametresRecruteur = () => {
       setPwdForm({ old: "", new: "", confirm: "" });
       if (estCompteGoogle) setEstCompteGoogle(false);
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur.");
+      toast.error(apiErrMsg(err, "Erreur."));
       reportError("ECHEC_CHANGER_MDP_RECRUTEUR", err);
     } finally {
       setPwdLoading(false);
@@ -403,7 +408,7 @@ const ParametresRecruteur = () => {
       setBannerFile(null);
       toast.success("Entreprise mise à jour !");
     } catch (err) {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
       reportError("ECHEC_SAVE_ENTREPRISE_PARAMETRES", err);
     } finally {
       setSaving(false);
@@ -416,7 +421,7 @@ const ParametresRecruteur = () => {
       await jobsService.updateParametresRecruteur(notifForm);
       toast.success("Préférences de notification sauvegardées !");
     } catch (err) {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
       reportError("ECHEC_SAVE_NOTIFS_PARAMETRES", err);
     } finally {
       setSaving(false);
@@ -1004,10 +1009,11 @@ const ParametresRecruteur = () => {
                         <button
                           type="button"
                           onClick={() => handleSupprimerPhoto(p.id)}
-                          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-slate-900/70 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-slate-900/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                           aria-label="Supprimer la photo"
+                          title="Supprimer la photo"
                         >
-                          ✕
+                          <X size={12} />
                         </button>
                       </div>
                     ))}

@@ -6,6 +6,7 @@ import { CalendarClock, Clock, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const STATUT_LABELS = { CONFIRME: "Confirmé", ANNULE: "Annulé", PASSE: "Passé" };
 const STATUT_STYLE = { CONFIRME: tw.scoreHigh, ANNULE: tw.scoreLow, PASSE: tw.statusNeutralSoft };
@@ -33,7 +34,7 @@ const PrendreRendezVous = () => {
         setCreneaux(disponibilites);
         setRendezVous(mesRdv);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_RENDEZ_VOUS", error);
       } finally {
         setIsLoading(false);
@@ -66,7 +67,7 @@ const PrendreRendezVous = () => {
       toast.success("Rendez-vous confirmé !");
     } catch (error) {
       reportError("ECHEC_RESERVATION_RDV_UI", error);
-      toast.error(error?.response?.data?.error || "Impossible de réserver ce créneau.");
+      toast.error(apiErrMsg(error, "Impossible de réserver ce créneau."));
     } finally {
       setReserving(false);
     }
@@ -79,7 +80,7 @@ const PrendreRendezVous = () => {
         setRendezVous((prev) => prev.map((r) => (r.id === id ? { ...r, statut: "ANNULE" } : r)));
         toast.success("Rendez-vous annulé.");
       } catch (error) {
-        toast.error("Erreur lors de l'annulation.");
+        toast.error(apiErrMsg(error, "Erreur lors de l'annulation."));
         reportError("ECHEC_ANNULATION_RDV_UI", error);
       }
     });

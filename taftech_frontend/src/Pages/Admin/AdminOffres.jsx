@@ -19,6 +19,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const getBadge = (offre) => {
   if (offre.est_cloturee)
@@ -88,7 +89,7 @@ const AdminOffres = () => {
       } else setOffres(data);
       setSelectedIds([]);
     } catch (err) {
-      toast.error("Erreur d'accès aux offres.");
+      toast.error(apiErrMsg(err, "Erreur d'accès aux offres."));
       reportError("ECHEC_CHARGEMENT_OFFRES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -128,7 +129,7 @@ const AdminOffres = () => {
         toast.success(`${selectedIds.length} offre(s) approuvée(s) !`);
         chargerOffres();
       } catch (err) {
-        toast.error("Erreur lors de l'approbation groupée.");
+        toast.error(apiErrMsg(err, "Erreur lors de l'approbation groupée."));
         reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", err);
       } finally {
         setBulkLoading(false);
@@ -146,7 +147,7 @@ const AdminOffres = () => {
         chargerOffres();
         toast.success("Offre approuvée !");
       } catch (err) {
-        toast.error("Erreur lors de l'approbation.");
+        toast.error(apiErrMsg(err, "Erreur lors de l'approbation."));
         reportError("ECHEC_APPROBATION_OFFRE", err);
       }
     });
@@ -164,7 +165,7 @@ const AdminOffres = () => {
       chargerOffres();
       toast.success("Offre rejetée.");
     } catch (err) {
-      toast.error("Erreur lors du rejet.");
+      toast.error(apiErrMsg(err, "Erreur lors du rejet."));
       reportError("ECHEC_REJET_OFFRE", err);
     }
   };
@@ -180,7 +181,7 @@ const AdminOffres = () => {
       chargerOffres();
       toast.success("Offre corrigée !");
     } catch (err) {
-      toast.error("Erreur lors de la modification.");
+      toast.error(apiErrMsg(err, "Erreur lors de la modification."));
       reportError("ECHEC_MODIFICATION_OFFRE", err);
     }
   };
@@ -199,7 +200,7 @@ const AdminOffres = () => {
       window.URL.revokeObjectURL(url);
       toast.success("Téléchargement réussi !");
     } catch (err) {
-      toast.error("Erreur lors de l'exportation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
       reportError("ECHEC_EXPORT_EXCEL_OFFRES", err);
     } finally {
       toast.dismiss(toastId);

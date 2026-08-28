@@ -119,10 +119,11 @@ class DashboardRecruteurAPIView(APIView):
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
         mon_role = get_membre_role(request.user, entreprise)
-        # Bloquer les membres (non-propriétaires) si le premium a expiré
-        if mon_role != 'PROPRIETAIRE' and not entreprise.est_premium_actif:
+        from ..paliers_utils import get_palier_actif
+        # Bloquer les membres (non-propriétaires) si aucun palier actif (abonnement expiré/absent)
+        if mon_role != 'PROPRIETAIRE' and get_palier_actif(entreprise) is None:
             return Response(
-                {"error": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
+                {"error": "L'abonnement de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -139,21 +140,18 @@ class DashboardRecruteurAPIView(APIView):
         kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
 
         offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
-        derniere_activation = entreprise.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
-        from ..paliers_utils import get_palier_actif
         palier = get_palier_actif(entreprise)
+        abonnement = getattr(entreprise, 'abonnement', None)
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,
             "offres": OffreDashboardDTO(offres, many=True).data,
-            "est_premium": entreprise.est_premium_actif,
-            "premium_expire_at": entreprise.premium_expire_at.strftime('%d/%m/%Y') if entreprise.premium_expire_at else None,
-            "premium_active_since": derniere_activation.date_traitement.strftime('%d/%m/%Y') if derniere_activation else None,
-            "premium_nb_mois": derniere_activation.nb_mois if derniere_activation else None,
             "membre_role": mon_role,
             "palier_actif": palier.nom if palier else None,
+            "palier_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if (abonnement and abonnement.date_expiration) else None,
             "acces_equipe": bool(palier and palier.acces_equipe),
             "acces_ia_recommandes": bool(palier and palier.acces_ia_recommandes),
             "acces_ia_avancee": bool(palier and palier.acces_ia_avancee),
+            "acces_coordonnees": bool(palier and palier.acces_coordonnees),
             "kpis": kpis,
             "periode": {"date_debut": date_debut.isoformat(), "date_fin": date_fin.isoformat()},
         }
@@ -1114,81 +1112,6 @@ class DemanderActivationPremiumAPIView(APIView):
         return Response({'message': 'Demande enregistrée. Votre compte sera activé sous 24h ouvrables.'}, status=201)
 
 
-def _get_plan_premium(nb_mois):
-    """Palier Premium actif pour cette durée, ou None si `nb_mois` ne correspond à aucun palier
-    actif — source de vérité unique du prix (panel admin `PremiumPlan`), plus de formule codée en
-    dur ni de duplication entre frontend/backend/email."""
-    from ..models import PremiumPlan
-    return PremiumPlan.objects.filter(nb_mois=nb_mois, actif=True).first()
-
-
-class ChargilyCheckoutAPIView(APIView):
-    """
-    Crée une session de paiement Chargily Pay et retourne l'URL de redirection.
-    Le recruteur est redirigé vers la page Chargily pour payer en ligne (CIB/EDAHABIA).
-    Après paiement, Chargily redirige vers success_url et envoie un webhook.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        entreprise = get_entreprise_for_user(request.user)
-        if not entreprise:
-            return Response({'error': 'Profil entreprise introuvable.'}, status=404)
-        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
-            return Response({'error': 'Réservé au propriétaire.'}, status=403)
-
-        try:
-            nb_mois = int(request.data.get('nb_mois', 1))
-        except (TypeError, ValueError):
-            return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
-        plan = _get_plan_premium(nb_mois)
-        if not plan:
-            return Response({'error': "Ce palier d'abonnement n'existe pas ou n'est plus disponible."}, status=400)
-        montant = plan.prix_da
-
-        # URLs de retour après paiement Chargily
-        site_url = settings.SITE_URL.rstrip('/')
-        # Après paiement → retour sur la page Premium avec ?paid=1 pour déclencher le retry
-        # (le webhook Chargily peut prendre 1-3s — le frontend réessaie 5 fois)
-        success_url = f"{site_url}/recruteurs/premium?paid=1"
-        failure_url = f"{site_url}/recruteurs/premium"
-
-        payload = {
-            "amount": montant,
-            "currency": "dzd",
-            "success_url": success_url,
-            "failure_url": failure_url,
-            "locale": "fr",
-            # metadata retransmise dans le webhook pour identifier l'entreprise
-            "metadata": {
-                "nb_mois": nb_mois,
-                "entreprise_id": entreprise.id,
-                "user_id": request.user.id,
-            },
-        }
-
-        try:
-            resp = http_requests.post(
-                "https://pay.chargily.net/test/api/v2/checkouts",
-                headers={
-                    "Authorization": f"Bearer {settings.CHARGILY_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=10,
-            )
-        except Exception as e:
-            logger.error(f"[CHARGILY] Erreur connexion : {e}")
-            return Response({'error': 'Impossible de contacter Chargily.'}, status=502)
-
-        if resp.status_code not in (200, 201):
-            logger.error(f"[CHARGILY] Erreur {resp.status_code} : {resp.text}")
-            return Response({'error': 'Erreur Chargily.', 'detail': resp.text}, status=502)
-
-        checkout_url = resp.json().get('checkout_url')
-        return Response({'checkout_url': checkout_url}, status=200)
-
-
 class ChargilyCheckoutPalierAPIView(APIView):
     """Crée une session de paiement Chargily pour un des 4 nouveaux paliers d'abonnement
     (Starter/Pro/Business/Enterprise) — même mécanisme que ChargilyCheckoutAPIView (ancien
@@ -1341,79 +1264,39 @@ class ChargilyWebhookAPIView(APIView):
         except ProfilEntreprise.DoesNotExist:
             return Response({'error': 'Entreprise introuvable.'}, status=404)
 
-        # Nouveau flux (page Abonnements, palier_nom présent) vs ancien flux (page Premium,
-        # nb_mois seul) — les deux systèmes coexistent tant que l'ancien PremiumPlan n'est pas
-        # retiré. Voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md.
+        # Seul flux restant : page Abonnements (palier_nom dans les métadonnées). L'ancien flux
+        # nb_mois (page Premium legacy) a été supprimé le 27/08/2026 (voir CLAUDE.md).
         palier_nom = metadata.get('palier_nom')
-        if palier_nom:
-            from ..models import Palier, AbonnementEntreprise, PaiementAbonnement
-            periode = metadata.get('periode', 'MENSUEL')
-            try:
-                palier = Palier.objects.get(nom=palier_nom)
-            except Palier.DoesNotExist:
-                return Response({'error': 'Palier introuvable.'}, status=404)
-            montant = palier.prix_annuel_da if periode == 'ANNUEL' else palier.prix_mensuel_da
-            duree_jours = 365 if periode == 'ANNUEL' else 30
-            now = timezone.now()
-            abonnement = getattr(entreprise, 'abonnement', None)
-            if abonnement and abonnement.palier_id == palier.id and abonnement.est_actif:
-                abonnement.date_expiration = (abonnement.date_expiration or now) + datetime.timedelta(days=duree_jours)
-                abonnement.save(update_fields=['date_expiration'])
-            else:
-                AbonnementEntreprise.objects.update_or_create(
-                    entreprise=entreprise,
-                    defaults={'palier': palier, 'date_expiration': now + datetime.timedelta(days=duree_jours)},
-                )
-            PaiementAbonnement.objects.create(
-                entreprise=entreprise, palier_nom=palier.nom, montant_da=montant or 0,
-                periode=periode, moyen_paiement='CHARGILY',
-            )
-            # Garder les anciens champs legacy en phase (encore lus par la page Premium/Navbar/
-            # get_palier_actif en repli) — même mapping que la migration 0080.
-            entreprise.est_premium = True
-            entreprise.premium_expire_at = now + datetime.timedelta(days=duree_jours)
-            entreprise.save(update_fields=['est_premium', 'premium_expire_at'])
-            AuditLog.objects.create(
-                admin=None, action='AUTRE',
-                detail=f"Paiement Chargily palier {palier.nom} ({periode}) — {entreprise.nom_entreprise}",
-            )
-            return Response({'status': 'ok'}, status=200)
+        if not palier_nom:
+            logger.warning("[WEBHOOK] Paiement sans palier_nom dans les métadonnées — ignoré")
+            return Response({'error': 'Métadonnées de paiement invalides (palier_nom manquant).'}, status=400)
 
-        # Plafond large (5 ans) en filet de sécurité si le webhook est appelé avec un payload
-        # corrompu/falsifié — le vrai contrôle (durée valide = palier actif) a déjà eu lieu à la
-        # création du checkout ; les paliers n'étant plus figés à 12 mois (admin peut en ajouter
-        # au-delà), on ne recale plus sur l'ancien plafond fixe.
-        nb_mois = max(1, min(int(metadata.get('nb_mois', 1)), 60))
-
-        # Activation ou prolongation du premium
+        from ..models import Palier, AbonnementEntreprise, PaiementAbonnement
+        periode = metadata.get('periode', 'MENSUEL')
+        try:
+            palier = Palier.objects.get(nom=palier_nom)
+        except Palier.DoesNotExist:
+            return Response({'error': 'Palier introuvable.'}, status=404)
+        montant = palier.prix_annuel_da if periode == 'ANNUEL' else palier.prix_mensuel_da
+        duree_jours = 365 if periode == 'ANNUEL' else 30
         now = timezone.now()
-        if entreprise.est_premium and entreprise.premium_expire_at and entreprise.premium_expire_at > now:
-            # Premium encore actif → on prolonge depuis la date d'expiration actuelle
-            entreprise.premium_expire_at += datetime.timedelta(days=nb_mois * 30)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        if abonnement and abonnement.palier_id == palier.id and abonnement.est_actif:
+            abonnement.date_expiration = (abonnement.date_expiration or now) + datetime.timedelta(days=duree_jours)
+            abonnement.save(update_fields=['date_expiration'])
         else:
-            # Nouveau premium ou expiré → on part de maintenant
-            entreprise.est_premium = True
-            entreprise.premium_expire_at = now + datetime.timedelta(days=nb_mois * 30)
-
-        entreprise.save(update_fields=['est_premium', 'premium_expire_at'])
-
-        # Traçabilité — déjà traitée car Chargily a confirmé le paiement
-        DemandeActivationPremium.objects.create(
-            entreprise=entreprise,
-            moyen_paiement='CHARGILY',
-            nb_mois=nb_mois,
-            est_traitee=True,
-            date_traitement=now,
+            AbonnementEntreprise.objects.update_or_create(
+                entreprise=entreprise,
+                defaults={'palier': palier, 'date_expiration': now + datetime.timedelta(days=duree_jours)},
+            )
+        PaiementAbonnement.objects.create(
+            entreprise=entreprise, palier_nom=palier.nom, montant_da=montant or 0,
+            periode=periode, moyen_paiement='CHARGILY',
         )
-
-        # Entrée dans le journal d'audit admin (admin=None car c'est un webhook automatique)
         AuditLog.objects.create(
-            admin=None,
-            action='AUTRE',
-            detail=f"[CHARGILY] Premium {nb_mois} mois activé pour {entreprise.nom_entreprise} — expire {entreprise.premium_expire_at.strftime('%d/%m/%Y')}",
-            ip=None,
+            admin=None, action='AUTRE',
+            detail=f"Paiement Chargily palier {palier.nom} ({periode}) — {entreprise.nom_entreprise}",
         )
-
         return Response({'status': 'ok'}, status=200)
 
 
@@ -1432,8 +1315,9 @@ class EnvoyerRecuPremiumAPIView(APIView):
             nb_mois = int(request.data.get('nb_mois', 1))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
-        plan = _get_plan_premium(nb_mois)
-        montant = plan.prix_da if plan else nb_mois * 2000  # repli si palier désactivé/inconnu (email informatif seulement)
+        from ..paliers_utils import get_palier_actif
+        palier = get_palier_actif(entreprise)
+        montant = (palier.prix_mensuel_da * nb_mois) if (palier and palier.prix_mensuel_da) else None
         message_custom = request.data.get('message', '')
         subject = f"[TafTech Premium] Reçu de paiement — {entreprise.nom_entreprise}"
         body = f"""
@@ -1446,7 +1330,7 @@ L'entreprise suivante a envoyé une confirmation de paiement Premium :
 • Téléphone : {request.user.telephone or 'Non renseigné'}
 • Moyen de paiement : {moyen}
 • Durée : {nb_mois} mois
-• Montant : {montant} DA
+• Montant : {f"{montant} DA" if montant else "Non calculé (palier sans prix mensuel)"}
 
 Message du recruteur :
 {message_custom or '(aucun message)'}

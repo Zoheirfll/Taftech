@@ -6,6 +6,7 @@ import { Bell, Trash2, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -30,7 +31,7 @@ const AlertesEmploi = () => {
         setAlertes(alertesData);
         setWilayas(constantsData.wilayas);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_ALERTES", error);
       } finally {
         setIsLoading(false);
@@ -53,7 +54,7 @@ const AlertesEmploi = () => {
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
     } catch (error) {
       reportError("ECHEC_CREATION_ALERTE", error);
-      toast.error("Impossible de créer l'alerte.");
+      toast.error(apiErrMsg(error, "Impossible de créer l'alerte."));
     }
   };
 
@@ -72,7 +73,7 @@ const AlertesEmploi = () => {
           a.id === alerteId ? { ...a, est_active: currentState } : a,
         ),
       );
-      toast.error("Erreur lors de la modification.");
+      toast.error(apiErrMsg(error, "Erreur lors de la modification."));
       reportError("ECHEC_TOGGLE_ALERTE", error);
     }
   };
@@ -84,7 +85,7 @@ const AlertesEmploi = () => {
         setAlertes(prev => prev.filter((a) => a.id !== alerteId));
         toast.success("Alerte supprimée.");
       } catch (error) {
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
         reportError("ECHEC_SUPPRESSION_ALERTE", error);
       }
     });

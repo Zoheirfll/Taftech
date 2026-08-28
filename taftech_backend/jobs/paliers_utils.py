@@ -10,21 +10,15 @@ def get_palier_actif(entreprise):
     """Retourne le Palier actif de l'entreprise, ou None si aucun abonnement actif (palier
     Gratuit implicite).
 
-    Repli legacy : si l'entreprise a `est_premium_actif=True` (ancien champ binaire) mais pas
-    encore d'AbonnementEntreprise, on retombe sur BUSINESS — même mapping que la migration de
-    données 0080. Nécessaire car les flux d'activation existants (AdminDemandesPremiumAPIView,
-    webhook Chargily) écrivent encore directement `est_premium`/`premium_expire_at` sans créer
-    d'AbonnementEntreprise (leur rebranchement sur le nouveau modèle est hors scope de cette
-    phase) — sans ce repli, un compte fraîchement activé par ces flux se retrouverait bloqué
-    partout malgré un paiement réel."""
+    Le repli legacy vers `est_premium_actif` (ancien champ binaire ProfilEntreprise.est_premium)
+    a été retiré le 27/08/2026 : le système Premium legacy est supprimé, `AdminDemandesPremiumAPIView`
+    et le webhook Chargily créent désormais directement un `AbonnementEntreprise` (plus jamais
+    `est_premium`/`premium_expire_at`, qui n'existent plus en base) — voir CLAUDE.md."""
     if entreprise is None:
         return None
     abonnement = getattr(entreprise, 'abonnement', None)
     if abonnement is not None and abonnement.est_actif:
         return abonnement.palier
-    if entreprise.est_premium_actif:
-        from .models import Palier
-        return Palier.objects.filter(nom='BUSINESS').first()
     return None
 
 

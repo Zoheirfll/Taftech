@@ -14,9 +14,11 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, PremiumPlan,
+    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, Secteur,
     Article, FaqItem, CompetenceReferentiel, BanniereAccueil,
+    Palier, AbonnementEntreprise,
 )
+from ..constants import WILAYAS_CHOICES
 import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
@@ -192,24 +194,24 @@ class AdminStatsAPIView(APIView):
 
     def get(self, request):
         maintenant = timezone.now()
-        entreprises_premium_actives = ProfilEntreprise.objects.filter(est_premium=True).filter(
-            Q(premium_expire_at__isnull=True) | Q(premium_expire_at__gte=maintenant)
+        abonnements_actifs = AbonnementEntreprise.objects.select_related('palier').filter(
+            Q(date_expiration__isnull=True) | Q(date_expiration__gte=maintenant)
         )
-        premium_expirant_bientot = entreprises_premium_actives.filter(
-            premium_expire_at__isnull=False,
-            premium_expire_at__lte=maintenant + datetime.timedelta(days=7),
+        premium_expirant_bientot = abonnements_actifs.filter(
+            date_expiration__isnull=False,
+            date_expiration__lte=maintenant + datetime.timedelta(days=7),
         ).count()
 
-        # Revenu estimé : pas de montant stocké sur ProfilEntreprise (source de vérité = dernière
-        # DemandeActivationPremium traitée, même logique que DashboardRecruteurAPIView.premium_nb_mois
-        # dans jobs/views/recruteur.py). Approximation raisonnable, pas une compta exacte
-        # (n'inclut pas les paiements Chargily sans DemandeActivationPremium correspondante).
-        plans_par_mois = dict(PremiumPlan.objects.values_list('nb_mois', 'prix_da'))
+        # Revenu estimé : dernier paiement réel enregistré par entreprise abonnée (PaiementAbonnement),
+        # sinon repli sur le prix mensuel catalogue du palier actif — approximation raisonnable,
+        # pas une comptabilité exacte (n'inclut pas les activations manuelles sans paiement Chargily).
         revenu_premium_estime = 0
-        for e in entreprises_premium_actives:
-            derniere = e.demandes_premium.filter(est_traitee=True).order_by('-date_traitement').first()
-            if derniere and derniere.nb_mois in plans_par_mois:
-                revenu_premium_estime += plans_par_mois[derniere.nb_mois]
+        for a in abonnements_actifs:
+            dernier_paiement = a.entreprise.paiements_abonnement.order_by('-date_paiement').first()
+            if dernier_paiement:
+                revenu_premium_estime += dernier_paiement.montant_da
+            elif a.palier.prix_mensuel_da:
+                revenu_premium_estime += a.palier.prix_mensuel_da
 
         stats = {
             "total_offres": OffreEmploi.objects.count(),
@@ -220,7 +222,7 @@ class AdminStatsAPIView(APIView):
             "total_recruteurs": User.objects.filter(role='RECRUTEUR').count(),
             "total_recrutements": Candidature.objects.filter(statut='RETENU').count(),
             "demandes_premium_attente": DemandeActivationPremium.objects.filter(est_traitee=False).count(),
-            "premium_actifs": entreprises_premium_actives.count(),
+            "premium_actifs": abonnements_actifs.count(),
             "premium_expirant_bientot": premium_expirant_bientot,
             "revenu_premium_estime": revenu_premium_estime,
             "nb_articles_publies": Article.objects.filter(statut='PUBLIE').count(),
@@ -230,6 +232,97 @@ class AdminStatsAPIView(APIView):
             "nb_bannieres_actives": BanniereAccueil.objects.filter(actif=True).count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
+
+
+class AdminSeoStatsAPIView(APIView):
+    """Compteurs réels par type de page publique + un exemple d'URL tel que généré par
+    seo_views.py::SitemapXMLView — pour que le panel SEO admin ne montre jamais un
+    statut ✓ figé ou une URL d'exemple qui ne correspond plus au vrai schéma."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        base = settings.SITE_URL.rstrip('/')
+
+        offre = OffreEmploi.objects.select_related('entreprise').filter(
+            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
+        ).only('titre', 'specialite', 'code_public', 'entreprise__slug').first()
+        nb_offres = OffreEmploi.objects.filter(
+            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
+        ).count()
+        exemple_offre = None
+        if offre:
+            from django.utils.text import slugify
+            domaine = Domaine.objects.select_related('secteur').filter(code=offre.specialite).first()
+            secteur_slug = slugify(domaine.secteur.libelle) if domaine else "offres-d-emploi"
+            titre_slug = slugify(offre.titre)
+            chemin = f"{titre_slug}-{offre.code_public}" if titre_slug else offre.code_public
+            exemple_offre = f"{base}/entreprises/{offre.entreprise.slug}/offres-d-emploi/{secteur_slug}/{chemin}/"
+
+        entreprise = ProfilEntreprise.objects.filter(est_approuvee=True).only('slug').first()
+        nb_entreprises = ProfilEntreprise.objects.filter(est_approuvee=True).count()
+
+        domaine_exemple = Domaine.objects.only('code', 'libelle').first()
+        nb_domaines = Domaine.objects.count()
+
+        secteur_exemple = Secteur.objects.only('code', 'libelle').first()
+        nb_secteurs = Secteur.objects.count()
+
+        wilaya_exemple = WILAYAS_CHOICES[0][0] if WILAYAS_CHOICES else None
+        nb_wilayas = len(WILAYAS_CHOICES)
+
+        article = Article.objects.filter(statut='PUBLIE').only('slug').order_by('-date_publication').first()
+        nb_articles = Article.objects.filter(statut='PUBLIE').count()
+
+        from django.utils.text import slugify as _slugify
+
+        pages = [
+            {
+                "type": "Offre d'emploi",
+                "url": exemple_offre,
+                "nb_pages_indexables": nb_offres,
+                "ok": nb_offres > 0,
+            },
+            {
+                "type": "Entreprise",
+                "url": f"{base}/entreprise/{entreprise.slug}/" if entreprise else None,
+                "nb_pages_indexables": nb_entreprises,
+                "ok": nb_entreprises > 0,
+            },
+            {
+                "type": "Métier",
+                "url": f"{base}/metiers/{domaine_exemple.code.lower()}-{_slugify(domaine_exemple.libelle)}/" if domaine_exemple else None,
+                "nb_pages_indexables": nb_domaines,
+                "ok": nb_domaines > 0,
+            },
+            {
+                "type": "Secteur",
+                "url": f"{base}/secteurs/{secteur_exemple.code.lower()}-{_slugify(secteur_exemple.libelle)}/" if secteur_exemple else None,
+                "nb_pages_indexables": nb_secteurs,
+                "ok": nb_secteurs > 0,
+            },
+            {
+                "type": "Wilaya",
+                "url": (
+                    f"{base}/regions/{wilaya_exemple.partition(' - ')[0]}-{_slugify(wilaya_exemple.partition(' - ')[2])}/"
+                    if wilaya_exemple else None
+                ),
+                "nb_pages_indexables": nb_wilayas,
+                "ok": nb_wilayas > 0,
+            },
+            {
+                "type": "Blog / Article",
+                "url": f"{base}/blog/{article.slug}/" if article else None,
+                "nb_pages_indexables": nb_articles,
+                "ok": nb_articles > 0,
+            },
+        ]
+
+        return Response({
+            "pages": pages,
+            "sitemap_url": f"{base}/sitemap.xml",
+            "robots_url": f"{base}/robots.txt",
+            "total_urls_sitemap": sum(p["nb_pages_indexables"] for p in pages) + 9,  # +9 = STATIC_PATHS
+        }, status=status.HTTP_200_OK)
 
 
 class AdminUsersListAPIView(APIView):
@@ -555,13 +648,20 @@ class AdminAuditLogAPIView(APIView):
 
 
 class AdminDemandesPremiumAPIView(APIView):
+    """Activation manuelle CIB/EDAHABIA — depuis le 27/08/2026, crée/prolonge un
+    AbonnementEntreprise(palier=<choisi par l'admin>) au lieu d'écrire est_premium/
+    premium_expire_at (système legacy supprimé). `nb_mois` reste sur DemandeActivationPremium
+    pour l'affichage historique de la demande, mais n'est plus utilisé pour calculer un prix."""
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        demandes = DemandeActivationPremium.objects.select_related('entreprise__user').order_by('-date_demande')
-        prix_par_mois = dict(PremiumPlan.objects.values_list('nb_mois', 'prix_da'))
-        data = [
-            {
+        from ..paliers_utils import get_palier_actif
+        demandes = DemandeActivationPremium.objects.select_related('entreprise__user', 'entreprise__abonnement__palier').order_by('-date_demande')
+        data = []
+        for d in demandes:
+            palier = get_palier_actif(d.entreprise)
+            abonnement = getattr(d.entreprise, 'abonnement', None)
+            data.append({
                 'id': d.id,
                 'entreprise_id': d.entreprise.id,
                 'nom_entreprise': d.entreprise.nom_entreprise,
@@ -569,15 +669,12 @@ class AdminDemandesPremiumAPIView(APIView):
                 'telephone': d.entreprise.user.telephone,
                 'moyen_paiement': d.moyen_paiement,
                 'nb_mois': d.nb_mois,
-                'montant': prix_par_mois.get(d.nb_mois, d.nb_mois * 2000),
                 'date_demande': d.date_demande.strftime('%d/%m/%Y %H:%M'),
                 'est_traitee': d.est_traitee,
                 'date_traitement': d.date_traitement.strftime('%d/%m/%Y %H:%M') if d.date_traitement else None,
-                'est_premium_actif': d.entreprise.est_premium_actif,
-                'premium_expire_at': d.entreprise.premium_expire_at.strftime('%d/%m/%Y') if d.entreprise.premium_expire_at else None,
-            }
-            for d in demandes
-        ]
+                'palier_actif': palier.nom if palier else None,
+                'abonnement_expire_at': abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement and abonnement.date_expiration else None,
+            })
         return Response(data)
 
     def patch(self, request, demande_id):
@@ -589,19 +686,35 @@ class AdminDemandesPremiumAPIView(APIView):
             nb_mois = max(1, min(int(request.data.get('nb_mois', demande.nb_mois)), 60))
         except (TypeError, ValueError):
             return Response({'error': 'nb_mois doit être un nombre entier.'}, status=400)
+        nom_palier = request.data.get('palier', 'BUSINESS')
+        try:
+            palier = Palier.objects.get(nom=nom_palier)
+        except Palier.DoesNotExist:
+            return Response({'error': f"Palier '{nom_palier}' introuvable."}, status=400)
+
         entreprise = demande.entreprise
-        # Prolonger si déjà premium actif, sinon partir de maintenant
-        base = entreprise.premium_expire_at if entreprise.est_premium_actif else timezone.now()
-        entreprise.est_premium = True
-        entreprise.premium_expire_at = base + datetime.timedelta(days=30 * nb_mois)
-        entreprise.save(update_fields=['est_premium', 'premium_expire_at'])
+        from ..paliers_utils import get_palier_actif
+        palier_actuel = get_palier_actif(entreprise)
+        abonnement = getattr(entreprise, 'abonnement', None)
+        # Prolonger si un abonnement (même expiré) existe déjà, sinon partir de maintenant
+        base = abonnement.date_expiration if (abonnement and abonnement.date_expiration and palier_actuel) else timezone.now()
+        nouvelle_expiration = base + datetime.timedelta(days=30 * nb_mois)
+        if abonnement:
+            abonnement.palier = palier
+            abonnement.date_expiration = nouvelle_expiration
+            abonnement.save(update_fields=['palier', 'date_expiration'])
+        else:
+            AbonnementEntreprise.objects.create(
+                entreprise=entreprise, palier=palier, date_expiration=nouvelle_expiration,
+            )
         demande.est_traitee = True
         demande.date_traitement = timezone.now()
         demande.save()
-        _audit(request, 'AUTRE', f"Premium {nb_mois} mois activé pour {entreprise.nom_entreprise} — expire {entreprise.premium_expire_at.strftime('%d/%m/%Y')}")
+        _audit(request, 'AUTRE', f"Palier {palier.get_nom_display()} ({nb_mois} mois) activé pour {entreprise.nom_entreprise} — expire {nouvelle_expiration.strftime('%d/%m/%Y')}")
         return Response({
-            'message': 'Premium activé.',
-            'premium_expire_at': entreprise.premium_expire_at.strftime('%d/%m/%Y'),
+            'message': 'Abonnement activé.',
+            'palier': palier.nom,
+            'abonnement_expire_at': nouvelle_expiration.strftime('%d/%m/%Y'),
         })
 
 

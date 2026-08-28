@@ -6,6 +6,7 @@ import { FolderLock, Trash2, Upload, FileText, Lock } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -28,7 +29,7 @@ const MesDocuments = () => {
         setDocuments(docsData);
         if (typesData.length > 0) setTypeSelectionne(String(typesData[0].id));
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_MES_DOCUMENTS", error);
       } finally {
         setIsLoading(false);
@@ -47,7 +48,7 @@ const MesDocuments = () => {
       toast.success("Document ajouté !");
     } catch (error) {
       reportError("ECHEC_UPLOAD_DOCUMENT_UI", error);
-      toast.error("Impossible d'ajouter ce document.");
+      toast.error(apiErrMsg(error, "Impossible d'ajouter ce document."));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -61,7 +62,7 @@ const MesDocuments = () => {
         setDocuments((prev) => prev.filter((d) => d.id !== id));
         toast.success("Document supprimé.");
       } catch (error) {
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
         reportError("ECHEC_SUPPRESSION_DOCUMENT_UI", error);
       }
     });

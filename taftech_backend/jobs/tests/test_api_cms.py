@@ -1,12 +1,15 @@
 """
 Tests pour le chantier CMS (session 20/08/2026) :
-- PremiumPlan / PremiumAvantage (jobs/views/premium_admin.py)
 - FaqItem
 - CompetenceReferentiel
 - Article / ArticleCategorie (jobs/views/articles.py)
 - SiteAnnonce / BanniereAccueil (jobs/views/banners.py)
 - PageStatique (jobs/views/pages.py)
 - AIConfig (jobs/views/ai_config.py)
+
+Note (27/08/2026) : PremiumPlan/PremiumAvantage ont été supprimés (système Premium legacy,
+remplacé par Palier/AbonnementEntreprise — voir test_api_paliers.py/test_api_paliers_gating.py
+et CLAUDE.md). Les tests correspondants ont été retirés de ce fichier.
 """
 from django.test import TestCase
 from django.urls import reverse
@@ -15,7 +18,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from jobs.models import (
-    PremiumPlan, PremiumAvantage, FaqItem, CompetenceReferentiel,
+    FaqItem, CompetenceReferentiel,
     Article, ArticleCategorie, SiteAnnonce, BanniereAccueil, PageStatique, AIConfig,
 )
 
@@ -39,95 +42,12 @@ class CMSTestBase(APITestCase):
     réponses (LocMemCache, persiste tout le process de test sans ça), une clé partagée entre deux
     tests (ex: 'jobs_faq_GENERAL') ferait fuiter l'état d'un test vers le suivant.
 
-    Plusieurs modèles CMS (PremiumPlan, PremiumAvantage, FaqItem, CompetenceReferentiel, ...) sont
+    Plusieurs modèles CMS (FaqItem, CompetenceReferentiel, ...) sont
     peuplés par des migrations de données (backfill du contenu qui existait en dur avant ce
     chantier) — la base de test les contient donc déjà. Les sous-classes qui comptent des lignes
     doivent vider la table concernée en premier pour ne tester que leurs propres fixtures."""
     def setUp(self):
         cache.clear()
-
-
-# ─── PremiumPlan / PremiumAvantage ───────────────────────────────────────────
-
-class PremiumPlanAPITest(CMSTestBase):
-    def setUp(self):
-        super().setUp()
-        PremiumPlan.objects.all().delete()  # vide le contenu seedé par la migration 0062
-        self.admin = make_admin()
-        self.plan_actif = PremiumPlan.objects.create(nb_mois=1, label="1 mois", prix_da=2000, actif=True)
-        self.plan_inactif = PremiumPlan.objects.create(nb_mois=6, label="6 mois", prix_da=11040, actif=False)
-
-    def test_public_liste_seulement_actifs(self):
-        response = self.client.get(reverse("premium-plans-public"))
-        self.assertEqual(response.status_code, 200)
-        ids = [p["id"] for p in response.data]
-        self.assertIn(self.plan_actif.id, ids)
-        self.assertNotIn(self.plan_inactif.id, ids)
-
-    def test_admin_liste_tout(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.get(reverse("admin-premium-plans"))
-        self.assertEqual(len(response.data), 2)
-
-    def test_non_admin_refuse(self):
-        candidat = make_candidat()
-        self.client.force_authenticate(user=candidat)
-        response = self.client.get(reverse("admin-premium-plans"))
-        self.assertEqual(response.status_code, 403)
-
-    def test_non_authentifie_refuse(self):
-        response = self.client.get(reverse("admin-premium-plans"))
-        self.assertIn(response.status_code, (401, 403))
-
-    def test_creation_prix_zero_rejetee(self):
-        """Un palier à 0 DA serait un abonnement Premium gratuit — bloqué par le validateur."""
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post(reverse("admin-premium-plans"), {
-            "nb_mois": 3, "label": "3 mois", "prix_da": 0,
-        })
-        self.assertEqual(response.status_code, 400)
-
-    def test_creation_nb_mois_duplique_rejetee(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post(reverse("admin-premium-plans"), {
-            "nb_mois": 1, "label": "Doublon", "prix_da": 5000,
-        })
-        self.assertEqual(response.status_code, 400)
-
-    def test_update_invalide_cache_public(self):
-        self.client.get(reverse("premium-plans-public"))  # peuple le cache
-        self.client.force_authenticate(user=self.admin)
-        self.client.put(reverse("admin-premium-plan-detail", args=[self.plan_actif.id]), {"prix_da": 9999})
-        response = self.client.get(reverse("premium-plans-public"))
-        prix = next(p["prix_da"] for p in response.data if p["id"] == self.plan_actif.id)
-        self.assertEqual(prix, 9999)
-
-    def test_delete_admin(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.delete(reverse("admin-premium-plan-detail", args=[self.plan_actif.id]))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(PremiumPlan.objects.filter(id=self.plan_actif.id).exists())
-
-
-class PremiumAvantageAPITest(CMSTestBase):
-    def setUp(self):
-        super().setUp()
-        PremiumAvantage.objects.all().delete()  # vide le contenu seedé par la migration 0062
-        self.admin = make_admin()
-        PremiumAvantage.objects.create(icone="Mail", titre="Coordonnées", description="Email/tel visibles.", actif=True)
-        PremiumAvantage.objects.create(icone="Star", titre="Masqué", description="Pas visible.", actif=False)
-
-    def test_public_liste_seulement_actifs(self):
-        response = self.client.get(reverse("premium-avantages-public"))
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["titre"], "Coordonnées")
-
-    def test_icone_hors_whitelist_rejetee(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post(reverse("admin-premium-avantages"), {
-            "icone": "<script>alert(1)</script>", "titre": "X", "description": "Y",
-        })
-        self.assertEqual(response.status_code, 400)
 
 
 # ─── FAQ ──────────────────────────────────────────────────────────────────────
@@ -454,3 +374,38 @@ class AIKillSwitchTest(APITestCase):
         self.client.force_authenticate(user=candidat)
         response = self.client.post(reverse("parser-cv"), {})
         self.assertEqual(response.status_code, 503)
+
+
+# ─── Panel admin SEO ──────────────────────────────────────────────────────────
+
+class AdminSeoStatsAPITest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.admin = make_admin("admin_seo", "admin_seo@test.dz")
+
+    def test_refuse_non_admin(self):
+        candidat = make_candidat("cand_seo", "cand_seo@test.dz")
+        self.client.force_authenticate(user=candidat)
+        response = self.client.get(reverse("admin-seo-stats"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_retourne_6_types_de_page(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(reverse("admin-seo-stats"))
+        self.assertEqual(response.status_code, 200)
+        types = [p["type"] for p in response.data["pages"]]
+        self.assertEqual(
+            types,
+            ["Offre d'emploi", "Entreprise", "Métier", "Secteur", "Wilaya", "Blog / Article"],
+        )
+        self.assertIn("sitemap_url", response.data)
+        self.assertIn("robots_url", response.data)
+
+    def test_type_sans_contenu_marque_non_ok(self):
+        Article.objects.filter(statut="PUBLIE").delete()
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(reverse("admin-seo-stats"))
+        blog = next(p for p in response.data["pages"] if p["type"] == "Blog / Article")
+        self.assertFalse(blog["ok"])
+        self.assertIsNone(blog["url"])
+        self.assertEqual(blog["nb_pages_indexables"], 0)

@@ -5,6 +5,7 @@ import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const NOTIF_FIELDS = [
   { field: "notif_offres_exclusives", label: "Offres exclusives", desc: "Recevez des offres spéciales de nos partenaires." },
@@ -46,7 +47,7 @@ const Settings = () => {
         setNotifications(parametres);
         setEstCompteGoogle(me.est_compte_google || false);
       } catch (error) {
-        toast.error("Erreur lors du chargement.");
+        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
         reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
       } finally {
         setIsLoading(false);
@@ -65,7 +66,7 @@ const Settings = () => {
     } catch (error) {
       setNotifications(previousState);
       reportError("ECHEC_MAJ_PARAMETRES", error);
-      toast.error("Échec de la sauvegarde.");
+      toast.error(apiErrMsg(error, "Échec de la sauvegarde."));
     }
   };
 
@@ -85,8 +86,7 @@ const Settings = () => {
       setPasswords({ old: "", new: "", confirm: "" });
       if (estCompteGoogle) setEstCompteGoogle(false);
     } catch (err) {
-      const msg = err.response?.data?.error || "Erreur lors du changement.";
-      toast.error(msg);
+      toast.error(apiErrMsg(err, "Erreur lors du changement."));
       reportError("ECHEC_CHANGER_MDP_SETTINGS", err);
     } finally {
       setPwdLoading(false);

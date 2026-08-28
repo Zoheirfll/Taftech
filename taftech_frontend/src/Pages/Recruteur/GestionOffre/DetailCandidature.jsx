@@ -26,6 +26,7 @@ import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
 import CandidatureTimeline from "../../../Components/CandidatureTimeline";
 import { tw } from "../../../theme";
+import { confirmToast } from "../../../utils/confirmToast";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -334,7 +335,12 @@ export const DetailCandidature = ({
           )}
           {selectedCandidature.statut === "REFUSE" && authService.peutFaire("UTILISATEUR") && (
             <button
-              onClick={() => supprimerCandidature(selectedCandidature.id)}
+              onClick={() =>
+                confirmToast("Supprimer définitivement cette candidature ?", () =>
+                  supprimerCandidature(selectedCandidature.id),
+                )
+              }
+              title="Supprimer la candidature"
               className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.dangerPillSoft} text-xs font-medium rounded-lg transition-colors`}
             >
               <Trash2 size={12} />
@@ -569,17 +575,27 @@ export const DetailCandidature = ({
                     Compétences
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {candidatData.competences
-                      .split(",")
-                      .filter(Boolean)
-                      .map((c, i) => (
-                        <span
-                          key={i}
-                          className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md`}
-                        >
-                          {c.trim()}
-                        </span>
-                      ))}
+                    {candidatData.competences_detail?.length > 0
+                      ? candidatData.competences_detail.map((c) => (
+                          <span
+                            key={c.id}
+                            className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md flex items-center gap-1`}
+                          >
+                            {c.label}
+                            <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
+                          </span>
+                        ))
+                      : candidatData.competences
+                          .split(",")
+                          .filter(Boolean)
+                          .map((c, i) => (
+                            <span
+                              key={i}
+                              className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md`}
+                            >
+                              {c.trim()}
+                            </span>
+                          ))}
                   </div>
                 </div>
               )}

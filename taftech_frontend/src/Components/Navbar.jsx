@@ -232,26 +232,22 @@ const Navbar = () => {
 
                 {isDropdownOpen && (
                   <div className={tw.dropdownPanel}>
+                    {/* Liste volontairement courte — la sidebar CandidatLayout/RecruteurLayout
+                        couvre déjà toute la navigation détaillée par catégories, ce menu ne
+                        garde que les raccourcis les plus utilisés. */}
                     {role === "CANDIDAT" && (
                       <>
                         <DropdownLink to="/dashboard-candidat" icon={LayoutDashboard} onClick={closeDropdown}>Tableau de bord</DropdownLink>
                         <DropdownLink to="/profil" icon={User} onClick={closeDropdown}>Mon profil</DropdownLink>
-                        <DropdownLink to="/mes-candidatures" icon={Briefcase} onClick={closeDropdown}>Mes candidatures</DropdownLink>
-                        <DropdownLink to="/offres-sauvegardees" icon={Bookmark} onClick={closeDropdown}>Offres sauvegardées</DropdownLink>
-                        <DropdownLink to="/alertes" icon={Bell} onClick={closeDropdown}>Alertes d'emploi</DropdownLink>
-                        <DropdownLink to="/suggestions-carriere" icon={Sparkles} onClick={closeDropdown}>Suggestions carrière</DropdownLink>
                         <DropdownLink to="/parametres/candidat" icon={Settings} onClick={closeDropdown}>Paramètres</DropdownLink>
                       </>
                     )}
                     {role === "RECRUTEUR" && (
                       <>
                         <DropdownLink to="/dashboard" icon={LayoutDashboard} onClick={closeDropdown}>Tableau de bord</DropdownLink>
-                        <DropdownLink to="/cvtheque" icon={Search} onClick={closeDropdown}>CVthèque</DropdownLink>
-                        <DropdownLink to="/candidatures-spontanees" icon={Inbox} onClick={closeDropdown}>Candidatures spontanées</DropdownLink>
                         <DropdownLink to="/creer-offre" icon={Briefcase} onClick={closeDropdown}>
                           <span className={tw.textPrimaryStrong}>Publier une offre</span>
                         </DropdownLink>
-                        <DropdownLink to="/questionnaires" icon={ClipboardList} onClick={closeDropdown}>Questionnaires</DropdownLink>
                         <DropdownLink to="/parametres" icon={Settings} onClick={closeDropdown}>Paramètres</DropdownLink>
                       </>
                     )}

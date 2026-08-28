@@ -6,6 +6,7 @@ import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
+import { apiErrMsg } from "../../../utils/apiErrMsg";
 
 const INITIAL_EXP = {
   titre_poste: "",
@@ -144,7 +145,7 @@ export const useProfilCandidat = () => {
         github: pData.github || "",
       });
     } catch (err) {
-      toast.error("Erreur de synchronisation avec le serveur.");
+      toast.error(apiErrMsg(err, "Erreur de synchronisation avec le serveur."));
       reportError("ECHEC_FETCH_PROFIL_DATA", err);
     } finally {
       setLoading(false);
@@ -230,7 +231,7 @@ export const useProfilCandidat = () => {
       setModalState(false);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
       reportError("ECHEC_UPDATE_PROFIL_GENERIC", err);
     }
   };
@@ -246,7 +247,7 @@ export const useProfilCandidat = () => {
       setShowCVForm(false);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de l'envoi du fichier");
+      toast.error(apiErrMsg(err, "Erreur lors de l'envoi du fichier"));
       reportError("ECHEC_UPDATE_CV", err);
     }
   };
@@ -259,7 +260,7 @@ export const useProfilCandidat = () => {
       toast.success("CV supprimé");
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de la suppression du CV");
+      toast.error(apiErrMsg(err, "Erreur lors de la suppression du CV"));
       reportError("ECHEC_DELETE_CV", err);
     }
   };
@@ -276,7 +277,7 @@ export const useProfilCandidat = () => {
       toast.success("Photo mise à jour !");
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors du téléchargement.");
+      toast.error(apiErrMsg(err, "Erreur lors du téléchargement."));
       reportError("ECHEC_UPDATE_PHOTO", err);
     }
   };
@@ -297,7 +298,7 @@ export const useProfilCandidat = () => {
       setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
-      toast.error("Vérifiez les données.");
+      toast.error(apiErrMsg(err, "Vérifiez les données."));
       reportError("ECHEC_AJOUT_EXP", err);
     }
   };
@@ -308,7 +309,7 @@ export const useProfilCandidat = () => {
         await profilService.deleteExperience(id);
         fetchData();
       } catch (err) {
-        toast.error("Erreur de suppression");
+        toast.error(apiErrMsg(err, "Erreur de suppression"));
         reportError("ECHEC_DELETE_EXP", err);
       }
     });
@@ -337,7 +338,7 @@ export const useProfilCandidat = () => {
       setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
       reportError("ECHEC_UPDATE_EXP", err);
     }
   };
@@ -351,7 +352,7 @@ export const useProfilCandidat = () => {
       setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de l'ajout");
+      toast.error(apiErrMsg(err, "Erreur lors de l'ajout"));
       reportError("ECHEC_AJOUT_FORMATION", err);
     }
   };
@@ -362,7 +363,7 @@ export const useProfilCandidat = () => {
         await profilService.deleteFormation(id);
         fetchData();
       } catch (err) {
-        toast.error("Erreur de suppression");
+        toast.error(apiErrMsg(err, "Erreur de suppression"));
         reportError("ECHEC_DELETE_FORMATION", err);
       }
     });
@@ -390,7 +391,7 @@ export const useProfilCandidat = () => {
       setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
       reportError("ECHEC_UPDATE_FORMATION", err);
     }
   };
@@ -482,7 +483,7 @@ export const useProfilCandidat = () => {
       setShowLinksForm(false);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
       reportError("ECHEC_UPDATE_LINKS", err);
     }
   };
@@ -513,7 +514,7 @@ export const useProfilCandidat = () => {
         });
       }
     } catch (err) {
-      toast.error("Erreur lors de l'analyse.", { id: toastId });
+      toast.error(apiErrMsg(err, "Erreur lors de l'analyse."), { id: toastId });
       reportError("ECHEC_PARSER_CV_CLIENT", err);
     } finally {
       setParserLoading(false);
@@ -702,7 +703,7 @@ export const useProfilCandidat = () => {
       setParserFile(null);
       fetchData();
     } catch (err) {
-      toast.error("Erreur lors du remplissage.", { id: toastId });
+      toast.error(apiErrMsg(err, "Erreur lors du remplissage."), { id: toastId });
       reportError("ECHEC_VALIDATION_PARSING", err);
     } finally {
       setRemplissageLoading(false);

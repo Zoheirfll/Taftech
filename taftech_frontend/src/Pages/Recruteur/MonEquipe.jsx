@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
+import { confirmToast } from "../../utils/confirmToast";
 import {
   Users,
   Plus,
@@ -18,6 +19,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ROLES_LABELS = {
   PROPRIETAIRE: {
@@ -76,7 +78,7 @@ const MonEquipe = () => {
       const d = await jobsService.getEquipe();
       setData(d);
     } catch (err) {
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
       reportError("ECHEC_GET_EQUIPE", err);
     } finally {
       setLoading(false);
@@ -99,7 +101,7 @@ const MonEquipe = () => {
       setAuditLog(logs);
     } catch (err) {
       reportError("ECHEC_GET_AUDIT_LOG", err);
-      toast.error("Impossible de charger le journal.");
+      toast.error(apiErrMsg(err, "Impossible de charger le journal."));
     } finally {
       setAuditLoading(false);
     }
@@ -118,8 +120,7 @@ const MonEquipe = () => {
       charger();
     } catch (err) {
       reportError("ECHEC_INVITER_MEMBRE", err);
-      const msg = err.response?.data?.error || "Erreur lors de l'invitation.";
-      toast.error(msg);
+      toast.error(apiErrMsg(err, "Erreur lors de l'invitation."));
     } finally {
       setSaving(false);
     }
@@ -134,25 +135,29 @@ const MonEquipe = () => {
       charger();
     } catch (err) {
       reportError("ECHEC_CHANGER_ROLE_MEMBRE", err);
-      toast.error(err.response?.data?.error || "Erreur.");
+      toast.error(apiErrMsg(err, "Erreur."));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRetirer = async () => {
-    setSaving(true);
-    try {
-      await jobsService.retirerMembre(modal.data.id);
-      toast.success("Membre retiré.");
-      setModal(null);
-      charger();
-    } catch (err) {
-      reportError("ECHEC_RETIRER_MEMBRE", err);
-      toast.error(err.response?.data?.error || "Erreur.");
-    } finally {
-      setSaving(false);
-    }
+  const handleRetirer = (membre) => {
+    confirmToast(
+      `Retirer ${membre.email} ? Il/elle n'aura plus accès à votre espace recruteur.`,
+      async () => {
+        setSaving(true);
+        try {
+          await jobsService.retirerMembre(membre.id);
+          toast.success("Membre retiré.");
+          charger();
+        } catch (err) {
+          reportError("ECHEC_RETIRER_MEMBRE", err);
+          toast.error(apiErrMsg(err, "Erreur."));
+        } finally {
+          setSaving(false);
+        }
+      },
+    );
   };
 
   const handleAnnulerInvitation = async (id) => {
@@ -162,7 +167,7 @@ const MonEquipe = () => {
       charger();
     } catch (err) {
       reportError("ECHEC_ANNULER_INVITATION", err);
-      toast.error("Impossible d'annuler l'invitation.");
+      toast.error(apiErrMsg(err, "Impossible d'annuler l'invitation."));
     }
   };
 
@@ -272,9 +277,7 @@ const MonEquipe = () => {
                         </button>
                         {!m.est_moi && (
                           <button
-                            onClick={() =>
-                              setModal({ mode: "retirer", data: m })
-                            }
+                            onClick={() => handleRetirer(m)}
                             className={`p-2 ${tw.dangerPillSoft} rounded-lg transition-colors`}
                             title="Retirer"
                           >
@@ -508,41 +511,6 @@ const MonEquipe = () => {
                 className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-bold rounded-xl disabled:opacity-60`}
               >
                 {saving ? "..." : "Confirmer"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal — Retirer */}
-      {modal?.mode === "retirer" && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-sm w-full shadow-2xl text-center`}>
-            <div className={`w-12 h-12 ${tw.iconCircleError} rounded-full flex items-center justify-center mx-auto mb-4`}>
-              <Trash2 size={20} className={tw.textError} />
-            </div>
-            <h2 className={`text-lg font-bold ${tw.textStrong} mb-2`}>
-              Retirer ce membre ?
-            </h2>
-            <p className={`text-sm ${tw.textMuted700} mb-6`}>
-              <span className={`font-semibold ${tw.textMuted700}`}>
-                {modal.data.email}
-              </span>{" "}
-              n'aura plus accès à votre espace recruteur.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setModal(null)}
-                className={`flex-1 py-2.5 ${tw.cancelPillGray} text-sm font-semibold rounded-xl`}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleRetirer}
-                disabled={saving}
-                className={`flex-1 py-2.5 ${tw.buttonDangerSolid} text-sm font-bold rounded-xl disabled:opacity-60`}
-              >
-                {saving ? "..." : "Retirer"}
               </button>
             </div>
           </div>

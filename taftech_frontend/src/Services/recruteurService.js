@@ -443,17 +443,6 @@ export const recruteurService = {
     }
   },
 
-  // Crée une session Chargily Pay et retourne l'URL de redirection vers la page de paiement
-  chargilyCheckout: async (nb_mois) => {
-    try {
-      const response = await api.post("jobs/premium/chargily/checkout/", { nb_mois });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_CHARGILY_CHECKOUT", err);
-      throw err;
-    }
-  },
-
   demanderPremium: async (moyen_paiement, nb_mois = 1) => {
     try {
       const response = await api.post("jobs/premium/demande/", { moyen_paiement, nb_mois });

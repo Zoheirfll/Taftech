@@ -8,6 +8,7 @@ import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { selectStyles, tw } from "../../theme";
 import { Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const TEXTE_LOI_1807 = {
   titre: "Protection des données à caractère personnel (Loi 18-07)",
@@ -147,7 +148,7 @@ const RegisterCandidat = () => {
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors du renvoi.", { id: toastId });
+      toast.error(apiErrMsg(err, "Erreur lors du renvoi."), { id: toastId });
       reportError("ECHEC_RENVOYER_CODE_CANDIDAT", err);
     } finally {
       setLoading(false);
@@ -169,7 +170,7 @@ const RegisterCandidat = () => {
       toast.success("Email vérifié avec succès !", { id: toastId });
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Le code est incorrect.", { id: toastId });
+      toast.error(apiErrMsg(err, "Le code est incorrect."), { id: toastId });
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0].focus();
       reportError("ECHEC_VERIFY_OTP_CANDIDAT", err);
@@ -341,8 +342,8 @@ const RegisterCandidat = () => {
                         navigate("/dashboard-candidat");
                         window.location.reload();
                       }
-                    } catch {
-                      toast.error("Échec de l'inscription Google.", { id: toastId });
+                    } catch (err) {
+                      toast.error(apiErrMsg(err, "Échec de l'inscription Google."), { id: toastId });
                     }
                   }}
                   onError={() => toast.error("Échec de l'inscription Google.")}
@@ -377,8 +378,8 @@ const RegisterCandidat = () => {
                           toast.success("Bienvenue sur TAFTECH !");
                           navigate("/");
                           window.location.reload();
-                        } catch {
-                          toast.error("Erreur lors de l'enregistrement du consentement.");
+                        } catch (err) {
+                          toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement du consentement."));
                           setConsentLoading(false);
                         }
                       }}

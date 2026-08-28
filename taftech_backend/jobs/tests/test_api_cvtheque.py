@@ -4,22 +4,33 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from jobs.models import ProfilCandidat, ExperienceCandidat, ProfilEntreprise, OffreEmploi
+from jobs.models import ProfilCandidat, ExperienceCandidat, ProfilEntreprise, OffreEmploi, Palier, AbonnementEntreprise
 import datetime
 
 User = get_user_model()
+
+
+def _business_palier():
+    palier, _ = Palier.objects.get_or_create(
+        nom='BUSINESS',
+        defaults=dict(acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, ordre=3),
+    )
+    return palier
+
 
 class CVthequeAndAdvancedTests(APITestCase):
     def setUp(self):
         self.rh = User.objects.create_user(username="rh_cv", email="rh_cv@test.com", role="RECRUTEUR", consentement_cvtheque=True)
         # ProfilEntreprise requis — CVThèque retourne 403 si pas d'entreprise
-        ProfilEntreprise.objects.create(
+        entreprise_rh = ProfilEntreprise.objects.create(
             user=self.rh,
             nom_entreprise="CVCorp",
             registre_commerce="RC_CV",
             est_approuvee=True,
-            est_premium=True,
-            premium_expire_at=timezone.now() + timedelta(days=30),
+        )
+        AbonnementEntreprise.objects.create(
+            entreprise=entreprise_rh, palier=_business_palier(),
+            date_expiration=timezone.now() + timedelta(days=30),
         )
         self.cand = User.objects.create_user(username="cand_ia", email="cand_ia@test.com", role="CANDIDAT")
         
@@ -118,8 +129,11 @@ class CVthequeAndAdvancedTests(APITestCase):
         autre_rh = User.objects.create_user(username="autre_rh", email="autre@test.dz", role="RECRUTEUR")
         autre_ent = ProfilEntreprise.objects.create(
             user=autre_rh, nom_entreprise="AutreCorp", registre_commerce="RC_AUTRE",
-            est_approuvee=True, est_premium=True,
-            premium_expire_at=timezone.now() + timedelta(days=30),
+            est_approuvee=True,
+        )
+        AbonnementEntreprise.objects.create(
+            entreprise=autre_ent, palier=_business_palier(),
+            date_expiration=timezone.now() + timedelta(days=30),
         )
         offre_autre = OffreEmploi.objects.create(
             entreprise=autre_ent, titre="Dev Java", wilaya="31 - Oran",

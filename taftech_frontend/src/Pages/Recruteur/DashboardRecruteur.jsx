@@ -35,12 +35,12 @@ import {
   Activity,
   LifeBuoy,
   Mail,
-  GraduationCap,
 } from "lucide-react";
 import MiniAreaChart from "../../Components/MiniAreaChart";
 import FunnelChart from "../../Components/FunnelChart";
 import DonutChart from "../../Components/DonutChart";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 // ─── Constantes pipeline / recommandations ────────────────────────────────────
 const ACTIVITE_EMOJIS = {
@@ -141,8 +141,8 @@ const DashboardRecruteur = () => {
         const dashData = await jobsService.getDashboard(dateDebut, dateFin);
         setEntreprise(dashData.entreprise);
         setOffres(dashData.offres);
-        setIsPremium(dashData.est_premium || false);
-        setPremiumExpire(dashData.premium_expire_at || null);
+        setIsPremium(!!dashData.palier_actif);
+        setPremiumExpire(dashData.palier_expiration || null);
         setKpis(dashData.kpis || null);
         setPalierActif(dashData.palier_actif || null);
       } catch (err) {
@@ -170,7 +170,7 @@ const DashboardRecruteur = () => {
     try {
       await jobsService.telechargerRapportDashboard(dateDebut, dateFin);
     } catch (err) {
-      toast.error("Erreur lors du téléchargement du rapport.");
+      toast.error(apiErrMsg(err, "Erreur lors du téléchargement du rapport."));
     }
   };
 
@@ -194,7 +194,7 @@ const DashboardRecruteur = () => {
     try {
       await jobsService.exporterCandidaturesExcel();
     } catch (err) {
-      toast.error("Erreur lors de l'export Excel.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'export Excel."));
       reportError("ECHEC_EXPORT_EXCEL_GLOBAL", err);
     }
   };
@@ -205,7 +205,7 @@ const DashboardRecruteur = () => {
       await jobsService.toggleFavoriCV(candidatUserId);
       toast.success("Favoris mis à jour.");
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour des favoris.");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour des favoris."));
       reportError("ECHEC_TOGGLE_FAVORI_DASHBOARD", err);
     }
   };
@@ -222,7 +222,7 @@ const DashboardRecruteur = () => {
       toast.success("Invitation envoyée !");
       setInviterCandidat(null);
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi de l'invitation.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de l'invitation."));
       reportError("ECHEC_INVITER_CANDIDAT_DASHBOARD", err);
     } finally {
       setEnvoiInvitation(false);
@@ -927,7 +927,6 @@ const DashboardRecruteur = () => {
           >
             Générer avec l'IA
           </button>
-          <Link to="/contact" className={`block text-center text-xs mt-2 ${tw.textTeal}`}>En savoir plus</Link>
         </div>
 
         <div className={`${tw.cardColors} rounded-2xl p-5`}>
@@ -935,15 +934,12 @@ const DashboardRecruteur = () => {
             <LifeBuoy size={15} className={tw.textTeal} /> Besoin d'aide ?
           </h2>
           <div className="space-y-2.5">
-            <Link to="/contact" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
-              <LifeBuoy size={13} /> Centre d'aide
+            <Link to="/contact?portail=recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <LifeBuoy size={13} className={tw.textTeal} /> Centre d'aide
             </Link>
-            <a href="mailto:taftech963@gmail.com" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
-              <Mail size={13} /> Contacter un conseiller
+            <a href="https://wa.me/213770123440" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+              <Mail size={13} className={tw.textTeal} /> Contacter un conseiller
             </a>
-            <Link to="/pages/formation-recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
-              <GraduationCap size={13} /> Formation recruteur
-            </Link>
           </div>
         </div>
       </div>

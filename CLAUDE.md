@@ -2,7 +2,130 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 26/08/2026 — Merge de `specs/important-features` dans `main`. Fix sécurité : `InviterMembreAPIView` n'ajoute plus un compte existant directement à une équipe sans consentement (passe désormais par invitation + acceptation, comme les autres cas), et les 3 messages de réponse sont unifiés pour ne plus permettre l'énumération de comptes par email. Voir sections ci-dessous._
+_Dernière mise à jour : 28/08/2026 — Session de test admin en direct (bannières/FAQ/pages/newsletter) : 2 bugs réels trouvés et corrigés (URL sans protocole rejetée sur bannières/annonces, upload image cassé quand combiné à un lien), audit des messages d'erreur masqués (~65 endroits sur 42 fichiers), et nouvelle fonctionnalité — liste des pages libres automatique dans les footers. Voir sections ci-dessous._
+
+## 🆕 SESSION 28/08/2026 — Tests admin en direct : bugs pages/bannières + liste pages libres dans footer
+
+**Contexte** : l'utilisateur a testé en direct plusieurs panels admin (bannières, carrousel, pages statiques, FAQ, newsletter, paliers) avec le compte `admin1@taftech.dz`. Deux bugs réels remontés pendant les tests, corrigés le jour même.
+
+**Bug 1 — `URLField` rejette une saisie sans protocole** (`jobs/serializers/banners.py`, `SiteAnnonceSerializer`/`BanniereAccueilSerializer`) : taper `google.com` dans le champ "Lien (URL)" du bandeau d'annonce ou d'une bannière carrousel échouait en 400 ("Saisissez une URL valide.") sans que le frontend n'affiche la vraie cause. Fix : normalisation `https://` auto-préfixée (même pattern que linkedin/github ailleurs dans le projet), appliquée dans `to_internal_value()` (pas `validate_<champ>` — le validateur intégré d'`URLField` s'exécute AVANT et rejette la valeur brute avant que `validate_lien_url` ait la main).
+
+**Bug 2 — upload d'image cassé dès que `lien_url` est rempli en même temps** (même fichier) : une 1ʳᵉ version du fix ci-dessus remplaçait `data` (un `QueryDict` multipart) par un dict Python classique (`{**data, ...}`) pour injecter l'URL normalisée — ça casse la détection DRF des champs fichier (`is_html_input()` teste `hasattr(data, 'getlist')`, absent sur un dict classique), donc `BanniereAccueilSerializer` ne reconnaissait plus `image` comme un fichier dès que `lien_url` était aussi présent → erreur "La donnée soumise n'est pas un fichier." Fix : `data.copy()` (un `QueryDict.copy()` reste mutable ET reste un `QueryDict`) au lieu de `{**data}` — préserve `getlist`/`is_html_input` tout en mutant `lien_url` en place.
+
+**Audit des messages d'erreur génériques masquant la vraie cause backend** : nouveau helper partagé `utils/apiErrMsg.js` (gère `{error}`/`{detail}`/`{message}`/erreurs de validation par champ DRF, avec fallback si rien d'exploitable). Appliqué sur ~65 blocs `catch` dans 42 fichiers frontend (tous les panels admin + plusieurs pages recruteur/candidat), remplaçant `toast.error("message générique fixe")` par `toast.error(apiErrMsg(err, "message générique fixe"))` — le comportement par défaut ne change pas si le backend ne renvoie rien d'exploitable, mais la vraie cause s'affiche quand elle existe. Le helper local dupliqué dans `useGestionOffre.js` a été supprimé au profit de l'import partagé — un seul `apiErrMsg` dans tout le projet désormais. Bug de référence trouvé au passage : un premier essai avait placé `apiErrMsg(err, ...)` dans le callback `onError` du bouton Google Login (`Login.jsx`/`RegisterCandidat.jsx`), où `err` n'existe pas dans ce scope (le SDK Google ne fournit aucun objet d'erreur exploitable à ce callback) — corrigé en gardant un message littéral fixe à cet endroit précis.
+
+**Nouvelle fonctionnalité — liste des pages libres automatique dans les footers** : jusqu'ici, une page libre créée via `/admin-taftech/pages` (autre que CGU/Confidentialité/Qui-sommes-nous, déjà liées en dur) n'était accessible que par son URL directe `/pages/<slug>` — aucun lien nulle part sur le site. Décision produit (validée avec l'utilisateur) : lister automatiquement ces pages dans la colonne "Légal" des deux footers (candidat + recruteur), sans qu'aucune action manuelle par page ne soit nécessaire — pas d'ajout dans la navbar ni la page d'accueil (périmètre volontairement limité au footer).
+- Nouveau `GET jobs/pages/` (`PageStatiqueListePublicAPIView`, `jobs/views/pages.py`) — liste allégée `{slug, titre}`, exclut les 3 slugs système (`cgu`/`confidentialite`/`qui-sommes-nous`) déjà liés en dur, triée par titre, cache Django 1h (`jobs_pages_statiques_liste`, invalidé sur chaque create/update/delete de `PageStatiqueAdminAPIView` — même pattern que `CACHE_PAGE` déjà en place pour la page unitaire).
+- Route ajoutée avant `pages/<slug:slug>/` dans `jobs/urls.py` (littéral avant catch-all-like, cohérent avec la contrainte déjà documentée dans ce fichier pour les offres).
+- Frontend : `jobsService.getPagesLibres()`, consommé par `Footer.jsx` et `FooterRecruteur.jsx` (fetch au montage, section "Légal" existante étendue avec les pages retournées — aucune section ne s'affiche si la liste est vide, pas de bloc vide).
+
+**Tests** : `manage.py check` propre, frontend build propre, **421/421 tests verts** (62 fichiers).
+
+## 🆕 SESSION 27/08/2026 (soir) — Nettoyage : suppression du système Premium legacy, Palier devient l'unique système
+
+**Contexte** : depuis la Phase 2a du portail recruteur (22/08/2026), deux systèmes de facturation coexistaient — l'ancien binaire `ProfilEntreprise.est_premium`/`premium_expire_at` + `PremiumPlan`/`PremiumAvantage` (page `PremiumPage.jsx`, panel `AdminPremium.jsx`), et le nouveau `Palier` (STARTER/PRO/BUSINESS/ENTERPRISE) + `AbonnementEntreprise` avec le vrai gating (Phase 2b, session 22-23/08/2026). `get_palier_actif()` avait un repli legacy vers `est_premium_actif` pour ne pas casser les comptes déjà activés par l'ancien flux. Spec : `docs/superpowers/specs/2026-08-27-nettoyage-palier-premium-design.md`. Demande utilisateur : supprimer le legacy en entier, pas seulement le désactiver.
+
+**Migration de données (avant suppression de schéma)** : `0090_backfill_abonnement_avant_suppression_premium.py` — filet de sécurité idempotent (`get_or_create`, même valeurs codées en dur que la migration 0080 déjà existante) qui bascule toute `ProfilEntreprise(est_premium=True)` sans `AbonnementEntreprise` vers `AbonnementEntreprise(palier=BUSINESS, date_expiration=premium_expire_at)` — nécessaire car des activations legacy (`AdminDemandesPremiumAPIView`, ancien webhook Chargily `nb_mois`) avaient pu avoir lieu après la migration 0080 initiale, sans jamais créer d'`AbonnementEntreprise`. `0091_supprime_premium_legacy.py` (générée par `makemigrations`) supprime ensuite les modèles `PremiumPlan`/`PremiumAvantage` et les champs `ProfilEntreprise.est_premium`/`premium_expire_at` (la property Python `est_premium_actif` n'a pas de colonne, retirée du code seul).
+
+**Backend** :
+- `jobs/models.py` : `PremiumPlan`/`PremiumAvantage` supprimés, `ProfilEntreprise.est_premium`/`premium_expire_at`/`est_premium_actif` supprimés.
+- `jobs/paliers_utils.py::get_palier_actif()` : repli legacy vers `est_premium_actif` retiré — toute entreprise premium a désormais un vrai `AbonnementEntreprise` après la migration 0090, plus besoin de ce filet.
+- `jobs/views/premium_admin.py` : vidé de ses 4 vues Premium (`PremiumPlansPublicAPIView`/`PremiumAvantagesPublicAPIView`/`PremiumPlansAdminAPIView`/`PremiumAvantagesAdminAPIView`) — le fichier n'est **pas** supprimé en entier (contrairement à ce que dit le spec littéralement) car il contient aussi `FaqPublicAPIView`/`FaqAdminAPIView`/`CompetencesAutocompleteAPIView`/`CompetencesAdminAPIView`, sans rapport avec Premium, toujours utilisées — seules les classes Premium en ont été retirées.
+- `ChargilyCheckoutAPIView` (ancien flux `nb_mois`) et ses routes supprimés — seul `ChargilyCheckoutPalierAPIView` (flux `palier_nom`) subsiste. Le webhook unique `ChargilyWebhookAPIView` ne garde que la branche `metadata.palier_nom` (la branche `nb_mois` avait déjà été retirée avant cette session, confirmé en lisant le code).
+- `AdminDemandesPremiumAPIView` (activation manuelle CIB/EDAHABIA) : le PATCH accepte désormais un champ `palier` (nom du palier, défaut `BUSINESS` si absent) en plus de `nb_mois` — crée/prolonge un `AbonnementEntreprise` au lieu d'écrire `est_premium`/`premium_expire_at`. Le GET retourne `palier_actif`/`abonnement_expire_at` par demande au lieu de `montant`/`est_premium_actif`/`premium_expire_at` (le prix catalogue par durée n'a plus de source — `PremiumPlan` supprimé — le prix n'est de toute façon plus affiché sur cette page admin).
+- `EnvoyerRecuPremiumAPIView`, `DashboardRecruteurAPIView` (retire `est_premium`/`premium_expire_at`/`premium_active_since`/`premium_nb_mois`, garde `palier_actif`/`palier_expiration`/`acces_equipe`/`acces_ia_recommandes`/`acces_ia_avancee`/`acces_coordonnees`) et `AdminStatsAPIView` (KPI `premium_actifs`/`revenu_premium_estime` recalculés sur `AbonnementEntreprise`/`PaiementAbonnement`) étaient déjà adaptés au système Palier avant cette session (vérifié en lisant le code, pas retouché).
+- `accounts/views.py` (blocage login membre si abonnement expiré, code `PREMIUM_EXPIRE`) : bascule sur `get_palier_actif(entreprise) is None` au lieu de `entreprise.est_premium_actif`.
+- `jobs/serializers/entreprise.py::EntrepriseDashboardDetailSerializer` : `est_premium` retiré des champs, nouveau `SerializerMethodField` `palier_actif` (via `get_palier_actif()`) ajouté — consommé par `AdminEntreprises.jsx` (affichage palier au lieu du badge Premium binaire) et par le dashboard recruteur (`dash.entreprise`).
+
+**Frontend** :
+- Supprimés : `Pages/Recruteur/Portal/PremiumPage.jsx`, `Pages/Admin/AdminPremium.jsx`, route `/admin-taftech/premium-config` + entrée sidebar "Config. Premium" (`AdminLayout.jsx`), `jobsService.getPremiumPlans`/`getPremiumAvantages`, `adminService.getAdminPremiumPlans`/`createPremiumPlan`/`updatePremiumPlan`/`deletePremiumPlan`/`getAdminPremiumAvantages`/`createPremiumAvantage`/`updatePremiumAvantage`/`deletePremiumAvantage`, `recruteurService.chargilyCheckout` (ancien flux, plus aucun appelant). La redirection `/recruteurs/premium` → `/recruteurs/abonnements` (déjà en place) est conservée telle quelle.
+- `NavbarRecruteur.jsx`/`DashboardRecruteur.jsx` : lisent `dash.palier_actif`/`dash.palier_expiration` au lieu de `dash.est_premium`/`dash.premium_expire_at` (champs qui n'existent plus dans la réponse du dashboard).
+- `AbonnementsPage.jsx` : `detailsAbonnement` n'expose plus que `expireLe` (`dash.palier_expiration`) — `activeDepuis`/`nbMois` n'ont plus de source côté dashboard (le legacy exposait `premium_active_since`/`premium_nb_mois`, jamais repris côté Palier), retirés de l'affichage plutôt que laissés à afficher `undefined`.
+- `AdminDemandesPremium.jsx` : nouveau `<select>` palier (STARTER/PRO/BUSINESS/ENTERPRISE, défaut BUSINESS) à côté du sélecteur de durée, colonne "Abonnement" affiche `palier_actif`/`abonnement_expire_at` au lieu du badge Premium binaire ; la colonne "Demande" n'affiche plus de montant (plus de `PremiumPlan.prix_da` côté backend pour le calculer).
+- `AdminEntreprises.jsx` : bouton "⭐ Retirer" (togglait `est_premium` directement, plus aucune API pour ça) supprimé — la désactivation d'un abonnement se fait désormais via la page Paliers/Abonnements, pas depuis la liste entreprises. Badge Premium binaire remplacé par `ent.palier_actif` (nom du palier ou "Gratuit").
+- `CreateJob.jsx`, `GestionOffre/useGestionOffre.js`, `ParametresRecruteur.jsx` : `isPremium` recalculé depuis `dash.palier_actif` (vérifié contre le seuil réel du backend : `GenererOffreIAAPIView` débloque dès qu'un palier actif existe, Starter compris — pas de changement de seuil nécessaire, juste la source du booléen). `CVTheque.jsx` déjà correct (`is_premium` de la réponse CVthèque reflète `palier.acces_coordonnees` côté backend, jamais lié à `est_premium`).
+
+**Tests** :
+- Backend : `test_api_premium.py` supprimé en entier (couvrait `PremiumPlan`/`est_premium_actif`, remplacé par `test_api_paliers.py`/`test_api_paliers_gating.py` déjà existants). `test_api_cms.py` : les 2 classes `PremiumPlanAPITest`/`PremiumAvantageAPITest` retirées (FAQ/Compétences/Articles/Bannières/Pages/AIConfig inchangés). `test_api_paliers_gating.py` : `test_repli_legacy_est_premium_actif_vers_business` supprimé (le repli n'existe plus), fixture `make_entreprise()` simplifiée (plus de paramètre `est_premium`). `test_api_cvtheque.py`, `test_api_equipe.py`, `test_api_recruteur.py`, `accounts/tests/test_views.py`, `test_profiles_models.py` : fixtures `est_premium=True`/`premium_expire_at=...` remplacées par la création d'un `AbonnementEntreprise(palier=BUSINESS)`.
+- Frontend : `AdminPremium.test.jsx`/`PremiumPage.test.jsx` déjà absents au moment de cette passe (supprimés lors d'une tentative précédente dans la même session, interrompue puis reprise).
+- **Résultat final vérifié** : backend `python manage.py test jobs accounts` → **373/373 ✅**, `python manage.py check` propre. Frontend `npm test -- --run` → **419/419 ✅** (62 fichiers), `npx vite build` propre.
+
+**Non touché (hors périmètre)** : `AbonnementsPage.jsx`, `AdminPaliers.jsx`, `jobs/views/paliers_admin.py`, `jobs/paliers_utils.py::limite_offres_actives`/`quota_cv_atteint` — le système Palier lui-même n'a pas changé, seul le legacy qui coexistait avec lui a été retiré.
+
+---
+
+## 🆕 SESSION 27/08/2026 — Sidebar recruteur/candidat en catégories + recherche/filtres manquants + navbar raccourcie
+
+**Contexte** : demande utilisateur — ajouter recherche/filtres sur les pages sidebar recruteur qui n'en avaient pas, regrouper la sidebar (devenue longue, 17 liens à plat) en catégories façon `AdminLayout`, faire en sorte qu'elle défile indépendamment de la page, et vérifier la navbar mobile/dropdown. Spec : `docs/superpowers/specs/2026-08-26-sidebar-recruteur-categories-recherche-design.md`.
+
+**Audit préalable** (sous-agent, 16 pages recruteur passées en revue) : les plus gros trous étaient `RecrutementsPage`, `FacturationPage`, `EvaluationsPage` (aucune recherche/filtre du tout) et `CandidaturesListPage` (filtres offre/statut mais pas de recherche nom). CVthèque/OffresListPage/CandidaturesSpontanees/CandidatsRecommandesPage/MonEquipe/StatistiquesPage déjà bien équipées — non touchées.
+
+**`RecruteurLayout.jsx`** — `menuItems` (17 liens à plat) → `menuGroups` (4 catégories, ajustées après retours utilisateur en direct) :
+- **Principal** : Tableau de bord
+- **Offres** : Offres d'emploi, Candidatures (déplacée ici sur demande explicite — liée aux offres, pas aux profils candidats), Publier une offre, Questionnaires
+- **Candidats** : CVthèque, Favoris, Messages (candidatures spontanées), Candidats recommandés, Entretiens, Évaluations, Recrutements
+- **Compte** : Mon équipe, Abonnements & tarifs, Facturation, Paramètres entreprise
+
+Le conteneur `<aside>` passe de `sticky top-20` simple à `sticky top-20 max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden` avec `<nav className="overflow-y-auto flex-1">` — la sidebar défile indépendamment de la page une fois pleine (avant : il fallait scroller toute la page pour atteindre "Paramètres" tout en bas). Le bouton Déconnexion reste toujours visible en bas (`shrink-0`, hors zone scrollable).
+- **Bug introduit puis corrigé en cours de session** : lors du regroupement, l'en-tête de catégorie a été écrit en `text-teal-100/70` (pensé pour un fond teal) — la sidebar réelle est fond blanc (`bg-white border border-slate-200`), rendant le texte quasi invisible. Corrigé en `text-slate-400`.
+- **2ᵉ bug introduit puis corrigé** : le libellé du lien "Messages" (`/candidatures-spontanees`) a été réécrit par erreur en "Candidatures spontanées" pendant la restructuration — casse une décision produit déjà actée (session 22/08/2026, "Messages" = candidatures spontanées renommées dans la sidebar). Restauré à "Messages" partout (sidebar, tooltip du bouton raccourci dans le header, menu mobile) — détecté par le test `RecruteurLayout.test.jsx` déjà existant (HP1/HP3 attendaient "Messages").
+
+**`CandidatLayout.jsx`** — même traitement, 4 catégories :
+- **Principal** : Tableau de bord
+- **Candidature** : Mon profil, Mes candidatures, Mes compétences, Offres sauvegardées, Boîte de réception, Alertes d'emploi
+- **Carrière** : Suggestions carrière, Prendre rendez-vous
+- **Compte** : Mes documents, Paramètres
+
+Même pattern de scroll indépendant (`max-h-[calc(100vh-5.5rem)] overflow-y-auto`) que la sidebar recruteur.
+
+**Recherche/filtres ajoutés — 4 pages, 100% client-side sur les données déjà chargées, aucun nouvel endpoint backend** :
+- `RecrutementsPage.jsx` : recherche (nom candidat + titre offre) + select période (7j/30j/6m/1a/tout).
+- `FacturationPage.jsx` : recherche n° facture + select année (dérivé dynamiquement des factures chargées).
+- `CandidaturesListPage.jsx` : recherche nom/email ajoutée en plus des selects offre/statut déjà existants.
+- `EvaluationsPage.jsx` : recherche (nom + offre) + select score minimum (≥8/≥12/≥16).
+
+**Navbar recruteur (`NavbarRecruteur.jsx`) et candidat (`Navbar.jsx`) — dropdown "Mon espace"/"Mon compte" raccourci** : signalé par l'utilisateur comme "trop long" — une fois la sidebar complète en place, le dropdown du header dupliquait presque tous ses liens (14 entrées recruteur, 7 candidat). Réduit à l'essentiel (raccourcis les plus utilisés, pas de doublon avec un lien déjà visible ailleurs) :
+- Recruteur : Mon équipe, Abonnement/Premium, Paramètres (Tableau de bord retiré du dropdown car déjà présent dans la barre de liens horizontale du haut).
+- Candidat : Tableau de bord, Mon profil, Paramètres.
+- Le menu hamburger mobile recruteur (`MOBILE_MENU_GROUPS`, nouveau) reprend les mêmes 4 catégories que la sidebar desktop (avec le split Offres/Candidats), au lieu d'une liste plate — et corrige au passage un vrai oubli : le lien **"Évaluations" n'existait dans AUCUN menu mobile ni dropdown desktop** avant cette session (page créée lors d'une session précédente, jamais raccordée à la navigation recruteur hors sidebar desktop `hidden md:block`, donc totalement inatteignable sur mobile).
+
+**Tests** : `Navbar.test.jsx` — 2 assertions mises à jour pour matcher le dropdown raccourci (`Mes candidatures`/`CVthèque` retirés du dropdown candidat/recruteur testé → remplacés par `Mon profil` côté candidat). `RecruteurLayout.test.jsx`/`CandidatLayout.test.jsx` déjà existants, passés sans modification une fois le bug de libellé "Messages" corrigé. Suite frontend complète relancée : **436/436 ✅**, `npx vite build` propre.
+
+**Non fait (hors périmètre explicite de la spec)** : pas de nouvel endpoint backend (tout le filtrage reste client-side, cohérent avec l'état actuel de ces pages) ; pas d'ancres de scroll intra-page (scrollspy) — seule la sidebar elle-même a été rendue navigable indépendamment de la page, pas de jump vers une section précise à l'intérieur d'une page.
+
+---
+
+## 🆕 SESSION 26/08/2026 (suite 3) — Fix parser CV : dates d'expérience mélangées sur CV en 2 colonnes
+
+**Contexte** : bug remonté par l'utilisateur sur son propre CV réel (`Cv_FILALI_LP7snqc.pdf`) — dates d'expérience manquantes, dupliquées entre postes voisins, ou collées dans le titre/l'entreprise après le remplissage automatique du profil.
+
+**Diagnostic** (vérifié empiriquement, pas supposé) : l'extraction PDF (`extract_text_from_pdf_smart`) était déjà correcte — les dates ressortent bien dans le bon ordre ligne par ligne, y compris quand une date est sur sa propre ligne avant/après le bloc titre+entreprise (limitation "CV en colonnes" documentée comme non résolue dans une session précédente — en réalité déjà corrigée côté extraction depuis, jamais revérifiée). Le vrai bug était dans **`PROMPT_CV_COMPLET`** (`jobs/cv_parser.py`) : aucune consigne ne précisait à Groq que la date de début/fin peut être sur une ligne séparée (pas forcément collée au titre) — résultat, sur ce CV réel : date de début perdue pour le 1ᵉʳ poste, date collée dans `titre_poste` ("DÉVELOPPEUR N8N Novembre 2025") ou `entreprise` ("Eurl DHL Distribution - Oran Octobre 2025") pour 2 autres postes, dates totalement absentes pour le dernier.
+
+**Fix** : ajout d'une consigne courte dans `PROMPT_CV_COMPLET` (section EXPÉRIENCES) expliquant les 2 cas — date sur sa propre ligne avant/après le bloc, ou collée en fin de ligne de titre/entreprise (à en extraire et retirer du texte) — et interdisant de dupliquer la date de début comme date de fin quand une seule date isolée est trouvée.
+- **Piège rencontré** : une première version de la consigne, trop verbeuse, a fait dépasser le quota Groq TPM (413 `tokens_per_minute` sur `openai/gpt-oss-20b`, limite 8000) une fois combinée à la liste des ~87 domaines ANEM déjà injectée dans le prompt — resserrée à 2 phrases.
+- **Piège #2 (important pour toute future modif de `PROMPT_CV_COMPLET`)** : `AIConfig.parser_cv_prompt` (panel admin "Configuration IA") contient un prompt backfillé en base depuis la session du 21/08 et **prend le pas** sur la constante Python (`ai_config.parser_cv_prompt or PROMPT_CV_COMPLET`) — modifier la constante dans le code n'a AUCUN effet tant que ce champ n'est pas vidé ou resynchronisé manuellement. Resynchronisé en base dev via shell (`AIConfig.get_solo().parser_cv_prompt = PROMPT_CV_COMPLET; save()`) pour que le fix s'applique réellement. **Si l'admin a du texte personnalisé dans ce champ en prod, il sera écrasé par le prochain déploiement de code seul — ce n'est PAS automatique, seulement fait manuellement ici en dev.**
+
+**Vérifié en conditions réelles** (pas juste lu le code) : `parse_cv()` relancé contre le vrai fichier CV en base (`media/cvs/Cv_FILALI_LP7snqc.pdf`) — les 5 expériences ressortent avec titres/entreprises propres (plus de date collée) et les bonnes dates par poste (ex. "Développeur N8N" : Novembre 2025 → Janvier 2026, avant : titre pollué + période "2025-2025").
+
+**Tests** : `manage.py check` propre. Pas de test automatisé dédié à cette regex/prompt (le comportement dépend de la réponse Groq réelle, non mockable de façon utile ici — même limitation déjà documentée pour le fix regex du 18/08/2026 sur les sections d'analyse IA).
+
+## 🆕 SESSION 26/08/2026 (suite) — Perf dashboard candidat : cache scores matching + niveaux compétences visibles recruteur
+
+**Contexte** : dashboard candidat signalé lent au chargement par l'utilisateur. Diagnostic : `OffresRecommandeesAPIView` (`jobs/views/ia.py`) et `_score_pertinence_marche` (`jobs/profile_score.py`) scoraient chacune, indépendamment, **toutes les offres actives** du catalogue via `calculer_score_matching()` à chaque chargement — avec ~500 offres, ça fait ~1000 calculs de matching synchrones par visite, sans `select_related` sur `entreprise` (N+1 en plus).
+
+**Fix — 4 mesures, toutes appliquées** :
+1. **Cache 10 min** — nouveau `jobs/matching_cache.py::scores_offres_actives_pour_candidat(user)` : calcule une fois, range le résultat `[(offre_id, score_total)]` dans le cache Django (`SCORES_CACHE_TTL = 600`), réutilisé pour tout rechargement dans la fenêtre. **Jamais utilisé** pour le score figé à la vraie candidature (`PostulerAPIView`) ni pour le matching CVthèque (une offre à la fois) — uniquement les 2 vues qui scorent tout le catalogue.
+2. **Dédoublonnage** — `OffresRecommandeesAPIView` et `_score_pertinence_marche` consomment désormais la même fonction : le 2ᵉ appel dans le même chargement de page retrouve le cache déjà chaud, zéro recalcul.
+3. **`select_related('entreprise')`** ajouté sur la requête `OffreEmploi.objects.filter(...)` de `scores_offres_actives_pour_candidat` — élimine le N+1 (1 requête au lieu de 501).
+4. **Pré-chauffe en tâche de fond** — nouvelle commande `jobs/management/commands/precalculer_scores_matching.py` (option `--dry-run`), destinée au cron toutes les 10 min (aligné sur le TTL) : recalcule le cache (`force=True`) pour tous les candidats **connectés depuis < 60 jours** (même seuil que `relance_maj_cv`, évite de gaspiller du calcul sur des comptes inactifs) — le dashboard trouve alors le cache déjà chaud même à la première visite de la journée.
+
+**Non fait (matérialisation lourde en DB)** : pas de nouveau modèle persistant type `ScoreMatchingCache` — le cache Django (mémoire/LocMem en dev, à adapter en Redis en prod si besoin) suffit largement à ce volume, cohérent avec le reste du projet qui n'a jamais introduit de modèle juste pour du cache (`jobs_constants`, `AIConfig` déjà en cache Django).
+
+**Niveaux de compétence transmis au recruteur** (demande liée) : `CandidatInfoDTO.competences_detail` (`jobs/serializers/candidatures.py`) expose désormais `label`/`niveau_libelle` par compétence (avant : seul le texte brut `competences` sans niveau était transmis). Affiché dans `ReviewCandidature.jsx` (page **candidat** de relecture avant envoi de candidature, malgré son emplacement dans `Pages/Recruteur/`) et `DetailCandidature.jsx` (recruteur) — repli sur l'ancien affichage texte si `competences_detail` est vide (candidatures historiques).
+
+**Tests** : backend 353/353 ✅, `manage.py check` propre, `precalculer_scores_matching --dry-run` vérifié en conditions réelles, `npx vite build` propre.
+
+**Déploiement — nouvelle entrée crontab requise** (voir section 🚀 DÉPLOIEMENT) : `*/10 * * * * python manage.py precalculer_scores_matching`.
 
 ## 🆕 SESSION 26/08/2026 — Audit sécurité complet (codebase entier) + fix ajout d'équipe non consenti
 
@@ -1016,8 +1139,8 @@ Suppression du badge "🇩🇿 Plateforme de recrutement algérienne" (hero) et 
 - `offres.py` — JobListAPIView, JobDetailAPIView, JobCreateAPIView, UpdateOffreRecruteurAPIView, CloturerOffreAPIView, ConstantsAPIView. Toutes les actions (create/update/cloturer) utilisent `get_entreprise_for_user()` + `get_membre_role()` — INVITE bloqué, UTILISATEUR/ADMIN/PROPRIETAIRE autorisés
 - `profils.py` — ProfilCandidatAPIView, ExperienceAPIView, FormationAPIView, alertes, favoris, paramètres
 - `candidatures.py` — PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView, UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView, EvaluerCandidatureAPIView, Top5CandidatsAPIView. Actions (update/delete/evaluer) utilisent `get_entreprise_for_user()` + `get_membre_role()` — INVITE bloqué
-- `recruteur.py` — DashboardRecruteurAPIView (retourne `est_premium`, `premium_expire_at`, `premium_active_since`, `premium_nb_mois`, **bloc 403 `PREMIUM_EXPIRE` si membre non-propriétaire et premium expiré**), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
-- `admin.py` — AdminPagination + toutes vues admin + exports CSV + **AdminDemandesPremiumAPIView** (GET liste toutes, PATCH activer avec nb_mois → étend premium_expire_at)
+- `recruteur.py` — DashboardRecruteurAPIView (retourne `palier_actif`, `palier_expiration`, `acces_equipe`/`acces_ia_recommandes`/`acces_ia_avancee`/`acces_coordonnees`, **bloc 403 `PREMIUM_EXPIRE` si membre non-propriétaire et aucun palier actif**), CVThequeView, questionnaires, spontanées, paramètres, **DemanderActivationPremiumAPIView**, **EnvoyerRecuPremiumAPIView**
+- `admin.py` — AdminPagination + toutes vues admin + exports CSV + **AdminDemandesPremiumAPIView** (GET liste toutes avec `palier_actif`/`abonnement_expire_at`, PATCH activer avec `nb_mois`+`palier` → crée/prolonge un `AbonnementEntreprise`)
 - `ia.py` — OffresRecommandeesAPIView, ParserCVAPIView, MetierReferentiel, SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView, AnalyseGroqRecruteurAPIView. Helper `_appel_groq()` mutualisé.
 - `bulletin.py` — GenererBulletinPDFAPIView
 - `equipe.py` — EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, **EquipeAuditLogAPIView** (`GET jobs/equipe/audit/` — 100 derniers logs, PROPRIETAIRE/ADMIN seulement). Helper `_log(user, entreprise, action, detail)` — appelé dans equipe, offres, candidatures, accounts/views.
@@ -1112,8 +1235,8 @@ Demande initiale de l'employeur : gérer sans intervention technique prix, abonn
 
 | Sous-projet | Panel admin | Modèles clés | Consommateurs publics |
 |---|---|---|---|
-| Prix/Abonnements/Avantages | `/admin-taftech/premium-config` | `PremiumPlan`, `PremiumAvantage` | `PremiumPage.jsx`, `LandingRecruteur.jsx` |
-| FAQ | `/admin-taftech/faq` | `FaqItem` (catégorie GENERAL/RECRUTEUR/PREMIUM) | `ContactezNous.jsx`, `LandingRecruteur.jsx`, `PremiumPage.jsx` |
+| ~~Prix/Abonnements/Avantages~~ | ~~`/admin-taftech/premium-config`~~ | ~~`PremiumPlan`, `PremiumAvantage`~~ | **Supprimé le 27/08/2026** — remplacé par `/admin-taftech/paliers` (`AdminPaliers.jsx`, modèle `Palier`) et `/recruteurs/abonnements` (`AbonnementsPage.jsx`), voir session dédiée |
+| FAQ | `/admin-taftech/faq` | `FaqItem` (catégorie GENERAL/RECRUTEUR/PALIERS) | `ContactezNous.jsx`, `LandingRecruteur.jsx`, `AbonnementsPage.jsx` |
 | Compétences | `/admin-taftech/competences` | `CompetenceReferentiel` | Autocomplete `ProfilCandidat/index.jsx` (suggestions, champ reste libre) |
 | Blog/Articles | `/admin-taftech/articles` | `Article`, `ArticleCategorie` | `Blog.jsx` (`/blog`), `ArticleDetail.jsx` (`/blog/:slug`) |
 | Bannières | `/admin-taftech/bannieres` | `SiteAnnonce` (bandeau global, 1 active), `BanniereAccueil` (carrousel) | `SiteAnnonceBar.jsx` (toutes pages), `BanniereCarousel.jsx` (Home) |
@@ -1269,10 +1392,11 @@ Demande initiale de l'employeur : gérer sans intervention technique prix, abonn
 - GestionOffre : sélecteur date inline pour modifier expiration (autorisé même si APPROUVEE)
 - `UpdateOffreRecruteurAPIView` : si seul `date_expiration` dans le PATCH → pas de remise EN_ATTENTE
 
-### ⭐ Système Premium (US11/12)
-- `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement)
-- `ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`
-- `premium_expire_at` + `premium_nb_mois` sur `ProfilEntreprise`
+### ⭐ Système Premium (US11/12) — ⚠️ OBSOLÈTE, voir section "SESSION 27/08/2026 (soir)" en tête de fichier
+> Ce système binaire (`est_premium`/`premium_expire_at`/`PremiumPlan`) a été **entièrement supprimé** le 27/08/2026 — remplacé par `Palier`/`AbonnementEntreprise` (voir Phase 2a/2b, sessions 22-23/08/2026, et le nettoyage du 27/08/2026). Section conservée telle quelle comme journal historique — ne pas s'y fier pour l'état actuel du code.
+- `DemandeActivationPremium` : traçabilité complète des demandes (moyen, nb_mois, est_traitee, date_traitement) — **toujours en place**, mais active désormais un `AbonnementEntreprise` (avec palier choisi par l'admin), plus `est_premium`/`premium_expire_at`.
+- ~~`ProfilEntreprise.est_premium_actif` : property qui vérifie `est_premium` + `premium_expire_at > now()`~~ — supprimé, remplacé par `jobs/paliers_utils.py::get_palier_actif()`.
+- ~~`premium_expire_at` + `premium_nb_mois` sur `ProfilEntreprise`~~ — supprimé.
 - Flow paiement recruteur : choix durée (1/3/6/12 mois) + CIB/EDAHABIA + envoi reçu email
 - Prix avec remises : 6 mois −8% (11 040 DA), 12 mois −17% (19 920 DA)
 - Page statut `/recruteurs/premium` : actif → dates activation/expiration/jours restants + section "envoyer reçu"
@@ -1319,8 +1443,8 @@ Demande initiale de l'employeur : gérer sans intervention technique prix, abonn
 | Limite taille fichiers | ✅ | CV/lettre 5 Mo, logo/photo 2 Mo |
 | CSP headers | ✅ | `SecurityHeadersMiddleware` |
 | HTTPS/HSTS en prod | ✅ | Activé si `DEBUG=False` |
-| Webhook nb_mois cap | ✅ | `max(1, min(nb_mois, 12))` — évite activation 999 mois |
-| CVTheque API-level | ✅ | 403 si non-premium — pas seulement masquage UI |
+| Webhook Chargily palier | ✅ | Flux `nb_mois` (legacy) supprimé le 27/08/2026 — seul le flux `palier_nom` (`ChargilyCheckoutPalierAPIView`) subsiste, capé à un `Palier.actif` existant |
+| CVTheque API-level | ✅ | 403 si aucun palier actif (`get_palier_actif() is None`) — pas seulement masquage UI |
 | ErrorReport throttle | ✅ | `CypressAwareThrottle` — évite flood DB |
 | Logging backend | ✅ | `print()` remplacés par `logger = logging.getLogger(__name__)` |
 | reportError frontend | ✅ | Tous les catch blocks ont `reportError()` |
@@ -1353,6 +1477,9 @@ Demande initiale de l'employeur : gérer sans intervention technique prix, abonn
 
 | Sujet | Décision | Raison |
 |-------|----------|--------|
+| Score matching dashboard candidat | Cache Django 10 min (`jobs/matching_cache.py`), jamais utilisé pour le score figé à la candidature | Dashboard scorait 2x tout le catalogue d'offres à chaque chargement (~1000 calculs) — le matching à la vraie candidature doit rester exact/live, pas de cache dessus |
+| Parser CV — dates expériences CV 2 colonnes | Consigne courte ajoutée à `PROMPT_CV_COMPLET` (pas de réécriture d'extraction PDF) | L'extraction texte était déjà correcte, le bug était dans le prompt Groq ; `AIConfig.parser_cv_prompt` en base doit être resynchronisé manuellement pour que toute future modif de la constante prenne effet |
+| Pré-chauffe scores matching | Commande cron `precalculer_scores_matching`, limitée aux candidats connectés < 60j | Évite de calculer pour des comptes inactifs, même seuil que `relance_maj_cv` |
 | Matching | Algorithme classique (difflib + synonymes) | Groq trop lent/coûteux à chaque postulation |
 | Groq | Uniquement à la demande | Analyse recruteur + suggestions carrière |
 | Snapshot | Figé à la postulation | Historique fidèle même si profil change |
@@ -1363,9 +1490,9 @@ Demande initiale de l'employeur : gérer sans intervention technique prix, abonn
 | serializers/ | Package avec __init__ façade | Imports inchangés dans les vues |
 | constants.py | Fichier centralisé | Plus de duplication entre models/matcher/cv_parser |
 | jobsService.js | Façade + 4 sous-services | Zéro changement dans les composants |
-| Premium paiement | Manuel CIB/EDAHABIA + email | Pas de Chargily Pay pour l'instant |
-| Premium durée | nb_mois × 2000 DA (remises 6M/12M) | Remises 8%/17% intégrées |
-| Premium renouvellement | Étend depuis expiry actuelle si premium actif | Pas de perte de jours restants |
+| Premium paiement | Manuel CIB/EDAHABIA + email, **ou** Chargily Pay | Activation manuelle crée/prolonge un `AbonnementEntreprise(palier=<choisi par l'admin>)` depuis le 27/08/2026 (plus de prix `PremiumPlan` calculé — le tarif catalogue est désormais uniquement celui du `Palier`) |
+| Premium durée/prix | `Palier.prix_mensuel_da`/`prix_annuel_da` (STARTER/PRO/BUSINESS/ENTERPRISE) | Le système `nb_mois × 2000 DA` (`PremiumPlan`) a été supprimé le 27/08/2026, voir session dédiée |
+| Abonnement renouvellement | Étend `AbonnementEntreprise.date_expiration` depuis l'expiry actuelle si encore active | Pas de perte de jours restants |
 | Swagger DEFAULT_SCHEMA_CLASS | Injecté dans `REST_FRAMEWORK` dict **après** sa définition (bloc try/except déplacé sous REST_FRAMEWORK) | `NameError` si injecté avant — settings.py est exécuté de haut en bas |
 | Slug migration PostgreSQL | Utiliser `AddField` (sans unique) + `RunPython` (populate) + `RunSQL ALTER TABLE ADD CONSTRAINT` | `AlterField` avec `unique=True` recrée l'index `_like` déjà créé par `AddField` → `DuplicateTable` |
 | QR code URL | `window.location.origin` (dynamique) | Pas hardcodé — s'adapte dev/prod automatiquement |
@@ -1489,6 +1616,9 @@ Crontab :
 
 # Archivage auto offres expirées — tous les jours à 00h30
 30 0 * * * cd /chemin/vers/taftech_backend && python manage.py archiver_offres_expirees >> /var/log/taftech_archivage.log 2>&1
+
+# Pré-chauffe cache scores matching dashboard candidat — toutes les 10 min (aligné sur SCORES_CACHE_TTL)
+*/10 * * * * cd /chemin/vers/taftech_backend && python manage.py precalculer_scores_matching >> /var/log/taftech_scores.log 2>&1
 ```
 
 Checklist avant déploiement :

@@ -70,15 +70,15 @@ def _score_langues(profil):
 
 
 def _score_pertinence_marche(candidat_user):
-    """Moyenne du score de matching sur toutes les offres actives — même pattern que
-    OffresRecommandeesAPIView (jobs/views/ia.py), pas de nouvelle logique de matching."""
-    from .models import OffreEmploi
-    from .matcher import calculer_score_matching
-    offres = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
-    scores = [calculer_score_matching(candidat_user, o)['total'] for o in offres]
+    """Moyenne du score de matching sur toutes les offres actives — partage le même cache
+    que OffresRecommandeesAPIView (jobs/matching_cache.py) au lieu de rescorer tout le
+    catalogue une 2e fois à chaque chargement du dashboard."""
+    from .matching_cache import scores_offres_actives_pour_candidat
+    scores = scores_offres_actives_pour_candidat(candidat_user)
     if not scores:
         return None
-    return sum(scores) / len(scores)
+    totaux = [total for _, total in scores]
+    return sum(totaux) / len(totaux)
 
 
 def calculer_score_profil(candidat_user):

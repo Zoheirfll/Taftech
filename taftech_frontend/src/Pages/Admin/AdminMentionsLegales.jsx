@@ -3,6 +3,7 @@ import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const CHAMP_VIDE = { raison_sociale: "", registre_commerce: "", nif: "", adresse: "", tva: "" };
 
@@ -35,7 +36,7 @@ const AdminMentionsLegales = () => {
       toast.success("Mentions légales mises à jour.");
     } catch (err) {
       reportError("ECHEC_UPDATE_MENTIONS_LEGALES", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     } finally {
       setSaving(false);
     }

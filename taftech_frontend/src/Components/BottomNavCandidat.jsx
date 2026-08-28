@@ -37,8 +37,8 @@ const BottomNavCandidat = () => {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex items-stretch"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md rounded-t-2xl shadow-[0_-6px_24px_-4px_rgba(15,23,42,0.12)] flex items-stretch px-1 pt-1.5"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.375rem)" }}
     >
       {ITEMS.map((item) => {
         const active = isActive(item);
@@ -47,17 +47,31 @@ const BottomNavCandidat = () => {
           <Link
             key={item.to}
             to={item.to}
-            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-              active ? "text-indigo-600" : "text-slate-500"
-            }`}
+            className="relative flex-1 flex flex-col items-center justify-center gap-1 py-1 min-h-[54px]"
           >
-            <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-            {item.badge && unreadCount > 0 && (
-              <span className="absolute top-1 right-[28%] w-4 h-4 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-            <span className={`text-xs ${active ? "font-bold" : "font-medium"}`}>{item.label}</span>
+            <span
+              className={`relative flex items-center justify-center w-10 h-8 rounded-full transition-all duration-200 ${
+                active ? "bg-indigo-50" : ""
+              }`}
+            >
+              <Icon
+                size={20}
+                strokeWidth={active ? 2.5 : 2}
+                className={`transition-colors duration-200 ${active ? "text-indigo-600" : "text-slate-400"}`}
+              />
+              {item.badge && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </span>
+            <span
+              className={`text-[10.5px] leading-none transition-colors duration-200 ${
+                active ? "font-bold text-indigo-600" : "font-medium text-slate-500"
+              }`}
+            >
+              {item.label}
+            </span>
           </Link>
         );
       })}

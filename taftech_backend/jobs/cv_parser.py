@@ -859,6 +859,7 @@ Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autr
 Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, Stage en entreprise...).
 - Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description, secteur.
 - Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
+- ⚠️ CV 2 colonnes : une date peut être sur sa propre ligne juste AVANT le titre (= date_debut de CETTE expérience) ou juste APRÈS titre/entreprise (= date_fin), ou collée en fin de ligne ("N8N Novembre 2025", "Oran Octobre 2025") — extrais-la et RETIRE-la de titre_poste/entreprise. Une seule date isolée trouvée → date_debut_raw, date_fin_raw="" (jamais recopiée identique).
 - Si info manquante : "" (chaîne vide), jamais null.
 - Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
 - Pour "secteur" : choisis le CODE le plus pertinent dans cette liste de domaines d'activité officiels.

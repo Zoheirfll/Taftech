@@ -12,7 +12,7 @@ from jobs.paliers_utils import get_palier_actif, limite_offres_actives
 User = get_user_model()
 
 
-def make_entreprise(username, est_premium=False, palier_nom=None, expire_dans_jours=None):
+def make_entreprise(username, palier_nom=None, expire_dans_jours=None):
     user = User.objects.create_user(
         username=username, email=f"{username}@test.dz", password="pwd", role="RECRUTEUR",
         consentement_cvtheque=True,
@@ -20,8 +20,7 @@ def make_entreprise(username, est_premium=False, palier_nom=None, expire_dans_jo
     entreprise = ProfilEntreprise.objects.create(
         user=user, nom_entreprise=f"Co-{username}", secteur_activite="IT",
         wilaya_siege="16 - Alger", registre_commerce=f"RC-{username}",
-        est_approuvee=True, est_premium=est_premium,
-        premium_expire_at=timezone.now() + timezone.timedelta(days=30) if est_premium else None,
+        est_approuvee=True,
     )
     if palier_nom:
         palier = Palier.objects.get(nom=palier_nom)
@@ -44,13 +43,6 @@ class GetPalierActifTest(TestCase):
     def test_abonnement_expire_retourne_none(self):
         _, entreprise = make_entreprise("gp_expire", palier_nom="STARTER", expire_dans_jours=-1)
         self.assertIsNone(get_palier_actif(entreprise))
-
-    def test_repli_legacy_est_premium_actif_vers_business(self):
-        """Un compte activé via l'ancien flux (est_premium=True, pas d'AbonnementEntreprise)
-        retombe sur BUSINESS — sans ce repli, un paiement réel via Chargily/admin laisserait
-        le compte bloqué partout."""
-        _, entreprise = make_entreprise("gp_legacy", est_premium=True)
-        self.assertEqual(get_palier_actif(entreprise).nom, "BUSINESS")
 
     def test_limite_offres_gratuit_egale_1(self):
         _, entreprise = make_entreprise("gp_limite_gratuit")

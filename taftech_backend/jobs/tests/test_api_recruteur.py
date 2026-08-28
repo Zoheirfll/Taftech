@@ -121,11 +121,23 @@ class ApiRecruteurTest(APITestCase):
 # TESTS PREMIUM_EXPIRE — Dashboard bloqué pour membres
 # =======================================================
 
-from jobs.models import MembreEquipe
+from jobs.models import MembreEquipe, Palier, AbonnementEntreprise
 from django.utils import timezone
 from datetime import timedelta
 
+
+def _business_palier():
+    palier, _ = Palier.objects.get_or_create(
+        nom='BUSINESS',
+        defaults=dict(acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, ordre=3),
+    )
+    return palier
+
+
 class DashboardPremiumExpireTests(APITestCase):
+    """Dashboard bloqué (403 PREMIUM_EXPIRE) pour les membres non-propriétaires quand
+    l'entreprise n'a plus de palier actif — système Palier/AbonnementEntreprise (le legacy
+    est_premium/premium_expire_at a été supprimé le 27/08/2026, voir CLAUDE.md)."""
 
     def setUp(self):
         self.owner = User.objects.create_user(
@@ -136,8 +148,10 @@ class DashboardPremiumExpireTests(APITestCase):
             nom_entreprise="DashCorp",
             registre_commerce="RC_DASH",
             est_approuvee=True,
-            est_premium=True,
-            premium_expire_at=timezone.now() - timedelta(days=1),
+        )
+        self.abonnement = AbonnementEntreprise.objects.create(
+            entreprise=self.entreprise, palier=_business_palier(),
+            date_expiration=timezone.now() - timedelta(days=1),
         )
         OffreEmploi.objects.create(entreprise=self.entreprise, titre="Dev")
 
@@ -149,22 +163,22 @@ class DashboardPremiumExpireTests(APITestCase):
         self.url = reverse('dashboard-recruteur')
 
     def test_membre_dashboard_premium_expire_bloque_403(self):
-        """Un membre dont le premium est expiré reçoit 403 PREMIUM_EXPIRE sur le dashboard."""
+        """Un membre dont l'abonnement est expiré reçoit 403 PREMIUM_EXPIRE sur le dashboard."""
         self.client.force_authenticate(user=self.membre)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data.get("code"), "PREMIUM_EXPIRE")
 
     def test_proprietaire_dashboard_premium_expire_autorise(self):
-        """Le propriétaire accède au dashboard même si le premium est expiré."""
+        """Le propriétaire accède au dashboard même si l'abonnement est expiré."""
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
 
     def test_membre_dashboard_premium_actif_autorise(self):
-        """Un membre accède au dashboard si le premium est encore actif."""
-        self.entreprise.premium_expire_at = timezone.now() + timedelta(days=30)
-        self.entreprise.save()
+        """Un membre accède au dashboard si l'abonnement est encore actif."""
+        self.abonnement.date_expiration = timezone.now() + timedelta(days=30)
+        self.abonnement.save()
         self.client.force_authenticate(user=self.membre)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)

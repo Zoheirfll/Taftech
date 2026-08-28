@@ -9,10 +9,9 @@ from .models import (
 
 @admin.register(ProfilEntreprise)
 class ProfilEntrepriseAdmin(admin.ModelAdmin):
-    list_display = ('nom_entreprise', 'wilaya_siege', 'registre_commerce', 'est_approuvee', 'est_premium')
+    list_display = ('nom_entreprise', 'wilaya_siege', 'registre_commerce', 'est_approuvee')
     search_fields = ('nom_entreprise', 'registre_commerce')
-    list_filter = ('wilaya_siege', 'est_approuvee', 'est_premium')
-    list_editable = ('est_premium',)
+    list_filter = ('wilaya_siege', 'est_approuvee')
 
 @admin.register(OffreEmploi)
 class OffreEmploiAdmin(admin.ModelAdmin):

@@ -62,21 +62,10 @@ class ProfilEntreprise(models.Model):
         validators=[MinValueValidator(1900)],
         verbose_name="Année de création de l'entreprise",
     )
-    est_premium = models.BooleanField(default=False, verbose_name="Compte Premium (Accès CVthèque)")
-    premium_expire_at = models.DateTimeField(null=True, blank=True, verbose_name="Premium expire le")
     mise_en_avant_accueil = models.BooleanField(
         default=False, verbose_name='Afficher dans "Ils nous font confiance" (logos clients)'
     )
 
-    @property
-    def est_premium_actif(self):
-        if not self.est_premium:
-            return False
-        if self.premium_expire_at is None:
-            return True
-        from django.utils import timezone
-        return self.premium_expire_at > timezone.now()
-    
     linkedin = models.URLField(blank=True, null=True, verbose_name="Lien LinkedIn entreprise")
     site_web = models.URLField(blank=True, null=True, verbose_name="Site web de l'entreprise")
 
@@ -732,43 +721,6 @@ ICONES_CHOICES = [
 ]
 
 
-class PremiumPlan(models.Model):
-    """Palier d'abonnement Premium (durée + prix), éditable par l'admin sans toucher au code.
-    Source de vérité unique pour le montant réellement facturé via Chargily — pas de formule
-    calculée, prix final saisi directement (voir docs/superpowers/specs/2026-08-20-...)."""
-    nb_mois = models.PositiveIntegerField(
-        unique=True, verbose_name="Durée (mois)", validators=[MinValueValidator(1)]
-    )
-    label = models.CharField(max_length=50, verbose_name="Libellé")
-    prix_da = models.PositiveIntegerField(
-        verbose_name="Prix final (DA)", validators=[MinValueValidator(1)]
-    )
-    populaire = models.BooleanField(default=False, verbose_name="Badge \"Populaire\"")
-    actif = models.BooleanField(default=True, verbose_name="Visible/activable")
-    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
-
-    class Meta:
-        ordering = ['ordre', 'nb_mois']
-
-    def __str__(self):
-        return f"{self.label} — {self.prix_da} DA"
-
-
-class PremiumAvantage(models.Model):
-    """Carte "avantage Premium" (icône + titre + description), éditable par l'admin."""
-    icone = models.CharField(max_length=40, choices=ICONES_CHOICES, verbose_name="Icône")
-    titre = models.CharField(max_length=100, verbose_name="Titre")
-    description = models.CharField(max_length=300, verbose_name="Description")
-    ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
-    actif = models.BooleanField(default=True, verbose_name="Visible")
-
-    class Meta:
-        ordering = ['ordre']
-
-    def __str__(self):
-        return self.titre
-
-
 class Palier(models.Model):
     """Palier d'abonnement recruteur (Starter/Pro/Business/Enterprise) — remplace le système
     Premium binaire (voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md).
@@ -812,10 +764,9 @@ class Palier(models.Model):
 
 
 class AbonnementEntreprise(models.Model):
-    """Abonnement actif d'une entreprise à un Palier. Remplace ProfilEntreprise.est_premium/
-    premium_expire_at comme future source de vérité — ces 2 champs restent en base pour
-    compatibilité (le gating existant les lit encore, voir Phase 2b) mais ne sont plus la
-    source de vérité une fois la Phase 2b câblée."""
+    """Abonnement actif d'une entreprise à un Palier — source de vérité unique du système de
+    facturation recruteur (le legacy ProfilEntreprise.est_premium/premium_expire_at a été
+    supprimé le 27/08/2026, voir CLAUDE.md)."""
     entreprise = models.OneToOneField(
         ProfilEntreprise, on_delete=models.CASCADE, related_name='abonnement'
     )

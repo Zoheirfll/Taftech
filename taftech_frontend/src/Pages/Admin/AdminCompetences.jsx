@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
@@ -25,7 +26,7 @@ const AdminCompetences = () => {
       setItems(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ const AdminCompetences = () => {
       fetchItems(search);
     } catch (err) {
       reportError("ECHEC_SAVE_COMPETENCE", err);
-      toast.error(err.response?.data?.label?.[0] || "Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -81,7 +82,7 @@ const AdminCompetences = () => {
         toast.success("Compétence supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_COMPETENCE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

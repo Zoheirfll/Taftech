@@ -22,7 +22,7 @@ class ProfilEntrepriseModelTest(TestCase):
         """ Vérifie que l'entreprise est créée et n'est PAS approuvée par défaut (Sécurité) """
         self.assertEqual(self.profil_entreprise.nom_entreprise, "TafTech Corp")
         self.assertFalse(self.profil_entreprise.est_approuvee)
-        self.assertFalse(self.profil_entreprise.est_premium)
+        self.assertIsNone(getattr(self.profil_entreprise, 'abonnement', None))
 
     def test_entreprise_str_representation(self):
         """ Vérifie l'affichage dans le panneau d'administration Django """

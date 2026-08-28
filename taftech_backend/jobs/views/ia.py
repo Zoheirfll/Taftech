@@ -15,6 +15,7 @@ import tempfile
 from ..models import OffreEmploi, ProfilCandidat, Candidature, MetierReferentiel
 from ..serializers import OffreEmploiSerializer, MetierReferentielSerializer
 from ..matcher import calculer_score_matching
+from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv, extract_specialite
 from .equipe import get_entreprise_for_user
 from ..throttles import PublicReadThrottle
@@ -102,18 +103,27 @@ class OffresRecommandeesAPIView(APIView):
     def get(self, request):
         if not hasattr(request.user, 'profil_candidat'):
             return Response([], status=status.HTTP_200_OK)
-        offres_actives = OffreEmploi.objects.filter(
-            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        )
+
+        scores = scores_offres_actives_pour_candidat(request.user)
+        top_ids = [oid for oid, total in scores if total >= 80]
+        top_ids.sort(key=lambda oid: dict(scores)[oid], reverse=True)
+        top_ids = top_ids[:10]
+        if not top_ids:
+            return Response([], status=status.HTTP_200_OK)
+
+        scores_map = dict(scores)
+        offres_map = {
+            o.id: o for o in OffreEmploi.objects.filter(id__in=top_ids).select_related('entreprise')
+        }
         offres_scorees = []
-        for offre in offres_actives:
-            resultat = calculer_score_matching(request.user, offre)
-            if resultat['total'] >= 80:
-                offre_data = OffreEmploiSerializer(offre).data
-                offre_data['matching_score'] = resultat['total']
-                offres_scorees.append(offre_data)
-        offres_scorees.sort(key=lambda x: x['matching_score'], reverse=True)
-        return Response(offres_scorees[:10], status=status.HTTP_200_OK)
+        for oid in top_ids:
+            offre = offres_map.get(oid)
+            if not offre:
+                continue
+            offre_data = OffreEmploiSerializer(offre).data
+            offre_data['matching_score'] = scores_map[oid]
+            offres_scorees.append(offre_data)
+        return Response(offres_scorees, status=status.HTTP_200_OK)
 
 
 class ParserCVAPIView(APIView):

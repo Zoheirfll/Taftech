@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
@@ -15,6 +16,7 @@ const CandidaturesListPage = () => {
   const [loading, setLoading] = useState(true);
   const [filtreOffre, setFiltreOffre] = useState("TOUTES");
   const [filtreStatut, setFiltreStatut] = useState("TOUS");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -37,8 +39,18 @@ const CandidaturesListPage = () => {
       (o.candidatures || []).forEach((c) => toutes.push({ ...c, offre_id: o.id, offre_titre: o.titre }));
     });
     if (filtreStatut !== "TOUS") toutes = toutes.filter((c) => c.statut === filtreStatut);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      toutes = toutes.filter((c) => {
+        const nom = c.est_rapide
+          ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}`
+          : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`;
+        const email = c.est_rapide ? c.email_rapide || "" : c.candidat?.email || "";
+        return nom.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+      });
+    }
     return toutes.sort((a, b) => (b.score_matching || 0) - (a.score_matching || 0));
-  }, [offres, filtreOffre, filtreStatut]);
+  }, [offres, filtreOffre, filtreStatut, search]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
@@ -48,6 +60,16 @@ const CandidaturesListPage = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un candidat par nom ou email..."
+            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+          />
+        </div>
         <select value={filtreOffre} onChange={(e) => setFiltreOffre(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
           <option value="TOUTES">Toutes les offres</option>
           {offres.map((o) => <option key={o.id} value={String(o.id)}>{o.titre}</option>)}

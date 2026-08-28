@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import RichTextEditor from "../../Components/RichTextEditor";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const FORM_VIDE = { slug: "", titre: "", contenu_html: "" };
 
@@ -26,7 +27,7 @@ const AdminPages = () => {
       setPages(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_PAGES", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ const AdminPages = () => {
       fetchPages();
     } catch (err) {
       reportError("ECHEC_SAVE_PAGE_STATIQUE", err);
-      toast.error(err.response?.data?.slug?.[0] || "Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     } finally {
       setSaving(false);
     }
@@ -80,7 +81,7 @@ const AdminPages = () => {
         toast.success("Page supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_PAGE_STATIQUE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Mail, Phone, MapPin, Clock, ChevronDown } from "lucide-react";
 import { authService } from "../../Services/authService";
@@ -16,6 +17,11 @@ const MOTIFS = [
 ];
 
 const ContactezNous = () => {
+  const [searchParams] = useSearchParams();
+  const role = authService.getUserRole();
+  const portalRecruteur =
+    searchParams.get("portail") === "recruteur" || role === "RECRUTEUR" || authService.getEstMembreEquipe();
+
   const [form, setForm] = useState({ nom: "", email: "", entreprise: "", motif: "", objet: "", message: "" });
   const [accepte, setAccepte] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,10 +30,10 @@ const ContactezNous = () => {
 
   useEffect(() => {
     jobsService
-      .getFaq("GENERAL")
+      .getFaq(portalRecruteur ? "RECRUTEUR" : "GENERAL")
       .then(setFaqItems)
       .catch((err) => reportError("ECHEC_GET_FAQ_CONTACT", err));
-  }, []);
+  }, [portalRecruteur]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -52,15 +58,19 @@ const ContactezNous = () => {
   };
 
   const inputClass = `w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`;
+  const accentText = portalRecruteur ? tw.textTeal : tw.textPrimary;
+  const accentBanner = portalRecruteur ? tw.bannerGradientTeal : tw.bannerGradientPrimary;
+  const accentOnDark = portalRecruteur ? tw.textTeal200 : tw.textPrimaryOnDark;
+  const accentButton = portalRecruteur ? tw.bgTealSolid : tw.bgPrimarySolidHover;
 
   return (
     <div className={`${tw.surfaceSubtle} min-h-screen`}>
-      <div className={tw.bannerGradientPrimary}>
+      <div className={accentBanner}>
         <div className="max-w-5xl mx-auto px-6 py-10">
           <h1 className={`text-3xl font-extrabold ${tw.textOnDark} tracking-tight mb-1`}>
-            Contactez-<span className={tw.textPrimaryOnDark}>nous</span>
+            Contactez-<span className={accentOnDark}>nous</span>
           </h1>
-          <p className={`${tw.textPrimaryOnDark} text-base`}>
+          <p className={`${accentOnDark} text-base`}>
             Une question ? Notre équipe vous répond rapidement.
           </p>
         </div>
@@ -114,7 +124,7 @@ const ContactezNous = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-3 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}
+            className={`w-full py-3 ${accentButton} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}
           >
             {isSubmitting ? "Envoi en cours..." : "Envoyer"}
           </button>
@@ -124,14 +134,14 @@ const ContactezNous = () => {
         <div className="w-full lg:w-80 shrink-0 space-y-4">
           <div className={`${tw.cardColors} rounded-2xl p-5 space-y-3`}>
             <p className={`text-xs font-semibold uppercase tracking-wider ${tw.textMuted}`}>Coordonnées</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Mail size={15} className={`${tw.textPrimary} shrink-0`} /> taftech963@gmail.com</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Phone size={15} className={`${tw.textPrimary} shrink-0`} /> 0770 123 440</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><MapPin size={15} className={`${tw.textPrimary} shrink-0`} /> Oran, Algérie</p>
+            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Mail size={15} className={`${accentText} shrink-0`} /> taftech963@gmail.com</p>
+            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Phone size={15} className={`${accentText} shrink-0`} /> 0770 123 440</p>
+            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><MapPin size={15} className={`${accentText} shrink-0`} /> Oran, Algérie</p>
           </div>
 
           <div className={`${tw.cardColors} rounded-2xl p-5`}>
             <p className={`flex items-center gap-2 text-sm font-bold ${tw.textStrong} mb-2`}>
-              <Clock size={16} className={tw.textPrimary} /> Horaires d'ouverture
+              <Clock size={16} className={accentText} /> Horaires d'ouverture
             </p>
             <p className={`text-sm ${tw.textMuted700}`}>Dimanche - Jeudi : 08h00 - 17h00</p>
             <p className={`text-sm ${tw.textMuted700}`}>Vendredi - Samedi : Fermé</p>

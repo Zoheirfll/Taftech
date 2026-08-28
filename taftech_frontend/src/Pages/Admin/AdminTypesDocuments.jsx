@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ITEM_VIDE = { label: "", ordre: 0, actif: true };
 
@@ -24,7 +25,7 @@ const AdminTypesDocuments = () => {
       setItems(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_TYPES_DOCUMENTS_UI", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ const AdminTypesDocuments = () => {
       fetchItems();
     } catch (err) {
       reportError("ECHEC_SAVE_ADMIN_TYPE_DOCUMENT", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -74,7 +75,7 @@ const AdminTypesDocuments = () => {
         toast.success("Type supprimé.");
       } catch (err) {
         reportError("ECHEC_DELETE_ADMIN_TYPE_DOCUMENT", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

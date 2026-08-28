@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logoTafTech from "../assets/logo-taftech.png";
 import { tw } from "../theme";
 import { Mail, MapPin, Phone } from "lucide-react";
+import { jobsService } from "../Services/jobsService";
+import { reportError } from "../utils/errorReporter";
 
 const RESEAUX_SOCIAUX = [
   { name: "Facebook", href: "https://www.facebook.com/Taftechemploi" },
@@ -23,6 +25,14 @@ const CONTACTS = [
 ];
 
 const FooterRecruteur = () => {
+  const [pagesLibres, setPagesLibres] = useState([]);
+
+  useEffect(() => {
+    jobsService.getPagesLibres().then(setPagesLibres).catch((err) => {
+      reportError("ECHEC_GET_PAGES_LIBRES_FOOTER_RECRUTEUR", err);
+    });
+  }, []);
+
   return (
     <footer className={tw.footerShellTeal} style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -106,6 +116,13 @@ const FooterRecruteur = () => {
                   Blog
                 </Link>
               </li>
+              {pagesLibres.map((p) => (
+                <li key={p.slug}>
+                  <Link to={`/pages/${p.slug}`} target="_blank" rel="noopener noreferrer" className={tw.footerLinkTeal}>
+                    {p.titre}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

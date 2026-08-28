@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const FORM_VIDE = {
   titre: "",
@@ -46,7 +47,7 @@ const AdminMetiers = () => {
       setTotalCount(data.count);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_METIERS", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ const AdminMetiers = () => {
       fetchMetiers(search, page);
     } catch (err) {
       reportError("ECHEC_SAVE_METIER", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -118,7 +119,7 @@ const AdminMetiers = () => {
         toast.success("Métier supprimé.");
       } catch (err) {
         reportError("ECHEC_DELETE_METIER", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };

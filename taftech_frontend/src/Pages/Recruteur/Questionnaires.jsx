@@ -4,7 +4,9 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { Plus, Trash2, Pencil, X, GripVertical, ClipboardList, AlertTriangle } from "lucide-react";
+import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const TYPE_OPTIONS = [
   { value: "COURT", label: "Réponse courte" },
@@ -31,7 +33,6 @@ const Questionnaires = () => {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ titre: "", questions: [questionVide()] });
   const [errors, setErrors] = useState({});
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -94,21 +95,21 @@ const Questionnaires = () => {
       setShowModal(false);
     } catch (err) {
       reportError("ECHEC_SAVE_QUESTIONNAIRE", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await jobsService.deleteQuestionnaire(id);
-      setQuestionnaires(questionnaires.filter((q) => q.id !== id));
-      toast.success("Questionnaire supprimé.");
-    } catch (err) {
-      reportError("ECHEC_DELETE_QUESTIONNAIRE", err);
-      toast.error("Erreur lors de la suppression.");
-    } finally {
-      setConfirmDeleteId(null);
-    }
+  const handleDelete = (id) => {
+    confirmToast("Supprimer définitivement ce questionnaire ?", async () => {
+      try {
+        await jobsService.deleteQuestionnaire(id);
+        setQuestionnaires(questionnaires.filter((q) => q.id !== id));
+        toast.success("Questionnaire supprimé.");
+      } catch (err) {
+        reportError("ECHEC_DELETE_QUESTIONNAIRE", err);
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+      }
+    });
   };
 
   const addQuestion = () =>
@@ -250,33 +251,18 @@ const Questionnaires = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleOpenEdit(q)}
+                    title="Modifier le questionnaire"
                     className={`p-2 ${tw.iconButtonHoverTeal} rounded-lg transition-colors`}
                   >
                     <Pencil size={15} />
                   </button>
-                  {confirmDeleteId === q.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(q.id)}
-                        className={`px-2.5 py-1.5 ${tw.buttonDangerSolid} text-xs font-semibold rounded-lg transition-colors`}
-                      >
-                        Confirmer
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className={`px-2.5 py-1.5 ${tw.cancelPillGray} text-xs font-medium rounded-lg transition-colors`}
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDeleteId(q.id)}
-                      className={`p-2 ${tw.deleteIconButton} rounded-lg transition-colors`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDelete(q.id)}
+                    title="Supprimer le questionnaire"
+                    className={`p-2 ${tw.deleteIconButton} rounded-lg transition-colors`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
               </div>
             );
@@ -296,6 +282,7 @@ const Questionnaires = () => {
               </h3>
               <button
                 onClick={() => setShowModal(false)}
+                title="Fermer"
                 className={`p-1.5 ${tw.modalCloseButton} rounded-lg transition-colors`}
               >
                 <X size={18} />
@@ -344,6 +331,7 @@ const Questionnaires = () => {
                       <button
                         type="button"
                         onClick={() => removeQuestion(i)}
+                        title="Retirer cette question"
                         className={`ml-auto p-1 ${tw.textMuted} hover:text-red-500 transition-colors`}
                       >
                         <X size={14} />
@@ -393,6 +381,7 @@ const Questionnaires = () => {
                               <button
                                 type="button"
                                 onClick={() => removeChoix(i, ci)}
+                                title="Retirer ce choix"
                                 className={`p-2 ${tw.textMuted} hover:text-red-500 transition-colors shrink-0`}
                               >
                                 <X size={14} />

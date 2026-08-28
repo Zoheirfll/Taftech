@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Plus, Trash2, X, Save } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const STATUT_LABELS = { CONFIRME: "Confirmé", ANNULE: "Annulé", PASSE: "Passé" };
@@ -45,7 +46,7 @@ const AdminRendezVous = () => {
       setRdvs(rv);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_RDV_DATA", err);
-      toast.error("Erreur de chargement.");
+      toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ const AdminRendezVous = () => {
       toast.success("Configuration mise à jour !");
     } catch (err) {
       reportError("ECHEC_UPDATE_ADMIN_CONFIG_RDV", err);
-      toast.error("Erreur lors de la sauvegarde.");
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
     }
   };
 
@@ -76,7 +77,7 @@ const AdminRendezVous = () => {
       fetchAll();
     } catch (err) {
       reportError("ECHEC_CREER_ADMIN_DISPONIBILITE", err);
-      toast.error("Erreur lors de l'ajout.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'ajout."));
     }
   };
 
@@ -88,7 +89,7 @@ const AdminRendezVous = () => {
         toast.success("Créneau supprimé.");
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_ADMIN_DISPONIBILITE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };
@@ -104,7 +105,7 @@ const AdminRendezVous = () => {
       fetchAll();
     } catch (err) {
       reportError("ECHEC_CREER_ADMIN_JOUR_BLOQUE", err);
-      toast.error("Erreur lors de l'ajout.");
+      toast.error(apiErrMsg(err, "Erreur lors de l'ajout."));
     }
   };
 
@@ -116,7 +117,7 @@ const AdminRendezVous = () => {
         toast.success("Jour bloqué supprimé.");
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_ADMIN_JOUR_BLOQUE", err);
-        toast.error("Erreur lors de la suppression.");
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
       }
     });
   };
@@ -128,7 +129,7 @@ const AdminRendezVous = () => {
       toast.success("Rendez-vous mis à jour.");
     } catch (err) {
       reportError("ECHEC_MODIFIER_ADMIN_RENDEZ_VOUS", err);
-      toast.error("Erreur lors de la mise à jour.");
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
     }
   };
 

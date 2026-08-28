@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import OffresListPage from "../src/Pages/Recruteur/OffresListPage";
 import { jobsService } from "../src/Services/jobsService";
 import * as reporter from "../src/utils/errorReporter";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import toast from "react-hot-toast";
 
 const mockNavigate = vi.fn();
@@ -109,13 +110,14 @@ describe("📋 UI & Logique - Composant <OffresListPage />", () => {
     render(
       <MemoryRouter>
         <OffresListPage />
+        <ConfirmModalHost />
       </MemoryRouter>,
     );
 
     await waitFor(() => screen.getAllByText("Offre Ouverte")[0]);
     const boutonsSuppr = screen.getAllByTitle("Supprimer l'offre");
     fireEvent.click(boutonsSuppr[0]);
-    fireEvent.click(screen.getAllByText("Confirmer")[0]);
+    fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => expect(jobsService.supprimerOffre).toHaveBeenCalledWith(1));
     expect(toast.success).toHaveBeenCalled();

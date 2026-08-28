@@ -65,6 +65,16 @@ export const adminService = {
     }
   },
 
+  getAdminSeoStats: async () => {
+    try {
+      const response = await api.get("jobs/admin/seo/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_SEO_STATS_API", err);
+      throw err;
+    }
+  },
+
   // Utilisateurs
   getAdminUsers: async (page = 1, search = "", role = "", ordering = "") => {
     try {
@@ -228,9 +238,9 @@ export const adminService = {
     }
   },
 
-  activerPremium: async (demandeId, nb_mois = 1) => {
+  activerPremium: async (demandeId, nb_mois = 1, palier = "BUSINESS") => {
     try {
-      const response = await api.patch(`jobs/admin/demandes-premium/${demandeId}/activer/`, { nb_mois });
+      const response = await api.patch(`jobs/admin/demandes-premium/${demandeId}/activer/`, { nb_mois, palier });
       return response.data;
     } catch (err) {
       reportError("ECHEC_ACTIVER_PREMIUM", err);
@@ -279,47 +289,6 @@ export const adminService = {
     }
   },
 
-  // Premium — plans (abonnements)
-  getAdminPremiumPlans: async () => {
-    try {
-      const response = await api.get("jobs/admin/premium/plans/");
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_ADMIN_PREMIUM_PLANS", err);
-      throw err;
-    }
-  },
-
-  createPremiumPlan: async (data) => {
-    try {
-      const response = await api.post("jobs/admin/premium/plans/", data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_CREATE_PREMIUM_PLAN", err);
-      throw err;
-    }
-  },
-
-  updatePremiumPlan: async (id, data) => {
-    try {
-      const response = await api.put(`jobs/admin/premium/plans/${id}/`, data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_UPDATE_PREMIUM_PLAN", err);
-      throw err;
-    }
-  },
-
-  deletePremiumPlan: async (id) => {
-    try {
-      const response = await api.delete(`jobs/admin/premium/plans/${id}/`);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_DELETE_PREMIUM_PLAN", err);
-      throw err;
-    }
-  },
-
   // Paliers d'abonnement recruteur (Starter/Pro/Business/Enterprise)
   getAdminPaliers: async () => {
     try {
@@ -337,47 +306,6 @@ export const adminService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_UPDATE_PALIER", err);
-      throw err;
-    }
-  },
-
-  // Premium — avantages
-  getAdminPremiumAvantages: async () => {
-    try {
-      const response = await api.get("jobs/admin/premium/avantages/");
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_ADMIN_PREMIUM_AVANTAGES", err);
-      throw err;
-    }
-  },
-
-  createPremiumAvantage: async (data) => {
-    try {
-      const response = await api.post("jobs/admin/premium/avantages/", data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_CREATE_PREMIUM_AVANTAGE", err);
-      throw err;
-    }
-  },
-
-  updatePremiumAvantage: async (id, data) => {
-    try {
-      const response = await api.put(`jobs/admin/premium/avantages/${id}/`, data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_UPDATE_PREMIUM_AVANTAGE", err);
-      throw err;
-    }
-  },
-
-  deletePremiumAvantage: async (id) => {
-    try {
-      const response = await api.delete(`jobs/admin/premium/avantages/${id}/`);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_DELETE_PREMIUM_AVANTAGE", err);
       throw err;
     }
   },

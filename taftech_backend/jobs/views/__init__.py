@@ -60,7 +60,6 @@ from .recruteur import (
     QuestionnaireDetailAPIView,
     DemanderActivationPremiumAPIView,
     EnvoyerRecuPremiumAPIView,
-    ChargilyCheckoutAPIView,
     ChargilyCheckoutPalierAPIView,
     ChargilyWebhookAPIView,
     MonAbonnementAPIView,
@@ -74,6 +73,7 @@ from .admin import (
     AdminEntreprisesListAPIView,
     AdminEntrepriseModerateAPIView,
     AdminStatsAPIView,
+    AdminSeoStatsAPIView,
     AdminUsersListAPIView,
     AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView,
@@ -105,10 +105,6 @@ from .equipe import (
     EquipeAuditLogAPIView,
 )
 from .premium_admin import (
-    PremiumPlansPublicAPIView,
-    PremiumAvantagesPublicAPIView,
-    PremiumPlansAdminAPIView,
-    PremiumAvantagesAdminAPIView,
     FaqPublicAPIView,
     FaqAdminAPIView,
     CompetencesAutocompleteAPIView,
@@ -140,6 +136,7 @@ from .banners import (
 from .pages import (
     PageStatiquePublicAPIView,
     PageStatiqueAdminAPIView,
+    PageStatiqueListePublicAPIView,
 )
 from .ai_config import AIConfigAdminAPIView
 from .candidat_dashboard import (

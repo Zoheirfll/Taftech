@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
+import { confirmToast } from "../../utils/confirmToast";
+import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
 import InfoBanner from "../../Components/InfoBanner";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
@@ -23,7 +25,6 @@ const OffresListPage = () => {
   const [filtreStatut, setFiltreStatut] = useState("toutes");
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ col: null, dir: "asc" });
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
   const [showModifierModal, setShowModifierModal] = useState(false);
@@ -78,24 +79,25 @@ const OffresListPage = () => {
       setOffreAModifier(null);
       toast.success("Offre soumise pour revalidation !", { id: toastId });
     } catch (err) {
-      toast.error("Erreur lors de la modification.", { id: toastId });
+      toast.error(apiErrMsg(err, "Erreur lors de la modification."), { id: toastId });
       reportError("ECHEC_MODIFIER_OFFRE", err);
     }
   };
 
-  const handleSupprimerOffre = async (offre) => {
-    setDeletingId(offre.id);
-    try {
-      await jobsService.supprimerOffre(offre.id);
-      setOffres(offres.filter((o) => o.id !== offre.id));
-      setConfirmDeleteId(null);
-      toast.success("Offre supprimée.");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de la suppression.");
-      reportError("ECHEC_SUPPRIMER_OFFRE", err);
-    } finally {
-      setDeletingId(null);
-    }
+  const handleSupprimerOffre = (offre) => {
+    confirmToast(`Supprimer définitivement l'offre "${offre.titre}" ?`, async () => {
+      setDeletingId(offre.id);
+      try {
+        await jobsService.supprimerOffre(offre.id);
+        setOffres(offres.filter((o) => o.id !== offre.id));
+        toast.success("Offre supprimée.");
+      } catch (err) {
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        reportError("ECHEC_SUPPRIMER_OFFRE", err);
+      } finally {
+        setDeletingId(null);
+      }
+    });
   };
 
   const toggleSort = (col) =>
@@ -339,27 +341,15 @@ const OffresListPage = () => {
               : tw.textMuted700;
 
             const canDelete = authService.peutFaire("UTILISATEUR");
-            const isConfirmingDelete = confirmDeleteId === offre.id;
             const DeleteControl = () => {
               if (!canDelete) return null;
-              if (isConfirmingDelete) {
-                return (
-                  <span className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleSupprimerOffre(offre)}
-                      disabled={deletingId === offre.id}
-                      className={`px-2 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap ${tw.buttonDangerSolid} disabled:opacity-50`}
-                    >
-                      {deletingId === offre.id ? "..." : "Confirmer"}
-                    </button>
-                    <button onClick={() => setConfirmDeleteId(null)} className={`p-1.5 rounded-lg ${tw.iconButton}`}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                );
-              }
               return (
-                <button onClick={() => setConfirmDeleteId(offre.id)} className={`p-1.5 rounded-lg ${tw.iconButton}`} title="Supprimer l'offre">
+                <button
+                  onClick={() => handleSupprimerOffre(offre)}
+                  disabled={deletingId === offre.id}
+                  className={`p-1.5 rounded-lg ${tw.iconButton} disabled:opacity-50`}
+                  title="Supprimer l'offre"
+                >
                   <Trash2 size={13} />
                 </button>
               );
@@ -493,7 +483,7 @@ const OffresListPage = () => {
                 <h3 className="text-base font-bold text-slate-900">Corriger l'offre</h3>
                 <p className="text-xs text-slate-600 mt-0.5">L'offre sera soumise à revalidation après modification.</p>
               </div>
-              <button onClick={() => setShowModifierModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors">✕</button>
+              <button onClick={() => setShowModifierModal(false)} title="Fermer" className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"><X size={16} /></button>
             </div>
             {offreAModifier.motif_rejet && (
               <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">

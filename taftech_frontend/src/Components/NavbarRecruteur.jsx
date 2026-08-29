@@ -9,7 +9,7 @@ import { tw } from "../theme";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
-  LogIn, Zap, HelpCircle, MessageCircle, Users,
+  LogIn, Zap, HelpCircle, MessageCircle, Users, Bell,
   FileText, UserCheck, Award, CalendarClock, Trophy, BarChart3, Receipt, ClipboardCheck,
 } from "lucide-react";
 
@@ -21,7 +21,10 @@ const NOM_PALIERS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTE
 const MOBILE_MENU_GROUPS = [
   {
     label: "Principal",
-    items: [{ to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" }],
+    items: [
+      { to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" },
+      { to: "/notifications", label: "Notifications", icon: Bell, minRole: "INVITE" },
+    ],
   },
   {
     label: "Offres",
@@ -37,7 +40,7 @@ const MOBILE_MENU_GROUPS = [
     items: [
       { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
       { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
-      { to: "/candidatures-spontanees", label: "Messages", icon: Inbox, minRole: "INVITE" },
+      { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
       { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
       { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
       { to: "/evaluations", label: "Évaluations", icon: ClipboardCheck, minRole: "INVITE" },

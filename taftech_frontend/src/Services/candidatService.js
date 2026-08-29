@@ -138,6 +138,16 @@ export const candidatService = {
     }
   },
 
+  markAllNotificationsAsRead: async () => {
+    try {
+      const response = await api.post("jobs/notifications/marquer-toutes-lues/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_MARK_ALL_NOTIFS_READ_API", err);
+      throw err;
+    }
+  },
+
   // Postuler
   postuler: async (offreId, candidatureData = {}) => {
     try {

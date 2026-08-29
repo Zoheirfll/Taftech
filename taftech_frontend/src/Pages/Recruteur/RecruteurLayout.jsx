@@ -24,12 +24,14 @@ import {
   Receipt,
   MessageSquare,
   ClipboardCheck,
+  Bell,
 } from "lucide-react";
 
 const RecruteurLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [messagesNonLus, setMessagesNonLus] = useState(0);
+  const [notifsNonLues, setNotifsNonLues] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef(null);
 
@@ -43,6 +45,16 @@ const RecruteurLayout = () => {
       }
     };
     fetchMessages();
+
+    const fetchNotifs = async () => {
+      try {
+        const notifs = await jobsService.getNotifications();
+        setNotifsNonLues(notifs.filter((n) => !n.lue).length);
+      } catch (error) {
+        reportError("ECHEC_CHARGEMENT_NOTIFS_LAYOUT_RECRUTEUR", error);
+      }
+    };
+    fetchNotifs();
   }, []);
 
   useEffect(() => {
@@ -68,6 +80,13 @@ const RecruteurLayout = () => {
         label: "Principal",
         items: [
           { name: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard, minRole: "INVITE" },
+          {
+            name: "Notifications",
+            path: "/notifications",
+            icon: Bell,
+            minRole: "INVITE",
+            badge: notifsNonLues > 0 ? notifsNonLues : null,
+          },
         ],
       },
       {
@@ -97,7 +116,7 @@ const RecruteurLayout = () => {
             isActive: () => location.pathname === "/cvtheque" && location.search.includes("favoris=true"),
           },
           {
-            name: "Messages",
+            name: "Candidatures spontanées",
             path: "/candidatures-spontanees",
             icon: Inbox,
             minRole: "INVITE",
@@ -125,7 +144,7 @@ const RecruteurLayout = () => {
         ],
       },
     ],
-    [messagesNonLus, location.pathname, location.search],
+    [messagesNonLus, notifsNonLues, location.pathname, location.search],
   );
 
   const visibleGroups = menuGroups
@@ -152,8 +171,21 @@ const RecruteurLayout = () => {
         </div>
         <button
           type="button"
+          onClick={() => navigate("/notifications")}
+          title="Notifications"
+          className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
+        >
+          <Bell size={16} className="text-slate-600" />
+          {notifsNonLues > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {notifsNonLues}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
           onClick={() => navigate("/candidatures-spontanees")}
-          title="Messages"
+          title="Candidatures spontanées"
           className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
         >
           <MessageSquare size={16} className="text-slate-600" />

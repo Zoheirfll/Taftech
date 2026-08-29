@@ -38,6 +38,13 @@ class MarkNotificationReadAPIView(APIView):
         except Notification.DoesNotExist:
             return Response({"error": "Message introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
+
+class MarkAllNotificationsReadAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        Notification.objects.filter(destinataire=request.user, lue=False).update(lue=True)
+        return Response({"message": "Toutes les notifications ont été marquées comme lues."}, status=status.HTTP_200_OK)
+
 class PublicStatsAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [PublicReadThrottle]

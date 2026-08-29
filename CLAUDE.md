@@ -2,7 +2,34 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 28/08/2026 — Session de test admin en direct (bannières/FAQ/pages/newsletter) : 2 bugs réels trouvés et corrigés (URL sans protocole rejetée sur bannières/annonces, upload image cassé quand combiné à un lien), audit des messages d'erreur masqués (~65 endroits sur 42 fichiers), et nouvelle fonctionnalité — liste des pages libres automatique dans les footers. Voir sections ci-dessous._
+_Dernière mise à jour : 29/08/2026 — Centre de notifications recruteur (nouvelle page `/notifications` + événements candidature spontanée/nouvelle candidature/candidat recommandé). Voir section ci-dessous._
+
+## 🆕 SESSION 29/08/2026 — Centre de notifications recruteur
+
+**Contexte** : le portail recruteur n'avait aucun système de notification transverse — seul le badge "Messages" (candidatures spontanées non lues) existait dans la sidebar. Demande utilisateur : être averti de tout événement de recrutement (candidature spontanée, nouvelle candidature sur une offre, nouveau candidat recommandé). Spec : `docs/superpowers/specs/2026-08-29-notifications-recruteur-design.md`.
+
+**Décision** : réutilisation du modèle `Notification` existant (`jobs/models.py`) — jusque-là documenté "boîte de réception du candidat" mais `destinataire` est un FK `User` générique, déjà consommé par une API `IsAuthenticated` sans filtre de rôle (`GET jobs/notifications/`, `PATCH jobs/notifications/<id>/lire/`). Pas de nouveau modèle.
+
+**Backend** :
+- `Notification.TYPES_NOTIF` : 3 nouveaux types — `CANDIDATURE_SPONTANEE`, `NOUVELLE_CANDIDATURE`, `CANDIDAT_RECOMMANDE`. `type_notif` élargi `max_length=20`→`25` (`CANDIDATURE_SPONTANEE` fait 21 caractères), migration `0092`.
+- Nouveau helper `jobs/views/equipe.py::_notifier_equipe(entreprise, type_notif, titre, message)` — crée une `Notification` par destinataire (`entreprise.user` + tous les `MembreEquipe.user`, dédupliqués via un `set`, `bulk_create`) — **toute l'équipe** reçoit sa propre notification (PROPRIETAIRE/ADMIN/UTILISATEUR/INVITE), cohérent avec l'accès déjà partagé à la CVthèque/candidatures.
+- Hooks ajoutés (aucun nouvel endroit de logique métier, juste des appels en plus) :
+  - `PostulerAPIView.post` (`jobs/views/candidatures.py`) : `NOUVELLE_CANDIDATURE` à chaque candidature ; `CANDIDAT_RECOMMANDE` en plus si `score_matching >= 80` (l'email "Top Profil" existant à ce même seuil reste inchangé, les deux coexistent).
+  - `PostulerRapideAPIView.post` : `NOUVELLE_CANDIDATURE` (jamais recommandé — score toujours 0 en rapide).
+  - `EnvoyerCandidatureSpontaneeAPIView.post` (`jobs/views/recruteur.py`) : `CANDIDATURE_SPONTANEE`.
+- Nouvel endpoint `POST jobs/notifications/marquer-toutes-lues/` (`MarkAllNotificationsReadAPIView`) — générique, réutilisable côté candidat aussi (`Notification.objects.filter(destinataire=request.user, lue=False).update(lue=True)`).
+
+**Frontend** :
+- `candidatService.js` : nouvelle méthode `markAllNotificationsAsRead()` — `getNotifications`/`markNotificationAsRead` déjà génériques, réutilisés tels quels.
+- Nouvelle page `Pages/Recruteur/NotificationsRecruteur.jsx` (route `/notifications`, sous `RecruteurLayout`) — même structure liste+détail que `BoiteReception.jsx` (candidat), icône par `type_notif` (Inbox=spontanée, UserCheck=nouvelle candidature, Award=recommandé), bouton "Tout marquer lu".
+- `RecruteurLayout.jsx` : item "Notifications" ajouté en tête du groupe "Principal" (badge = non lus), + bouton cloche dédié dans le header à côté du bouton "Candidatures spontanées" existant (remplace l'ancien bouton qui pointait par erreur vers `/candidatures-spontanees` à cet emplacement — désormais deux boutons distincts).
+- `NavbarRecruteur.jsx` : lien "Notifications" ajouté au groupe "Principal" du menu mobile (`MOBILE_MENU_GROUPS`), sans badge de compteur côté mobile (le badge vit sur la sidebar/header desktop, pattern jugé suffisant — pas de duplication de fetch supplémentaire pour un menu secondaire).
+
+**Non fait (hors périmètre explicite)** : pas de push navigateur/WebSocket temps réel (rafraîchissement au chargement de page, comme le reste du système notifications) ; pas de préférences on/off par type d'événement.
+
+**Tests** : backend 72/72 ✅ (`test_api_candidat`/`test_api_recruteur`/`test_api_gestion_recruteur`/`test_api_equipe`), `python manage.py check` propre. Frontend 420/421 — le seul échec (`RecruteurLayout.test.jsx` attendant le libellé "Messages") est **préexistant**, sans rapport avec cette session (le fichier avait déjà une modification non commitée renommant ce lien en "Candidatures spontanées" avant le début de cette session — à traiter séparément). `npx vite build` propre.
+
+---
 
 ## 🆕 SESSION 28/08/2026 — Tests admin en direct : bugs pages/bannières + liste pages libres dans footer
 

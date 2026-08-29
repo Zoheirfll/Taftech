@@ -486,8 +486,8 @@ class AlerteEmploi(models.Model):
 
 class Notification(models.Model):
     """
-    Boîte de réception du candidat : Stocke les messages automatiques du système 
-    et les convocations aux entretiens.
+    Boîte de réception : Stocke les messages automatiques du système
+    (candidat : convocations/décisions ; recruteur : nouvelles candidatures).
     """
     TYPES_NOTIF = (
         ('INFO', 'Information'),
@@ -495,10 +495,13 @@ class Notification(models.Model):
         ('RETENU', 'Candidature retenue'),
         ('REFUS', 'Candidature refusée'),
         ('ALERTE', 'Alerte Emploi'),
+        ('CANDIDATURE_SPONTANEE', 'Candidature spontanée reçue'),
+        ('NOUVELLE_CANDIDATURE', 'Nouvelle candidature'),
+        ('CANDIDAT_RECOMMANDE', 'Candidat recommandé'),
     )
 
     destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
-    type_notif = models.CharField(max_length=20, choices=TYPES_NOTIF, default='INFO')
+    type_notif = models.CharField(max_length=25, choices=TYPES_NOTIF, default='INFO')
     titre = models.CharField(max_length=200)
     message = models.TextField()
     lue = models.BooleanField(default=False, verbose_name="Message lu")

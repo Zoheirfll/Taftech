@@ -120,8 +120,20 @@ class PostulerAPIView(APIView):
             source=source_candidature,
         )
 
-        from .equipe import _log
-        _log(None, offre.entreprise, 'AUTRE', f"{request.user.first_name} {request.user.last_name} a postulé sur « {offre.titre} »")
+        from .equipe import _log, _notifier_equipe
+        nom_candidat_notif = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email
+        _log(None, offre.entreprise, 'AUTRE', f"{nom_candidat_notif} a postulé sur « {offre.titre} »")
+        _notifier_equipe(
+            offre.entreprise, 'NOUVELLE_CANDIDATURE',
+            f"Nouvelle candidature : {offre.titre}",
+            f"{nom_candidat_notif} a postulé à « {offre.titre} »."
+        )
+        if resultat_matching["total"] >= 80.0:
+            _notifier_equipe(
+                offre.entreprise, 'CANDIDAT_RECOMMANDE',
+                f"Candidat recommandé : {nom_candidat_notif}",
+                f"{nom_candidat_notif} obtient un score IA de {int(resultat_matching['total'])}% sur « {offre.titre} »."
+            )
 
         # Réponses questionnaire + détection disqualification
         reponses_raw = request.data.get('reponses', None)
@@ -216,10 +228,16 @@ class PostulerRapideAPIView(APIView):
                 details_matching={"message": "Candidature rapide, pas d'analyse IA disponible."},
                 statut='RECUE'
             )
-            from .equipe import _log
+            from .equipe import _log, _notifier_equipe
             prenom_rapide = serializer.validated_data.get('prenom_rapide', '') or ''
             nom_rapide = serializer.validated_data.get('nom_rapide', '') or ''
-            _log(None, offre.entreprise, 'AUTRE', f"{prenom_rapide} {nom_rapide} a postulé sur « {offre.titre} »")
+            nom_complet_rapide = f"{prenom_rapide} {nom_rapide}".strip() or "Un candidat"
+            _log(None, offre.entreprise, 'AUTRE', f"{nom_complet_rapide} a postulé sur « {offre.titre} »")
+            _notifier_equipe(
+                offre.entreprise, 'NOUVELLE_CANDIDATURE',
+                f"Nouvelle candidature : {offre.titre}",
+                f"{nom_complet_rapide} a postulé (candidature rapide) à « {offre.titre} »."
+            )
             return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

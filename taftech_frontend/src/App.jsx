@@ -129,6 +129,7 @@ const DashboardRecruteur     = lazy(() => import("./Pages/Recruteur/DashboardRec
 const GestionOffre           = lazy(() => import("./Pages/Recruteur/GestionOffre/index"));
 const CVTheque               = lazy(() => import("./Pages/Recruteur/CVTheque"));
 const CandidaturesSpontanees = lazy(() => import("./Pages/Recruteur/CandidaturesSpontanees"));
+const NotificationsRecruteur = lazy(() => import("./Pages/Recruteur/NotificationsRecruteur"));
 const Questionnaires         = lazy(() => import("./Pages/Recruteur/Questionnaires"));
 const ParametresRecruteur    = lazy(() => import("./Pages/Recruteur/ParametresRecruteur"));
 const ReviewCandidature      = lazy(() => import("./Pages/Recruteur/ReviewCandidature"));
@@ -312,6 +313,7 @@ function AppContent() {
               <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
               <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
               <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
+              <Route path="/notifications" element={<NotificationsRecruteur />} />
               <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
               <Route path="/parametres" element={<ParametresRecruteur />} />
               <Route path="/mon-equipe" element={<MonEquipe />} />

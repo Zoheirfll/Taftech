@@ -952,6 +952,13 @@ class EnvoyerCandidatureSpontaneeAPIView(APIView):
             if request.user.is_authenticated and request.user.role == 'CANDIDAT':
                 candidature.candidat = request.user
                 candidature.save()
+            from .equipe import _notifier_equipe
+            nom_spontane = f"{candidature.prenom} {candidature.nom}".strip() or "Un candidat"
+            _notifier_equipe(
+                entreprise, 'CANDIDATURE_SPONTANEE',
+                "Nouvelle candidature spontanée",
+                f"{nom_spontane} a envoyé une candidature spontanée."
+            )
             return Response({'message': 'Candidature spontanée envoyée !'}, status=201)
         return Response(serializer.errors, status=400)
 

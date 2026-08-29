@@ -37,6 +37,19 @@ def _log(user, entreprise, action, detail=''):
     EquipeActionLog.objects.create(entreprise=entreprise, membre=user, action=action, detail=detail)
 
 
+def _notifier_equipe(entreprise, type_notif, titre, message):
+    """Crée une Notification pour chaque membre de l'équipe (propriétaire + MembreEquipe, dédupliqué)."""
+    from ..models import Notification
+    destinataires = {entreprise.user_id}
+    destinataires.update(
+        MembreEquipe.objects.filter(entreprise=entreprise).values_list('user_id', flat=True)
+    )
+    Notification.objects.bulk_create([
+        Notification(destinataire_id=user_id, type_notif=type_notif, titre=titre, message=message)
+        for user_id in destinataires
+    ])
+
+
 def _envoyer_email_invitation(invitation, request):
     site_url = getattr(settings, 'SITE_URL', 'http://localhost:5173')
     lien = f"{site_url}/invitation/equipe/{invitation.token}"

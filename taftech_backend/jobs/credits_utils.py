@@ -7,6 +7,7 @@ l'entreprise. Deux pools consommés dans l'ordre : le quota mensuel du palier
 jamais un compteur stocké à décrémenter), puis le pool de crédits achetés
 (AbonnementEntreprise.credits_achetes_restants, jamais reset, décrémenté à l'usage)."""
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from .paliers_utils import get_palier_actif
@@ -57,9 +58,18 @@ def deverrouiller_candidat(entreprise, candidat):
         return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='MENSUEL')
 
     if disponibles['achetes_restant'] > 0:
+        from .models import AbonnementEntreprise
         abonnement = entreprise.abonnement
-        abonnement.credits_achetes_restants -= 1
-        abonnement.save(update_fields=['credits_achetes_restants'])
+        # Atomic update at database level: decrement only if > 0 (prevents race condition with
+        # concurrent calls). If another concurrent request already spent the last credit,
+        # updated_count will be 0 and we raise CreditsEpuisesError instead of creating a duplicate row.
+        updated_count = AbonnementEntreprise.objects.filter(
+            pk=abonnement.pk,
+            credits_achetes_restants__gt=0
+        ).update(credits_achetes_restants=F('credits_achetes_restants') - 1)
+        if updated_count == 0:
+            # Another concurrent request already spent the last credit(s)
+            raise CreditsEpuisesError("Aucun crédit disponible.")
         return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='ACHETE')
 
     raise CreditsEpuisesError("Aucun crédit disponible.")

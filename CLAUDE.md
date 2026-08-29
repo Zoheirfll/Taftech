@@ -20,6 +20,8 @@ _Dernière mise à jour : 29/08/2026 — Système de crédits CVthèque (remplac
 - Achat de packs : `CreditPackCheckoutAPIView` (Chargily, réutilise le webhook unique existant via un nouveau discriminant `metadata.pack_id`), `CreditPackPublicAPIView`/`CreditPackAdminAPIView` (CRUD, pattern `PaliersAdminAPIView`).
 - `DashboardRecruteurAPIView` expose `credits_mensuel_restant`/`credits_achetes_restant`.
 
+**🐛 Bug trouvé en testant en direct (capture d'écran utilisateur)** : les cartes tarifs de `AbonnementsPage.jsx` (haut de page, pas le tableau comparatif) lisaient encore `p.limite_cv_mois` (champ supprimé) → affichaient "Téléchargement CV illimité" sur tous les paliers peu importe le vrai plafond. La puce "Coordonnées candidats" ✓/✗ (sur `acces_coordonnees`) était aussi devenue trompeuse — Starter a maintenant accès aux coordonnées via crédits, ce n'est plus un booléen par palier. Corrigé : puce crédits/mois basée sur `credits_mois`, puce "Accès à la CVthèque" neutre pour tous (navigation incluse dans tout palier actif).
+
 **Frontend** :
 - `AdminCreditPacks.jsx` (nouveau panel `/admin-taftech/credit-packs`, CRUD complet, pattern `AdminFaq.jsx`).
 - `AbonnementsPage.jsx` : nouvelle section "Crédits CVthèque" (solde + achat des 3 packs).

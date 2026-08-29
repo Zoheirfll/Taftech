@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import { confirmToast } from "../../utils/confirmToast";
 import {
   Bell,
   Inbox,
@@ -12,6 +13,7 @@ import {
   Award,
   Mail,
   CheckCheck,
+  Trash2,
 } from "lucide-react";
 
 const getStyleForType = (type) => {
@@ -71,6 +73,21 @@ const NotificationsRecruteur = () => {
       toast.error(apiErrMsg(error, "Erreur lors du marquage."));
       reportError("ECHEC_MARK_ALL_READ_NOTIF_RECRUTEUR", error);
     }
+  };
+
+  const handleDelete = (notif, e) => {
+    e.stopPropagation();
+    confirmToast("Supprimer définitivement cette notification ?", async () => {
+      try {
+        await jobsService.deleteNotification(notif.id);
+        setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+        setSelectedNotif((prev) => (prev?.id === notif.id ? null : prev));
+        toast.success("Notification supprimée.");
+      } catch (error) {
+        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        reportError("ECHEC_DELETE_NOTIF_RECRUTEUR", error);
+      }
+    });
   };
 
   if (loading)
@@ -159,6 +176,14 @@ const NotificationsRecruteur = () => {
                           })}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDelete(notif, e)}
+                        title="Supprimer"
+                        className={`self-start p-1.5 rounded-lg shrink-0 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 transition-colors`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                 );
@@ -170,26 +195,36 @@ const NotificationsRecruteur = () => {
         <div className={`flex-1 ${tw.card} rounded-2xl overflow-y-auto`}>
           {selectedNotif ? (
             <div className="p-6">
-              <div className={`flex items-center gap-4 mb-6 pb-6 border-b ${tw.borderSubtle}`}>
-                {selectedStyle && (
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${selectedStyle.bg}`}>
-                    <selectedStyle.Icon size={22} className={selectedStyle.color} />
+              <div className={`flex items-start justify-between gap-4 mb-6 pb-6 border-b ${tw.borderSubtle}`}>
+                <div className="flex items-center gap-4">
+                  {selectedStyle && (
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${selectedStyle.bg}`}>
+                      <selectedStyle.Icon size={22} className={selectedStyle.color} />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className={`text-xl font-extrabold ${tw.textStrong}`}>{selectedNotif.titre}</h2>
+                    <p className={`text-xs ${tw.textMuted} mt-0.5`}>
+                      Reçu le{" "}
+                      {new Date(selectedNotif.date_creation).toLocaleDateString("fr-FR", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
-                )}
-                <div>
-                  <h2 className={`text-xl font-extrabold ${tw.textStrong}`}>{selectedNotif.titre}</h2>
-                  <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                    Reçu le{" "}
-                    {new Date(selectedNotif.date_creation).toLocaleDateString("fr-FR", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleDelete(selectedNotif, e)}
+                  title="Supprimer"
+                  className={`p-2 rounded-lg shrink-0 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 transition-colors`}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
               <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                 {selectedNotif.message}

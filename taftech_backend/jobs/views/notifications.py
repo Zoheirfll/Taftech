@@ -45,6 +45,17 @@ class MarkAllNotificationsReadAPIView(APIView):
         Notification.objects.filter(destinataire=request.user, lue=False).update(lue=True)
         return Response({"message": "Toutes les notifications ont été marquées comme lues."}, status=status.HTTP_200_OK)
 
+
+class DeleteNotificationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, notif_id):
+        try:
+            notif = Notification.objects.get(id=notif_id, destinataire=request.user)
+            notif.delete()
+            return Response({"message": "Notification supprimée."}, status=status.HTTP_200_OK)
+        except Notification.DoesNotExist:
+            return Response({"error": "Notification introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
 class PublicStatsAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [PublicReadThrottle]

@@ -148,6 +148,16 @@ export const candidatService = {
     }
   },
 
+  deleteNotification: async (notifId) => {
+    try {
+      const response = await api.delete(`jobs/notifications/${notifId}/supprimer/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_NOTIF_API", err);
+      throw err;
+    }
+  },
+
   // Postuler
   postuler: async (offreId, candidatureData = {}) => {
     try {

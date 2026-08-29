@@ -2,6 +2,7 @@ from .notifications import (
     NotificationListAPIView,
     MarkNotificationReadAPIView,
     MarkAllNotificationsReadAPIView,
+    DeleteNotificationAPIView,
     PublicStatsAPIView,
     StatsGeoAPIView,
     EntrepriseListAPIView,

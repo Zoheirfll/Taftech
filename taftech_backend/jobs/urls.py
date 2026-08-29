@@ -30,7 +30,7 @@ from .views import (
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
 
     # Notifications
-    NotificationListAPIView, MarkNotificationReadAPIView, MarkAllNotificationsReadAPIView,
+    NotificationListAPIView, MarkNotificationReadAPIView, MarkAllNotificationsReadAPIView, DeleteNotificationAPIView,
     PublicStatsAPIView, StatsGeoAPIView, EntrepriseDetailAPIView, EntrepriseListAPIView,
 
     # Admin
@@ -150,6 +150,7 @@ urlpatterns = [
     path('notifications/', NotificationListAPIView.as_view(), name='notifications'),
     path('notifications/<int:notif_id>/lire/', MarkNotificationReadAPIView.as_view(), name='notification-lire'),
     path('notifications/marquer-toutes-lues/', MarkAllNotificationsReadAPIView.as_view(), name='notifications-marquer-toutes-lues'),
+    path('notifications/<int:notif_id>/supprimer/', DeleteNotificationAPIView.as_view(), name='notification-supprimer'),
     path('stats/public/', PublicStatsAPIView.as_view(), name='stats-public'),
     path('stats/geo/', StatsGeoAPIView.as_view(), name='stats-geo'),
     path('entreprises/', EntrepriseListAPIView.as_view(), name='entreprises-list'),

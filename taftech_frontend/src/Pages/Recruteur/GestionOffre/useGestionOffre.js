@@ -290,6 +290,27 @@ export const useGestionOffre = () => {
     }
   };
 
+  const supprimerEvaluation = (candidatureId) => {
+    confirmToast("Supprimer définitivement cette évaluation ?", async () => {
+      try {
+        const response = await recruteurService.supprimerEvaluation(candidatureId);
+        const updated = response.candidature;
+        setOffre({
+          ...offre,
+          candidatures: offre.candidatures.map((c) =>
+            c.id === updated.id ? updated : c,
+          ),
+        });
+        if (selectedCandidature?.id === updated.id)
+          setSelectedCandidature(updated);
+        toast.success("Évaluation supprimée.");
+      } catch (err) {
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        reportError("ECHEC_SUPPRIMER_EVALUATION", err);
+      }
+    });
+  };
+
   const handleDownloadBulletin = async (candidatureId) => {
     const toastId = toast.loading("Génération du bulletin PDF...");
     try {
@@ -411,6 +432,7 @@ export const useGestionOffre = () => {
     handleExportExcel,
     handleSetExpiration,
     soumettreEvaluation,
+    supprimerEvaluation,
     handleDownloadBulletin,
     isPremium,
     handleAnalyseGroq,

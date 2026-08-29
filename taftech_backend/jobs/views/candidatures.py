@@ -440,6 +440,28 @@ class EvaluerCandidatureAPIView(APIView):
         serializer = CandidatureRecruteurDTO(candidature)
         return Response({"message": "Évaluation enregistrée !", "candidature": serializer.data}, status=status.HTTP_200_OK)
 
+    def delete(self, request, candidature_id):
+        try:
+            candidature = Candidature.objects.get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({"error": "Action non autorisée."}, status=status.HTTP_403_FORBIDDEN)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
+        candidature.note_technique = None
+        candidature.note_communication = None
+        candidature.note_motivation = None
+        candidature.note_experience = None
+        candidature.note_globale = None
+        candidature.commentaire_evaluation = ''
+        candidature.save()
+        nom_candidat = candidature.candidat.get_full_name() if candidature.candidat else 'Candidat rapide'
+        _log(request.user, entreprise, 'EVALUER_CANDIDATURE', f"{nom_candidat} — {candidature.offre.titre} — évaluation supprimée")
+        serializer = CandidatureRecruteurDTO(candidature)
+        return Response({"message": "Évaluation supprimée.", "candidature": serializer.data}, status=status.HTTP_200_OK)
+
 
 class Top5CandidatsAPIView(APIView):
     permission_classes = [IsAuthenticated]

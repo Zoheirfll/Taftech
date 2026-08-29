@@ -83,6 +83,7 @@ const GestionOffre = () => {
     handleCloturer,
     handleSetExpiration,
     soumettreEvaluation,
+    supprimerEvaluation,
     handleDownloadBulletin,
     handleAnalyseGroq,
     handleResumeIA,
@@ -465,6 +466,7 @@ const GestionOffre = () => {
         evalForm={evalForm}
         setEvalForm={setEvalForm}
         soumettreEvaluation={soumettreEvaluation}
+        supprimerEvaluation={supprimerEvaluation}
         showCompare={showCompare}
         setShowCompare={setShowCompare}
         compareIds={compareIds}

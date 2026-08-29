@@ -158,6 +158,7 @@ export const DetailCandidature = ({
   handleResumeIA,
   setModalEval,
   setEvalForm,
+  supprimerEvaluation,
 }) => {
   const candidatData = getCandidatData(selectedCandidature);
   const candidatUserId = selectedCandidature?.candidat?.id;
@@ -848,21 +849,31 @@ export const DetailCandidature = ({
                   "{selectedCandidature.commentaire_evaluation}"
                 </p>
               )}
-              <button
-                onClick={() => {
-                  setEvalForm({
-                    note_technique: selectedCandidature.note_technique || 0,
-                    note_communication: selectedCandidature.note_communication || 0,
-                    note_motivation: selectedCandidature.note_motivation || 0,
-                    note_experience: selectedCandidature.note_experience || 0,
-                    commentaire_evaluation: selectedCandidature.commentaire_evaluation || "",
-                  });
-                  setModalEval({ isOpen: true, candidature: selectedCandidature });
-                }}
-                className={`mt-4 flex items-center gap-1.5 px-4 py-2 ${tw.surfaceSubtle} ${tw.textMuted700} text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors mx-auto`}
-              >
-                <Star size={12} /> Modifier la note
-              </button>
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    setEvalForm({
+                      note_technique: selectedCandidature.note_technique || 0,
+                      note_communication: selectedCandidature.note_communication || 0,
+                      note_motivation: selectedCandidature.note_motivation || 0,
+                      note_experience: selectedCandidature.note_experience || 0,
+                      commentaire_evaluation: selectedCandidature.commentaire_evaluation || "",
+                    });
+                    setModalEval({ isOpen: true, candidature: selectedCandidature });
+                  }}
+                  className={`flex items-center gap-1.5 px-4 py-2 ${tw.surfaceSubtle} ${tw.textMuted700} text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors`}
+                >
+                  <Star size={12} /> Modifier la note
+                </button>
+                {authService.peutFaire("UTILISATEUR") && (
+                  <button
+                    onClick={() => supprimerEvaluation(selectedCandidature.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={12} /> Supprimer
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-center py-4">

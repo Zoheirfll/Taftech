@@ -200,6 +200,16 @@ export const recruteurService = {
     }
   },
 
+  supprimerEvaluation: async (candidatureId) => {
+    try {
+      const response = await api.delete(`/jobs/candidatures/${candidatureId}/evaluer/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_EVALUATION_API", err);
+      throw err;
+    }
+  },
+
   telechargerBulletin: async (candidatureId) => {
     try {
       const response = await api.get(

@@ -2,7 +2,16 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 29/08/2026 — Centre de notifications recruteur (nouvelle page `/notifications` + événements candidature spontanée/nouvelle candidature/candidat recommandé). Voir section ci-dessous._
+_Dernière mise à jour : 29/08/2026 — Centre de notifications recruteur (nouvelle page `/notifications` + événements candidature spontanée/nouvelle candidature/candidat recommandé), suppression individuelle de notifications (candidat + recruteur), et suppression d'évaluation d'entretien. Voir sections ci-dessous._
+
+## 🆕 SESSION 29/08/2026 (suite) — Suppression d'évaluation d'entretien
+
+**Contexte** : après avoir ajouté la suppression de notifications, audit des autres listes utilisateur sans suppression — un seul cas jugé légitime (pas un bug) : une évaluation d'entretien (notes 4 critères + commentaire, stockées directement sur `Candidature`) ne pouvait être que réécrite, jamais effacée. Décision : **effacer les champs d'évaluation, pas supprimer la candidature** — contrairement aux notifications, la candidature elle-même reste une trace de recrutement.
+
+- Backend : `EvaluerCandidatureAPIView.delete()` (`jobs/views/candidatures.py`) — remet `note_technique/communication/motivation/experience/globale` à `None` et `commentaire_evaluation` à `''`, mêmes contrôles d'accès que le `patch()` existant (`get_entreprise_for_user` + `get_membre_role` dans `_ROLES_ACTION`, INVITE bloqué), log `EquipeActionLog`.
+- Frontend : `recruteurService.supprimerEvaluation()`, hook `useGestionOffre.js::supprimerEvaluation` (confirmToast), bouton "Supprimer" (rouge, à côté de "Modifier la note") dans l'onglet Évaluation de `DetailCandidature.jsx`, visible seulement `peutFaire("UTILISATEUR")`.
+
+**Tests** : backend `test_api_gestion_recruteur` 8/8 ✅, frontend `GestionOffre.test.jsx` 11/11 ✅, `npx vite build` propre, `python manage.py check` propre.
 
 ## 🆕 SESSION 29/08/2026 — Centre de notifications recruteur
 

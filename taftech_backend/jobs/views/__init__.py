@@ -116,6 +116,9 @@ from .paliers_admin import (
     PaliersPublicAPIView,
     PaliersAdminAPIView,
 )
+from .credits import (
+    DeverrouillerCandidatAPIView,
+)
 from .facturation import (
     FacturesListAPIView,
     FacturePDFAPIView,

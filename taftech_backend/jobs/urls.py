@@ -28,6 +28,7 @@ from .views import (
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
     ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
+    DeverrouillerCandidatAPIView,
 
     # Notifications
     NotificationListAPIView, MarkNotificationReadAPIView, MarkAllNotificationsReadAPIView, DeleteNotificationAPIView,
@@ -137,6 +138,7 @@ urlpatterns = [
     path('dashboard/rapport-pdf/', RapportDashboardPDFAPIView.as_view(), name='dashboard-rapport-pdf'),
     path('cvtheque/favoris/<int:candidat_id>/', ToggleFavoriCVAPIView.as_view(), name='cvtheque-favori'),
     path('cvtheque/inviter/', InviterCandidatCVThequeAPIView.as_view(), name='cvtheque-inviter'),
+    path('cvtheque/candidats/<int:candidat_id>/debloquer/', DeverrouillerCandidatAPIView.as_view(), name='cvtheque-debloquer'),
     path('cvtheque/recherches-sauvegardees/', RecherchesSauvegardeesAPIView.as_view(), name='recherches-sauvegardees'),
     path('cvtheque/recherches-sauvegardees/<int:pk>/', RecherchesSauvegardeesAPIView.as_view(), name='recherche-sauvegardee-detail'),
     path('entreprises/<slug:slug>/candidature-spontanee/', EnvoyerCandidatureSpontaneeAPIView.as_view(), name='candidature-spontanee'),

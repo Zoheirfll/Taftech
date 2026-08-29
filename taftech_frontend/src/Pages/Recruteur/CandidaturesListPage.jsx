@@ -17,6 +17,9 @@ const CandidaturesListPage = () => {
   const [filtreOffre, setFiltreOffre] = useState("TOUTES");
   const [filtreStatut, setFiltreStatut] = useState("TOUS");
   const [search, setSearch] = useState("");
+  const [sortConfig, setSortConfig] = useState({ col: "score", dir: "desc" });
+  const toggleSort = (col) =>
+    setSortConfig((s) => ({ col, dir: s.col === col && s.dir === "asc" ? "desc" : "asc" }));
 
   useEffect(() => {
     const load = async () => {
@@ -32,9 +35,14 @@ const CandidaturesListPage = () => {
     load();
   }, []);
 
+  // Offres clôturées exclues des candidatures affichées ici : ce sont des offres archivées,
+  // leurs candidatures restent consultables directement dans la fiche de l'offre (onglet
+  // "Archivées" de la page Offres > Candidats), pas dans cette liste globale.
+  const offresOuvertes = useMemo(() => offres.filter((o) => !o.est_cloturee), [offres]);
+
   const candidatures = useMemo(() => {
     let toutes = [];
-    offres.forEach((o) => {
+    offresOuvertes.forEach((o) => {
       if (filtreOffre !== "TOUTES" && String(o.id) !== filtreOffre) return;
       (o.candidatures || []).forEach((c) => toutes.push({ ...c, offre_id: o.id, offre_titre: o.titre }));
     });
@@ -49,14 +57,31 @@ const CandidaturesListPage = () => {
         return nom.toLowerCase().includes(q) || email.toLowerCase().includes(q);
       });
     }
-    return toutes.sort((a, b) => (b.score_matching || 0) - (a.score_matching || 0));
-  }, [offres, filtreOffre, filtreStatut, search]);
+    const dir = sortConfig.dir === "asc" ? 1 : -1;
+    const nomDe = (c) => (c.est_rapide ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}` : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`).trim();
+    toutes.sort((a, b) => {
+      const map = {
+        candidat: [nomDe(a).toLowerCase(), nomDe(b).toLowerCase()],
+        offre: [(a.offre_titre || "").toLowerCase(), (b.offre_titre || "").toLowerCase()],
+        score: [a.score_matching ?? -1, b.score_matching ?? -1],
+        statut: [(STATUT_LABELS[a.statut] || a.statut || ""), (STATUT_LABELS[b.statut] || b.statut || "")],
+        date: [a.date_postulation ? new Date(a.date_postulation).getTime() : 0, b.date_postulation ? new Date(b.date_postulation).getTime() : 0],
+      };
+      const [va, vb] = map[sortConfig.col] || [0, 0];
+      if (va < vb) return -dir;
+      if (va > vb) return dir;
+      return 0;
+    });
+    return toutes;
+  }, [offresOuvertes, filtreOffre, filtreStatut, search, sortConfig]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Candidatures</h1>
-        <p className="text-sm text-slate-600 mt-1">Toutes les candidatures reçues, toutes offres confondues.</p>
+        <p className="text-sm text-slate-600 mt-1">
+          Toutes les candidatures reçues sur vos offres actives. Les candidatures d'une offre clôturée restent consultables en ouvrant cette offre depuis l'onglet « Archivées » de la page Offres.
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -72,7 +97,7 @@ const CandidaturesListPage = () => {
         </div>
         <select value={filtreOffre} onChange={(e) => setFiltreOffre(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
           <option value="TOUTES">Toutes les offres</option>
-          {offres.map((o) => <option key={o.id} value={String(o.id)}>{o.titre}</option>)}
+          {offresOuvertes.map((o) => <option key={o.id} value={String(o.id)}>{o.titre}</option>)}
         </select>
         <select value={filtreStatut} onChange={(e) => setFiltreStatut(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
           <option value="TOUS">Tous les statuts</option>
@@ -85,11 +110,26 @@ const CandidaturesListPage = () => {
           <table className="w-full text-left min-w-[700px]">
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
-                <th className="px-4 py-3">Candidat</th>
-                <th className="px-4 py-3">Offre</th>
-                <th className="px-4 py-3 text-center">Score IA</th>
-                <th className="px-4 py-3 text-center">Statut</th>
-                <th className="px-4 py-3 text-right">Date</th>
+                {[
+                  { label: "Candidat", col: "candidat", align: "left" },
+                  { label: "Offre", col: "offre", align: "left" },
+                  { label: "Score IA", col: "score", align: "center" },
+                  { label: "Statut", col: "statut", align: "center" },
+                  { label: "Date", col: "date", align: "right" },
+                ].map(({ label, col, align }) => (
+                  <th key={col} className={`px-4 py-3 ${align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left"}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col)}
+                      className={`inline-flex items-center gap-0.5 hover:text-slate-900 transition-colors ${align === "center" ? "justify-center" : align === "right" ? "justify-end" : ""}`}
+                    >
+                      {label}
+                      {sortConfig.col === col && (
+                        <span className="ml-0.5 text-teal-600">{sortConfig.dir === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </button>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

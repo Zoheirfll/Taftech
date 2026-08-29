@@ -18,7 +18,7 @@ const formatDA = (n) => (n != null ? `${n.toLocaleString("fr-FR")} DA` : "Sur de
 const CRITERES_TABLEAU = [
   { key: "limite_offres", label: "Offres d'emploi actives", format: (v) => (v != null ? v : "Illimité") },
   { key: "acces_coordonnees", label: "Coordonnées candidats", format: (v) => (v ? "✓" : "—") },
-  { key: "limite_cv_mois", label: "Téléchargement CV / mois", format: (v) => (v != null ? v : "Illimité") },
+  { key: "credits_mois", label: "Crédits CVthèque / mois", format: (v) => (v != null ? v : "Illimité") },
   { key: "acces_ia_recommandes", label: "Candidats recommandés (IA)", format: (v) => (v ? "✓" : "—") },
   { key: "acces_ia_avancee", label: "Recherche/filtres/stats avancés (IA)", format: (v) => (v ? "✓" : "—") },
   { key: "acces_equipe", label: "Gestion d'équipe multi-utilisateurs", format: (v) => (v ? "✓" : "—") },

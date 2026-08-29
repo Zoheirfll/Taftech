@@ -47,7 +47,7 @@ const AdminPaliers = () => {
       prix_mensuel_da: form.prix_mensuel_da === "" ? null : Number(form.prix_mensuel_da),
       prix_annuel_da: form.prix_annuel_da === "" ? null : Number(form.prix_annuel_da),
       limite_offres: form.limite_offres === "" ? null : Number(form.limite_offres),
-      limite_cv_mois: form.limite_cv_mois === "" ? null : Number(form.limite_cv_mois),
+      credits_mois: form.credits_mois === "" ? null : Number(form.credits_mois),
       ordre: Number(form.ordre) || 0,
     };
     try {
@@ -79,7 +79,7 @@ const AdminPaliers = () => {
                 <th className="px-5 py-3">Prix mensuel</th>
                 <th className="px-5 py-3">Prix annuel</th>
                 <th className="px-5 py-3">Limite offres</th>
-                <th className="px-5 py-3">Limite CV/mois</th>
+                <th className="px-5 py-3">Crédits CVthèque / mois</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -96,7 +96,7 @@ const AdminPaliers = () => {
                     <td className="px-5 py-3 text-sm">{p.prix_mensuel_da != null ? `${p.prix_mensuel_da.toLocaleString("fr-FR")} DA` : "Sur devis"}</td>
                     <td className="px-5 py-3 text-sm">{p.prix_annuel_da != null ? `${p.prix_annuel_da.toLocaleString("fr-FR")} DA` : "—"}</td>
                     <td className="px-5 py-3 text-sm">{p.limite_offres != null ? p.limite_offres : "Illimité"}</td>
-                    <td className="px-5 py-3 text-sm">{p.limite_cv_mois != null ? p.limite_cv_mois : "Illimité"}</td>
+                    <td className="px-5 py-3 text-sm">{p.credits_mois != null ? p.credits_mois : "Illimité"}</td>
                     <td className="px-5 py-3 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
                         {p.actif ? "Actif" : "Inactif"}
@@ -140,8 +140,8 @@ const AdminPaliers = () => {
                 <input id="limite_offres" type="number" min="1" className={inputClass} value={form.limite_offres ?? ""} onChange={(e) => setForm({ ...form, limite_offres: e.target.value })} />
               </div>
               <div>
-                <label htmlFor="limite_cv_mois" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Limite CV/mois (vide = illimité)</label>
-                <input id="limite_cv_mois" type="number" min="1" className={inputClass} value={form.limite_cv_mois ?? ""} onChange={(e) => setForm({ ...form, limite_cv_mois: e.target.value })} />
+                <label htmlFor="credits_mois" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Crédits CVthèque / mois (vide = illimité)</label>
+                <input id="credits_mois" type="number" min="1" className={inputClass} value={form.credits_mois ?? ""} onChange={(e) => setForm({ ...form, credits_mois: e.target.value })} />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="acces_coordonnees" className={`${tw.accentPrimary} w-4 h-4`} checked={!!form.acces_coordonnees} onChange={(e) => setForm({ ...form, acces_coordonnees: e.target.checked })} />

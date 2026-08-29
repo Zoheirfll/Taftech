@@ -124,3 +124,11 @@ class PalierAPITest(APITestCase):
         response = self.client.delete(reverse("admin-palier-detail", args=[self.palier_actif.id]))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Palier.objects.filter(id=self.palier_actif.id).exists())
+
+
+class PalierCreditsMoisFieldTest(TestCase):
+    def test_credits_mois_remplace_limite_cv_mois(self):
+        from jobs.models import Palier
+        palier = Palier.objects.get(nom='STARTER')
+        self.assertFalse(hasattr(palier, 'limite_cv_mois'))
+        self.assertEqual(palier.credits_mois, 10)  # valeur backfillée depuis l'ancien limite_cv_mois=10

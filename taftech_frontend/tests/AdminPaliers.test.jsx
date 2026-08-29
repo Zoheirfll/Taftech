@@ -16,8 +16,8 @@ vi.mock("../src/Services/jobsService", () => ({
 }));
 
 const mockPaliers = [
-  { id: 1, nom: "STARTER", prix_mensuel_da: 5900, prix_annuel_da: 70800, remise_annuelle_active: false, limite_offres: 5, limite_cv_mois: 10, acces_coordonnees: false, acces_ia_recommandes: false, acces_ia_avancee: false, acces_equipe: false, support_label: "Essentiel", ordre: 1, actif: true },
-  { id: 2, nom: "PRO", prix_mensuel_da: 12900, prix_annuel_da: 154800, remise_annuelle_active: false, limite_offres: 15, limite_cv_mois: null, acces_coordonnees: true, acces_ia_recommandes: true, acces_ia_avancee: false, acces_equipe: false, support_label: "Prioritaire", ordre: 2, actif: true },
+  { id: 1, nom: "STARTER", prix_mensuel_da: 5900, prix_annuel_da: 70800, remise_annuelle_active: false, limite_offres: 5, credits_mois: 10, acces_coordonnees: false, acces_ia_recommandes: false, acces_ia_avancee: false, acces_equipe: false, support_label: "Essentiel", ordre: 1, actif: true },
+  { id: 2, nom: "PRO", prix_mensuel_da: 12900, prix_annuel_da: 154800, remise_annuelle_active: false, limite_offres: 15, credits_mois: null, acces_coordonnees: true, acces_ia_recommandes: true, acces_ia_avancee: false, acces_equipe: false, support_label: "Prioritaire", ordre: 2, actif: true },
 ];
 
 describe("🏢 AdminPaliers — panel admin paliers d'abonnement", () => {

@@ -747,8 +747,8 @@ class Palier(models.Model):
         null=True, blank=True, verbose_name="Limite offres actives (vide = illimité)",
         validators=[MinValueValidator(1)],
     )
-    limite_cv_mois = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name="Limite téléchargements CV/mois (vide = illimité)",
+    credits_mois = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Crédits CVthèque/mois (vide = illimité)",
         validators=[MinValueValidator(1)],
     )
     acces_coordonnees = models.BooleanField(default=False, verbose_name="Coordonnées candidats visibles")

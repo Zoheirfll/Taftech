@@ -7,6 +7,6 @@ class PalierSerializer(serializers.ModelSerializer):
         model = Palier
         fields = [
             'id', 'nom', 'prix_mensuel_da', 'prix_annuel_da', 'remise_annuelle_active',
-            'limite_offres', 'limite_cv_mois', 'acces_coordonnees', 'acces_ia_recommandes',
+            'limite_offres', 'credits_mois', 'acces_coordonnees', 'acces_ia_recommandes',
             'acces_ia_avancee', 'acces_equipe', 'support_label', 'ordre', 'actif',
         ]

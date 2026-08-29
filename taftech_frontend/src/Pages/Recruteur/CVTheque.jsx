@@ -11,6 +11,7 @@ import { mediaUrl as getMediaUrl, candidatFichierUrl } from "../../utils/mediaUr
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import { confirmToast } from "../../utils/confirmToast";
 import {
   Search,
   SlidersHorizontal,
@@ -108,7 +109,19 @@ const CVTheque = () => {
     }
     setCurrentPage(1);
   }, [searchParams]);
-  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    jobsService.getDashboard()
+      .then((dash) => setAccesCoordonnees(!!dash.acces_coordonnees))
+      .catch((err) => reportError("ECHEC_GET_ACCES_COORDONNEES", err));
+  }, []);
+  const [creditsDisponibles, setCreditsDisponibles] = useState({ mensuel_restant: null, achetes_restant: 0 });
+  const [debloquageEnCours, setDebloquageEnCours] = useState(null);
+  // acces_coordonnees (palier Pro+) reste un flag distinct des crédits — gate uniquement le
+  // bouton "Inviter à postuler" (InviterCandidatCVThequeAPIView, hors périmètre des crédits,
+  // inchangé côté backend). Le dashboard reste la seule source de ce flag depuis que
+  // CVThequeView n'expose plus is_premium.
+  const [accesCoordonnees, setAccesCoordonnees] = useState(false);
   const [rechercheAvancee, setRechercheAvancee] = useState(true);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);
@@ -212,7 +225,7 @@ const CVTheque = () => {
       setCandidats(data.results || []);
       setTotalCandidats(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / 10));
-      if (data.is_premium !== undefined) setIsPremium(data.is_premium);
+      if (data.credits_disponibles !== undefined) setCreditsDisponibles(data.credits_disponibles);
       if (data.recherche_avancee !== undefined) setRechercheAvancee(data.recherche_avancee);
 
       // Auto-sélection du premier candidat sur desktop
@@ -282,6 +295,29 @@ const CVTheque = () => {
     setOffreId("");
     setCurrentPage(1);
   };
+  const handleDeverrouillerCandidat = (candidat) => {
+    confirmToast("Débloquer ce profil (1 crédit) ? Coordonnées et CV seront accessibles définitivement pour toute votre équipe.", async () => {
+      setDebloquageEnCours(candidat.user_id);
+      try {
+        const result = await jobsService.deverrouillerCandidat(candidat.user_id);
+        setCreditsDisponibles(result.credits_disponibles);
+        setCandidats((prev) => prev.map((c) => (c.user_id === candidat.user_id ? { ...c, est_debloque: true, email: null } : c)));
+        // Recharge la fiche pour récupérer email/téléphone/linkedin réellement débloqués.
+        chargerCandidats();
+        toast.success("Profil débloqué !");
+      } catch (err) {
+        reportError("ECHEC_DEVERROUILLER_CANDIDAT", err);
+        if (err.response?.status === 403 && err.response?.data?.code === "CREDITS_EPUISES") {
+          toast.error("Plus de crédits disponibles — achetez un pack depuis la page Abonnements.");
+        } else {
+          toast.error(apiErrMsg(err, "Erreur lors du déblocage."));
+        }
+      } finally {
+        setDebloquageEnCours(null);
+      }
+    });
+  };
+
   const handleToggleFavori = async (candidat, e) => {
     e.stopPropagation(); // Empêche le clic d'ouvrir le détail
 
@@ -463,27 +499,20 @@ const CVTheque = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* BANNIÈRE PREMIUM */}
-      {!isPremium && (
-        <div className={`mb-6 ${tw.bannerGradientTeal} rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🔒</span>
-            <div>
-              <p className={`font-bold text-sm ${tw.textOnDark}`}>Accès limité — Coordonnées masquées</p>
-              <p className={`text-xs mt-0.5 ${tw.textTeal200}`}>Passez en Premium pour accéder aux emails, téléphones et réseaux sociaux des candidats.</p>
-            </div>
-          </div>
-          <Link to="/recruteurs/premium" className={`shrink-0 px-4 py-2 text-sm font-bold rounded-xl transition-colors ${tw.linkOnTealGradient}`}>
-            Passer Premium →
+      {/* BANDEAU CRÉDITS */}
+      <div className={`mb-6 flex flex-wrap items-center gap-3 ${tw.bgTealSoft} border ${tw.borderTeal200} rounded-xl px-4 py-2.5 w-fit`}>
+        <span className={`text-sm font-bold ${tw.textTeal}`}>
+          {creditsDisponibles.mensuel_restant == null ? "Crédits illimités" : `${creditsDisponibles.mensuel_restant} crédit${creditsDisponibles.mensuel_restant === 1 ? "" : "s"} ce mois-ci`}
+        </span>
+        {creditsDisponibles.achetes_restant > 0 && (
+          <span className={`text-xs ${tw.textTeal600}`}>+ {creditsDisponibles.achetes_restant} acheté{creditsDisponibles.achetes_restant === 1 ? "" : "s"}</span>
+        )}
+        {creditsDisponibles.mensuel_restant === 0 && creditsDisponibles.achetes_restant === 0 && (
+          <Link to="/recruteurs/abonnements" className={`text-xs font-bold underline ${tw.textTeal}`}>
+            Acheter des crédits →
           </Link>
-        </div>
-      )}
-      {isPremium && (
-        <div className={`mb-6 flex items-center gap-2 ${tw.bgTealSoft} border ${tw.borderTeal200} rounded-xl px-4 py-2.5 w-fit`}>
-          <span className={`text-sm font-bold ${tw.textTeal}`}>⭐ Compte Premium actif</span>
-          <span className={`text-xs ${tw.textTeal600}`}>— Accès complet aux coordonnées</span>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* HEADER + ONGLETS fusionnés */}
       <div className={`flex items-end justify-between border-b ${tw.borderBase} mb-5`}>
@@ -520,7 +549,7 @@ const CVTheque = () => {
           Filtrez par wilaya, diplôme, spécialité ou expérience. Cliquez sur un profil pour voir le détail, télécharger le CV et lancer une analyse IA.
           Ajoutez des candidats à vos <strong>favoris ⭐</strong> pour les retrouver facilement dans l'onglet "Favoris".
           Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
-          Les coordonnées (email, téléphone) sont visibles uniquement avec un compte Premium.
+          Débloquez un profil (1 crédit) pour accéder à ses coordonnées et son CV, à vie, pour toute votre équipe.
           L'accès à la CVthèque implique votre engagement à traiter les données des candidats <strong>uniquement dans le cadre du recrutement</strong>, conformément à la loi n° 18-07.
         </InfoBanner>
       </div>
@@ -1006,10 +1035,10 @@ const CVTheque = () => {
 
                   {/* INVITER À POSTULER (Pro+, réservé à l'accès coordonnées) */}
                   <button
-                    onClick={(e) => (isPremium ? handleOuvrirInvitation(candidat, e) : e.stopPropagation())}
-                    disabled={!isPremium}
-                    title={isPremium ? "Inviter à postuler" : "Nécessite un abonnement Pro ou supérieur"}
-                    className={`absolute top-3 right-10 p-1 rounded-md transition-colors group/send ${isPremium ? tw.hoverSurfaceSubtle : "opacity-30 cursor-not-allowed"}`}
+                    onClick={(e) => (accesCoordonnees ? handleOuvrirInvitation(candidat, e) : e.stopPropagation())}
+                    disabled={!accesCoordonnees}
+                    title={accesCoordonnees ? "Inviter à postuler" : "Nécessite un abonnement Pro ou supérieur"}
+                    className={`absolute top-3 right-10 p-1 rounded-md transition-colors group/send ${accesCoordonnees ? tw.hoverSurfaceSubtle : "opacity-30 cursor-not-allowed"}`}
                   >
                     <Send size={14} className={tw.iconMuted} />
                   </button>
@@ -1050,26 +1079,6 @@ const CVTheque = () => {
         <div className="lg:col-span-7" ref={detailRef}>
           {selectedCandidat ? (
             <div className={`relative ${tw.cardColors} rounded-xl overflow-hidden`}>
-              {/* OVERLAY PREMIUM */}
-              {!isPremium && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-xl">
-                  <div className="text-center px-8 max-w-sm">
-                    <div className={`w-16 h-16 ${tw.bgTealSoft} border-2 ${tw.borderTeal200} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-                      <span className="text-3xl">🔒</span>
-                    </div>
-                    <h3 className={`text-lg font-bold mb-2 ${tw.textStrong}`}>Accès Premium requis</h3>
-                    <p className={`text-sm mb-6 leading-relaxed ${tw.bodyText}`}>
-                      Passez en compte Premium pour accéder aux profils complets, coordonnées, CV et réseaux sociaux des candidats.
-                    </p>
-                    <Link
-                      to="/recruteurs/premium"
-                      className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl transition-colors shadow-sm ${tw.bgTealSolid}`}
-                    >
-                      ⭐ Passer Premium
-                    </Link>
-                  </div>
-                </div>
-              )}
               {/* En-tête détail */}
               <div className={`p-6 border-b ${tw.borderSubtle}`}>
                 <div className="flex items-start gap-4">
@@ -1198,8 +1207,17 @@ const CVTheque = () => {
                       <ExternalLink size={13} /> LinkedIn
                     </a>
                   )}
-                  {!selectedCandidat.email && !selectedCandidat.telephone && (
-                    <p className={`text-sm italic ${tw.textMuted}`}>Coordonnées non disponibles</p>
+                  {!selectedCandidat.est_debloque && (
+                    <button
+                      onClick={() => handleDeverrouillerCandidat(selectedCandidat)}
+                      disabled={debloquageEnCours === selectedCandidat.user_id}
+                      className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgTealSolid}`}
+                    >
+                      🔓 {debloquageEnCours === selectedCandidat.user_id ? "Déblocage..." : "Débloquer ce profil (1 crédit)"}
+                    </button>
+                  )}
+                  {selectedCandidat.est_debloque && !selectedCandidat.email && !selectedCandidat.telephone && (
+                    <p className={`text-sm italic ${tw.textMuted}`}>Coordonnées non renseignées par le candidat.</p>
                   )}
                 </div>
               </div>
@@ -1347,7 +1365,7 @@ const CVTheque = () => {
               </div>
 
               {/* CV PDF */}
-              {selectedCandidat.cv_pdf && (
+              {selectedCandidat.cv_pdf && selectedCandidat.est_debloque && (
                 <div className="px-6 pb-6">
                   <a
                     href={candidatFichierUrl(selectedCandidat.user_id, "cv")}
@@ -1358,6 +1376,18 @@ const CVTheque = () => {
                     <FileText size={16} />
                     Télécharger le CV complet
                   </a>
+                </div>
+              )}
+              {selectedCandidat.cv_pdf && !selectedCandidat.est_debloque && (
+                <div className="px-6 pb-6">
+                  <button
+                    onClick={() => handleDeverrouillerCandidat(selectedCandidat)}
+                    disabled={debloquageEnCours === selectedCandidat.user_id}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${tw.buttonDark}`}
+                  >
+                    <FileText size={16} />
+                    Débloquer pour voir le CV (1 crédit)
+                  </button>
                 </div>
               )}
             </div>

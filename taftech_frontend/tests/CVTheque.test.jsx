@@ -13,6 +13,7 @@ import {
 import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import CVTheque from "../src/Pages/Recruteur/CVTheque";
 import { jobsService } from "../src/Services/jobsService";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import * as reporter from "../src/utils/errorReporter";
 import selectEvent from "react-select-event";
 
@@ -22,6 +23,7 @@ vi.mock("../src/Services/jobsService", () => ({
     getConstants: vi.fn(),
     searchCVtheque: vi.fn(),
     getDashboard: vi.fn(),
+    deverrouillerCandidat: vi.fn(),
     getNomenclature: vi.fn().mockResolvedValue({
       secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
@@ -388,5 +390,29 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
       // getDashboard est appelé pour charger les offres actives
       expect(jobsService.getDashboard).toHaveBeenCalled();
     });
+  });
+
+  it("🟢 HP-CREDITS : débloque un candidat au clic", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue({
+      results: [{ user_id: 1, email: null, telephone: null, est_debloque: false, cv_pdf: "cvs/x.pdf" }],
+      count: 1,
+      credits_disponibles: { mensuel_restant: 10, achetes_restant: 0 },
+    });
+    jobsService.deverrouillerCandidat.mockResolvedValue({
+      est_debloque: true,
+      credits_disponibles: { mensuel_restant: 9, achetes_restant: 0 },
+    });
+    render(
+      <MemoryRouter>
+        <CVTheque />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText(/Débloquer ce profil/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByText(/Débloquer ce profil/i));
+    fireEvent.click(await screen.findByText("Confirmer"));
+    await waitFor(() => expect(jobsService.deverrouillerCandidat).toHaveBeenCalledWith(1));
   });
 });

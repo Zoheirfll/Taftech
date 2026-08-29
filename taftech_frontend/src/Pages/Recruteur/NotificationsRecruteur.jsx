@@ -87,7 +87,7 @@ const NotificationsRecruteur = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h1 className={tw.pageTitleGrand}>Notifications</h1>
+          <h1 className={tw.pageTitleGrand}>Boîte de réception</h1>
           {unreadCount > 0 && (
             <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${tw.badgeDangerSolid}`}>
               {unreadCount} non lues

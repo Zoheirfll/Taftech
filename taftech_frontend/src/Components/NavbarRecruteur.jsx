@@ -9,7 +9,7 @@ import { tw } from "../theme";
 import {
   LayoutDashboard, Search, Inbox, Briefcase,
   ClipboardList, Settings, LogOut, Menu, X, User, Shield, Star,
-  LogIn, Zap, HelpCircle, MessageCircle, Users, Bell,
+  LogIn, Zap, HelpCircle, MessageCircle, Users, Mail,
   FileText, UserCheck, Award, CalendarClock, Trophy, BarChart3, Receipt, ClipboardCheck,
 } from "lucide-react";
 
@@ -23,7 +23,7 @@ const MOBILE_MENU_GROUPS = [
     label: "Principal",
     items: [
       { to: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, minRole: "INVITE" },
-      { to: "/notifications", label: "Notifications", icon: Bell, minRole: "INVITE" },
+      { to: "/notifications", label: "Boîte de réception", icon: Mail, minRole: "INVITE" },
     ],
   },
   {
@@ -78,6 +78,7 @@ const NavbarRecruteur = () => {
   const [isPremium, setIsPremium] = useState(false);
   const [premiumExpire, setPremiumExpire] = useState(null);
   const [palierNom, setPalierNom] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
 
   const isActive = (path) =>
@@ -112,6 +113,16 @@ const NavbarRecruteur = () => {
         }
       };
       load();
+
+      const loadNotifications = async () => {
+        try {
+          const notifs = await jobsService.getNotifications();
+          setUnreadCount(notifs.filter((n) => !n.lue).length);
+        } catch (err) {
+          reportError("ECHEC_NOTIFS_NAVBAR_RECRUTEUR", err);
+        }
+      };
+      loadNotifications();
     }
   }, [isLogged, role]);
 
@@ -200,6 +211,17 @@ const NavbarRecruteur = () => {
                 S'inscrire
               </Link>
             </>
+          )}
+
+          {isLogged && estRecruteurOuMembre && (
+            <Link to="/notifications" className={tw.iconButton} title="Boîte de réception">
+              <Mail size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
           )}
 
           {isLogged && estRecruteurOuMembre && (

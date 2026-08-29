@@ -81,7 +81,7 @@ const RecruteurLayout = () => {
         items: [
           { name: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard, minRole: "INVITE" },
           {
-            name: "Notifications",
+            name: "Boîte de réception",
             path: "/notifications",
             icon: Bell,
             minRole: "INVITE",
@@ -172,7 +172,7 @@ const RecruteurLayout = () => {
         <button
           type="button"
           onClick={() => navigate("/notifications")}
-          title="Notifications"
+          title="Boîte de réception"
           className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
         >
           <Bell size={16} className="text-slate-600" />

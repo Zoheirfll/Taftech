@@ -143,6 +143,8 @@ class DashboardRecruteurAPIView(APIView):
         offres = OffreEmploi.objects.prefetch_related('candidatures', 'candidatures__candidat').filter(entreprise=entreprise).order_by('-date_publication')
         palier = get_palier_actif(entreprise)
         abonnement = getattr(entreprise, 'abonnement', None)
+        from ..credits_utils import credits_disponibles
+        _credits = credits_disponibles(entreprise)
         data = {
             "entreprise": EntrepriseDashboardDetailSerializer(entreprise).data,
             "offres": OffreDashboardDTO(offres, many=True).data,
@@ -153,6 +155,8 @@ class DashboardRecruteurAPIView(APIView):
             "acces_ia_recommandes": bool(palier and palier.acces_ia_recommandes),
             "acces_ia_avancee": bool(palier and palier.acces_ia_avancee),
             "acces_coordonnees": bool(palier and palier.acces_coordonnees),
+            "credits_mensuel_restant": _credits['mensuel_restant'],
+            "credits_achetes_restant": _credits['achetes_restant'],
             "kpis": kpis,
             "periode": {"date_debut": date_debut.isoformat(), "date_fin": date_fin.isoformat()},
         }

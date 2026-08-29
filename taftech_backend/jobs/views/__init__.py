@@ -119,6 +119,8 @@ from .paliers_admin import (
 from .credits import (
     DeverrouillerCandidatAPIView,
     CreditPackCheckoutAPIView,
+    CreditPackPublicAPIView,
+    CreditPackAdminAPIView,
 )
 from .facturation import (
     FacturesListAPIView,

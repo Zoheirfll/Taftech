@@ -1,14 +1,18 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 from .equipe import get_entreprise_for_user, get_membre_role, _log
 from ..paliers_utils import get_palier_actif
 from ..credits_utils import credits_disponibles, deverrouiller_candidat, CreditsEpuisesError
-from ..throttles import WriteActionThrottle
+from ..throttles import WriteActionThrottle, PublicReadThrottle
+from ..serializers import CreditPackSerializer
 
 User = get_user_model()
+
+CACHE_CREDIT_PACKS = 'jobs_credit_packs'
 
 _ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 
@@ -89,3 +93,66 @@ class CreditPackCheckoutAPIView(APIView):
         if response.status_code not in (200, 201):
             return Response({"error": "Erreur lors de la création du paiement."}, status=502)
         return Response({"checkout_url": response.json().get("checkout_url")})
+
+
+class CreditPackPublicAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request):
+        cached = cache.get(CACHE_CREDIT_PACKS)
+        if cached is not None:
+            return Response(cached)
+        from ..models import CreditPack
+        packs = CreditPack.objects.filter(actif=True)
+        data = CreditPackSerializer(packs, many=True).data
+        cache.set(CACHE_CREDIT_PACKS, data, timeout=3600)
+        return Response(data)
+
+
+class CreditPackAdminAPIView(APIView):
+    """CRUD admin des packs de crédits CVthèque — même pattern que PaliersAdminAPIView."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        from ..models import CreditPack
+        packs = CreditPack.objects.all()
+        return Response(CreditPackSerializer(packs, many=True).data)
+
+    def post(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        serializer = CreditPackSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            cache.delete(CACHE_CREDIT_PACKS)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+    def put(self, request, pk=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        from ..models import CreditPack
+        try:
+            pack = CreditPack.objects.get(pk=pk)
+        except CreditPack.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)
+        serializer = CreditPackSerializer(pack, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            cache.delete(CACHE_CREDIT_PACKS)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        from ..models import CreditPack
+        try:
+            CreditPack.objects.get(pk=pk).delete()
+            cache.delete(CACHE_CREDIT_PACKS)
+            return Response({'message': 'Supprimé.'})
+        except CreditPack.DoesNotExist:
+            return Response({'error': 'Introuvable.'}, status=404)

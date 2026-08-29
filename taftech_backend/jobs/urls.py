@@ -28,7 +28,7 @@ from .views import (
     DemanderActivationPremiumAPIView, EnvoyerRecuPremiumAPIView,
     ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
-    DeverrouillerCandidatAPIView, CreditPackCheckoutAPIView,
+    DeverrouillerCandidatAPIView, CreditPackCheckoutAPIView, CreditPackPublicAPIView, CreditPackAdminAPIView,
 
     # Notifications
     NotificationListAPIView, MarkNotificationReadAPIView, MarkAllNotificationsReadAPIView, DeleteNotificationAPIView,
@@ -198,6 +198,9 @@ urlpatterns = [
     path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),
     path('admin/paliers/<int:pk>/', PaliersAdminAPIView.as_view(), name='admin-palier-detail'),
     path('paliers/', PaliersPublicAPIView.as_view(), name='paliers-public'),
+    path('credit-packs/', CreditPackPublicAPIView.as_view(), name='credit-packs-public'),
+    path('admin/credit-packs/', CreditPackAdminAPIView.as_view(), name='admin-credit-packs'),
+    path('admin/credit-packs/<int:pk>/', CreditPackAdminAPIView.as_view(), name='admin-credit-pack-detail'),
     path('factures/', FacturesListAPIView.as_view(), name='factures-list'),
     path('factures/<int:paiement_id>/pdf/', FacturePDFAPIView.as_view(), name='facture-pdf'),
     path('admin/mentions-legales/', MentionsLegalesAdminAPIView.as_view(), name='admin-mentions-legales'),

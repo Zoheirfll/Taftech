@@ -37,6 +37,7 @@ from .entreprise import EntrepriseDashboardDetailSerializer
 from .dashboard import OffreDashboardDTO
 from .premium import FaqItemSerializer, CompetenceReferentielSerializer
 from .paliers import PalierSerializer
+from .credits import CreditPackSerializer
 from .articles import ArticleCategorieSerializer, ArticleListSerializer, ArticleDetailSerializer
 from .banners import SiteAnnonceSerializer, BanniereAccueilSerializer
 from .pages import PageStatiqueSerializer

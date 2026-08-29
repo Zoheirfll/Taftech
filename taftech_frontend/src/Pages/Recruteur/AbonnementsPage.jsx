@@ -56,13 +56,18 @@ const AbonnementsPage = () => {
   const [messageManuel, setMessageManuel] = useState("");
   const [envoiManuelEnCours, setEnvoiManuelEnCours] = useState(false);
   const [etapeManuelle, setEtapeManuelle] = useState("choix"); // choix | confirme
+  const [creditPacks, setCreditPacks] = useState([]);
+  const [creditsMensuelRestant, setCreditsMensuelRestant] = useState(null);
+  const [creditsAchetesRestant, setCreditsAchetesRestant] = useState(0);
+  const [achatEnCours, setAchatEnCours] = useState(null);
 
   useEffect(() => {
     const load = async () => {
-      const [p, f, c] = await Promise.allSettled([
+      const [p, f, c, cp] = await Promise.allSettled([
         jobsService.getPaliers(),
         jobsService.getFaq("PALIERS"),
         jobsService.getEntreprisesMisesEnAvant(),
+        jobsService.getCreditPacks(),
       ]);
       if (p.status === "fulfilled") setPaliers(p.value);
       else reportError("ECHEC_LOAD_PALIERS", p.reason);
@@ -70,6 +75,8 @@ const AbonnementsPage = () => {
       else reportError("ECHEC_LOAD_FAQ_PALIERS", f.reason);
       if (c.status === "fulfilled") setClients(c.value);
       else reportError("ECHEC_LOAD_CLIENTS_MIS_EN_AVANT", c.reason);
+      if (cp.status === "fulfilled") setCreditPacks(cp.value);
+      else reportError("ECHEC_LOAD_CREDIT_PACKS", cp.reason);
       setLoading(false);
     };
     load();
@@ -87,6 +94,8 @@ const AbonnementsPage = () => {
         setDetailsAbonnement({
           expireLe: dash.palier_expiration,
         });
+        setCreditsMensuelRestant(dash.credits_mensuel_restant);
+        setCreditsAchetesRestant(dash.credits_achetes_restant ?? 0);
         const isPaidReturn = new URLSearchParams(window.location.search).get("paid");
         if (!dash.palier_actif && isPaidReturn && tentatives < MAX) {
           tentatives++;
@@ -154,6 +163,21 @@ const AbonnementsPage = () => {
       toast.error(apiErrMsg(err, "Erreur lors de la création du paiement."));
       setCheckoutEnCours(null);
     }
+  };
+
+  const handleAcheterPack = (pack) => {
+    confirmToast(`Acheter le pack "${pack.nom}" (${pack.credits} crédits) pour ${pack.prix_da.toLocaleString("fr-FR")} DA ?`, async () => {
+      setAchatEnCours(pack.id);
+      try {
+        const { checkout_url } = await jobsService.checkoutCreditPack(pack.id);
+        window.location.href = checkout_url;
+      } catch (err) {
+        reportError("ECHEC_CHECKOUT_CREDIT_PACK", err);
+        toast.error(apiErrMsg(err, "Erreur lors de la création du paiement."));
+      } finally {
+        setAchatEnCours(null);
+      }
+    });
   };
 
   const handleOuvrirPaiementManuel = (palierNom) => {
@@ -229,6 +253,41 @@ const AbonnementsPage = () => {
                 Réactiver le renouvellement
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {palierActif && (
+        <div className={`${tw.card} p-6`}>
+          <h2 className={`text-lg font-bold ${tw.textStrong} mb-1`}>Crédits CVthèque</h2>
+          <p className={`text-sm ${tw.textMuted} mb-4`}>
+            Chaque crédit débloque coordonnées + CV d'un candidat, à vie, pour toute votre équipe.
+          </p>
+          <div className="flex flex-wrap gap-3 mb-5">
+            <div className={`px-4 py-2 rounded-lg ${tw.bgPrimarySoft}`}>
+              <span className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>
+                {creditsMensuelRestant == null ? "Illimité" : creditsMensuelRestant} crédit{creditsMensuelRestant === 1 ? "" : "s"} ce mois-ci
+              </span>
+            </div>
+            <div className={`px-4 py-2 rounded-lg ${tw.surfaceSubtle}`}>
+              <span className={`text-sm font-semibold ${tw.textMuted700}`}>{creditsAchetesRestant} crédit{creditsAchetesRestant === 1 ? "" : "s"} acheté{creditsAchetesRestant === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {creditPacks.map((pack) => (
+              <div key={pack.id} className={`${tw.card} p-4 text-center`}>
+                <p className={`text-2xl font-extrabold ${tw.textStrong}`}>{pack.credits}</p>
+                <p className={`text-xs ${tw.textMuted} mb-3`}>crédits</p>
+                <p className={`text-sm font-semibold ${tw.textStrong} mb-3`}>{pack.prix_da.toLocaleString("fr-FR")} DA</p>
+                <button
+                  onClick={() => handleAcheterPack(pack)}
+                  disabled={achatEnCours === pack.id}
+                  className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgPrimarySolidHover} text-white`}
+                >
+                  {achatEnCours === pack.id ? "..." : "Acheter"}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
 let _paliersCache = null;
+let _creditPacksCache = null;
 const _faqCacheParCategorie = {};
 
 // ─── Offres publiques (reste ici car utilisé partout) ────────
@@ -164,6 +165,31 @@ const offresPubliquesService = {
         });
     }
     return _paliersCache;
+  },
+
+  // Packs de crédits CVthèque (achat quand le quota mensuel est épuisé).
+  getCreditPacks: async () => {
+    if (!_creditPacksCache) {
+      _creditPacksCache = api
+        .get("jobs/credit-packs/")
+        .then((response) => response.data)
+        .catch((err) => {
+          _creditPacksCache = null;
+          reportError("ECHEC_GET_CREDIT_PACKS_API", err);
+          throw err;
+        });
+    }
+    return _creditPacksCache;
+  },
+
+  checkoutCreditPack: async (packId) => {
+    try {
+      const response = await api.post("jobs/credit-packs/checkout/", { pack_id: packId });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CHECKOUT_CREDIT_PACK", err);
+      throw err;
+    }
   },
 
   // Entreprises mises en avant côté admin ("Ils nous font confiance", page Abonnements).

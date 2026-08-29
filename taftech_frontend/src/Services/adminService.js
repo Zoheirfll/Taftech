@@ -351,6 +351,47 @@ export const adminService = {
     }
   },
 
+  // Packs de crédits CVthèque (admin)
+  getAdminCreditPacks: async () => {
+    try {
+      const response = await api.get("jobs/admin/credit-packs/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_CREDIT_PACKS", err);
+      throw err;
+    }
+  },
+
+  createCreditPack: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/credit-packs/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREATE_CREDIT_PACK", err);
+      throw err;
+    }
+  },
+
+  updateCreditPack: async (id, data) => {
+    try {
+      const response = await api.put(`jobs/admin/credit-packs/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_CREDIT_PACK", err);
+      throw err;
+    }
+  },
+
+  deleteCreditPack: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/credit-packs/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DELETE_CREDIT_PACK", err);
+      throw err;
+    }
+  },
+
   // Compétences (référentiel admin)
   getAdminCompetences: async (search = "") => {
     try {

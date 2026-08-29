@@ -350,6 +350,16 @@ export const recruteurService = {
     }
   },
 
+  deverrouillerCandidat: async (candidatId) => {
+    try {
+      const response = await api.post(`jobs/cvtheque/candidats/${candidatId}/debloquer/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_DEVERROUILLER_CANDIDAT", err);
+      throw err;
+    }
+  },
+
   inviterCandidatCVTheque: async (candidatId, offreId) => {
     try {
       const response = await api.post("jobs/cvtheque/inviter/", {

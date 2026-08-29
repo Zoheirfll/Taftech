@@ -2,7 +2,29 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
-_Dernière mise à jour : 29/08/2026 — Centre de notifications recruteur (nouvelle page `/notifications` + événements candidature spontanée/nouvelle candidature/candidat recommandé), suppression individuelle de notifications (candidat + recruteur), et suppression d'évaluation d'entretien. Voir sections ci-dessous._
+_Dernière mise à jour : 29/08/2026 — Centre de notifications recruteur (nouvelle page `/notifications` + événements candidature spontanée/nouvelle candidature/candidat recommandé) avec suppression individuelle (candidat + recruteur), suppression d'évaluation d'entretien (détail candidature + liste Évaluations), masquage des candidatures d'offres clôturées dans la page Candidatures, et fix lien "Espace recruteur" (ouvrait un nouvel onglet). Voir sections ci-dessous._
+
+## 🆕 SESSION 29/08/2026 (suite 4) — Candidatures des offres clôturées masquées dans la liste globale
+
+**Contexte** : la page sidebar "Candidatures" (`CandidaturesListPage.jsx`) agrégeait `dash.offres` sans filtrer sur `est_cloturee` — les candidatures d'offres archivées depuis longtemps polluaient la liste globale au même titre que les offres actives. Décision utilisateur : les masquer de cette liste, elles restent consultables en ouvrant l'offre directement (fiche offre / onglet "Archivées" de la page Offres).
+
+- `CandidaturesListPage.jsx` : nouveau `offresOuvertes = offres.filter(o => !o.est_cloturee)`, utilisé pour construire la liste de candidatures ET peupler le `<select>` de filtre par offre (une offre clôturée n'apparaît plus non plus dans ce dropdown). Sous-titre de page mis à jour pour expliciter où retrouver les candidatures d'une offre clôturée.
+- **Candidats recommandés — vérifié, déjà correct, aucun changement nécessaire** : la page dédiée `/candidats-recommandes` (`CandidatsRecommandesAPIView`, backend) et le widget compact du dashboard (`DashboardRecruteur.jsx::candidatsRecommandesTous`) excluaient déjà les offres `est_cloturee=True` depuis la session du 25/08/2026 — confirmé en relisant le code avant de conclure qu'il n'y avait rien à faire ici.
+- **Non touché (périmètre explicitement limité)** : Recrutements et Évaluations gardent toutes les offres (y compris clôturées) — ce sont des historiques (qui a été embauché, quelles notes ont été données), pas des listes d'action où une offre clôturée devrait disparaître.
+
+**Tests** : `npx vite build` propre (pas de test dédié existant pour cette page).
+
+## 🆕 SESSION 29/08/2026 (suite 3) — Suppression de notifications + bouton évaluation dans la liste
+
+**Contexte** : suite directe des 2 fonctionnalités précédentes (centre de notifications, suppression d'évaluation) — ajustements demandés après tests en direct par l'utilisateur.
+
+**Suppression de notifications (candidat + recruteur)** : `DeleteNotificationAPIView` (`DELETE jobs/notifications/<id>/supprimer/`, `jobs/views/notifications.py`) — scopé `destinataire=request.user`, réutilisable des deux côtés. Bouton corbeille (`confirmToast`) sur chaque ligne de la liste ET dans le panneau détail, dans `BoiteReception.jsx` (candidat) et `NotificationsRecruteur.jsx` (recruteur). `candidatService.deleteNotification()`.
+
+**Bouton "Supprimer" une évaluation, aussi visible directement dans la liste** : la 1ʳᵉ version (session précédente) ne mettait le bouton que dans l'onglet "Évaluation" du détail d'une candidature (`DetailCandidature.jsx`) — retrouvé par l'utilisateur comme absent de la page sidebar "Évaluations" (`EvaluationsPage.jsx`), qui liste pourtant toutes les candidatures évaluées. Ajouté : colonne "Actions" en bout de tableau, corbeille par ligne (`handleSupprimerEvaluation`, `confirmToast`, `jobsService.supprimerEvaluation`), réservé `peutFaire("UTILISATEUR")` — met à jour l'état local (`offres`) directement sans recharger toute la liste.
+
+**Fix lien "Espace recruteur" ouvrait un nouvel onglet** : `Navbar.jsx` (desktop + menu mobile) avait `target="_blank" rel="noopener noreferrer"` sur le lien `/recruteurs` — jugé non voulu par l'utilisateur ("je veux qu'il me laisse sur la même page"), retiré des deux occurrences.
+
+**Tests** : `npx vite build` propre à chaque étape, `python manage.py check` propre, `BoiteReception.test.jsx` 4/4 ✅, `Navbar.test.jsx` 5/5 ✅.
 
 ## 🆕 SESSION 29/08/2026 (suite) — Suppression d'évaluation d'entretien
 

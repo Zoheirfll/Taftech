@@ -170,6 +170,7 @@ const AdminMetiers      = lazy(() => import("./Pages/Admin/AdminMetiers"));
 const AdminPaliers      = lazy(() => import("./Pages/Admin/AdminPaliers"));
 const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
+const AdminCreditPacks  = lazy(() => import("./Pages/Admin/AdminCreditPacks"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
@@ -359,6 +360,7 @@ function AppContent() {
               <Route path="/admin-taftech/paliers" element={<AdminPaliers />} />
               <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
+              <Route path="/admin-taftech/credit-packs" element={<AdminCreditPacks />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />

@@ -23,6 +23,7 @@ import {
   CalendarClock,
   FolderLock,
   TrendingUp,
+  Coins,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
@@ -71,6 +72,7 @@ const NAV_GROUPS = [
       { to: "/admin-taftech/erreurs-systeme", icon: AlertTriangle, label: "Erreurs système" },
       { to: "/admin-taftech/comptes-admins", icon: UserCog, label: "Comptes admins" },
       { to: "/admin-taftech/paliers", icon: Layers, label: "Config. Paliers" },
+      { to: "/admin-taftech/credit-packs", icon: Coins, label: "Packs de crédits" },
       { to: "/admin-taftech/mentions-legales", icon: Receipt, label: "Mentions légales" },
       { to: "/admin-taftech/faq", icon: HelpCircle, label: "FAQ" },
       { to: "/admin-taftech/rendez-vous", icon: CalendarClock, label: "Rendez-vous" },

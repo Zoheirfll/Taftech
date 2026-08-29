@@ -357,15 +357,11 @@ const AbonnementsPage = () => {
                 </li>
                 <li className="flex items-center gap-2 text-xs text-slate-700">
                   <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
-                  {p.acces_coordonnees ? "Accès complet à la CVthèque" : "Accès basique à la CVthèque"}
+                  Accès à la CVthèque
                 </li>
                 <li className="flex items-center gap-2 text-xs text-slate-700">
                   <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
-                  {p.limite_cv_mois != null ? `Téléchargement CV limité (${p.limite_cv_mois}/mois)` : "Téléchargement CV illimité"}
-                </li>
-                <li className="flex items-center gap-2 text-xs text-slate-700">
-                  {p.acces_coordonnees ? <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> : <X size={14} className="text-slate-300 shrink-0" />}
-                  Coordonnées candidats
+                  {p.credits_mois != null ? `${p.credits_mois} crédits CVthèque/mois` : "Crédits CVthèque illimités"}
                 </li>
                 {p.acces_ia_recommandes && (
                   <li className="flex items-center gap-2 text-xs text-slate-700">

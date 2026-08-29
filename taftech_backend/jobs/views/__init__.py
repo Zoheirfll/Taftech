@@ -118,6 +118,7 @@ from .paliers_admin import (
 )
 from .credits import (
     DeverrouillerCandidatAPIView,
+    CreditPackCheckoutAPIView,
 )
 from .facturation import (
     FacturesListAPIView,

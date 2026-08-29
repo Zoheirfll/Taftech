@@ -1278,6 +1278,27 @@ class ChargilyWebhookAPIView(APIView):
         except ProfilEntreprise.DoesNotExist:
             return Response({'error': 'Entreprise introuvable.'}, status=404)
 
+        pack_id = metadata.get('pack_id')
+        if pack_id:
+            from ..models import CreditPack, PaiementCreditPack
+            try:
+                pack = CreditPack.objects.get(id=pack_id)
+            except CreditPack.DoesNotExist:
+                return Response({'error': 'Pack introuvable.'}, status=404)
+            abonnement = getattr(entreprise, 'abonnement', None)
+            if abonnement is None:
+                return Response({'error': "L'entreprise n'a pas d'abonnement actif."}, status=400)
+            abonnement.credits_achetes_restants += pack.credits
+            abonnement.save(update_fields=['credits_achetes_restants'])
+            PaiementCreditPack.objects.create(
+                entreprise=entreprise, pack_nom=pack.nom, credits=pack.credits, montant_da=pack.prix_da,
+            )
+            AuditLog.objects.create(
+                admin=None, action='AUTRE',
+                detail=f"Paiement Chargily pack crédits {pack.nom} ({pack.credits} crédits) — {entreprise.nom_entreprise}",
+            )
+            return Response({'status': 'ok'}, status=200)
+
         # Seul flux restant : page Abonnements (palier_nom dans les métadonnées). L'ancien flux
         # nb_mois (page Premium legacy) a été supprimé le 27/08/2026 (voir CLAUDE.md).
         palier_nom = metadata.get('palier_nom')

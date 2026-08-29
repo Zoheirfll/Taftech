@@ -48,3 +48,44 @@ class DeverrouillerCandidatAPIView(APIView):
 
         _log(request.user, entreprise, 'DEBLOQUER_CANDIDAT', candidat.email)
         return Response({"est_debloque": True, "credits_disponibles": credits_disponibles(entreprise)})
+
+
+import hashlib
+import hmac
+import requests as http_requests
+from django.conf import settings
+
+
+class CreditPackCheckoutAPIView(APIView):
+    """Crée une session de paiement Chargily pour un pack de crédits — même mécanisme que
+    ChargilyCheckoutPalierAPIView, discriminé côté webhook par metadata.pack_id."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
+            return Response({"error": "Seul le propriétaire peut acheter des crédits."}, status=403)
+
+        from ..models import CreditPack
+        try:
+            pack = CreditPack.objects.get(id=request.data.get('pack_id'), actif=True)
+        except (CreditPack.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Pack introuvable."}, status=404)
+
+        payload = {
+            "items": [{"price": pack.prix_da, "quantity": 1, "name": pack.nom}],
+            "success_url": f"{settings.SITE_URL}/recruteurs/abonnements?paid=1",
+            "failure_url": f"{settings.SITE_URL}/recruteurs/abonnements?paid=0",
+            "metadata": {"pack_id": str(pack.id), "entreprise_id": str(entreprise.id), "user_id": str(request.user.id)},
+        }
+        response = http_requests.post(
+            "https://pay.chargily.net/test/api/v2/checkouts",
+            json=payload,
+            headers={"Authorization": f"Bearer {settings.CHARGILY_API_KEY}"},
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            return Response({"error": "Erreur lors de la création du paiement."}, status=502)
+        return Response({"checkout_url": response.json().get("checkout_url")})

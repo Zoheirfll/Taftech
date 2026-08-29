@@ -285,6 +285,16 @@ class AlerteEmploiDetailAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request, pk):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            alerte = AlerteEmploi.objects.get(id=pk, candidat=request.user)
+        except AlerteEmploi.DoesNotExist:
+            return Response({"error": "Alerte introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        alerte.delete()
+        return Response({"message": "Alerte supprimée."}, status=status.HTTP_200_OK)
+
 
 class AlerteMarquerVueAPIView(APIView):
     """Réinitialise le compteur "nouvelles offres" d'une alerte — appelé quand le candidat

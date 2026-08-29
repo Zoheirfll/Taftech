@@ -103,18 +103,20 @@ class CVThequeGatingAPITest(APITestCase):
         self.client.force_authenticate(user=user)
         response = self.client.get(reverse("cvtheque"))
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.data["is_premium"])
         candidat_row = response.data["results"][0]
+        self.assertFalse(candidat_row["est_debloque"])
         self.assertIsNone(candidat_row.get("email"))
 
-    def test_pro_acces_et_coordonnees_visibles(self):
-        user, _ = make_entreprise("cvg_pro", palier_nom="PRO")
+    def test_pro_acces_mais_coordonnees_masquees_sans_deblocage(self):
+        user, entreprise = make_entreprise("cvg_pro", palier_nom="PRO")
         self.client.force_authenticate(user=user)
         response = self.client.get(reverse("cvtheque"))
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.data["is_premium"])
         candidat_row = response.data["results"][0]
-        self.assertEqual(candidat_row.get("email"), self.cand.email)
+        # Un palier Pro donne accès à la CVthèque mais ne débloque plus les coordonnées
+        # automatiquement — il faut dépenser un crédit (voir test_api_cvtheque_credits.py).
+        self.assertFalse(candidat_row["est_debloque"])
+        self.assertIsNone(candidat_row.get("email"))
 
 
 class GenererOffreIAGatingAPITest(APITestCase):

@@ -29,6 +29,7 @@ from ..models import (
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import WriteActionThrottle, EmailRateThrottle, InvitationCVThequeThrottle
 from ..matcher import calculer_score_matching
+from ..credits_utils import credits_disponibles
 from ..serializers import (
     EntrepriseDashboardDetailSerializer, OffreDashboardDTO,
     ProfilCandidatDTO, CandidatureSpontaneeSerializer,
@@ -756,10 +757,9 @@ class CVThequeView(APIView):
             from ..paliers_utils import get_palier_actif
             palier = get_palier_actif(entreprise_user)
             if palier is None:
-                return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
+                return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif."}, status=403)
             if not palier.acces_ia_recommandes:
-                return Response({"error": "Le classement par compatibilité IA nécessite le palier Pro ou supérieur.", "is_premium": False}, status=403)
-            is_premium = palier.acces_coordonnees
+                return Response({"error": "Le classement par compatibilité IA nécessite le palier Pro ou supérieur."}, status=403)
             # Pagination manuelle
             page_size = 10
             page = int(request.GET.get('page', 1))
@@ -769,7 +769,11 @@ class CVThequeView(APIView):
             page_items = scored[start:end]
             profils_page = [p for p, _ in page_items]
             scores_map = {p.user.id: s for p, s in page_items}
-            serializer = ProfilCandidatDTO(profils_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
+            from ..models import AccesCandidatDebloque
+            unlocked_ids = set(AccesCandidatDebloque.objects.filter(
+                entreprise=entreprise_user, candidat_id__in=[p.user_id for p in profils_page],
+            ).values_list('candidat_id', flat=True))
+            serializer = ProfilCandidatDTO(profils_page, many=True, context={'recruteur': request.user, 'unlocked_ids': unlocked_ids})
             results = serializer.data
             for item in results:
                 item['score_offre'] = scores_map.get(item['user_id'], 0)
@@ -797,7 +801,7 @@ class CVThequeView(APIView):
                 'next': None,
                 'previous': None,
                 'results': results,
-                'is_premium': is_premium,
+                'credits_disponibles': credits_disponibles(entreprise_user),
                 'recherche_avancee': _recherche_avancee_ok,
             })
 
@@ -819,13 +823,16 @@ class CVThequeView(APIView):
         from ..paliers_utils import get_palier_actif
         palier = get_palier_actif(entreprise_user)
         if palier is None:
-            return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif.", "is_premium": False}, status=403)
-        is_premium = palier.acces_coordonnees
+            return Response({"error": "Accès réservé aux recruteurs avec un abonnement actif."}, status=403)
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
-        serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'is_premium': is_premium})
+        from ..models import AccesCandidatDebloque
+        unlocked_ids = set(AccesCandidatDebloque.objects.filter(
+            entreprise=entreprise_user, candidat_id__in=[p.user_id for p in result_page],
+        ).values_list('candidat_id', flat=True))
+        serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'unlocked_ids': unlocked_ids})
         response = paginator.get_paginated_response(serializer.data)
-        response.data['is_premium'] = is_premium
+        response.data['credits_disponibles'] = credits_disponibles(entreprise_user)
         response.data['recherche_avancee'] = _recherche_avancee_ok
         return response
 

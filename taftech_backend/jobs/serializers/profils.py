@@ -34,6 +34,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     date_joined = serializers.SerializerMethodField()
     last_login = serializers.SerializerMethodField()
     user_id = serializers.SerializerMethodField()
+    est_debloque = serializers.SerializerMethodField()
     is_favori = serializers.SerializerMethodField()
     experiences_detail = ExperienceSerializer(many=True, read_only=True)
     formations_detail = FormationSerializer(many=True, read_only=True)
@@ -49,16 +50,26 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
             'wilaya', 'commune', 'adresse', 'date_joined', 'is_favori', 'last_login', 'user_id',
-            'bio', 'linkedin', 'github'
+            'est_debloque', 'bio', 'linkedin', 'github'
         )
 
-    def _is_premium(self):
+    def _peut_voir_coordonnees(self, obj):
+        """True si ce candidat précis est débloqué pour l'entreprise du contexte
+        ('unlocked_ids', calculé une fois par la vue) — ou repli sur l'ancien flag
+        'is_premium' pour les appelants hors CVthèque (ex: le candidat consultant son
+        propre profil, toujours is_premium=True)."""
+        unlocked_ids = self.context.get('unlocked_ids')
+        if unlocked_ids is not None:
+            return obj.user_id in unlocked_ids
         return self.context.get('is_premium', False)
+
+    def get_est_debloque(self, obj):
+        return self._peut_voir_coordonnees(obj)
 
     def get_first_name(self, obj): return obj.user.first_name
     def get_last_name(self, obj): return obj.user.last_name
-    def get_email(self, obj): return obj.user.email if self._is_premium() else None
-    def get_telephone(self, obj): return obj.user.telephone if self._is_premium() else None
+    def get_email(self, obj): return obj.user.email if self._peut_voir_coordonnees(obj) else None
+    def get_telephone(self, obj): return obj.user.telephone if self._peut_voir_coordonnees(obj) else None
     def get_nin(self, obj): return obj.user.nin if self.context.get('include_nin') else None
     def get_date_joined(self, obj): return obj.user.date_joined
     def get_last_login(self, obj): return obj.user.last_login
@@ -76,12 +87,12 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     def get_linkedin(self, obj):
         p = obj
         val = getattr(p, 'linkedin', None)
-        return val if self._is_premium() else None
+        return val if self._peut_voir_coordonnees(obj) else None
 
     def get_github(self, obj):
         p = obj
         val = getattr(p, 'github', None)
-        return val if self._is_premium() else None
+        return val if self._peut_voir_coordonnees(obj) else None
 
 
 class ProfilCandidatAdminSerializer(serializers.ModelSerializer):

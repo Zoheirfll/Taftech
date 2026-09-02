@@ -101,6 +101,7 @@ const RegisterCandidat = () => {
     }
     setLoading(true);
     const toastId = toast.loading("Création de votre profil...");
+    sessionStorage.setItem("taftech_new_registration", "1");
     try {
       const usernameGenere = formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
       const { confirmPassword, ...payload } = formData;
@@ -168,7 +169,9 @@ const RegisterCandidat = () => {
       await authService.verifyEmail(registeredEmail, codeSaisi);
       sessionStorage.removeItem("taftech_pending_verification");
       toast.success("Email vérifié avec succès !", { id: toastId });
-      navigate("/login");
+      const isNewRegistration = sessionStorage.getItem("taftech_new_registration") === "1";
+      sessionStorage.removeItem("taftech_new_registration");
+      navigate(isNewRegistration ? "/onboarding" : "/login");
     } catch (err) {
       toast.error(apiErrMsg(err, "Le code est incorrect."), { id: toastId });
       setOtp(["", "", "", "", "", ""]);
@@ -332,6 +335,7 @@ const RegisterCandidat = () => {
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     const toastId = toast.loading("Inscription Google...");
+                    sessionStorage.setItem("taftech_new_registration", "1");
                     try {
                       const data = await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "register");
                       toast.dismiss(toastId);
@@ -339,7 +343,9 @@ const RegisterCandidat = () => {
                         setShowConsentModal(true);
                       } else {
                         toast.success("Compte connecté !");
-                        navigate("/dashboard-candidat");
+                        const isNewRegistration = sessionStorage.getItem("taftech_new_registration") === "1";
+                        sessionStorage.removeItem("taftech_new_registration");
+                        navigate(isNewRegistration ? "/onboarding" : "/dashboard-candidat");
                         window.location.reload();
                       }
                     } catch (err) {

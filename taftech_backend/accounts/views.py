@@ -41,6 +41,7 @@ class AuthRateThrottle(ScopedRateThrottle):
                 return True
         return super().allow_request(request, view)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterCandidatDTO, EmailTokenObtainSerializer, RecruteurRegisterSerializer
 from django.contrib.auth import get_user_model
@@ -137,7 +138,31 @@ class VerifyEmailAPIView(APIView):
             user.code_verification = None
             user.code_verification_created_at = None
             user.save()
-            return Response({"message": "Email vérifié avec succès !"}, status=status.HTTP_200_OK)
+
+            # Connecte directement le candidat/recruteur — évite de lui faire ressaisir
+            # son mot de passe juste après avoir tapé son code OTP (même mécanisme de
+            # cookies que CookieTokenObtainView, voir la classe plus bas dans ce fichier).
+            refresh = RefreshToken.for_user(user)
+            response = Response({
+                "message": "Email vérifié avec succès !",
+                "role": user.role,
+                "est_membre_equipe": False,
+            }, status=status.HTTP_200_OK)
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=str(refresh.access_token),
+                httponly=True,
+                samesite='Lax',
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            )
+            response.set_cookie(
+                key='refreshToken',
+                value=str(refresh),
+                httponly=True,
+                samesite='Lax',
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+            )
+            return response
 
         except User.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)

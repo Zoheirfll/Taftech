@@ -166,6 +166,28 @@ class RegistrationAndAuthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['error'], "Le code de vérification est incorrect.")
 
+    def test_verify_email_logs_user_in_with_cookies(self):
+        """ La verification OTP doit desormais connecter directement le candidat
+        (cookies JWT emis), sans repasser par /login. """
+        user = User.objects.create_user(
+            username="nadia_otp",
+            email="nadia@taftech.dz",
+            password="Password123!",
+            role="CANDIDAT",
+            code_verification="424242",
+        )
+
+        response = self.client.post(self.verify_email_url, {
+            "email": user.email,
+            "code": "424242",
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['role'], 'CANDIDAT')
+        self.assertIn('accessToken', response.cookies)
+        self.assertIn('refreshToken', response.cookies)
+        self.assertTrue(response.cookies['accessToken']['httponly'])
+
 
 class LoginLockoutTests(APITestCase):
     """Tests pour le verrouillage de compte après X tentatives échouées."""

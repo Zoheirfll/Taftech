@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useProfilCandidat } from "./useProfilCandidat";
 import { Modals } from "./Modals";
+import OnboardingWizard from "../Onboarding/OnboardingWizard";
 import InfoBanner from "../../../Components/InfoBanner";
 import ImageCropperModal from "../../../Components/ImageCropperModal";
 import { TooltipIcon } from "../../../Components/Tooltip";
@@ -68,8 +69,6 @@ const ProfilCandidat = () => {
     setShowPrefForm,
     showLinksForm,
     setShowLinksForm,
-    showParserModal,
-    setShowParserModal,
     newExp,
     setNewExp,
     newForm,
@@ -93,14 +92,8 @@ const ProfilCandidat = () => {
     showExpTitreSuggestions,
     setShowExpTitreSuggestions,
     handleExpTitreChange,
-    parserLoading,
-    remplissageLoading,
-    parsedData,
-    setParsedData,
-    resetParser,
-    parserMode,
-    setParserMode,
     constants,
+    fetchData,
     getPhotoUrl,
     formatText,
     formatDate,
@@ -128,9 +121,8 @@ const ProfilCandidat = () => {
     handleUpdateFormation,
     handleDeleteForm,
     handleEditFormation,
-    handleParserCVUpload,
-    handleValiderParsing,
   } = hook;
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   if (loading)
     return (
@@ -233,7 +225,7 @@ const ProfilCandidat = () => {
         </div>
         <div className={`border-t ${tw.borderSubtle} pt-4 mt-4`}>
           <button
-            onClick={() => setShowParserModal(true)}
+            onClick={() => setShowOnboardingModal(true)}
             className={`w-full flex items-center gap-4 p-4 rounded-2xl ${tw.bannerGradientPrimary} ${tw.textOnDark} shadow-md hover:shadow-lg transition-shadow group`}
           >
             <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -732,8 +724,6 @@ const ProfilCandidat = () => {
         setShowExpForm={setShowExpForm}
         showFormForm={showFormForm}
         setShowFormForm={setShowFormForm}
-        showParserModal={showParserModal}
-        setShowParserModal={setShowParserModal}
         editInfo={editInfo}
         setEditInfo={setEditInfo}
         editPref={editPref}
@@ -757,13 +747,6 @@ const ProfilCandidat = () => {
         showExpTitreSuggestions={showExpTitreSuggestions}
         setShowExpTitreSuggestions={setShowExpTitreSuggestions}
         handleExpTitreChange={handleExpTitreChange}
-        parserLoading={parserLoading}
-        remplissageLoading={remplissageLoading}
-        parsedData={parsedData}
-        setParsedData={setParsedData}
-        resetParser={resetParser}
-        parserMode={parserMode}
-        setParserMode={setParserMode}
         handleUpdateGeneric={handleUpdateGeneric}
         handleUpdateCV={handleUpdateCV}
         handleUpdateLinks={handleUpdateLinks}
@@ -772,10 +755,19 @@ const ProfilCandidat = () => {
         handleUpdateExperience={handleUpdateExperience}
         handleAddFormation={handleAddFormation}
         handleUpdateFormation={handleUpdateFormation}
-        handleParserCVUpload={handleParserCVUpload}
-        handleValiderParsing={handleValiderParsing}
         getCommunesOptions={getCommunesOptions}
       />
+      {showOnboardingModal && (
+        <div className={tw.modalOverlayStrong}>
+          <OnboardingWizard
+            mode="modal"
+            onClose={() => {
+              setShowOnboardingModal(false);
+              fetchData();
+            }}
+          />
+        </div>
+      )}
       {cropperPhoto && (
         <ImageCropperModal
           file={cropperPhoto}

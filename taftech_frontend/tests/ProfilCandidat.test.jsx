@@ -28,6 +28,16 @@ vi.mock("../src/Components/ImageCropperModal", () => ({
   ),
 }));
 
+// OnboardingWizard a sa propre suite de tests dédiée (OnboardingWizard.test.jsx) —
+// ici on vérifie seulement que ProfilCandidat l'ouvre/le ferme correctement.
+vi.mock("../src/Pages/Candidat/Onboarding/OnboardingWizard", () => ({
+  default: ({ onClose }) => (
+    <div data-testid="onboarding-wizard-mock">
+      <button onClick={onClose}>Fermer (mock)</button>
+    </div>
+  ),
+}));
+
 // --- MOCKS SERVICES ---
 vi.mock("../src/Services/profilService", () => ({
   profilService: {
@@ -263,5 +273,29 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
 
     fireEvent.click(screen.getByText("Sauvegarder"));
     expect(profilService.addExperience).not.toHaveBeenCalled();
+  });
+
+  it("🟢 HP5 (Wizard) : le bouton Remplissage automatique ouvre le wizard en mode modal", async () => {
+    profilService.getProfil.mockResolvedValue(mockProfil);
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+
+    render(
+      <MemoryRouter>
+        <ProfilCandidat />
+      </MemoryRouter>,
+    );
+    await screen.findByText(/Meriem Belamri/i);
+
+    fireEvent.click(screen.getByText(/Remplissage automatique par IA/i));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-wizard-mock")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Fermer (mock)"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("onboarding-wizard-mock")).not.toBeInTheDocument();
+    });
   });
 });

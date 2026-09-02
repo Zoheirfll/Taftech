@@ -7,6 +7,7 @@ import { confirmToast } from "../../../utils/confirmToast";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { convertDateRaw } from "../../../utils/cvDates";
 
 const INITIAL_EXP = {
   titre_poste: "",
@@ -30,29 +31,6 @@ const formatText = (text) => {
   return text
     .replace(/_/g, " ")
     .replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
-};
-
-const convertDateRaw = (dateStr) => {
-  if (!dateStr) return null;
-  const lower = dateStr.toLowerCase().trim();
-  if (
-    lower.includes("présent") ||
-    lower.includes("present") ||
-    lower.includes("aujourd") ||
-    lower.includes("en cours")
-  )
-    return null;
-  const mois = {
-    janvier: "01", février: "02", fevrier: "02", mars: "03", avril: "04",
-    mai: "05", juin: "06", juillet: "07", août: "08", aout: "08",
-    septembre: "09", octobre: "10", novembre: "11", décembre: "12", decembre: "12",
-  };
-  const matchMoisAnnee = lower.match(/([a-zà-ÿ]+)\s+(\d{4})/);
-  if (matchMoisAnnee)
-    return `${matchMoisAnnee[2]}-${mois[matchMoisAnnee[1]] || "01"}-01`;
-  const matchAnnee = lower.match(/(\d{4})/);
-  if (matchAnnee) return `${matchAnnee[1]}-01-01`;
-  return null;
 };
 
 const normalizeExp = (exp) => ({
@@ -83,7 +61,6 @@ export const useProfilCandidat = () => {
   const [showInfoForm, setShowInfoForm] = useState(false);
   const [showPrefForm, setShowPrefForm] = useState(false);
   const [showLinksForm, setShowLinksForm] = useState(false);
-  const [showParserModal, setShowParserModal] = useState(false);
 
   // Forms state
   const [newExp, setNewExp] = useState(INITIAL_EXP);
@@ -98,13 +75,6 @@ export const useProfilCandidat = () => {
     linkedin: "",
     github: "",
   });
-
-  // Parser state
-  const [parserLoading, setParserLoading] = useState(false);
-  const [remplissageLoading, setRemplissageLoading] = useState(false);
-  const [parsedData, setParsedData] = useState(null);
-  const [parserMode, setParserMode] = useState("remplacer");
-  const [parserFile, setParserFile] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -488,228 +458,6 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const handleParserCVUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const ext = "." + file.name.split(".").pop().toLowerCase();
-    if (![".pdf", ".docx", ".doc"].includes(ext)) {
-      toast.error("Format non supporté.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 5 Mo).");
-      return;
-    }
-    setParserLoading(true);
-    const toastId = toast.loading("Analyse de votre CV en cours...");
-    try {
-      const result = await jobsService.parserCV(file);
-      if (result.success) {
-        setParsedData(result);
-        setParserFile(file);
-        toast.success("CV analysé !", { id: toastId });
-      } else {
-        toast.error(result.error || "Impossible d'analyser ce CV.", {
-          id: toastId,
-        });
-      }
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'analyse."), { id: toastId });
-      reportError("ECHEC_PARSER_CV_CLIENT", err);
-    } finally {
-      setParserLoading(false);
-    }
-  };
-
-  const resetParser = () => {
-    setParsedData(null);
-    setParserFile(null);
-  };
-
-  const handleValiderParsing = async () => {
-    if (!parsedData || remplissageLoading) return;
-    setRemplissageLoading(true);
-    const toastId = toast.loading("Remplissage de votre profil...");
-    try {
-      const remplacer = parserMode === "remplacer";
-      const formData = new FormData();
-
-      // Remplacer : écrase toujours (vide si non détecté). Ajouter : ne remplit que si vide.
-      const setField = (key, value, profilKey = key) => {
-        if (remplacer) formData.append(key, value || "");
-        else if (value && !profil[profilKey]) formData.append(key, value);
-      };
-      const setBoolField = (key, value, profilKey = key) => {
-        if (remplacer) formData.append(key, value ? "true" : "false");
-        else if (value && !profil[profilKey]) formData.append(key, "true");
-      };
-
-      if (parsedData.nom_complet) {
-        const parts = parsedData.nom_complet.trim().split(/\s+/).filter(Boolean);
-        let prenom = "";
-        let nom = "";
-        if (parts.length >= 2) {
-          if (parts[0] === parts[0].toUpperCase()) {
-            nom = parts[0];
-            prenom = parts.slice(1).join(" ");
-          } else {
-            prenom = parts[0];
-            nom = parts.slice(1).join(" ");
-          }
-        } else {
-          prenom = parts[0] || "";
-        }
-        if (remplacer || !profil.first_name) formData.append("first_name", prenom);
-        if (remplacer || !profil.last_name) formData.append("last_name", nom);
-      }
-
-      setField("telephone", parsedData.telephone);
-      setField("titre_professionnel", parsedData.titre_professionnel);
-      setField("wilaya", parsedData.wilaya);
-      setField("diplome", parsedData.diplome);
-      setField("specialite", parsedData.specialite);
-      setField("service_militaire", parsedData.service_militaire);
-      setField("bio", parsedData.bio);
-      setField("linkedin", parsedData.linkedin);
-      setField("github", parsedData.github);
-      setBoolField("permis_conduire", parsedData.permis_conduire);
-      setBoolField("passeport_valide", parsedData.passeport_valide);
-      setBoolField("vehicule_personnel", parsedData.vehicule_personnel);
-      if (parsedData.competences || remplacer) {
-        const existing = remplacer ? "" : profil.competences || "";
-        const merged = existing
-          ? `${existing},${parsedData.competences || ""}`
-          : parsedData.competences || "";
-        const unique = [
-          ...new Set(
-            merged
-              .split(",")
-              .map((c) => c.trim())
-              .filter(Boolean),
-          ),
-        ].join(",");
-        formData.append("competences", unique);
-      }
-      if (parsedData.langues || remplacer) {
-        const existing = remplacer ? "" : profil.langues || "";
-        const langsRaw = (parsedData.langues || "")
-          .split(",")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        const newLangsFormatted = langsRaw.map((l) => {
-          if (l.includes(":")) return l;
-          const m = l.match(/^(.+?)\s*\((.+?)\)$/);
-          if (m) return `${m[1].trim()}:${m[2].trim()}`;
-          return `${l}:Intermédiaire`;
-        });
-        const combined = existing
-          ? `${existing},${newLangsFormatted.join(",")}`
-          : newLangsFormatted.join(",");
-        // Déduplique par nom de langue (garde la dernière valeur = la plus récente) et limite à 255 caractères (max_length du modèle)
-        const parLangue = new Map();
-        combined.split(",").map((l) => l.trim()).filter(Boolean).forEach((l) => {
-          const nom = l.split(":")[0].trim().toLowerCase();
-          parLangue.set(nom, l);
-        });
-        formData.append("langues", [...parLangue.values()].join(",").slice(0, 255));
-      }
-      if (parsedData.photo && (remplacer || !profil.photo_profil)) {
-        const byteCharacters = atob(parsedData.photo.data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++)
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        const blob = new Blob([new Uint8Array(byteNumbers)], {
-          type: `image/${parsedData.photo.ext}`,
-        });
-        formData.append(
-          "photo_profil",
-          new File([blob], `photo.${parsedData.photo.ext}`, {
-            type: `image/${parsedData.photo.ext}`,
-          }),
-        );
-      } else if (!parsedData.photo && remplacer && profil.photo_profil) {
-        formData.append("remove_photo_profil", "true");
-      }
-      if (parserFile && (remplacer || !profil.cv_pdf)) {
-        formData.append("cv_pdf", parserFile);
-      }
-      if ([...formData.entries()].length > 0)
-        await profilService.updateProfil(formData);
-      // Niveaux détectés par l'IA pour les compétences extraites — la sauvegarde ci-dessus a déjà
-      // créé les compétences en base au niveau par défaut (Débutant), on affine ensuite celles
-      // dont Groq a pu estimer un niveau réel à partir du contexte du CV.
-      const niveaux = parsedData.competences_niveaux || {};
-      if (Object.keys(niveaux).length > 0) {
-        await Promise.allSettled(
-          Object.entries(niveaux).map(([label, niveau]) =>
-            jobsService
-              .ajouterCompetence(label, niveau)
-              .catch((err) => reportError("ECHEC_NIVEAU_COMPETENCE_PARSER", err)),
-          ),
-        );
-      }
-      if (parsedData.experiences?.length > 0 || remplacer) {
-        if (remplacer) {
-          await Promise.allSettled(
-            (profil.experiences_detail || []).map((exp) =>
-              profilService
-                .deleteExperience(exp.id)
-                .catch((err) => reportError("ECHEC_SUPPR_EXP_PARSER", err)),
-            ),
-          );
-        }
-        await Promise.allSettled(
-          (parsedData.experiences || []).map((exp) =>
-            profilService
-              .addExperience({
-                titre_poste: exp.titre_poste,
-                entreprise: exp.entreprise,
-                date_debut: convertDateRaw(exp.date_debut_raw),
-                date_fin: convertDateRaw(exp.date_fin_raw),
-                description: exp.description,
-                secteur: exp.secteur || null,
-              })
-              .catch((err) => reportError("ECHEC_AJOUT_EXP_PARSER", err)),
-          ),
-        );
-      }
-      if (parsedData.formations?.length > 0 || remplacer) {
-        if (remplacer) {
-          await Promise.allSettled(
-            (profil.formations_detail || []).map((form) =>
-              profilService
-                .deleteFormation(form.id)
-                .catch((err) => reportError("ECHEC_SUPPR_FORMATION_PARSER", err)),
-            ),
-          );
-        }
-        await Promise.allSettled(
-          (parsedData.formations || []).map((form) =>
-            profilService
-              .addFormation({
-                diplome: form.diplome,
-                etablissement: form.etablissement,
-                date_debut: convertDateRaw(form.date_debut_raw),
-                date_fin: convertDateRaw(form.date_fin_raw),
-                description: form.description,
-              })
-              .catch((err) => reportError("ECHEC_AJOUT_FORMATION_PARSER", err)),
-          ),
-        );
-      }
-      toast.success("Profil rempli avec succès !", { id: toastId });
-      setShowParserModal(false);
-      setParsedData(null);
-      setParserFile(null);
-      fetchData();
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du remplissage."), { id: toastId });
-      reportError("ECHEC_VALIDATION_PARSING", err);
-    } finally {
-      setRemplissageLoading(false);
-    }
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return null;
     const [year, month] = dateStr.split("-");
@@ -756,8 +504,6 @@ export const useProfilCandidat = () => {
     setShowPrefForm,
     showLinksForm,
     setShowLinksForm,
-    showParserModal,
-    setShowParserModal,
     newExp,
     setNewExp,
     newForm,
@@ -774,13 +520,6 @@ export const useProfilCandidat = () => {
     setEditCV,
     editLinks,
     setEditLinks,
-    parserLoading,
-    remplissageLoading,
-    parsedData,
-    setParsedData,
-    resetParser,
-    parserMode,
-    setParserMode,
     // Computed
     completionPercent,
     champsManquants,
@@ -813,7 +552,5 @@ export const useProfilCandidat = () => {
     handleChangerNiveauCompetence,
     handleAddLanguage,
     handleUpdateLinks,
-    handleParserCVUpload,
-    handleValiderParsing,
   };
 };

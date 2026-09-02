@@ -332,9 +332,15 @@ class ProfilCandidat(models.Model):
         ('INCORPORE', 'Incorporé'),
     ]
 
+    SEXE_CHOICES = [
+        ('HOMME', 'Homme'),
+        ('FEMME', 'Femme'),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_candidat')
     titre_professionnel = models.CharField(max_length=150, blank=True, null=True)
     date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
+    sexe = models.CharField(max_length=10, choices=SEXE_CHOICES, blank=True, null=True, verbose_name="Sexe")
     
     cv_pdf = models.FileField(
         upload_to='cvs/',

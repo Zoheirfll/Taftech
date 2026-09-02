@@ -85,7 +85,7 @@ class ApiCandidatTest(APITestCase):
     def test_postuler_rapide_success(self):
         """ Happy Path : Un visiteur utilise la route rapide """
         url = reverse('postuler-rapide', kwargs={'offre_id': self.offre_valide.id})
-        
+
         # Client anonyme
         payload = {
             "nom_rapide": "Visiteur",
@@ -95,10 +95,22 @@ class ApiCandidatTest(APITestCase):
         }
         # Note: Pour tester un upload de fichier (CV), on utilise self.client.post avec format='multipart'
         response = self.client.post(url, payload, format='multipart')
-        
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
+
         # On vérifie en base que la candidature s'est bien créée sans lier de User
         candidature = Candidature.objects.get(email_rapide="visiteur@test.com")
         self.assertTrue(candidature.est_rapide)
         self.assertIsNone(candidature.candidat)
+
+    def test_put_profil_sets_sexe(self):
+        """ Vérifie que le champ sexe peut être défini via PUT /api/jobs/profil/ """
+        self.client.force_authenticate(user=self.user_candidat)
+        response = self.client.put(
+            reverse('profil-candidat'),
+            {'sexe': 'HOMME'},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user_candidat.profil_candidat.refresh_from_db()
+        self.assertEqual(self.user_candidat.profil_candidat.sexe, 'HOMME')

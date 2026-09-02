@@ -43,7 +43,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     class Meta:
         model = ProfilCandidat
         fields = (
-            'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'specialite',
+            'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'specialite', 'sexe',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin',
             'experiences_detail', 'formations_detail',

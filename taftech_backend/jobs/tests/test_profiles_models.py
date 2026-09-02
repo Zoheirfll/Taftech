@@ -50,6 +50,20 @@ class ProfilCandidatModelTest(TestCase):
     def test_candidat_str_representation(self):
         self.assertEqual(str(self.profil_candidat), "Profil de candidat_test")
 
+    def test_sexe_field_accepts_homme_ou_femme(self):
+        self.profil_candidat.sexe = 'FEMME'
+        self.profil_candidat.save()
+        self.profil_candidat.refresh_from_db()
+        self.assertEqual(self.profil_candidat.sexe, 'FEMME')
+
+    def test_sexe_field_nullable(self):
+        # Create a new candidate without sexe
+        user_candidat2 = User.objects.create_user(
+            username="candidat_test2", email="candidat2@test.dz", password="pass", role="CANDIDAT"
+        )
+        profil = ProfilCandidat.objects.create(user=user_candidat2)
+        self.assertIsNone(profil.sexe)
+
 
 class ExperienceEtFormationModelTest(TestCase):
     def setUp(self):

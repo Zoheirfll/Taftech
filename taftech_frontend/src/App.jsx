@@ -133,6 +133,7 @@ const NotificationsRecruteur = lazy(() => import("./Pages/Recruteur/Notification
 const Questionnaires         = lazy(() => import("./Pages/Recruteur/Questionnaires"));
 const ParametresRecruteur    = lazy(() => import("./Pages/Recruteur/ParametresRecruteur"));
 const ReviewCandidature      = lazy(() => import("./Pages/Recruteur/ReviewCandidature"));
+const OnboardingWizard       = lazy(() => import("./Pages/Candidat/Onboarding/OnboardingWizard"));
 const MonEquipe              = lazy(() => import("./Pages/Recruteur/MonEquipe"));
 const AbonnementsPage        = lazy(() => import("./Pages/Recruteur/AbonnementsPage"));
 const OffresListPage         = lazy(() => import("./Pages/Recruteur/OffresListPage"));
@@ -345,6 +346,7 @@ function AppContent() {
               <Route path="/rendez-vous" element={<PrendreRendezVous />} />
             </Route>
             <Route path="/jobs/:id/postuler" element={<CandidatRoute><ReviewCandidature /></CandidatRoute>} />
+            <Route path="/onboarding" element={<CandidatRoute><OnboardingWizard mode="page" /></CandidatRoute>} />
 
             {/* ZONE ADMINISTRATION */}
             <Route path="/admin-taftech" element={<AdminRoute><AdminLayout /></AdminRoute>}>

@@ -163,6 +163,26 @@ describe("🔧 Logique Métier - Service <authService />", () => {
       fakeError,
     );
   });
+
+  it("🟢 HP5 : verifyEmail stocke le rôle et le portail candidat quand le backend connecte directement", async () => {
+    api.post.mockResolvedValue({
+      data: { message: "Email vérifié avec succès !", role: "CANDIDAT", est_membre_equipe: false },
+    });
+
+    await authService.verifyEmail("nadia@taftech.dz", "424242");
+
+    expect(mockStore["userRole"]).toBe("CANDIDAT");
+    expect(mockStore["estMembreEquipe"]).toBe("false");
+    expect(mockStore["loginPortal"]).toBe("candidat");
+  });
+
+  it("🔴 EC4 : verifyEmail ne touche pas le localStorage si le backend ne renvoie pas de rôle (compte déjà vérifié)", async () => {
+    api.post.mockResolvedValue({ data: { message: "Ce compte est déjà vérifié." } });
+
+    await authService.verifyEmail("nadia@taftech.dz", "424242");
+
+    expect(mockStore["userRole"]).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

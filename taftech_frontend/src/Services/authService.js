@@ -145,6 +145,15 @@ export const authService = {
         email,
         code,
       });
+      // Depuis le changement backend, une verification reussie connecte
+      // directement l'utilisateur (cookies JWT emis) — on reflete cet etat cote
+      // client exactement comme authService.login, pour que les routes protegees
+      // (CandidatRoute) le reconnaissent immediatement sans reconnexion manuelle.
+      if (response.data.role) {
+        localStorage.setItem("userRole", response.data.role);
+        localStorage.setItem("estMembreEquipe", response.data.est_membre_equipe ? "true" : "false");
+        localStorage.setItem("loginPortal", "candidat");
+      }
       return response.data;
     } catch (err) {
       reportError("ECHEC_VERIFY_EMAIL_API", err);

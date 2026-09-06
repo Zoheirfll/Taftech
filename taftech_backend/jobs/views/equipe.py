@@ -72,7 +72,7 @@ def _envoyer_email_invitation(invitation, request):
       <p style="color:#94a3b8;font-size:12px">Lien valable 72 heures. Si vous n'attendiez pas cette invitation, ignorez cet email.</p>
     </div>
     """
-    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [invitation.email])
+    msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [invitation.email])
     msg.attach_alternative(html, "text/html")
     msg.send(fail_silently=True)
 

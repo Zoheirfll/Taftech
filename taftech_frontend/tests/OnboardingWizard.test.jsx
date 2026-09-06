@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import OnboardingWizard from "../src/Pages/Candidat/Onboarding/OnboardingWizard";
+import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { profilService } from "../src/Services/profilService";
 import { jobsService } from "../src/Services/jobsService";
 
@@ -31,6 +32,11 @@ vi.mock("../src/Services/jobsService", () => ({
     ajouterCompetence: vi.fn(),
     supprimerCompetence: vi.fn(),
     searchCompetences: vi.fn(),
+    getNomenclature: vi.fn().mockResolvedValue({
+      secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
+      domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
+      sous_domaines: [],
+    }),
   },
 }));
 vi.mock("react-hot-toast", () => ({
@@ -84,7 +90,7 @@ describe("OnboardingWizard", () => {
     });
   });
 
-  it("parcourt les 7 étapes en tout skip jusqu'à l'écran Félicitations, puis navigue au dashboard", async () => {
+  it("parcourt les 8 étapes en tout skip jusqu'à l'écran Félicitations, puis navigue au dashboard", async () => {
     render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
     await screen.findByText(/Upload CV/i);
     fireEvent.click(screen.getByText(/Passer cette étape/i)); // -> 2
@@ -99,6 +105,8 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByText(/Passer cette étape/i)); // -> 6
     await screen.findByRole("button", { name: /Continuer/i });
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // -> 7 (save compétences)
+    await screen.findByText(/Passer cette étape/i);
+    fireEvent.click(screen.getByText(/Passer cette étape/i)); // -> 8 (préférences)
 
     await screen.findByText(/Félicitations/i);
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
@@ -106,11 +114,30 @@ describe("OnboardingWizard", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard-candidat");
   });
 
-  it("mode modal : le bouton Fermer appelle onClose au lieu de naviguer", async () => {
+  it("mode modal : le bouton Quitter demande confirmation puis appelle onClose", async () => {
     const onClose = vi.fn();
-    render(<MemoryRouter><OnboardingWizard mode="modal" onClose={onClose} /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <OnboardingWizard mode="modal" onClose={onClose} />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
     await screen.findByText(/Upload CV/i);
-    fireEvent.click(screen.getByLabelText(/Fermer/i));
+    fireEvent.click(screen.getByLabelText(/Quitter/i));
+    fireEvent.click(await screen.findByText(/Confirmer/i));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("mode page : le bouton Quitter demande confirmation puis navigue vers le dashboard", async () => {
+    render(
+      <MemoryRouter>
+        <OnboardingWizard mode="page" />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+    await screen.findByText(/Upload CV/i);
+    fireEvent.click(screen.getByLabelText(/Quitter/i));
+    fireEvent.click(await screen.findByText(/Confirmer/i));
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard-candidat");
   });
 });

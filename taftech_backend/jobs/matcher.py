@@ -113,6 +113,73 @@ def competences_score(competences_candidat, texte_offre):
     return ratio, tags_trouves
 
 
+_NIVEAU_POINTS = {'DEBUTANT': 1, 'INTERMEDIAIRE': 2, 'AVANCE': 3, 'CONFIRME': 4}
+
+
+def _niveaux_candidat_par_label(profil):
+    """Récupère une fois les compétences structurées du candidat, indexées par label
+    normalisé — évite une requête par compétence requise de l'offre."""
+    niveaux = {}
+    competences_detail = getattr(profil, 'competences_detail', None)
+    if competences_detail is not None:
+        for c in competences_detail.all():
+            niveaux[normaliser(c.label)] = c.niveau
+    return niveaux
+
+
+def _trouver_competence_candidat(profil, label_norm, niveaux_par_label):
+    """Cherche `label_norm` (déjà normalisé) parmi les compétences structurées pré-chargées du
+    candidat, puis dans le texte libre en filet de sécurité. Retourne (trouve, niveau_ou_None,
+    niveau_fiable) — niveau_fiable=False si le match vient du texte libre (niveau inconnu)."""
+    if label_norm in niveaux_par_label:
+        return True, niveaux_par_label[label_norm], True
+    if profil.competences:
+        for tag in str(profil.competences).split(','):
+            if normaliser(tag.strip()) == label_norm:
+                return True, None, False
+    return False, None, False
+
+
+def competences_score_structure(profil, competences_requises):
+    """Score de compétences basé sur le référentiel structuré (CompetenceOffre/CompetenceCandidat)
+    — pondère Obligatoire (poids 2) plus fort que Souhaitée (poids 1), et tient compte du niveau
+    minimum requis quand il est renseigné. Utilisé à la place de `competences_score` (texte libre)
+    dès qu'une offre a au moins une compétence structurée."""
+    items = list(competences_requises)
+    if not items:
+        return 0.0, [], []
+
+    niveaux_par_label = _niveaux_candidat_par_label(profil)
+    poids_total = 0.0
+    poids_obtenu = 0.0
+    trouvees = []
+    manquantes = []
+    for comp in items:
+        poids = 2.0 if comp.type_exigence == 'OBLIGATOIRE' else 1.0
+        poids_total += poids
+        label_norm = normaliser(comp.label)
+        trouve, niveau_candidat, niveau_fiable = _trouver_competence_candidat(profil, label_norm, niveaux_par_label)
+        if not trouve:
+            manquantes.append(comp)
+            continue
+        if not comp.niveau_requis:
+            poids_obtenu += poids
+            trouvees.append(comp)
+        elif not niveau_fiable:
+            # Match via texte libre seul, niveau réel inconnu — crédit partiel.
+            poids_obtenu += poids * 0.8
+            trouvees.append(comp)
+        elif _NIVEAU_POINTS.get(niveau_candidat, 0) >= _NIVEAU_POINTS.get(comp.niveau_requis, 0):
+            poids_obtenu += poids
+            trouvees.append(comp)
+        else:
+            poids_obtenu += poids * 0.6
+            trouvees.append(comp)
+
+    ratio = min(poids_obtenu / poids_total, 1.0) if poids_total else 0.0
+    return ratio, trouvees, manquantes
+
+
 # ---------------------------------------------------------------------------
 # Pertinence d'une expérience
 # ---------------------------------------------------------------------------
@@ -378,29 +445,54 @@ def _calculer_score_algo(candidat_user, offre):
     # ==========================================
     # 5. COMPÉTENCES (Max 15%)
     # ==========================================
-    texte_offre_comp = " ".join(
-        str(v) for v in [offre.profil_recherche, offre.description, offre.missions, offre.titre]
-        if v and not callable(v)
-    )
-    if profil.competences and texte_offre_comp.strip():
-        ratio, tags_trouves = competences_score(profil.competences, texte_offre_comp)
+    try:
+        competences_requises = list(offre.competences_requises.all())
+    except TypeError:
+        # `offre` est un Mock dans certains tests unitaires — pas de compétences structurées,
+        # repli sur le scoring texte libre ci-dessous.
+        competences_requises = []
+    if competences_requises:
+        ratio, trouvees, manquantes = competences_score_structure(profil, competences_requises)
         details["competences"] = round(ratio * 15.0, 2)
-        if ratio >= 0.6:
-            explications["competences"] = f"Excellente adéquation ({len(tags_trouves)} compétences clés détectées)."
-            points_forts.append(f"Fortes correspondances techniques ({len(tags_trouves)} compétences validées).")
-        elif ratio >= 0.35:
-            explications["competences"] = f"Correspondance partielle ({len(tags_trouves)} compétences)."
+        n_obligatoires_manquantes = sum(1 for c in manquantes if c.type_exigence == 'OBLIGATOIRE')
+        if ratio >= 0.85:
+            explications["competences"] = f"Compétences requises couvertes ({len(trouvees)}/{len(competences_requises)})."
+            points_forts.append(f"Compétences clés du poste maîtrisées ({len(trouvees)}/{len(competences_requises)}).")
+        elif ratio >= 0.5:
+            explications["competences"] = f"Compétences partiellement couvertes ({len(trouvees)}/{len(competences_requises)})."
+            if n_obligatoires_manquantes:
+                ecarts.append(f"{n_obligatoires_manquantes} compétence(s) obligatoire(s) manquante(s).")
         elif ratio > 0:
-            explications["competences"] = "Peu de compétences correspondent au poste."
-            ecarts.append("Compétences techniques partiellement alignées.")
+            explications["competences"] = "Peu de compétences requises retrouvées chez le candidat."
+            ecarts.append("Plusieurs compétences requises par l'offre sont absentes du profil.")
         else:
-            explications["competences"] = "Aucune compétence ne correspond au poste."
-            ecarts.append("Compétences techniques non alignées avec l'offre.")
+            explications["competences"] = "Aucune des compétences requises n'a été retrouvée."
+            ecarts.append("Compétences requises non alignées avec le profil.")
     else:
-        # Compétences non renseignées → score neutre 5/15
-        details["competences"] = 5.0
-        explications["competences"] = "Compétences non renseignées — score neutre appliqué."
-        ecarts.append("Renseignez vos compétences pour améliorer votre score.")
+        # Pas de référentiel structuré sur cette offre — repli sur l'ancien scoring texte libre.
+        texte_offre_comp = " ".join(
+            str(v) for v in [offre.profil_recherche, offre.description, offre.missions, offre.titre]
+            if v and not callable(v)
+        )
+        if profil.competences and texte_offre_comp.strip():
+            ratio, tags_trouves = competences_score(profil.competences, texte_offre_comp)
+            details["competences"] = round(ratio * 15.0, 2)
+            if ratio >= 0.6:
+                explications["competences"] = f"Excellente adéquation ({len(tags_trouves)} compétences clés détectées)."
+                points_forts.append(f"Fortes correspondances techniques ({len(tags_trouves)} compétences validées).")
+            elif ratio >= 0.35:
+                explications["competences"] = f"Correspondance partielle ({len(tags_trouves)} compétences)."
+            elif ratio > 0:
+                explications["competences"] = "Peu de compétences correspondent au poste."
+                ecarts.append("Compétences techniques partiellement alignées.")
+            else:
+                explications["competences"] = "Aucune compétence ne correspond au poste."
+                ecarts.append("Compétences techniques non alignées avec l'offre.")
+        else:
+            # Compétences non renseignées → score neutre 5/15
+            details["competences"] = 5.0
+            explications["competences"] = "Compétences non renseignées — score neutre appliqué."
+            ecarts.append("Renseignez vos compétences pour améliorer votre score.")
 
     # La disqualification questionnaire est gérée par PostulerAPIView
     # après sauvegarde des réponses — pas ici (les réponses n'existent pas encore).

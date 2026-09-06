@@ -11,4 +11,4 @@ class FaqItemSerializer(serializers.ModelSerializer):
 class CompetenceReferentielSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetenceReferentiel
-        fields = ['id', 'label', 'actif']
+        fields = ['id', 'label', 'synonymes', 'actif']

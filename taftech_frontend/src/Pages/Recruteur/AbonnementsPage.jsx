@@ -47,6 +47,7 @@ const AbonnementsPage = () => {
   const [periode, setPeriode] = useState("mensuel");
   const [faqOuverte, setFaqOuverte] = useState(null);
   const [palierActif, setPalierActif] = useState(null);
+  const [entrepriseApprouvee, setEntrepriseApprouvee] = useState(true);
   const [detailsAbonnement, setDetailsAbonnement] = useState(null);
   const [renouvellementAuto, setRenouvellementAuto] = useState(true);
   const [resiliationEnCours, setResiliationEnCours] = useState(false);
@@ -91,6 +92,7 @@ const AbonnementsPage = () => {
       try {
         const dash = await jobsService.getDashboard();
         setPalierActif(dash.palier_actif);
+        setEntrepriseApprouvee(dash.entreprise?.est_approuvee !== false);
         setDetailsAbonnement({
           expireLe: dash.palier_expiration,
         });
@@ -218,6 +220,15 @@ const AbonnementsPage = () => {
         <p className="text-sm text-slate-600 mt-1">Choisissez la formule qui correspond le mieux à vos besoins de recrutement.</p>
       </div>
 
+      {!entrepriseApprouvee && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <Clock size={20} className="text-amber-700 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-900">
+            Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.
+          </p>
+        </div>
+      )}
+
       {palierActif && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
           <div className="flex items-center gap-3">
@@ -261,7 +272,7 @@ const AbonnementsPage = () => {
         <div className={`${tw.card} p-6`}>
           <h2 className={`text-lg font-bold ${tw.textStrong} mb-1`}>Crédits CVthèque</h2>
           <p className={`text-sm ${tw.textMuted} mb-4`}>
-            Chaque crédit débloque coordonnées + CV d'un candidat, à vie, pour toute votre équipe.
+            Chaque crédit débloque coordonnées + CV d'un candidat pour votre équipe, sous réserve que le profil reste actif et accessible conformément à ses paramètres de confidentialité.
           </p>
           <div className="flex flex-wrap gap-3 mb-5">
             <div className={`px-4 py-2 rounded-lg ${tw.bgPrimarySoft}`}>
@@ -281,7 +292,8 @@ const AbonnementsPage = () => {
                 <p className={`text-sm font-semibold ${tw.textStrong} mb-3`}>{pack.prix_da.toLocaleString("fr-FR")} DA</p>
                 <button
                   onClick={() => handleAcheterPack(pack)}
-                  disabled={achatEnCours === pack.id}
+                  disabled={achatEnCours === pack.id || !entrepriseApprouvee}
+                  title={!entrepriseApprouvee ? "Votre entreprise est en cours de validation." : undefined}
                   className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgPrimarySolidHover} text-white`}
                 >
                   {achatEnCours === pack.id ? "..." : "Acheter"}
@@ -420,14 +432,17 @@ const AbonnementsPage = () => {
                 <>
                   <button
                     onClick={() => handleChoisir(p.nom)}
-                    disabled={checkoutEnCours === p.nom}
+                    disabled={checkoutEnCours === p.nom || !entrepriseApprouvee}
+                    title={!entrepriseApprouvee ? "Votre entreprise est en cours de validation." : undefined}
                     className={`mt-4 w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 ${p.nom === "PRO" ? "bg-teal-700 text-white hover:bg-teal-800" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}
                   >
                     {checkoutEnCours === p.nom ? <><Loader2 size={14} className="animate-spin" /> Connexion à Chargily...</> : `Choisir ${NOM_LABELS[p.nom]}`}
                   </button>
                   <button
                     onClick={() => handleOuvrirPaiementManuel(p.nom)}
-                    className="mt-2 w-full py-1.5 text-center text-xs font-medium text-slate-600 hover:text-teal-700 hover:underline transition-colors"
+                    disabled={!entrepriseApprouvee}
+                    title={!entrepriseApprouvee ? "Votre entreprise est en cours de validation." : undefined}
+                    className="mt-2 w-full py-1.5 text-center text-xs font-medium text-slate-600 hover:text-teal-700 hover:underline transition-colors disabled:opacity-60 disabled:hover:no-underline disabled:hover:text-slate-600"
                   >
                     ou payer par virement (CIB/EDAHABIA)
                   </button>

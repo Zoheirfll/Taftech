@@ -40,6 +40,13 @@ const CONTRAT_LABELS = {
   STAGE: "Stage", ALTERNANCE: "Alternance", INTERIM: "Intérim",
 };
 
+const NIVEAU_LABELS = {
+  DEBUTANT: "Débutant",
+  INTERMEDIAIRE: "Intermédiaire",
+  AVANCE: "Avancé",
+  CONFIRME: "Confirmé",
+};
+
 const formatSalaire = (val) => {
   if (!val) return null;
   return Number(val).toLocaleString("fr-DZ") + " DA";
@@ -623,10 +630,39 @@ const JobDetail = () => {
                 {renderTexte(job.profil_recherche)}
               </div>
             )}
-            {job.competences && (
+            {(job.competences_requises?.length > 0 || job.competences) && (
               <div className={`${tw.cardColors} rounded-xl p-6`}>
                 <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Compétences requises</h2>
-                {renderTexte(job.competences)}
+                {job.competences_requises?.length > 0 ? (
+                  <div className="space-y-3">
+                    {job.competences_requises.some((c) => c.type_exigence === "OBLIGATOIRE") && (
+                      <div>
+                        <p className={`text-xs font-semibold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>Indispensables</p>
+                        <div className="flex flex-wrap gap-2">
+                          {job.competences_requises.filter((c) => c.type_exigence === "OBLIGATOIRE").map((c) => (
+                            <span key={c.id} className={tw.badgePrimary}>
+                              {c.label}{c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {job.competences_requises.some((c) => c.type_exigence === "SOUHAITEE") && (
+                      <div>
+                        <p className={`text-xs font-semibold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>Souhaitées</p>
+                        <div className="flex flex-wrap gap-2">
+                          {job.competences_requises.filter((c) => c.type_exigence === "SOUHAITEE").map((c) => (
+                            <span key={c.id} className={tw.badgeNeutral}>
+                              {c.label}{c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  renderTexte(job.competences)
+                )}
               </div>
             )}
 

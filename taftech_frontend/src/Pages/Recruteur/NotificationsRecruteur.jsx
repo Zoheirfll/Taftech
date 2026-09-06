@@ -37,7 +37,7 @@ const NotificationsRecruteur = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const data = await jobsService.getNotifications();
+        const data = await jobsService.getNotifications("recruteur");
         setNotifications(data);
       } catch (error) {
         toast.error(apiErrMsg(error, "Erreur lors du chargement."));
@@ -66,7 +66,7 @@ const NotificationsRecruteur = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await jobsService.markAllNotificationsAsRead();
+      await jobsService.markAllNotificationsAsRead("recruteur");
       setNotifications((prev) => prev.map((n) => ({ ...n, lue: true })));
       setSelectedNotif((prev) => (prev ? { ...prev, lue: true } : prev));
     } catch (error) {

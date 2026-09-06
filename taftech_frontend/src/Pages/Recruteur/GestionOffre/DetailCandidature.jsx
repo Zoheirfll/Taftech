@@ -21,10 +21,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
-import { candidatFichierUrl } from "../../../utils/mediaUrl";
+import { candidatFichierUrl, documentPartageFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import DomaineLabel from "../../../Components/DomaineLabel";
 import CandidatureTimeline from "../../../Components/CandidatureTimeline";
+import MatchingRadarChart from "../../../Components/MatchingRadarChart";
 import { tw } from "../../../theme";
 import { confirmToast } from "../../../utils/confirmToast";
 
@@ -36,95 +37,6 @@ const CRITERES_RADAR = [
   { key: "region", label: "Région", max: 20 },
 ];
 
-const RadarChartRecruteur = ({ scores }) => {
-  const cx = 90,
-    cy = 90,
-    R = 62;
-  const n = CRITERES_RADAR.length;
-  const angle = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
-  const gridPoints = (level) =>
-    CRITERES_RADAR.map((_, i) => {
-      const a = angle(i);
-      return `${cx + R * level * Math.cos(a)},${cy + R * level * Math.sin(a)}`;
-    }).join(" ");
-  const dataPoints = CRITERES_RADAR.map((c, i) => {
-    const norm = Math.min((scores?.[c.key] ?? 0) / c.max, 1);
-    const a = angle(i);
-    return `${cx + R * norm * Math.cos(a)},${cy + R * norm * Math.sin(a)}`;
-  }).join(" ");
-  const total = CRITERES_RADAR.reduce(
-    (acc, c) => acc + (scores?.[c.key] ?? 0),
-    0,
-  );
-  const color = total >= 80 ? "#059669" : total >= 60 ? "#d97706" : "#dc2626";
-  return (
-    <svg viewBox="0 0 180 180" className="w-full max-w-[160px] mx-auto">
-      {[0.25, 0.5, 0.75, 1].map((l, i) => (
-        <polygon
-          key={i}
-          points={gridPoints(l)}
-          fill="none"
-          stroke="#e2e8f0"
-          strokeWidth="0.8"
-        />
-      ))}
-      {CRITERES_RADAR.map((_, i) => {
-        const a = angle(i);
-        return (
-          <line
-            key={i}
-            x1={cx}
-            y1={cy}
-            x2={cx + R * Math.cos(a)}
-            y2={cy + R * Math.sin(a)}
-            stroke="#cbd5e1"
-            strokeWidth="0.8"
-          />
-        );
-      })}
-      <polygon
-        points={dataPoints}
-        fill={color}
-        fillOpacity={0.18}
-        stroke={color}
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      {CRITERES_RADAR.map((c, i) => {
-        const norm = Math.min((scores?.[c.key] ?? 0) / c.max, 1);
-        const a = angle(i);
-        return (
-          <circle
-            key={i}
-            cx={cx + R * norm * Math.cos(a)}
-            cy={cy + R * norm * Math.sin(a)}
-            r="3"
-            fill={color}
-          />
-        );
-      })}
-      {CRITERES_RADAR.map((c, i) => {
-        const pos = {
-          x: cx + (R + 16) * Math.cos(angle(i)),
-          y: cy + (R + 16) * Math.sin(angle(i)),
-        };
-        return (
-          <text
-            key={i}
-            x={pos.x}
-            y={pos.y}
-            textAnchor="middle"
-            fontSize="7.5"
-            fontWeight="600"
-            fill="#475569"
-          >
-            {c.label}
-          </text>
-        );
-      })}
-    </svg>
-  );
-};
 
 const STATUTS_LABELS = {
   RECUE: "Candidature reçue",
@@ -159,6 +71,7 @@ export const DetailCandidature = ({
   setModalEval,
   setEvalForm,
   supprimerEvaluation,
+  documentsPartages = [],
 }) => {
   const candidatData = getCandidatData(selectedCandidature);
   const candidatUserId = selectedCandidature?.candidat?.id;
@@ -295,7 +208,7 @@ export const DetailCandidature = ({
       </div>
 
       {/* ONGLETS */}
-      <div className={`flex border-b ${tw.borderSubtle}`}>
+      <div className={`flex flex-wrap border-b ${tw.borderSubtle}`}>
         {[
           "profil",
           "ia",
@@ -305,7 +218,7 @@ export const DetailCandidature = ({
           <button
             key={tab}
             onClick={() => setActiveDetailTab(tab)}
-            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${activeDetailTab === tab ? `border-teal-700 ${tw.textTeal}` : `border-transparent ${tw.textMuted700} hover:text-slate-900`}`}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors shrink-0 ${activeDetailTab === tab ? `border-teal-700 ${tw.textTeal}` : `border-transparent ${tw.textMuted700} hover:text-slate-900`}`}
           >
             {tab === "profil" && "Profil"}
             {tab === "ia" && "Analyse IA"}
@@ -313,13 +226,13 @@ export const DetailCandidature = ({
             {tab === "questionnaire" && "Questionnaire"}
           </button>
         ))}
-        <div className="ml-auto flex items-center px-4 gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end px-4 py-1.5 gap-2 max-w-full">
           {candidatData?.cv_pdf && (
             <a
               href={candidatFichierUrl(candidatUserId, "cv")}
               target="_blank"
               rel="noopener noreferrer"
-              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-medium rounded-lg transition-colors`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillTeal} text-xs font-medium rounded-lg transition-colors shrink-0`}
             >
               <FileText size={12} /> CV PDF
             </a>
@@ -329,11 +242,24 @@ export const DetailCandidature = ({
               href={selectedCandidature.cv_rapide_url}
               target="_blank"
               rel="noreferrer"
-              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillAmberSoft} text-xs font-medium rounded-lg transition-colors`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.pillAmberSoft} text-xs font-medium rounded-lg transition-colors shrink-0`}
             >
               <Zap size={12} /> CV Rapide
             </a>
           )}
+          {documentsPartages.map((doc) => (
+            <a
+              key={doc.id}
+              href={documentPartageFichierUrl(candidatUserId, doc.id)}
+              target="_blank"
+              rel="noreferrer"
+              title={`${doc.nom_personnalise || doc.type_document || "Document partagé"} · Partagé par le candidat le ${new Date(doc.date_partage).toLocaleDateString("fr-FR")}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors min-w-0 max-w-40"
+            >
+              <FileText size={12} className="shrink-0" />
+              <span className="truncate">{doc.nom_personnalise || doc.type_document || "Document partagé"}</span>
+            </a>
+          ))}
           {selectedCandidature.statut === "REFUSE" && authService.peutFaire("UTILISATEUR") && (
             <button
               onClick={() =>
@@ -629,7 +555,7 @@ export const DetailCandidature = ({
             <div className="space-y-5">
               <div className={`p-4 ${tw.surfaceMuted} rounded-xl border ${tw.borderSubtle} flex flex-col items-center gap-3`}>
                 {selectedCandidature.details_matching?.scores && (
-                  <RadarChartRecruteur scores={selectedCandidature.details_matching.scores} />
+                  <MatchingRadarChart scores={selectedCandidature.details_matching.scores} criteres={CRITERES_RADAR} height={200} />
                 )}
                 <div className="text-center">
                   <p className={`${tw.sectionLabel} mb-1.5`}>Score de matching IA</p>

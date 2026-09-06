@@ -27,7 +27,7 @@ from ..models import (
     InvitationCVTheque, RechercheSauvegardee, EquipeActionLog, Notification,
 )
 from .equipe import get_entreprise_for_user, get_membre_role
-from ..throttles import WriteActionThrottle, EmailRateThrottle, InvitationCVThequeThrottle
+from ..throttles import WriteActionThrottle, EmailRateThrottle, InvitationCVThequeThrottle, FileUploadThrottle
 from ..matcher import calculer_score_matching
 from ..credits_utils import credits_disponibles
 from ..serializers import (
@@ -250,47 +250,89 @@ class RapportDashboardPDFAPIView(APIView):
 
         kpis = _calculer_kpis_periode(entreprise, date_debut, date_fin)
 
+        import os
+        import io
+        from django.conf import settings
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image
         from reportlab.lib.styles import ParagraphStyle
-        import io
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
         INDIGO = colors.HexColor("#204883")
+        TEAL = colors.HexColor("#307020")
         SLATE = colors.HexColor("#1e293b")
+        SLATE_LIGHT = colors.HexColor("#64748b")
+        WHITE = colors.white
         BG_LIGHT = colors.HexColor("#f8fafc")
+        BORDER = colors.HexColor("#e2e8f0")
+
+        def style(name, **kwargs):
+            return ParagraphStyle(name, **kwargs)
+
+        s_tagline = style("tagline", fontSize=9, textColor=colors.HexColor("#93c5fd"), fontName="Helvetica", alignment=TA_LEFT)
+        s_h2 = style("h2", fontSize=11, textColor=INDIGO, fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=6)
+        s_body = style("body", fontSize=9, textColor=SLATE_LIGHT, fontName="Helvetica")
+        s_kpi_label = style("kpi_label", fontSize=8, textColor=SLATE_LIGHT, fontName="Helvetica", alignment=TA_CENTER)
+        s_kpi_value = style("kpi_value", fontSize=18, textColor=INDIGO, fontName="Helvetica-Bold", alignment=TA_CENTER)
+        s_footer = style("footer", fontSize=8, textColor=SLATE_LIGHT, fontName="Helvetica", alignment=TA_CENTER)
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20 * mm, leftMargin=20 * mm, topMargin=15 * mm, bottomMargin=20 * mm)
         story = []
-        s_title = ParagraphStyle("title", fontSize=16, textColor=colors.white, fontName="Helvetica-Bold")
-        s_h2 = ParagraphStyle("h2", fontSize=12, textColor=INDIGO, fontName="Helvetica-Bold", spaceBefore=12, spaceAfter=6)
-        s_body = ParagraphStyle("body", fontSize=9, textColor=SLATE, fontName="Helvetica")
 
-        header_table = Table([[Paragraph(f"TafTech — Rapport dashboard<br/>{entreprise.nom_entreprise}", s_title)]], colWidths=[170 * mm])
-        header_table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, -1), INDIGO), ('TOPPADDING', (0, 0), (-1, -1), 12), ('BOTTOMPADDING', (0, 0), (-1, -1), 12), ('LEFTPADDING', (0, 0), (-1, -1), 12)]))
+        logo_path = os.path.join(settings.BASE_DIR, '..', 'taftech_frontend', 'src', 'assets', 'logo-taftech.png')
+        logo_cell = Image(logo_path, width=28 * mm, height=14 * mm) if os.path.exists(logo_path) else Paragraph("TAFTECH", style("brand", fontSize=22, textColor=WHITE, fontName="Helvetica-Bold"))
+
+        # EN-TÊTE
+        header_data = [[
+            logo_cell,
+            Paragraph(f"RAPPORT DE RECRUTEMENT<br/><font size='9' color='#93c5fd'>{entreprise.nom_entreprise}</font>",
+                      style("h_right", fontSize=13, textColor=WHITE, fontName="Helvetica-Bold", alignment=TA_RIGHT, leading=18)),
+        ], [
+            Paragraph("Plateforme de recrutement intelligente en Algérie", s_tagline),
+            Paragraph(f"<font size='8' color='#93c5fd'>Généré le {timezone.now().strftime('%d/%m/%Y')}</font>",
+                      style("h_date", fontSize=8, textColor=colors.HexColor("#93c5fd"), fontName="Helvetica", alignment=TA_RIGHT)),
+        ]]
+        header_table = Table(header_data, colWidths=[90 * mm, 80 * mm])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), INDIGO),
+            ('PADDING', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
         story.append(header_table)
-        story.append(Spacer(1, 10))
-        story.append(Paragraph(f"Période : {date_debut.strftime('%d/%m/%Y')} — {date_fin.strftime('%d/%m/%Y')}", s_body))
+        story.append(Spacer(1, 6 * mm))
+
+        story.append(Paragraph(f"Période analysée : <b>{date_debut.strftime('%d/%m/%Y')} — {date_fin.strftime('%d/%m/%Y')}</b>", s_body))
+        story.append(Spacer(1, 4 * mm))
         story.append(Paragraph("Indicateurs clés", s_h2))
 
-        kpi_rows = [["Indicateur", "Valeur"]]
         libelles = {
             "offres_actives": "Offres actives", "candidatures_recues": "Candidatures reçues",
-            "candidats_entretien": "Candidats en entretien", "recrutements": "Recrutements",
-            "taux_conversion": "Taux de conversion (%)",
+            "candidats_entretien": "En entretien", "recrutements": "Recrutements",
+            "taux_conversion": "Taux de conversion",
         }
+        kpi_cells = []
         for cle, libelle in libelles.items():
-            kpi_rows.append([libelle, str(kpis[cle]["valeur"])])
-        kpi_table = Table(kpi_rows, colWidths=[110 * mm, 60 * mm])
-        kpi_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            valeur = kpis[cle]["valeur"]
+            suffixe = "%" if cle == "taux_conversion" else ""
+            kpi_cells.append(Table(
+                [[Paragraph(f"{valeur}{suffixe}", s_kpi_value)], [Paragraph(libelle, s_kpi_label)]],
+                colWidths=[32 * mm],
+            ))
+        kpi_row = Table([kpi_cells], colWidths=[34 * mm] * len(kpi_cells))
+        kpi_row.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BG_LIGHT),
+            ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 10), ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
-        story.append(kpi_table)
-        story.append(Spacer(1, 14))
+        story.append(kpi_row)
+        story.append(Spacer(1, 8 * mm))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+        story.append(Spacer(1, 2 * mm))
 
         story.append(Paragraph("Top 5 offres (candidatures reçues sur la période)", s_h2))
         offres_periode = OffreEmploi.objects.filter(entreprise=entreprise).annotate(
@@ -304,13 +346,26 @@ class RapportDashboardPDFAPIView(APIView):
         offres_rows = [["Offre", "Candidatures"]]
         for o in offres_periode:
             offres_rows.append([o.titre, str(o.nb_candidatures_periode)])
+        if len(offres_rows) == 1:
+            offres_rows.append(["Aucune offre sur cette période.", ""])
         offres_table = Table(offres_rows, colWidths=[130 * mm, 40 * mm])
         offres_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), BG_LIGHT), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (0, 0), (-1, 0), INDIGO), ('TEXTCOLOR', (0, 0), (-1, 0), WHITE),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9), ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [WHITE, BG_LIGHT]),
+            ('TOPPADDING', (0, 0), (-1, -1), 7), ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ]))
         story.append(offres_table)
+        story.append(Spacer(1, 10 * mm))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph(
+            "TAFTECH — Plateforme de recrutement intelligente en Algérie | taftech963@gmail.com | Oran, Algérie",
+            s_footer,
+        ))
 
         doc.build(story)
         buffer.seek(0)
@@ -424,9 +479,59 @@ class ExportCandidaturesExcelAPIView(APIView):
         return response
 
 
+class ExportGraphiqueExcelAPIView(APIView):
+    """Export .xlsx générique pour les graphiques du dashboard/statistiques recruteur
+    (MiniAreaChart) — remplace l'ancien export CSV fait à la main côté client, qui
+    s'ouvrait mal sur mobile (tout dans une seule colonne, séparateur/BOM mal interprété
+    par les applications mobiles). Les données sont déjà agrégées côté client (le
+    graphique les a déjà calculées pour l'affichage) — cette vue se contente de les
+    mettre en forme dans un vrai classeur Excel, aucune requête DB supplémentaire.
+    Scopée à l'entreprise de l'utilisateur connecté par simple exigence d'authentification
+    (aucune donnée sensible d'autrui n'est manipulée ici, uniquement la mise en forme)."""
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [WriteActionThrottle]
+
+    def post(self, request):
+        titre = str(request.data.get('titre', 'export'))[:80] or 'export'
+        colonnes = request.data.get('colonnes')
+        lignes = request.data.get('lignes')
+        if not isinstance(colonnes, list) or not colonnes or not isinstance(lignes, list):
+            return Response({"error": "Format invalide : 'colonnes' (liste) et 'lignes' (liste de listes) requis."}, status=400)
+
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment
+        from django.http import HttpResponse
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = titre[:31] or "Export"  # limite Excel : 31 caractères max pour un nom d'onglet
+
+        ws.append([str(c) for c in colonnes])
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(vertical="center")
+
+        for ligne in lignes:
+            if not isinstance(ligne, list):
+                continue
+            ws.append([v if isinstance(v, (int, float, str)) or v is None else str(v) for v in ligne])
+
+        for col_cells in ws.columns:
+            longueur = max((len(str(c.value)) for c in col_cells if c.value is not None), default=10)
+            ws.column_dimensions[col_cells[0].column_letter].width = min(longueur + 2, 50)
+        ws.freeze_panes = "A2"
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        nom_fichier = "".join(c if c.isalnum() or c in "-_ " else "_" for c in titre)[:60] or "export"
+        response['Content-Disposition'] = f'attachment; filename="{nom_fichier}.xlsx"'
+        wb.save(response)
+        return response
+
+
 class UpdateProfilEntrepriseAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [FileUploadThrottle]
 
     def put(self, request):
         profil = get_entreprise_for_user(request.user)
@@ -499,6 +604,7 @@ class EntreprisePhotosAPIView(APIView):
     """Galerie photo de la page vitrine — ajout/suppression, réservé PROPRIETAIRE/ADMIN."""
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
+    throttle_classes = [FileUploadThrottle]
 
     def post(self, request):
         profil = get_entreprise_for_user(request.user)
@@ -654,6 +760,11 @@ class CVThequeView(APIView):
         entreprise_user = get_entreprise_for_user(request.user)
         if not entreprise_user:
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        if not entreprise_user.est_approuvee:
+            return Response(
+                {"error": "Votre entreprise doit être validée par TafTech avant d'accéder à la CVthèque.", "code": "ENTREPRISE_NON_VALIDEE"},
+                status=403,
+            )
         if not request.user.consentement_cvtheque:
             return Response(
                 {"error": "Vous devez accepter les conditions de traitement des données candidats.", "code": "CVTHEQUE_CONSENT_REQUIRED"},
@@ -903,7 +1014,7 @@ class InviterCandidatCVThequeAPIView(APIView):
                 msg = EmailMultiAlternatives(
                     f"{entreprise.nom_entreprise} vous invite à postuler",
                     f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} » : {lien_offre}",
-                    settings.EMAIL_HOST_USER, [candidat.email],
+                    settings.DEFAULT_FROM_EMAIL, [candidat.email],
                 )
                 msg.attach_alternative(html_body, 'text/html')
                 msg.send(fail_silently=True)
@@ -1119,6 +1230,11 @@ class DemanderActivationPremiumAPIView(APIView):
             return Response({'error': 'Profil entreprise introuvable.'}, status=404)
         if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
+        if not entreprise.est_approuvee:
+            return Response(
+                {'error': 'Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
+                status=403,
+            )
         moyen = request.data.get('moyen_paiement', 'CIB')
         try:
             nb_mois = max(1, min(int(request.data.get('nb_mois', 1)), 60))
@@ -1143,6 +1259,11 @@ class ChargilyCheckoutPalierAPIView(APIView):
             return Response({'error': 'Profil entreprise introuvable.'}, status=404)
         if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
+        if not entreprise.est_approuvee:
+            return Response(
+                {'error': 'Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
+                status=403,
+            )
 
         from ..models import Palier
         palier_nom = request.data.get('palier_nom', '').upper()
@@ -1377,7 +1498,7 @@ Message du recruteur :
 → Activez le compte depuis le panel admin TafTech.
         """.strip()
         try:
-            mail = EmailMultiAlternatives(subject, body, settings.EMAIL_HOST_USER, [settings.EMAIL_HOST_USER])
+            mail = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, [settings.EMAIL_HOST_USER])
             mail.send()
         except Exception as e:
             return Response({'error': 'Erreur lors de l\'envoi du mail.'}, status=500)

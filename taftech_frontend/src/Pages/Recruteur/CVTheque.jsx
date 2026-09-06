@@ -7,7 +7,7 @@ import { authService } from "../../Services/authService";
 import Select from "react-select";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import { mediaUrl as getMediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
+import { mediaUrl as getMediaUrl, candidatFichierUrl, documentPartageFichierUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import { apiErrMsg } from "../../utils/apiErrMsg";
@@ -92,6 +92,7 @@ const CVTheque = () => {
 
   // UI
   const [selectedCandidat, setSelectedCandidat] = useState(null);
+  const [documentsPartages, setDocumentsPartages] = useState([]);
   const [showFiltres, setShowFiltres] = useState(false);
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(
@@ -115,6 +116,19 @@ const CVTheque = () => {
       .then((dash) => setAccesCoordonnees(!!dash.acces_coordonnees))
       .catch((err) => reportError("ECHEC_GET_ACCES_COORDONNEES", err));
   }, []);
+
+  // Documents privés que ce candidat a explicitement partagés avec notre entreprise —
+  // voir jobs/views/candidat_dashboard.py::_entreprises_relation_candidat (nécessite déjà
+  // une candidature reçue ou un déblocage crédit existant, sinon la liste est vide).
+  useEffect(() => {
+    setDocumentsPartages([]);
+    const candidatId = selectedCandidat?.user_id;
+    if (!candidatId) return;
+    jobsService
+      .getDocumentsPartages(candidatId)
+      .then(setDocumentsPartages)
+      .catch((err) => reportError("ECHEC_DOCUMENTS_PARTAGES_CVTHEQUE", err));
+  }, [selectedCandidat?.user_id]);
   const [creditsDisponibles, setCreditsDisponibles] = useState({ mensuel_restant: null, achetes_restant: 0 });
   const [debloquageEnCours, setDebloquageEnCours] = useState(null);
   // acces_coordonnees (palier Pro+) reste un flag distinct des crédits — gate uniquement le
@@ -296,7 +310,7 @@ const CVTheque = () => {
     setCurrentPage(1);
   };
   const handleDeverrouillerCandidat = (candidat) => {
-    confirmToast("Débloquer ce profil (1 crédit) ? Coordonnées et CV seront accessibles définitivement pour toute votre équipe.", async () => {
+    confirmToast("Débloquer ce profil (1 crédit) ? Coordonnées et CV seront accessibles pour votre équipe, sous réserve que le profil reste actif et accessible conformément aux paramètres de confidentialité du candidat.", async () => {
       setDebloquageEnCours(candidat.user_id);
       try {
         const result = await jobsService.deverrouillerCandidat(candidat.user_id);
@@ -549,7 +563,7 @@ const CVTheque = () => {
           Filtrez par wilaya, diplôme, spécialité ou expérience. Cliquez sur un profil pour voir le détail, télécharger le CV et lancer une analyse IA.
           Ajoutez des candidats à vos <strong>favoris ⭐</strong> pour les retrouver facilement dans l'onglet "Favoris".
           Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
-          Débloquez un profil (1 crédit) pour accéder à ses coordonnées et son CV, à vie, pour toute votre équipe.
+          Débloquez un profil (1 crédit) pour accéder à ses coordonnées et à son CV pour votre équipe, sous réserve que le profil reste actif et accessible conformément aux paramètres de confidentialité du candidat.
           L'accès à la CVthèque implique votre engagement à traiter les données des candidats <strong>uniquement dans le cadre du recrutement</strong>, conformément à la loi n° 18-07.
         </InfoBanner>
       </div>
@@ -1388,6 +1402,23 @@ const CVTheque = () => {
                     <FileText size={16} />
                     Débloquer pour voir le CV (1 crédit)
                   </button>
+                </div>
+              )}
+              {documentsPartages.length > 0 && (
+                <div className="px-6 pb-6 flex flex-wrap gap-2">
+                  {documentsPartages.map((doc) => (
+                    <a
+                      key={doc.id}
+                      href={documentPartageFichierUrl(selectedCandidat.user_id, doc.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`${doc.nom_personnalise || doc.type_document || "Document partagé"} · Partagé par le candidat le ${new Date(doc.date_partage).toLocaleDateString("fr-FR")}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors min-w-0 max-w-40"
+                    >
+                      <FileText size={12} className="shrink-0" />
+                      <span className="truncate">{doc.nom_personnalise || doc.type_document || "Document partagé"}</span>
+                    </a>
+                  ))}
                 </div>
               )}
             </div>

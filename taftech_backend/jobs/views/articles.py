@@ -7,7 +7,7 @@ from ..models import Article, ArticleCategorie
 from ..serializers import (
     ArticleListSerializer, ArticleDetailSerializer, ArticleCategorieSerializer,
 )
-from ..throttles import PublicReadThrottle
+from ..throttles import PublicReadThrottle, AdminFileUploadThrottle
 
 
 class ArticlePagination(PageNumberPagination):
@@ -60,6 +60,7 @@ class ArticleAdminAPIView(APIView):
     """CRUD admin des articles — inclut les brouillons, toutes catégories."""
     permission_classes = [IsAdminUser]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [AdminFileUploadThrottle]
 
     def get(self, request):
         if request.user.role != 'ADMIN':
@@ -82,6 +83,7 @@ class ArticleAdminDetailAPIView(APIView):
     retourner contenu_html complet (ArticleDetailSerializer), pas la liste allégée."""
     permission_classes = [IsAdminUser]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [AdminFileUploadThrottle]
 
     def get(self, request, pk):
         if request.user.role != 'ADMIN':

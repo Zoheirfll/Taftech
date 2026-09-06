@@ -38,7 +38,7 @@ const FEATURES = [
   {
     icon: Shield,
     title: "Conforme Loi 18-07",
-    desc: "100% conforme à la législation algérienne sur la protection des données (ANPDP).",
+    desc: "100% conforme à la loi 18-07 relative à la protection des données à caractère personnel.",
   },
 ];
 
@@ -50,12 +50,12 @@ const STEPS = [
 ];
 
 const AVANTAGES = [
-  "Publication d'offres illimitée",
+  "Publication d'offres : 1 gratuite, jusqu'à illimité selon votre formule",
   "Score de matching sur chaque candidat",
-  "Accès à la CVthèque nationale",
+  "CVthèque nationale accessible dès la formule Starter",
   "Questionnaires de présélection",
   "Notifications en temps réel",
-  "Conforme ANPDP / Loi 18-07",
+  "Conforme à la loi 18-07",
 ];
 
 const LandingRecruteur = () => {
@@ -105,7 +105,7 @@ const LandingRecruteur = () => {
               </Link>
             </div>
             <div className="flex flex-wrap gap-4">
-              {["Gratuit au lancement", "Sans engagement", "Validé ANPDP"].map((item) => (
+              {["Compte gratuit disponible", "Sans engagement", "Conforme à la loi 18-07"].map((item) => (
                 <div key={item} className={`flex items-center gap-1.5 text-sm ${tw.bodyTextGrand}`}>
                   <CheckCircle size={14} className={tw.iconMuted} />
                   {item}
@@ -227,7 +227,7 @@ const LandingRecruteur = () => {
               Pourquoi choisir TAFTECH ?
             </h2>
             <p className="text-slate-700 text-base leading-relaxed mb-8">
-              La seule plateforme de recrutement algérienne avec matching par IA, conforme ANPDP, pensée pour les entreprises locales.
+              La plateforme de recrutement algérienne qui combine intelligence artificielle, expertise RH et accompagnement humain.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {AVANTAGES.map((item) => (

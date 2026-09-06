@@ -57,7 +57,7 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
         <Navbar />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Se connecter/i)).toBeInTheDocument();
+    expect(screen.getByText(/Connexion/i)).toBeInTheDocument();
     expect(screen.getByText(/S'inscrire/i)).toBeInTheDocument();
     expect(screen.queryByText(/Mon Compte/i)).not.toBeInTheDocument();
   });

@@ -48,7 +48,7 @@ const FooterRecruteur = () => {
               </span>
             </Link>
             <p className={tw.footerBrandTextTeal}>
-              La plateforme de recrutement algérienne avec matching par intelligence artificielle. Conforme loi 18-07 / ANPDP.
+              La plateforme de recrutement qui combine intelligence artificielle, expertise RH et accompagnement humain. Conforme à la loi 18-07.
             </p>
           </div>
 

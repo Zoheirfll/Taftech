@@ -116,7 +116,7 @@ const NavbarRecruteur = () => {
 
       const loadNotifications = async () => {
         try {
-          const notifs = await jobsService.getNotifications();
+          const notifs = await jobsService.getNotifications("recruteur");
           setUnreadCount(notifs.filter((n) => !n.lue).length);
         } catch (err) {
           reportError("ECHEC_NOTIFS_NAVBAR_RECRUTEUR", err);
@@ -124,7 +124,7 @@ const NavbarRecruteur = () => {
       };
       loadNotifications();
     }
-  }, [isLogged, role]);
+  }, [isLogged, role, location.pathname]);
 
   useEffect(() => {
     const handler = (e) => {

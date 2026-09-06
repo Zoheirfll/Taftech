@@ -10,6 +10,28 @@ Travail initial effectué sur `security/audit-2026-07` (créée depuis `main`) �
 
 ---
 
+## ✅ 17. Throttling par endpoint — uploads & IA (03/09/2026)
+
+**Contexte** : demande explicite de l'utilisateur de resserrer le rate limiting sur les uploads de fichiers et la génération IA, au-delà des scopes déjà en place (`auth`, `groq`, `public_read`, `write_action`, `email_write`, `invitation_cvtheque`). Audit ciblé de tous les endpoints authentifiés avec `MultiPartParser` ou appel Groq, pas un audit de vulnérabilité classique (pas de nouveau finding IDOR/injection).
+
+**Trouvé — 6 endpoints authentifiés sans aucun throttle au-delà du seau générique `user` (1000/jour)** :
+- `ParserCVAPIView` (`jobs/views/ia.py`) — le plus sérieux : upload de fichier **et** 1-2 appels Groq (extraction + agent de classification domaine), sans limite dédiée depuis sa création.
+- `DocumentCandidatAPIView.post` (`jobs/views/candidat_dashboard.py`) — upload de document privé candidat, aucune limite de fréquence **ni de nombre** (un candidat pouvait accumuler des documents indéfiniment, un seul type "CV" pouvait être uploadé en 50 exemplaires).
+- `ProfilCandidatAPIView.put` (CV/photo profil), `UpdateProfilEntrepriseAPIView` (logo/bannière), `EntreprisePhotosAPIView.post` (galerie, déjà plafonnée à 12 photos mais sans throttle de fréquence), `PostulerAPIView` (candidature réelle avec CV/lettre) — tous sans throttle dédié.
+- Côté admin (`IsAdminUser`, risque plus faible mais non nul si session compromise) : `ArticleAdminAPIView`/`ArticleAdminDetailAPIView` (image de couverture), `BanniereAccueilAdminAPIView` (carrousel accueil) — sans throttle.
+
+**Correctifs appliqués** (`jobs/throttles.py`, `settings.py`) :
+- `FileUploadThrottle` (scope `file_upload`, 20/h, ignore GET/HEAD/OPTIONS) — appliqué à `ProfilCandidatAPIView`, `DocumentCandidatAPIView`, `UpdateProfilEntrepriseAPIView`, `EntreprisePhotosAPIView`, `PostulerAPIView`.
+- `CVParserThrottle` (scope `cv_parser`, 10/h, dédié — plus strict que le scope `groq` partagé car combine upload + coût Groq) — appliqué à `ParserCVAPIView` en plus de `FileUploadThrottle` (le plus restrictif des deux s'applique).
+- `AdminFileUploadThrottle` (scope `admin_upload`, 100/h — plus généreux car publication en lot légitime par un admin) — appliqué à `ArticleAdminAPIView`, `ArticleAdminDetailAPIView`, `BanniereAccueilAdminAPIView`.
+- **Nombre de documents privés plafonné** : `DocumentCandidatAPIView.post` refuse désormais tout nouvel upload au-delà de 20 documents au total, **et un seul document par type** (`TypeDocument`, y compris le bucket "sans type") — un upload sur un type déjà utilisé est rejeté (400) tant que l'ancien n'est pas supprimé explicitement.
+
+**Non touché (déjà correctement borné avant cette session)** : taille de fichier (5 Mo CV/documents/lettre, 2-5 Mo logo/photo/bannière selon le champ) et whitelist d'extensions + vérification magic-bytes — déjà en place au niveau modèle (`FileExtensionValidator`, `validate_document_mime`/`validate_image_mime`, `validate_file_size`), rien à changer.
+
+**Tests** : 410/410 backend ✅ (suite complète `jobs accounts` relancée après chaque lot de changements), `python manage.py check` propre.
+
+---
+
 ## ✅ 16. Round 2 (26/08/2026) — audit complet, approfondissement
 
 **Contexte** : suite directe du round 1 ci-dessous, même jour, à la demande explicite d'aller plus loin après un premier passage propre. Méthodologie identique (sous-agent d'exploration + sous-agent de vérification indépendant par finding, seuil de confiance ≥8/10).

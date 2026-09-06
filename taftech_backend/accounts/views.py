@@ -90,7 +90,7 @@ class CandidatRegistrationAPIView(APIView):
                 html_body = render_to_string('emails/verification_code.html', ctx)
                 texte = f"Bonjour {user.first_name},\n\nVotre code de vérification est : {code}\n\nÀ très vite !"
                 try:
-                    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+                    msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [user.email])
                     msg.attach_alternative(html_body, 'text/html')
                     msg.send(fail_silently=False)
                 except Exception as e:
@@ -193,7 +193,7 @@ class RenvoyerCodeVerificationAPIView(APIView):
         html_body = render_to_string('emails/verification_code.html', ctx)
         texte = f"Bonjour {user.first_name},\n\nVotre nouveau code de vérification est : {code}\n\nIl est valable 10 minutes."
         try:
-            msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+            msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [user.email])
             msg.attach_alternative(html_body, 'text/html')
             msg.send(fail_silently=False)
         except Exception as e:
@@ -230,7 +230,7 @@ class RecruteurRegisterAPIView(APIView):
                 "Une fois votre email vérifié, notre équipe validera votre Registre de Commerce."
             )
             try:
-                msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [user.email])
+                msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [user.email])
                 msg.attach_alternative(html_body, 'text/html')
                 msg.send(fail_silently=False)
             except Exception as e:
@@ -485,7 +485,7 @@ class ForgotPasswordAPIView(APIView):
             msg = EmailMultiAlternatives(
                 "Réinitialisation de votre mot de passe TafTech",
                 texte,
-                settings.EMAIL_HOST_USER,
+                settings.DEFAULT_FROM_EMAIL,
                 [user.email],
             )
             msg.attach_alternative(html_body, 'text/html')
@@ -724,7 +724,7 @@ class ContactMessageAPIView(APIView):
                 f"Motif : {motif}\nObjet : {objet}\n\nMessage :\n{message}"
             )
             msg = EmailMultiAlternatives(
-                f"[Contact TafTech] {objet}", texte, settings.EMAIL_HOST_USER,
+                f"[Contact TafTech] {objet}", texte, settings.DEFAULT_FROM_EMAIL,
                 [settings.EMAIL_HOST_USER], reply_to=[email],
             )
             msg.send(fail_silently=False)

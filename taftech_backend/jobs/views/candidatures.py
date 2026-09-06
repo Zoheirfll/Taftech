@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_datetime
 from ..models import OffreEmploi, Candidature, Notification, EquipeActionLog
 from ..models import QuestionQuestionnaire, ReponseCandidat
 from .equipe import get_entreprise_for_user, get_membre_role, _log
-from ..throttles import WriteActionThrottle, PostulerRapideEmailThrottle
+from ..throttles import WriteActionThrottle, PostulerRapideEmailThrottle, FileUploadThrottle
 
 _ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 from ..serializers import (
@@ -30,6 +30,7 @@ User = get_user_model()
 class PostulerAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [FileUploadThrottle]
 
     def post(self, request, offre_id):
         if request.user.role != 'CANDIDAT':
@@ -188,7 +189,7 @@ class PostulerAPIView(APIView):
                 f"Score IA : {resultat_matching['total']}%.\n\nL'équipe TafTech."
             )
             try:
-                msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [email_employeur])
+                msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [email_employeur])
                 msg.attach_alternative(html_body, 'text/html')
                 msg.send(fail_silently=True)
             except Exception as e:
@@ -298,7 +299,7 @@ class UpdateCandidatureStatusAPIView(APIView):
                     texte += f"\nMessage : {message_custom}"
                 texte += f"\n\nCordialement,\n{nom_entreprise} (via TafTech)"
                 try:
-                    msg = EmailMultiAlternatives(sujet, texte, settings.EMAIL_HOST_USER, [email_destinataire])
+                    msg = EmailMultiAlternatives(sujet, texte, settings.DEFAULT_FROM_EMAIL, [email_destinataire])
                     msg.attach_alternative(html_body, 'text/html')
                     msg.send(fail_silently=True)
                 except Exception as e:
@@ -327,7 +328,7 @@ class UpdateCandidatureStatusAPIView(APIView):
                         msg = EmailMultiAlternatives(
                             f"Réponse à votre candidature — {candidature.offre.titre}",
                             message_final,
-                            settings.EMAIL_HOST_USER,
+                            settings.DEFAULT_FROM_EMAIL,
                             [email_candidat],
                         )
                         msg.attach_alternative(html_body, 'text/html')

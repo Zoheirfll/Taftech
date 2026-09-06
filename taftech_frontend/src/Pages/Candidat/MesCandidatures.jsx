@@ -16,6 +16,7 @@ import {
 import InfoBanner from "../../Components/InfoBanner";
 import { TooltipIcon } from "../../Components/Tooltip";
 import CandidatureTimeline from "../../Components/CandidatureTimeline";
+import MatchingRadarChart from "../../Components/MatchingRadarChart";
 import { tw } from "../../theme";
 
 const getBadgeStyle = (statut) => {
@@ -61,105 +62,6 @@ const CRITERES = [
   { key: "region", label: "Localisation & mobilité", max: 20 },
 ];
 
-const RadarChart = ({ details }) => {
-  const cx = 110,
-    cy = 110,
-    R = 78;
-  const n = CRITERES.length;
-  const angle = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
-  const gridPoints = (level) =>
-    CRITERES.map((_, i) => {
-      const a = angle(i);
-      return `${cx + R * level * Math.cos(a)},${cy + R * level * Math.sin(a)}`;
-    }).join(" ");
-  const dataPoints = CRITERES.map((c, i) => {
-    const norm = Math.min((details?.[c.key] ?? 0) / c.max, 1);
-    const a = angle(i);
-    return `${cx + R * norm * Math.cos(a)},${cy + R * norm * Math.sin(a)}`;
-  }).join(" ");
-  const labelPos = (i) => {
-    const a = angle(i);
-    return { x: cx + (R + 18) * Math.cos(a), y: cy + (R + 18) * Math.sin(a) };
-  };
-  const total = CRITERES.reduce((acc, c) => acc + (details?.[c.key] ?? 0), 0);
-  const color = total >= 80 ? "#059669" : total >= 60 ? "#d97706" : "#dc2626";
-
-  return (
-    <svg viewBox="0 0 220 220" className="w-full max-w-[200px] mx-auto">
-      {[0.25, 0.5, 0.75, 1].map((l) => (
-        <polygon
-          key={l}
-          points={gridPoints(l)}
-          fill="none"
-          stroke="#e2e8f0"
-          strokeWidth="0.8"
-        />
-      ))}
-      {CRITERES.map((_, i) => {
-        const a = angle(i);
-        return (
-          <line
-            key={i}
-            x1={cx}
-            y1={cy}
-            x2={cx + R * Math.cos(a)}
-            y2={cy + R * Math.sin(a)}
-            stroke="#cbd5e1"
-            strokeWidth="0.8"
-          />
-        );
-      })}
-      <polygon
-        points={dataPoints}
-        fill={color}
-        fillOpacity={0.18}
-        stroke={color}
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      {CRITERES.map((c, i) => {
-        const norm = Math.min((details?.[c.key] ?? 0) / c.max, 1);
-        const a = angle(i);
-        return (
-          <circle
-            key={i}
-            cx={cx + R * norm * Math.cos(a)}
-            cy={cy + R * norm * Math.sin(a)}
-            r="3.5"
-            fill={color}
-          />
-        );
-      })}
-      {CRITERES.map((c, i) => {
-        const pos = labelPos(i);
-        const pct = Math.round(((details?.[c.key] ?? 0) / c.max) * 100);
-        return (
-          <g key={i}>
-            <text
-              x={pos.x}
-              y={pos.y - 4}
-              textAnchor="middle"
-              fontSize="8.5"
-              fontWeight="600"
-              fill="#475569"
-            >
-              {c.label}
-            </text>
-            <text
-              x={pos.x}
-              y={pos.y + 7}
-              textAnchor="middle"
-              fontSize="8"
-              fill="#94a3b8"
-            >
-              {pct}%
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
 
 const AnalyseIA = ({ cand }) => {
   const DM = cand.details_matching;
@@ -177,7 +79,7 @@ const AnalyseIA = ({ cand }) => {
       </div>
       <div className="flex flex-col sm:flex-row gap-6 items-center mb-4">
         <div className="w-full sm:w-1/2">
-          <RadarChart details={scores} />
+          <MatchingRadarChart scores={scores} criteres={CRITERES} height={220} />
         </div>
         <div className="w-full sm:w-1/2 space-y-3">
           {CRITERES.map((c) => {

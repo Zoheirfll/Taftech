@@ -118,9 +118,10 @@ export const candidatService = {
   },
 
   // Notifications inbox
-  getNotifications: async () => {
+  // portail: "candidat" (défaut) ou "recruteur" — sépare les 2 boîtes pour un compte qui a les deux rôles
+  getNotifications: async (portail = "candidat") => {
     try {
-      const response = await api.get("jobs/notifications/");
+      const response = await api.get("jobs/notifications/", { params: { portail } });
       return Array.isArray(response.data) ? response.data : (response.data.results ?? []);
     } catch (err) {
       reportError("ECHEC_GET_NOTIFICATIONS_API", err);
@@ -138,9 +139,9 @@ export const candidatService = {
     }
   },
 
-  markAllNotificationsAsRead: async () => {
+  markAllNotificationsAsRead: async (portail = "candidat") => {
     try {
-      const response = await api.post("jobs/notifications/marquer-toutes-lues/");
+      const response = await api.post("jobs/notifications/marquer-toutes-lues/", null, { params: { portail } });
       return response.data;
     } catch (err) {
       reportError("ECHEC_MARK_ALL_NOTIFS_READ_API", err);

@@ -110,6 +110,36 @@ export const dashboardCandidatService = {
     }
   },
 
+  getEntreprisesEligiblesPartage: async (docId) => {
+    try {
+      const response = await api.get(`jobs/documents/${docId}/entreprises-eligibles/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ENTREPRISES_ELIGIBLES", err);
+      throw err;
+    }
+  },
+
+  partagerDocument: async (docId, entrepriseId) => {
+    try {
+      const response = await api.post(`jobs/documents/${docId}/partager/`, { entreprise_id: entrepriseId });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_PARTAGER_DOCUMENT", err);
+      throw err;
+    }
+  },
+
+  revoquerPartageDocument: async (docId, entrepriseId) => {
+    try {
+      const response = await api.delete(`jobs/documents/${docId}/partager/${entrepriseId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_REVOQUER_PARTAGE_DOCUMENT", err);
+      throw err;
+    }
+  },
+
   getDisponibilitesRdv: async () => {
     try {
       const response = await api.get("jobs/rendez-vous/disponibilites/");

@@ -61,6 +61,7 @@ const GestionOffre = () => {
     resumeIA,
     setResumeIA,
     loadingResume,
+    documentsPartages,
     activeDetailTab,
     setActiveDetailTab,
     modalEntretien,
@@ -437,6 +438,7 @@ const GestionOffre = () => {
               handleResumeIA={handleResumeIA}
               setModalEval={setModalEval}
               setEvalForm={setEvalForm}
+              documentsPartages={documentsPartages}
             />
           ) : (
             <div className={`${tw.card} rounded-2xl p-12 text-center`}>

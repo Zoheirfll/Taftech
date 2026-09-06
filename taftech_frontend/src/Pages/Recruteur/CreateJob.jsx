@@ -7,12 +7,19 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
-import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft } from "lucide-react";
+import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 import { CreateQuestionnaireModal } from "../../Components/CreateQuestionnaireModal";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+
+const NIVEAU_LABELS = {
+  DEBUTANT: "Débutant",
+  INTERMEDIAIRE: "Intermédiaire",
+  AVANCE: "Avancé",
+  CONFIRME: "Confirmé / Expert",
+};
 
 const TYPE_QUESTION_LABELS = {
   COURT: "Texte court",
@@ -78,6 +85,42 @@ const CreateJob = () => {
   const [questionsEntretien, setQuestionsEntretien] = useState([]);
   const [modalPrefillQuestions, setModalPrefillQuestions] = useState(null);
 
+  // Compétences structurées pour le matching — voir NIVEAU_LABELS plus bas.
+  const [competencesRequises, setCompetencesRequises] = useState([]);
+  const [compSuggestions, setCompSuggestions] = useState([]);
+  const [showCompSuggestions, setShowCompSuggestions] = useState(false);
+  const [compType, setCompType] = useState("OBLIGATOIRE");
+  const [compNiveau, setCompNiveau] = useState("");
+
+  const handleCompInputChange = async (value) => {
+    if (value.length >= 2) {
+      try {
+        const data = await jobsService.searchCompetences(value);
+        setCompSuggestions(data);
+        setShowCompSuggestions(data.length > 0);
+      } catch {
+        setCompSuggestions([]);
+      }
+    } else {
+      setShowCompSuggestions(false);
+    }
+  };
+
+  const ajouterCompetenceRequise = (label) => {
+    const trimmed = (label || "").trim();
+    if (!trimmed) return;
+    if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Cette compétence est déjà ajoutée.");
+      return;
+    }
+    setCompetencesRequises((prev) => [...prev, { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null }]);
+    setShowCompSuggestions(false);
+  };
+
+  const retirerCompetenceRequise = (label) => {
+    setCompetencesRequises((prev) => prev.filter((c) => c.label !== label));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -136,7 +179,9 @@ const CreateJob = () => {
   };
 
   const handleGenererIA = async (titreOverride) => {
-    const titrePourGeneration = titreOverride || formData.titre;
+    // Garde-fou : un onClick={handleGenererIA} direct (sans wrapper fléché) passerait
+    // l'événement React ici au lieu d'un titre — on ignore tout ce qui n'est pas une chaîne.
+    const titrePourGeneration = (typeof titreOverride === "string" ? titreOverride : "") || formData.titre;
     if (!titrePourGeneration) {
       toast.error("Saisissez au moins le titre du poste avant de générer.");
       return;
@@ -164,6 +209,13 @@ const CreateJob = () => {
         specialite: prev.specialite || result.specialite_resolue || prev.specialite,
       }));
       setQuestionsEntretien(result.questions_entretien || []);
+      if (result.competences_requises?.length > 0) {
+        setCompetencesRequises((prev) => {
+          const dejaPresentes = new Set(prev.map((c) => c.label.toLowerCase()));
+          const nouvelles = result.competences_requises.filter((c) => !dejaPresentes.has(c.label.toLowerCase()));
+          return [...prev, ...nouvelles];
+        });
+      }
       toast.success("Contenu généré ! Relisez et ajustez selon vos besoins.", { id: toastId });
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."), { id: toastId });
@@ -190,7 +242,7 @@ const CreateJob = () => {
     setLoading(true);
     const toastId = toast.loading("Publication en cours...");
     try {
-      const payload = { ...formData, date_expiration: formData.date_expiration || null };
+      const payload = { ...formData, date_expiration: formData.date_expiration || null, competences_requises: competencesRequises };
       await jobsService.creerOffre(payload);
       toast.success("Offre soumise ! Elle sera visible après validation par notre équipe.", { id: toastId, duration: 5000 });
       setTimeout(() => navigate("/dashboard"), 2500);
@@ -403,7 +455,7 @@ const CreateJob = () => {
               {isPremium ? (
                 <button
                   type="button"
-                  onClick={handleGenererIA}
+                  onClick={() => handleGenererIA()}
                   disabled={iaLoading || !iaReady}
                   title={!iaReady ? "Saisissez le titre du poste d'abord" : ""}
                   className={`flex items-center justify-center gap-1.5 px-4 py-2 w-full sm:w-auto text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? tw.bgAmberSolidHover : tw.bgSlate300}`}
@@ -449,16 +501,90 @@ const CreateJob = () => {
                 />
               </Field>
             </div>
-            <Field label="Compétences requises">
-              <textarea
-                name="competences"
-                value={formData.competences}
-                onChange={handleChange}
-                rows={4}
-                className={textareaClass}
-                placeholder="- Python / Django / React&#10;- PostgreSQL&#10;- Git&#10;- ..."
-              />
-            </Field>
+            <div>
+              <label className={`text-sm font-semibold ${tw.textMuted} mb-1.5 block`}>
+                Compétences requises
+              </label>
+              <p className={`text-xs mb-2 ${tw.textMuted700}`}>
+                Ajoutez vos compétences ci-dessous : le texte affiché sur l'annonce est généré automatiquement à partir de cette liste, pour qu'il corresponde toujours exactement à ce que l'IA utilise pour le matching.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {competencesRequises.map((c) => (
+                  <span
+                    key={c.label}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${c.type_exigence === "OBLIGATOIRE" ? tw.badgeError : tw.badgeNeutral}`}
+                  >
+                    {c.label}
+                    <span className="opacity-70 font-normal">
+                      · {c.type_exigence === "OBLIGATOIRE" ? "Obligatoire" : "Souhaitée"}
+                      {c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
+                    </span>
+                    <button type="button" onClick={() => retirerCompetenceRequise(c.label)} className="hover:opacity-70">
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+                {competencesRequises.length === 0 && (
+                  <p className={`text-xs ${tw.textMuted700}`}>Aucune compétence structurée ajoutée.</p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <input
+                    id="comp-offre-input"
+                    onChange={(e) => handleCompInputChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.target.value.trim()) {
+                        e.preventDefault();
+                        ajouterCompetenceRequise(e.target.value);
+                        e.target.value = "";
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => setShowCompSuggestions(false), 200)}
+                    placeholder="Tapez une compétence puis Entrée..."
+                    className={inputClass}
+                  />
+                  {showCompSuggestions && compSuggestions.length > 0 && (
+                    <div className={`absolute top-full left-0 right-0 rounded-xl shadow-lg z-50 mt-1 overflow-hidden ${tw.autocompleteDropdown}`}>
+                      <div className="max-h-48 overflow-y-auto">
+                        {compSuggestions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onMouseDown={() => {
+                              ajouterCompetenceRequise(c.label);
+                              const el = document.getElementById("comp-offre-input");
+                              if (el) el.value = "";
+                            }}
+                            className={`w-full text-left px-4 py-2.5 transition-colors text-sm font-medium ${tw.autocompleteItem} ${tw.autocompleteItemTitle}`}
+                          >
+                            {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <select value={compType} onChange={(e) => setCompType(e.target.value)} className={`${inputClass} sm:w-40`}>
+                  <option value="OBLIGATOIRE">Obligatoire</option>
+                  <option value="SOUHAITEE">Souhaitée</option>
+                </select>
+                <select value={compNiveau} onChange={(e) => setCompNiveau(e.target.value)} className={`${inputClass} sm:w-44`}>
+                  <option value="">Niveau (optionnel)</option>
+                  {Object.entries(NIVEAU_LABELS).map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              {competencesRequises.length > 0 && (
+                <div className={`mt-3 p-3 rounded-lg text-xs whitespace-pre-line ${tw.surfaceMuted} ${tw.textMuted700}`}>
+                  <p className={`font-semibold mb-1 ${tw.textMuted}`}>Aperçu du texte affiché sur l'annonce :</p>
+                  {competencesRequises
+                    .map((c) => `- ${c.label}${c.niveau_requis ? ` (niveau ${NIVEAU_LABELS[c.niveau_requis]} minimum)` : ""} — ${c.type_exigence === "OBLIGATOIRE" ? "Obligatoire" : "Souhaitée"}`)
+                    .join("\n")}
+                </div>
+              )}
+            </div>
 
             {questionsEntretien.length > 0 && (
               <div className={`p-4 rounded-lg border ${tw.borderTeal200} ${tw.bgTealSoft}`}>

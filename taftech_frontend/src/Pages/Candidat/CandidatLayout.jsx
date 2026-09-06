@@ -33,7 +33,7 @@ const CandidatLayout = () => {
       }
     };
     fetchNotifications();
-  }, []);
+  }, [location.pathname]);
 
   const menuGroups = useMemo(() => [
     {

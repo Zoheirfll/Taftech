@@ -26,6 +26,7 @@ export const useGestionOffre = () => {
   const [loadingGroq, setLoadingGroq] = useState(false);
   const [resumeIA, setResumeIA] = useState(null);
   const [loadingResume, setLoadingResume] = useState(false);
+  const [documentsPartages, setDocumentsPartages] = useState([]);
   const [activeDetailTab, setActiveDetailTab] = useState("profil");
   const [modalEntretien, setModalEntretien] = useState({
     isOpen: false,
@@ -86,6 +87,13 @@ export const useGestionOffre = () => {
     setLoadingGroq(false);
     setResumeIA(null);
     setLoadingResume(false);
+    setDocumentsPartages([]);
+    const candidatId = selectedCandidature?.candidat?.id;
+    if (!candidatId) return;
+    jobsService
+      .getDocumentsPartages(candidatId)
+      .then(setDocumentsPartages)
+      .catch((err) => reportError("ECHEC_DOCUMENTS_PARTAGES", err));
   }, [selectedCandidature?.id]);
 
   const getMediaUrl = mediaUrl;
@@ -407,6 +415,7 @@ export const useGestionOffre = () => {
     resumeIA,
     setResumeIA,
     loadingResume,
+    documentsPartages,
     activeDetailTab,
     setActiveDetailTab,
     modalEntretien,

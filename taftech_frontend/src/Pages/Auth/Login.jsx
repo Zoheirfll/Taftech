@@ -64,8 +64,10 @@ const Login = () => {
     <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center p-4`}>
       <div className={`max-w-4xl w-full ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
 
-        {/* COLONNE GAUCHE */}
-        <div className={`md:w-5/12 ${tw.bannerGradientPrimary} text-white p-10 flex flex-col justify-between`}>
+        {/* COLONNE GAUCHE — en second sur mobile (order-2) pour que le formulaire de
+            connexion soit immédiatement visible sans scroll, ce panneau promotionnel
+            passant après ; ordre naturel restauré à partir de md (côte à côte). */}
+        <div className={`order-2 md:order-1 md:w-5/12 ${tw.bannerGradientPrimary} text-white p-10 flex flex-col justify-between`}>
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
               Bon retour sur <span className={tw.textAmber400}>TAFTECH</span>
@@ -93,8 +95,8 @@ const Login = () => {
           </p>
         </div>
 
-        {/* COLONNE DROITE */}
-        <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        {/* COLONNE DROITE — formulaire, en premier sur mobile */}
+        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
           <h3 className={`text-xl font-bold ${tw.textStrong} mb-1`}>Accédez à votre espace TAFTECH</h3>
           <p className={`${tw.bodyText} mb-6`}>
             Retrouvez vos candidatures, gérez votre profil et suivez vos opportunités professionnelles en toute simplicité.

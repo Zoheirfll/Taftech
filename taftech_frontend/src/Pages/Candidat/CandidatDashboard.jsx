@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import { TooltipIcon } from "../../Components/Tooltip";
+import RadialGauge from "../../Components/RadialGauge";
 import { jobUrl } from "../../utils/slugify";
 import {
   Briefcase,
@@ -81,40 +82,49 @@ const RecommendedJobCard = ({ job }) => (
   </Link>
 );
 
+// "action" est le paramètre `?focus=` lu par ProfilCandidat au montage pour ouvrir/
+// scroller directement vers le bon endroit — mêmes clés que PROFILE_CATEGORIES dans
+// ProfilCandidat/index.jsx, pour rester cohérent entre les deux pages.
 const CATEGORIES = [
   {
     key: "infos",
     label: "Informations personnelles",
-    criteres: ["Numéro de téléphone", "Photo de profil", "Titre professionnel", "Wilaya / Commune"],
-    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune)],
+    action: "info",
+    criteres: ["Numéro de téléphone", "Photo de profil", "Titre professionnel", "Wilaya / Commune", "Diplôme", "Spécialité"],
+    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.specialite],
   },
   {
     key: "experience",
     label: "Expérience professionnelle",
+    action: "experiences",
     criteres: ["Au moins une expérience renseignée"],
     test: (p) => [p.experiences_detail?.length > 0],
   },
   {
     key: "competences",
     label: "Compétences",
+    action: "competences",
     criteres: ["Au moins une compétence renseignée"],
     test: (p) => [p.competences?.split(",").filter((t) => t.trim()).length > 0],
   },
   {
     key: "formation",
     label: "Formation",
-    criteres: ["Diplôme", "Spécialité", "Au moins une formation"],
-    test: (p) => [!!p.diplome, !!p.specialite, p.formations_detail?.length > 0],
+    action: "formations",
+    criteres: ["Au moins une formation renseignée"],
+    test: (p) => [p.formations_detail?.length > 0],
   },
   {
     key: "langues",
     label: "Langues",
+    action: "langues",
     criteres: ["Au moins une langue renseignée"],
     test: (p) => [p.langues?.split(",").filter((t) => t.trim()).length > 0],
   },
   {
     key: "cv",
     label: "CV",
+    action: "cv-form",
     criteres: ["CV téléversé"],
     test: (p) => [!!p.cv_pdf],
   },
@@ -336,27 +346,14 @@ const CandidatDashboard = () => {
       <div className={`${tw.card} p-5 mb-2.5`}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-3">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
-                <path
-                  className="stroke-slate-100"
-                  strokeWidth="4"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className={completionRounded >= 80 ? "stroke-emerald-500" : completionRounded >= 40 ? "stroke-amber-500" : "stroke-indigo-500"}
-                  strokeWidth="4"
-                  strokeDasharray={`${completionRounded}, 100`}
-                  strokeLinecap="round"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-sm font-extrabold ${tw.textStrong}`}>{completionRounded}%</span>
-              </div>
-            </div>
+            <RadialGauge
+              value={completionRounded}
+              size={64}
+              thresholdHigh={80}
+              thresholdMid={40}
+              colorLow="#6366f1"
+              labelClassName={`text-sm font-extrabold ${tw.textStrong}`}
+            />
             <div>
               <h2 className={`text-sm font-bold ${tw.textStrong}`}>Complétude du profil</h2>
               <p className={`text-[10px] ${tw.textMuted700}`}>
@@ -373,23 +370,36 @@ const CandidatDashboard = () => {
         </div>
 
         <div className={`mt-3 pt-3 border-t ${tw.borderSubtle} grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2`}>
-          {categoriesAvecPct.map((cat) => (
-            <div key={cat.key}>
-              <div className="flex items-center justify-between mb-0.5">
-                <div className="flex items-center gap-1">
-                  <span className={`text-xs font-semibold ${tw.textStrong}`}>{cat.label}</span>
-                  <TooltipIcon text={cat.criteres.join(", ")} />
+          {categoriesAvecPct.map((cat) => {
+            const isComplete = cat.pct === 100;
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => navigate(`/profil?focus=${cat.action}`)}
+                disabled={isComplete}
+                className={`text-left rounded-lg p-1 -m-1 transition-colors ${isComplete ? "cursor-default" : "hover:bg-slate-50 cursor-pointer"}`}
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-semibold ${tw.textStrong}`}>{cat.label}</span>
+                    <TooltipIcon text={cat.criteres.join(", ")} />
+                  </div>
+                  {isComplete ? (
+                    <CheckCircle size={12} className="text-emerald-500 shrink-0" />
+                  ) : (
+                    <span className={`text-[10px] font-bold ${tw.textMuted700}`}>{cat.pct}%</span>
+                  )}
                 </div>
-                <span className={`text-[10px] font-bold ${tw.textMuted700}`}>{cat.pct}%</span>
-              </div>
-              <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${cat.pct >= 80 ? "bg-emerald-500" : cat.pct >= 40 ? "bg-amber-500" : "bg-indigo-500"}`}
-                  style={{ width: `${cat.pct}%` }}
-                />
-              </div>
-            </div>
-          ))}
+                <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${cat.pct >= 80 ? "bg-emerald-500" : cat.pct >= 40 ? "bg-amber-500" : "bg-indigo-500"}`}
+                    style={{ width: `${cat.pct}%` }}
+                  />
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -486,27 +496,15 @@ const CandidatDashboard = () => {
             {scoreProfil ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="relative w-16 h-16 shrink-0">
-                    <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
-                      <path
-                        className="stroke-slate-100"
-                        strokeWidth="4"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className={scoreProfil.total >= 80 ? "stroke-emerald-500" : scoreProfil.total >= 50 ? "stroke-amber-500" : "stroke-indigo-500"}
-                        strokeWidth="4"
-                        strokeDasharray={`${scoreProfil.total}, 100`}
-                        strokeLinecap="round"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={`text-sm font-extrabold ${tw.textStrong}`}>{scoreProfil.total}</span>
-                    </div>
-                  </div>
+                  <RadialGauge
+                    value={scoreProfil.total}
+                    size={64}
+                    thresholdHigh={80}
+                    thresholdMid={50}
+                    colorLow="#6366f1"
+                    label={scoreProfil.total}
+                    labelClassName={`text-sm font-extrabold ${tw.textStrong}`}
+                  />
                   <div>
                     <p className={`text-sm font-bold ${tw.textStrong}`}>
                       {scoreProfil.total >= 80 ? "Excellent profil !" : scoreProfil.total >= 50 ? "Bon profil !" : "Profil à renforcer"}

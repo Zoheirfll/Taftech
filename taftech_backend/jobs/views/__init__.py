@@ -67,6 +67,7 @@ from .recruteur import (
     MonAbonnementAPIView,
     ExportCandidaturesOffreExcelAPIView,
     ExportCandidaturesExcelAPIView,
+    ExportGraphiqueExcelAPIView,
 )
 from .admin import (
     AdminPagination,
@@ -121,6 +122,8 @@ from .credits import (
     CreditPackCheckoutAPIView,
     CreditPackPublicAPIView,
     CreditPackAdminAPIView,
+    CandidatDocumentsPartagesAPIView,
+    CandidatDocumentPartageFichierAPIView,
 )
 from .facturation import (
     FacturesListAPIView,
@@ -154,6 +157,8 @@ from .candidat_dashboard import (
     CompetenceCandidatAPIView,
     TypeDocumentPublicAPIView,
     DocumentCandidatAPIView,
+    DocumentEntreprisesEligiblesAPIView,
+    DocumentPartagerAPIView,
     DisponibilitesAPIView,
     RendezVousAPIView,
     RendezVousAnnulerAPIView,

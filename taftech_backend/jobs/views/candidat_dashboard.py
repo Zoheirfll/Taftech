@@ -8,16 +8,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from ..models import (
-    CompetenceCandidat, TypeDocument, DocumentCandidat,
+    CompetenceCandidat, TypeDocument, DocumentCandidat, PartageDocument,
     ConfigRendezVous, DisponibiliteRecurrente, JourBloque, RendezVous,
-    ActiviteProfil, Candidature,
+    ActiviteProfil, Candidature, ProfilEntreprise, AccesCandidatDebloque,
 )
 from ..profile_score import calculer_score_profil
 from ..metiers_matching import calculer_metiers_accessibles
 from .ia import GroqThrottle
+from ..throttles import FileUploadThrottle
+
+MAX_DOCUMENTS_CANDIDAT = 20
 
 logger = logging.getLogger(__name__)
 
@@ -204,12 +207,17 @@ class TypeDocumentPublicAPIView(APIView):
 
 class DocumentCandidatAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
+    # JSONParser en plus de MultiPartParser/FormParser : le POST (upload) envoie du multipart,
+    # mais le DELETE (axios `data: {id}`) envoie un corps JSON — sans JSONParser, DRF renvoie
+    # 415 "Unsupported Media Type" avant même d'atteindre delete().
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [FileUploadThrottle]
 
     def get(self, request):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Réservé aux candidats."}, status=403)
         profil = request.user.profil_candidat
+        documents = list(profil.documents.all().prefetch_related('partages__entreprise'))
         data = [
             {
                 'id': d.id,
@@ -218,8 +226,12 @@ class DocumentCandidatAPIView(APIView):
                 'type_document_id': d.type_document_id,
                 'fichier_url': request.build_absolute_uri(d.fichier.url) if d.fichier else None,
                 'date_upload': d.date_upload,
+                'partages': [
+                    {'entreprise_id': p.entreprise_id, 'nom_entreprise': p.entreprise.nom_entreprise}
+                    for p in d.partages.all()
+                ],
             }
-            for d in profil.documents.all()
+            for d in documents
         ]
         return Response(data, status=200)
 
@@ -230,8 +242,18 @@ class DocumentCandidatAPIView(APIView):
         fichier = request.FILES.get('fichier')
         if not fichier:
             return Response({"error": "Aucun fichier reçu."}, status=400)
+        if profil.documents.count() >= MAX_DOCUMENTS_CANDIDAT:
+            return Response({"error": f"Maximum {MAX_DOCUMENTS_CANDIDAT} documents."}, status=400)
         type_id = request.data.get('type_document')
         type_doc = TypeDocument.objects.filter(id=type_id).first() if type_id else None
+        # 1 document par type (y compris "aucun type" — bucket à part) : un nouvel upload sur un
+        # type déjà utilisé doit d'abord supprimer l'existant, pas s'accumuler indéfiniment.
+        if profil.documents.filter(type_document=type_doc).exists():
+            label = type_doc.label if type_doc else "sans type"
+            return Response(
+                {"error": f"Un document « {label} » existe déjà. Supprimez-le avant d'en ajouter un nouveau."},
+                status=400,
+            )
         doc = DocumentCandidat.objects.create(
             profil=profil,
             type_document=type_doc,
@@ -244,6 +266,7 @@ class DocumentCandidatAPIView(APIView):
             'type_document': doc.type_document.label if doc.type_document else None,
             'fichier_url': request.build_absolute_uri(doc.fichier.url),
             'date_upload': doc.date_upload,
+            'partages': [],
         }, status=201)
 
     def delete(self, request):
@@ -257,6 +280,68 @@ class DocumentCandidatAPIView(APIView):
         doc.fichier.delete(save=False)
         doc.delete()
         return Response({"message": "Document supprimé."}, status=200)
+
+
+def _entreprises_relation_candidat(candidat_user):
+    """Entreprises avec lesquelles ce candidat a une relation réelle (a postulé, ou a déjà été
+    débloqué via un crédit CVthèque) — seules éligibles pour un partage ponctuel de document,
+    pour éviter d'exposer un annuaire libre de toutes les entreprises de la plateforme."""
+    ids_candidatures = Candidature.objects.filter(candidat=candidat_user).values_list('offre__entreprise_id', flat=True)
+    ids_debloque = AccesCandidatDebloque.objects.filter(candidat=candidat_user).values_list('entreprise_id', flat=True)
+    ids = set(ids_candidatures) | set(ids_debloque)
+    return ProfilEntreprise.objects.filter(id__in=ids)
+
+
+class DocumentEntreprisesEligiblesAPIView(APIView):
+    """Liste les entreprises avec qui le candidat peut partager un document précis — voir
+    _entreprises_relation_candidat. GET jobs/documents/<id>/entreprises-eligibles/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, doc_id):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=403)
+        try:
+            doc = request.user.profil_candidat.documents.get(id=doc_id)
+        except DocumentCandidat.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=404)
+        deja_partagees = set(doc.partages.values_list('entreprise_id', flat=True))
+        entreprises = _entreprises_relation_candidat(request.user)
+        return Response([
+            {'id': e.id, 'nom_entreprise': e.nom_entreprise, 'deja_partage': e.id in deja_partagees}
+            for e in entreprises
+        ], status=200)
+
+
+class DocumentPartagerAPIView(APIView):
+    """Active/révoque le partage d'un document privé avec une entreprise précise —
+    POST jobs/documents/<id>/partager/ {entreprise_id}, DELETE jobs/documents/<id>/partager/<entreprise_id>/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, doc_id):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=403)
+        try:
+            doc = request.user.profil_candidat.documents.get(id=doc_id)
+        except DocumentCandidat.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=404)
+        entreprise_id = request.data.get('entreprise_id')
+        entreprises_eligibles = _entreprises_relation_candidat(request.user)
+        try:
+            entreprise = entreprises_eligibles.get(id=entreprise_id)
+        except (ProfilEntreprise.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Entreprise introuvable ou non éligible."}, status=404)
+        PartageDocument.objects.get_or_create(document=doc, entreprise=entreprise)
+        return Response({"message": "Document partagé."}, status=201)
+
+    def delete(self, request, doc_id, entreprise_id=None):
+        if request.user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=403)
+        try:
+            doc = request.user.profil_candidat.documents.get(id=doc_id)
+        except DocumentCandidat.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=404)
+        PartageDocument.objects.filter(document=doc, entreprise_id=entreprise_id).delete()
+        return Response({"message": "Partage révoqué."}, status=200)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

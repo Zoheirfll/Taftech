@@ -1,49 +1,43 @@
 import React from "react";
+import { PieChart, Pie, Cell } from "recharts";
 
 /**
- * Donut SVG compact — segments empilés via stroke-dasharray, centré sur le total.
+ * Donut compact (recharts) — segments = sources de candidatures, centré sur
+ * le total. Même API que l'ancienne version SVG faite main.
  * data: [{ key, label, count, pct, couleur }]
  */
 const DonutChart = ({ data = [], size = 96, strokeWidth = 14 }) => {
   const total = data.reduce((sum, d) => sum + (d.count || 0), 0);
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  let cumule = 0;
+  const segments = data.filter((d) => d.count > 0);
+  const innerRadius = size / 2 - strokeWidth;
+  const outerRadius = size / 2;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Répartition des sources de candidatures">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
-      {total > 0 &&
-        data
-          .filter((d) => d.count > 0)
-          .map((d) => {
-            const fraction = d.count / total;
-            const longueur = fraction * circumference;
-            const decalage = -(cumule / total) * circumference;
-            cumule += d.count;
-            return (
-              <circle
-                key={d.key}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={d.couleur}
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${longueur} ${circumference - longueur}`}
-                strokeDashoffset={decalage}
-                transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                strokeLinecap="butt"
-              />
-            );
-          })}
-      <text x={size / 2} y={size / 2 - 2} textAnchor="middle" fontSize="16" fontWeight="700" fill="#0f172a">
-        {total}
-      </text>
-      <text x={size / 2} y={size / 2 + 14} textAnchor="middle" fontSize="9" fill="#64748b">
-        total
-      </text>
-    </svg>
+    <div className="relative" style={{ width: size, height: size }} role="img" aria-label="Répartition des sources de candidatures">
+      <PieChart width={size} height={size}>
+        <Pie
+          data={segments.length ? segments : [{ key: "vide", count: 1, couleur: "#e2e8f0" }]}
+          dataKey="count"
+          nameKey="label"
+          cx="50%"
+          cy="50%"
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={90}
+          endAngle={-270}
+          stroke="none"
+          isAnimationActive={false}
+        >
+          {(segments.length ? segments : [{ key: "vide", couleur: "#e2e8f0" }]).map((d) => (
+            <Cell key={d.key} fill={d.couleur} />
+          ))}
+        </Pie>
+      </PieChart>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-base font-bold text-slate-900 leading-none">{total}</span>
+        <span className="text-[9px] text-slate-500 mt-0.5">total</span>
+      </div>
+    </div>
   );
 };
 

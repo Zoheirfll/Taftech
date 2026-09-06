@@ -20,11 +20,13 @@ from ..serializers import (
     ParametresNotificationsSerializer
 )
 from .equipe import get_entreprise_for_user
+from ..throttles import FileUploadThrottle
 
 
 class ProfilCandidatAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [FileUploadThrottle]
 
     def get(self, request):
         if request.user.role != 'CANDIDAT':
@@ -50,11 +52,12 @@ class ProfilCandidatAPIView(APIView):
             profil.cv_pdf.delete(save=False)
             profil.cv_pdf = None
             profil.cv_pdf_maj_le = None
-        if request.FILES.get('cv_pdf'):
+        nouveau_cv = request.FILES.get('cv_pdf')
+        if nouveau_cv:
             profil.cv_pdf_maj_le = timezone.now()
         user = request.user
         user_fields = []
-        for field in ('first_name', 'last_name', 'telephone'):
+        for field in ('first_name', 'last_name', 'telephone', 'date_naissance'):
             val = request.data.get(field)
             if val is not None:
                 model_field = user._meta.get_field(field)
@@ -66,6 +69,8 @@ class ProfilCandidatAPIView(APIView):
                         model_field.run_validators(val)
                     except DjangoValidationError as e:
                         return Response({"error": " ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+                elif field == 'date_naissance':
+                    val = None
                 setattr(user, field, val)
                 user_fields.append(field)
         if user_fields:
@@ -105,11 +110,36 @@ class ProfilCandidatAPIView(APIView):
             serializer.save()
             if 'competences' in data:
                 _synchroniser_competences_depuis_texte(profil)
+            if nouveau_cv:
+                _copier_cv_vers_mes_documents(profil)
             return Response({
                 "message": "Profil mis à jour avec succès !",
                 "profil": serializer.data
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _copier_cv_vers_mes_documents(profil):
+    """Chaque CV uploadé (formulaire profil ou parser IA, même endpoint) est aussi rangé
+    dans l'espace privé "Mes documents" du candidat, sous le type CV — pour que l'historique
+    de ses CV reste consultable même après un remplacement dans le profil."""
+    from django.core.files.base import ContentFile
+    from ..models import DocumentCandidat, TypeDocument
+    if not profil.cv_pdf:
+        return
+    type_cv = TypeDocument.objects.filter(label='CV').first()
+    nom_fichier = os.path.basename(profil.cv_pdf.name)
+    profil.cv_pdf.open('rb')
+    try:
+        contenu = profil.cv_pdf.read()
+    finally:
+        profil.cv_pdf.close()
+    DocumentCandidat.objects.create(
+        profil=profil,
+        type_document=type_cv,
+        nom_personnalise=nom_fichier,
+        fichier=ContentFile(contenu, name=nom_fichier),
+    )
 
 
 def _synchroniser_competences_depuis_texte(profil):

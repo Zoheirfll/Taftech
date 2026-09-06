@@ -24,6 +24,7 @@ vi.mock("../src/Services/jobsService", () => ({
     searchCVtheque: vi.fn(),
     getDashboard: vi.fn(),
     deverrouillerCandidat: vi.fn(),
+    getDocumentsPartages: vi.fn().mockResolvedValue([]),
     getNomenclature: vi.fn().mockResolvedValue({
       secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],

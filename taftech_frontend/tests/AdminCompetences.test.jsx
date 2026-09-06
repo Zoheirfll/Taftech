@@ -110,7 +110,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(jobsService.createCompetence).toHaveBeenCalledWith({ label: "Nouvelle", actif: true });
+      expect(jobsService.createCompetence).toHaveBeenCalledWith({ label: "Nouvelle", synonymes: "", actif: true });
       expect(toast.success).toHaveBeenCalledWith("Compétence ajoutée !");
     });
   });

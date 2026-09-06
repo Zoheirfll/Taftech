@@ -10,7 +10,7 @@ const NIVEAUX = [
   { value: "CONFIRME", label: "Confirmé" },
 ];
 
-export const StepCompetences = ({ pendingCompetences, setPendingCompetences, competencesMode, setCompetencesMode, saveCompetencesStep, skipStep, profil }) => {
+export const StepCompetences = ({ pendingCompetences, setPendingCompetences, competencesMode, setCompetencesMode, saveCompetencesStep, skipStep, profil, saving }) => {
   const [nouvelleCompetence, setNouvelleCompetence] = useState("");
   const [nouveauNiveau, setNouveauNiveau] = useState("DEBUTANT");
 
@@ -22,6 +22,7 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
   };
 
   const removeAt = (idx) => setPendingCompetences((list) => list.filter((_, i) => i !== idx));
+  const updateNiveau = (idx, niveau) => setPendingCompetences((list) => list.map((c, i) => (i === idx ? { ...c, niveau } : c)));
 
   return (
     <div>
@@ -31,8 +32,16 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
       </div>
       <div className="flex flex-wrap gap-2 mb-4">
         {pendingCompetences.map((c, idx) => (
-          <span key={idx} className={`inline-flex items-center gap-2 ${tw.badgeNeutral} px-3 py-1.5`}>
-            {c.label} <span className={`text-[10px] ${tw.textMuted}`}>({NIVEAUX.find((n) => n.value === c.niveau)?.label || c.niveau})</span>
+          <span key={idx} className={`inline-flex items-center gap-1.5 ${tw.badgeNeutral} px-3 py-1.5`}>
+            {c.label}
+            <select
+              value={c.niveau}
+              onChange={(e) => updateNiveau(idx, e.target.value)}
+              aria-label={`Niveau de ${c.label}`}
+              className="bg-transparent text-[10px] font-semibold border-l pl-1.5 ml-0.5 cursor-pointer focus:outline-none"
+            >
+              {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
+            </select>
             <button type="button" onClick={() => removeAt(idx)} aria-label={`Supprimer ${c.label}`}>
               <Trash2 size={12} />
             </button>
@@ -46,16 +55,18 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
           placeholder="Ex: React"
           className={`${tw.authInput} flex-1`}
         />
-        <select value={nouveauNiveau} onChange={(e) => setNouveauNiveau(e.target.value)} className={tw.authInput}>
-          {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
-        </select>
+        <div className="w-40 shrink-0">
+          <select value={nouveauNiveau} onChange={(e) => setNouveauNiveau(e.target.value)} className={tw.authInput}>
+            {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
+          </select>
+        </div>
         <button type="button" onClick={ajouter} className={`${tw.buttonSecondary} px-3`} aria-label="Ajouter une compétence">
           <Plus size={16} />
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <button type="button" onClick={skipStep} className={`${tw.linkPrimary} text-sm font-semibold`}>Passer cette étape</button>
-        <button type="button" onClick={saveCompetencesStep} className={`${tw.buttonPrimary} px-6 py-2.5`}>Continuer</button>
+        <button type="button" onClick={skipStep} disabled={saving} className={`${tw.linkPrimary} text-sm font-semibold disabled:opacity-50`}>Passer cette étape</button>
+        <button type="button" onClick={saveCompetencesStep} disabled={saving} className={`${tw.buttonPrimary} px-6 py-2.5 disabled:opacity-60`}>{saving ? "Enregistrement..." : "Continuer"}</button>
       </div>
     </div>
   );

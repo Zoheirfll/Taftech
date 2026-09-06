@@ -48,14 +48,14 @@ const RecruteurLayout = () => {
 
     const fetchNotifs = async () => {
       try {
-        const notifs = await jobsService.getNotifications();
+        const notifs = await jobsService.getNotifications("recruteur");
         setNotifsNonLues(notifs.filter((n) => !n.lue).length);
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_NOTIFS_LAYOUT_RECRUTEUR", error);
       }
     };
     fetchNotifs();
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {

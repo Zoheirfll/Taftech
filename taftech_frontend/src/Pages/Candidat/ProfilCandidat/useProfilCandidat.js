@@ -122,17 +122,20 @@ export const useProfilCandidat = () => {
     }
   };
 
+  // "action" détermine le raccourci déclenché au clic sur le badge manquant
+  // correspondant (voir handleChampManquantClick) — évite le détour habituel
+  // "cliquer Modifier puis chercher où saisir".
   const CHAMPS_PROFIL = [
-    { label: "Téléphone", test: (p) => !!p.telephone },
-    { label: "Photo de profil", test: (p) => !!p.photo_profil },
-    { label: "CV", test: (p) => !!p.cv_pdf },
-    { label: "Titre professionnel", test: (p) => !!p.titre_professionnel },
-    { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
-    { label: "Diplôme", test: (p) => !!p.diplome },
-    { label: "Spécialité", test: (p) => !!p.specialite },
-    { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
-    { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
-    { label: "Compétences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
+    { label: "Téléphone", action: "info", test: (p) => !!p.telephone },
+    { label: "Photo de profil", action: "photo", test: (p) => !!p.photo_profil },
+    { label: "CV", action: "cv", test: (p) => !!p.cv_pdf },
+    { label: "Titre professionnel", action: "cv-form", test: (p) => !!p.titre_professionnel },
+    { label: "Wilaya / Commune", action: "info", test: (p) => !!(p.wilaya && p.commune) },
+    { label: "Diplôme", action: "info", test: (p) => !!p.diplome },
+    { label: "Spécialité", action: "info", test: (p) => !!p.specialite },
+    { label: "Expériences", action: "experiences", test: (p) => p.experiences_detail?.length > 0 },
+    { label: "Formations", action: "formations", test: (p) => p.formations_detail?.length > 0 },
+    { label: "Compétences", action: "competences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
   ];
 
   const completionPercent = useMemo(() => {
@@ -142,7 +145,7 @@ export const useProfilCandidat = () => {
 
   const champsManquants = useMemo(() => {
     if (!profil) return [];
-    return CHAMPS_PROFIL.filter((c) => !c.test(profil)).map((c) => c.label);
+    return CHAMPS_PROFIL.filter((c) => !c.test(profil)).map((c) => ({ label: c.label, action: c.action }));
   }, [profil]);
 
   const handleExpTitreChange = async (value) => {
@@ -257,6 +260,35 @@ export const useProfilCandidat = () => {
     e.target.value = "";
     if (!file) return;
     setCropperPhoto(file);
+  };
+
+  // Upload direct du CV sans passer par la modale "Modifier" — utilisé par le
+  // badge "CV" de la checklist de complétion, ouvre directement le sélecteur
+  // de fichier local au lieu d'un détour par un formulaire.
+  const handleQuickUploadCV = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const ext = "." + file.name.split(".").pop().toLowerCase();
+    if (![".pdf", ".docx", ".doc"].includes(ext)) {
+      toast.error("Format non supporté.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Fichier trop volumineux (max 5 Mo).");
+      return;
+    }
+    const toastId = toast.loading("Envoi du CV...");
+    try {
+      const formData = new FormData();
+      formData.append("cv_pdf", file);
+      await profilService.updateProfil(formData);
+      toast.success("CV ajouté !", { id: toastId });
+      fetchData();
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erreur lors de l'envoi du fichier"), { id: toastId });
+      reportError("ECHEC_QUICK_UPLOAD_CV", err);
+    }
   };
 
   const handleAddExperience = async (e) => {
@@ -534,6 +566,7 @@ export const useProfilCandidat = () => {
     handleUpdateCV,
     handleDeleteCV,
     handlePhotoChange,
+    handleQuickUploadCV,
     cropperPhoto,
     fermerCropperPhoto,
     uploaderPhotoRecadree,

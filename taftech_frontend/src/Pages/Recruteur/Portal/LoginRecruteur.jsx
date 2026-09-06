@@ -6,10 +6,10 @@ import { reportError } from "../../../utils/errorReporter";
 import { Eye, EyeOff, CheckCircle, LogIn } from "lucide-react";
 
 const AVANTAGES = [
-  "Publiez vos offres gratuitement",
+  "Publiez une offre gratuitement pour commencer",
   "Score IA sur chaque candidat",
-  "CVthèque avec matching intelligent",
-  "Gestion d'équipe multi-rôles",
+  "CVthèque accessible dès la formule Starter",
+  "Formules évolutives selon vos besoins",
 ];
 
 const LoginRecruteur = () => {
@@ -58,7 +58,7 @@ const LoginRecruteur = () => {
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
 
         {/* COLONNE GAUCHE */}
-        <div className="md:w-5/12 bg-slate-900 p-10 text-white flex flex-col justify-center">
+        <div className="order-2 md:order-1 md:w-5/12 bg-slate-900 p-10 text-white flex flex-col justify-center">
           <div className="mb-8">
             <p className="text-xs font-semibold text-teal-400 uppercase tracking-widest mb-3">Espace Recruteur</p>
             <h2 className="text-2xl font-extrabold leading-snug mb-3">
@@ -79,7 +79,7 @@ const LoginRecruteur = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
           <div className="mb-8">
             <h3 className="text-xl font-bold text-slate-900">Connexion Recruteur</h3>
             <p className="text-sm text-slate-700 mt-1">Accédez à votre espace employeur TAFTECH</p>

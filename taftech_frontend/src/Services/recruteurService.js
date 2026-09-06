@@ -161,6 +161,30 @@ export const recruteurService = {
     }
   },
 
+  // Export d'un graphique (MiniAreaChart) en vrai fichier Excel — remplace l'ancien
+  // export CSV fait à la main côté client, qui s'ouvrait mal sur mobile (tout dans une
+  // seule colonne).
+  exporterGraphiqueExcel: async (titre, colonnes, lignes) => {
+    try {
+      const response = await api.post(
+        "jobs/dashboard/export-graphique-excel/",
+        { titre, colonnes, lignes },
+        { responseType: "blob" },
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${titre}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      reportError("ECHEC_EXPORT_GRAPHIQUE_EXCEL", err);
+      throw err;
+    }
+  },
+
   // Candidatures
   updateStatutCandidature: async (candidatureId, payload) => {
     try {
@@ -356,6 +380,16 @@ export const recruteurService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_DEVERROUILLER_CANDIDAT", err);
+      throw err;
+    }
+  },
+
+  getDocumentsPartages: async (candidatId) => {
+    try {
+      const response = await api.get(`jobs/cvtheque/candidats/${candidatId}/documents-partages/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_DOCUMENTS_PARTAGES", err);
       throw err;
     }
   },

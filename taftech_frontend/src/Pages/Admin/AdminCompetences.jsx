@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
-const ITEM_VIDE = { label: "", actif: true };
+const ITEM_VIDE = { label: "", synonymes: "", actif: true };
 
 const AdminCompetences = () => {
   const [items, setItems] = useState([]);
@@ -51,7 +51,7 @@ const AdminCompetences = () => {
 
   const handleOpenEdit = (item) => {
     setEditingId(item.id);
-    setForm({ label: item.label, actif: item.actif });
+    setForm({ label: item.label, synonymes: item.synonymes || "", actif: item.actif });
     setShowModal(true);
   };
 
@@ -121,19 +121,25 @@ const AdminCompetences = () => {
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                 <th className="px-5 py-3">Compétence</th>
+                <th className="px-5 py-3">Synonymes</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="3" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan="3" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucune compétence trouvée.</td></tr>
+                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucune compétence trouvée.</td></tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.id} className={tw.rowHover}>
                     <td className="px-5 py-3"><p className={`text-sm font-medium ${tw.textStrong}`}>{item.label}</p></td>
+                    <td className="px-5 py-3">
+                      <p className={`text-xs ${tw.textMuted} max-w-xs truncate`} title={item.synonymes || ""}>
+                        {item.synonymes || "—"}
+                      </p>
+                    </td>
                     <td className="px-5 py-3 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${item.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
                         {item.actif ? "Suggérée" : "Masquée"}
@@ -164,6 +170,19 @@ const AdminCompetences = () => {
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé *</label>
                 <input required className={inputClass} placeholder="Ex: Gestion de projet" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+              </div>
+              <div>
+                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Synonymes / traductions</label>
+                <textarea
+                  rows={2}
+                  className={inputClass}
+                  placeholder="Ex: Project Management, Gestion des projets"
+                  value={form.synonymes}
+                  onChange={(e) => setForm({ ...form, synonymes: e.target.value })}
+                />
+                <p className={`text-[11px] ${tw.textMuted} mt-1`}>
+                  Séparés par des virgules. Une compétence extraite d'un CV portant l'un de ces intitulés (ou très proche) sera automatiquement remplacée par "{form.label || "ce libellé"}".
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="competence_actif" className={`${tw.accentPrimary} w-4 h-4`} checked={form.actif} onChange={(e) => setForm({ ...form, actif: e.target.checked })} />

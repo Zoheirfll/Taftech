@@ -83,7 +83,7 @@ const Navbar = () => {
         loadNotifications();
       }
     }
-  }, [isLogged, role]);
+  }, [isLogged, role, location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -186,10 +186,10 @@ const Navbar = () => {
               <Link to="/recruteurs" className="hidden md:block shrink-0 whitespace-nowrap text-sm font-semibold text-slate-700 pl-4 pr-3 border-l border-slate-200">
                 Vous recrutez ? <span className="font-semibold text-teal-700 hover:underline">Espace recruteur</span>
               </Link>
-              <Link to="/login" className={tw.navLink}>
-                <LogIn size={14} /> Se connecter
+              <Link to="/login" className={`${tw.navLink} whitespace-nowrap`}>
+                <LogIn size={14} /> Connexion
               </Link>
-              <Link to="/register" className={`${tw.bgPrimary} px-4 py-1.5 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200`}>
+              <Link to="/register" className={`${tw.bgPrimary} px-4 py-1.5 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200 whitespace-nowrap`}>
                 S'inscrire
               </Link>
             </>
@@ -318,7 +318,7 @@ const Navbar = () => {
             <>
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               <Link to="/login" onClick={closeMobile} className={mobileLinkClass("/login", true)}>
-                <LogIn size={16} className="shrink-0" /> Se connecter
+                <LogIn size={16} className="shrink-0" /> Connexion
               </Link>
               <Link to="/register" onClick={closeMobile} className={mobileLinkClass("/register")}>
                 <User size={16} className="shrink-0" /> S'inscrire

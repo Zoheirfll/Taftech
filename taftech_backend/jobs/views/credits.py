@@ -1,3 +1,5 @@
+import os
+from django.http import FileResponse, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
@@ -29,6 +31,11 @@ class DeverrouillerCandidatAPIView(APIView):
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Action non autorisée pour votre rôle."}, status=403)
+        if not entreprise.est_approuvee:
+            return Response(
+                {"error": "Votre entreprise doit être validée par TafTech avant de débloquer un profil.", "code": "ENTREPRISE_NON_VALIDEE"},
+                status=403,
+            )
 
         palier = get_palier_actif(entreprise)
         if palier is None:
@@ -42,6 +49,13 @@ class DeverrouillerCandidatAPIView(APIView):
         except User.DoesNotExist:
             return Response({"error": "Candidat introuvable."}, status=404)
 
+        profil_candidat = getattr(candidat, 'profil_candidat', None)
+        if profil_candidat and not profil_candidat.visible_cvtheque:
+            return Response(
+                {"error": "Ce candidat a désactivé le déblocage de son profil pour le moment.", "code": "PROFIL_NON_VISIBLE"},
+                status=403,
+            )
+
         try:
             deverrouiller_candidat(entreprise, candidat)
         except CreditsEpuisesError:
@@ -52,6 +66,51 @@ class DeverrouillerCandidatAPIView(APIView):
 
         _log(request.user, entreprise, 'DEBLOQUER_CANDIDAT', candidat.email)
         return Response({"est_debloque": True, "credits_disponibles": credits_disponibles(entreprise)})
+
+
+class CandidatDocumentsPartagesAPIView(APIView):
+    """Liste les documents privés qu'un candidat a explicitement partagés avec l'entreprise du
+    recruteur connecté — GET jobs/cvtheque/candidats/<candidat_id>/documents-partages/."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, candidat_id):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        from ..models import PartageDocument
+        partages = PartageDocument.objects.filter(
+            entreprise=entreprise, document__profil__user_id=candidat_id
+        ).select_related('document', 'document__type_document')
+        return Response([
+            {
+                'id': p.document_id,
+                'nom_personnalise': p.document.nom_personnalise,
+                'type_document': p.document.type_document.label if p.document.type_document else None,
+                'date_partage': p.date_partage,
+            }
+            for p in partages
+        ], status=200)
+
+
+class CandidatDocumentPartageFichierAPIView(APIView):
+    """Sert le fichier d'un document privé, uniquement si un PartageDocument existe pour
+    l'entreprise du recruteur connecté — GET jobs/cvtheque/candidats/<candidat_id>/documents-partages/<doc_id>/fichier/."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, candidat_id, doc_id):
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise:
+            return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        from ..models import PartageDocument
+        partage = PartageDocument.objects.filter(
+            entreprise=entreprise, document_id=doc_id, document__profil__user_id=candidat_id
+        ).select_related('document').first()
+        if not partage:
+            return Response({"error": "Accès refusé."}, status=403)
+        fichier = partage.document.fichier
+        if not fichier:
+            raise Http404
+        return FileResponse(fichier.open('rb'), filename=os.path.basename(fichier.name))
 
 
 import hashlib
@@ -71,6 +130,11 @@ class CreditPackCheckoutAPIView(APIView):
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
         if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
             return Response({"error": "Seul le propriétaire peut acheter des crédits."}, status=403)
+        if not entreprise.est_approuvee:
+            return Response(
+                {"error": "Votre entreprise est en cours de validation. Vous pourrez acheter des crédits dès validation de votre compte.", "code": "ENTREPRISE_NON_VALIDEE"},
+                status=403,
+            )
 
         from ..models import CreditPack
         try:

@@ -31,7 +31,7 @@ const ForgotPasswordRecruteur = () => {
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
 
         {/* COLONNE GAUCHE */}
-        <div className="md:w-5/12 bg-slate-900 p-10 text-white flex flex-col justify-center">
+        <div className="order-2 md:order-1 md:w-5/12 bg-slate-900 p-10 text-white flex flex-col justify-center">
           <p className="text-xs font-semibold text-teal-400 uppercase tracking-widest mb-6">Espace Recruteur</p>
           <h2 className="text-xl font-extrabold leading-snug mb-3">
             Réinitialisez votre <span className="text-teal-400">mot de passe</span>
@@ -62,7 +62,7 @@ const ForgotPasswordRecruteur = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
           {sent ? (
             <div className="text-center space-y-5 max-w-sm mx-auto w-full">
               <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-200 rounded-2xl flex items-center justify-center mx-auto animate-bounce" style={{ animationDuration: "1.5s", animationIterationCount: 3 }}>

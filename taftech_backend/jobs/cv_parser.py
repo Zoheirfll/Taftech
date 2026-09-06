@@ -872,16 +872,34 @@ Si vraiment aucun ne correspond : "".
 ⚠️ NE METS JAMAIS D'EMPLOIS DEDANS (postes occupés, stages en entreprise sauf stage académique avec école).
 - Pour chaque formation : diplome, etablissement, date_debut_raw, date_fin_raw, description.
 - Mêmes règles de "" et de description (points sur lignes séparées, préfixés "- ") que ci-dessus.
+- ⚠️ Une seule date isolée trouvée pour une formation = l'année d'OBTENTION du diplôme → date_fin_raw = cette date, date_debut_raw = "". Ne recopie JAMAIS la même date sur date_debut_raw ET date_fin_raw.
+- N'écris "Présent"/"En cours"/"Aujourd'hui" comme date_fin_raw QUE si la formation est explicitement en cours (CV indique "en cours", "actuellement", année future). Une formation avec une seule date passée est TERMINÉE — n'invente jamais une date de fin ouverte pour elle.
 
 4. INFOS PERSONNELLES :
 - nom_complet : nom + prénom du candidat (ex: "FILALI Zoheir"), PAS son titre professionnel. Si absent : null.
-- telephone : tous les chiffres, format brut. Si absent : null.
-- competences : TOUTES les compétences techniques (langages, outils, logiciels, soft skills), séparées par virgules. Si absent : null.
+- telephone : UN SEUL numéro de téléphone (le principal/premier trouvé), tous les chiffres, format brut. Ne colle JAMAIS deux numéros ensemble. Si absent : null.
+- email : l'adresse email du candidat si présente dans le texte. Sinon null.
+- competences : TOUTES les compétences techniques (langages, outils, logiciels, méthodologies, soft skills), séparées par virgules. Chaque compétence est un INTITULÉ COURT (1 à 3 mots, ex: "Python", "Kaizen", "Gestion de la paie", "Leadership", "Ergonomie") — comme une étiquette dans un CV, JAMAIS une phrase complète copiée d'une expérience professionnelle.
+  ⚠️ EXCLUS SYSTÉMATIQUEMENT de "competences" : les montants ("30 M$", "50 000 DA"), les pourcentages ("50 %"), les dates ou plages d'années ("2019-2023"), les effectifs ("500 employés"), les chiffres isolés ("400", "30"), les phrases complètes, et toute mission/description d'expérience recopiée telle quelle. Ce sont des données d'expérience, jamais des compétences.
+  Si une mission contient une ou plusieurs compétences identifiables, DÉCOMPOSE-la en plusieurs intitulés courts normalisés au lieu de la recopier — n'écris jamais la phrase entière.
+  Exemple : la mission "Pilotage des observations de poste pour améliorer qualité, ergonomie et sécurité" ne devient PAS une compétence telle quelle, mais donne par exemple : "Ergonomie", "Amélioration continue", "Analyse des risques", "Sécurité industrielle".
+  Si absent : null.
 - competences_niveaux : pour CHAQUE compétence listée ci-dessus, estime un niveau de maîtrise d'après le contexte du CV (ancienneté, nombre de mentions, poste occupé, mots comme "maîtrise"/"notions"/"expert"). Format "Compétence:Niveau" séparés par virgules, niveau parmi EXACTEMENT : "Débutant", "Intermédiaire", "Avancé", "Confirmé". Si le contexte ne permet vraiment aucune estimation : "Intermédiaire" par défaut. Si absent : null.
 - langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
 - linkedin : URL complète du profil LinkedIn si présente. Sinon null.
 - github : URL complète du profil GitHub si présente. Sinon null.
 - bio : résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences. Sinon null.
+- wilaya : le nom de la wilaya/ville algérienne de résidence du candidat, tel qu'écrit dans le CV (ex: "Oran", "Alger"). Si non mentionnée : null.
+- diplome : le libellé exact du diplôme le PLUS ÉLEVÉ obtenu par le candidat, tel qu'écrit dans le CV (ex: "Master 2 en Informatique", "Licence"). Si non déductible : null.
+- service_militaire : uniquement si explicitement mentionné dans le CV, un des mots suivants : "non concerné", "dégagé", "sursitaire", "inapte", "incorporé". Sinon null.
+- sexe : déduis "HOMME" ou "FEMME" si le prénom, les accords grammaticaux (ex: "née le", "marié"/"mariée", "responsable" au féminin) ou une mention explicite le permettent clairement. Si vraiment ambigu ou non déductible : null.
+- date_naissance : la date de naissance du candidat si mentionnée (ex: "Né(e) le 12/03/1990", "12 mars 1990"), écrite EXACTEMENT comme dans le CV. Sinon null.
+- situation_actuelle : uniquement si déductible du CV, un des mots suivants : "en poste" (a un emploi actuel, sans date de fin), "en recherche active" (mentionne explicitement chercher un emploi/disponible immédiatement), "à l'écoute du marché", "étudiant" (formation en cours sans expérience professionnelle significative). Sinon null — ne devine jamais si ambigu.
+- mobilite : uniquement si le CV mentionne explicitement une disponibilité géographique, un des mots suivants : "locale" (une seule wilaya), "régionale", "nationale" (toute l'Algérie), "internationale". Sinon null.
+- salaire_souhaite : uniquement si un montant de salaire souhaité/attendu est explicitement écrit dans le CV (rare). Sinon null — n'invente jamais un montant.
+- permis_conduire : true si le CV mentionne un permis de conduire, sinon false.
+- passeport_valide : true si le CV mentionne un passeport valide, sinon false.
+- vehicule_personnel : true si le CV mentionne un véhicule personnel/véhiculé, sinon false.
 
 FORMAT EXIGÉ (JSON strict, un seul objet) :
 {
@@ -894,12 +912,24 @@ FORMAT EXIGÉ (JSON strict, un seul objet) :
   ],
   "nom_complet": "string ou null",
   "telephone": "string ou null",
+  "email": "string ou null",
   "competences": "string ou null",
   "competences_niveaux": "string ou null",
   "langues": "string ou null",
   "linkedin": "string ou null",
   "github": "string ou null",
-  "bio": "string ou null"
+  "bio": "string ou null",
+  "wilaya": "string ou null",
+  "diplome": "string ou null",
+  "service_militaire": "string ou null",
+  "sexe": "HOMME ou FEMME ou null",
+  "date_naissance_raw": "string ou null",
+  "situation_actuelle": "string ou null",
+  "mobilite": "string ou null",
+  "salaire_souhaite": "string ou null",
+  "permis_conduire": false,
+  "passeport_valide": false,
+  "vehicule_personnel": false
 }
 
 CV À ANALYSER :
@@ -993,6 +1023,110 @@ _NIVEAU_LABEL_VERS_CODE = {
 }
 
 
+_MAX_MOTS_COMPETENCE = 5
+_MAX_CHARS_COMPETENCE = 45
+_RE_SEPARATEUR_COMPOSE = re.compile(r'\s*(?:&|/|\bet\b)\s*', re.IGNORECASE)
+
+
+def _eclater_competence_composee(label):
+    """Une "compétence" qui combine plusieurs notions avec "&"/"et"/"/" (ex: "Relations
+    sociales & dialogue syndical", "Reporting RH & indicateurs sociaux") est éclatée en
+    plusieurs intitulés distincts au lieu d'être gardée comme un seul bloc composé qui
+    dépasserait la longueur/le nombre de mots attendu d'une vraie compétence."""
+    morceaux = [m.strip() for m in _RE_SEPARATEUR_COMPOSE.split(label) if m.strip()]
+    return morceaux if len(morceaux) > 1 else [label]
+
+# Signaux numériques trahissant un chiffre-clé d'expérience (montant, effectif, date,
+# pourcentage) recopié par erreur comme "compétence" au lieu d'un vrai intitulé —
+# ex: "400 – 500 – 50 % x 30 M$", "2019-2023", "500 employés".
+_RE_POURCENTAGE = re.compile(r'%')
+_RE_MONTANT = re.compile(r'[$€£]|\b(da|dza|mda|kda)\b', re.IGNORECASE)
+_RE_PLAGE_NUMERIQUE = re.compile(r'^\s*\d[\d\s.,]*\s*[-–—x×]\s*\d[\d\s.,]*(\s*[-–—x×]\s*\d[\d\s.,]*)*\s*$')
+_RE_EFFECTIF = re.compile(r'\b\d[\d\s]*\s*(employ|salari|personnes?|collaborat|agents?)', re.IGNORECASE)
+_RE_DATE_ANNEE = re.compile(r'^(19|20)\d{2}(\s*[-–—/]\s*(19|20)?\d{2,4})?$')
+
+
+def _contient_signal_numerique_suspect(label):
+    """True si le libellé ressemble à un montant/pourcentage/date/effectif isolé
+    (chiffre-clé d'une expérience) plutôt qu'à un nom de compétence — certaines
+    compétences légitimes contiennent des chiffres (ex: "Python 3", "ISO 9001", "5S"),
+    donc on ne bannit jamais les chiffres en soi : seuls des motifs typiquement
+    numériques (ou un texte majoritairement composé de chiffres/symboles) sont rejetés."""
+    if _RE_POURCENTAGE.search(label) or _RE_MONTANT.search(label):
+        return True
+    if _RE_PLAGE_NUMERIQUE.match(label) or _RE_DATE_ANNEE.match(label) or _RE_EFFECTIF.search(label):
+        return True
+    lettres = sum(1 for ch in label if ch.isalpha())
+    if label and lettres / len(label) < 0.35:
+        return True
+    return False
+
+
+def _est_competence_valide(label):
+    """Rejette une "compétence" qui ressemble à une phrase de mission, un chiffre-clé
+    (montant/pourcentage/date/effectif) ou un extrait de texte plutôt qu'à un intitulé
+    court — garde-fou contre une hallucination Groq qui recopierait une responsabilité
+    entière d'une expérience (ex: "Gestion des dossiers disciplinaires et suivi des
+    sanctions") ou un chiffre d'expérience (ex: "400 – 500 – 50 % x 30 M$") au lieu
+    d'un nom de compétence (ex: "Gestion disciplinaire")."""
+    label = label.strip()
+    if not label or len(label) > _MAX_CHARS_COMPETENCE:
+        return False
+    if len(label.split()) > _MAX_MOTS_COMPETENCE:
+        return False
+    if _contient_signal_numerique_suspect(label):
+        return False
+    return True
+
+
+NIVEAU_POINTS_PARSER = {'DEBUTANT': 1, 'INTERMEDIAIRE': 2, 'AVANCE': 3, 'CONFIRME': 4}
+
+
+def _normaliser_avec_referentiel(competences_niveaux):
+    """Fait converger les intitulés de compétences parsés vers le référentiel admin
+    (CompetenceReferentiel) — un libellé parsé identique/synonyme/très proche d'une
+    entrée du référentiel est remplacé par son libellé canonique, pour éviter que
+    "Gestion de projet", "Gestion des projets" et "Project Management" (même
+    compétence, formulée différemment par le CV) ressortent comme 3 tags distincts.
+    Une compétence sans correspondance connue est laissée telle quelle — elle reste
+    proposée au candidat pour validation, jamais rejetée pour cette seule raison."""
+    if not competences_niveaux:
+        return competences_niveaux
+    import difflib
+    from .models import CompetenceReferentiel
+
+    # variante normalisée (minuscules, espaces compactés) -> libellé canonique
+    variantes_vers_canonique = {}
+    for ref in CompetenceReferentiel.objects.filter(actif=True).only('label', 'synonymes'):
+        variantes = [ref.label] + [s.strip() for s in (ref.synonymes or '').split(',') if s.strip()]
+        for v in variantes:
+            cle = re.sub(r'\s+', ' ', v.strip().lower())
+            if cle:
+                variantes_vers_canonique[cle] = ref.label
+
+    if not variantes_vers_canonique:
+        return competences_niveaux
+
+    variantes_connues = list(variantes_vers_canonique.keys())
+    resultat = {}
+    for label, niveau in competences_niveaux.items():
+        cle = re.sub(r'\s+', ' ', label.strip().lower())
+        canonique = variantes_vers_canonique.get(cle)
+        if not canonique:
+            proches = difflib.get_close_matches(cle, variantes_connues, n=1, cutoff=0.84)
+            if proches:
+                canonique = variantes_vers_canonique[proches[0]]
+        label_final = canonique or label
+        # Deux libellés parsés convergeant vers le même canonique (ou déjà identiques
+        # après nettoyage) → on garde le niveau le plus élevé, pas un doublon.
+        if label_final in resultat:
+            if NIVEAU_POINTS_PARSER.get(niveau, 0) > NIVEAU_POINTS_PARSER.get(resultat[label_final], 0):
+                resultat[label_final] = niveau
+        else:
+            resultat[label_final] = niveau
+    return resultat
+
+
 def _parser_niveaux_competences(brut):
     """Convertit "Compétence:Niveau, Compétence:Niveau" (sortie Groq) en dict {label: code
     NIVEAU_CHOICES de CompetenceCandidat} — même format texte que les langues, code aligné
@@ -1017,8 +1151,9 @@ def parse_with_groq(text):
     Retourne un dict complet, ou None si l'appel échoue entièrement.
     """
     # Réduit vs la version précédente : la liste des domaines ANEM injectée dans le
-    # prompt (~900 tokens) grignote le budget TPM Groq (12000 tokens/min).
-    text_truncated = text[:9000]
+    # prompt (~900 tokens) grignote le budget TPM Groq (8000 tokens/min, requête =
+    # prompt + max_tokens de complétion, donc le budget complet doit tenir dessous).
+    text_truncated = text[:7000]
 
     result = {
         "titre_professionnel": None,
@@ -1032,6 +1167,14 @@ def parse_with_groq(text):
         "linkedin": None,
         "github": None,
         "bio": None,
+        "email": None,
+        "wilaya": None,
+        "diplome": None,
+        "service_militaire": None,
+        "sexe": None,
+        "permis_conduire": False,
+        "passeport_valide": False,
+        "vehicule_personnel": False,
     }
 
     logger.debug("Groq : extraction complète du CV (1 appel)...")
@@ -1044,7 +1187,13 @@ def parse_with_groq(text):
     content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
     infos = _extract_json_object(content)
     if not infos:
-        return None
+        # Un échec ponctuel (timeout, JSON malformé, 429) ne doit pas dégrader
+        # tout le résultat vers le regex — un seul retry avant d'abandonner.
+        logger.warning("Groq : échec 1er appel parsing CV, retry...")
+        content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
+        infos = _extract_json_object(content)
+        if not infos:
+            return None
 
     if infos.get("titre_professionnel"):
         titre = str(infos["titre_professionnel"]).strip().strip('"').strip("'")
@@ -1072,11 +1221,30 @@ def parse_with_groq(text):
     if infos.get("telephone"):
         tel = re.sub(r'[\s.\-()]', '', str(infos["telephone"]))
         tel = re.split(r'[/,;]', tel)[0]
+        # L'IA colle parfois 2 numéros sans séparateur ("05523990670770960926") ou
+        # préfixe l'indicatif international ("2130552399067") — un numéro algérien
+        # fait 10 chiffres (0X XX XX XX XX) une fois l'indicatif retiré.
+        digits_only = re.sub(r'\D', '', tel)
+        if digits_only.startswith('00213'):
+            digits_only = '0' + digits_only[5:]
+        elif digits_only.startswith('213') and len(digits_only) > 10:
+            digits_only = '0' + digits_only[3:]
+        if len(digits_only) > 10 and digits_only.startswith('0'):
+            digits_only = digits_only[:10]
+        tel = digits_only or tel
         result["telephone"] = tel
     if infos.get("competences"):
-        result["competences"] = str(infos["competences"]).strip()
+        items = [m for c in str(infos["competences"]).split(',') for m in _eclater_competence_composee(c.strip())]
+        valides = [c for c in items if _est_competence_valide(c)]
+        if valides:
+            result["competences"] = ", ".join(valides)
     if infos.get("competences_niveaux"):
-        result["competences_niveaux"] = _parser_niveaux_competences(str(infos["competences_niveaux"]))
+        niveaux_bruts = _parser_niveaux_competences(str(infos["competences_niveaux"]))
+        niveaux = {}
+        for label, niveau in niveaux_bruts.items():
+            for morceau in _eclater_competence_composee(label):
+                niveaux.setdefault(morceau, niveau)
+        result["competences_niveaux"] = {k: v for k, v in niveaux.items() if _est_competence_valide(k)}
     if infos.get("langues"):
         result["langues"] = str(infos["langues"]).strip()
 
@@ -1084,7 +1252,115 @@ def parse_with_groq(text):
     result["github"] = infos.get("github")
     result["bio"] = infos.get("bio")
 
+    if infos.get("email"):
+        result["email"] = str(infos["email"]).strip()
+
+    # L'IA renvoie le libellé libre (ex: "Oran", "Master 2 en Informatique") — mappé
+    # vers le code interne via les dictionnaires déjà utilisés par extract_wilaya/
+    # extract_diplome_max (pas besoin d'injecter la liste complète des 58 wilayas/13
+    # diplômes dans le prompt, ça dépassait le quota TPM Groq).
+    if infos.get("wilaya"):
+        wilaya_low = str(infos["wilaya"]).strip().lower()
+        for wilaya_text, code in WILAYAS_MAPPING.items():
+            if re.search(r'\b' + re.escape(wilaya_text) + r'\b', wilaya_low):
+                result["wilaya"] = code
+                break
+
+    if infos.get("diplome"):
+        diplome_low = str(infos["diplome"]).strip().lower()
+        for keywords, code in DIPLOMES_MAPPING:
+            if any(re.search(r'\b' + re.escape(kw) + r'\b', diplome_low) for kw in keywords):
+                result["diplome"] = code
+                break
+
+    service_militaire_map = {
+        'non concerné': 'NON_CONCERNE', 'dégagé': 'DEGAGE', 'sursitaire': 'SURSITAIRE',
+        'inapte': 'INAPTE', 'incorporé': 'INCORPORE',
+    }
+    if infos.get("service_militaire"):
+        sm_low = str(infos["service_militaire"]).strip().lower()
+        result["service_militaire"] = service_militaire_map.get(sm_low)
+
+    result["permis_conduire"] = bool(infos.get("permis_conduire"))
+    result["passeport_valide"] = bool(infos.get("passeport_valide"))
+    result["vehicule_personnel"] = bool(infos.get("vehicule_personnel"))
+
     return result
+
+
+MOIS_FR = {
+    "janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5,
+    "juin": 6, "juillet": 7, "août": 8, "aout": 8, "septembre": 9,
+    "octobre": 10, "novembre": 11, "décembre": 12, "decembre": 12,
+}
+
+
+def _normaliser_date_naissance(raw):
+    """Convertit une date de naissance brute extraite du CV ("12/03/1990",
+    "12-03-1990", "12 mars 1990") en ISO YYYY-MM-DD, ou None si non reconnue —
+    seul format accepté par un <input type="date"> côté frontend."""
+    if not raw:
+        return None
+    raw = str(raw).strip().lower()
+    m = re.search(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})', raw)
+    if m:
+        jour, mois, annee = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if 1 <= jour <= 31 and 1 <= mois <= 12:
+            return f"{annee:04d}-{mois:02d}-{jour:02d}"
+    m = re.search(r'(\d{1,2})\s+([a-zà-ÿ]+)\s+(\d{4})', raw)
+    if m:
+        jour = int(m.group(1))
+        mois = MOIS_FR.get(m.group(2))
+        annee = int(m.group(3))
+        if mois and 1 <= jour <= 31:
+            return f"{annee:04d}-{mois:02d}-{jour:02d}"
+    return None
+
+
+def _normaliser_sexe(valeur):
+    """Ramène la valeur libre renvoyée par Groq (Homme/homme/Femme/F/...) vers
+    exactement 'HOMME'/'FEMME' (choices de ProfilCandidat.sexe), ou None si
+    ambigu — jamais de valeur invalide envoyée au frontend/à la base."""
+    if not valeur:
+        return None
+    v = str(valeur).strip().lower()
+    if v in ("homme", "h", "m", "masculin"):
+        return "HOMME"
+    if v in ("femme", "f", "féminin", "feminin"):
+        return "FEMME"
+    return None
+
+
+def _normaliser_situation_actuelle(valeur):
+    if not valeur:
+        return None
+    v = str(valeur).strip().lower()
+    if "poste" in v:
+        return "EN_POSTE"
+    if "recherche" in v:
+        return "EN_RECHERCHE"
+    if "écoute" in v or "ecoute" in v:
+        return "A_L_ECOUTE"
+    if "étudiant" in v or "etudiant" in v:
+        return "ETUDIANT"
+    return None
+
+
+def _normaliser_mobilite(valeur):
+    if not valeur:
+        return None
+    v = str(valeur).strip().lower()
+    if "local" in v:
+        return "LOCALE"
+    if "région" in v or "region" in v:
+        return "REGIONALE"
+    if "national" in v:
+        return "NATIONALE"
+    if "international" in v:
+        return "INTERNATIONALE"
+    return None
+
+
 # ==========================================
 # 8. FONCTION PRINCIPALE
 # ==========================================
@@ -1097,9 +1373,8 @@ def parse_cv(file_path, file_name):
             "error": "Impossible d'extraire du texte. Le PDF est peut-être scanné (image)."
         }
 
-    sections = find_sections(text)
-
-    # Extraction photo
+    # Extraction photo — extraction d'image binaire embarquée, pas une heuristique
+    # de texte, aucun équivalent IA pertinent pour ça.
     photo = None
     name_lower = file_name.lower()
     if name_lower.endswith(".pdf"):
@@ -1107,90 +1382,52 @@ def parse_cv(file_path, file_name):
     elif name_lower.endswith((".docx", ".doc")):
         photo = extract_photo_from_docx(file_path)
 
-    # === Champs simples via regex ===
+    # === Extraction 100% IA — plus de repli regex ===
+    # Un échec (après le retry interne de parse_with_groq) retourne une erreur
+    # explicite plutôt qu'un résultat dégradé silencieusement.
+    ai_data = parse_with_groq(text)
+    if not ai_data:
+        return {
+            "success": False,
+            "error": "Le service d'analyse IA est momentanément indisponible. Réessayez dans quelques instants."
+        }
+
+    # Normalisation contre le référentiel admin (CompetenceReferentiel) — fait converger
+    # les doublons/synonymes ("Gestion de projet" / "Project Management" / "Gestion des
+    # projets") vers un seul libellé canonique avant de proposer les compétences au
+    # candidat. Reconstruit "competences" (texte) depuis le dict normalisé pour que les
+    # deux champs restent cohérents entre eux.
+    competences_niveaux_normalisees = _normaliser_avec_referentiel(ai_data.get("competences_niveaux") or {})
+    competences_texte = ", ".join(competences_niveaux_normalisees.keys()) or None
+
     result = {
         "success": True,
-        "email": extract_email(text),
-        "wilaya": extract_wilaya(text),
-        "diplome": extract_diplome_max(text),
-        "specialite": extract_specialite(text),
-        "service_militaire": extract_service_militaire(text),
-        "permis_conduire": extract_permis(text),
-        "passeport_valide": extract_passeport(text),
-        "vehicule_personnel": extract_vehicule(text),
         "photo": photo,
-        "linkedin": None,  # Initialisation par défaut
-        "github": None,    # Initialisation par défaut
-        "bio": None,       # Initialisation par défaut
+        "email": ai_data.get("email"),
+        "wilaya": ai_data.get("wilaya"),
+        "diplome": ai_data.get("diplome"),
+        "specialite": None,
+        "service_militaire": ai_data.get("service_militaire"),
+        "sexe": _normaliser_sexe(ai_data.get("sexe")),
+        "date_naissance": _normaliser_date_naissance(ai_data.get("date_naissance_raw")),
+        "situation_actuelle": _normaliser_situation_actuelle(ai_data.get("situation_actuelle")),
+        "mobilite": _normaliser_mobilite(ai_data.get("mobilite")),
+        "salaire_souhaite": ai_data.get("salaire_souhaite"),
+        "permis_conduire": ai_data.get("permis_conduire", False),
+        "passeport_valide": ai_data.get("passeport_valide", False),
+        "vehicule_personnel": ai_data.get("vehicule_personnel", False),
+        "nom_complet": ai_data.get("nom_complet"),
+        "telephone": ai_data.get("telephone"),
+        "titre_professionnel": ai_data.get("titre_professionnel"),
+        "competences": competences_texte if competences_niveaux_normalisees else ai_data.get("competences"),
+        "competences_niveaux": competences_niveaux_normalisees,
+        "langues": ai_data.get("langues"),
+        "linkedin": ai_data.get("linkedin"),
+        "github": ai_data.get("github"),
+        "bio": ai_data.get("bio"),
+        "experiences": ai_data.get("experiences") or [],
+        "formations": ai_data.get("formations") or [],
+        "parsing_method": "ia",
     }
-
-    # === Champs complexes via Groq ===
-    ai_data = parse_with_groq(text)
-    methods_used = []
-
-    # Nom complet
-    if ai_data and ai_data.get("nom_complet"):
-        result["nom_complet"] = ai_data["nom_complet"]
-        methods_used.append("nom:ai")
-    else:
-        result["nom_complet"] = extract_name(text)
-        methods_used.append("nom:regex")
-
-    # Téléphone
-    if ai_data and ai_data.get("telephone"):
-        result["telephone"] = ai_data["telephone"]
-        methods_used.append("tel:ai")
-    else:
-        result["telephone"] = extract_phone(text)
-        methods_used.append("tel:regex")
-
-    # Titre professionnel
-    if ai_data and ai_data.get("titre_professionnel"):
-        result["titre_professionnel"] = ai_data["titre_professionnel"]
-        methods_used.append("titre:ai")
-    else:
-        result["titre_professionnel"] = extract_titre_professionnel(text)
-        methods_used.append("titre:regex")
-
-    # Compétences
-    if ai_data and ai_data.get("competences"):
-        result["competences"] = ai_data["competences"]
-        methods_used.append("comp:ai")
-    else:
-        result["competences"] = extract_competences(sections.get('competences', ''))
-        methods_used.append("comp:regex")
-    result["competences_niveaux"] = (ai_data or {}).get("competences_niveaux") or {}
-
-    # Langues
-    if ai_data and ai_data.get("langues"):
-        result["langues"] = ai_data["langues"]
-        methods_used.append("lang:ai")
-    else:
-        result["langues"] = extract_langues(sections.get('langues', ''))
-        methods_used.append("lang:regex")
-
-    # Récupération des nouveaux attributs spécifiques à l'IA
-    if ai_data:
-        result["linkedin"] = ai_data.get("linkedin")
-        result["github"] = ai_data.get("github")
-        result["bio"] = ai_data.get("bio")
-
-    # Expériences
-    if ai_data and ai_data.get("experiences"):
-        result["experiences"] = ai_data["experiences"]
-        methods_used.append("exp:ai")
-    else:
-        result["experiences"] = extract_experiences_list(sections.get('experiences', ''))
-        methods_used.append("exp:regex")
-
-    # Formations
-    if ai_data and ai_data.get("formations"):
-        result["formations"] = ai_data["formations"]
-        methods_used.append("form:ai")
-    else:
-        result["formations"] = extract_formations_list(sections.get('formations', ''))
-        methods_used.append("form:regex")
-
-    result["parsing_method"] = " | ".join(methods_used)
 
     return result

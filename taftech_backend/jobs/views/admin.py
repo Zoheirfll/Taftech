@@ -60,7 +60,7 @@ def _envoyer_email_offre_approuvee(offre):
         msg = EmailMultiAlternatives(
             f"Offre approuvée — {offre.titre}",
             texte,
-            settings.EMAIL_HOST_USER,
+            settings.DEFAULT_FROM_EMAIL,
             [email_destinataire],
         )
         msg.attach_alternative(html_body, 'text/html')
@@ -159,7 +159,7 @@ def _envoyer_email_entreprise_approuvee(entreprise):
         msg = EmailMultiAlternatives(
             "Entreprise validée — TafTech",
             texte,
-            settings.EMAIL_HOST_USER,
+            settings.DEFAULT_FROM_EMAIL,
             [email_destinataire],
         )
         msg.attach_alternative(html_body, 'text/html')
@@ -395,7 +395,7 @@ class AdminBroadcastEmailAPIView(APIView):
             email = EmailMultiAlternatives(
                 subject=sujet,
                 body=message,
-                from_email=settings.EMAIL_HOST_USER,
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[settings.EMAIL_HOST_USER],
                 bcc=liste_emails,
             )

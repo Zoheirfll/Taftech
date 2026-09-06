@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, ArrowLeft } from "lucide-react";
 import { tw } from "../../../theme";
+import { confirmToast } from "../../../utils/confirmToast";
 import { useOnboardingWizard } from "./useOnboardingWizard";
 import { StepUploadCV } from "./steps/StepUploadCV";
 import { StepInfos } from "./steps/StepInfos";
@@ -9,6 +10,7 @@ import { StepExperiences } from "./steps/StepExperiences";
 import { StepFormations } from "./steps/StepFormations";
 import { StepLangues } from "./steps/StepLangues";
 import { StepCompetences } from "./steps/StepCompetences";
+import { StepPreferences } from "./steps/StepPreferences";
 
 const STEP_LABELS = [
   "Upload CV",
@@ -17,6 +19,7 @@ const STEP_LABELS = [
   "Formations",
   "Langues",
   "Compétences",
+  "Préférences",
   "Terminé",
 ];
 
@@ -30,6 +33,16 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
     else navigate("/dashboard-candidat");
   };
 
+  const handleQuit = () => {
+    confirmToast(
+      "Quitter maintenant ? Les étapes déjà validées restent enregistrées, le reste sera à compléter plus tard depuis votre profil.",
+      () => {
+        if (mode === "modal" && onClose) onClose();
+        else navigate("/dashboard-candidat");
+      },
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
@@ -40,12 +53,13 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
 
   return (
     <div className={mode === "page" ? `min-h-screen ${tw.authPageBg} flex items-center justify-center p-4` : ""}>
-      <div className={`max-w-2xl w-full ${tw.surface} rounded-2xl shadow-xl p-8 relative`}>
-        {mode === "modal" && (
+      <div className={`max-w-2xl w-full ${tw.surface} rounded-2xl shadow-xl p-8 relative overflow-y-auto max-h-[90vh]`}>
+        {step < 8 && (
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Fermer"
+            onClick={handleQuit}
+            aria-label="Quitter"
+            title="Quitter le wizard"
             className={`absolute top-4 right-4 p-1.5 rounded-lg transition-colors ${tw.modalCloseButton}`}
           >
             <X size={18} />
@@ -72,7 +86,18 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
           })}
         </div>
 
-        {step === 1 && <StepUploadCV parserLoading={wizard.parserLoading} uploadCV={wizard.uploadCV} skipStep={wizard.skipStep} />}
+        {step > 1 && step < 8 && (
+          <button
+            type="button"
+            onClick={() => wizard.goToStep(step - 1)}
+            disabled={wizard.saving}
+            className={`flex items-center gap-1.5 text-xs font-semibold ${tw.textMuted} hover:${tw.textStrong} mb-4 disabled:opacity-50`}
+          >
+            <ArrowLeft size={14} /> Retour
+          </button>
+        )}
+
+        {step === 1 && <StepUploadCV parserLoading={wizard.parserLoading} uploadCV={wizard.uploadCV} skipStep={wizard.skipStep} profil={wizard.profil} />}
         {step === 2 && (
           <StepInfos
             infosForm={wizard.infosForm}
@@ -83,6 +108,8 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             skipStep={wizard.skipStep}
             constants={wizard.constants}
             profil={wizard.profil}
+            saving={wizard.saving}
+            pendingPhoto={wizard.pendingPhoto}
           />
         )}
         {step === 3 && (
@@ -94,6 +121,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             saveExperiencesStep={wizard.saveExperiencesStep}
             skipStep={wizard.skipStep}
             profil={wizard.profil}
+            saving={wizard.saving}
           />
         )}
         {step === 4 && (
@@ -105,6 +133,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             saveFormationsStep={wizard.saveFormationsStep}
             skipStep={wizard.skipStep}
             profil={wizard.profil}
+            saving={wizard.saving}
           />
         )}
         {step === 5 && (
@@ -116,6 +145,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             saveLanguesStep={wizard.saveLanguesStep}
             skipStep={wizard.skipStep}
             profil={wizard.profil}
+            saving={wizard.saving}
           />
         )}
         {step === 6 && (
@@ -127,9 +157,19 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             saveCompetencesStep={wizard.saveCompetencesStep}
             skipStep={wizard.skipStep}
             profil={wizard.profil}
+            saving={wizard.saving}
           />
         )}
         {step === 7 && (
+          <StepPreferences
+            prefsForm={wizard.prefsForm}
+            setPrefsForm={wizard.setPrefsForm}
+            savePrefsStep={wizard.savePrefsStep}
+            skipStep={wizard.skipStep}
+            saving={wizard.saving}
+          />
+        )}
+        {step === 8 && (
           <div className="text-center">
             <div className={`w-16 h-16 ${tw.bgSuccessSoft} rounded-full flex items-center justify-center mx-auto mb-4`}>
               <CheckCircle2 size={32} className={tw.textSuccess} />

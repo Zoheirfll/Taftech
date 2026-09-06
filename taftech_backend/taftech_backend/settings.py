@@ -131,6 +131,9 @@ REST_FRAMEWORK = {
         'write_action': '30/hour',
         'email_write': '10/day',
         'invitation_cvtheque': '20/day',
+        'file_upload': '20/hour',
+        'cv_parser': '10/hour',
+        'admin_upload': '100/hour',
     },
 }
 
@@ -189,6 +192,12 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+# Nom d'expéditeur affiché — un "From" avec juste une adresse Gmail nue est un signal
+# spam classique pour les filtres des autres fournisseurs (Outlook, Yahoo...). Ne résout
+# pas le vrai problème de fond (voir checklist déploiement : SPF/DKIM/DMARC sur un domaine
+# taftech.dz, pas un compte Gmail grand public) mais c'est la seule amélioration possible
+# sans accès DNS.
+DEFAULT_FROM_EMAIL = f'TafTech <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'TafTech <noreply@taftech.dz>'
 
 # ──────────────────────────────────────────────
 # EXTERNAL APIS

@@ -4,7 +4,9 @@ import { reportError } from "../utils/errorReporter";
 export const iaService = {
   genererOffreIA: async (payload) => {
     try {
-      const response = await api.post("jobs/ia/generer-offre/", payload, { timeout: 30000 });
+      // 60s : le backend retente une fois en cas d'échec Groq (JSON invalide), le délai doit
+      // couvrir 2 appels séquentiels au modèle IA, pas un seul.
+      const response = await api.post("jobs/ia/generer-offre/", payload, { timeout: 60000 });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GENERER_OFFRE_IA", err);
@@ -12,11 +14,12 @@ export const iaService = {
     }
   },
 
-  // Parser CV
+  // Parser CV — sans fichier (cvFile omis/null), le backend réutilise le CV déjà
+  // stocké sur le profil du candidat.
   parserCV: async (cvFile) => {
     try {
       const formData = new FormData();
-      formData.append("cv", cvFile);
+      if (cvFile) formData.append("cv", cvFile);
       const response = await api.post("jobs/parser-cv/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 90000,

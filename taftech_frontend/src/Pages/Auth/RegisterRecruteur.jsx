@@ -18,7 +18,7 @@ const LEFT_CONTENT = {
   1: {
     title: "Créez votre espace employeur",
     desc: "Rejoignez TAFTECH pour accéder aux meilleurs talents d'Algérie. Votre compte sera actif après vérification de vos documents.",
-    items: ["Publication illimitée d'offres", "Score IA sur chaque candidat", "CVthèque intelligente", "Gestion d'équipe multi-rôles"],
+    items: ["Publiez votre première offre gratuitement", "Score IA sur chaque candidature", "Formules Starter à Enterprise pour aller plus loin", "Conforme à la loi 18-07"],
   },
   2: {
     title: "Vérification de votre email",
@@ -152,7 +152,7 @@ const RegisterRecruteur = () => {
       <div className={`max-w-5xl mx-auto ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
 
         {/* COLONNE GAUCHE */}
-        <div className={`md:w-5/12 ${tw.heroPanelDark} p-10 flex flex-col justify-between`}>
+        <div className={`order-2 md:order-1 md:w-5/12 ${tw.heroPanelDark} p-10 flex flex-col justify-between`}>
           <div>
             <p className={`text-xs font-semibold ${tw.textTealLight} uppercase tracking-widest mb-6`}>Espace Recruteur</p>
             <h2 className="text-xl font-extrabold leading-snug mb-3 transition-all duration-300">
@@ -177,7 +177,7 @@ const RegisterRecruteur = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
 
           {/* STEPPER */}
           <div className="flex items-center gap-2 mb-8">
@@ -240,6 +240,7 @@ const RegisterRecruteur = () => {
                   <label className={labelClass}>Secteur d'activité</label>
                   <Select
                     options={constants.secteurs}
+                    value={constants.secteurs?.find((s) => s.value === formData.secteur_activite) || null}
                     placeholder="Sélectionnez..."
                     onChange={(opt) => setFormData({ ...formData, secteur_activite: opt?.value || "" })}
                     styles={selectStyles}
@@ -249,6 +250,7 @@ const RegisterRecruteur = () => {
                   <label className={labelClass}>Wilaya du siège</label>
                   <Select
                     options={constants.wilayas}
+                    value={constants.wilayas?.find((w) => w.value === formData.wilaya_siege) || null}
                     placeholder="Sélectionnez..."
                     onChange={(opt) => setFormData({ ...formData, wilaya_siege: opt?.value || "" })}
                     styles={selectStyles}

@@ -187,7 +187,7 @@ const RegisterCandidat = () => {
       <div className={`max-w-5xl w-full ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
 
         {/* COLONNE GAUCHE */}
-        <div className={`md:w-5/12 ${tw.bannerGradientPrimary} p-10 ${tw.textOnDark} flex flex-col justify-between`}>
+        <div className={`order-2 md:order-1 md:w-5/12 ${tw.bannerGradientPrimary} p-10 ${tw.textOnDark} flex flex-col justify-between`}>
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
               Propulsez votre <span className={tw.textPrimaryOnDark}>carrière</span>
@@ -220,7 +220,7 @@ const RegisterCandidat = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
 
           {/* STEPPER */}
           <div className="flex items-center gap-2 mb-6">
@@ -270,7 +270,7 @@ const RegisterCandidat = () => {
                 </div>
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Wilaya *</label>
-                  <Select name="wilaya" options={wilayasList} onChange={handleSelectChange} placeholder="Sélectionnez votre wilaya..." styles={selectStyles} classNamePrefix="wilaya-select" />
+                  <Select name="wilaya" options={wilayasList} value={wilayasList.find((w) => w.value === formData.wilaya) || null} onChange={handleSelectChange} placeholder="Sélectionnez votre wilaya..." styles={selectStyles} classNamePrefix="wilaya-select" />
                 </div>
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Adresse *</label>

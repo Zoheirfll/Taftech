@@ -17,11 +17,22 @@ class NotificationPagination(PageNumberPagination):
     max_page_size = 50
 
 
+# Types envoyés exclusivement au portail recruteur (jobs/views/equipe.py::_notifier_equipe)
+TYPES_NOTIF_RECRUTEUR = ('CANDIDATURE_SPONTANEE', 'NOUVELLE_CANDIDATURE', 'CANDIDAT_RECOMMANDE')
+
+
+def _filtrer_par_portail(qs, portail):
+    if portail == 'recruteur':
+        return qs.filter(type_notif__in=TYPES_NOTIF_RECRUTEUR)
+    return qs.exclude(type_notif__in=TYPES_NOTIF_RECRUTEUR)
+
+
 class NotificationListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         notifs = Notification.objects.filter(destinataire=request.user).order_by('-date_creation')
+        notifs = _filtrer_par_portail(notifs, request.query_params.get('portail'))
         paginator = NotificationPagination()
         result_page = paginator.paginate_queryset(notifs, request)
         serializer = NotificationSerializer(result_page, many=True)
@@ -42,7 +53,9 @@ class MarkNotificationReadAPIView(APIView):
 class MarkAllNotificationsReadAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        Notification.objects.filter(destinataire=request.user, lue=False).update(lue=True)
+        qs = Notification.objects.filter(destinataire=request.user, lue=False)
+        qs = _filtrer_par_portail(qs, request.query_params.get('portail'))
+        qs.update(lue=True)
         return Response({"message": "Toutes les notifications ont été marquées comme lues."}, status=status.HTTP_200_OK)
 
 

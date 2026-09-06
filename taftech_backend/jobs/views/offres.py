@@ -7,7 +7,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Case, When, Value, IntegerField
 from django.utils import timezone
 import datetime
-from ..models import OffreEmploi, Candidature, EquipeActionLog
+from ..models import OffreEmploi, Candidature, EquipeActionLog, CompetenceOffre
 from .equipe import get_entreprise_for_user, get_membre_role, _log
 from ..serializers import (
     OffreEmploiSerializer,
@@ -92,6 +92,52 @@ class JobDetailAPIView(APIView):
 
 _ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 
+_TYPES_EXIGENCE_VALIDES = {choix[0] for choix in CompetenceOffre.TYPE_EXIGENCE_CHOICES}
+_NIVEAUX_VALIDES = {choix[0] for choix in CompetenceOffre.NIVEAU_CHOICES}
+
+
+def _synchroniser_competences_offre(offre, items):
+    """Remplace intégralement les compétences structurées d'une offre à partir d'une liste
+    [{label, type_exigence, niveau_requis}] — appelé à la création et sur toute mise à jour
+    qui inclut explicitement la clé `competences_requises` (sémantique remplacement, pas merge,
+    cohérent avec le fait que le recruteur revoit toujours la liste complète dans l'UI)."""
+    offre.competences_requises.all().delete()
+    if not items:
+        return
+    vues = set()
+    a_creer = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get('label', '')).strip()[:100]
+        if not label or label.lower() in vues:
+            continue
+        vues.add(label.lower())
+        type_exigence = item.get('type_exigence') or 'OBLIGATOIRE'
+        if type_exigence not in _TYPES_EXIGENCE_VALIDES:
+            type_exigence = 'OBLIGATOIRE'
+        niveau_requis = item.get('niveau_requis') or None
+        if niveau_requis not in _NIVEAUX_VALIDES:
+            niveau_requis = None
+        a_creer.append(CompetenceOffre(offre=offre, label=label, type_exigence=type_exigence, niveau_requis=niveau_requis))
+    if a_creer:
+        CompetenceOffre.objects.bulk_create(a_creer)
+
+
+_NIVEAU_LABELS = dict(CompetenceOffre.NIVEAU_CHOICES)
+
+
+def _texte_depuis_competences(competences_requises):
+    """Génère le texte affiché sur l'annonce à partir des compétences structurées — seule
+    source de vérité pour le recruteur (il ne remplit plus le texte libre à la main), évite
+    toute divergence entre les deux."""
+    lignes = []
+    for comp in competences_requises:
+        niveau = f" (niveau {_NIVEAU_LABELS.get(comp.niveau_requis, comp.niveau_requis)} minimum)" if comp.niveau_requis else ""
+        exigence = "Obligatoire" if comp.type_exigence == 'OBLIGATOIRE' else "Souhaitée"
+        lignes.append(f"- {comp.label}{niveau} — {exigence}")
+    return "\n".join(lignes)
+
 
 class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -117,6 +163,10 @@ class JobCreateAPIView(APIView):
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
+            _synchroniser_competences_offre(offre, request.data.get('competences_requises'))
+            if offre.competences_requises.exists():
+                offre.competences = _texte_depuis_competences(offre.competences_requises.all())
+                offre.save(update_fields=['competences'])
             _log(request.user, entreprise, 'CREER_OFFRE', offre.titre)
             # Notifier tous les admins
             from django.contrib.auth import get_user_model
@@ -155,6 +205,11 @@ class UpdateOffreRecruteurAPIView(APIView):
                 serializer.save()
             else:
                 serializer.save(statut_moderation="EN_ATTENTE", motif_rejet="")
+            if 'competences_requises' in request.data:
+                _synchroniser_competences_offre(offre, request.data.get('competences_requises'))
+                if offre.competences_requises.exists():
+                    offre.competences = _texte_depuis_competences(offre.competences_requises.all())
+                    offre.save(update_fields=['competences'])
             _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
             return Response({
                 "message": "Offre mise à jour.",

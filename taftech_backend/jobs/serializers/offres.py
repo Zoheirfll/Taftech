@@ -1,6 +1,12 @@
 from rest_framework import serializers
-from ..models import OffreEmploi, ProfilEntreprise, Domaine
+from ..models import OffreEmploi, ProfilEntreprise, Domaine, CompetenceOffre
 from .questionnaires import QuestionnaireSerializer
+
+
+class CompetenceOffreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompetenceOffre
+        fields = ('id', 'label', 'type_exigence', 'niveau_requis')
 
 
 def _secteur_libelle_pour_offre(obj):
@@ -31,6 +37,7 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     questionnaire = QuestionnaireSerializer(read_only=True)
     jours_restants = serializers.SerializerMethodField()
     secteur_libelle = serializers.SerializerMethodField()
+    competences_requises = CompetenceOffreSerializer(many=True, read_only=True)
 
     class Meta:
         model = OffreEmploi

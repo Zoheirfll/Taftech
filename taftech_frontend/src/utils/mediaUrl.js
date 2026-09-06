@@ -19,3 +19,10 @@ export const candidatFichierUrl = (candidatId, type) => {
   if (!candidatId || !type) return null;
   return `${API_BASE}/api/jobs/media-prive/candidat/${candidatId}/${type}/`;
 };
+
+// Document privé partagé ponctuellement par un candidat avec l'entreprise du recruteur
+// connecté — servi uniquement si un PartageDocument existe (voir CandidatDocumentPartageFichierAPIView).
+export const documentPartageFichierUrl = (candidatId, docId) => {
+  if (!candidatId || !docId) return null;
+  return `${API_BASE}/api/jobs/cvtheque/candidats/${candidatId}/documents-partages/${docId}/fichier/`;
+};

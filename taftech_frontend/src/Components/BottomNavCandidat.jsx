@@ -30,7 +30,7 @@ const BottomNavCandidat = () => {
       }
     };
     loadNotifications();
-  }, []);
+  }, [location.pathname]);
 
   const isActive = (item) =>
     item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to);

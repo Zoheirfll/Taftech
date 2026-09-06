@@ -10,6 +10,7 @@ from .offres import (
     OffreEmploiCreateDTO,
     OffreEmploiPublicSerializer,
     EntreprisePublicSerializer,
+    CompetenceOffreSerializer,
 )
 from .profils import (
     ExperienceSerializer,

@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.core.cache import cache
 from ..models import SiteAnnonce, BanniereAccueil
 from ..serializers import SiteAnnonceSerializer, BanniereAccueilSerializer
-from ..throttles import PublicReadThrottle
+from ..throttles import PublicReadThrottle, AdminFileUploadThrottle
 
 CACHE_ANNONCE = 'jobs_site_annonce_active'
 CACHE_BANNIERES = 'jobs_bannieres_accueil'
@@ -89,6 +89,7 @@ class BanniereAccueilAdminAPIView(APIView):
     """CRUD admin des bannières du carrousel d'accueil."""
     permission_classes = [IsAdminUser]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    throttle_classes = [AdminFileUploadThrottle]
 
     def get(self, request):
         if request.user.role != 'ADMIN':

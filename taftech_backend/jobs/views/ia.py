@@ -18,7 +18,7 @@ from ..matcher import calculer_score_matching
 from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv, extract_specialite
 from .equipe import get_entreprise_for_user
-from ..throttles import PublicReadThrottle
+from ..throttles import PublicReadThrottle, FileUploadThrottle
 
 User = get_user_model()
 
@@ -69,17 +69,23 @@ Wilaya : {wilaya}
 
 Pour les questions d'entretien, choisis le type le plus adapté à chaque question parmi : COURT (réponse texte courte), LONG (réponse texte développée), NUMERIQUE (un nombre, ex: années d'expérience), CHOIX_UNIQUE (QCM une seule bonne réponse), CHOIX_MULTIPLE (QCM plusieurs réponses possibles). Pour CHOIX_UNIQUE/CHOIX_MULTIPLE, fournis 3 à 5 options de réponse plausibles et réalistes pour ce poste précis (pas des options génériques "Oui/Non" sauf si vraiment pertinent).
 
+Référentiel de compétences disponibles sur la plateforme : {competences_referentiel}
+Pour le champ "competences_structurees", choisis EXCLUSIVEMENT des libellés présents mot pour mot dans ce référentiel (aucune invention, aucune reformulation) — si aucune compétence du référentiel ne correspond au poste, renvoie un tableau vide pour ce champ.
+
 Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
 {
   "description": "2-3 phrases présentant le contexte de ce poste et de l'entreprise.",
   "missions": "Liste de 4 à 6 missions concrètes, une par ligne, commençant par un tiret.",
   "profil_recherche": "Liste de 4 à 5 exigences du profil (formation, savoir-être), une par ligne, commençant par un tiret.",
   "competences": "Liste de 5 à 8 compétences techniques/outils concrets attendus pour ce poste précis, une par ligne, commençant par un tiret.",
+  "competences_structurees": [
+    {"label": "libellé EXACT tiré du référentiel fourni", "type_exigence": "OBLIGATOIRE|SOUHAITEE", "niveau_requis": "DEBUTANT|INTERMEDIAIRE|AVANCE|CONFIRME"}
+  ],
   "questions_entretien": [
     {"texte": "Texte de la question", "type_question": "COURT|LONG|NUMERIQUE|CHOIX_UNIQUE|CHOIX_MULTIPLE", "choix": ["option 1", "option 2", "..."] }
   ]
 }
-Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre)."""
+Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre). Pour "competences_structurees", propose 3 à 6 entrées maximum, avec un mélange raisonnable d'Obligatoire/Souhaitée."""
 
 
 def _deviner_secteur_experience(titre_poste, description="", secteur_groq=""):
@@ -95,6 +101,13 @@ def _deviner_secteur_experience(titre_poste, description="", secteur_groq=""):
 
 class GroqThrottle(UserRateThrottle):
     scope = 'groq'
+
+
+class CVParserThrottle(UserRateThrottle):
+    """Scope 'cv_parser' (10/h) — plus strict que le seau 'groq' partagé (20/h, réparti entre
+    4 autres fonctionnalités) : parser un CV combine upload de fichier ET 1-2 appels Groq
+    (extraction + agent classification domaine), donc plus coûteux qu'un simple appel IA."""
+    scope = 'cv_parser'
 
 
 class OffresRecommandeesAPIView(APIView):
@@ -129,25 +142,48 @@ class OffresRecommandeesAPIView(APIView):
 class ParserCVAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
+    # Aucun throttle avant cette session : le parsing déclenche 1-2 appels Groq (extraction
+    # + agent de classification domaine) sans aucune limite au-delà du seau générique user
+    # (1000/jour) — gap réel, même risque de coût/abus que les autres endpoints IA.
+    # FileUploadThrottle (20/h) borne l'upload, CVParserThrottle (10/h, plus strict) borne le
+    # coût Groq réel — le plus restrictif des deux s'applique.
+    throttle_classes = [FileUploadThrottle, CVParserThrottle]
 
     def post(self, request):
         from ..models import AIConfig
         if not AIConfig.get_solo().parser_cv_actif:
             return Response({"error": "Le parser CV est temporairement désactivé par l'administrateur."}, status=503)
+
         cv_file = request.FILES.get('cv')
-        if not cv_file:
-            return Response({"error": "Aucun fichier reçu."}, status=status.HTTP_400_BAD_REQUEST)
-        ext = os.path.splitext(cv_file.name)[1].lower()
+        if cv_file:
+            if cv_file.size > 5 * 1024 * 1024:
+                return Response({"error": "Fichier trop volumineux (max 5 Mo)."}, status=status.HTTP_400_BAD_REQUEST)
+            cv_name = cv_file.name
+            source_chunks = cv_file.chunks()
+        else:
+            # Aucun fichier envoyé → réutilise le CV déjà stocké sur le profil (évite
+            # de redemander le fichier quand il est déjà téléversé).
+            profil = getattr(request.user, 'profil_candidat', None)
+            if not profil or not profil.cv_pdf:
+                return Response({"error": "Aucun fichier reçu et aucun CV existant sur le profil."}, status=status.HTTP_400_BAD_REQUEST)
+            cv_name = os.path.basename(profil.cv_pdf.name)
+            source_chunks = None  # ouvert plus bas via profil.cv_pdf
+
+        ext = os.path.splitext(cv_name)[1].lower()
         if ext not in ['.pdf', '.docx', '.doc']:
             return Response({"error": f"Format non supporté ({ext})."}, status=status.HTTP_400_BAD_REQUEST)
-        if cv_file.size > 5 * 1024 * 1024:
-            return Response({"error": "Fichier trop volumineux (max 5 Mo)."}, status=status.HTTP_400_BAD_REQUEST)
+
         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
         try:
-            for chunk in cv_file.chunks():
-                tmp_file.write(chunk)
+            if cv_file:
+                for chunk in source_chunks:
+                    tmp_file.write(chunk)
+            else:
+                with profil.cv_pdf.open('rb') as f:
+                    for chunk in f.chunks():
+                        tmp_file.write(chunk)
             tmp_file.close()
-            result = parse_cv(tmp_file.name, cv_file.name)
+            result = parse_cv(tmp_file.name, cv_name)
             experiences = result.get('experiences', [])
             from ..domaine_agent import classifier_domaines_experiences, SPECIALITE_INDEX
             classifications = classifier_domaines_experiences(
@@ -477,6 +513,10 @@ class GenererOffreIAAPIView(APIView):
         domaine_obj = Domaine.objects.filter(code=specialite_resolue).first() if specialite_resolue else None
         specialite_libelle = domaine_obj.libelle if domaine_obj else (specialite_resolue or 'Non précisée')
 
+        from ..models import CompetenceReferentiel
+        labels_referentiel = list(CompetenceReferentiel.objects.filter(actif=True).values_list('label', flat=True))
+        labels_par_cle = {lbl.strip().lower(): lbl for lbl in labels_referentiel}
+
         prompt_source = ai_config.generation_offre_prompt or DEFAULT_PROMPT_GENERATION_OFFRE
         prompt = (
             prompt_source
@@ -486,6 +526,7 @@ class GenererOffreIAAPIView(APIView):
             .replace("{experience}", experience or 'Non précisée')
             .replace("{contrat}", contrat or 'Non précisé')
             .replace("{wilaya}", wilaya or 'Non précisée')
+            .replace("{competences_referentiel}", ", ".join(labels_referentiel) if labels_referentiel else "aucun référentiel disponible")
         )
 
         try:
@@ -493,13 +534,27 @@ class GenererOffreIAAPIView(APIView):
             from ..ai_engine import call_ai
             # Appel direct à call_ai (pas _appel_groq) : ce dernier strip les **/##/* pour un
             # rendu markdown propre, ce qui corromprait le JSON strict attendu ici.
-            raw = call_ai(
-                [{'role': 'user', 'content': prompt}],
-                max_tokens=ai_config.generation_offre_max_tokens,
-                temperature=0.6,
-                response_format={'type': 'json_object'},
-            )
-            data = _json.loads(raw)
+            # Un essai retente une fois : Groq échoue de temps en temps à produire un JSON
+            # strictement valide (`json_validate_failed`) sur ce prompt riche (5 sections +
+            # questions d'entretien typées) — déjà documenté comme un aléa connu du modèle
+            # reasoning utilisé, pas une panne réelle du service la plupart du temps.
+            data = None
+            derniere_erreur = None
+            for tentative in range(2):
+                try:
+                    raw = call_ai(
+                        [{'role': 'user', 'content': prompt}],
+                        max_tokens=ai_config.generation_offre_max_tokens,
+                        temperature=0.6,
+                        response_format={'type': 'json_object'},
+                    )
+                    data = _json.loads(raw)
+                    break
+                except Exception as e:
+                    derniere_erreur = e
+                    logger.warning("GenererOffreIA tentative %s échouée : %s", tentative + 1, e)
+            if data is None:
+                raise derniere_erreur
             questions_brutes = data.get('questions_entretien', [])
             if not isinstance(questions_brutes, list):
                 questions_brutes = []
@@ -528,11 +583,40 @@ class GenererOffreIAAPIView(APIView):
                     choix = []
                 questions.append({'texte': texte, 'type_question': type_question, 'choix': choix})
 
+            # Compétences structurées : ne garder que les libellés existant réellement dans le
+            # référentiel (comparaison insensible à la casse) — une hallucination de Groq (nom
+            # inventé, absent du référentiel) est silencieusement écartée plutôt que créée à la
+            # volée, cohérent avec la décision de piocher exclusivement dans le référentiel.
+            from ..models import CompetenceOffre
+            TYPES_EXIGENCE_VALIDES = {c[0] for c in CompetenceOffre.TYPE_EXIGENCE_CHOICES}
+            NIVEAUX_VALIDES = {c[0] for c in CompetenceOffre.NIVEAU_CHOICES}
+            competences_structurees_brutes = data.get('competences_structurees', [])
+            if not isinstance(competences_structurees_brutes, list):
+                competences_structurees_brutes = []
+            competences_structurees = []
+            vues = set()
+            for c in competences_structurees_brutes:
+                if not isinstance(c, dict):
+                    continue
+                label_brut = str(c.get('label', '')).strip().lower()
+                label_reel = labels_par_cle.get(label_brut)
+                if not label_reel or label_reel.lower() in vues:
+                    continue
+                vues.add(label_reel.lower())
+                type_exigence = str(c.get('type_exigence', 'OBLIGATOIRE')).strip().upper()
+                if type_exigence not in TYPES_EXIGENCE_VALIDES:
+                    type_exigence = 'OBLIGATOIRE'
+                niveau_requis = str(c.get('niveau_requis', '') or '').strip().upper() or None
+                if niveau_requis not in NIVEAUX_VALIDES:
+                    niveau_requis = None
+                competences_structurees.append({'label': label_reel, 'type_exigence': type_exigence, 'niveau_requis': niveau_requis})
+
             return Response({
                 'description': data.get('description', ''),
                 'missions': data.get('missions', ''),
                 'profil_recherche': data.get('profil_recherche', ''),
                 'competences': data.get('competences', ''),
+                'competences_requises': competences_structurees[:6],
                 'questions_entretien': questions[:6],
                 'specialite_resolue': specialite_resolue,
             })

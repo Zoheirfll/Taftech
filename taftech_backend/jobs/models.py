@@ -219,6 +219,37 @@ class OffreEmploi(models.Model):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
 
 
+class CompetenceOffre(models.Model):
+    """Compétence structurée requise par une offre, normalisée sur le même référentiel que
+    CompetenceCandidat (label libre, suggéré via CompetenceReferentiel) — permet un matching
+    fiable en plus de la zone texte libre `OffreEmploi.competences` conservée pour l'annonce."""
+    TYPE_EXIGENCE_CHOICES = [
+        ('OBLIGATOIRE', 'Obligatoire'),
+        ('SOUHAITEE', 'Souhaitée'),
+    ]
+    # Dupliqué depuis CompetenceCandidat.NIVEAU_CHOICES (défini plus bas dans ce fichier) —
+    # référencer la classe ici provoquerait un NameError, cette classe n'étant pas encore
+    # définie à ce point du module.
+    NIVEAU_CHOICES = [
+        ('DEBUTANT', 'Débutant'),
+        ('INTERMEDIAIRE', 'Intermédiaire'),
+        ('AVANCE', 'Avancé'),
+        ('CONFIRME', 'Confirmé / Expert'),
+    ]
+
+    offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='competences_requises')
+    label = models.CharField(max_length=100, verbose_name="Compétence")
+    type_exigence = models.CharField(max_length=15, choices=TYPE_EXIGENCE_CHOICES, default='OBLIGATOIRE')
+    niveau_requis = models.CharField(max_length=20, choices=NIVEAU_CHOICES, blank=True, null=True)
+
+    class Meta:
+        ordering = ['type_exigence', 'label']
+        unique_together = [('offre', 'label')]
+
+    def __str__(self):
+        return f"{self.label} ({self.get_type_exigence_display()}) — {self.offre.titre}"
+
+
 class Candidature(models.Model):
     """
     Représente la candidature d'un utilisateur à une offre (Connecté OU Rapide).
@@ -378,6 +409,12 @@ class ProfilCandidat(models.Model):
     permis_conduire = models.BooleanField(default=False, verbose_name="Permis de conduire")
     vehicule_personnel = models.BooleanField(default=False, verbose_name="Véhiculé") 
     passeport_valide = models.BooleanField(default=False, verbose_name="Passeport valide")
+    visible_cvtheque = models.BooleanField(
+        default=True,
+        verbose_name="Profil déblocable dans la CVthèque",
+        help_text="Si désactivé, le profil reste visible/recherchable mais aucun recruteur ne peut "
+                  "débloquer les coordonnées/CV via un crédit tant que ce n'est pas réactivé.",
+    )
 
     # --- PRÉFÉRENCES DE RECRUTEMENT ---
     secteur_souhaite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Domaine souhaité (code ANEM)")
@@ -976,7 +1013,7 @@ class AIConfig(models.Model):
     )
 
     generation_offre_actif = models.BooleanField(default=True, verbose_name="Génération d'offre IA active")
-    generation_offre_max_tokens = models.PositiveIntegerField(default=1600, validators=[MinValueValidator(100)])
+    generation_offre_max_tokens = models.PositiveIntegerField(default=1900, validators=[MinValueValidator(100)])
     generation_offre_prompt = models.TextField(
         blank=True, verbose_name="Prompt Génération d'offre",
         help_text=(
@@ -1155,8 +1192,17 @@ class Article(models.Model):
 class CompetenceReferentiel(models.Model):
     """Référentiel de compétences suggérées, éditable par l'admin — alimente l'autocomplete du
     champ "Compétences" du profil candidat (TextField libre, non modifié : ceci ne fait que
-    suggérer, jamais ne contraint la saisie)."""
+    suggérer, jamais ne contraint la saisie), et sert aussi de table de normalisation pour les
+    compétences extraites automatiquement d'un CV (jobs.cv_parser) — un intitulé parsé proche
+    d'un `label` ou d'un `synonymes` est remplacé par le libellé canonique avant d'être proposé
+    au candidat, pour éviter les doublons type "Gestion de projet" / "Gestion des projets" /
+    "Project Management"."""
     label = models.CharField(max_length=100, unique=True, verbose_name="Compétence")
+    synonymes = models.TextField(
+        blank=True, default="",
+        verbose_name="Synonymes / traductions",
+        help_text="Intitulés équivalents séparés par des virgules (ex: Project Management, Gestion des projets) — utilisés pour normaliser les compétences extraites d'un CV vers ce libellé.",
+    )
     actif = models.BooleanField(default=True, verbose_name="Suggérée")
 
     class Meta:
@@ -1242,9 +1288,9 @@ class TypeDocument(models.Model):
 
 
 class DocumentCandidat(models.Model):
-    """Espace documents 100% privé du candidat — jamais exposé aux recruteurs ni attaché
-    automatiquement à une candidature (contrairement au CV/lettre de motivation "officiels"
-    de ProfilCandidat, qui restent inchangés et sont la seule chose qu'un recruteur voit)."""
+    """Espace documents privé du candidat, jamais attaché automatiquement à une candidature
+    (contrairement au CV/lettre de motivation "officiels" de ProfilCandidat) et jamais visible
+    par un recruteur par défaut — sauf partage ponctuel explicite (voir PartageDocument)."""
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='documents')
     type_document = models.ForeignKey(TypeDocument, on_delete=models.SET_NULL, null=True, related_name='documents')
     nom_personnalise = models.CharField(max_length=150, blank=True, verbose_name="Nom (ex: CV version IT)")
@@ -1263,6 +1309,23 @@ class DocumentCandidat(models.Model):
 
     def __str__(self):
         return self.nom_personnalise or (self.type_document.label if self.type_document else "Document")
+
+
+class PartageDocument(models.Model):
+    """Autorisation explicite du candidat pour qu'une entreprise précise voie un document privé
+    précis — le partage par défaut reste fermé (DocumentCandidat), ceci est l'exception ponctuelle
+    que le candidat active lui-même. Partagé avec toute l'équipe de l'entreprise (même principe que
+    le déblocage CVthèque par crédit — pas juste le recruteur qui a reçu l'autorisation)."""
+    document = models.ForeignKey(DocumentCandidat, on_delete=models.CASCADE, related_name='partages')
+    entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='documents_partages')
+    date_partage = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('document', 'entreprise')
+        ordering = ['-date_partage']
+
+    def __str__(self):
+        return f"{self.document} → {self.entreprise.nom_entreprise}"
 
 
 class ConfigRendezVous(models.Model):

@@ -3,7 +3,7 @@ from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
     ConstantsAPIView, NomenclatureAPIView, CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
-    ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView,
+    ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView, ExportGraphiqueExcelAPIView,
 
     # Candidatures
     PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView,
@@ -29,6 +29,7 @@ from .views import (
     ChargilyCheckoutPalierAPIView, ChargilyWebhookAPIView, MonAbonnementAPIView,
     EquipeAPIView, InviterMembreAPIView, AccepterInvitationAPIView, EquipeAuditLogAPIView,
     DeverrouillerCandidatAPIView, CreditPackCheckoutAPIView, CreditPackPublicAPIView, CreditPackAdminAPIView,
+    CandidatDocumentsPartagesAPIView, CandidatDocumentPartageFichierAPIView,
 
     # Notifications
     NotificationListAPIView, MarkNotificationReadAPIView, MarkAllNotificationsReadAPIView, DeleteNotificationAPIView,
@@ -80,6 +81,7 @@ from .views import (
     # Nouveau tableau de bord candidat (specs/important-features)
     ScoreProfilAPIView, MetiersAccessiblesAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
     TypeDocumentPublicAPIView, DocumentCandidatAPIView,
+    DocumentEntreprisesEligiblesAPIView, DocumentPartagerAPIView,
     DisponibilitesAPIView, RendezVousAPIView, RendezVousAnnulerAPIView,
     ActiviteProfilAPIView, AlerteMarquerVueAPIView,
     ConfigRendezVousAdminAPIView, DisponibiliteRecurrenteAdminAPIView,
@@ -97,6 +99,7 @@ urlpatterns = [
     path('dashboard/offres/<int:offre_id>/supprimer/', SupprimerOffreAPIView.as_view(), name='supprimer-offre'),
     path('dashboard/offres/<int:offre_id>/export-excel/', ExportCandidaturesOffreExcelAPIView.as_view(), name='export-candidatures-offre-excel'),
     path('dashboard/export-excel/', ExportCandidaturesExcelAPIView.as_view(), name='export-candidatures-excel'),
+    path('dashboard/export-graphique-excel/', ExportGraphiqueExcelAPIView.as_view(), name='export-graphique-excel'),
 
     # Candidatures
     path('<int:offre_id>/postuler/', PostulerAPIView.as_view(), name='postuler-offre'),
@@ -236,6 +239,11 @@ urlpatterns = [
     path('mes-competences/', CompetenceCandidatAPIView.as_view(), name='mes-competences'),
     path('types-documents/', TypeDocumentPublicAPIView.as_view(), name='types-documents-public'),
     path('mes-documents/', DocumentCandidatAPIView.as_view(), name='mes-documents'),
+    path('documents/<int:doc_id>/entreprises-eligibles/', DocumentEntreprisesEligiblesAPIView.as_view(), name='document-entreprises-eligibles'),
+    path('documents/<int:doc_id>/partager/', DocumentPartagerAPIView.as_view(), name='document-partager'),
+    path('documents/<int:doc_id>/partager/<int:entreprise_id>/', DocumentPartagerAPIView.as_view(), name='document-partager-revoquer'),
+    path('cvtheque/candidats/<int:candidat_id>/documents-partages/', CandidatDocumentsPartagesAPIView.as_view(), name='cvtheque-documents-partages'),
+    path('cvtheque/candidats/<int:candidat_id>/documents-partages/<int:doc_id>/fichier/', CandidatDocumentPartageFichierAPIView.as_view(), name='cvtheque-document-partage-fichier'),
     path('rendez-vous/disponibilites/', DisponibilitesAPIView.as_view(), name='rdv-disponibilites'),
     path('rendez-vous/', RendezVousAPIView.as_view(), name='rendez-vous'),
     path('rendez-vous/<int:pk>/annuler/', RendezVousAnnulerAPIView.as_view(), name='rdv-annuler'),

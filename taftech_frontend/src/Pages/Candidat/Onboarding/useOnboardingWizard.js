@@ -34,17 +34,23 @@ export const useOnboardingWizard = () => {
   const [constants, setConstants] = useState({});
   const [parsedData, setParsedData] = useState(null);
   const [parserLoading, setParserLoading] = useState(false);
+  // Verrou anti-double-clic partagé par toutes les etapes "Continuer" — une
+  // sauvegarde reseau lente ne doit jamais pouvoir en declencher une seconde
+  // en parallele si l'utilisateur reclique avant la reponse.
+  const [saving, setSaving] = useState(false);
 
   const [infosForm, setInfosForm] = useState({});
-  const [infosMode, setInfosMode] = useState("ajouter");
+  const [infosMode, setInfosMode] = useState("remplacer");
   const [pendingExperiences, setPendingExperiences] = useState([]);
-  const [experiencesMode, setExperiencesMode] = useState("ajouter");
+  const [experiencesMode, setExperiencesMode] = useState("remplacer");
   const [pendingFormations, setPendingFormations] = useState([]);
-  const [formationsMode, setFormationsMode] = useState("ajouter");
+  const [formationsMode, setFormationsMode] = useState("remplacer");
   const [pendingLangues, setPendingLangues] = useState([]);
-  const [languesMode, setLanguesMode] = useState("ajouter");
+  const [languesMode, setLanguesMode] = useState("remplacer");
   const [pendingCompetences, setPendingCompetences] = useState([]);
-  const [competencesMode, setCompetencesMode] = useState("ajouter");
+  const [competencesMode, setCompetencesMode] = useState("remplacer");
+  const [prefsForm, setPrefsForm] = useState({});
+  const [pendingPhoto, setPendingPhoto] = useState(null);
 
   const refresh = useCallback(async () => {
     const [p, c] = await Promise.all([profilService.getProfil(), jobsService.getConstants()]);
@@ -60,6 +66,20 @@ export const useOnboardingWizard = () => {
       telephone: p.telephone || "",
       diplome: p.diplome || "",
       specialite: p.specialite || "",
+      titre_professionnel: p.titre_professionnel || "",
+      service_militaire: p.service_militaire || "",
+      bio: p.bio || "",
+      linkedin: p.linkedin || "",
+      github: p.github || "",
+      permis_conduire: p.permis_conduire || false,
+      passeport_valide: p.passeport_valide || false,
+      vehicule_personnel: p.vehicule_personnel || false,
+    });
+    setPrefsForm({
+      secteur_souhaite: p.secteur_souhaite || "",
+      salaire_souhaite: p.salaire_souhaite || "",
+      mobilite: p.mobilite || "",
+      situation_actuelle: p.situation_actuelle || "",
     });
     return p;
   }, []);
@@ -77,7 +97,7 @@ export const useOnboardingWizard = () => {
     })();
   }, [refresh]);
 
-  const nextStep = useCallback(() => setStep((s) => Math.min(s + 1, 7)), []);
+  const nextStep = useCallback(() => setStep((s) => Math.min(s + 1, 8)), []);
   const skipStep = useCallback(() => nextStep(), [nextStep]);
   const goToStep = useCallback((n) => setStep(n), []);
 
@@ -90,13 +110,58 @@ export const useOnboardingWizard = () => {
         return;
       }
       setParsedData(result);
+      let prenom, nom;
+      if (result.nom_complet) {
+        const parts = result.nom_complet.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          if (parts[0] === parts[0].toUpperCase()) {
+            nom = parts[0];
+            prenom = parts.slice(1).join(" ");
+          } else {
+            prenom = parts[0];
+            nom = parts.slice(1).join(" ");
+          }
+        } else {
+          prenom = parts[0] || "";
+        }
+      }
       setInfosForm((prev) => ({
         ...prev,
+        first_name: prenom || prev.first_name,
+        last_name: nom || prev.last_name,
         telephone: result.telephone || prev.telephone,
         wilaya: result.wilaya || prev.wilaya,
         diplome: result.diplome || prev.diplome,
         specialite: result.specialite || prev.specialite,
+        sexe: result.sexe || prev.sexe,
+        date_naissance: result.date_naissance || prev.date_naissance,
+        titre_professionnel: result.titre_professionnel || prev.titre_professionnel,
+        service_militaire: result.service_militaire || prev.service_militaire,
+        bio: result.bio || prev.bio,
+        linkedin: result.linkedin || prev.linkedin,
+        github: result.github || prev.github,
+        permis_conduire: result.permis_conduire || prev.permis_conduire,
+        passeport_valide: result.passeport_valide || prev.passeport_valide,
+        vehicule_personnel: result.vehicule_personnel || prev.vehicule_personnel,
       }));
+      setPrefsForm((prev) => ({
+        ...prev,
+        situation_actuelle: result.situation_actuelle || prev.situation_actuelle,
+        mobilite: result.mobilite || prev.mobilite,
+        salaire_souhaite: result.salaire_souhaite || prev.salaire_souhaite,
+      }));
+      if (result.photo?.data) {
+        try {
+          const byteCharacters = atob(result.photo.data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+          const ext = result.photo.ext || "jpg";
+          const blob = new Blob([new Uint8Array(byteNumbers)], { type: `image/${ext}` });
+          setPendingPhoto(new File([blob], `photo.${ext}`, { type: `image/${ext}` }));
+        } catch (err) {
+          reportError("ECHEC_DECODAGE_PHOTO_ONBOARDING", err);
+        }
+      }
       if (result.experiences?.length > 0) {
         setPendingExperiences(
           result.experiences.map((exp) => ({
@@ -144,21 +209,31 @@ export const useOnboardingWizard = () => {
   }, [nextStep]);
 
   const saveInfosStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
     const formData = new FormData();
     Object.entries(infosForm).forEach(([key, value]) => {
       if (infosMode === "remplacer" || value) formData.append(key, value ?? "");
     });
+    if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
+      formData.append("photo_profil", pendingPhoto);
+    }
     try {
       await profilService.updateProfil(formData);
+      setPendingPhoto(null);
       await refresh();
       nextStep();
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
       reportError("ECHEC_SAVE_INFOS_ONBOARDING", err);
+    } finally {
+      setSaving(false);
     }
-  }, [infosForm, infosMode, nextStep, refresh]);
+  }, [infosForm, infosMode, pendingPhoto, profil, nextStep, refresh, saving]);
 
   const saveExperiencesStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
     try {
       if (experiencesMode === "remplacer") {
         await Promise.allSettled(
@@ -177,10 +252,14 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des expériences."));
       reportError("ECHEC_SAVE_EXPERIENCES_ONBOARDING", err);
+    } finally {
+      setSaving(false);
     }
-  }, [pendingExperiences, experiencesMode, profil, nextStep, refresh]);
+  }, [pendingExperiences, experiencesMode, profil, nextStep, refresh, saving]);
 
   const saveFormationsStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
     try {
       if (formationsMode === "remplacer") {
         await Promise.allSettled(
@@ -199,10 +278,14 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des formations."));
       reportError("ECHEC_SAVE_FORMATIONS_ONBOARDING", err);
+    } finally {
+      setSaving(false);
     }
-  }, [pendingFormations, formationsMode, profil, nextStep, refresh]);
+  }, [pendingFormations, formationsMode, profil, nextStep, refresh, saving]);
 
   const saveLanguesStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
     try {
       const existing = languesMode === "remplacer" ? [] : (profil?.langues || "").split(",").filter(Boolean).map(parseLangueBrute);
       const parLangue = new Map();
@@ -215,10 +298,14 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des langues."));
       reportError("ECHEC_SAVE_LANGUES_ONBOARDING", err);
+    } finally {
+      setSaving(false);
     }
-  }, [pendingLangues, languesMode, profil, nextStep, refresh]);
+  }, [pendingLangues, languesMode, profil, nextStep, refresh, saving]);
 
   const saveCompetencesStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
     try {
       if (competencesMode === "remplacer") {
         await Promise.allSettled(
@@ -237,8 +324,27 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des compétences."));
       reportError("ECHEC_SAVE_COMPETENCES_ONBOARDING", err);
+    } finally {
+      setSaving(false);
     }
-  }, [pendingCompetences, competencesMode, profil, nextStep, refresh]);
+  }, [pendingCompetences, competencesMode, profil, nextStep, refresh, saving]);
+
+  const savePrefsStep = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
+    const formData = new FormData();
+    Object.entries(prefsForm).forEach(([key, value]) => formData.append(key, value ?? ""));
+    try {
+      await profilService.updateProfil(formData);
+      await refresh();
+      nextStep();
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des préférences."));
+      reportError("ECHEC_SAVE_PREFS_ONBOARDING", err);
+    } finally {
+      setSaving(false);
+    }
+  }, [prefsForm, nextStep, refresh, saving]);
 
   const completionPercent = useMemo(() => {
     if (!profil) return 0;
@@ -247,13 +353,14 @@ export const useOnboardingWizard = () => {
 
   return {
     step, goToStep, nextStep, skipStep,
-    loading, profil, constants,
+    loading, profil, constants, saving,
     parsedData, parserLoading, uploadCV,
-    infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep,
+    infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, pendingPhoto, setPendingPhoto,
     pendingExperiences, setPendingExperiences, experiencesMode, setExperiencesMode, saveExperiencesStep,
     pendingFormations, setPendingFormations, formationsMode, setFormationsMode, saveFormationsStep,
     pendingLangues, setPendingLangues, languesMode, setLanguesMode, saveLanguesStep,
     pendingCompetences, setPendingCompetences, competencesMode, setCompetencesMode, saveCompetencesStep,
+    prefsForm, setPrefsForm, savePrefsStep,
     completionPercent,
   };
 };

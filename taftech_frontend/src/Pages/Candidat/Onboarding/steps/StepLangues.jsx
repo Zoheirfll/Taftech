@@ -5,7 +5,7 @@ import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCa
 
 const NIVEAUX = ["Débutant", "Intermédiaire", "Avancé", "Langue maternelle"];
 
-export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, setLanguesMode, saveLanguesStep, skipStep, profil }) => {
+export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, setLanguesMode, saveLanguesStep, skipStep, profil, saving }) => {
   const [nouvelleLangue, setNouvelleLangue] = useState("");
   const [nouveauNiveau, setNouveauNiveau] = useState(NIVEAUX[1]);
 
@@ -44,16 +44,18 @@ export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, se
           placeholder="Ex: Anglais"
           className={`${tw.authInput} flex-1`}
         />
-        <select value={nouveauNiveau} onChange={(e) => setNouveauNiveau(e.target.value)} className={tw.authInput}>
-          {NIVEAUX.map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
+        <div className="w-40 shrink-0">
+          <select value={nouveauNiveau} onChange={(e) => setNouveauNiveau(e.target.value)} className={tw.authInput}>
+            {NIVEAUX.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
         <button type="button" onClick={ajouter} className={`${tw.buttonSecondary} px-3`} aria-label="Ajouter une langue">
           <Plus size={16} />
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <button type="button" onClick={skipStep} className={`${tw.linkPrimary} text-sm font-semibold`}>Passer cette étape</button>
-        <button type="button" onClick={saveLanguesStep} className={`${tw.buttonPrimary} px-6 py-2.5`}>Continuer</button>
+        <button type="button" onClick={skipStep} disabled={saving} className={`${tw.linkPrimary} text-sm font-semibold disabled:opacity-50`}>Passer cette étape</button>
+        <button type="button" onClick={saveLanguesStep} disabled={saving} className={`${tw.buttonPrimary} px-6 py-2.5 disabled:opacity-60`}>{saving ? "Enregistrement..." : "Continuer"}</button>
       </div>
     </div>
   );

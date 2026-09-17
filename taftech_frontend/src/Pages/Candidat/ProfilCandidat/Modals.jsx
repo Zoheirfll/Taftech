@@ -2,7 +2,15 @@ import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
 import { SecteurDomaineSelect } from "../../../Components/SecteurDomaineSelect";
+import { FormationReferentielSelect } from "../../../Components/FormationReferentielSelect";
+import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
 import { tw } from "../../../theme";
+
+const STATUT_FORMATION_OPTIONS = [
+  { value: "OBTENU", label: "Obtenu" },
+  { value: "EN_COURS", label: "En cours" },
+  { value: "INTERROMPU", label: "Interrompu" },
+];
 
 export const Modals = ({
   // Styles
@@ -221,6 +229,15 @@ export const Modals = ({
                     styles={selectStyles}
                   />
                 </div>
+              </div>
+              <div>
+                <label className={tw.formLabel}>
+                  Métier recherché (optionnel — améliore la précision du matching)
+                </label>
+                <MetierAutocomplete
+                  value={editInfo.metier_libelle || ""}
+                  onSelect={(item) => setEditInfo({ ...editInfo, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
+                />
               </div>
               <div>
                 <label className={tw.formLabel}>
@@ -599,6 +616,15 @@ export const Modals = ({
                   styles={selectStyles}
                 />
               </div>
+              <div>
+                <label className={tw.formLabel}>
+                  Métier précis (optionnel)
+                </label>
+                <MetierAutocomplete
+                  value={newExp.metier_libelle || ""}
+                  onSelect={(item) => setNewExp({ ...newExp, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={tw.formLabel}>
@@ -717,6 +743,28 @@ export const Modals = ({
                     setNewForm({ ...newForm, description: e.target.value })
                   }
                 />
+              </div>
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
+                <p className="text-xs text-slate-600">
+                  Optionnel — précisez votre formation dans le référentiel national pour un
+                  score de correspondance plus fiable sur les offres. Absente de la liste ?
+                  Laissez vide, les champs ci-dessus (texte libre) suffisent.
+                </p>
+                <FormationReferentielSelect
+                  diplomeId={newForm.diplome_ref}
+                  specialiteId={newForm.specialite_ref}
+                  onChangeDiplome={(id) => setNewForm({ ...newForm, diplome_ref: id })}
+                  onChangeSpecialite={(id) => setNewForm({ ...newForm, specialite_ref: id })}
+                />
+                <div>
+                  <label className={tw.formLabel}>Statut de la formation</label>
+                  <Select
+                    options={STATUT_FORMATION_OPTIONS}
+                    value={STATUT_FORMATION_OPTIONS.find((o) => o.value === newForm.statut) || STATUT_FORMATION_OPTIONS[0]}
+                    onChange={(opt) => setNewForm({ ...newForm, statut: opt?.value || "OBTENU" })}
+                    styles={selectStyles}
+                  />
+                </div>
               </div>
               <div>
                 <label className={tw.formLabel}>

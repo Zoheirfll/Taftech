@@ -574,6 +574,10 @@ export const DetailCandidature = ({
                   const DM = selectedCandidature.details_matching;
                   const scores = DM.scores || DM;
                   const explics = DM.explications || {};
+                  const CRITERES_LABELS = {
+                    specialite: "Spécialité", diplome: "Diplôme", experience: "Expérience",
+                    region: "Localisation & mobilité", competences: "Compétences",
+                  };
                   return (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 -mb-1">
@@ -582,6 +586,12 @@ export const DetailCandidature = ({
                           Pourquoi ce score ?
                         </span>
                       </div>
+                      {typeof DM.completude === "number" && DM.completude < 1 && (
+                        <p className={`text-xs ${tw.textMuted700}`}>
+                          Score calculé sur des informations incomplètes ({Math.round(DM.completude * 100)}% des
+                          critères évalués — {(DM.criteres_manquants || []).map((c) => CRITERES_LABELS[c] || c).join(", ")} non renseigné(s) côté candidat.
+                        </p>
+                      )}
                       {[
                         { key: "specialite", label: "Spécialité", max: 25 },
                         { key: "diplome", label: "Diplôme", max: 20 },

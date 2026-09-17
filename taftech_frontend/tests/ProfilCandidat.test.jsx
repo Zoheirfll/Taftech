@@ -62,6 +62,14 @@ vi.mock("../src/Services/jobsService", () => ({
     searchCompetences: vi.fn().mockResolvedValue([]),
     ajouterCompetence: vi.fn(),
     supprimerCompetence: vi.fn(),
+    getNomenclatureFormation: vi.fn().mockResolvedValue({
+      types_diplomes: [],
+      domaines: [],
+      filieres: [],
+      specialites: [],
+      diplome_specialite: [],
+    }),
+    searchMetiers: vi.fn().mockResolvedValue([]),
   },
 }));
 

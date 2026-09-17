@@ -370,7 +370,7 @@ class NomenclatureFormationAPIView(APIView):
             # Couples attestés — le frontend les met en avant dans la liste des spécialités
             # dès qu'un type de diplôme est choisi (REGLES_FORMATION F02).
             "diplome_specialite": [
-                {"diplome_id": ds.diplome_id, "specialite_id": ds.specialite_id}
+                {"id": ds.id, "diplome_id": ds.diplome_id, "specialite_id": ds.specialite_id}
                 for ds in DiplomeSpecialite.objects.filter(selectionnable=True)
             ],
         }

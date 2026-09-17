@@ -69,15 +69,23 @@ const AnalyseIA = ({ cand }) => {
   const explications = DM?.explications || {};
   const points_forts = DM?.highlights?.points_forts || [];
   const ecarts = DM?.highlights?.ecarts || [];
+  const completude = DM?.completude;
+  const criteresManquants = DM?.criteres_manquants || [];
   return (
     <div className={`mt-4 border-t ${tw.borderSubtle} pt-4`}>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-1">
         <Sparkles size={14} className={tw.iconPrimary500} />
         <span className={`text-sm font-semibold ${tw.textPrimaryStrong} uppercase tracking-wide`}>
           Pourquoi ce score ?
         </span>
       </div>
-      <div className="flex flex-col sm:flex-row gap-6 items-center mb-4">
+      {typeof completude === "number" && completude < 1 && (
+        <p className={`text-xs ${tw.textMuted700} mb-3`}>
+          Score calculé sur des informations incomplètes ({Math.round(completude * 100)}% des critères
+          évalués — complétez {criteresManquants.map((c) => CRITERES.find((cr) => cr.key === c)?.label || c).join(", ")} pour un score plus fiable).
+        </p>
+      )}
+      <div className="flex flex-col sm:flex-row gap-6 items-center mb-4 mt-3">
         <div className="w-full sm:w-1/2">
           <MatchingRadarChart scores={scores} criteres={CRITERES} height={220} />
         </div>

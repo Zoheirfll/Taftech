@@ -9,6 +9,7 @@ import { iaService } from "./iaService";
 import { dashboardCandidatService } from "./dashboardCandidatService";
 
 let _nomenclatureCache = null;
+let _nomenclatureFormationCache = null;
 let _paliersCache = null;
 let _creditPacksCache = null;
 const _faqCacheParCategorie = {};
@@ -69,6 +70,33 @@ const offresPubliquesService = {
         });
     }
     return _nomenclatureCache;
+  },
+
+  // Arbre Type de diplôme / Domaine / Filière / Spécialité (référentiel v2 client) +
+  // couples diplôme+spécialité attestés — quasi-statique, gardé en mémoire pour la session.
+  getNomenclatureFormation: async () => {
+    if (!_nomenclatureFormationCache) {
+      _nomenclatureFormationCache = api
+        .get("jobs/referentiel/nomenclature-formation/")
+        .then((response) => response.data)
+        .catch((err) => {
+          _nomenclatureFormationCache = null;
+          reportError("ECHEC_GET_NOMENCLATURE_FORMATION_API", err);
+          throw err;
+        });
+    }
+    return _nomenclatureFormationCache;
+  },
+
+  // Autocomplete métier (référentiel v2, Appellation → Metier résolu vers son canonique).
+  searchMetiers: async (search) => {
+    try {
+      const response = await api.get(`jobs/referentiel/metiers/?search=${encodeURIComponent(search || "")}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SEARCH_METIERS_API", err);
+      return [];
+    }
   },
 
   getStatsGeo: async () => {

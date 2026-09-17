@@ -7,6 +7,8 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
 import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
+import { FormationReferentielSelect } from "../../Components/FormationReferentielSelect";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
@@ -73,6 +75,8 @@ const CreateJob = () => {
     commune: "",
     diplome: "",
     specialite: "",
+    metier: "",
+    metier_libelle: "",
     experience_requise: "DEBUTANT",
     nombre_postes: 1,
     description: "",
@@ -91,6 +95,34 @@ const CreateJob = () => {
   const [showCompSuggestions, setShowCompSuggestions] = useState(false);
   const [compType, setCompType] = useState("OBLIGATOIRE");
   const [compNiveau, setCompNiveau] = useState("");
+
+  // Couples diplôme+spécialité explicitement acceptés (référentiel v2, REGLES_FORMATION F06) —
+  // liste de OffreDiplomeAccepte.couple à créer, jamais une équivalence déduite automatiquement.
+  const [diplomesAcceptes, setDiplomesAcceptes] = useState([]);
+  const [draftDiplomeId, setDraftDiplomeId] = useState("");
+  const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
+  const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
+
+  useEffect(() => {
+    jobsService.getNomenclatureFormation().then(setNomenclatureFormation).catch(() => {});
+  }, []);
+
+  const handleAjouterCoupleAccepte = () => {
+    if (!draftDiplomeId || !draftSpecialiteId || !nomenclatureFormation) return;
+    const couple = nomenclatureFormation.diplome_specialite.find(
+      (c) => String(c.diplome_id) === String(draftDiplomeId) && String(c.specialite_id) === String(draftSpecialiteId),
+    );
+    if (!couple) {
+      toast.error("Ce couple diplôme + spécialité n'est pas reconnu dans le référentiel.");
+      return;
+    }
+    if (diplomesAcceptes.some((d) => d.id === couple.id)) return;
+    const diplomeLabel = nomenclatureFormation.types_diplomes.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
+    const specialiteLabel = nomenclatureFormation.specialites.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
+    setDiplomesAcceptes((prev) => [...prev, { id: couple.id, diplome_libelle: diplomeLabel, specialite_libelle: specialiteLabel }]);
+    setDraftDiplomeId("");
+    setDraftSpecialiteId("");
+  };
 
   const handleCompInputChange = async (value) => {
     if (value.length >= 2) {
@@ -242,7 +274,14 @@ const CreateJob = () => {
     setLoading(true);
     const toastId = toast.loading("Publication en cours...");
     try {
-      const payload = { ...formData, date_expiration: formData.date_expiration || null, competences_requises: competencesRequises };
+      const payload = {
+        ...formData,
+        metier: formData.metier || null,
+        date_expiration: formData.date_expiration || null,
+        competences_requises: competencesRequises,
+        diplomes_acceptes: diplomesAcceptes.map((d) => d.id),
+      };
+      delete payload.metier_libelle;
       await jobsService.creerOffre(payload);
       toast.success("Offre soumise ! Elle sera visible après validation par notre équipe.", { id: toastId, duration: 5000 });
       setTimeout(() => navigate("/dashboard"), 2500);
@@ -393,6 +432,54 @@ const CreateJob = () => {
               />
               {errors.specialite && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.specialite}</p>}
             </div>
+          </div>
+          <div className="mt-4">
+            <Field label="Métier précis (référentiel v2, optionnel — améliore le matching)">
+              <MetierAutocomplete
+                value={formData.metier_libelle}
+                onSelect={(item) => setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.appellation_libelle }))}
+              />
+            </Field>
+          </div>
+          <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.textStrong}`}>
+              Diplômes/spécialités acceptés (optionnel)
+            </p>
+            <p className="text-xs text-slate-600 mb-3">
+              Sans couple précisé ici, le critère "Diplôme attendu" ci-dessus (niveau minimum) reste utilisé.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+              <FormationReferentielSelect
+                diplomeId={draftDiplomeId}
+                specialiteId={draftSpecialiteId}
+                onChangeDiplome={setDraftDiplomeId}
+                onChangeSpecialite={setDraftSpecialiteId}
+              />
+              <button
+                type="button"
+                onClick={handleAjouterCoupleAccepte}
+                disabled={!draftDiplomeId || !draftSpecialiteId}
+                className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
+              >
+                Ajouter
+              </button>
+            </div>
+            {diplomesAcceptes.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {diplomesAcceptes.map((d) => (
+                  <span key={d.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
+                    {d.diplome_libelle} — {d.specialite_libelle}
+                    <button
+                      type="button"
+                      onClick={() => setDiplomesAcceptes((prev) => prev.filter((x) => x.id !== d.id))}
+                      className="hover:text-red-600"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </Section>
 

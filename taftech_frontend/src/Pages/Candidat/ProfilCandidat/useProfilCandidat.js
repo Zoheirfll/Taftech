@@ -13,6 +13,8 @@ const INITIAL_EXP = {
   titre_poste: "",
   entreprise: "",
   secteur: "",
+  metier: "",
+  metier_libelle: "",
   date_debut: "",
   date_fin: "",
   description: "",
@@ -24,6 +26,9 @@ const INITIAL_FORM = {
   date_debut: "",
   date_fin: "",
   description: "",
+  diplome_ref: "",
+  specialite_ref: "",
+  statut: "OBTENU",
 };
 
 const formatText = (text) => {
@@ -36,7 +41,16 @@ const formatText = (text) => {
 const normalizeExp = (exp) => ({
   ...exp,
   secteur: exp.secteur || null,
+  metier: exp.metier || null,
   date_fin: exp.date_fin || null,
+});
+
+// diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF — une chaîne
+// vide "" (valeur par défaut des <select> non renseignés) est rejetée (seul `null` est accepté).
+const normalizeForm = (form) => ({
+  ...form,
+  diplome_ref: form.diplome_ref || null,
+  specialite_ref: form.specialite_ref || null,
 });
 
 export const useProfilCandidat = () => {
@@ -98,6 +112,8 @@ export const useProfilCandidat = () => {
         adresse: pData.adresse || "",
         diplome: pData.diplome || "",
         specialite: pData.specialite || "",
+        metier: pData.metier || "",
+        metier_libelle: pData.metier_libelle || "",
         service_militaire: pData.service_militaire || "",
         permis_conduire: pData.permis_conduire || false,
         passeport_valide: pData.passeport_valide || false,
@@ -197,7 +213,12 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => key !== "nin")
+        .filter((key) => key !== "nin" && key !== "metier_libelle")
+        // `metier` est un PrimaryKeyRelatedField nullable côté DRF — une chaîne vide (valeur
+        // par défaut tant qu'aucun métier n'est choisi) est rejetée, contrairement à `null`
+        // (que FormData ne sait pas transporter) : on omet simplement la clé, ce qui laisse
+        // la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
+        .filter((key) => !(key === "metier" && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
@@ -322,6 +343,8 @@ export const useProfilCandidat = () => {
       titre_poste: exp.titre_poste || "",
       entreprise: exp.entreprise || "",
       secteur: exp.secteur || "",
+      metier: exp.metier || "",
+      metier_libelle: exp.metier_libelle || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
       description: exp.description || "",
@@ -348,7 +371,7 @@ export const useProfilCandidat = () => {
   const handleAddFormation = async (e) => {
     e.preventDefault();
     try {
-      await profilService.addFormation(newForm);
+      await profilService.addFormation(normalizeForm(newForm));
       toast.success("Formation ajoutée");
       setShowFormForm(false);
       setNewForm(INITIAL_FORM);
@@ -378,6 +401,9 @@ export const useProfilCandidat = () => {
       date_debut: form.date_debut || "",
       date_fin: form.date_fin || "",
       description: form.description || "",
+      diplome_ref: form.diplome_ref || "",
+      specialite_ref: form.specialite_ref || "",
+      statut: form.statut || "OBTENU",
     });
     setEditingFormId(form.id);
     setShowFormForm(true);
@@ -386,7 +412,7 @@ export const useProfilCandidat = () => {
   const handleUpdateFormation = async (e) => {
     e.preventDefault();
     try {
-      await profilService.updateFormation(editingFormId, newForm);
+      await profilService.updateFormation(editingFormId, normalizeForm(newForm));
       toast.success("Formation mise à jour");
       setShowFormForm(false);
       setEditingFormId(null);

@@ -28,6 +28,14 @@ vi.mock("../src/Services/jobsService", () => ({
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
       sous_domaines: [],
     }),
+    getNomenclatureFormation: vi.fn().mockResolvedValue({
+      types_diplomes: [],
+      domaines: [],
+      filieres: [],
+      specialites: [],
+      diplome_specialite: [],
+    }),
+    searchMetiers: vi.fn().mockResolvedValue([]),
   },
 }));
 

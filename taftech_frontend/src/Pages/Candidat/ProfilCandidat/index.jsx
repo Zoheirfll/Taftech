@@ -473,7 +473,9 @@ const ProfilCandidat = () => {
                 </p>
                 <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                   {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
-                  {profil.specialite && (
+                  {profil.metier_libelle ? (
+                    <> {" · "}{profil.metier_libelle}</>
+                  ) : profil.specialite && (
                     <>
                       {" · "}
                       <DomaineLabel code={profil.specialite} />

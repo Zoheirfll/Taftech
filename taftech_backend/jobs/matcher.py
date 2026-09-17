@@ -48,6 +48,30 @@ def _meme_region(w1, w2):
 def _mots(texte):
     return set(re.findall(r'\b\w+\b', normaliser(texte)))
 
+
+# ---------------------------------------------------------------------------
+# Métier (référentiel v2, session 17/09/2026) — comparaison précise au niveau
+# Metier (1038 valeurs) quand candidat ET offre l'ont renseigné, en plus de la
+# comparaison texte historique `specialites_compatibles` (code Domaine ANEM,
+# conservée intacte comme repli tant que les anciennes fiches ne sont pas
+# migrées vers ce nouveau champ — voir CLAUDE.md, Phase 2).
+# ---------------------------------------------------------------------------
+def metiers_compatibles(metier_candidat, metier_offre):
+    """Compare deux instances Metier (déjà résolues vers leur metier_canonique par
+    l'appelant si besoin). Retourne (compatible: bool, ratio: float)."""
+    if not metier_candidat or not metier_offre:
+        return False, 0.0
+    if metier_candidat.pk == metier_offre.pk:
+        return True, 1.0
+    if metier_candidat.groupe_principal_id and metier_candidat.groupe_principal_id == metier_offre.groupe_principal_id:
+        return True, 0.85
+    # Filet de sécurité : deux métiers différents mais au libellé très proche
+    # (ex: variantes non couvertes par une RelationMetier explicite).
+    ratio = difflib.SequenceMatcher(None, normaliser(metier_candidat.libelle), normaliser(metier_offre.libelle)).ratio()
+    if ratio >= 0.72:
+        return True, ratio
+    return False, ratio
+
 def specialites_compatibles(spec_candidat, spec_offre):
     if not spec_candidat or not spec_offre:
         return False, 0.0
@@ -281,33 +305,60 @@ def _calculer_score_algo(candidat_user, offre):
     points_forts = []
     ecarts = []
     flags = []  # Fix point 8 : flags disqualifiants
+    donnees_manquantes = []  # Référentiel v2 : critères non évalués faute de donnée (≠ incompatible)
 
     profil = candidat_user.profil_candidat
 
     # ==========================================
     # 1. SPÉCIALITÉ (Max 25%)
-    # profil.specialite et offre.specialite → même codes SECTEURS_CHOICES
+    # Référentiel v2 (17/09/2026) : comparaison précise au niveau Metier si candidat ET offre
+    # l'ont renseigné (`profil.metier`/`offre.metier`) — repli sur l'ancienne comparaison texte
+    # (codes Domaine ANEM) sinon, pour ne rien casser sur les fiches pas encore migrées.
     # ==========================================
-    specialite_candidat = profil.specialite or profil.secteur_souhaite
-    if specialite_candidat and offre.specialite:
-        compatible, ratio = specialites_compatibles(specialite_candidat, offre.specialite)
+    from .models import Metier
+    metier_candidat = getattr(profil, 'metier', None)
+    metier_offre = getattr(offre, 'metier', None)
+    if isinstance(metier_candidat, Metier) and isinstance(metier_offre, Metier):
+        mc = metier_candidat.metier_canonique or metier_candidat
+        mo = metier_offre.metier_canonique or metier_offre
+        compatible, ratio = metiers_compatibles(mc, mo)
         if compatible:
             if ratio >= 0.95:
                 details["specialite"] = 25.0
-                explications["specialite"] = "Spécialité parfaitement alignée."
-                points_forts.append("Spécialité parfaitement alignée sur le poste.")
+                explications["specialite"] = f"Métier parfaitement aligné ({mc.libelle})."
+                points_forts.append(f"Métier parfaitement aligné sur le poste ({mc.libelle}).")
             elif ratio >= 0.8:
                 details["specialite"] = 20.0
-                explications["specialite"] = "Domaine très proche de celui de l'offre."
-                points_forts.append("Domaine d'activité très proche du poste.")
+                explications["specialite"] = "Métier du même groupe que celui recherché."
+                points_forts.append("Métier proche de celui recherché par l'offre.")
             else:
                 details["specialite"] = 12.0
-                explications["specialite"] = "Domaine partiellement compatible."
-                points_forts.append("Domaine partiellement compatible avec le poste.")
+                explications["specialite"] = "Métier partiellement compatible."
+                points_forts.append("Métier partiellement compatible avec le poste.")
         else:
-            ecarts.append("Le domaine d'activité du candidat diffère de l'offre.")
+            ecarts.append(f"Le métier du candidat ({mc.libelle}) diffère de celui recherché ({mo.libelle}).")
     else:
-        ecarts.append("Spécialité ou secteur non renseigné sur le profil.")
+        specialite_candidat = profil.specialite or profil.secteur_souhaite
+        if specialite_candidat and offre.specialite:
+            compatible, ratio = specialites_compatibles(specialite_candidat, offre.specialite)
+            if compatible:
+                if ratio >= 0.95:
+                    details["specialite"] = 25.0
+                    explications["specialite"] = "Spécialité parfaitement alignée."
+                    points_forts.append("Spécialité parfaitement alignée sur le poste.")
+                elif ratio >= 0.8:
+                    details["specialite"] = 20.0
+                    explications["specialite"] = "Domaine très proche de celui de l'offre."
+                    points_forts.append("Domaine d'activité très proche du poste.")
+                else:
+                    details["specialite"] = 12.0
+                    explications["specialite"] = "Domaine partiellement compatible."
+                    points_forts.append("Domaine partiellement compatible avec le poste.")
+            else:
+                ecarts.append("Le domaine d'activité du candidat diffère de l'offre.")
+        else:
+            donnees_manquantes.append("specialite")
+            ecarts.append("Spécialité ou secteur non renseigné sur le profil.")
 
     # ==========================================
     # 2. LOCALISATION (Max 20%)
@@ -343,38 +394,84 @@ def _calculer_score_algo(candidat_user, offre):
             explications["region"] = "Mobilité régionale — wilaya éloignée."
             ecarts.append(f"Candidat basé à {profil.wilaya or 'wilaya inconnue'}, wilaya cible éloignée.")
     else:
+        if not wilaya_c:
+            donnees_manquantes.append("region")
         ecarts.append(f"Candidat basé hors zone ({profil.wilaya or 'inconnue'}) sans mobilité.")
 
     # ==========================================
     # 3. DIPLÔME (Max 20%)
+    # Référentiel v2 (17/09/2026) : si le recruteur a défini une liste explicite de couples
+    # diplôme+spécialité acceptés (OffreDiplomeAccepte), le score se base exclusivement sur ces
+    # couples — jamais en combinant le diplôme d'une FormationCandidat avec la spécialité d'une
+    # autre (règle client explicite). Sinon, repli intégral sur l'ancienne hiérarchie de niveau.
     # ==========================================
-    hierarchie = {
-        'NON_DIPLOMANTE': 0, 'NIVEAU_SECONDAIRE': 1, 'FORMATION_PRO': 2,
-        'NIVEAU_TERMINAL': 3, 'BACCALAUREAT': 4, 'CERTIFICATION': 5,
-        'UNIVERSITAIRE_SANS_DIPLOME': 6, 'TS': 7, 'LICENCE': 8,
-        'MASTER_1': 9, 'MASTER_2': 10, 'MAGISTERE': 11, 'DOCTORAT': 12
-    }
-    niveau_requis = hierarchie.get(offre.diplome, 0) if offre.diplome else 0
-    niveau_candidat = hierarchie.get(profil.diplome, 0) if profil.diplome else 0
+    try:
+        diplomes_acceptes = list(offre.diplomes_acceptes.all())
+    except TypeError:
+        diplomes_acceptes = []
 
-    if niveau_requis == 0:
-        details["diplome"] = 20.0
-        explications["diplome"] = "Aucun diplôme spécifique exigé."
-        points_forts.append("Critère de diplôme ouvert.")
-    elif niveau_candidat >= niveau_requis:
-        details["diplome"] = 20.0
-        explications["diplome"] = "Niveau d'études requis atteint ou dépassé."
-        points_forts.append("Niveau d'études requis validé.")
-    elif niveau_candidat == niveau_requis - 1:
-        details["diplome"] = 10.0
-        explications["diplome"] = "Niveau d'études légèrement inférieur au requis."
-        ecarts.append("Niveau d'études légèrement en dessous du requis.")
-    elif niveau_candidat >= niveau_requis - 3:
-        details["diplome"] = 5.0
-        explications["diplome"] = "Niveau d'études nettement inférieur."
-        ecarts.append("Niveau d'études insuffisant pour ce poste.")
+    if diplomes_acceptes:
+        couples_acceptes = {(da.couple.diplome_id, da.couple.specialite_id) for da in diplomes_acceptes}
+        diplomes_acceptes_seuls = {c[0] for c in couples_acceptes}
+        try:
+            formations_obtenues = [
+                f for f in profil.formations_detail.all()
+                if f.statut == 'OBTENU' and f.diplome_ref_id
+            ]
+        except TypeError:
+            formations_obtenues = []
+
+        if not formations_obtenues:
+            details["diplome"] = 6.0
+            donnees_manquantes.append("diplome")
+            explications["diplome"] = "Diplôme non précisé avec le référentiel détaillé — correspondance non vérifiable."
+            ecarts.append("Précisez vos formations (diplôme + spécialité) pour un score plus fiable sur ce critère.")
+        else:
+            match_complet = any(
+                (f.diplome_ref_id, f.specialite_ref_id) in couples_acceptes for f in formations_obtenues
+            )
+            match_diplome_seul = any(f.diplome_ref_id in diplomes_acceptes_seuls for f in formations_obtenues)
+            if match_complet:
+                details["diplome"] = 20.0
+                explications["diplome"] = "Diplôme et spécialité correspondent à un couple accepté par l'offre."
+                points_forts.append("Formation (diplôme + spécialité) exactement acceptée par l'offre.")
+            elif match_diplome_seul:
+                details["diplome"] = 12.0
+                explications["diplome"] = "Type de diplôme accepté, mais spécialité différente de celle attendue."
+                ecarts.append("La spécialité de votre formation ne correspond pas exactement à celle recherchée.")
+            else:
+                explications["diplome"] = "Aucune de vos formations ne correspond aux couples diplôme/spécialité acceptés."
+                ecarts.append("Diplôme/spécialité non compatibles avec les exigences de cette offre.")
     else:
-        ecarts.append("Diplôme insuffisant pour ce poste.")
+        hierarchie = {
+            'NON_DIPLOMANTE': 0, 'NIVEAU_SECONDAIRE': 1, 'FORMATION_PRO': 2,
+            'NIVEAU_TERMINAL': 3, 'BACCALAUREAT': 4, 'CERTIFICATION': 5,
+            'UNIVERSITAIRE_SANS_DIPLOME': 6, 'TS': 7, 'LICENCE': 8,
+            'MASTER_1': 9, 'MASTER_2': 10, 'MAGISTERE': 11, 'DOCTORAT': 12
+        }
+        niveau_requis = hierarchie.get(offre.diplome, 0) if offre.diplome else 0
+        niveau_candidat = hierarchie.get(profil.diplome, 0) if profil.diplome else 0
+
+        if niveau_requis == 0:
+            details["diplome"] = 20.0
+            explications["diplome"] = "Aucun diplôme spécifique exigé."
+            points_forts.append("Critère de diplôme ouvert.")
+        elif niveau_candidat >= niveau_requis:
+            details["diplome"] = 20.0
+            explications["diplome"] = "Niveau d'études requis atteint ou dépassé."
+            points_forts.append("Niveau d'études requis validé.")
+        elif niveau_candidat == niveau_requis - 1:
+            details["diplome"] = 10.0
+            explications["diplome"] = "Niveau d'études légèrement inférieur au requis."
+            ecarts.append("Niveau d'études légèrement en dessous du requis.")
+        elif niveau_candidat >= niveau_requis - 3:
+            details["diplome"] = 5.0
+            explications["diplome"] = "Niveau d'études nettement inférieur."
+            ecarts.append("Niveau d'études insuffisant pour ce poste.")
+        else:
+            if niveau_candidat == 0:
+                donnees_manquantes.append("diplome")
+            ecarts.append("Diplôme insuffisant pour ce poste.")
 
     # ==========================================
     # 4. EXPÉRIENCE (Max 20%)
@@ -440,6 +537,8 @@ def _calculer_score_algo(candidat_user, offre):
         explications["experience"] = f"Niveau d'expérience déclaré compatible ({niveau_exp_declare}) — détails non renseignés."
         ecarts.append("Renseignez vos expériences détaillées pour un score plus précis.")
     else:
+        if annees_total == 0 and not niveau_exp_declare:
+            donnees_manquantes.append("experience")
         ecarts.append(f"Manque d'expérience pertinente dans ce secteur ({round(annees_pertinentes, 1)} ans / {annees_requises} requis).")
 
     # ==========================================
@@ -491,12 +590,17 @@ def _calculer_score_algo(candidat_user, offre):
         else:
             # Compétences non renseignées → score neutre 5/15
             details["competences"] = 5.0
+            donnees_manquantes.append("competences")
             explications["competences"] = "Compétences non renseignées — score neutre appliqué."
             ecarts.append("Renseignez vos compétences pour améliorer votre score.")
 
     # La disqualification questionnaire est gérée par PostulerAPIView
     # après sauvegarde des réponses — pas ici (les réponses n'existent pas encore).
     total = min(round(sum(details.values()), 2), 100.0)
+    # Indicateur de complétude (consigne client) : distingue "donnée manquante" d'"incompatible"
+    # — 1.0 = les 5 critères ont pu être réellement évalués, moins si certains sont neutres
+    # faute d'information (spécialité/diplôme/expérience/compétences non renseignés).
+    completude = round(1 - (len(set(donnees_manquantes)) / len(details)), 2)
     return {
         "total": total,
         "details": details,
@@ -504,6 +608,8 @@ def _calculer_score_algo(candidat_user, offre):
         "highlights": {"points_forts": points_forts, "ecarts": ecarts},
         "disqualifie": False,
         "flags": flags,
+        "completude": completude,
+        "criteres_manquants": sorted(set(donnees_manquantes)),
     }
 
 
@@ -516,5 +622,7 @@ def calculer_score_matching(candidat_user, offre):
             "highlights": {"points_forts": [], "ecarts": ["Dossier candidat incomplet."]},
             "disqualifie": False,
             "flags": [],
+            "completude": 0.0,
+            "criteres_manquants": ["specialite", "region", "diplome", "experience", "competences"],
         }
     return _calculer_score_algo(candidat_user, offre)

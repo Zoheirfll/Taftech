@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import OffreEmploi, ProfilEntreprise, Domaine, CompetenceOffre
+from ..models import OffreEmploi, ProfilEntreprise, Domaine, CompetenceOffre, OffreDiplomeAccepte
 from .questionnaires import QuestionnaireSerializer
 
 
@@ -7,6 +7,17 @@ class CompetenceOffreSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetenceOffre
         fields = ('id', 'label', 'type_exigence', 'niveau_requis')
+
+
+class OffreDiplomeAccepteSerializer(serializers.ModelSerializer):
+    """Couple diplôme+spécialité explicitement accepté par le recruteur (REGLES_FORMATION F06,
+    référentiel v2) — jamais une équivalence déduite automatiquement."""
+    diplome_libelle = serializers.CharField(source='couple.diplome.libelle', read_only=True)
+    specialite_libelle = serializers.CharField(source='couple.specialite.libelle', read_only=True)
+
+    class Meta:
+        model = OffreDiplomeAccepte
+        fields = ('id', 'couple', 'diplome_libelle', 'specialite_libelle')
 
 
 def _secteur_libelle_pour_offre(obj):
@@ -38,6 +49,8 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     jours_restants = serializers.SerializerMethodField()
     secteur_libelle = serializers.SerializerMethodField()
     competences_requises = CompetenceOffreSerializer(many=True, read_only=True)
+    metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    diplomes_acceptes = OffreDiplomeAccepteSerializer(many=True, read_only=True)
 
     class Meta:
         model = OffreEmploi
@@ -58,7 +71,7 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = (
-            'titre', 'wilaya', 'commune', 'diplome', 'specialite',
+            'titre', 'wilaya', 'commune', 'diplome', 'specialite', 'metier',
             'description', 'missions', 'profil_recherche', 'competences', 'type_contrat',
             'experience_requise', 'nombre_postes', 'salaire_propose', 'questionnaire', 'date_expiration'
         )

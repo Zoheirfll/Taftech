@@ -6,15 +6,29 @@ User = get_user_model()
 
 
 class ExperienceSerializer(serializers.ModelSerializer):
+    metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+
     class Meta:
         model = ExperienceCandidat
-        fields = ['id', 'titre_poste', 'entreprise', 'secteur', 'date_debut', 'date_fin', 'description']
+        fields = ['id', 'titre_poste', 'entreprise', 'secteur', 'metier', 'metier_libelle', 'date_debut', 'date_fin', 'description']
 
 
 class FormationSerializer(serializers.ModelSerializer):
+    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    specialite_ref_libelle = serializers.CharField(source='specialite_ref.libelle', read_only=True, default=None)
+
     class Meta:
         model = FormationCandidat
-        fields = ['id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description']
+        fields = [
+            'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description',
+            'diplome_ref', 'diplome_ref_libelle', 'specialite_ref', 'specialite_ref_libelle', 'statut',
+        ]
+        # Pas de validation bloquante sur le couple diplome_ref/specialite_ref : REGLES_FORMATION F02
+        # (client) — la couverture universitaire n'est pas exhaustive, un couple absent du référentiel
+        # doit rester saisissable (repli "Autre, préciser"), jamais rejeté. La contrainte "même
+        # formation" (ne pas combiner diplôme et spécialité de deux formations différentes) se
+        # respecte côté matcher.py en comparant chaque FormationCandidat comme un tout atomique,
+        # pas en interdisant une combinaison à la saisie.
 
 
 class CompetenceCandidatSerializer(serializers.ModelSerializer):
@@ -46,11 +60,13 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     experiences_detail = serializers.SerializerMethodField()
     formations_detail = FormationSerializer(many=True, read_only=True)
     competences_detail = CompetenceCandidatSerializer(many=True, read_only=True)
+    metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
 
     class Meta:
         model = ProfilCandidat
         fields = (
             'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'specialite', 'sexe',
+            'metier', 'metier_libelle',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin', 'date_naissance',
             'experiences_detail', 'formations_detail',

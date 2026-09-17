@@ -17,6 +17,8 @@ from .offres import (
     SupprimerOffreAPIView,
     ConstantsAPIView,
     NomenclatureAPIView,
+    NomenclatureFormationAPIView,
+    MetierAutocompleteAPIView,
 )
 from .profils import (
     ProfilCandidatAPIView,

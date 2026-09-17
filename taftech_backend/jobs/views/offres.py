@@ -124,6 +124,26 @@ def _synchroniser_competences_offre(offre, items):
         CompetenceOffre.objects.bulk_create(a_creer)
 
 
+def _synchroniser_diplomes_acceptes_offre(offre, couple_ids):
+    """Remplace intégralement la liste des couples diplôme+spécialité acceptés par le recruteur
+    (REGLES_FORMATION F06, référentiel v2) — sémantique remplacement, comme les compétences
+    structurées. Une liste vide/absente signifie "aucune exigence de couple précis" (repli sur
+    `OffreEmploi.diplome`, niveau minimum), jamais une erreur."""
+    from ..models import DiplomeSpecialite, OffreDiplomeAccepte
+    offre.diplomes_acceptes.all().delete()
+    if not couple_ids:
+        return
+    couples_valides = set(
+        DiplomeSpecialite.objects.filter(pk__in=couple_ids).values_list('pk', flat=True)
+    )
+    a_creer = [
+        OffreDiplomeAccepte(offre=offre, couple_id=cid)
+        for cid in couple_ids if cid in couples_valides
+    ]
+    if a_creer:
+        OffreDiplomeAccepte.objects.bulk_create(a_creer)
+
+
 _NIVEAU_LABELS = dict(CompetenceOffre.NIVEAU_CHOICES)
 
 
@@ -164,6 +184,7 @@ class JobCreateAPIView(APIView):
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
             _synchroniser_competences_offre(offre, request.data.get('competences_requises'))
+            _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
             if offre.competences_requises.exists():
                 offre.competences = _texte_depuis_competences(offre.competences_requises.all())
                 offre.save(update_fields=['competences'])
@@ -210,6 +231,8 @@ class UpdateOffreRecruteurAPIView(APIView):
                 if offre.competences_requises.exists():
                     offre.competences = _texte_depuis_competences(offre.competences_requises.all())
                     offre.save(update_fields=['competences'])
+            if 'diplomes_acceptes' in request.data:
+                _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
             _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
             return Response({
                 "message": "Offre mise à jour.",
@@ -312,3 +335,79 @@ class NomenclatureAPIView(APIView):
         }
         cache.set('jobs_nomenclature', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
+
+
+class NomenclatureFormationAPIView(APIView):
+    """Arbre complet Type de diplôme / Domaine / Filière / Spécialité (référentiel v2 client) +
+    couples attestés Diplôme+Spécialité — alimente la cascade du formulaire "Ajouter une
+    formation" (FORMULAIRE/REGLES_FORMATION F01-F03), filtré côté client comme wilaya→commune."""
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request):
+        from django.core.cache import cache
+        cached = cache.get('jobs_nomenclature_formation')
+        if cached:
+            return Response(cached, status=status.HTTP_200_OK)
+        from ..models import TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation, DiplomeSpecialite
+        data = {
+            "types_diplomes": [
+                {"id": d.id, "libelle": d.libelle, "systeme": d.systeme}
+                for d in TypeDiplome.objects.filter(selectionnable=True).order_by('systeme', 'libelle')
+            ],
+            "domaines": [
+                {"id": d.id, "libelle": d.libelle}
+                for d in DomaineFormation.objects.filter(actif=True).order_by('libelle')
+            ],
+            "filieres": [
+                {"id": f.id, "libelle": f.libelle, "domaine_id": f.domaine_id}
+                for f in FiliereFormation.objects.filter(actif=True).order_by('libelle')
+            ],
+            "specialites": [
+                {"id": s.id, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id}
+                for s in SpecialiteFormation.objects.filter(selectionnable=True).order_by('libelle')
+            ],
+            # Couples attestés — le frontend les met en avant dans la liste des spécialités
+            # dès qu'un type de diplôme est choisi (REGLES_FORMATION F02).
+            "diplome_specialite": [
+                {"diplome_id": ds.diplome_id, "specialite_id": ds.specialite_id}
+                for ds in DiplomeSpecialite.objects.filter(selectionnable=True)
+            ],
+        }
+        cache.set('jobs_nomenclature_formation', data, timeout=3600)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class MetierAutocompleteAPIView(APIView):
+    """Recherche libre sur les appellations de poste (référentiel v2, 7428 entrées) — retourne
+    un `metier_id` déjà résolu vers son `metier_canonique` (R04) et le libellé précis de
+    l'appellation trouvée (à conserver tel quel côté candidat/offre, R03 : une fiche métier
+    peut regrouper plusieurs postes distincts)."""
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request):
+        from ..models import Appellation
+        search = (request.query_params.get('search') or '').strip()
+        if not search:
+            return Response([])
+        q = Q()
+        for mot in search.split():
+            q &= Q(cle_recherche__icontains=mot)
+        appellations = (
+            Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
+            .select_related('metier', 'metier__metier_canonique')[:20]
+        )
+        resultats = []
+        vus = set()
+        for app in appellations:
+            metier = app.metier.metier_canonique or app.metier
+            if metier.id in vus:
+                continue
+            vus.add(metier.id)
+            resultats.append({
+                "metier_id": metier.id,
+                "metier_libelle": metier.libelle,
+                "appellation_libelle": app.libelle,
+            })
+        return Response(resultats)

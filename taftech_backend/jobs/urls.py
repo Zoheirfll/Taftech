@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
-    ConstantsAPIView, NomenclatureAPIView, CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
+    ConstantsAPIView, NomenclatureAPIView, NomenclatureFormationAPIView, MetierAutocompleteAPIView,
+    CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
     ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView, ExportGraphiqueExcelAPIView,
 
     # Candidatures
@@ -94,6 +95,8 @@ urlpatterns = [
     path('creer/', JobCreateAPIView.as_view(), name='creer-offre'),
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
     path('nomenclature/', NomenclatureAPIView.as_view(), name='api-nomenclature'),
+    path('referentiel/nomenclature-formation/', NomenclatureFormationAPIView.as_view(), name='api-nomenclature-formation'),
+    path('referentiel/metiers/', MetierAutocompleteAPIView.as_view(), name='api-metiers-autocomplete'),
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
     path('dashboard/offres/<int:offre_id>/supprimer/', SupprimerOffreAPIView.as_view(), name='supprimer-offre'),

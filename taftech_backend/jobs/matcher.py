@@ -597,10 +597,14 @@ def _calculer_score_algo(candidat_user, offre):
     # La disqualification questionnaire est gérée par PostulerAPIView
     # après sauvegarde des réponses — pas ici (les réponses n'existent pas encore).
     total = min(round(sum(details.values()), 2), 100.0)
-    # Indicateur de complétude (consigne client) : distingue "donnée manquante" d'"incompatible"
-    # — 1.0 = les 5 critères ont pu être réellement évalués, moins si certains sont neutres
-    # faute d'information (spécialité/diplôme/expérience/compétences non renseignés).
-    completude = round(1 - (len(set(donnees_manquantes)) / len(details)), 2)
+    # Indicateur de complétude (consigne client, PARAM_MATCHING/SIMULATIONS) : pondéré par le
+    # poids réel de chaque critère (25/20/20/20/15), pas un simple compte sur 5 — une spécialité
+    # manquante (25%) pèse plus qu'une compétence manquante (15%). Vérifié contre les 6 cas
+    # SIMULATIONS fournis par le client (ex. EX-04 : diplôme+spécialité inconnus (0.20+0.25)
+    # → couverture_attendue = 1 - 0.45 = 0.55, exactement). Distingue "donnée manquante"
+    # d'"incompatible" — 1.0 = les 5 critères ont pu être réellement évalués.
+    _POIDS_CRITERES = {"specialite": 0.25, "region": 0.20, "diplome": 0.20, "experience": 0.20, "competences": 0.15}
+    completude = round(1 - sum(_POIDS_CRITERES[c] for c in set(donnees_manquantes)), 2)
     return {
         "total": total,
         "details": details,

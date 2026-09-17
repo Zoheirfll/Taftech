@@ -49,6 +49,7 @@ from .views import (
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
     MetierReferentielAPIView, MetierReferentielAdminAPIView,
+    AdminReferentielMetiersAPIView, AdminReferentielSpecialitesAPIView, AdminReferentielDiplomesAPIView,
     SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView,
 
@@ -199,6 +200,12 @@ urlpatterns = [
     path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='export-utilisateurs'),
     path('admin/metiers/', MetierReferentielAdminAPIView.as_view(), name='admin-metiers'),
     path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view(), name='admin-metier-detail'),
+    path('admin/referentiel-v2/metiers/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metiers'),
+    path('admin/referentiel-v2/metiers/<int:pk>/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metier-detail'),
+    path('admin/referentiel-v2/specialites/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialites'),
+    path('admin/referentiel-v2/specialites/<int:pk>/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialite-detail'),
+    path('admin/referentiel-v2/diplomes/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplomes'),
+    path('admin/referentiel-v2/diplomes/<int:pk>/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplome-detail'),
     path('admin/comptes-admins/', AdminCompteAdminsAPIView.as_view(), name='admin-comptes-admins'),
     path('admin/comptes-admins/<int:admin_id>/', AdminCompteAdminsAPIView.as_view(), name='admin-compte-admin-detail'),
     path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),

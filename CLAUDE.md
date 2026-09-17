@@ -67,9 +67,24 @@ C'est un **remplacement de fond**, pas un ajout : à terme ça remplace `Secteur
 - **Piège récurrent (déjà documenté ailleurs dans ce fichier) reconfirmé** : `CreateJob.test.jsx`/`ProfilCandidat.test.jsx`/`RegisterCandidat.test.jsx` (qui teste en réalité `<ProfilCandidat />`) ont eu besoin de `getNomenclatureFormation`/`searchMetiers` ajoutés à leurs mocks `jobsService` — sinon échec silencieux dès que le composant monté appelle ces méthodes.
 - **Suite complète relancée** : 2 échecs (`RecruteurLayout.test.jsx`, `FunnelChart.test.jsx`) — **vérifiés préexistants** via `git stash` (échouent aussi sur l'arbre non modifié par cette session), sans rapport avec le référentiel v2.
 
+## 🆕 SESSION 17/09/2026 (suite) — Panel admin référentiel v2 + SIMULATIONS/RECETTE en tests formels
+
+**1. Bug de fond trouvé en traduisant les cas `SIMULATIONS`** : l'indicateur `completude` (ajouté Phase 4) était calculé comme un simple compte `1 - nb_manquants/5` — les 6 cas `SIMULATIONS` fournis par le client (poids réels 25/20/20/20/15) montrent que leur "couverture" est en réalité **pondérée par le poids de chaque critère**, pas un compte à plat. Preuve : EX-04 (diplôme+spécialité inconnus, poids 0.20+0.25) attend `couverture_attendue=0.55` — exactement `1-0.45`, jamais `1-2/5=0.6`. Corrigé dans `matcher.py` (`_POIDS_CRITERES`, dict des 5 poids) — **trouvé et corrigé uniquement parce que les cas SIMULATIONS ont été traduits en tests**, aucun test précédent n'aurait détecté cet écart (les tests Phase 4 ne vérifiaient que `< 1.0`, jamais une valeur exacte).
+
+**2. `jobs/tests/test_referentiel_v2_simulations.py` (12 tests)** :
+- `SimulationsMatchingTest` — EX-01 à EX-04 et EX-06 vérifiés au **score exact** annoncé par le client (100/85/75/55/80) et à la `completude` exacte (1.0/1.0/1.0/0.55/1.0), chemin legacy (texte, pas Metier v2) volontairement utilisé. **EX-05 (mi-expérience) n'est vérifié que directionnellement** — le modèle abstrait du client suppose une satisfaction continue (0.5 → 10/20 pts), notre implémentation réelle utilise des paliers de confiance discrets hérités de sessions précédentes (20/12/6/0) qui ne retombent jamais sur une valeur continue à 90/100 pile ; assumé et documenté plutôt que bricolé pour forcer un score exact.
+- `RecetteMetiersRechercheTest` (T02-T05) et `RecetteDiplomesTest` (T10, T11 — déjà couverts par `test_matcher_referentiel_v2.py`, repris ici sous leur identifiant RECETTE d'origine pour la traçabilité) — fiches/appellations **synthétiques** reproduisant la structure du cas réel (redirection, granularité, absence d'expansion sémantique), pas un réimport complet du référentiel réel dans la base de test (les ~11 000 lignes ne sont peuplées que par la commande d'import en dev, jamais par une migration — la base de test ne les contient donc pas).
+- **Cas volontairement non traduits** : T06/T07 (normalisation de clé — déjà pré-calculée par le client dans les colonnes `cle_recherche` du fichier, pas un comportement de notre code) ; T01/T08/T09/T19 (règles de saisie admin/qualité de données, sans comportement de code à vérifier).
+
+**3. Panel admin `/admin-taftech/referentiel-v2`** (`AdminReferentielV2.jsx`, 3 onglets Métiers/Spécialités/Diplômes) :
+- Backend `jobs/views/referentiel_admin.py` (3 vues `AdminReferentiel{Metiers,Specialites,Diplomes}APIView`, pattern GET paginé+recherche / PATCH déjà standard du projet) + `jobs/serializers/referentiel_admin.py`.
+- **Décision volontaire : ni création ni suppression** — les `code` sont les identifiants stables du réimport idempotent (`import_referentiel_v2`), et supprimer casserait les FK déjà posées sur des profils/offres réels. L'admin ajuste seulement `libelle` et `selectionnable` (masquer une entrée sans la supprimer) — même principe déjà appliqué à `AdminPaliers.jsx` (4 paliers fixes, pas d'ajout/suppression).
+- Recherche sur `cle_recherche` (déjà normalisé par le client, insensible aux accents) pour Métiers/Spécialités ; `TypeDiplome` n'a pas de `cle_recherche` dans le référentiel client (seul `ALIAS_DIPLOMES` en a un, non importé comme modèle séparé — voir Phase 1), recherche sur `libelle` pour ce dernier.
+- Tests : `jobs/tests/test_admin_referentiel_v2.py` (9/9 : permissions, recherche, PATCH toggle/libellé, `code` en lecture seule, 404), `tests/AdminReferentielV2.test.jsx` (5/5).
+
+**Tests** : backend `jobs accounts` **452/452** ✅ (431 + 21 nouveaux), frontend suite complète relancée (2 échecs `RecruteurLayout.test.jsx`/`FunnelChart.test.jsx` confirmés préexistants via `git stash`, sans rapport). `python manage.py check` / `npx vite build` propres.
+
 **Reste à faire** :
-- Les 6 cas de `SIMULATIONS` (fichier métiers) et les cas de `RECETTE` (fichier diplômes) à transformer en tests d'intégration frontend/E2E si jugé utile
-- `AdminMetiers.jsx` (admin) : à décider si le nouveau référentiel v2 doit avoir son propre panel d'administration (les nouvelles tables n'ont aucune interface CRUD admin pour l'instant, gérées uniquement via `import_referentiel_v2`)
 - Rattrapage des anciennes fiches (profils/offres sans `metier` précis) : décision actée de ne rien faire pour l'instant (voir plus haut), aucune tâche de relance prévue
 
 ---

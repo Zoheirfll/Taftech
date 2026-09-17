@@ -228,6 +228,63 @@ export const adminService = {
     }
   },
 
+  // Référentiel v2 (métiers/spécialités/diplômes importés) — pas de create/delete,
+  // uniquement libellé + selectionnable/actif (voir jobs/views/referentiel_admin.py).
+  getAdminReferentielMetiers: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/metiers/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_REFERENTIEL_METIERS", err);
+      throw err;
+    }
+  },
+  updateAdminReferentielMetier: async (id, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/referentiel-v2/metiers/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_ADMIN_REFERENTIEL_METIER", err);
+      throw err;
+    }
+  },
+  getAdminReferentielSpecialites: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/specialites/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_REFERENTIEL_SPECIALITES", err);
+      throw err;
+    }
+  },
+  updateAdminReferentielSpecialite: async (id, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/referentiel-v2/specialites/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_ADMIN_REFERENTIEL_SPECIALITE", err);
+      throw err;
+    }
+  },
+  getAdminReferentielDiplomes: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/diplomes/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_REFERENTIEL_DIPLOMES", err);
+      throw err;
+    }
+  },
+  updateAdminReferentielDiplome: async (id, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/referentiel-v2/diplomes/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_UPDATE_ADMIN_REFERENTIEL_DIPLOME", err);
+      throw err;
+    }
+  },
+
   getDemandesPremium: async () => {
     try {
       const response = await api.get("jobs/admin/demandes-premium/");

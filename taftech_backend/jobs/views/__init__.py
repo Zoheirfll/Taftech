@@ -172,3 +172,8 @@ from .candidat_dashboard import (
     TypeDocumentAdminAPIView,
 )
 from .profils import AlerteMarquerVueAPIView
+from .referentiel_admin import (
+    AdminReferentielMetiersAPIView,
+    AdminReferentielSpecialitesAPIView,
+    AdminReferentielDiplomesAPIView,
+)

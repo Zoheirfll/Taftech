@@ -58,13 +58,19 @@ C'est un **remplacement de fond**, pas un ajout : à terme ça remplace `Secteur
 - **Indicateur de complétude** (nouveau, demandé par le client) : chaque branche qui aboutit à un score neutre faute de donnée (spécialité/diplôme/région/expérience/compétences non renseignés) alimente `donnees_manquantes` ; le résultat de `calculer_score_matching()` expose désormais `completude` (1.0 = les 5 critères ont pu être réellement évalués) et `criteres_manquants` (liste des clés concernées) — distingue explicitement "donnée manquante" d'"incompatible", exigence client explicite.
 - **Nouveau `jobs/tests/test_matcher_referentiel_v2.py`** (11 tests, instances réelles Django — pas des `Mock`, car le nouveau chemin a besoin de vraies relations FK) : `metiers_compatibles` (3), comparaison métier candidat/offre (3, dont le repli legacy), couples diplôme/spécialité (5, dont le cas client explicite "master finance + licence informatique ≠ master informatique" et le cas formation `EN_COURS`). Les 25 tests historiques de `test_matcher.py` (`Mock`) passent sans aucune modification — vérifie le non-régression du repli.
 
-**Reste à faire (Phase 5 frontend)** — non commencé :
-- Nouveau composant cascade `MetierFormationSelect.jsx` (ou extension de `SecteurDomaineSelect.jsx`) pour le formulaire "Ajouter une formation" candidat (Type→Domaine→Filière→Spécialité, repli "Autre, préciser")
-- Autocomplete métier (`jobs/referentiel/metiers/`) sur `CreateJob.jsx` (offre) et le profil candidat
-- UI de sélection multiple des couples `OffreDiplomeAccepte` sur l'offre
-- Affichage de `completude`/`criteres_manquants` sur "Pourquoi ce score ?" (candidat + recruteur)
+**Phase 5 (frontend) réalisée** :
+- Nouveaux composants réutilisables `Components/MetierAutocomplete.jsx` (recherche sur `Appellation`, résout vers `metier_canonique`) et `Components/FormationReferentielSelect.jsx` (cascade Type diplôme→Domaine→Filière→Spécialité, couples `DiplomeSpecialite` attestés mis en avant avec un ★ sans jamais bloquer une combinaison absente — REGLES_FORMATION F02).
+- `ProfilCandidat` : champ "Métier recherché" (v2) dans les infos générales, autocomplete métier par expérience, cascade référentiel v2 dans le formulaire formation (`diplome_ref`/`specialite_ref`/`statut`) en complément des champs texte libre existants (jamais remplacés). `normalizeExp`/nouveau `normalizeForm` (`useProfilCandidat.js`) convertissent `""` → `null` avant envoi (`PrimaryKeyRelatedField` nullable n'accepte pas une chaîne vide, seulement `null`).
+- `CreateJob.jsx` : autocomplete métier + builder de couples diplôme+spécialité acceptés (chips ajout/suppression, cohérent avec le pattern déjà utilisé pour les compétences structurées).
+- Indicateur de complétude/critères manquants affiché dans "Pourquoi ce score ?" côté candidat (`MesCandidatures.jsx`) et recruteur (`DetailCandidature.jsx`).
+- Petit fix backend complémentaire : `NomenclatureFormationAPIView` expose désormais l'`id` de chaque `DiplomeSpecialite` (oublié dans la Phase 3 — nécessaire pour que le frontend soumette `diplomes_acceptes` avec la bonne clé primaire).
+- **Piège récurrent (déjà documenté ailleurs dans ce fichier) reconfirmé** : `CreateJob.test.jsx`/`ProfilCandidat.test.jsx`/`RegisterCandidat.test.jsx` (qui teste en réalité `<ProfilCandidat />`) ont eu besoin de `getNomenclatureFormation`/`searchMetiers` ajoutés à leurs mocks `jobsService` — sinon échec silencieux dès que le composant monté appelle ces méthodes.
+- **Suite complète relancée** : 2 échecs (`RecruteurLayout.test.jsx`, `FunnelChart.test.jsx`) — **vérifiés préexistants** via `git stash` (échouent aussi sur l'arbre non modifié par cette session), sans rapport avec le référentiel v2.
+
+**Reste à faire** :
 - Les 6 cas de `SIMULATIONS` (fichier métiers) et les cas de `RECETTE` (fichier diplômes) à transformer en tests d'intégration frontend/E2E si jugé utile
 - `AdminMetiers.jsx` (admin) : à décider si le nouveau référentiel v2 doit avoir son propre panel d'administration (les nouvelles tables n'ont aucune interface CRUD admin pour l'instant, gérées uniquement via `import_referentiel_v2`)
+- Rattrapage des anciennes fiches (profils/offres sans `metier` précis) : décision actée de ne rien faire pour l'instant (voir plus haut), aucune tâche de relance prévue
 
 ---
 

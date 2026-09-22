@@ -24,6 +24,7 @@ const offresPubliquesService = {
         commune: filters.commune || "",
         diplome: filters.diplome || "",
         specialite: filters.specialite || "",
+        domaine_id: filters.domaine_id || "",
         experience: filters.experience || "",
         contrat: filters.contrat || "",
         page: page,
@@ -96,6 +97,19 @@ const offresPubliquesService = {
     } catch (err) {
       reportError("ECHEC_SEARCH_METIERS_API", err);
       return [];
+    }
+  },
+
+  // Suggestions compétences/spécialités pour un métier (référentiel v2, MetierCompetence/
+  // MetierFormation) — purement informatif, le recruteur choisit ce qu'il ajoute réellement.
+  getMetierSuggestions: async (metierId) => {
+    if (!metierId) return { competences: [], diplomes_specialites: [] };
+    try {
+      const response = await api.get(`jobs/referentiel/metiers/${metierId}/suggestions/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_METIER_SUGGESTIONS_API", err);
+      return { competences: [], diplomes_specialites: [] };
     }
   },
 

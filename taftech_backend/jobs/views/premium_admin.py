@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny
 from django.core.cache import cache
+from django.db.models import Q
 from ..models import FaqItem, CompetenceReferentiel
 from ..serializers import FaqItemSerializer, CompetenceReferentielSerializer
 from ..throttles import PublicReadThrottle
@@ -93,7 +94,9 @@ class CompetencesAutocompleteAPIView(APIView):
         search = request.query_params.get('search', '').strip()
         qs = CompetenceReferentiel.objects.filter(actif=True)
         if search:
-            qs = qs.filter(label__icontains=search)
+            # ALIAS_COMPETENCES (référentiel v2) : un synonyme/sigle (ETL, IAM, CI/CD...) doit
+            # retrouver la compétence canonique, pas seulement une saisie du libellé complet.
+            qs = qs.filter(Q(label__icontains=search) | Q(synonymes__icontains=search))
         return Response(CompetenceReferentielSerializer(qs[:15], many=True).data)
 
 

@@ -11,7 +11,7 @@ const CHAMPS_PROFIL = [
   { label: "CV", test: (p) => !!p.cv_pdf },
   { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
   { label: "Diplôme", test: (p) => !!p.diplome },
-  { label: "Spécialité", test: (p) => !!p.specialite },
+  { label: "Métier", test: (p) => !!p.metier },
   { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
   { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
   { label: "Compétences", test: (p) => p.competences_detail?.length > 0 },
@@ -65,7 +65,8 @@ export const useOnboardingWizard = () => {
       commune: p.commune || "",
       telephone: p.telephone || "",
       diplome: p.diplome || "",
-      specialite: p.specialite || "",
+      metier: p.metier || "",
+      metier_libelle: p.metier_libelle || "",
       titre_professionnel: p.titre_professionnel || "",
       service_militaire: p.service_militaire || "",
       bio: p.bio || "",
@@ -76,7 +77,8 @@ export const useOnboardingWizard = () => {
       vehicule_personnel: p.vehicule_personnel || false,
     });
     setPrefsForm({
-      secteur_souhaite: p.secteur_souhaite || "",
+      metier_souhaite: p.metier_souhaite || "",
+      metier_souhaite_libelle: p.metier_souhaite_libelle || "",
       salaire_souhaite: p.salaire_souhaite || "",
       mobilite: p.mobilite || "",
       situation_actuelle: p.situation_actuelle || "",
@@ -132,7 +134,8 @@ export const useOnboardingWizard = () => {
         telephone: result.telephone || prev.telephone,
         wilaya: result.wilaya || prev.wilaya,
         diplome: result.diplome || prev.diplome,
-        specialite: result.specialite || prev.specialite,
+        metier: result.metier || prev.metier,
+        metier_libelle: result.metier_libelle || prev.metier_libelle,
         sexe: result.sexe || prev.sexe,
         date_naissance: result.date_naissance || prev.date_naissance,
         titre_professionnel: result.titre_professionnel || prev.titre_professionnel,
@@ -167,7 +170,8 @@ export const useOnboardingWizard = () => {
           result.experiences.map((exp) => ({
             titre_poste: exp.titre_poste,
             entreprise: exp.entreprise,
-            secteur: exp.secteur || null,
+            metier: exp.metier || null,
+            metier_libelle: exp.metier_libelle || "",
             date_debut: convertDateRaw(exp.date_debut_raw),
             date_fin: convertDateRaw(exp.date_fin_raw),
             description: exp.description || "",
@@ -182,6 +186,10 @@ export const useOnboardingWizard = () => {
             date_debut: convertDateRaw(f.date_debut_raw),
             date_fin: convertDateRaw(f.date_fin_raw),
             description: f.description || "",
+            diplome_ref: f.diplome_ref || null,
+            diplome_ref_libelle: f.diplome_ref_libelle || "",
+            specialite_ref: f.specialite_ref || null,
+            specialite_ref_libelle: f.specialite_ref_libelle || "",
           })),
         );
       }
@@ -213,6 +221,10 @@ export const useOnboardingWizard = () => {
     setSaving(true);
     const formData = new FormData();
     Object.entries(infosForm).forEach(([key, value]) => {
+      if (key === "metier_libelle") return;
+      // `metier` est un PrimaryKeyRelatedField nullable — une chaîne vide est rejetée par
+      // DRF, on omet simplement la clé si aucun métier n'a été choisi.
+      if (key === "metier" && !value) return;
       if (infosMode === "remplacer" || value) formData.append(key, value ?? "");
     });
     if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
@@ -333,7 +345,12 @@ export const useOnboardingWizard = () => {
     if (saving) return;
     setSaving(true);
     const formData = new FormData();
-    Object.entries(prefsForm).forEach(([key, value]) => formData.append(key, value ?? ""));
+    Object.entries(prefsForm)
+      .filter(([key]) => key !== "metier_souhaite_libelle")
+      // `metier_souhaite` est un PrimaryKeyRelatedField nullable — une chaîne vide est
+      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi.
+      .filter(([key, value]) => !(key === "metier_souhaite" && !value))
+      .forEach(([key, value]) => formData.append(key, value ?? ""));
     try {
       await profilService.updateProfil(formData);
       await refresh();

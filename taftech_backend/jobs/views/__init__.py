@@ -19,6 +19,8 @@ from .offres import (
     NomenclatureAPIView,
     NomenclatureFormationAPIView,
     MetierAutocompleteAPIView,
+    MetierSuggestionsAPIView,
+    RechercheUniverselleAPIView,
 )
 from .profils import (
     ProfilCandidatAPIView,
@@ -42,6 +44,7 @@ from .candidatures import (
     EvaluerCandidatureAPIView,
     Top5CandidatsAPIView,
     CandidatureMarquerConsulteeAPIView,
+    MettreAJourReponseExigenceAPIView,
 )
 from .recruteur import (
     DashboardRecruteurAPIView,
@@ -95,9 +98,6 @@ from .admin import (
 from .ia import (
     OffresRecommandeesAPIView,
     ParserCVAPIView,
-    MetierReferentielAPIView,
-    MetierReferentielAdminAPIView,
-    SuggestionsCarriereAPIView,
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView,
     GenererOffreIAAPIView,

@@ -4,29 +4,66 @@ import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { selectStyles } from "../theme";
 
+const inputClass =
+  "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
 /**
  * Cascade Type de diplôme → Domaine → Filière (facultative) → Spécialité, référentiel v2
  * client (FORMULAIRE/REGLES_FORMATION F01-F03) — les couples diplôme+spécialité déjà
  * attestés (DIPLOME_SPECIALITE) sont mis en avant dans la liste des spécialités dès qu'un
- * type de diplôme est choisi, sans jamais bloquer les autres (couverture non exhaustive,
- * F02 : "Autre, préciser" reste toujours possible via le champ texte libre existant du
- * formulaire — ce composant n'expose que la partie structurée diplome_ref/specialite_ref).
+ * type de diplôme est choisi, sans jamais bloquer les autres (couverture non exhaustive, F02).
+ *
+ * "Autre, préciser" (F02) — un bouton à chaque niveau bascule ce niveau en mode "Autre"
+ * (le select est remplacé par un badge + un champ texte "Précisez"), et **cascade vers le
+ * bas** : choisir "Autre" au Type de diplôme bascule automatiquement Domaine et Spécialité
+ * en mode "Autre" aussi (si le type de diplôme n'est pas identifiable, le reste ne l'est pas
+ * non plus) ; choisir "Autre" au Domaine bascule la Spécialité. Chaque niveau reste
+ * indépendamment réversible ("↩ revenir à la liste").
+ *  - Type de diplôme : en mode Autre, la vraie entrée référentiel "Autre diplôme à préciser"
+ *    (code `D-AUTRE`) est utilisée comme FK — jamais de FK nulle sans raison, F02 : préférer
+ *    un référentiel réel même générique à une absence de donnée.
+ *  - Domaine : purement un filtre local, jamais persisté séparément — en mode Autre, débloque
+ *    la liste complète des spécialités (plus de filtre par domaine), pas de texte à capturer.
+ *  - Spécialité : `specialite_ref` est vidé en mode Autre (aucune FK hors référentiel) ; le
+ *    texte tapé alimente le champ libre déjà existant du formulaire parent.
+ *  - Limite connue acceptée : au chargement d'une formation déjà enregistrée, impossible de
+ *    distinguer "jamais renseigné" de "Autre choisi puis quitté" — le composant réaffiche la
+ *    liste normale par défaut.
  *
  * Props :
  *  - diplomeId / specialiteId : valeurs actuelles (id numérique ou "")
- *  - onChangeDiplome(id) / onChangeSpecialite(id)
+ *  - onChangeDiplome(id, label) / onChangeSpecialite(id, label) — `label` (libellé propre,
+ *    sans le ★) n'est fourni que lors d'un vrai choix dans le référentiel (jamais en mode
+ *    Autre, ni au clear) : permet au parent de recopier automatiquement l'intitulé choisi
+ *    dans son propre champ texte, pour ne jamais avoir un intitulé vide sur un choix réel.
+ *  - autreTexte / onChangeAutreTexte(texte) : texte libre affiché/modifié quand "Autre,
+ *    préciser" est actif pour la Spécialité — le parent le relie en général au champ
+ *    description déjà présent dans son formulaire ("Spécialité / Domaine").
+ *  - diplomeAutreTexte / onChangeDiplomeAutreTexte(texte) : idem pour le Type de diplôme —
+ *    le parent le relie en général à son champ "intitulé" principal.
  *  - required
+ *  - permettreAutre (défaut true) : mettre à `false` quand le contexte appelant a besoin
+ *    d'une vraie FK spécialité (ex: couple diplôme+spécialité accepté sur une offre,
+ *    `OffreDiplomeAccepte`) — un "Autre, préciser" texte libre n'y a pas de sens.
  */
 export const FormationReferentielSelect = ({
   diplomeId,
   specialiteId,
   onChangeDiplome,
   onChangeSpecialite,
+  autreTexte = "",
+  onChangeAutreTexte,
+  diplomeAutreTexte = "",
+  onChangeDiplomeAutreTexte,
   required = false,
+  permettreAutre = true,
 }) => {
   const [nomenclature, setNomenclature] = useState(null);
   const [domaineId, setDomaineId] = useState("");
   const [filiereId, setFiliereId] = useState("");
+  const [diplomeAutre, setDiplomeAutre] = useState(false);
+  const [domaineAutre, setDomaineAutre] = useState(false);
+  const [specialiteAutre, setSpecialiteAutre] = useState(false);
 
   useEffect(() => {
     jobsService
@@ -45,6 +82,11 @@ export const FormationReferentielSelect = ({
     }
   }, [nomenclature, specialiteId, domaineId]);
 
+  const diplomeAutreRef = useMemo(
+    () => nomenclature?.types_diplomes.find((d) => d.code === "D-AUTRE") || null,
+    [nomenclature],
+  );
+
   const typesDiplomesOptions = useMemo(
     () => (nomenclature ? nomenclature.types_diplomes.map((d) => ({ value: d.id, label: d.libelle })) : []),
     [nomenclature],
@@ -56,11 +98,11 @@ export const FormationReferentielSelect = ({
   );
 
   const filiereOptions = useMemo(() => {
-    if (!nomenclature || !domaineId) return [];
+    if (!nomenclature || !domaineId || domaineAutre) return [];
     return nomenclature.filieres
       .filter((f) => String(f.domaine_id) === String(domaineId))
       .map((f) => ({ value: f.id, label: f.libelle }));
-  }, [nomenclature, domaineId]);
+  }, [nomenclature, domaineId, domaineAutre]);
 
   const couplesAttestesIds = useMemo(() => {
     if (!nomenclature || !diplomeId) return new Set();
@@ -72,9 +114,12 @@ export const FormationReferentielSelect = ({
   }, [nomenclature, diplomeId]);
 
   const specialiteOptions = useMemo(() => {
-    if (!nomenclature || !domaineId) return [];
-    let liste = nomenclature.specialites.filter((s) => String(s.domaine_id) === String(domaineId));
-    if (filiereId) liste = liste.filter((s) => String(s.filiere_id) === String(filiereId));
+    if (!nomenclature) return [];
+    if (!domaineAutre && !domaineId) return [];
+    let liste = domaineAutre
+      ? nomenclature.specialites
+      : nomenclature.specialites.filter((s) => String(s.domaine_id) === String(domaineId));
+    if (!domaineAutre && filiereId) liste = liste.filter((s) => String(s.filiere_id) === String(filiereId));
     // Couples attestés avec le diplôme choisi en premier (F02 : mis en avant, jamais exclusif).
     liste = [...liste].sort((a, b) => {
       const aAttestee = couplesAttestesIds.has(String(a.id)) ? 0 : 1;
@@ -84,38 +129,117 @@ export const FormationReferentielSelect = ({
     return liste.map((s) => ({
       value: s.id,
       label: couplesAttestesIds.has(String(s.id)) ? `${s.libelle} ★` : s.libelle,
+      rawLabel: s.libelle,
     }));
-  }, [nomenclature, domaineId, filiereId, couplesAttestesIds]);
+  }, [nomenclature, domaineId, domaineAutre, filiereId, couplesAttestesIds]);
+
+  const activerDomaineAutre = () => {
+    setDomaineAutre(true);
+    setDomaineId("");
+    setFiliereId("");
+    onChangeSpecialite("");
+  };
+
+  const activerSpecialiteAutre = () => {
+    setSpecialiteAutre(true);
+    onChangeSpecialite("");
+  };
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Type de diplôme {required && <span className="text-red-500">*</span>}
-        </label>
-        <Select
-          options={typesDiplomesOptions}
-          value={typesDiplomesOptions.find((o) => String(o.value) === String(diplomeId)) || null}
-          onChange={(opt) => onChangeDiplome(opt?.value || "")}
-          styles={selectStyles}
-          placeholder="Sélectionner un type de diplôme..."
-          isClearable
-        />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-medium text-slate-700">
+            Type de diplôme {required && <span className="text-red-500">*</span>}
+          </label>
+          {permettreAutre && !diplomeAutre && (
+            <button
+              type="button"
+              onClick={() => {
+                setDiplomeAutre(true);
+                onChangeDiplome(diplomeAutreRef ? diplomeAutreRef.id : "");
+                // Cascade : type inconnu => domaine et spécialité ne le sont pas plus.
+                activerDomaineAutre();
+                activerSpecialiteAutre();
+              }}
+              className="text-xs font-medium text-indigo-600 hover:underline"
+            >
+              Autre, préciser
+            </button>
+          )}
+        </div>
+        {diplomeAutre ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+              <span className="text-slate-700">Autre (type de diplôme hors référentiel)</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDiplomeAutre(false);
+                  onChangeDiplome("");
+                }}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+              >
+                ↩ revenir à la liste
+              </button>
+            </div>
+            <input
+              type="text"
+              autoFocus
+              value={diplomeAutreTexte}
+              onChange={(e) => onChangeDiplomeAutreTexte && onChangeDiplomeAutreTexte(e.target.value)}
+              placeholder="Précisez le diplôme..."
+              className={inputClass}
+            />
+          </div>
+        ) : (
+          <Select
+            options={typesDiplomesOptions}
+            value={typesDiplomesOptions.find((o) => String(o.value) === String(diplomeId)) || null}
+            onChange={(opt) => (opt ? onChangeDiplome(opt.value, opt.label) : onChangeDiplome(""))}
+            styles={selectStyles}
+            placeholder="Sélectionner un type de diplôme..."
+            isClearable
+          />
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">Domaine de formation</label>
-        <Select
-          options={domaineOptions}
-          value={domaineOptions.find((o) => String(o.value) === String(domaineId)) || null}
-          onChange={(opt) => {
-            setDomaineId(opt?.value ? String(opt.value) : "");
-            setFiliereId("");
-            onChangeSpecialite("");
-          }}
-          styles={selectStyles}
-          placeholder="Sélectionner un domaine..."
-          isClearable
-        />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-medium text-slate-700">Domaine de formation</label>
+          {permettreAutre && !domaineAutre && (
+            <button type="button" onClick={activerDomaineAutre} className="text-xs font-medium text-indigo-600 hover:underline">
+              Autre, préciser
+            </button>
+          )}
+        </div>
+        {domaineAutre ? (
+          <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+            <span className="text-slate-700">Autre (domaine hors référentiel)</span>
+            <button
+              type="button"
+              onClick={() => {
+                setDomaineAutre(false);
+                onChangeSpecialite("");
+              }}
+              className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+            >
+              ↩ revenir à la liste
+            </button>
+          </div>
+        ) : (
+          <Select
+            options={domaineOptions}
+            value={domaineOptions.find((o) => String(o.value) === String(domaineId)) || null}
+            onChange={(opt) => {
+              setDomaineId(opt?.value ? String(opt.value) : "");
+              setFiliereId("");
+              onChangeSpecialite("");
+            }}
+            styles={selectStyles}
+            placeholder="Sélectionner un domaine..."
+            isClearable
+          />
+        )}
       </div>
       {filiereOptions.length > 0 && (
         <div>
@@ -133,19 +257,49 @@ export const FormationReferentielSelect = ({
           />
         </div>
       )}
-      {domaineId && (
+      {(domaineAutre || domaineId) && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Spécialité <span className="text-xs text-slate-500">(★ = couple attesté avec le diplôme choisi)</span>
-          </label>
-          <Select
-            options={specialiteOptions}
-            value={specialiteOptions.find((o) => String(o.value) === String(specialiteId)) || null}
-            onChange={(opt) => onChangeSpecialite(opt?.value || "")}
-            styles={selectStyles}
-            placeholder="Sélectionner une spécialité (ou laisser vide si absente)..."
-            isClearable
-          />
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-slate-700">
+              Spécialité <span className="text-xs text-slate-500">(★ = couple attesté avec le diplôme choisi)</span>
+            </label>
+            {permettreAutre && !specialiteAutre && (
+              <button type="button" onClick={activerSpecialiteAutre} className="text-xs font-medium text-indigo-600 hover:underline">
+                Autre, préciser
+              </button>
+            )}
+          </div>
+          {specialiteAutre ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                <span className="text-slate-700">Autre (spécialité hors référentiel)</span>
+                <button
+                  type="button"
+                  onClick={() => setSpecialiteAutre(false)}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                >
+                  ↩ revenir à la liste
+                </button>
+              </div>
+              <input
+                type="text"
+                autoFocus
+                value={autreTexte}
+                onChange={(e) => onChangeAutreTexte && onChangeAutreTexte(e.target.value)}
+                placeholder="Précisez la spécialité..."
+                className={inputClass}
+              />
+            </div>
+          ) : (
+            <Select
+              options={specialiteOptions}
+              value={specialiteOptions.find((o) => String(o.value) === String(specialiteId)) || null}
+              onChange={(opt) => (opt ? onChangeSpecialite(opt.value, opt.rawLabel) : onChangeSpecialite(""))}
+              styles={selectStyles}
+              placeholder="Sélectionner une spécialité..."
+              isClearable
+            />
+          )}
         </div>
       )}
     </div>

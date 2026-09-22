@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { Trash2, Pencil, Check } from "lucide-react";
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
-import { SecteurDomaineSelect } from "../../../../Components/SecteurDomaineSelect";
-import DomaineLabel from "../../../../Components/DomaineLabel";
+import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
 
 export const StepExperiences = ({ pendingExperiences, setPendingExperiences, experiencesMode, setExperiencesMode, saveExperiencesStep, skipStep, profil, saving }) => {
   const [editingIndex, setEditingIndex] = useState(null);
@@ -59,7 +58,10 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
                   className={tw.authInput}
                 />
               </div>
-              <SecteurDomaineSelect value={exp.secteur || ""} onChange={(code) => updateField(idx, "secteur", code)} />
+              <MetierAutocomplete
+                value={exp.metier_libelle || ""}
+                onSelect={(item) => setPendingExperiences((list) => list.map((e, i) => (i === idx ? { ...e, metier: item.metier_id, metier_libelle: item.appellation_libelle } : e)))}
+              />
               <textarea
                 value={exp.description || ""}
                 onChange={(e) => updateField(idx, "description", e.target.value)}
@@ -81,10 +83,10 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-bold ${tw.textStrong}`}>{exp.titre_poste}</p>
                 <p className={`text-xs ${tw.textMuted}`}>{exp.entreprise}</p>
-                {(exp.date_debut || exp.date_fin || exp.secteur) && (
+                {(exp.date_debut || exp.date_fin || exp.metier_libelle) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                     {exp.date_debut || "?"} — {exp.date_fin || "présent"}
-                    {exp.secteur && <DomaineLabel code={exp.secteur} prefix=" · " />}
+                    {exp.metier_libelle && ` · ${exp.metier_libelle}`}
                   </p>
                 )}
                 {exp.description && <p className={`text-xs ${tw.textMuted} mt-1 whitespace-pre-line`}>{exp.description}</p>}

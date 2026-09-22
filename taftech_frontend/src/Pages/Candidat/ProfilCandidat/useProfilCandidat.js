@@ -12,7 +12,6 @@ import { convertDateRaw } from "../../../utils/cvDates";
 const INITIAL_EXP = {
   titre_poste: "",
   entreprise: "",
-  secteur: "",
   metier: "",
   metier_libelle: "",
   date_debut: "",
@@ -40,7 +39,6 @@ const formatText = (text) => {
 
 const normalizeExp = (exp) => ({
   ...exp,
-  secteur: exp.secteur || null,
   metier: exp.metier || null,
   date_fin: exp.date_fin || null,
 });
@@ -51,6 +49,7 @@ const normalizeForm = (form) => ({
   ...form,
   diplome_ref: form.diplome_ref || null,
   specialite_ref: form.specialite_ref || null,
+  date_fin_prevue: form.date_fin_prevue || null,
 });
 
 export const useProfilCandidat = () => {
@@ -111,7 +110,6 @@ export const useProfilCandidat = () => {
         commune: pData.commune || "",
         adresse: pData.adresse || "",
         diplome: pData.diplome || "",
-        specialite: pData.specialite || "",
         metier: pData.metier || "",
         metier_libelle: pData.metier_libelle || "",
         service_militaire: pData.service_militaire || "",
@@ -119,7 +117,8 @@ export const useProfilCandidat = () => {
         passeport_valide: pData.passeport_valide || false,
       });
       setEditPref({
-        secteur_souhaite: pData.secteur_souhaite || "",
+        metier_souhaite: pData.metier_souhaite || "",
+        metier_souhaite_libelle: pData.metier_souhaite_libelle || "",
         salaire_souhaite: pData.salaire_souhaite || "",
         mobilite: pData.mobilite || "",
         situation_actuelle: pData.situation_actuelle || "",
@@ -148,7 +147,7 @@ export const useProfilCandidat = () => {
     { label: "Titre professionnel", action: "cv-form", test: (p) => !!p.titre_professionnel },
     { label: "Wilaya / Commune", action: "info", test: (p) => !!(p.wilaya && p.commune) },
     { label: "Diplôme", action: "info", test: (p) => !!p.diplome },
-    { label: "Spécialité", action: "info", test: (p) => !!p.specialite },
+    { label: "Métier", action: "info", test: (p) => !!p.metier },
     { label: "Expériences", action: "experiences", test: (p) => p.experiences_detail?.length > 0 },
     { label: "Formations", action: "formations", test: (p) => p.formations_detail?.length > 0 },
     { label: "Compétences", action: "competences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
@@ -168,7 +167,7 @@ export const useProfilCandidat = () => {
     setNewExp((prev) => ({ ...prev, titre_poste: value }));
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value, "", newExp.secteur);
+        const data = await jobsService.searchMetiers(value);
         setExpTitreSuggestions(data.slice(0, 20));
         setShowExpTitreSuggestions(true);
       } catch {
@@ -197,7 +196,7 @@ export const useProfilCandidat = () => {
     setEditCV(prev => ({ ...prev, titre: value }));
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value, "", editInfo.specialite);
+        const data = await jobsService.searchMetiers(value);
         setTitreSuggestions(data.slice(0, 20));
         setShowTitreSuggestions(true);
       } catch {
@@ -213,12 +212,12 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => key !== "nin" && key !== "metier_libelle")
-        // `metier` est un PrimaryKeyRelatedField nullable côté DRF — une chaîne vide (valeur
-        // par défaut tant qu'aucun métier n'est choisi) est rejetée, contrairement à `null`
-        // (que FormData ne sait pas transporter) : on omet simplement la clé, ce qui laisse
-        // la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
-        .filter((key) => !(key === "metier" && !dataState[key]))
+        .filter((key) => key !== "nin" && key !== "metier_libelle" && key !== "metier_souhaite_libelle")
+        // `metier`/`metier_souhaite` sont des PrimaryKeyRelatedField nullables côté DRF — une
+        // chaîne vide (valeur par défaut tant qu'aucun métier n'est choisi) est rejetée,
+        // contrairement à `null` (que FormData ne sait pas transporter) : on omet simplement la
+        // clé, ce qui laisse la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
+        .filter((key) => !((key === "metier" || key === "metier_souhaite") && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
@@ -342,7 +341,6 @@ export const useProfilCandidat = () => {
     setNewExp({
       titre_poste: exp.titre_poste || "",
       entreprise: exp.entreprise || "",
-      secteur: exp.secteur || "",
       metier: exp.metier || "",
       metier_libelle: exp.metier_libelle || "",
       date_debut: exp.date_debut || "",

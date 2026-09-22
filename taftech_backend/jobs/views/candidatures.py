@@ -13,7 +13,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from ..models import OffreEmploi, Candidature, Notification, EquipeActionLog
-from ..models import QuestionQuestionnaire, ReponseCandidat
+from ..models import QuestionQuestionnaire, ReponseCandidat, ReponseExigence
 from .equipe import get_entreprise_for_user, get_membre_role, _log
 from ..throttles import WriteActionThrottle, PostulerRapideEmailThrottle, FileUploadThrottle
 
@@ -22,6 +22,7 @@ from ..serializers import (
     PostulerDTO, PostulerRapideDTO,
     MesCandidaturesDTO, CandidatureRecruteurDTO
 )
+from ..serializers.candidatures import ReponseExigenceSerializer
 from ..matcher import calculer_score_matching, normaliser
 
 User = get_user_model()
@@ -61,7 +62,7 @@ class PostulerAPIView(APIView):
                 "commune": profil.commune,
                 "adresse": profil.adresse,
                 "diplome": profil.diplome,
-                "specialite": profil.specialite,
+                "metier": profil.metier.libelle if profil.metier else None,
                 "competences": profil.competences,
                 "langues": profil.langues,
                 "cv_pdf": profil.cv_pdf.url if profil.cv_pdf else None,
@@ -73,7 +74,7 @@ class PostulerAPIView(APIView):
                     {
                         "titre_poste": exp.titre_poste,
                         "entreprise": exp.entreprise,
-                        "secteur": exp.secteur,
+                        "metier": exp.metier.libelle if exp.metier else None,
                         "date_debut": str(exp.date_debut),
                         "date_fin": str(exp.date_fin) if exp.date_fin else None,
                         "description": exp.description,
@@ -110,7 +111,7 @@ class PostulerAPIView(APIView):
             candidat=request.user,
             lettre_motivation=serializer.validated_data.get('lettre_motivation', ''),
             lettre_motivation_file=serializer.validated_data.get('lettre_motivation_file', None),
-            score_matching=resultat_matching["total"],
+            score_matching=resultat_matching["total"] if resultat_matching["total"] is not None else 0,
             details_matching={
                 "scores": resultat_matching["details"],
                 "explications": resultat_matching["explications"],
@@ -169,6 +170,43 @@ class PostulerAPIView(APIView):
                     candidature.save(update_fields=["score_matching", "details_matching"])
             except Exception as e:
                 logger.error("Erreur sauvegarde réponses : %s", e)
+
+        # S12 : réponses aux exigences impératives de l'offre (permis, habilitation...) — un
+        # statut manquant/invalide retombe sur INCONNU (jamais une disqualification implicite,
+        # "inconnu provoque une vérification, pas un rejet automatique"). Justificatif optionnel
+        # transmis en multipart sous la clé `justificatif_exigence_<id>`.
+        try:
+            import json as _json
+            reponses_exigences_raw = request.data.get('reponses_exigences')
+            reponses_exigences = _json.loads(reponses_exigences_raw) if isinstance(reponses_exigences_raw, str) else (reponses_exigences_raw or [])
+            exigence_ids = set(offre.exigences_imperatives.values_list('id', flat=True))
+            statuts_valides = {c[0] for c in ReponseExigence.STATUT_CHOICES}
+            for item in reponses_exigences:
+                if not isinstance(item, dict):
+                    continue
+                exigence_id = item.get('exigence_id')
+                try:
+                    exigence_id = int(exigence_id)
+                except (TypeError, ValueError):
+                    continue
+                if exigence_id not in exigence_ids:
+                    continue
+                statut = item.get('statut') if item.get('statut') in statuts_valides else 'INCONNU'
+                ReponseExigence.objects.create(
+                    candidature=candidature,
+                    exigence_id=exigence_id,
+                    statut=statut,
+                    justificatif=request.FILES.get(f'justificatif_exigence_{exigence_id}'),
+                )
+            # Toute exigence de l'offre sans réponse du candidat reste tracée comme INCONNU —
+            # jamais silencieusement absente, pour que le recruteur sache qu'il doit vérifier.
+            repondues = set(reponses_exigences and [
+                int(i['exigence_id']) for i in reponses_exigences if isinstance(i, dict) and str(i.get('exigence_id', '')).isdigit()
+            ] or [])
+            for exigence_id in exigence_ids - repondues:
+                ReponseExigence.objects.get_or_create(candidature=candidature, exigence_id=exigence_id, defaults={'statut': 'INCONNU'})
+        except Exception as e:
+            logger.error("Erreur sauvegarde réponses exigences impératives : %s", e)
 
         # Email recruteur si score >= 80%
         email_employeur = offre.entreprise.user.email
@@ -387,6 +425,40 @@ class UpdateCandidatureStatusAPIView(APIView):
                  phrases_statut.get(nouveau_statut, f"changé le statut de {nom_candidat} vers {nouveau_statut}"))
 
         return Response({"message": "Statut mis à jour !", "nouveau_statut": nouveau_statut}, status=status.HTTP_200_OK)
+
+
+class MettreAJourReponseExigenceAPIView(APIView):
+    """S12 — le recruteur vérifie manuellement une exigence impérative répondue INCONNU (ou
+    corrige une réponse) et bascule son statut. Jamais un rejet automatique de la candidature :
+    ceci ne fait que mettre à jour le statut de l'exigence elle-même, la décision finale sur la
+    candidature reste un acte séparé du recruteur (changement de statut de la candidature)."""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, candidature_id, exigence_id):
+        try:
+            candidature = Candidature.objects.get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({"error": "Candidature introuvable."}, status=404)
+        entreprise = get_entreprise_for_user(request.user)
+        if not entreprise or candidature.offre.entreprise != entreprise:
+            return Response({"error": "Vous n'avez pas l'autorisation de modifier cette candidature."}, status=403)
+        if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
+            return Response({"error": "Accès refusé."}, status=403)
+        try:
+            reponse = ReponseExigence.objects.get(candidature=candidature, exigence_id=exigence_id)
+        except ReponseExigence.DoesNotExist:
+            return Response({"error": "Réponse à l'exigence introuvable."}, status=404)
+        nouveau_statut = request.data.get('statut')
+        statuts_valides = {c[0] for c in ReponseExigence.STATUT_CHOICES}
+        if nouveau_statut not in statuts_valides:
+            return Response({"error": "Statut invalide."}, status=400)
+        reponse.statut = nouveau_statut
+        if 'commentaire' in request.data:
+            reponse.commentaire = str(request.data.get('commentaire') or '')[:2000]
+        reponse.save(update_fields=['statut', 'commentaire', 'date_reponse'])
+        _log(request.user, entreprise, 'AUTRE',
+             f"Exigence « {reponse.exigence.label} » vérifiée pour {candidature.candidat_id or candidature.email_rapide} : {reponse.get_statut_display()}")
+        return Response(ReponseExigenceSerializer(reponse, context={'request': request}).data, status=200)
 
 
 class DeleteCandidatureAPIView(APIView):

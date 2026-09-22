@@ -1,6 +1,11 @@
-"""Tests Phase 4 (17/09/2026) — matcher.py branché sur le référentiel v2 client
-(Metier pour la spécialité, couples DiplomeSpecialite pour le diplôme), avec repli
-garanti sur l'ancien comportement texte tant que les fiches ne sont pas migrées."""
+"""Tests Phase 4 (17/09/2026) — matcher.py branché sur le référentiel v2 client.
+Réécrit session 21/09/2026 (mise en conformité S01-S14) : le critère noté "spécialité"
+(poids 0.25) est désormais la spécialité de FORMATION (`SpecialiteFormation`, couplée
+au diplôme sur une même `FormationCandidat` — S06/S07), pas le métier/poste — voir
+`test_matcher_diplome_specialite_s07.py` pour la couverture complète de ce critère.
+`Metier` (comparé ici via `metiers_compatibles()`) reste utilisé, mais uniquement comme
+signal de pertinence d'une expérience passée (`_experience_pertinente`), plus comme
+critère noté séparément dans le score total."""
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
@@ -64,29 +69,18 @@ class MatcherReferentielV2IntegrationTest(TestCase):
         self.candidat = User.objects.create_user(username='cand_v2', email='cand_v2@test.com', password='pwd', role='CANDIDAT')
         self.profil = ProfilCandidat.objects.create(user=self.candidat, wilaya='16 - Alger')
 
-    def test_metier_identique_score_specialite_maximal(self):
-        self.profil.metier = self.metier_candidat_meme
-        self.profil.save()
-        resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertEqual(resultat['details']['specialite'], 25.0)
-        self.assertNotIn('specialite', resultat['criteres_manquants'])
-
-    def test_metier_different_incompatible(self):
-        self.profil.metier = self.metier_candidat_autre
-        self.profil.save()
-        resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertEqual(resultat['details']['specialite'], 0.0)
-
-    def test_repli_ancien_comportement_si_metier_absent(self):
-        """Ni le profil ni l'offre n'ont de Metier v2 renseigné → repli intégral sur
-        l'ancienne comparaison texte specialite/secteur, comme avant cette session."""
-        self.offre.metier = None
-        self.offre.specialite = 'L18'
-        self.offre.save()
-        self.profil.specialite = 'L18'
-        self.profil.save()
-        resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertEqual(resultat['details']['specialite'], 25.0)
+    def test_metier_ne_pese_plus_sur_le_critere_specialite(self):
+        """Un métier identique/différent/absent n'a plus aucun effet sur le critère noté
+        "spécialité" (désormais la spécialité de formation) — seul un couple
+        DiplomeSpecialite via OffreDiplomeAccepte le fait varier (voir les tests diplôme/
+        spécialité plus bas). Sans couple accepté sur l'offre, le critère est non demandé."""
+        for metier_candidat in (self.metier_candidat_meme, self.metier_candidat_autre, None):
+            self.profil.metier = metier_candidat
+            self.profil.save()
+            resultat = calculer_score_matching(self.candidat, self.offre)
+            self.assertEqual(resultat['details']['specialite'], 0.0)
+            self.assertIn('specialite', resultat['criteres_non_demandes'])
+            self.assertNotIn('specialite', resultat['criteres_manquants'])
 
     def test_diplome_couple_exact_score_maximal(self):
         OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
@@ -108,14 +102,21 @@ class MatcherReferentielV2IntegrationTest(TestCase):
             diplome_ref=self.diplome_master, specialite_ref=self.specialite_finance, statut='OBTENU',
         )
         resultat = calculer_score_matching(self.candidat, self.offre)
-        # Type de diplôme reconnu (Master) mais spécialité différente → score partiel, pas 20.
-        self.assertEqual(resultat['details']['diplome'], 12.0)
-        self.assertLess(resultat['details']['diplome'], 20.0)
+        # S07 : diplôme et spécialité sont deux critères pondérés indépendants — le type de
+        # diplôme (Master) est bien reconnu (20/20, poids 0.20), mais la spécialité de
+        # formation ne correspond pas à celle acceptée (0/25, poids 0.25) : jamais un "master
+        # en informatique" fabriqué en combinant le diplôme de cette formation avec la
+        # spécialité d'une autre.
+        self.assertEqual(resultat['details']['diplome'], 20.0)
+        self.assertEqual(resultat['details']['specialite'], 0.0)
 
     def test_diplome_non_renseigne_est_donnee_manquante_pas_incompatible(self):
+        # RECETTE T15 : contribution NULLE (0.0, jamais un crédit partiel inventé) quand le
+        # diplôme du candidat est totalement inconnu — corrigé session 18/09/2026, un ancien
+        # `6.0` ici contredisait directement ce cas de recette client.
         OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
         resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertEqual(resultat['details']['diplome'], 6.0)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
         self.assertIn('diplome', resultat['criteres_manquants'])
         self.assertLess(resultat['completude'], 1.0)
 
@@ -126,13 +127,16 @@ class MatcherReferentielV2IntegrationTest(TestCase):
             diplome_ref=self.diplome_master, specialite_ref=self.specialite_info, statut='EN_COURS',
         )
         resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertEqual(resultat['details']['diplome'], 6.0)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
         self.assertIn('diplome', resultat['criteres_manquants'])
 
-    def test_completude_maximale_si_offre_sans_couples_repli_legacy(self):
-        """Sans OffreDiplomeAccepte, l'ancien scoring hiérarchique s'applique et n'est jamais
-        compté comme 'donnée manquante' côté diplôme (comportement historique inchangé)."""
+    def test_diplome_non_demande_sans_couples_jamais_donnee_manquante(self):
+        """Sans OffreDiplomeAccepte (F06 : le recruteur définit explicitement la liste, pas
+        de repli hiérarchique implicite depuis session 21/09/2026), le critère diplôme est
+        exclu du calcul (non demandé, S01) — jamais compté comme 'donnée manquante' côté
+        candidat, puisque rien n'a été demandé par l'offre."""
         self.offre.diplome = None
         self.offre.save()
         resultat = calculer_score_matching(self.candidat, self.offre)
         self.assertNotIn('diplome', resultat['criteres_manquants'])
+        self.assertIn('diplome', resultat['criteres_non_demandes'])

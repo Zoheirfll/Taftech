@@ -45,7 +45,7 @@ const MetierDetail = () => {
     if (!domaine) return;
     setLoading(true);
     jobsService
-      .getAllJobs({ specialite: domaine.code }, page)
+      .getAllJobs({ domaine_id: domaine.id }, page)
       .then((data) => {
         setJobs(data.results || []);
         setCount(data.count || 0);

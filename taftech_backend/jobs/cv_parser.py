@@ -262,12 +262,6 @@ def extract_diplome_max(text):
     return None
 
 
-def extract_specialite(text):
-    """Détecte la spécialité principale (code Domaine ANEM) via le référentiel métiers."""
-    from .referentiel_utils import resoudre_domaine_depuis_texte
-    return resoudre_domaine_depuis_texte(text)
-
-
 def extract_service_militaire(text):
     """Détecte le statut militaire."""
     text_low = text.lower()
@@ -857,15 +851,12 @@ Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autr
 2. EXPÉRIENCES PROFESSIONNELLES (emplois, stages rémunérés — PAS les formations/diplômes/études) :
 ⚠️ NE METS JAMAIS DE FORMATIONS, DIPLÔMES OU ÉTUDES DEDANS ("Licence en...", "Master en...", "Bac", "Étudiant en...", cours, certifications, écoles où la personne n'a pas travaillé).
 Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, Stage en entreprise...).
-- Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description, secteur.
+- Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description.
 - Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
 - ⚠️ CV 2 colonnes : une date peut être sur sa propre ligne juste AVANT le titre (= date_debut de CETTE expérience) ou juste APRÈS titre/entreprise (= date_fin), ou collée en fin de ligne ("N8N Novembre 2025", "Oran Octobre 2025") — extrais-la et RETIRE-la de titre_poste/entreprise. Une seule date isolée trouvée → date_debut_raw, date_fin_raw="" (jamais recopiée identique).
 - Si info manquante : "" (chaîne vide), jamais null.
 - Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
-- Pour "secteur" : choisis le CODE le plus pertinent dans cette liste de domaines d'activité officiels.
-⚠️ Base-toi sur le MÉTIER/LA FONCTION réellement exercée par le candidat (titre_poste + missions), PAS sur le secteur d'activité de l'entreprise employeuse. Un développeur web chez un fabricant de véhicules reste dans le domaine informatique, pas "Production industrielle" ; un comptable dans une clinique reste en comptabilité/finance, pas en santé.
-{domaines_list}
-Si vraiment aucun ne correspond : "".
+- Le métier précis de chaque expérience est classé séparément après cette extraction (agent dédié, référentiel v2) — n'extrais pas de champ "secteur" ici.
 - Si aucune expérience : tableau vide [].
 
 3. FORMATIONS ET DIPLÔMES (Master, Licence, Bac, certifications, cours suivis — PAS les emplois) :
@@ -905,7 +896,7 @@ FORMAT EXIGÉ (JSON strict, un seul objet) :
 {
   "titre_professionnel": "string ou null",
   "experiences": [
-    {"titre_poste": "string", "entreprise": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string", "secteur": "code ou vide"}
+    {"titre_poste": "string", "entreprise": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
   ],
   "formations": [
     {"diplome": "string", "etablissement": "string", "date_debut_raw": "string", "date_fin_raw": "string", "description": "string"}
@@ -1012,11 +1003,6 @@ def _extract_json_object(content):
         except json.JSONDecodeError as e:
             logger.warning("Groq : JSON object invalide - %s", e)
     return None
-
-def _domaines_list_pour_prompt():
-    from .referentiel_utils import domaines_list_pour_prompt
-    return domaines_list_pour_prompt()
-
 
 _NIVEAU_LABEL_VERS_CODE = {
     'débutant': 'DEBUTANT', 'intermédiaire': 'INTERMEDIAIRE', 'avancé': 'AVANCE', 'confirmé': 'CONFIRME',
@@ -1181,9 +1167,7 @@ def parse_with_groq(text):
     from .models import AIConfig
     ai_config = AIConfig.get_solo()
     prompt_source = ai_config.parser_cv_prompt or PROMPT_CV_COMPLET
-    prompt = prompt_source.replace("{cv_text}", text_truncated).replace(
-        "{domaines_list}", _domaines_list_pour_prompt()
-    )
+    prompt = prompt_source.replace("{cv_text}", text_truncated)
     content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
     infos = _extract_json_object(content)
     if not infos:

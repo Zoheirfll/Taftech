@@ -18,8 +18,12 @@ Ordre d'import strictement dérivé de l'onglet IMPORT de chaque classeur :
                donc après import complet du fichier diplômes) → RELATIONS_METIERS
                → PARAM_MATCHING
 
+SOURCES (IMPORT étape 19, `source_partagee`) est importée en premier, une seule
+fois par classeur, upsert par `source_id` — identique dans les deux fichiers,
+donc le second import met simplement à jour les mêmes lignes (aucun doublon).
+
 Onglets volontairement NON importés comme tables opérationnelles (conformes aux
-consignes client) : SOURCES, OFFRES_SOURCES, SOURCE_NAME, SOURCE_TAFTECH,
+consignes client) : OFFRES_SOURCES, SOURCE_NAME, SOURCE_TAFTECH,
 MIGRATION, RECETTE, SIMULATIONS, AUDIT, COUVERTURE, DICTIONNAIRE, IMPORT,
 FORMULAIRE, REGLES_FORMATION, REGLES_MATCHING, LIRE_MOI, METIER_GROUPES
 (redondant avec METIERS.groupe_principal_id pour cette v2).
@@ -33,11 +37,11 @@ import os
 
 import openpyxl
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from jobs.models import (
-    Scolarite, TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation,
+    Source, Scolarite, TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation,
     DiplomeSpecialite, AliasDiplome, AliasSpecialite,
     GroupeMetier, Metier, Appellation, CompetenceReferentiel, ProfilSuggestion,
     MetierCompetence, MetierFormation, RelationMetier, ParametreMatching,
@@ -73,6 +77,22 @@ def _i(v):
         return None
 
 
+def _d(v):
+    """date_iso_string(YYYY-MM-DD) -> date Python. openpyxl renvoie déjà un datetime/date pour
+    une cellule formatée date ; on ne parse la chaîne qu'en repli (cellule en texte brut)."""
+    if v is None or v == '':
+        return None
+    if hasattr(v, 'date'):
+        return v.date()
+    if hasattr(v, 'year'):
+        return v
+    try:
+        from datetime import datetime
+        return datetime.strptime(str(v).strip(), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return None
+
+
 def sheet_rows(wb, sheet_name):
     """Génère un dict par ligne de données (ligne 1 = en-têtes), ignore les lignes vides."""
     ws = wb[sheet_name]
@@ -82,6 +102,19 @@ def sheet_rows(wb, sheet_name):
         if row is None or all(c is None for c in row):
             continue
         yield dict(zip(headers, row))
+
+
+def sheet_rows_numerotees(wb, sheet_name):
+    """Comme `sheet_rows`, mais avec le numéro de ligne réel du classeur (2 = première ligne
+    de données, la ligne 1 étant les en-têtes) — réservé aux sheets où une erreur de clé
+    étrangère doit être rapportée avec sa position exacte (RECETTE T17 : METIER_FORMATIONS)."""
+    ws = wb[sheet_name]
+    rows = ws.iter_rows(values_only=True)
+    headers = [str(h).strip() if h is not None else '' for h in next(rows)]
+    for i, row in enumerate(rows, start=2):
+        if row is None or all(c is None for c in row):
+            continue
+        yield i, dict(zip(headers, row))
 
 
 class Command(BaseCommand):
@@ -110,6 +143,7 @@ class Command(BaseCommand):
                 wb_dip = openpyxl.load_workbook(chemin_diplomes, read_only=True, data_only=True)
                 wb_met = openpyxl.load_workbook(chemin_metiers, read_only=True, data_only=True)
 
+                self._import_sources(wb_dip, wb_met)
                 self._import_diplomes(wb_dip)
                 self._import_metiers(wb_met)
 
@@ -124,6 +158,38 @@ class Command(BaseCommand):
         ))
         for label, n in self.compteurs.items():
             self.stdout.write(f"  {label:<28} {n}")
+
+    # ------------------------------------------------------------------
+    # SOURCES — table partagée par les deux classeurs (IMPORT étape 19)
+    # ------------------------------------------------------------------
+    def _import_sources(self, wb_dip, wb_met):
+        n = 0
+        n_doublons = 0
+        codes_vus = set()
+        for wb in (wb_dip, wb_met):
+            for r in sheet_rows(wb, 'SOURCES'):
+                code = _s(r['source_id'])
+                if code in codes_vus:
+                    n_doublons += 1
+                else:
+                    codes_vus.add(code)
+                Source.objects.update_or_create(
+                    code=code,
+                    defaults=dict(
+                        titre=_s(r['titre']),
+                        nature=_s(r.get('nature')),
+                        organisme=_s(r.get('organisme')),
+                        fichier=_s(r.get('fichier')),
+                        url=_s(r.get('url')),
+                        edition_annee=_i(r.get('edition_annee')),
+                        consulte_le=_d(r.get('consulte_le')),
+                        sha256=_s(r.get('sha256')),
+                        perimetre_limite=_s(r.get('perimetre_limite')),
+                    ),
+                )
+                n += 1
+        self.compteurs['Source'] = n
+        self.compteurs['Source (déjà vue dans l\'autre classeur)'] = n_doublons
 
     # ------------------------------------------------------------------
     # Fichier Diplômes / Spécialités
@@ -155,6 +221,7 @@ class Command(BaseCommand):
                     selectionnable=_b(r.get('selectionnable', 1)),
                     diplome_formel=_b(r.get('diplome_formel', 1)),
                     precision=_s(r.get('precision')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -169,6 +236,7 @@ class Command(BaseCommand):
                     libelle_ar=_s(r.get('libelle_ar')),
                     systeme=_s(r['systeme']),
                     code_source=_s(r.get('code_source')),
+                    source_id=_s(r.get('source_id')),
                     actif=_b(r.get('actif', 1)),
                 ),
             )
@@ -215,6 +283,7 @@ class Command(BaseCommand):
                     cle_recherche=_s(r['cle_recherche']),
                     nature=_s(r.get('nature')),
                     code_source=_s(r.get('code_source')),
+                    source_id=_s(r.get('source_id')),
                     page_pdf=_i(r.get('page_pdf')),
                     statut_reference=_s(r.get('statut_reference')),
                     selectionnable=_b(r.get('selectionnable', 1)),
@@ -250,6 +319,7 @@ class Command(BaseCommand):
                     statut=_s(r.get('statut')),
                     selectionnable=_b(r.get('selectionnable', 1)),
                     precision=_s(r.get('precision')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -269,6 +339,7 @@ class Command(BaseCommand):
                     cle_recherche=_s(r['cle_recherche']),
                     langue=_s(r.get('langue')) or 'und',
                     ambiguite=_b(r.get('ambiguite')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -289,6 +360,7 @@ class Command(BaseCommand):
                     type_alias=_s(r.get('type_alias')),
                     contexte=_s(r.get('contexte')),
                     ambiguite=_b(r.get('ambiguite')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -307,6 +379,7 @@ class Command(BaseCommand):
                     type_groupe=_s(r['type_groupe']),
                     libelle=_s(r['libelle_fr']),
                     code_source=_s(r.get('code_source')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -334,6 +407,7 @@ class Command(BaseCommand):
                     groupe_principal=groupe,
                     code_source=_s(r.get('code_source')),
                     libelle_source=_s(r.get('libelle_source')),
+                    source_id=_s(r.get('source_id')),
                     selectionnable=_b(r.get('selectionnable', 1)),
                     statut=_s(r.get('statut')) or 'actif',
                 ),
@@ -366,6 +440,7 @@ class Command(BaseCommand):
                     type_alias=_s(r.get('type_alias')),
                     ambiguite=_b(r.get('ambiguite')),
                     actif=_b(r.get('actif', 1)),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -380,16 +455,18 @@ class Command(BaseCommand):
         for r in sheet_rows(wb, 'COMPETENCES'):
             code = _s(r['competence_id'])
             label = _s(r['libelle_fr'])
+            source_id = _s(r.get('source_id'))
             existant = CompetenceReferentiel.objects.filter(code=code).first()
             if not existant:
                 existant = CompetenceReferentiel.objects.filter(label=label).first()
             if existant:
                 existant.code = code
                 existant.actif = _b(r.get('actif', 1))
-                existant.save(update_fields=['code', 'actif'])
+                existant.source_id = source_id
+                existant.save(update_fields=['code', 'actif', 'source_id'])
                 n_rattaches += 1
             else:
-                CompetenceReferentiel.objects.create(code=code, label=label, actif=_b(r.get('actif', 1)))
+                CompetenceReferentiel.objects.create(code=code, label=label, actif=_b(r.get('actif', 1)), source_id=source_id)
                 n_crees += 1
         self.compteurs['CompetenceReferentiel (v2, créées)'] = n_crees
         self.compteurs['CompetenceReferentiel (v2, rattachées à une entrée existante)'] = n_rattaches
@@ -426,6 +503,7 @@ class Command(BaseCommand):
                     contexte=_s(r['regle_intitule_contexte']),
                     nb_metiers=_i(r.get('nb_metiers')) or 0,
                     limite=_s(r.get('limite')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -454,6 +532,7 @@ class Command(BaseCommand):
                     profil_suggestion=profils_suggestion.get(_s(r.get('profil_suggestion_id'))),
                     usage=_s(r.get('usage')),
                     attribution_candidat_auto=_b(r.get('attribution_candidat_auto')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
@@ -461,17 +540,25 @@ class Command(BaseCommand):
         self.compteurs['MetierCompetence (doublons couple ignorés)'] = n_doublons
 
         # --- METIER_FORMATIONS (pont vers SPECIALITES du fichier diplômes) ---
+        # RECETTE T17 : une ligne référençant un metier_id/specialite_id introuvable rejette
+        # le lot ENTIER avant publication (erreur explicite + numéro de ligne), contrairement
+        # aux autres sheets de liens (METIER_COMPETENCES, RELATIONS_METIERS) qui restent en
+        # best-effort (ignorent silencieusement une ligne isolée) — comportement volontairement
+        # différencié uniquement pour ce sheet, celui explicitement visé par le cas client.
         specialites = {s.code: s for s in SpecialiteFormation.objects.all()}
         n = 0
         n_doublons = 0
-        n_introuvable = 0
         couples_vus = set()
-        for r in sheet_rows(wb, 'METIER_FORMATIONS'):
+        for numero_ligne, r in sheet_rows_numerotees(wb, 'METIER_FORMATIONS'):
             metier = metiers.get(_s(r['metier_id']))
             specialite = specialites.get(_s(r['specialite_id']))
             if not metier or not specialite:
-                n_introuvable += 1
-                continue
+                champ = 'metier_id' if not metier else 'specialite_id'
+                valeur = r.get('metier_id') if not metier else r.get('specialite_id')
+                raise CommandError(
+                    f"METIER_FORMATIONS ligne {numero_ligne} : {champ}={valeur!r} introuvable "
+                    f"dans le référentiel déjà importé — lot rejeté avant publication (RECETTE T17)."
+                )
             couple = (metier.pk, specialite.pk)
             if couple in couples_vus:
                 n_doublons += 1
@@ -485,12 +572,12 @@ class Command(BaseCommand):
                     relation=_s(r.get('relation')),
                     usage_score_auto=_b(r.get('usage_score_auto')),
                     precision=_s(r.get('precision')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1
         self.compteurs['MetierFormation'] = n
         self.compteurs['MetierFormation (doublons couple ignorés)'] = n_doublons
-        self.compteurs['MetierFormation (metier/specialite introuvable)'] = n_introuvable
 
         # --- RELATIONS_METIERS ---
         n = 0
@@ -507,6 +594,7 @@ class Command(BaseCommand):
                     relation=_s(r['relation']),
                     active_recherche=_b(r.get('active_recherche', 1)),
                     justification=_s(r.get('justification')),
+                    source_id=_s(r.get('source_id')),
                 ),
             )
             n += 1

@@ -105,9 +105,23 @@ class MatchingCompetencesStructureesTest(TestCase):
         resultat = calculer_score_matching(self.cand, self.offre)
         self.assertEqual(resultat["details"]["competences"], 15.0)
 
-    def test_candidat_sans_competence_obligatoire_score_zero(self):
+    def test_candidat_avec_competence_differente_sans_obligatoire_score_zero(self):
+        # Le candidat a bien déclaré quelque chose, mais rien qui corresponde à ce que
+        # l'offre demande — vraie incompatibilité (0.0), distinct du cas T12 ci-dessous
+        # où RIEN n'est déclaré du tout (donnée manquante, pas une incompatibilité).
+        CompetenceCandidat.objects.create(profil=self.profil, label="Photoshop", niveau="AVANCE")
         resultat = calculer_score_matching(self.cand, self.offre)
         self.assertEqual(resultat["details"]["competences"], 0.0)
+
+    def test_t12_aucune_competence_declaree_est_donnee_manquante(self):
+        # RECETTE T12 : compétences_declarees=[] -> aucune compétence créée à la volée,
+        # et le critère doit être signalé comme MANQUANT. S02 (session 21/09/2026) : une
+        # donnée candidate inconnue contribue 0 (pas un score neutre à demi inventé) —
+        # c'est le statut "manquant" dans criteres_manquants qui porte l'information,
+        # pas une valeur de score arbitraire.
+        resultat = calculer_score_matching(self.cand, self.offre)
+        self.assertEqual(resultat["details"]["competences"], 0.0)
+        self.assertIn("competences", resultat["criteres_manquants"])
 
     def test_niveau_insuffisant_credit_partiel(self):
         # Excel requis niveau INTERMEDIAIRE, candidat DEBUTANT seulement → crédit partiel (0.6)
@@ -116,7 +130,11 @@ class MatchingCompetencesStructureesTest(TestCase):
         attendu = round((2.0 * 0.6) / 3.0 * 15.0, 2)  # poids obligatoire=2, souhaitee=1, total=3
         self.assertEqual(resultat["details"]["competences"], attendu)
 
-    def test_offre_sans_competences_structurees_repli_texte_libre(self):
+    def test_offre_sans_competences_structurees_critere_non_demande(self):
+        # S10 (session 21/09/2026) : "sélection offre obligatoire" pour que le critère
+        # compétences existe — une offre sans aucune CompetenceOffre a ce critère exclu du
+        # score (poids actif=0), le repli texte libre historique (competences_score()) ne
+        # contribue plus au total, quel que soit le contenu de profil_recherche/competences.
         offre_libre = OffreEmploi.objects.create(
             entreprise=self.offre.entreprise, titre="Autre poste", wilaya="16 - Alger",
             experience_requise="DEBUTANT", statut_moderation="APPROUVEE",
@@ -125,7 +143,9 @@ class MatchingCompetencesStructureesTest(TestCase):
         self.profil.competences = "Excel"
         self.profil.save()
         resultat = calculer_score_matching(self.cand, offre_libre)
-        self.assertGreater(resultat["details"]["competences"], 0.0)
+        self.assertEqual(resultat["details"]["competences"], 0.0)
+        self.assertIn("competences", resultat["criteres_non_demandes"])
+        self.assertNotIn("competences", resultat["criteres_manquants"])
 
 
 class GenererOffreIACompetencesReferentielTest(APITestCase):

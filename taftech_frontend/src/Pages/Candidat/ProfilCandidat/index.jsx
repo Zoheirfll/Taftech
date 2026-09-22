@@ -29,7 +29,6 @@ import OnboardingWizard from "../Onboarding/OnboardingWizard";
 import InfoBanner from "../../../Components/InfoBanner";
 import ImageCropperModal from "../../../Components/ImageCropperModal";
 import { TooltipIcon } from "../../../Components/Tooltip";
-import DomaineLabel from "../../../Components/DomaineLabel";
 import { confirmToast } from "../../../utils/confirmToast";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
@@ -61,7 +60,7 @@ const PROFILE_CATEGORIES = [
     key: "infos",
     label: "Informations personnelles",
     action: "info",
-    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.specialite],
+    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.metier],
     actionLabelZero: "Compléter",
   },
   {
@@ -473,14 +472,10 @@ const ProfilCandidat = () => {
                 </p>
                 <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                   {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
-                  {profil.metier_libelle ? (
-                    <> {" · "}{profil.metier_libelle}</>
-                  ) : profil.specialite && (
-                    <>
-                      {" · "}
-                      <DomaineLabel code={profil.specialite} />
-                    </>
+                  {(profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle) && (
+                    <> {" · "}{profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle}</>
                   )}
+                  {profil.metier_libelle && <> {" · "}{profil.metier_libelle}</>}
                 </p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-2">
                   {profil.niveau_experience && (
@@ -532,8 +527,8 @@ const ProfilCandidat = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {[
                 {
-                  label: "Secteur souhaité",
-                  value: <DomaineLabel code={profil.secteur_souhaite} />,
+                  label: "Métier souhaité",
+                  value: profil.metier_souhaite_libelle || "Non renseigné",
                 },
                 {
                   label: "Salaire souhaité",
@@ -604,8 +599,8 @@ const ProfilCandidat = () => {
                       </h4>
                       <p className={`text-xs ${tw.textPrimary} font-medium`}>
                         {exp.entreprise}
-                        {exp.secteur && (
-                          <span className={`ml-2 ${tw.textMuted} font-normal`}><DomaineLabel code={exp.secteur} prefix="· " /></span>
+                        {exp.metier_libelle && (
+                          <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.metier_libelle}</span>
                         )}
                       </p>
                       <p className={`text-xs ${tw.textMuted} mt-1`}>
@@ -684,8 +679,27 @@ const ProfilCandidat = () => {
                       <h4 className={`text-base font-semibold ${tw.textStrong}`}>
                         {f.diplome || "Diplôme non précisé"}
                       </h4>
+                      {(f.diplome_ref_libelle || f.specialite_ref_libelle) && (
+                        <p className={`text-xs ${tw.textMuted} mt-1 flex flex-wrap items-center gap-1`}>
+                          {f.diplome_ref_libelle && (
+                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
+                              {f.diplome_ref_libelle}
+                            </span>
+                          )}
+                          {f.specialite_ref_libelle && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-teal-50 text-teal-700">
+                              {f.specialite_ref_libelle}
+                            </span>
+                          )}
+                          {f.statut && f.statut !== "OBTENU" && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-700">
+                              {formatText(f.statut)}
+                            </span>
+                          )}
+                        </p>
+                      )}
                       {f.description && (
-                        <p className={`text-xs ${tw.textPrimary} font-medium`}>
+                        <p className={`text-xs ${tw.textPrimary} font-medium mt-1`}>
                           {f.description}
                         </p>
                       )}
@@ -694,7 +708,13 @@ const ProfilCandidat = () => {
                       </p>
                       <p className={`text-xs ${tw.textMuted} mt-1`}>
                         {formatDate(f.date_debut)} —{" "}
-                        {f.date_fin ? formatDate(f.date_fin) : "En cours"}
+                        {f.statut === "EN_COURS" && !f.date_fin
+                          ? "En cours"
+                          : f.date_fin_prevue && !f.date_fin
+                          ? `Fin prévue ${formatDate(f.date_fin_prevue)}`
+                          : f.date_fin
+                          ? formatDate(f.date_fin)
+                          : "En cours"}
                       </p>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">

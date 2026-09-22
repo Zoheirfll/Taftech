@@ -2,9 +2,9 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
-from .validators import validate_document_mime, validate_image_mime, validate_file_size
+from .validators import validate_document_mime, validate_image_mime, validate_file_size, validate_document_or_image_mime
 from .constants import (
-    WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES,
+    WILAYAS_CHOICES, DIPLOMES_CHOICES,
     NIVEAUX_EXPERIENCE, TYPES_CONTRAT, TAILLES_ENTREPRISE_CHOICES
 )
 
@@ -19,7 +19,18 @@ class ProfilEntreprise(models.Model):
     est_approuvee = models.BooleanField(default=False, verbose_name="Entreprise approuvée")
     
     # Listes appliquées ici :
-    secteur_activite = models.CharField(max_length=100, choices=SECTEURS_CHOICES, verbose_name="Secteur d'activité")
+    secteur_activite = models.CharField(
+        max_length=100, verbose_name="Secteur d'activité",
+        help_text="Code `GroupeMetier.code_source` (ou `code` si absent) parmi les entrées "
+                  "type_groupe='secteur_source' du référentiel v2 — 16 secteurs officiels ANEM "
+                  "(NSEC-*) + ~70 secteurs plus précis ajoutés par TAFTECH (TSEC-*, ex: "
+                  "Informatique, Cybersécurité, RH...). Plus de `choices` figé en Python : la "
+                  "liste vient désormais de la même source que la navigation publique "
+                  "'Offres par secteur' (NomenclatureAPIView), jamais deux référentiels "
+                  "différents pour le même concept. Anciennes valeurs (lettres A-P) restent "
+                  "valides sans migration — elles correspondent exactement aux `code_source` "
+                  "des 16 entrées NSEC-*.",
+    )
     wilaya_siege = models.CharField(max_length=100, choices=WILAYAS_CHOICES, verbose_name="Wilaya du siège social")
     
     # 👇 NOUVEAU : Ajout du champ pour la commune du siège 👇
@@ -111,71 +122,19 @@ class EntreprisePhoto(models.Model):
         return f"Photo {self.entreprise.nom_entreprise} — {self.date_ajout:%d/%m/%Y}"
 
 
-class Secteur(models.Model):
-    """Nomenclature ANEM — niveau 1 (ex: 'A' = Agriculture et pêche)."""
-    code = models.CharField(max_length=5, unique=True)
-    libelle = models.CharField(max_length=150)
-
-    class Meta:
-        ordering = ['code']
-
-    def __str__(self):
-        return f"{self.code} — {self.libelle}"
-
-
-class Domaine(models.Model):
-    """Nomenclature ANEM — niveau 2 (ex: 'A11' = Espaces naturels et espaces verts)."""
-    secteur = models.ForeignKey(Secteur, on_delete=models.CASCADE, related_name='domaines')
-    code = models.CharField(max_length=10, unique=True)
-    libelle = models.CharField(max_length=200)
-
-    class Meta:
-        ordering = ['code']
-
-    def __str__(self):
-        return f"{self.code} — {self.libelle}"
-
-
-class SousDomaine(models.Model):
-    """Nomenclature ANEM — niveau 3, optionnel (absent pour la plupart des domaines)."""
-    domaine = models.ForeignKey(Domaine, on_delete=models.CASCADE, related_name='sous_domaines')
-    libelle = models.CharField(max_length=200)
-
-    def __str__(self):
-        return self.libelle
-
-
-class MetierReferentiel(models.Model):
-    """Nomenclature ANEM — niveau 5, une ligne par appellation de poste (ex: 'Élagueur-grimpeur')."""
-    titre = models.CharField(max_length=200)
-    domaine = models.ForeignKey(Domaine, null=True, blank=True, on_delete=models.CASCADE, related_name='metiers')
-    sous_domaine = models.ForeignKey(SousDomaine, null=True, blank=True, on_delete=models.SET_NULL, related_name='metiers')
-    code_fiche = models.CharField(max_length=10, blank=True, default='', db_index=True)
-    fiche_metier = models.CharField(max_length=200, blank=True)
-    secteur_code = models.CharField(max_length=5, blank=True, default='', db_index=True)
-    est_actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['secteur_code', 'titre']
-
-    def __str__(self):
-        return f"{self.titre} — {self.secteur_code}"
-
-
 # ==========================================
-# RÉFÉRENTIEL V2 (session 17/09/2026) — fichiers client
-# TAFTECH_Diplomes_Specialites_Algerie_v2.xlsx + TAFTECH_Metiers_Matching_v2.xlsx
+# RÉFÉRENTIEL V2 (fichiers client TAFTECH_Diplomes_Specialites_Algerie_v2.xlsx +
+# TAFTECH_Metiers_Matching_v2.xlsx) — remplace intégralement l'ancienne nomenclature ANEM
+# (Secteur/Domaine/SousDomaine/MetierReferentiel, basée sur NAME.xlsx) côté métiers, et
+# DIPLOMES_CHOICES/ProfilCandidat.specialite (texte libre) côté diplômes/spécialités.
+# Cutover complet (session 18/09/2026) : les anciens modèles ont été supprimés, le
+# référentiel v2 est la seule source de vérité pour le matching. Le champ `code` de chaque
+# modèle est l'identifiant stable du fichier Excel (ex: "D-CFPS", "A1101"), conservé pour
+# permettre les réimports idempotents et les redirections de MIGRATION.
 #
-# Remplace à terme Secteur/Domaine/SousDomaine/MetierReferentiel (ci-dessus) côté métiers,
-# et DIPLOMES_CHOICES/ProfilCandidat.specialite (texte libre) côté diplômes/spécialités.
-# Les modèles ci-dessous restent séparés le temps de la migration (voir CLAUDE.md) — le champ
-# `code` de chaque modèle est l'identifiant stable du fichier Excel (ex: "D-CFPS", "A1101"),
-# conservé pour permettre les réimports idempotents et les redirections de MIGRATION.
-#
-# "Domaine"/"Filière"/"Spécialité" existent aussi côté diplômes (hiérarchie de formation) —
-# préfixés *Formation pour ne jamais les confondre avec Domaine/SousDomaine (nomenclature
-# ANEM métiers, ci-dessus), qui décrivent un tout autre concept malgré le nom partagé.
+# "Domaine"/"Filière"/"Spécialité" préfixés *Formation (hiérarchie de formation, ex-cité de
+# collision avec l'ancien Domaine/SousDomaine ANEM métiers) — conservé tel quel même après
+# la suppression de l'ancien système (renommage cosmétique non fait, aucun gain fonctionnel).
 # ==========================================
 
 class Scolarite(models.Model):
@@ -190,6 +149,33 @@ class Scolarite(models.Model):
 
     def __str__(self):
         return self.libelle
+
+
+class Source(models.Model):
+    """Table SOURCES du référentiel v2 — identique dans les deux classeurs client (IMPORT
+    étape 19 : `source_partagee`), partagée par toutes les entités des deux fichiers via leur
+    champ `source_id` (ex: SRC_NAME, SRC_FP19, SRC_TAF_V2). Upsert par `code`, aucun doublon :
+    réimporter le même classeur ou l'autre met simplement à jour la même ligne."""
+    code = models.CharField(max_length=30, unique=True, verbose_name="Identifiant (source_id)")
+    titre = models.CharField(max_length=250)
+    nature = models.CharField(max_length=40, blank=True, default='')
+    organisme = models.CharField(max_length=250, blank=True, default='')
+    fichier = models.CharField(max_length=250, blank=True, default='')
+    url = models.URLField(max_length=500, blank=True, default='')
+    edition_annee = models.PositiveSmallIntegerField(null=True, blank=True)
+    consulte_le = models.DateField(null=True, blank=True)
+    sha256 = models.CharField(max_length=64, blank=True, default='')
+    perimetre_limite = models.TextField(
+        blank=True, default='',
+        verbose_name="Limites de la source",
+        help_text="Ex: '5789 lignes ; 420 codes de fiche. Authenticité administrative et édition non vérifiées indépendamment.'",
+    )
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.titre}"
 
 
 class TypeDiplome(models.Model):
@@ -209,6 +195,12 @@ class TypeDiplome(models.Model):
     selectionnable = models.BooleanField(default=True, help_text="1 = proposé dans le formulaire candidat.")
     diplome_formel = models.BooleanField(default=True)
     precision = models.TextField(blank=True, default='')
+    source_id = models.CharField(
+        max_length=20, blank=True, default='',
+        verbose_name="Provenance (référence à Source.code)",
+        help_text="IMPORT étape 11 : exposé en API sous la clé `source` — pas une FK stricte, Source peut "
+                  "être importée après ce référentiel (ordre d'import DICTIONNAIRE non garanti entre les deux).",
+    )
 
     class Meta:
         ordering = ['systeme', 'libelle']
@@ -224,6 +216,7 @@ class DomaineFormation(models.Model):
     libelle_ar = models.CharField(max_length=250, blank=True, default='')
     systeme = models.CharField(max_length=50)
     code_source = models.CharField(max_length=20, blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
     actif = models.BooleanField(default=True)
 
     class Meta:
@@ -261,6 +254,7 @@ class SpecialiteFormation(models.Model):
     cle_recherche = models.CharField(max_length=300, db_index=True)
     nature = models.CharField(max_length=40, blank=True, default='')
     code_source = models.CharField(max_length=30, blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
     page_pdf = models.PositiveSmallIntegerField(null=True, blank=True)
     statut_reference = models.CharField(max_length=60, blank=True, default='')
     selectionnable = models.BooleanField(default=True)
@@ -282,6 +276,7 @@ class DiplomeSpecialite(models.Model):
     statut = models.CharField(max_length=60, blank=True, default='')
     selectionnable = models.BooleanField(default=True)
     precision = models.TextField(blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     class Meta:
         unique_together = [('diplome', 'specialite')]
@@ -298,6 +293,7 @@ class AliasDiplome(models.Model):
     cle_recherche = models.CharField(max_length=250, db_index=True)
     langue = models.CharField(max_length=10, blank=True, default='und')
     ambiguite = models.BooleanField(default=False)
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     def __str__(self):
         return self.libelle
@@ -313,6 +309,7 @@ class AliasSpecialite(models.Model):
     type_alias = models.CharField(max_length=40, blank=True, default='')
     contexte = models.CharField(max_length=250, blank=True, default='')
     ambiguite = models.BooleanField(default=False)
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     def __str__(self):
         return self.libelle
@@ -327,6 +324,7 @@ class GroupeMetier(models.Model):
     type_groupe = models.CharField(max_length=40)
     libelle = models.CharField(max_length=250)
     code_source = models.CharField(max_length=20, blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     class Meta:
         ordering = ['code']
@@ -352,6 +350,7 @@ class Metier(models.Model):
     groupe_principal = models.ForeignKey(GroupeMetier, null=True, blank=True, on_delete=models.SET_NULL, related_name='metiers')
     code_source = models.CharField(max_length=20, blank=True, default='')
     libelle_source = models.CharField(max_length=250, blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
     selectionnable = models.BooleanField(default=True)
     statut = models.CharField(max_length=20, default='actif')
 
@@ -373,6 +372,7 @@ class Appellation(models.Model):
     type_alias = models.CharField(max_length=40, blank=True, default='')
     ambiguite = models.BooleanField(default=False)
     actif = models.BooleanField(default=True)
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     def __str__(self):
         return self.libelle
@@ -386,6 +386,7 @@ class ProfilSuggestion(models.Model):
     contexte = models.CharField(max_length=200, verbose_name="Intitulé/contexte (regle_intitule_contexte)")
     nb_metiers = models.PositiveSmallIntegerField(default=0)
     limite = models.TextField(blank=True, default='', verbose_name="Avertissement d'usage")
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     def __str__(self):
         return self.contexte
@@ -401,6 +402,7 @@ class MetierCompetence(models.Model):
     profil_suggestion = models.ForeignKey(ProfilSuggestion, null=True, blank=True, on_delete=models.SET_NULL, related_name='competences_liees')
     usage = models.CharField(max_length=60, blank=True, default='')
     attribution_candidat_auto = models.BooleanField(default=False)
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     class Meta:
         unique_together = [('metier', 'competence')]
@@ -417,6 +419,7 @@ class MetierFormation(models.Model):
     relation = models.CharField(max_length=40, blank=True, default='')
     usage_score_auto = models.BooleanField(default=False)
     precision = models.TextField(blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     class Meta:
         unique_together = [('metier', 'specialite')]
@@ -431,6 +434,7 @@ class RelationMetier(models.Model):
     relation = models.CharField(max_length=40)
     active_recherche = models.BooleanField(default=True)
     justification = models.TextField(blank=True, default='')
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     def __str__(self):
         return f"{self.metier_depart} → {self.metier_arrivee} ({self.relation})"
@@ -471,12 +475,19 @@ class OffreEmploi(models.Model):
     wilaya = models.CharField(max_length=100, choices=WILAYAS_CHOICES, verbose_name="Lieu de travail (Wilaya)")
     commune = models.CharField(max_length=100, blank=True, null=True, verbose_name="Commune")
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme requis")
-    specialite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Spécialité (code Domaine ANEM) — legacy, voir `metier`")
+    diplome_ref = models.ForeignKey(
+        'TypeDiplome', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres_niveau_requis',
+        verbose_name="Diplôme requis (référentiel v2, résolu depuis `diplome`)",
+        help_text="Résolution non ambiguë uniquement — voir ProfilCandidat.diplome_ref. Le vrai repli de matching "
+                  "reste `diplomes_acceptes` (couples explicites) ; ce champ est informatif, pas consommé par matcher.py.",
+    )
+    niveau_scolaire_ref = models.ForeignKey(
+        'Scolarite', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres_niveau_requis',
+        verbose_name="Niveau de scolarité requis (référentiel v2, résolu depuis `diplome`)",
+    )
     metier = models.ForeignKey(
         'Metier', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres',
         verbose_name="Métier (référentiel v2)",
-        help_text="Nullable tant que l'offre n'a pas été recréée/modifiée via le nouveau formulaire — "
-                  "matcher.py compare au niveau Metier si renseigné des deux côtés, sinon repli sur `specialite`.",
     )
     type_contrat = models.CharField(max_length=50, choices=TYPES_CONTRAT, default='CDI')
     experience_requise = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
@@ -506,6 +517,8 @@ class OffreEmploi(models.Model):
             while OffreEmploi.objects.filter(code_public=code).exclude(pk=self.pk).exists():
                 code = ''.join(random.choices(alphabet, k=6))
             self.code_public = code
+        from .referentiel_utils import resoudre_diplome_legacy
+        self.diplome_ref, self.niveau_scolaire_ref = resoudre_diplome_legacy(self.diplome)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -525,6 +538,29 @@ class OffreDiplomeAccepte(models.Model):
 
     def __str__(self):
         return f"{self.offre.titre} — {self.couple}"
+
+
+class ExigenceImperative(models.Model):
+    """S12 (REGLES_MATCHING) — exigence professionnelle impérative déclarée par le recruteur
+    sur son offre (permis, habilitation, droit d'exercice, certification...), distincte du
+    diplôme (S12 : "Droits d'exercice, permis et certifications restent des champs avec
+    justificatifs, distincts du diplôme"). Ne participe jamais au score de matching — c'est un
+    filtre d'éligibilité à vérifier manuellement, pas un critère noté."""
+    offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='exigences_imperatives')
+    label = models.CharField(max_length=150, verbose_name="Exigence (ex: Permis B, Habilitation électrique)")
+    description = models.TextField(blank=True, default='')
+    justificatif_requis = models.BooleanField(
+        default=False,
+        verbose_name="Justificatif requis",
+        help_text="Si coché, le candidat doit joindre un document prouvant qu'il satisfait cette exigence.",
+    )
+
+    class Meta:
+        unique_together = [('offre', 'label')]
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.label} ({self.offre.titre})"
 
 
 class CompetenceOffre(models.Model):
@@ -645,6 +681,40 @@ class Candidature(models.Model):
         score_display = f" - {self.score_matching}%" if self.score_matching else ""
         return f"{nom} -> {self.offre.titre}{score_display}"
 
+
+class ReponseExigence(models.Model):
+    """S12 — réponse du candidat à une `ExigenceImperative` de l'offre, à trois états
+    (jamais binaire) : un statut INCONNU déclenche une vérification manuelle par le recruteur,
+    jamais un rejet automatique de la candidature (S12 : "inconnu provoque une vérification,
+    pas un rejet automatique")."""
+    STATUT_CHOICES = [
+        ('SATISFAIT', 'Satisfait'),
+        ('NON_SATISFAIT', 'Non satisfait'),
+        ('INCONNU', 'Inconnu — à vérifier'),
+    ]
+    candidature = models.ForeignKey(Candidature, on_delete=models.CASCADE, related_name='reponses_exigences')
+    exigence = models.ForeignKey(ExigenceImperative, on_delete=models.CASCADE, related_name='reponses')
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='INCONNU')
+    justificatif = models.FileField(
+        upload_to='justificatifs_exigences/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png', 'webp']),
+            validate_document_or_image_mime,
+            validate_file_size(5),
+        ],
+    )
+    commentaire = models.TextField(blank=True, default='')
+    date_reponse = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('candidature', 'exigence')]
+
+    def __str__(self):
+        return f"{self.exigence.label} — {self.get_statut_display()}"
+
+
 class ProfilCandidat(models.Model):
     """
     Profil étendu pour un candidat, contenant son CV et toutes ses préférences.
@@ -725,20 +795,35 @@ class ProfilCandidat(models.Model):
     )
 
     # --- PRÉFÉRENCES DE RECRUTEMENT ---
-    secteur_souhaite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Domaine souhaité (code ANEM) — legacy, voir `metier`")
     salaire_souhaite = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: 80 000 DA")
     mobilite = models.CharField(max_length=50, choices=MOBILITE_CHOICES, blank=True, null=True)
     situation_actuelle = models.CharField(max_length=50, choices=SITUATION_ACTUELLE, blank=True, null=True)
     metier = models.ForeignKey(
         'Metier', null=True, blank=True, on_delete=models.SET_NULL, related_name='candidats',
-        verbose_name="Métier recherché (référentiel v2)",
-        help_text="Nullable tant que le candidat n'a pas mis à jour son profil via le nouveau formulaire — "
-                  "matcher.py compare au niveau Metier si renseigné des deux côtés, sinon repli sur `specialite`/`secteur_souhaite`.",
+        verbose_name="Métier actuel/déclaré (référentiel v2)",
+    )
+    metier_souhaite = models.ForeignKey(
+        'Metier', null=True, blank=True, on_delete=models.SET_NULL, related_name='candidats_interesses_v2',
+        verbose_name="Métier souhaité / préférence de recherche (référentiel v2)",
+        help_text="Distinct de `metier` (situation actuelle) — un candidat peut viser un métier différent de "
+                  "celui qu'il exerce aujourd'hui.",
     )
 
     # --- ANCIENS CHAMPS GARDÉS ---
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme")
-    specialite = models.CharField(max_length=100, blank=True, null=True, verbose_name="Spécialité (code Domaine ANEM) — legacy, voir `metier`")
+    diplome_ref = models.ForeignKey(
+        'TypeDiplome', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_niveau_declare',
+        verbose_name="Diplôme (référentiel v2, résolu depuis `diplome`)",
+        help_text="Résolution non ambiguë uniquement (MIGRATION niveau_v1_vers_diplome, F02/F06) — reste vide pour "
+                  "les valeurs de `diplome` trop imprécises pour être converties sans deviner (ex: TS, MASTER_1/2, "
+                  "FORMATION_PRO). `diplome` (texte) reste la source de vérité, jamais modifié par cette résolution.",
+    )
+    niveau_scolaire_ref = models.ForeignKey(
+        'Scolarite', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_niveau_declare',
+        verbose_name="Niveau de scolarité (référentiel v2, résolu depuis `diplome`)",
+        help_text="Pour les valeurs de `diplome` qui ne sont pas un diplôme mais un niveau de scolarité "
+                  "(NIVEAU_SECONDAIRE, UNIVERSITAIRE_SANS_DIPLOME) — mutuellement exclusif avec `diplome_ref`.",
+    )
     experiences = models.TextField(blank=True, null=True, verbose_name="Expériences")
     competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
     langues = models.CharField(max_length=255, blank=True, null=True, verbose_name="Langues")
@@ -748,7 +833,12 @@ class ProfilCandidat(models.Model):
     notif_newsletter = models.BooleanField(default=True, verbose_name="Actualités et newsletter")
     notif_mise_a_jour = models.BooleanField(default=True, verbose_name="Emails de mise à jour")
     niveau_experience = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, blank=True, null=True, verbose_name="Niveau d'expérience global")
-    
+
+    def save(self, *args, **kwargs):
+        from .referentiel_utils import resoudre_diplome_legacy
+        self.diplome_ref, self.niveau_scolaire_ref = resoudre_diplome_legacy(self.diplome)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Profil de {self.user.username}"
 class ExperienceCandidat(models.Model):
@@ -758,10 +848,15 @@ class ExperienceCandidat(models.Model):
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='experiences_detail')
     titre_poste = models.CharField(max_length=200, verbose_name="Titre du poste (Ex: Développeur Front-End)")
     entreprise = models.CharField(max_length=200, verbose_name="Nom de l'entreprise")
-    secteur = models.CharField(max_length=100, blank=True, null=True, verbose_name="Domaine d'activité (code ANEM) — legacy, voir `metier`")
     metier = models.ForeignKey(
         'Metier', null=True, blank=True, on_delete=models.SET_NULL, related_name='experiences',
         verbose_name="Métier de cette expérience (référentiel v2)",
+    )
+    appellation = models.ForeignKey(
+        'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='experiences',
+        verbose_name="Appellation précise (référentiel v2)",
+        help_text="FORMULAIRE experience.appellation_id — conserve l'intitulé précis au sein d'une fiche métier "
+                  "large (ex. une fiche Metier peut regrouper plusieurs appellations de poste distinctes).",
     )
 
     date_debut = models.DateField(verbose_name="Date de début")
@@ -785,10 +880,21 @@ class FormationCandidat(models.Model):
         ('EN_COURS', 'En cours'),
         ('INTERROMPU', 'Interrompu'),
     ]
+    STATUT_VALIDATION_CHOICES = [
+        ('DECLARE', 'Déclaré'),
+        ('DOCUMENT_VERIFIE', 'Document vérifié'),
+        ('A_PRECISER', 'À préciser'),
+    ]
+    VERSION_REFERENTIEL_DEFAUT = 'TAFTECH-2026.09.11-v2'
 
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='formations_detail')
     diplome = models.CharField(max_length=200, verbose_name="Nom de la formation ou diplôme (intitulé exact déclaré)")
     etablissement = models.CharField(max_length=200, blank=True, verbose_name="Université ou École")
+    pays_formation = models.CharField(
+        max_length=2, blank=True, default='DZ',
+        verbose_name="Pays de la formation (code ISO)",
+        help_text="FORMULAIRE pays_formation — accepte un diplôme étranger, aucune reconnaissance administrative déduite.",
+    )
 
     # --- Référentiel v2 (Phase 2, 17/09/2026) — nullable : `diplome` ci-dessus reste
     # l'intitulé original à préserver (FORMULAIRE F01/F02) même une fois ces champs remplis.
@@ -803,9 +909,40 @@ class FormationCandidat(models.Model):
                   "formation avec la spécialité d'une autre — REGLES_FORMATION du client).",
     )
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='OBTENU', verbose_name="Statut de la formation")
+    statut_validation = models.CharField(
+        max_length=20, choices=STATUT_VALIDATION_CHOICES, default='DECLARE',
+        verbose_name="Statut de validation",
+        help_text="FORMULAIRE statut_validation — un diplôme déclaré n'est pas automatiquement authentifié.",
+    )
 
     date_debut = models.DateField(null=True, blank=True, verbose_name="Date de début")
-    date_fin = models.DateField(null=True, blank=True, verbose_name="Date de fin")
+    date_fin = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date de fin",
+        help_text="Année d'obtention si statut=OBTENU ; sans valeur si INTERROMPU. Ne jamais confondre avec "
+                  "`date_fin_prevue` (statut=EN_COURS) — FORMULAIRE distingue explicitement annee_obtention "
+                  "et annee_fin_prevue.",
+    )
+    date_fin_prevue = models.DateField(
+        null=True, blank=True,
+        verbose_name="Date de fin prévue (si en cours)",
+        help_text="FORMULAIRE annee_fin_prevue — ne valide pas le diplôme, juste une échéance annoncée.",
+    )
+
+    document_reference = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Référence du justificatif",
+        help_text="FORMULAIRE document_reference — référence privée gérée par le site, jamais rendue publique.",
+    )
+    est_principale = models.BooleanField(
+        default=False,
+        verbose_name="Formation principale (préférence d'affichage)",
+        help_text="FORMULAIRE est_principale — le matching continue d'examiner toutes les formations quel que soit ce choix.",
+    )
+    version_referentiel = models.CharField(
+        max_length=30, blank=True, default=VERSION_REFERENTIEL_DEFAUT,
+        verbose_name="Version du référentiel utilisée",
+    )
 
     description = models.TextField(blank=True, null=True, verbose_name="Description ou mention")
 
@@ -1547,6 +1684,7 @@ class CompetenceReferentiel(models.Model):
         help_text="Intitulés équivalents séparés par des virgules (ex: Project Management, Gestion des projets) — utilisés pour normaliser les compétences extraites d'un CV vers ce libellé.",
     )
     actif = models.BooleanField(default=True, verbose_name="Suggérée")
+    source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
 
     class Meta:
         ordering = ['label']
@@ -1604,6 +1742,13 @@ class CompetenceCandidat(models.Model):
 
     profil = models.ForeignKey(ProfilCandidat, on_delete=models.CASCADE, related_name='competences_detail')
     label = models.CharField(max_length=100, verbose_name="Compétence")
+    competence_ref = models.ForeignKey(
+        'CompetenceReferentiel', null=True, blank=True, on_delete=models.SET_NULL, related_name='competences_candidats',
+        verbose_name="Compétence référentiel v2 (competence_id)",
+        help_text="FORMULAIRE competence_candidat.competence_id — rattachement au référentiel v2 quand `label` "
+                  "correspond à une entrée connue (résolu automatiquement par label, jamais forcé) ; `label` reste "
+                  "la source de vérité texte, ce champ ne fait qu'ajouter une résolution stable au COMPETENCES.competence_id.",
+    )
     niveau = models.CharField(max_length=20, choices=NIVEAU_CHOICES, default='DEBUTANT')
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='DECLARE')
     date_ajout = models.DateTimeField(auto_now_add=True)

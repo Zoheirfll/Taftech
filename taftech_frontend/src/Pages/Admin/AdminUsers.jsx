@@ -8,7 +8,6 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
-import DomaineLabel from "../../Components/DomaineLabel";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ROLE_TABS = [
@@ -433,12 +432,8 @@ const AdminUsers = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       {[
                         {
-                          label: "Secteur",
-                          value: (
-                            <DomaineLabel
-                              code={selectedUser.profil_candidat.secteur_souhaite}
-                            />
-                          ),
+                          label: "Métier souhaité",
+                          value: selectedUser.profil_candidat.metier_souhaite || "—",
                         },
                         {
                           label: "Salaire",

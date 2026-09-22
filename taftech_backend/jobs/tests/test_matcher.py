@@ -2,6 +2,7 @@ import datetime
 from unittest.mock import Mock
 from django.test import TestCase
 from jobs.matcher import calculer_score_matching
+from jobs.models import Metier
 
 class MatcherAlgorithmTest(TestCase):
 
@@ -40,55 +41,60 @@ class MatcherAlgorithmTest(TestCase):
     # 2. HAPPY PATH : LE CANDIDAT PARFAIT (100%)
     # ==========================================
     def test_candidat_parfait_score_maximal(self):
-        """ Un candidat qui coche absolument toutes les cases doit avoir 100%. """
-        self.profil.specialite = "Informatique"
+        """ Un candidat qui coche toutes les cases EFFECTIVEMENT DEMANDÉES doit avoir 100%.
+        Sur un `Mock`, `offre.diplomes_acceptes.all()`/`offre.competences_requises.all()`
+        lèvent `TypeError` à l'itération (pas de couples/compétences structurés) — ces deux
+        critères, ainsi que la spécialité (formation) sans OffreDiplomeAccepte, sont donc
+        "non demandés" (S01, exclus du calcul), pas notés à 0. Seuls région et expérience
+        restent actifs ici ; les critères diplôme/spécialité/compétences sont couverts avec
+        de vraies relations FK dans test_matcher_diplome_specialite_s07.py et
+        test_matcher_competences_s10.py. """
         self.profil.wilaya = "31 - Oran"
         self.profil.commune = "Bir El Djir"
-        self.profil.diplome = "MASTER_2"
-        self.profil.competences = "react, python" # 2 tags trouvés sur 2 -> 15/15
-        
+        self.profil.mobilite = "AUCUNE"
+
         # On lui donne 4 ans d'expérience (pour un requis de 3 ans)
         exp = Mock()
         exp.titre_poste = "Développeur React"
         exp.entreprise = "Taziri"
         exp.description = "Création web"
+        exp.metier = None
         exp.date_debut = datetime.date.today() - datetime.timedelta(days=365 * 4)
         exp.date_fin = datetime.date.today()
         self.profil.experiences_detail.all.return_value = [exp]
 
         resultat = calculer_score_matching(self.candidat, self.offre)
-        
-        # Vérification détaillée (très pratique pour le débogage)
-        self.assertEqual(resultat['details']['specialite'], 25.0)
-        self.assertEqual(resultat['details']['region'], 20.0) # 15 wilaya + 5 commune
-        self.assertEqual(resultat['details']['diplome'], 20.0)
+
+        self.assertEqual(resultat['details']['specialite'], 0.0)
+        self.assertEqual(resultat['details']['region'], 20.0)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
         self.assertEqual(resultat['details']['experience'], 20.0)
-        self.assertEqual(resultat['details']['competences'], 15.0)
-        
+        self.assertEqual(resultat['details']['competences'], 0.0)
+        self.assertEqual(
+            sorted(resultat['criteres_non_demandes']),
+            ['competences', 'diplome', 'specialite'],
+        )
         self.assertEqual(resultat['total'], 100.0)
 
     # ==========================================
     # 3. EDGE CASE : LE DIPLÔME JUSTE EN DESSOUS
     # ==========================================
-    def test_candidat_diplome_inferieur(self):
-        """ 
-        Test de la règle métier : Si l'offre demande MASTER_2 et que le candidat a MASTER_1 (niveau -1),
-        il doit recevoir 10 points sur 20 au lieu de 0 ou 20.
-        """
-        self.profil.specialite = None
-        self.profil.secteur_souhaite = None # Pas de point de spécialité
+    def test_candidat_diplome_inferieur_offre_sans_couples_critere_non_demande(self):
+        """ F06/S05 (session 21/09/2026) : plus de rang hiérarchique implicite entre diplômes
+        (BTS/Licence/Master...) — une offre sans `OffreDiplomeAccepte` explicite (le cas d'un
+        `Mock`) n'a pas de critère diplôme évaluable du tout, quel que soit `profil.diplome`.
+        Le diplôme candidat n'est plus jamais comparé à un rang de diplôme requis. """
         self.profil.wilaya = "16 - Alger"
         self.profil.commune = None
-        self.profil.mobilite = "NATIONALE" # 15 points
-        
-        # Le test critique est ici : Master 1 vs Master 2
-        self.profil.diplome = "MASTER_1" 
-        
+        self.profil.mobilite = "NATIONALE"
+        self.profil.diplome = "MASTER_1"
         self.profil.competences = "aucune"
 
         resultat = calculer_score_matching(self.candidat, self.offre)
-        
-        self.assertEqual(resultat['details']['diplome'], 10.0)
+
+        self.assertEqual(resultat['details']['diplome'], 0.0)
+        self.assertIn('diplome', resultat['criteres_non_demandes'])
+        self.assertNotIn('diplome', resultat['criteres_manquants'])
 
     # ==========================================
     # 4. EDGE CASE : LE TRI DES EXPÉRIENCES

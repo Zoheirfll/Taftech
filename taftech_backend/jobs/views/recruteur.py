@@ -753,6 +753,13 @@ class StatistiquesAvanceesAPIView(APIView):
         return Response({"repartition_score": repartition})
 
 
+def _score_ou_zero(result):
+    """S01 : `total` peut être None (aucun critère actif sur l'offre) — jamais planter le tri
+    ou l'affichage, traiter comme 0 dans ce cas (pas de classement possible, pas un mauvais score)."""
+    total = result.get('total')
+    return round(total) if total is not None else 0
+
+
 class CVThequeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -794,18 +801,98 @@ class CVThequeView(APIView):
             ids_favoris = ProfilCandidatFavori.objects.filter(recruteur=request.user).values_list('candidat_id', flat=True)
             candidats = candidats.filter(user__id__in=ids_favoris)
         if search:
+            # R01/N01-N04 : normalisation de la requête libre avant comparaison — sans elle,
+            # une saisie accentuée usuelle ("développeur") ne trouvait plus aucun candidat
+            # dont les champs sont eux aussi accentués (bug identique à celui déjà corrigé
+            # sur l'autocomplete métier, session 18/09/2026). Filtrage en Python (pas de
+            # fonction SQL de normalisation d'accents sans extension Postgres `unaccent`) —
+            # acceptable au volume actuel de la CVthèque, à optimiser avec pg_trgm/unaccent
+            # si le volume grossit significativement.
+            #
+            # R05 : n'indexer que les faits autorisés du profil (titre déclaré, métier
+            # recherché explicitement déclaré, expériences, compétences) — jamais nom/sexe/
+            # âge (S13, même principe que le score). Chaque champ autorisé est marqué avec
+            # une étiquette ("titre"/"metier_souhaite"/"experience"/"competence") pour que le
+            # recruteur voie CE QUI a motivé le résultat (R05 : "marquer le champ ayant
+            # motivé le résultat ; une aspiration ne prouve pas une expérience").
+            #
+            # R07 : ordre du rappel — expression exacte (la requête entière comme
+            # sous-chaîne) prioritaire sur une correspondance par jetons significatifs
+            # dispersés sur plusieurs champs ; pas d'expansion sémantique (désactivée par
+            # défaut, cohérent avec expansion_semantique_active=0 dans PARAM_MATCHING).
+            from ..referentiel_utils import normaliser_recherche
+            search_norm = normaliser_recherche(search)
+            mots_recherche = {m for m in search_norm.split() if len(m) >= 3}
+            # Clé = user_id (pas ProfilCandidat.id, distinct — OneToOneField sans
+            # primary_key=True) pour rester cohérent avec `score_offre` plus bas, indexé
+            # de la même façon sur `item['user_id']` du résultat sérialisé.
+            resultats_recherche = {}  # user_id -> {"champ": str, "priorite": int}
+            for c in candidats.select_related('metier_souhaite').iterator(chunk_size=200):
+                champs_autorises = [
+                    ("titre", c.titre_professionnel or ''),
+                    ("metier_souhaite", getattr(c.metier_souhaite, 'libelle', '') or ''),
+                    ("competence", c.competences or ''),
+                ]
+                try:
+                    champs_autorises += [("experience", e.titre_poste or '') for e in c.experiences_detail.all()]
+                except Exception:
+                    pass
+                meilleur = None  # (priorite, champ) — priorite 0 = meilleure
+                for champ, valeur in champs_autorises:
+                    if not valeur:
+                        continue
+                    valeur_norm = normaliser_recherche(valeur)
+                    if search_norm in valeur_norm:
+                        meilleur = (0, champ)
+                        break
+                    if mots_recherche and mots_recherche.issubset(set(valeur_norm.split())):
+                        if meilleur is None or meilleur[0] > 1:
+                            meilleur = (1, champ)
+                if meilleur is None and mots_recherche:
+                    # Jetons dispersés sur PLUSIEURS champs autorisés — filet de sécurité le
+                    # plus permissif, toujours après les deux priorités ci-dessus.
+                    tous_mots = set()
+                    for _champ, valeur in champs_autorises:
+                        tous_mots.update(normaliser_recherche(valeur).split())
+                    if mots_recherche.issubset(tous_mots):
+                        meilleur = (2, "profil")
+                if meilleur is not None:
+                    resultats_recherche[c.user_id] = {"champ": meilleur[1], "priorite": meilleur[0]}
+            candidats = candidats.filter(user_id__in=resultats_recherche.keys())
+            if resultats_recherche:
+                # R07 : ordre du rappel — expression exacte avant jetons dispersés, avant
+                # expansion sémantique (désactivée par défaut). Priorité en tête d'ordre,
+                # le tri choisi par le recruteur (nom/expérience/récents) départage ensuite
+                # les candidats à égalité de priorité.
+                from django.db.models import Case, When, Value, IntegerField
+                candidats = candidats.annotate(
+                    _prio_recherche=Case(
+                        *[When(user_id=uid, then=Value(r["priorite"])) for uid, r in resultats_recherche.items()],
+                        default=Value(3), output_field=IntegerField(),
+                    )
+                ).order_by('_prio_recherche')
+        if request.GET.get('specialite_formation', '').isdigit():
+            # Filtre dédié à la spécialité de FORMATION (SpecialiteFormation, référentiel
+            # diplômes) — distinct du paramètre `specialite` ci-dessous qui filtre par Metier
+            # (poste/profession). Les deux référentiels partageaient jusqu'ici le même nom de
+            # paramètre côté recherche libre, source de confusion (voir la vérification du
+            # 21/09/2026 contre REGLES_MATCHING).
+            spec_formation_id = int(request.GET['specialite_formation'])
             candidats = candidats.filter(
-                Q(titre_professionnel__icontains=search) |
-                Q(competences__icontains=search) |
-                Q(experiences_detail__titre_poste__icontains=search) |
-                Q(experiences_detail__description__icontains=search)
+                formations_detail__specialite_ref_id=spec_formation_id,
+                formations_detail__statut='OBTENU',
             ).distinct()
         if wilaya:
             candidats = candidats.filter(wilaya=wilaya)
         if diplome:
             candidats = candidats.filter(diplome=diplome)
-        if specialite:
-            candidats = candidats.filter(Q(specialite=specialite) | Q(secteur_souhaite=specialite)).distinct()
+        if specialite and specialite.isdigit():
+            # MIGRATION (R04) : élargit aux anciens codes redirigés vers ce métier (et
+            # réciproquement) — sans ça, un futur réimport ajoutant une redirection ferait
+            # disparaître silencieusement des candidats déjà en base d'une recherche par métier.
+            from ..referentiel_utils import ids_metier_avec_redirections
+            metier_ids = ids_metier_avec_redirections(specialite)
+            candidats = candidats.filter(Q(metier_id__in=metier_ids) | Q(metier_souhaite_id__in=metier_ids)).distinct()
         if mobilite:
             candidats = candidats.filter(mobilite=mobilite)
         if disponibilite:
@@ -867,7 +954,7 @@ class CVThequeView(APIView):
             scored = []
             for profil in candidats_list:
                 result = calculer_score_matching(profil.user, offre_match)
-                scored.append((profil, round(result['total'])))
+                scored.append((profil, _score_ou_zero(result)))
             scored.sort(key=lambda x: x[1], reverse=True)
             from ..paliers_utils import get_palier_actif
             palier = get_palier_actif(entreprise_user)
@@ -892,6 +979,8 @@ class CVThequeView(APIView):
             results = serializer.data
             for item in results:
                 item['score_offre'] = scores_map.get(item['user_id'], 0)
+                if search:
+                    item['champ_correspondant'] = resultats_recherche.get(item['user_id'], {}).get('champ')
             # Fil d'activité candidat "profil recommandé" (dashboard candidat, session
             # specs/important-features) — uniquement si score élevé, pas une simple
             # consultation (décision utilisateur). Throttlé à 1 entrée/24h par candidat pour
@@ -920,8 +1009,12 @@ class CVThequeView(APIView):
                 'recherche_avancee': _recherche_avancee_ok,
             })
 
+        # R07 : quand une recherche libre est active, la priorité de pertinence
+        # (_prio_recherche, posée juste au-dessus) passe toujours en tête de tri — le tri
+        # choisi par le recruteur ne départage qu'à égalité de priorité.
+        ordre_prio = ('_prio_recherche',) if search else ()
         if tri == 'nom_asc':
-            candidats = candidats.order_by('user__last_name', 'user__first_name')
+            candidats = candidats.order_by(*ordre_prio, 'user__last_name', 'user__first_name')
         elif tri == 'experience_desc':
             if 'duree_totale' not in str(candidats.query):
                 candidats = candidats.annotate(
@@ -932,9 +1025,9 @@ class CVThequeView(APIView):
                         )
                     )
                 )
-            candidats = candidats.order_by(F('duree_totale').desc(nulls_last=True))
+            candidats = candidats.order_by(*ordre_prio, F('duree_totale').desc(nulls_last=True))
         else:
-            candidats = candidats.order_by('-user__date_joined')
+            candidats = candidats.order_by(*ordre_prio, '-user__date_joined')
         from ..paliers_utils import get_palier_actif
         palier = get_palier_actif(entreprise_user)
         if palier is None:
@@ -946,7 +1039,11 @@ class CVThequeView(APIView):
             entreprise=entreprise_user, candidat_id__in=[p.user_id for p in result_page],
         ).values_list('candidat_id', flat=True))
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'unlocked_ids': unlocked_ids})
-        response = paginator.get_paginated_response(serializer.data)
+        results = serializer.data
+        if search:
+            for item in results:
+                item['champ_correspondant'] = resultats_recherche.get(item['user_id'], {}).get('champ')
+        response = paginator.get_paginated_response(results)
         response.data['credits_disponibles'] = credits_disponibles(entreprise_user)
         response.data['recherche_avancee'] = _recherche_avancee_ok
         return response

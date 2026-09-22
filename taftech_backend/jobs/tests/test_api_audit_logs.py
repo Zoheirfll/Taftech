@@ -21,7 +21,7 @@ class AuditLogTest(APITestCase):
         entreprise = ProfilEntreprise.objects.create(user=recruteur, nom_entreprise='TestCo', registre_commerce='RC123')
         offre = OffreEmploi.objects.create(
             entreprise=entreprise, titre='Dev', wilaya='Alger', diplome='LICENCE',
-            specialite='Informatique', missions='Dev', profil_recherche='Dev',
+            missions='Dev', profil_recherche='Dev',
             type_contrat='CDI', experience_requise='JUNIOR'
         )
         url = reverse('admin-offre-moderer', kwargs={'offre_id': offre.id})

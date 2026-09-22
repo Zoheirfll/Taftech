@@ -231,7 +231,7 @@ const AdminEntreprises = () => {
                   </td>
                   <td className="px-5 py-4">
                     <p className={`text-sm font-semibold ${tw.textStrong}`}>{ent.nom_entreprise}</p>
-                    <p className={`text-xs ${tw.textMuted} mt-0.5`}>{ent.secteur_activite}</p>
+                    <p className={`text-xs ${tw.textMuted} mt-0.5`}>{ent.secteur_activite_libelle || ent.secteur_activite}</p>
                     <p className={`text-xs font-mono ${tw.textMuted} mt-0.5`}>RC: {ent.registre_commerce}</p>
                   </td>
                   <td className="px-5 py-4">
@@ -308,7 +308,7 @@ const AdminEntreprises = () => {
                 <p className={`text-xs font-mono ${tw.textSlate800} ${tw.surface} border ${tw.borderBase} px-2 py-1.5 rounded`}>
                   RC: {selectedEntreprise.registre_commerce}
                 </p>
-                <p className={`text-xs font-medium ${tw.textMuted} mt-2`}>{selectedEntreprise.secteur_activite}</p>
+                <p className={`text-xs font-medium ${tw.textMuted} mt-2`}>{selectedEntreprise.secteur_activite_libelle || selectedEntreprise.secteur_activite}</p>
               </div>
               <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
                 <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>Contact recruteur</p>

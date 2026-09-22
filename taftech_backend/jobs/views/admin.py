@@ -14,7 +14,7 @@ import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
-    ProfilEntreprise, AuditLog, DemandeActivationPremium, Domaine, Secteur,
+    ProfilEntreprise, AuditLog, DemandeActivationPremium, Metier, GroupeMetier,
     Article, FaqItem, CompetenceReferentiel, BanniereAccueil,
     Palier, AbonnementEntreprise,
 )
@@ -243,17 +243,18 @@ class AdminSeoStatsAPIView(APIView):
     def get(self, request):
         base = settings.SITE_URL.rstrip('/')
 
-        offre = OffreEmploi.objects.select_related('entreprise').filter(
+        offre = OffreEmploi.objects.select_related('entreprise', 'metier', 'metier__groupe_principal', 'metier__groupe_principal__parent').filter(
             est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        ).only('titre', 'specialite', 'code_public', 'entreprise__slug').first()
+        ).only('titre', 'metier_id', 'code_public', 'entreprise__slug').first()
         nb_offres = OffreEmploi.objects.filter(
             est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
         ).count()
         exemple_offre = None
         if offre:
             from django.utils.text import slugify
-            domaine = Domaine.objects.select_related('secteur').filter(code=offre.specialite).first()
-            secteur_slug = slugify(domaine.secteur.libelle) if domaine else "offres-d-emploi"
+            groupe = offre.metier.groupe_principal if offre.metier else None
+            racine = groupe.parent if groupe and groupe.parent else groupe
+            secteur_slug = slugify(racine.libelle) if racine else "offres-d-emploi"
             titre_slug = slugify(offre.titre)
             chemin = f"{titre_slug}-{offre.code_public}" if titre_slug else offre.code_public
             exemple_offre = f"{base}/entreprises/{offre.entreprise.slug}/offres-d-emploi/{secteur_slug}/{chemin}/"
@@ -261,11 +262,11 @@ class AdminSeoStatsAPIView(APIView):
         entreprise = ProfilEntreprise.objects.filter(est_approuvee=True).only('slug').first()
         nb_entreprises = ProfilEntreprise.objects.filter(est_approuvee=True).count()
 
-        domaine_exemple = Domaine.objects.only('code', 'libelle').first()
-        nb_domaines = Domaine.objects.count()
+        domaine_exemple = Metier.objects.filter(selectionnable=True).only('id', 'libelle').first()
+        nb_domaines = Metier.objects.filter(selectionnable=True).count()
 
-        secteur_exemple = Secteur.objects.only('code', 'libelle').first()
-        nb_secteurs = Secteur.objects.count()
+        secteur_exemple = GroupeMetier.objects.filter(type_groupe='secteur_source').only('code', 'libelle').first()
+        nb_secteurs = GroupeMetier.objects.filter(type_groupe='secteur_source').count()
 
         wilaya_exemple = WILAYAS_CHOICES[0][0] if WILAYAS_CHOICES else None
         nb_wilayas = len(WILAYAS_CHOICES)
@@ -290,7 +291,7 @@ class AdminSeoStatsAPIView(APIView):
             },
             {
                 "type": "Métier",
-                "url": f"{base}/metiers/{domaine_exemple.code.lower()}-{_slugify(domaine_exemple.libelle)}/" if domaine_exemple else None,
+                "url": f"{base}/metiers/{domaine_exemple.id}-{_slugify(domaine_exemple.libelle)}/" if domaine_exemple else None,
                 "nb_pages_indexables": nb_domaines,
                 "ok": nb_domaines > 0,
             },
@@ -479,10 +480,11 @@ class ExportEntreprisesCSVAPIView(APIView):
         response['Content-Disposition'] = 'attachment; filename="entreprises_taftech.csv"'
         writer = csv.writer(response, delimiter=';')
         writer.writerow(['ID', 'Nom', 'Secteur', 'Wilaya', 'Approuvée', 'Email', 'Téléphone'])
+        from ..referentiel_utils import libelle_secteur_entreprise
         for ent in ProfilEntreprise.objects.all().order_by('-id'):
             writer.writerow([
                 ent.id, ent.nom_entreprise,
-                ent.get_secteur_activite_display() if ent.secteur_activite else "",
+                libelle_secteur_entreprise(ent.secteur_activite),
                 ent.wilaya_siege,
                 'Oui' if ent.est_approuvee else 'Non',
                 ent.user.email,
@@ -553,28 +555,28 @@ class AdminMarcheAPIView(APIView):
         # d'une comparaison de salaires qui n'a jamais eu de données côté candidat.
         offres_avec_salaire = OffreEmploi.objects.filter(
             salaire_propose__isnull=False, statut_moderation='APPROUVEE'
-        ).exclude(salaire_propose='').values('specialite', 'salaire_propose')
+        ).exclude(salaire_propose='').values('metier_id', 'salaire_propose')
         salaires_offres = {}
         for o in offres_avec_salaire:
             m = extraire_montant(o['salaire_propose'])
-            if m and o['specialite']:
-                salaires_offres.setdefault(o['specialite'], []).append(m)
+            if m and o['metier_id']:
+                salaires_offres.setdefault(o['metier_id'], []).append(m)
 
         nb_offres_par_secteur = {
-            row['specialite']: row['n']
+            row['metier_id']: row['n']
             for row in OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
-            .exclude(specialite__isnull=True).exclude(specialite='')
-            .values('specialite').annotate(n=Count('id'))
+            .exclude(metier_id__isnull=True)
+            .values('metier_id').annotate(n=Count('id'))
         }
         nb_candidatures_par_secteur = {
-            row['offre__specialite']: row['n']
-            for row in Candidature.objects.exclude(offre__specialite__isnull=True).exclude(offre__specialite='')
-            .values('offre__specialite').annotate(n=Count('id'))
+            row['offre__metier_id']: row['n']
+            for row in Candidature.objects.exclude(offre__metier_id__isnull=True)
+            .values('offre__metier_id').annotate(n=Count('id'))
         }
 
         tous_secteurs = set(list(salaires_offres.keys()) + list(nb_offres_par_secteur.keys()) + list(nb_candidatures_par_secteur.keys()))
         libelles_domaines = dict(
-            Domaine.objects.filter(code__in=tous_secteurs).values_list('code', 'libelle')
+            Metier.objects.filter(id__in=tous_secteurs).values_list('id', 'libelle')
         )
         tension_par_secteur = []
         for secteur in tous_secteurs:
@@ -599,12 +601,17 @@ class AdminMarcheAPIView(APIView):
         )
         top_secteurs = list(
             OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
-            .values('specialite').annotate(nb_offres=Count('id')).order_by('-nb_offres')[:10]
+            .exclude(metier_id__isnull=True)
+            .values('metier_id').annotate(nb_offres=Count('id')).order_by('-nb_offres')[:10]
+        )
+        libelles_top_secteurs = dict(
+            Metier.objects.filter(id__in=[s['metier_id'] for s in top_secteurs]).values_list('id', 'libelle')
         )
         for s in top_secteurs:
-            # Candidatures réellement déposées sur des offres de ce secteur — remplace l'ancien
+            # Candidatures réellement déposées sur des offres de ce métier — remplace l'ancien
             # `ProfilCandidat.secteur_souhaite` (préférence déclarée, très rarement renseignée).
-            s['nb_candidats'] = nb_candidatures_par_secteur.get(s['specialite'], 0)
+            s['nb_candidats'] = nb_candidatures_par_secteur.get(s['metier_id'], 0)
+            s['libelle'] = libelles_top_secteurs.get(s['metier_id'], s['metier_id'])
 
         matching_moyen = Candidature.objects.filter(
             score_matching__isnull=False

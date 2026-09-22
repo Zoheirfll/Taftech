@@ -35,7 +35,7 @@ class CVthequeAndAdvancedTests(APITestCase):
         self.cand = User.objects.create_user(username="cand_ia", email="cand_ia@test.com", role="CANDIDAT")
         
         self.profil_cand = ProfilCandidat.objects.create(
-            user=self.cand, wilaya="16 - Alger", specialite="IT", titre_professionnel="Dev React"
+            user=self.cand, wilaya="16 - Alger", titre_professionnel="Dev React"
         )
         
         # On lui donne 3 ans d'expérience
@@ -81,7 +81,6 @@ class CVthequeAndAdvancedTests(APITestCase):
             entreprise=entreprise,
             titre="Développeur Django",
             wilaya="16 - Alger",
-            specialite="IT",
             diplome="MASTER",
             experience_requise="3_5",
             type_contrat="CDI",
@@ -137,7 +136,7 @@ class CVthequeAndAdvancedTests(APITestCase):
         )
         offre_autre = OffreEmploi.objects.create(
             entreprise=autre_ent, titre="Dev Java", wilaya="31 - Oran",
-            specialite="IT", diplome="LICENCE", experience_requise="1_3",
+            diplome="LICENCE", experience_requise="1_3",
             type_contrat="CDD", statut_moderation="APPROUVEE",
         )
         self.client.force_authenticate(user=self.rh)

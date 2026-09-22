@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import OffreEmploi, ProfilEntreprise, Domaine, CompetenceOffre, OffreDiplomeAccepte
+from ..models import OffreEmploi, ProfilEntreprise, CompetenceOffre, OffreDiplomeAccepte, ExigenceImperative
 from .questionnaires import QuestionnaireSerializer
 
 
@@ -21,12 +21,13 @@ class OffreDiplomeAccepteSerializer(serializers.ModelSerializer):
 
 
 def _secteur_libelle_pour_offre(obj):
-    """Libellé du secteur ANEM parent du Domaine référencé par `specialite` —
-    utilisé côté frontend pour construire l'URL SEO imbriquée de l'offre."""
-    if not obj.specialite:
+    """Libellé du secteur (groupe racine) du Metier v2 référencé par `metier` — utilisé
+    côté frontend pour construire l'URL SEO imbriquée de l'offre."""
+    if not obj.metier_id:
         return None
-    domaine = Domaine.objects.select_related('secteur').filter(code=obj.specialite).first()
-    return domaine.secteur.libelle if domaine else None
+    groupe = obj.metier.groupe_principal
+    racine = groupe.parent if groupe and groupe.parent else groupe
+    return racine.libelle if racine else None
 
 
 class EntrepriseSimpleSerializer(serializers.ModelSerializer):
@@ -43,6 +44,14 @@ class EntrepriseSimpleSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
 
 
+class ExigenceImperativeSerializer(serializers.ModelSerializer):
+    """S12 — exigence impérative de l'offre (permis, habilitation...), jamais notée dans le
+    score de matching."""
+    class Meta:
+        model = ExigenceImperative
+        fields = ('id', 'label', 'description', 'justificatif_requis')
+
+
 class OffreEmploiSerializer(serializers.ModelSerializer):
     entreprise = EntrepriseSimpleSerializer(read_only=True)
     questionnaire = QuestionnaireSerializer(read_only=True)
@@ -50,7 +59,10 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     secteur_libelle = serializers.SerializerMethodField()
     competences_requises = CompetenceOffreSerializer(many=True, read_only=True)
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
     diplomes_acceptes = OffreDiplomeAccepteSerializer(many=True, read_only=True)
+    exigences_imperatives = ExigenceImperativeSerializer(many=True, read_only=True)
 
     class Meta:
         model = OffreEmploi
@@ -71,7 +83,7 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = (
-            'titre', 'wilaya', 'commune', 'diplome', 'specialite', 'metier',
+            'titre', 'wilaya', 'commune', 'diplome', 'metier',
             'description', 'missions', 'profil_recherche', 'competences', 'type_contrat',
             'experience_requise', 'nombre_postes', 'salaire_propose', 'questionnaire', 'date_expiration'
         )
@@ -94,16 +106,22 @@ class EntreprisePublicSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
     banniere_url = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
+    secteur_activite_libelle = serializers.SerializerMethodField()
 
     class Meta:
         model = ProfilEntreprise
         fields = (
-            'id', 'slug', 'nom_entreprise', 'secteur_activite', 'wilaya_siege', 'commune_siege',
+            'id', 'slug', 'nom_entreprise', 'secteur_activite', 'secteur_activite_libelle',
+            'wilaya_siege', 'commune_siege',
             'adresse_complete', 'taille_entreprise', 'description', 'culture_entreprise',
             'annee_creation',
             'logo_url', 'banniere_url', 'photos', 'linkedin', 'site_web',
             'offres_actives', 'nombre_offres_actives',
         )
+
+    def get_secteur_activite_libelle(self, obj):
+        from ..referentiel_utils import libelle_secteur_entreprise
+        return libelle_secteur_entreprise(obj.secteur_activite)
 
     def _offres_actives_qs(self, obj):
         return obj.offres.filter(

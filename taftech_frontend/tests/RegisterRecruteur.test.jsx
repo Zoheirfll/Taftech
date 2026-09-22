@@ -33,7 +33,7 @@ vi.mock("../src/Services/authService", () => ({
 }));
 
 vi.mock("../src/Services/jobsService", () => ({
-  jobsService: { getConstants: vi.fn() },
+  jobsService: { getConstants: vi.fn(), getNomenclature: vi.fn() },
 }));
 
 vi.mock("../src/theme", async (importOriginal) => {
@@ -57,10 +57,15 @@ const mockConstants = {
   secteurs: [{ value: "IT", label: "Informatique" }],
 };
 
+const mockNomenclature = {
+  secteurs: [{ code: "G", libelle: "Informatique" }],
+};
+
 describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.getNomenclature.mockResolvedValue(mockNomenclature);
   });
 
   afterEach(() => {

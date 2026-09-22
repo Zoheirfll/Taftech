@@ -3,7 +3,6 @@ import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
-import DomaineLabel from "../../Components/DomaineLabel";
 import {
   RefreshCw,
   TrendingUp,
@@ -429,10 +428,10 @@ const AdminStatistiques = () => {
                         const max = marche.top_secteurs[0].nb_offres;
                         const pct = (s.nb_offres / max) * 100;
                         return (
-                          <div key={s.specialite}>
+                          <div key={s.metier_id}>
                             <div className="flex justify-between items-center mb-1">
                               <span className={`text-xs font-medium ${tw.textMuted700}`}>
-                                {i + 1}. <DomaineLabel code={s.specialite} />
+                                {i + 1}. {s.libelle}
                               </span>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs ${tw.textMuted} flex items-center gap-1`}>

@@ -6,7 +6,6 @@ import Select from "react-select";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { FormationReferentielSelect } from "../../Components/FormationReferentielSelect";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
@@ -74,7 +73,6 @@ const CreateJob = () => {
     wilaya: "",
     commune: "",
     diplome: "",
-    specialite: "",
     metier: "",
     metier_libelle: "",
     experience_requise: "DEBUTANT",
@@ -103,9 +101,48 @@ const CreateJob = () => {
   const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
   const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
 
+  // Suggestions compétences/spécialités du métier choisi (référentiel v2, MetierCompetence/
+  // MetierFormation) — purement informatif, le recruteur ajoute ce qu'il veut, rien d'imposé.
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], diplomes_specialites: [] });
+
+  // Exigences impératives (S12, REGLES_MATCHING) — permis, habilitation, droit d'exercice...
+  // Distinctes du diplôme, jamais notées dans le score de matching : un simple filtre
+  // d'éligibilité que le candidat déclare et que le recruteur vérifie manuellement.
+  const [exigencesImperatives, setExigencesImperatives] = useState([]);
+  const [draftExigenceLabel, setDraftExigenceLabel] = useState("");
+  const [draftExigenceDescription, setDraftExigenceDescription] = useState("");
+  const [draftExigenceJustificatif, setDraftExigenceJustificatif] = useState(false);
+
+  const ajouterExigence = () => {
+    const label = draftExigenceLabel.trim();
+    if (!label) return;
+    if (exigencesImperatives.some((e) => e.label.toLowerCase() === label.toLowerCase())) {
+      toast.error("Cette exigence est déjà dans la liste.");
+      return;
+    }
+    setExigencesImperatives((prev) => [...prev, {
+      label, description: draftExigenceDescription.trim(), justificatif_requis: draftExigenceJustificatif,
+    }]);
+    setDraftExigenceLabel("");
+    setDraftExigenceDescription("");
+    setDraftExigenceJustificatif(false);
+  };
+
+  const retirerExigence = (label) => {
+    setExigencesImperatives((prev) => prev.filter((e) => e.label !== label));
+  };
+
   useEffect(() => {
     jobsService.getNomenclatureFormation().then(setNomenclatureFormation).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!formData.metier) {
+      setSuggestionsPourMetier({ competences: [], diplomes_specialites: [] });
+      return;
+    }
+    jobsService.getMetierSuggestions(formData.metier).then(setSuggestionsPourMetier);
+  }, [formData.metier]);
 
   const handleAjouterCoupleAccepte = () => {
     if (!draftDiplomeId || !draftSpecialiteId || !nomenclatureFormation) return;
@@ -122,6 +159,14 @@ const CreateJob = () => {
     setDiplomesAcceptes((prev) => [...prev, { id: couple.id, diplome_libelle: diplomeLabel, specialite_libelle: specialiteLabel }]);
     setDraftDiplomeId("");
     setDraftSpecialiteId("");
+  };
+
+  const ajouterCoupleSuggere = (item) => {
+    // `item` vient de MetierSuggestionsAPIView — le couple existe forcément déjà dans le
+    // référentiel (`id` = vraie clé DiplomeSpecialite), pas besoin de re-vérifier comme
+    // handleAjouterCoupleAccepte.
+    if (diplomesAcceptes.some((d) => d.id === item.id)) return;
+    setDiplomesAcceptes((prev) => [...prev, { id: item.id, diplome_libelle: item.diplome_libelle, specialite_libelle: item.specialite_libelle }]);
   };
 
   const handleCompInputChange = async (value) => {
@@ -185,7 +230,7 @@ const CreateJob = () => {
     setFormData({ ...formData, titre: value });
     if (value.length >= 2) {
       try {
-        const data = await jobsService.getMetiers(value, "", formData.specialite);
+        const data = await jobsService.searchMetiers(value);
         setMetierSuggestions(data.slice(0, 10));
         setShowSuggestions(true);
       } catch {
@@ -223,7 +268,7 @@ const CreateJob = () => {
     try {
       const result = await iaService.genererOffreIA({
         titre: titrePourGeneration,
-        specialite: formData.specialite,
+        metier: formData.metier,
         diplome: formData.diplome,
         wilaya: formData.wilaya,
         experience_requise: formData.experience_requise,
@@ -235,10 +280,11 @@ const CreateJob = () => {
         missions: result.missions || prev.missions,
         profil_recherche: result.profil_recherche || prev.profil_recherche,
         competences: result.competences || prev.competences,
-        // Le recruteur n'a peut-être saisi que le titre — l'IA devine la spécialité via le
-        // référentiel métiers ; on ne l'auto-sélectionne que si le champ était vide (jamais
+        // Le recruteur n'a peut-être saisi que le titre — l'IA devine le métier via le
+        // référentiel v2 ; on ne l'auto-sélectionne que si le champ était vide (jamais
         // écraser un choix déjà fait manuellement par le recruteur).
-        specialite: prev.specialite || result.specialite_resolue || prev.specialite,
+        metier: prev.metier || result.metier_resolu || prev.metier,
+        metier_libelle: prev.metier ? prev.metier_libelle : (result.metier_resolu_libelle || prev.metier_libelle),
       }));
       setQuestionsEntretien(result.questions_entretien || []);
       if (result.competences_requises?.length > 0) {
@@ -262,7 +308,7 @@ const CreateJob = () => {
     const newErrors = {};
     if (!formData.titre) newErrors.titre = "Le titre du poste est requis.";
     if (!formData.wilaya) newErrors.wilaya = "La wilaya est requise.";
-    if (!formData.specialite) newErrors.specialite = "La spécialité est requise.";
+    if (!formData.metier) newErrors.metier = "Le métier est requis.";
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       toast.error("Veuillez corriger les champs manquants.");
@@ -280,6 +326,7 @@ const CreateJob = () => {
         date_expiration: formData.date_expiration || null,
         competences_requises: competencesRequises,
         diplomes_acceptes: diplomesAcceptes.map((d) => d.id),
+        exigences_imperatives: exigencesImperatives,
       };
       delete payload.metier_libelle;
       await jobsService.creerOffre(payload);
@@ -344,13 +391,13 @@ const CreateJob = () => {
                       <div className="max-h-52 overflow-y-auto">
                         {metierSuggestions.map((m) => (
                           <button
-                            key={m.id}
+                            key={m.metier_id}
                             type="button"
-                            onMouseDown={() => { setFormData({ ...formData, titre: m.titre }); setShowSuggestions(false); }}
+                            onMouseDown={() => { setFormData({ ...formData, titre: m.appellation_libelle }); setShowSuggestions(false); }}
                             className={`w-full text-left px-4 py-2.5 transition-colors border-b ${tw.borderSubtle} last:border-0 ${tw.bgTealHover}`}
                           >
-                            <p className={`text-sm font-medium ${tw.textStrong}`}>{m.titre}</p>
-                            <p className={`text-xs ${tw.textMuted700}`}>{m.domaine_label}</p>
+                            <p className={`text-sm font-medium ${tw.textStrong}`}>{m.appellation_libelle}</p>
+                            <p className={`text-xs ${tw.textMuted700}`}>{m.metier_libelle}</p>
                           </button>
                         ))}
                       </div>
@@ -419,34 +466,25 @@ const CreateJob = () => {
                 styles={selectStylesTeal}
               />
             </Field>
-            {/* Fix 3 : validation spécialité */}
-            <div id="field-specialite">
-              <SecteurDomaineSelect
-                value={formData.specialite}
-                onChange={(domaineCode) => {
-                  setFormData((p) => ({ ...p, specialite: domaineCode }));
-                  if (errors.specialite) setErrors((p) => ({ ...p, specialite: "" }));
-                }}
-                styles={selectStylesTeal}
-                required
-              />
-              {errors.specialite && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.specialite}</p>}
+            <div id="field-metier">
+              <Field label="Métier" required>
+                <MetierAutocomplete
+                  value={formData.metier_libelle}
+                  onSelect={(item) => {
+                    setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.appellation_libelle }));
+                    if (errors.metier) setErrors((p) => ({ ...p, metier: "" }));
+                  }}
+                />
+                {errors.metier && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.metier}</p>}
+              </Field>
             </div>
-          </div>
-          <div className="mt-4">
-            <Field label="Métier précis (référentiel v2, optionnel — améliore le matching)">
-              <MetierAutocomplete
-                value={formData.metier_libelle}
-                onSelect={(item) => setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.appellation_libelle }))}
-              />
-            </Field>
           </div>
           <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
             <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.textStrong}`}>
               Diplômes/spécialités acceptés (optionnel)
             </p>
             <p className="text-xs text-slate-600 mb-3">
-              Sans couple précisé ici, le critère "Diplôme attendu" ci-dessus (niveau minimum) reste utilisé.
+              "Diplôme attendu" (niveau minimum) est affiché sur l'annonce mais n'est plus utilisé pour le score de matching — précisez un ou plusieurs couples ici pour que le diplôme et la spécialité de formation soient réellement évalués sur les candidatures.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
               <FormationReferentielSelect
@@ -454,6 +492,7 @@ const CreateJob = () => {
                 specialiteId={draftSpecialiteId}
                 onChangeDiplome={setDraftDiplomeId}
                 onChangeSpecialite={setDraftSpecialiteId}
+                permettreAutre={false}
               />
               <button
                 type="button"
@@ -474,6 +513,85 @@ const CreateJob = () => {
                       onClick={() => setDiplomesAcceptes((prev) => prev.filter((x) => x.id !== d.id))}
                       className="hover:text-red-600"
                     >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {suggestionsPourMetier.diplomes_specialites.length > 0 && (
+              <div className="mt-3">
+                <p className="text-[11px] font-medium text-slate-500 mb-1.5">
+                  Suggéré pour ce métier — cliquez pour ajouter :
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestionsPourMetier.diplomes_specialites
+                    .filter((s) => !diplomesAcceptes.some((d) => d.id === s.id))
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => ajouterCoupleSuggere(s)}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed ${tw.borderBase} hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 text-slate-600`}
+                      >
+                        + {s.diplome_libelle} — {s.specialite_libelle}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${tw.textStrong}`}>
+              Exigences impératives (optionnel)
+            </p>
+            <p className="text-xs text-slate-600 mb-3">
+              Permis, habilitation, droit d'exercice, certification... — distinct du diplôme, jamais utilisé pour calculer le score de matching. Le candidat déclare s'il y répond au moment de postuler, vous vérifiez ensuite.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+              <div>
+                <label className={tw.formLabel}>Exigence</label>
+                <input
+                  type="text"
+                  value={draftExigenceLabel}
+                  onChange={(e) => setDraftExigenceLabel(e.target.value)}
+                  placeholder="Ex: Permis B"
+                  className={tw.inputColorsWhite}
+                />
+              </div>
+              <div>
+                <label className={tw.formLabel}>Précision (optionnel)</label>
+                <input
+                  type="text"
+                  value={draftExigenceDescription}
+                  onChange={(e) => setDraftExigenceDescription(e.target.value)}
+                  placeholder="Ex: Bulletin n°3 du casier judiciaire"
+                  className={tw.inputColorsWhite}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-700 h-fit pb-2.5 whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={draftExigenceJustificatif}
+                  onChange={(e) => setDraftExigenceJustificatif(e.target.checked)}
+                />
+                Justificatif requis
+              </label>
+              <button
+                type="button"
+                onClick={ajouterExigence}
+                disabled={!draftExigenceLabel.trim()}
+                className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
+              >
+                Ajouter
+              </button>
+            </div>
+            {exigencesImperatives.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {exigencesImperatives.map((e) => (
+                  <span key={e.label} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
+                    {e.label}{e.justificatif_requis ? " 📎" : ""}
+                    <button type="button" onClick={() => retirerExigence(e.label)} className="hover:text-red-600">
                       <X size={12} />
                     </button>
                   </span>
@@ -663,6 +781,27 @@ const CreateJob = () => {
                   ))}
                 </select>
               </div>
+              {suggestionsPourMetier.competences.filter((s) => !competencesRequises.some((c) => c.label.toLowerCase() === s.label.toLowerCase())).length > 0 && (
+                <div className="mt-3">
+                  <p className={`text-[11px] font-medium ${tw.textMuted700} mb-1.5`}>
+                    Suggéré pour ce métier — cliquez pour ajouter :
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestionsPourMetier.competences
+                      .filter((s) => !competencesRequises.some((c) => c.label.toLowerCase() === s.label.toLowerCase()))
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => ajouterCompetenceRequise(s.label)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed ${tw.borderBase} hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 text-slate-600`}
+                        >
+                          + {s.label}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
               {competencesRequises.length > 0 && (
                 <div className={`mt-3 p-3 rounded-lg text-xs whitespace-pre-line ${tw.surfaceMuted} ${tw.textMuted700}`}>
                   <p className={`font-semibold mb-1 ${tw.textMuted}`}>Aperçu du texte affiché sur l'annonce :</p>

@@ -39,7 +39,7 @@ def _make_candidat(email="cand_invit@test.dz"):
 def _make_offre(entreprise):
     return OffreEmploi.objects.create(
         entreprise=entreprise, titre="Poste Test", wilaya="16 - Alger",
-        specialite="L18", diplome="LICENCE", experience_requise="DEBUTANT",
+        diplome="LICENCE", experience_requise="DEBUTANT",
         type_contrat="CDI", description="Desc", statut_moderation="APPROUVEE",
         est_active=True, est_cloturee=False,
     )

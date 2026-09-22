@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from ..models import (
-    CompetenceCandidat, TypeDocument, DocumentCandidat, PartageDocument,
+    CompetenceCandidat, CompetenceReferentiel, TypeDocument, DocumentCandidat, PartageDocument,
     ConfigRendezVous, DisponibiliteRecurrente, JourBloque, RendezVous,
     ActiviteProfil, Candidature, ProfilEntreprise, AccesCandidatDebloque,
 )
@@ -170,8 +170,9 @@ class CompetenceCandidatAPIView(APIView):
             return Response({"error": "Le nom de la compétence est requis."}, status=400)
         if niveau not in dict(CompetenceCandidat.NIVEAU_CHOICES):
             niveau = 'DEBUTANT'
+        ref = CompetenceReferentiel.objects.filter(label__iexact=label).first()
         comp, created = CompetenceCandidat.objects.update_or_create(
-            profil=profil, label=label, defaults={'niveau': niveau}
+            profil=profil, label=label, defaults={'niveau': niveau, 'competence_ref': ref}
         )
         _resynchroniser_competences_texte(profil)
         return Response(

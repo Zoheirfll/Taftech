@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from ..models import Metier, SpecialiteFormation, TypeDiplome
+from ..referentiel_utils import normaliser_recherche
 from ..serializers.referentiel_admin import (
     AdminMetierSerializer, AdminSpecialiteFormationSerializer, AdminTypeDiplomeSerializer,
 )
@@ -22,8 +23,13 @@ from ..serializers.referentiel_admin import (
 def _paginer(queryset, serializer_class, request, champ_recherche='libelle'):
     search = request.query_params.get('search', '')
     if search:
+        # `cle_recherche` est déjà normalisé côté import (accents retirés) — la requête
+        # tapée par l'admin doit donc l'être aussi, sinon "développeur" (avec accents,
+        # la saisie la plus naturelle) ne matche plus rien. `libelle` garde ses accents,
+        # pas besoin de normaliser dans ce cas.
+        mots = normaliser_recherche(search).split() if champ_recherche == 'cle_recherche' else search.strip().split()
         q = Q()
-        for mot in search.strip().split():
+        for mot in mots:
             q &= Q(**{f'{champ_recherche}__icontains': mot})
         queryset = queryset.filter(q)
     page = int(request.query_params.get('page', 1))

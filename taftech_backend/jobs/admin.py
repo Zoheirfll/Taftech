@@ -3,8 +3,7 @@ from .models import ProfilEntreprise, OffreEmploi
 from .models import Candidature
 from .models import (
     ProfilCandidat, ExperienceCandidat, FormationCandidat,
-    Notification, AlerteEmploi, OffreSauvegardee, CandidatureSpontanee, Questionnaire, MetierReferentiel, ProfilCandidatFavori,
-    Secteur, Domaine, SousDomaine
+    Notification, AlerteEmploi, OffreSauvegardee, CandidatureSpontanee, Questionnaire, ProfilCandidatFavori,
 )
 
 @admin.register(ProfilEntreprise)
@@ -25,7 +24,7 @@ class OffreEmploiAdmin(admin.ModelAdmin):
             'fields': ('entreprise', 'titre', 'wilaya', 'commune', 'est_active') # Ajout de commune
         }),
         ('Ciblage du Profil (Nouveau)', {
-            'fields': ('diplome', 'specialite') # Ajout de diplome et specialite
+            'fields': ('diplome', 'metier')
         }),
         ('Détails du Poste', {
             'fields': ('missions', 'profil_recherche')
@@ -60,7 +59,7 @@ class CandidatureAdmin(admin.ModelAdmin):
 # ==========================================
 @admin.register(ProfilCandidat)
 class ProfilCandidatAdmin(admin.ModelAdmin):
-    list_display = ('user', 'titre_professionnel', 'wilaya', 'specialite')
+    list_display = ('user', 'titre_professionnel', 'wilaya', 'metier')
     search_fields = ('user__email', 'user__last_name', 'user__first_name', 'titre_professionnel')
     list_filter = ('wilaya', 'mobilite')
 
@@ -104,29 +103,6 @@ class CandidatureSpontaneeAdmin(admin.ModelAdmin):
 class QuestionnaireAdmin(admin.ModelAdmin):
     list_display = ('titre', 'recruteur', 'date_creation')
     search_fields = ('titre', 'recruteur__email')
-
-@admin.register(Secteur)
-class SecteurAdmin(admin.ModelAdmin):
-    list_display = ('code', 'libelle')
-    search_fields = ('code', 'libelle')
-
-@admin.register(Domaine)
-class DomaineAdmin(admin.ModelAdmin):
-    list_display = ('code', 'libelle', 'secteur')
-    list_filter = ('secteur',)
-    search_fields = ('code', 'libelle')
-
-@admin.register(SousDomaine)
-class SousDomaineAdmin(admin.ModelAdmin):
-    list_display = ('libelle', 'domaine')
-    list_filter = ('domaine__secteur',)
-    search_fields = ('libelle',)
-
-@admin.register(MetierReferentiel)
-class MetierReferentielAdmin(admin.ModelAdmin):
-    list_display = ('titre', 'secteur_code', 'domaine', 'code_fiche', 'est_actif')
-    list_filter = ('secteur_code', 'est_actif')
-    search_fields = ('titre', 'code_fiche', 'fiche_metier')
 
 @admin.register(ProfilCandidatFavori)
 class ProfilCandidatFavoriAdmin(admin.ModelAdmin):

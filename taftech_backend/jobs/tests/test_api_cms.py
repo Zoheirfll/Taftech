@@ -116,6 +116,16 @@ class CompetenceAPITest(CMSTestBase):
         response = self.client.post(reverse("admin-competences"), {"label": "Python"})
         self.assertEqual(response.status_code, 400)
 
+    def test_autocomplete_trouve_par_synonyme_alias_competences(self):
+        # ALIAS_COMPETENCES (référentiel v2) doit permettre de retrouver une compétence par
+        # un sigle/synonyme (ex: "ETL"), pas seulement par son libellé canonique complet.
+        CompetenceReferentiel.objects.create(
+            label="Pipelines de données ETL", actif=True, synonymes="ETL, ELT",
+        )
+        response = self.client.get(reverse("competences-autocomplete"), {"search": "ETL"})
+        labels = [c["label"] for c in response.data]
+        self.assertIn("Pipelines de données ETL", labels)
+
 
 # ─── Articles / Blog ────────────────────────────────────────────────────────
 

@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import InfoBanner from "../../Components/InfoBanner";
-import DomaineLabel from "../../Components/DomaineLabel";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import Select from "react-select";
@@ -9,7 +8,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl, candidatFichierUrl, documentPartageFichierUrl } from "../../utils/mediaUrl";
 import { selectStylesTeal, tw } from "../../theme";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import {
@@ -69,6 +68,7 @@ const CVTheque = () => {
   const [search, setSearch] = useState("");
   const [wilaya, setWilaya] = useState("");
   const [specialite, setSpecialite] = useState("");
+  const [specialiteLibelle, setSpecialiteLibelle] = useState("");
   const [diplome, setDiplome] = useState("");
   const [experience, setExperience] = useState("");
   const [mobilite, setMobilite] = useState("");
@@ -679,13 +679,14 @@ const CVTheque = () => {
               styles={selectStylesTeal}
             />
             <div className="min-w-55">
-              <SecteurDomaineSelect
-                value={specialite}
-                onChange={(domaineCode) => {
-                  setSpecialite(domaineCode);
+              <MetierAutocomplete
+                value={specialiteLibelle}
+                placeholder="Métier..."
+                onSelect={(item) => {
+                  setSpecialite(String(item.metier_id));
+                  setSpecialiteLibelle(item.appellation_libelle);
                   setCurrentPage(1);
                 }}
-                styles={selectStylesTeal}
               />
             </div>
             <Select
@@ -1165,16 +1166,16 @@ const CVTheque = () => {
                             ` · ${selectedCandidat.commune}`}
                         </span>
                       )}
-                      {selectedCandidat.diplome && (
+                      {(selectedCandidat.diplome_ref_libelle || selectedCandidat.diplome) && (
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <GraduationCap size={12} />
-                          {selectedCandidat.diplome}
+                          {selectedCandidat.diplome_ref_libelle || selectedCandidat.diplome}
                         </span>
                       )}
-                      {selectedCandidat.specialite && (
+                      {selectedCandidat.metier_libelle && (
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                           <Briefcase size={12} />
-                          <DomaineLabel code={selectedCandidat.specialite} />
+                          {selectedCandidat.metier_libelle}
                         </span>
                       )}
                     </div>
@@ -1253,9 +1254,9 @@ const CVTheque = () => {
                         </p>
                         <p className={`text-sm mt-0.5 ${tw.textMuted}`}>
                           {exp.entreprise}
-                          {exp.secteur && (
+                          {exp.metier_libelle && (
                             <span className={`font-normal ${tw.textMuted}`}>
-                              {" "}<DomaineLabel code={exp.secteur} prefix="· " />
+                              {" "}· {exp.metier_libelle}
                             </span>
                           )}
                         </p>
@@ -1296,8 +1297,27 @@ const CVTheque = () => {
                         <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {form.diplome || "Diplôme non précisé"}
                         </p>
+                        {(form.diplome_ref_libelle || form.specialite_ref_libelle) && (
+                          <p className="flex flex-wrap items-center gap-1 mt-1">
+                            {form.diplome_ref_libelle && (
+                              <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
+                                {form.diplome_ref_libelle}
+                              </span>
+                            )}
+                            {form.specialite_ref_libelle && (
+                              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-teal-50 text-teal-700">
+                                {form.specialite_ref_libelle}
+                              </span>
+                            )}
+                            {form.statut && form.statut !== "OBTENU" && (
+                              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-700">
+                                {form.statut === "EN_COURS" ? "En cours" : form.statut === "INTERROMPU" ? "Interrompu" : form.statut}
+                              </span>
+                            )}
+                          </p>
+                        )}
                         {form.description && (
-                          <p className={`text-xs font-medium ${tw.textTeal}`}>
+                          <p className={`text-xs font-medium mt-1 ${tw.textTeal}`}>
                             {form.description}
                           </p>
                         )}

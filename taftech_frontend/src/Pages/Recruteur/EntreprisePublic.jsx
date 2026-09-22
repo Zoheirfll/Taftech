@@ -104,8 +104,7 @@ const EntreprisePublic = () => {
   if (!entreprise) return null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const secteurLabel = constants.secteurs.find((s) => s.value === entreprise.secteur_activite)?.label
-    || entreprise.secteur_activite || "Secteur non défini";
+  const secteurLabel = entreprise.secteur_activite_libelle || entreprise.secteur_activite || "Secteur non défini";
 
   // Wilaya : "31 - Oran" → "Oran". Déduplique si commune identique à la ville
   const wilayaVille = entreprise.wilaya_siege?.split(" - ")[1] || entreprise.wilaya_siege || "";

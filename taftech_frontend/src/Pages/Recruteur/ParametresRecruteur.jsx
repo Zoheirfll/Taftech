@@ -71,6 +71,7 @@ const ParametresRecruteur = () => {
   const [newPhotoLegende, setNewPhotoLegende] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
+  const [secteursEntreprise, setSecteursEntreprise] = useState([]);
 
   // Notifications (recruteur uniquement)
   const [notifForm, setNotifForm] = useState({
@@ -215,6 +216,15 @@ const ParametresRecruteur = () => {
     };
     load();
   }, [role]);
+
+  // Secteur d'entreprise — même référentiel v2 que la navigation publique "Offres par
+  // secteur" (16 ANEM + secteurs précis ajoutés par TAFTECH), pas l'ancienne liste figée.
+  useEffect(() => {
+    jobsService
+      .getNomenclature()
+      .then((n) => setSecteursEntreprise((n.secteurs || []).map((s) => ({ value: s.code, label: s.libelle }))))
+      .catch((err) => reportError("ECHEC_CHARGEMENT_SECTEURS_ENTREPRISE", err));
+  }, []);
 
   const getCommunesOptions = (wilayaValue) => {
     if (!wilayaValue) return [];
@@ -822,9 +832,9 @@ const ParametresRecruteur = () => {
                   Secteur d'activité
                 </label>
                 <Select
-                  options={constants.secteurs}
+                  options={secteursEntreprise}
                   value={
-                    constants.secteurs.find(
+                    secteursEntreprise.find(
                       (s) => s.value === entrepriseForm.secteur_activite,
                     ) || null
                   }

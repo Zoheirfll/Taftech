@@ -8,15 +8,13 @@ from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
-from django.db.models import Q, F
 import os
-import random
 import tempfile
-from ..models import OffreEmploi, ProfilCandidat, Candidature, MetierReferentiel
-from ..serializers import OffreEmploiSerializer, MetierReferentielSerializer
+from ..models import OffreEmploi, ProfilCandidat, Candidature
+from ..serializers import OffreEmploiSerializer
 from ..matcher import calculer_score_matching
 from ..matching_cache import scores_offres_actives_pour_candidat
-from ..cv_parser import parse_cv, extract_specialite
+from ..cv_parser import parse_cv
 from .equipe import get_entreprise_for_user
 from ..throttles import PublicReadThrottle, FileUploadThrottle
 
@@ -88,15 +86,12 @@ Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
 Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre). Pour "competences_structurees", propose 3 à 6 entrées maximum, avec un mélange raisonnable d'Obligatoire/Souhaitée."""
 
 
-def _deviner_secteur_experience(titre_poste, description="", secteur_groq=""):
-    """Code Domaine ANEM d'une expérience. Priorité au choix de Groq (déjà informé du
-    métier réel via le CV entier) s'il est valide ; sinon repli sur le référentiel
-    métiers par mots-clés, moins fiable sur des titres/descriptions génériques."""
-    from ..models import Domaine
-    if secteur_groq and Domaine.objects.filter(code=secteur_groq).exists():
-        return secteur_groq
-    from ..referentiel_utils import resoudre_domaine_depuis_texte
-    return resoudre_domaine_depuis_texte(titre_poste, description)
+def _deviner_metier_experience(titre_poste, description=""):
+    """Metier (référentiel v2) d'une expérience — repli déterministe (mots-clés) utilisé
+    quand l'agent de classification dédié (metier_agent, RAG+Groq) n'a rien retourné pour
+    cette expérience. Retourne un objet Metier ou None."""
+    from ..referentiel_utils import resoudre_metier_depuis_texte
+    return resoudre_metier_depuis_texte(titre_poste, description)
 
 
 class GroqThrottle(UserRateThrottle):
@@ -185,142 +180,44 @@ class ParserCVAPIView(APIView):
             tmp_file.close()
             result = parse_cv(tmp_file.name, cv_name)
             experiences = result.get('experiences', [])
-            from ..domaine_agent import classifier_domaines_experiences, SPECIALITE_INDEX
-            classifications = classifier_domaines_experiences(
+            from ..domaine_agent import classifier_metiers_experiences, SPECIALITE_INDEX
+            from ..models import Metier
+            classifications = classifier_metiers_experiences(
                 experiences, titre_professionnel=result.get('titre_professionnel')
             )
+            metiers_par_id = {
+                m.id: m.libelle for m in Metier.objects.filter(pk__in=set(classifications.values()))
+            }
             for i, exp in enumerate(experiences):
-                if isinstance(exp, dict):
-                    exp['secteur'] = classifications.get(i) or _deviner_secteur_experience(
-                        exp.get('titre_poste'), exp.get('description'), exp.get('secteur')
-                    )
+                if not isinstance(exp, dict):
+                    continue
+                metier_id = classifications.get(i)
+                if metier_id:
+                    exp['metier'] = metier_id
+                    exp['metier_libelle'] = metiers_par_id.get(metier_id)
+                else:
+                    metier = _deviner_metier_experience(exp.get('titre_poste'), exp.get('description'))
+                    exp['metier'] = metier.id if metier else None
+                    exp['metier_libelle'] = metier.libelle if metier else None
             if SPECIALITE_INDEX in classifications:
-                result['specialite'] = classifications[SPECIALITE_INDEX]
+                result['metier'] = classifications[SPECIALITE_INDEX]
+                result['metier_libelle'] = metiers_par_id.get(classifications[SPECIALITE_INDEX])
+
+            from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte
+            for f in result.get('formations', []):
+                if not isinstance(f, dict):
+                    continue
+                type_diplome, specialite = resoudre_diplome_et_specialite_depuis_texte(f.get('diplome'))
+                f['diplome_ref'] = type_diplome.id if type_diplome else None
+                f['diplome_ref_libelle'] = type_diplome.libelle if type_diplome else None
+                f['specialite_ref'] = specialite.id if specialite else None
+                f['specialite_ref_libelle'] = specialite.libelle if specialite else None
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
             if os.path.exists(tmp_file.name):
                 os.unlink(tmp_file.name)
-
-
-class MetierReferentielAPIView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [PublicReadThrottle]
-
-    def get(self, request):
-        metiers = MetierReferentiel.objects.filter(est_actif=True)
-        secteur = request.query_params.get('secteur')
-        domaine = request.query_params.get('domaine')
-        sous_domaine = request.query_params.get('sous_domaine')
-        search = request.query_params.get('search')
-        if secteur:
-            metiers = metiers.filter(secteur_code=secteur)
-        if domaine:
-            metiers = metiers.filter(domaine__code=domaine)
-        if sous_domaine:
-            metiers = metiers.filter(sous_domaine_id=sous_domaine)
-        if search:
-            q = Q()
-            for mot in search.strip().split():
-                q &= Q(titre__icontains=mot)
-            metiers = metiers.filter(q)
-        return Response(MetierReferentielSerializer(metiers[:30], many=True).data)
-
-
-class MetierReferentielAdminAPIView(APIView):
-    permission_classes = [IsAdminUser]
-
-    def get(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        from django.core.paginator import Paginator
-        metiers = MetierReferentiel.objects.all()
-        search = request.query_params.get('search', '')
-        page = int(request.query_params.get('page', 1))
-        if search:
-            q = Q()
-            for mot in search.strip().split():
-                q &= Q(titre__icontains=mot)
-            metiers = metiers.filter(q)
-        paginator = Paginator(metiers, 20)
-        page_obj = paginator.get_page(page)
-        return Response({
-            'results': MetierReferentielSerializer(page_obj.object_list, many=True).data,
-            'count': paginator.count,
-            'total_pages': paginator.num_pages,
-        })
-
-    def post(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        serializer = MetierReferentielSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-    def put(self, request, pk=None):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        try:
-            metier = MetierReferentiel.objects.get(pk=pk)
-        except MetierReferentiel.DoesNotExist:
-            return Response({'error': 'Introuvable.'}, status=404)
-        serializer = MetierReferentielSerializer(metier, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-    def delete(self, request, pk=None):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        try:
-            MetierReferentiel.objects.get(pk=pk).delete()
-            return Response({'message': 'Supprimé.'})
-        except MetierReferentiel.DoesNotExist:
-            return Response({'error': 'Introuvable.'}, status=404)
-
-
-class SuggestionsCarriereAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [GroqThrottle]
-
-    def get(self, request):
-        if request.user.role != 'CANDIDAT':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        try:
-            profil = request.user.profil_candidat
-        except Exception:
-            return Response({'metiers': []})
-        metiers = []
-        if profil.specialite:
-            metiers_qs = list(MetierReferentiel.objects.filter(
-                domaine__code=profil.specialite, est_actif=True
-            ).exclude(titre=profil.titre_professionnel).values(
-                'id', 'titre', domaine_code=F('domaine__code'), domaine_label=F('domaine__libelle')
-            ))
-            seed = hash(f"{request.user.id}_{profil.specialite or ''}")
-            random.seed(seed)
-            random.shuffle(metiers_qs)
-            metiers = metiers_qs[:20]
-        if len(metiers) < 5 and profil.titre_professionnel:
-            q = Q()
-            for mot in profil.titre_professionnel.strip().split():
-                if len(mot) > 3:
-                    q |= Q(titre__icontains=mot)
-            metiers_extra = list(MetierReferentiel.objects.filter(
-                q, est_actif=True
-            ).exclude(titre=profil.titre_professionnel).values('id', 'titre', 'domaine__code', 'domaine__libelle')[:20])
-            metiers = metiers + metiers_extra
-        from ..models import Domaine
-        domaine_obj = Domaine.objects.filter(code=profil.specialite).first() if profil.specialite else None
-        return Response({
-            'metiers': metiers[:20],
-            'profil_titre': profil.titre_professionnel,
-            'profil_secteur': domaine_obj.libelle if domaine_obj else profil.specialite,
-        })
 
 
 def _appel_groq(messages, max_tokens=500, temperature=None):
@@ -355,21 +252,16 @@ class AnalyseCarriereGroqAPIView(APIView):
         ]
         formations = [f"{f.diplome} à {f.etablissement}" for f in profil.formations_detail.all()]
 
-        from ..models import Domaine
-        def _libelle_domaine(code):
-            if not code:
-                return None
-            d = Domaine.objects.filter(code=code).first()
-            return d.libelle if d else code
-
+        metier_actuel = profil.metier.libelle if profil.metier else None
+        metier_souhaite = profil.metier_souhaite.libelle if profil.metier_souhaite else None
         profil_text = f"""
 Titre : {profil.titre_professionnel or 'Non renseigné'}
 Diplôme : {profil.diplome or 'Non renseigné'}
-Spécialité : {_libelle_domaine(profil.specialite) or 'Non renseigné'}
+Métier : {metier_actuel or 'Non renseigné'}
 Compétences : {profil.competences or 'Non renseigné'}
 Expériences : {', '.join(experiences) if experiences else 'Aucune'}
 Formations : {', '.join(formations) if formations else 'Aucune'}
-Secteur souhaité : {_libelle_domaine(profil.secteur_souhaite) or 'Non renseigné'}
+Métier souhaité : {metier_souhaite or 'Non renseigné'}
 """
         try:
             system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
@@ -449,7 +341,7 @@ class AnalyseGroqRecruteurAPIView(APIView):
             prompt_source
             .replace("{offre_titre}", str(offre.titre))
             .replace("{entreprise}", str(offre.entreprise.nom_entreprise))
-            .replace("{specialite}", str(offre.specialite))
+            .replace("{specialite}", str(offre.metier.libelle if offre.metier else 'Non précisée'))
             .replace("{type_contrat}", str(offre.type_contrat))
             .replace("{offre_wilaya}", str(offre.wilaya))
             .replace("{nom_candidat}", str(nom))
@@ -491,7 +383,7 @@ class GenererOffreIAAPIView(APIView):
             return Response({'error': 'Fonctionnalité réservée aux comptes avec un abonnement actif.'}, status=403)
 
         titre = request.data.get('titre', '').strip()
-        specialite = request.data.get('specialite', '').strip()
+        metier_id = request.data.get('metier') or None
         diplome = request.data.get('diplome', '').strip()
         wilaya = request.data.get('wilaya', '').strip()
         experience = request.data.get('experience_requise', '').strip()
@@ -500,18 +392,16 @@ class GenererOffreIAAPIView(APIView):
         if not titre:
             return Response({'error': 'Le titre du poste est requis.'}, status=400)
 
-        # `specialite` est un code Domaine ANEM (ex: "L18"), pas un texte lisible —
-        # on le traduit en libellé avant de l'envoyer à l'IA (sinon le prompt contient
-        # littéralement "Spécialité : L18", incompréhensible pour Groq). Si le recruteur
-        # n'a saisi que le titre du poste (flux "génération rapide"), on devine la
-        # spécialité via le référentiel métiers — même logique que le parser CV candidat.
-        from ..models import Domaine
-        from ..referentiel_utils import resoudre_domaine_depuis_texte
-        specialite_resolue = specialite
-        if not specialite_resolue:
-            specialite_resolue = resoudre_domaine_depuis_texte(titre) or ''
-        domaine_obj = Domaine.objects.filter(code=specialite_resolue).first() if specialite_resolue else None
-        specialite_libelle = domaine_obj.libelle if domaine_obj else (specialite_resolue or 'Non précisée')
+        # Si le recruteur n'a saisi que le titre du poste (flux "génération rapide"),
+        # on devine le métier via le référentiel v2 — même logique que le parser CV candidat.
+        from ..models import Metier
+        from ..referentiel_utils import resoudre_metier_depuis_texte
+        metier_obj = Metier.objects.filter(pk=metier_id).first() if metier_id else None
+        metier_resolu = None
+        if not metier_obj:
+            metier_resolu = resoudre_metier_depuis_texte(titre)
+            metier_obj = metier_resolu
+        specialite_libelle = metier_obj.libelle if metier_obj else 'Non précisée'
 
         from ..models import CompetenceReferentiel
         labels_referentiel = list(CompetenceReferentiel.objects.filter(actif=True).values_list('label', flat=True))
@@ -618,7 +508,8 @@ class GenererOffreIAAPIView(APIView):
                 'competences': data.get('competences', ''),
                 'competences_requises': competences_structurees[:6],
                 'questions_entretien': questions[:6],
-                'specialite_resolue': specialite_resolue,
+                'metier_resolu': metier_resolu.id if metier_resolu else None,
+                'metier_resolu_libelle': metier_resolu.libelle if metier_resolu else None,
             })
         except Exception as e:
             logger.error("Erreur GenererOffreIA : %s", e)

@@ -8,7 +8,6 @@ import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User, Chec
 import { confirmToast } from "../../utils/confirmToast";
 import Select from "react-select";
 import { selectStylesTeal, tw } from "../../theme";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
 import DomaineLabel from "../../Components/DomaineLabel";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
@@ -101,7 +100,10 @@ const CandidaturesSpontanees = () => {
   const spontaneesFiltrees = spontanees.filter((c) => {
     if (filtres.wilaya && c.wilaya !== filtres.wilaya) return false;
     if (filtres.diplome && c.diplome !== filtres.diplome) return false;
-    if (filtres.specialite && c.specialite !== filtres.specialite) return false;
+    if (
+      filtres.specialite &&
+      !(c.specialite || "").toLowerCase().includes(filtres.specialite.toLowerCase())
+    ) return false;
     if (filtres.lue === "lue" && !c.lue) return false;
     if (filtres.lue === "non_lue" && c.lue) return false;
     return true;
@@ -146,13 +148,6 @@ const CandidaturesSpontanees = () => {
             setFiltres({ ...filtres, diplome: opt ? opt.value : "" })
           }
         />
-        <div className="min-w-50">
-          <SecteurDomaineSelect
-            value={filtres.specialite}
-            onChange={(domaineCode) => setFiltres({ ...filtres, specialite: domaineCode })}
-            styles={selectStylesTeal}
-          />
-        </div>
         <Select
           options={[
             { value: "lue", label: "Lues" },
@@ -164,6 +159,13 @@ const CandidaturesSpontanees = () => {
           onChange={(opt) =>
             setFiltres({ ...filtres, lue: opt ? opt.value : "" })
           }
+        />
+        <input
+          type="text"
+          value={filtres.specialite}
+          onChange={(e) => setFiltres({ ...filtres, specialite: e.target.value })}
+          placeholder="Spécialité..."
+          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
         />
       </div>
 

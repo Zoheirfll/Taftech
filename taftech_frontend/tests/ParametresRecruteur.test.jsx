@@ -29,6 +29,7 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
     getConstants: vi.fn(),
+    getNomenclature: vi.fn(),
     getParametresRecruteur: vi.fn(),
     updateProfilEntreprise: vi.fn(),
     updateParametresRecruteur: vi.fn(),
@@ -88,11 +89,16 @@ const mockNotifs = {
   message_refus_auto: "",
 };
 
+const mockNomenclature = {
+  secteurs: [{ code: "IT", libelle: "Informatique" }],
+};
+
 describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getDashboard.mockResolvedValue(mockDashboard);
     jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.getNomenclature.mockResolvedValue(mockNomenclature);
     jobsService.getParametresRecruteur.mockResolvedValue(mockNotifs);
     // Défaut pour api.get (accounts/me/) — peut être surchargé par test
     api.get.mockResolvedValue({ data: { est_compte_google: false } });

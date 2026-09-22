@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from jobs.models import (
-    ProfilEntreprise, OffreEmploi, Candidature, ProfilCandidat
+    ProfilEntreprise, OffreEmploi, Candidature, ProfilCandidat, GroupeMetier, Metier
 )
 
 User = get_user_model()
@@ -50,12 +50,18 @@ class AdminMarcheAPITestCase(TestCase):
             est_approuvee=True
         )
 
+        secteur = GroupeMetier.objects.create(code="TST-SECT", libelle="Secteur Test", type_groupe="secteur_source")
+        domaine_it = GroupeMetier.objects.create(code="TST-DOM-IT", libelle="Domaine IT", type_groupe="domaine_source", parent=secteur)
+        domaine_finance = GroupeMetier.objects.create(code="TST-DOM-FIN", libelle="Domaine Finance", type_groupe="domaine_source", parent=secteur)
+        self.metier_it = Metier.objects.create(code="TST-M-IT", libelle="IT", groupe_principal=domaine_it)
+        self.metier_finance = Metier.objects.create(code="TST-M-FIN", libelle="FINANCE", groupe_principal=domaine_finance)
+
         # Offres avec salaires
         self.offre1 = OffreEmploi.objects.create(
             entreprise=self.entreprise,
             titre="Développeur Full-Stack",
             wilaya="31 - Oran",
-            specialite="IT",
+            metier=self.metier_it,
             type_contrat="CDI",
             experience_requise="CONFIRME",
             salaire_propose="80000",
@@ -66,7 +72,7 @@ class AdminMarcheAPITestCase(TestCase):
             entreprise=self.entreprise,
             titre="Comptable",
             wilaya="16 - Alger",
-            specialite="FINANCE",
+            metier=self.metier_finance,
             type_contrat="CDI",
             experience_requise="DEBUTANT",
             salaire_propose="60000",
@@ -77,7 +83,7 @@ class AdminMarcheAPITestCase(TestCase):
             entreprise=self.entreprise,
             titre="Ingénieur IT",
             wilaya="31 - Oran",
-            specialite="IT",
+            metier=self.metier_it,
             type_contrat="CDD",
             experience_requise="CONFIRME",
             salaire_propose="90000",
@@ -85,15 +91,11 @@ class AdminMarcheAPITestCase(TestCase):
             est_active=True
         )
 
-        # Profils candidats avec salaires souhaités
+        # Profils candidats
         ProfilCandidat.objects.filter(user=self.candidat1).update(
-            secteur_souhaite="IT",
-            salaire_souhaite="100000",
             wilaya="31 - Oran"
         )
         ProfilCandidat.objects.filter(user=self.candidat2).update(
-            secteur_souhaite="FINANCE",
-            salaire_souhaite="70000",
             wilaya="16 - Alger"
         )
 
@@ -147,7 +149,7 @@ class AdminMarcheAPITestCase(TestCase):
         secteurs = response.data["top_secteurs"]
         self.assertGreater(len(secteurs), 0)
         # IT a 2 offres, FINANCE a 1
-        self.assertEqual(secteurs[0]["specialite"], "IT")
+        self.assertEqual(secteurs[0]["libelle"], "IT")
         self.assertEqual(secteurs[0]["nb_offres"], 2)
 
     def test_HP5_matching_moyen_calcule(self):
@@ -167,7 +169,7 @@ class AdminMarcheAPITestCase(TestCase):
         tension = response.data["tension_par_secteur"]
         self.assertGreater(len(tension), 0)
         it_data = next(
-            (s for s in tension if s["secteur"] == "IT"), None
+            (s for s in tension if s["secteur"] == self.metier_it.libelle), None
         )
         self.assertIsNotNone(it_data)
         # Moyenne offres IT : (80000 + 90000) / 2 = 85000
@@ -208,7 +210,6 @@ class AdminMarcheAPITestCase(TestCase):
             entreprise=self.entreprise,
             titre="Poste avec salaire textuel",
             wilaya="31 - Oran",
-            specialite="IT",
             type_contrat="CDI",
             experience_requise="DEBUTANT",
             salaire_propose="Négociable",

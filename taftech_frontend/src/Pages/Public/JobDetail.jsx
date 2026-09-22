@@ -6,11 +6,10 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { TooltipIcon } from "../../Components/Tooltip";
-import DomaineLabel from "../../Components/DomaineLabel";
 import {
   ArrowLeft, MapPin, Calendar, Briefcase, GraduationCap,
   Banknote, TrendingUp, FileText, Zap, CheckCircle, XCircle,
-  Building2, ChevronDown, Users,
+  Building2, ChevronDown, Users, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import { tw } from "../../theme";
 import Seo from "../../Components/Seo";
@@ -580,10 +579,10 @@ const JobDetail = () => {
                     <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><GraduationCap size={12} className={tw.iconPrimary500} />{DIPLOME_LABELS[job.diplome] || job.diplome}</p>
                   </div>
                 )}
-                {job.specialite && (
+                {job.metier_libelle && (
                   <div className={`${tw.bgPrimarySoft} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textPrimaryLight} uppercase tracking-wider mb-1`}>Spécialité</p>
-                    <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}><DomaineLabel code={job.specialite} /></p>
+                    <p className={`text-[10px] font-semibold ${tw.textPrimaryLight} uppercase tracking-wider mb-1`}>Métier</p>
+                    <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>{job.metier_libelle}</p>
                   </div>
                 )}
                 {job.salaire_propose && (
@@ -663,6 +662,47 @@ const JobDetail = () => {
                 ) : (
                   renderTexte(job.competences)
                 )}
+              </div>
+            )}
+
+            {job.diplomes_acceptes?.length > 0 && (
+              <div className={`${tw.cardColors} rounded-xl p-6`}>
+                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Diplômes acceptés</h2>
+                <div className="flex flex-wrap gap-2">
+                  {job.diplomes_acceptes.map((d) => (
+                    <span key={d.id} className={tw.badgePrimary}>
+                      <GraduationCap size={12} className="inline mr-1" />
+                      {d.diplome_libelle}{d.specialite_libelle ? ` · ${d.specialite_libelle}` : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {job.exigences_imperatives?.length > 0 && (
+              <div className={`${tw.cardColors} rounded-xl p-6`}>
+                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle} flex items-center gap-2`}>
+                  <ShieldCheck size={16} className={tw.iconPrimary500} /> Exigences impératives
+                </h2>
+                <p className={`text-xs ${tw.textMuted700} mb-3`}>
+                  Ces conditions sont indispensables pour ce poste — vous les confirmerez lors de votre candidature.
+                </p>
+                <div className="space-y-2">
+                  {job.exigences_imperatives.map((ex) => (
+                    <div key={ex.id} className={`flex items-start gap-2 p-3 rounded-lg ${tw.surfaceMuted}`}>
+                      <AlertTriangle size={14} className={`${tw.textAmber500} shrink-0 mt-0.5`} />
+                      <div>
+                        <p className={`text-sm font-semibold ${tw.textEmphasis800}`}>
+                          {ex.label}
+                          {ex.justificatif_requis && (
+                            <span className={`ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${tw.badgeNeutral}`}>Justificatif requis</span>
+                          )}
+                        </p>
+                        {ex.description && <p className={`text-xs ${tw.textMuted700} mt-0.5`}>{ex.description}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

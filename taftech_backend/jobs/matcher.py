@@ -208,13 +208,14 @@ def competences_score_structure(profil, competences_requises):
 # Pertinence d'une expérience
 # ---------------------------------------------------------------------------
 def _experience_pertinente(exp, offre):
-    secteur_exp = getattr(exp, 'secteur', None)
-    if secteur_exp and isinstance(secteur_exp, str) and offre.specialite:
-        # Même code SECTEURS_CHOICES → match direct
-        if normaliser(secteur_exp) == normaliser(offre.specialite):
-            return True, 1.0
-        compat, ratio = specialites_compatibles(secteur_exp, offre.specialite)
-        if compat and ratio >= 0.8:
+    from .models import Metier
+    metier_exp = getattr(exp, 'metier', None)
+    metier_offre = getattr(offre, 'metier', None)
+    if isinstance(metier_exp, Metier) and isinstance(metier_offre, Metier):
+        me = metier_exp.metier_canonique or metier_exp
+        mo = metier_offre.metier_canonique or metier_offre
+        compat, ratio = metiers_compatibles(me, mo)
+        if compat:
             return True, ratio
 
     if exp.titre_poste and offre.titre:
@@ -227,16 +228,6 @@ def _experience_pertinente(exp, offre):
         mots_off = {m for m in _mots(offre.titre) if len(m) >= 5}
         if mots_exp & mots_off:
             return True, 0.70
-
-    # Filet de sécurité : le domaine ANEM deviné depuis titre+description de
-    # l'expérience correspond-il au même Secteur/Domaine que l'offre ?
-    if offre.specialite and (exp.titre_poste or exp.description):
-        from .referentiel_utils import resoudre_domaine_depuis_texte
-        domaine_devine = resoudre_domaine_depuis_texte(exp.titre_poste, exp.description)
-        if domaine_devine:
-            compat, ratio = specialites_compatibles(domaine_devine, offre.specialite)
-            if compat:
-                return True, min(ratio, 0.65)
 
     return False, 0.0
 
@@ -287,333 +278,279 @@ def _deduire_annees_sans_chevauchement(experiences_pertinentes):
     return total
 
 
-# ---------------------------------------------------------------------------
-# Algorithme principal
-# ---------------------------------------------------------------------------
-def _calculer_score_algo(candidat_user, offre):
-    details = {
-        "specialite": 0.0, "region": 0.0,
-        "diplome": 0.0, "experience": 0.0, "competences": 0.0
-    }
-    explications = {
-        "specialite": "Aucune spécialité renseignée ou domaine non concordant.",
-        "region": "Éloignement géographique sans mobilité nationale.",
-        "diplome": "Le niveau de diplôme ne correspond pas aux exigences.",
-        "experience": "Manque d'expérience pertinente dans cette spécialité.",
-        "competences": "Aucune correspondance trouvée dans les compétences."
-    }
-    points_forts = []
-    ecarts = []
-    flags = []  # Fix point 8 : flags disqualifiants
-    donnees_manquantes = []  # Référentiel v2 : critères non évalués faute de donnée (≠ incompatible)
-
-    profil = candidat_user.profil_candidat
-
-    # ==========================================
-    # 1. SPÉCIALITÉ (Max 25%)
-    # Référentiel v2 (17/09/2026) : comparaison précise au niveau Metier si candidat ET offre
-    # l'ont renseigné (`profil.metier`/`offre.metier`) — repli sur l'ancienne comparaison texte
-    # (codes Domaine ANEM) sinon, pour ne rien casser sur les fiches pas encore migrées.
-    # ==========================================
-    from .models import Metier
-    metier_candidat = getattr(profil, 'metier', None)
-    metier_offre = getattr(offre, 'metier', None)
-    if isinstance(metier_candidat, Metier) and isinstance(metier_offre, Metier):
-        mc = metier_candidat.metier_canonique or metier_candidat
-        mo = metier_offre.metier_canonique or metier_offre
-        compatible, ratio = metiers_compatibles(mc, mo)
-        if compatible:
-            if ratio >= 0.95:
-                details["specialite"] = 25.0
-                explications["specialite"] = f"Métier parfaitement aligné ({mc.libelle})."
-                points_forts.append(f"Métier parfaitement aligné sur le poste ({mc.libelle}).")
-            elif ratio >= 0.8:
-                details["specialite"] = 20.0
-                explications["specialite"] = "Métier du même groupe que celui recherché."
-                points_forts.append("Métier proche de celui recherché par l'offre.")
-            else:
-                details["specialite"] = 12.0
-                explications["specialite"] = "Métier partiellement compatible."
-                points_forts.append("Métier partiellement compatible avec le poste.")
-        else:
-            ecarts.append(f"Le métier du candidat ({mc.libelle}) diffère de celui recherché ({mo.libelle}).")
-    else:
-        specialite_candidat = profil.specialite or profil.secteur_souhaite
-        if specialite_candidat and offre.specialite:
-            compatible, ratio = specialites_compatibles(specialite_candidat, offre.specialite)
-            if compatible:
-                if ratio >= 0.95:
-                    details["specialite"] = 25.0
-                    explications["specialite"] = "Spécialité parfaitement alignée."
-                    points_forts.append("Spécialité parfaitement alignée sur le poste.")
-                elif ratio >= 0.8:
-                    details["specialite"] = 20.0
-                    explications["specialite"] = "Domaine très proche de celui de l'offre."
-                    points_forts.append("Domaine d'activité très proche du poste.")
-                else:
-                    details["specialite"] = 12.0
-                    explications["specialite"] = "Domaine partiellement compatible."
-                    points_forts.append("Domaine partiellement compatible avec le poste.")
-            else:
-                ecarts.append("Le domaine d'activité du candidat diffère de l'offre.")
-        else:
-            donnees_manquantes.append("specialite")
-            ecarts.append("Spécialité ou secteur non renseigné sur le profil.")
-
-    # ==========================================
-    # 2. LOCALISATION (Max 20%)
-    # Fix point 4 : NATIONALE vaut autant que présence locale si même wilaya
-    # ==========================================
-    wilaya_c = normaliser(profil.wilaya)
-    wilaya_o = normaliser(offre.wilaya)
-    meme_wilaya = wilaya_c and wilaya_o and wilaya_c == wilaya_o
-
-    if meme_wilaya:
-        commune_c = normaliser(profil.commune)
-        commune_o = normaliser(offre.commune)
-        if commune_c and commune_o and commune_c == commune_o:
-            details["region"] = 20.0
-            explications["region"] = "Réside dans la même commune (Proximité idéale)."
-            points_forts.append(f"Proximité locale idéale (Commune de {profil.commune}).")
-        else:
-            details["region"] = 15.0
-            explications["region"] = f"Réside dans la même wilaya ({profil.wilaya})."
-            points_forts.append(f"Résidence dans la même Wilaya ({profil.wilaya}).")
-        # NATIONALE + même wilaya = bonus commune possible → déjà géré ci-dessus
-    elif profil.mobilite == 'NATIONALE':
-        details["region"] = 15.0
-        explications["region"] = "Mobilité nationale sur toute l'Algérie."
-        points_forts.append("Mobilité nationale totale.")
-    elif profil.mobilite == 'REGIONALE':
-        if wilaya_c and wilaya_o and _meme_region(wilaya_c, wilaya_o):
-            details["region"] = 12.0
-            explications["region"] = "Mobilité régionale — wilaya voisine."
-            points_forts.append(f"Mobilité régionale couvrant la zone de {offre.wilaya}.")
-        else:
-            details["region"] = 5.0
-            explications["region"] = "Mobilité régionale — wilaya éloignée."
-            ecarts.append(f"Candidat basé à {profil.wilaya or 'wilaya inconnue'}, wilaya cible éloignée.")
-    else:
-        if not wilaya_c:
-            donnees_manquantes.append("region")
-        ecarts.append(f"Candidat basé hors zone ({profil.wilaya or 'inconnue'}) sans mobilité.")
-
-    # ==========================================
-    # 3. DIPLÔME (Max 20%)
-    # Référentiel v2 (17/09/2026) : si le recruteur a défini une liste explicite de couples
-    # diplôme+spécialité acceptés (OffreDiplomeAccepte), le score se base exclusivement sur ces
-    # couples — jamais en combinant le diplôme d'une FormationCandidat avec la spécialité d'une
-    # autre (règle client explicite). Sinon, repli intégral sur l'ancienne hiérarchie de niveau.
-    # ==========================================
+def _score_competences(profil, offre):
+    """S10 — score compétences uniquement si l'offre a sélectionné au moins une
+    CompetenceOffre ; sinon critère désactivé (None), plus de repli texte libre dans le
+    score total (le texte libre reste disponible pour la recherche)."""
     try:
-        diplomes_acceptes = list(offre.diplomes_acceptes.all())
+        competences_requises = list(offre.competences_requises.all())
     except TypeError:
-        diplomes_acceptes = []
+        competences_requises = []
+    if not competences_requises:
+        return None
 
-    if diplomes_acceptes:
-        couples_acceptes = {(da.couple.diplome_id, da.couple.specialite_id) for da in diplomes_acceptes}
-        diplomes_acceptes_seuls = {c[0] for c in couples_acceptes}
-        try:
-            formations_obtenues = [
-                f for f in profil.formations_detail.all()
-                if f.statut == 'OBTENU' and f.diplome_ref_id
-            ]
-        except TypeError:
-            formations_obtenues = []
+    try:
+        aucune_declaree = (
+            not (getattr(profil, 'competences', None) or '').strip()
+            and not profil.competences_detail.exists()
+        )
+    except (TypeError, AttributeError):
+        aucune_declaree = False
+    if aucune_declaree:
+        return {"score": 0.0, "connu": False}
 
-        if not formations_obtenues:
-            details["diplome"] = 6.0
-            donnees_manquantes.append("diplome")
-            explications["diplome"] = "Diplôme non précisé avec le référentiel détaillé — correspondance non vérifiable."
-            ecarts.append("Précisez vos formations (diplôme + spécialité) pour un score plus fiable sur ce critère.")
-        else:
-            match_complet = any(
-                (f.diplome_ref_id, f.specialite_ref_id) in couples_acceptes for f in formations_obtenues
-            )
-            match_diplome_seul = any(f.diplome_ref_id in diplomes_acceptes_seuls for f in formations_obtenues)
-            if match_complet:
-                details["diplome"] = 20.0
-                explications["diplome"] = "Diplôme et spécialité correspondent à un couple accepté par l'offre."
-                points_forts.append("Formation (diplôme + spécialité) exactement acceptée par l'offre.")
-            elif match_diplome_seul:
-                details["diplome"] = 12.0
-                explications["diplome"] = "Type de diplôme accepté, mais spécialité différente de celle attendue."
-                ecarts.append("La spécialité de votre formation ne correspond pas exactement à celle recherchée.")
-            else:
-                explications["diplome"] = "Aucune de vos formations ne correspond aux couples diplôme/spécialité acceptés."
-                ecarts.append("Diplôme/spécialité non compatibles avec les exigences de cette offre.")
-    else:
-        hierarchie = {
-            'NON_DIPLOMANTE': 0, 'NIVEAU_SECONDAIRE': 1, 'FORMATION_PRO': 2,
-            'NIVEAU_TERMINAL': 3, 'BACCALAUREAT': 4, 'CERTIFICATION': 5,
-            'UNIVERSITAIRE_SANS_DIPLOME': 6, 'TS': 7, 'LICENCE': 8,
-            'MASTER_1': 9, 'MASTER_2': 10, 'MAGISTERE': 11, 'DOCTORAT': 12
-        }
-        niveau_requis = hierarchie.get(offre.diplome, 0) if offre.diplome else 0
-        niveau_candidat = hierarchie.get(profil.diplome, 0) if profil.diplome else 0
+    ratio, _trouvees, _manquantes = competences_score_structure(profil, competences_requises)
+    return {"score": round(ratio, 4), "connu": True}
 
-        if niveau_requis == 0:
-            details["diplome"] = 20.0
-            explications["diplome"] = "Aucun diplôme spécifique exigé."
-            points_forts.append("Critère de diplôme ouvert.")
-        elif niveau_candidat >= niveau_requis:
-            details["diplome"] = 20.0
-            explications["diplome"] = "Niveau d'études requis atteint ou dépassé."
-            points_forts.append("Niveau d'études requis validé.")
-        elif niveau_candidat == niveau_requis - 1:
-            details["diplome"] = 10.0
-            explications["diplome"] = "Niveau d'études légèrement inférieur au requis."
-            ecarts.append("Niveau d'études légèrement en dessous du requis.")
-        elif niveau_candidat >= niveau_requis - 3:
-            details["diplome"] = 5.0
-            explications["diplome"] = "Niveau d'études nettement inférieur."
-            ecarts.append("Niveau d'études insuffisant pour ce poste.")
-        else:
-            if niveau_candidat == 0:
-                donnees_manquantes.append("diplome")
-            ecarts.append("Diplôme insuffisant pour ce poste.")
 
-    # ==========================================
-    # 4. EXPÉRIENCE (Max 20%)
-    # Fix point 6 : déduplication des chevauchements
-    # Fix point 7 : fallback sur niveau_experience déclaré
-    # ==========================================
-    periodes_pertinentes = []  # (debut, fin, confiance)
-    annees_total = 0.0
+_MAP_EXP_ANNEES = {
+    'STAGIAIRE': 0, 'DEBUTANT': 0, 'JEUNE_DIPLOME': 1,
+    'CONFIRME': 3, 'MANAGER': 5, 'RESPONSABLE_EQUIPE': 5, 'CADRE_DIRIGEANT': 8,
+}
 
+
+def _score_experience(profil, offre):
+    """S09 — score continu min(mois_pertinents/mois_minimum, 1). minimum=0 -> critère
+    désactivé (None), pas de crédit automatique pour un poste "ouvert aux débutants"."""
+    annees_requises = _MAP_EXP_ANNEES.get(getattr(offre, 'experience_requise', None), 0)
+    if annees_requises == 0:
+        return None
+
+    periodes_pertinentes = []
+    annees_total_connu = False
     if hasattr(profil, 'experiences_detail'):
         for exp in profil.experiences_detail.all():
             annees, debut, fin = _annees_experience(exp)
-            annees_total += annees
+            if annees:
+                annees_total_connu = True
             pertinente, confiance = _experience_pertinente(exp, offre)
             if pertinente and debut is not None:
                 periodes_pertinentes.append((debut, fin, confiance))
 
-    # Fix point 6 : années sans chevauchement
     annees_pertinentes = _deduire_annees_sans_chevauchement(periodes_pertinentes)
+    if not annees_total_connu and not getattr(profil, 'niveau_experience', None):
+        return {"score": 0.0, "connu": False}
 
-    map_exp = {
-        'STAGIAIRE': 0, 'DEBUTANT': 0, 'JEUNE_DIPLOME': 1,
-        'CONFIRME': 3, 'MANAGER': 5, 'RESPONSABLE_EQUIPE': 5, 'CADRE_DIRIGEANT': 8
-    }
-    annees_requises = map_exp.get(offre.experience_requise, 0)
+    ratio = min(annees_pertinentes / annees_requises, 1.0) if annees_requises else 1.0
+    return {"score": round(ratio, 4), "connu": True}
 
-    # Fix point 7 : niveau_experience déclaré comme fallback
-    niveau_exp_declare = getattr(profil, 'niveau_experience', None)
-    niveau_exp_val = map_exp.get(niveau_exp_declare, 0) if niveau_exp_declare else 0
 
-    if annees_requises == 0:
-        # Fix point 5 : DEBUTANT → pas de cadeau automatique à 12 pts
-        # On valorise si le candidat a quelque chose, sinon score minimal
-        if annees_pertinentes >= 1:
-            details["experience"] = 20.0
-            explications["experience"] = f"Poste junior — expérience pertinente valorisée ({round(annees_pertinentes, 1)} ans)."
-            points_forts.append(f"Expérience pertinente valorisée ({round(annees_pertinentes, 1)} ans).")
-        elif annees_total >= 0.5 or niveau_exp_val >= 1:
-            details["experience"] = 14.0
-            explications["experience"] = "Poste ouvert aux débutants — candidat avec antécédents professionnels."
-            points_forts.append("Poste ouvert aux débutants.")
-        else:
-            # Vraiment aucune expérience : 8 pts (pas 12 — on ne sur-récompense pas le vide)
-            details["experience"] = 8.0
-            explications["experience"] = "Poste ouvert aux débutants/juniors."
-            points_forts.append("Poste ouvert aux débutants.")
-    elif annees_pertinentes >= annees_requises:
-        details["experience"] = 20.0
-        explications["experience"] = f"Expérience pertinente validée ({round(annees_pertinentes, 1)} ans dans ce domaine)."
-        points_forts.append(f"Expérience requise atteinte ({round(annees_pertinentes, 1)} ans dans ce domaine).")
-    elif annees_pertinentes >= annees_requises * 0.6:
-        details["experience"] = 12.0
-        explications["experience"] = f"Expérience pertinente partielle ({round(annees_pertinentes, 1)} ans / {annees_requises} requis)."
-        ecarts.append(f"Expérience dans le domaine légèrement insuffisante ({round(annees_pertinentes, 1)} ans / {annees_requises} requis).")
-    elif annees_pertinentes >= annees_requises * 0.3:
-        details["experience"] = 6.0
-        explications["experience"] = f"Peu d'expérience pertinente ({round(annees_pertinentes, 1)} ans)."
-        ecarts.append(f"Expérience dans le domaine trop courte ({round(annees_pertinentes, 1)} ans / {annees_requises} requis).")
-    elif niveau_exp_val >= annees_requises:
-        # Niveau déclaré compatible mais expériences détaillées absentes → 14/20
-        # (pas 10 — le candidat CONFIRME qui n'a pas rempli ses détails ne doit pas être trop pénalisé)
-        details["experience"] = 14.0
-        explications["experience"] = f"Niveau d'expérience déclaré compatible ({niveau_exp_declare}) — détails non renseignés."
-        ecarts.append("Renseignez vos expériences détaillées pour un score plus précis.")
-    else:
-        if annees_total == 0 and not niveau_exp_declare:
-            donnees_manquantes.append("experience")
-        ecarts.append(f"Manque d'expérience pertinente dans ce secteur ({round(annees_pertinentes, 1)} ans / {annees_requises} requis).")
-
-    # ==========================================
-    # 5. COMPÉTENCES (Max 15%)
-    # ==========================================
+def _score_diplome_specialite(profil, offre):
+    """S05/S06/S07/S08 — diplôme et spécialité-formation comme deux critères pondérés
+    indépendants, évalués sur la MÊME FormationCandidat (jamais un diplôme d'une formation
+    combiné à la spécialité d'une autre — T10). Retourne (contrib_diplome, contrib_specialite,
+    formation_retenue). (None, None, None) si l'offre ne définit aucun couple accepté
+    (critères non demandés, S01)."""
     try:
-        competences_requises = list(offre.competences_requises.all())
+        diplomes_acceptes = list(offre.diplomes_acceptes.all())
     except TypeError:
-        # `offre` est un Mock dans certains tests unitaires — pas de compétences structurées,
-        # repli sur le scoring texte libre ci-dessous.
-        competences_requises = []
-    if competences_requises:
-        ratio, trouvees, manquantes = competences_score_structure(profil, competences_requises)
-        details["competences"] = round(ratio * 15.0, 2)
-        n_obligatoires_manquantes = sum(1 for c in manquantes if c.type_exigence == 'OBLIGATOIRE')
-        if ratio >= 0.85:
-            explications["competences"] = f"Compétences requises couvertes ({len(trouvees)}/{len(competences_requises)})."
-            points_forts.append(f"Compétences clés du poste maîtrisées ({len(trouvees)}/{len(competences_requises)}).")
-        elif ratio >= 0.5:
-            explications["competences"] = f"Compétences partiellement couvertes ({len(trouvees)}/{len(competences_requises)})."
-            if n_obligatoires_manquantes:
-                ecarts.append(f"{n_obligatoires_manquantes} compétence(s) obligatoire(s) manquante(s).")
-        elif ratio > 0:
-            explications["competences"] = "Peu de compétences requises retrouvées chez le candidat."
-            ecarts.append("Plusieurs compétences requises par l'offre sont absentes du profil.")
+        diplomes_acceptes = []
+    if not diplomes_acceptes:
+        return None, None, None
+
+    couples_diplome_ids = {da.couple.diplome_id for da in diplomes_acceptes}
+    couples_specialite_ids = {da.couple.specialite_id for da in diplomes_acceptes}
+
+    try:
+        formations = [
+            f for f in profil.formations_detail.all()
+            if f.statut == 'OBTENU' and f.diplome_ref_id
+            and getattr(f.diplome_ref, 'code', None) != 'D-AUTRE'
+        ]
+    except TypeError:
+        formations = []
+
+    if not formations:
+        return {"score": 0.0, "connu": False}, {"score": 0.0, "connu": False}, None
+
+    meilleure = None
+    meilleur_total = -1.0
+    for f in formations:
+        sd = 1.0 if f.diplome_ref_id in couples_diplome_ids else 0.0
+        ss = 1.0 if f.specialite_ref_id in couples_specialite_ids else 0.0
+        total = 0.20 * sd + 0.25 * ss
+        if total > meilleur_total:
+            meilleur_total = total
+            meilleure = (f, sd, ss)
+
+    formation, sd, ss = meilleure
+    return (
+        {"score": sd, "connu": True},
+        {"score": ss, "connu": True},
+        formation if (sd or ss) else None,
+    )
+
+
+def _score_region(profil, offre):
+    """S04 — binaire strict : 1 si même wilaya OU mobilité compatible, 0 si incompatibilité
+    déclarée. `connu=False` seulement si la wilaya du candidat est totalement absente (donnée
+    manquante) — une incompatibilité déclarée reste "connue" (S03)."""
+    wilaya_c = normaliser(getattr(profil, "wilaya", None))
+    wilaya_o = normaliser(getattr(offre, "wilaya", None))
+    if not wilaya_c:
+        return {"score": 0.0, "connu": False}
+    if wilaya_c == wilaya_o:
+        return {"score": 1.0, "connu": True}
+    mobilite = getattr(profil, "mobilite", None)
+    if mobilite == "NATIONALE":
+        return {"score": 1.0, "connu": True}
+    if mobilite == "REGIONALE" and _meme_region(wilaya_c, wilaya_o):
+        return {"score": 1.0, "connu": True}
+    return {"score": 0.0, "connu": True}
+
+
+# ---------------------------------------------------------------------------
+# Formule à poids actifs (REGLES_MATCHING S01/S02/S03) — un critère non demandé par
+# l'offre est exclu du dénominateur W plutôt que de recevoir un score neutre inclus
+# dans un total fixe sur 100.
+# ---------------------------------------------------------------------------
+def _composer_score(contributions):
+    """`contributions` : dict critère -> None (non demandé, exclu) ou
+    {"poids": float, "score": float 0..1, "connu": bool}."""
+    actifs = {k: v for k, v in contributions.items() if v is not None}
+    non_demandes = sorted(k for k, v in contributions.items() if v is None)
+    W = sum(v["poids"] for v in actifs.values())
+    if W <= 0:
+        return {
+            "total": None,
+            "completude": 0.0,
+            "criteres_manquants": [],
+            "criteres_non_demandes": non_demandes,
+        }
+    total = 100.0 * sum(v["poids"] * v["score"] for v in actifs.values()) / W
+    manquants = sorted(k for k, v in actifs.items() if not v["connu"])
+    couverture = sum(v["poids"] for k, v in actifs.items() if v["connu"]) / W
+    return {
+        "total": round(min(total, 100.0), 2),
+        "completude": round(couverture, 2),
+        "criteres_manquants": manquants,
+        "criteres_non_demandes": non_demandes,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Algorithme principal
+# ---------------------------------------------------------------------------
+def _calculer_score_algo(candidat_user, offre):
+    """Score de matching conforme à REGLES_MATCHING S01-S14 : formule à poids actifs
+    (un critère non demandé par l'offre est exclu du dénominateur, pas noté), spécialité
+    = spécialité de formation couplée au diplôme sur une même FormationCandidat (S06/S07,
+    plus le métier/poste — voir jobs.metiers_matching pour la recherche et
+    _experience_pertinente pour son usage dans le critère expérience), région binaire
+    stricte (S04), expérience continue (S09), compétences désactivées sans CompetenceOffre
+    (S10)."""
+    from .matching_params import get_parametres_matching
+    params = get_parametres_matching()
+    profil = candidat_user.profil_candidat
+
+    points_forts = []
+    ecarts = []
+    explications = {}
+    formation_retenue = None
+
+    # RÉGION (S04) — toujours un critère actif : OffreEmploi.wilaya est un champ obligatoire,
+    # pas de notion de télétravail intégral dans le modèle actuel pour le désactiver.
+    contrib_region = _score_region(profil, offre)
+    contrib_region["poids"] = params["poids_region"]
+    wilaya_c, wilaya_o = normaliser(profil.wilaya), normaliser(offre.wilaya)
+    if contrib_region["score"] == 1.0:
+        commune_c, commune_o = normaliser(profil.commune), normaliser(offre.commune)
+        if wilaya_c == wilaya_o and commune_c and commune_o and commune_c == commune_o:
+            explications["region"] = f"Réside dans la même commune ({profil.commune})."
+            points_forts.append(f"Proximité locale idéale (Commune de {profil.commune}).")
+        elif wilaya_c == wilaya_o:
+            explications["region"] = f"Réside dans la même wilaya ({profil.wilaya})."
+            points_forts.append(f"Résidence dans la même Wilaya ({profil.wilaya}).")
+        else:
+            explications["region"] = "Mobilité déclarée compatible avec le lieu de travail."
+            points_forts.append("Mobilité compatible avec le poste.")
+    elif not contrib_region["connu"]:
+        explications["region"] = "Localisation du candidat non renseignée."
+    else:
+        explications["region"] = f"Candidat basé à {profil.wilaya or 'wilaya inconnue'}, hors zone et sans mobilité compatible."
+        ecarts.append(f"Localisation incompatible avec le poste ({offre.wilaya}).")
+
+    # DIPLÔME + SPÉCIALITÉ DE FORMATION (S05-S08) — deux critères pondérés indépendants,
+    # évalués sur la même FormationCandidat (jamais un diplôme d'une formation combiné à la
+    # spécialité d'une autre — T10).
+    contrib_diplome, contrib_specialite, formation_retenue = _score_diplome_specialite(profil, offre)
+    if contrib_diplome is not None:
+        contrib_diplome["poids"] = params["poids_diplome"]
+        if contrib_diplome["score"] == 1.0:
+            explications["diplome"] = "Type de diplôme accepté par l'offre."
+            points_forts.append("Diplôme conforme aux exigences de l'offre.")
+        elif not contrib_diplome["connu"]:
+            explications["diplome"] = "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+        else:
+            explications["diplome"] = "Le diplôme du candidat ne fait pas partie des diplômes acceptés."
+            ecarts.append("Diplôme non compatible avec les exigences de l'offre.")
+    if contrib_specialite is not None:
+        contrib_specialite["poids"] = params["poids_specialite"]
+        if contrib_specialite["score"] == 1.0:
+            libelle_spe = formation_retenue.specialite_ref.libelle if formation_retenue and formation_retenue.specialite_ref_id else ""
+            explications["specialite"] = f"Spécialité de formation acceptée ({libelle_spe})." if libelle_spe else "Spécialité de formation acceptée par l'offre."
+            points_forts.append("Spécialité de formation exactement acceptée par l'offre.")
+        elif not contrib_specialite["connu"]:
+            explications["specialite"] = "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+        else:
+            explications["specialite"] = "La spécialité de formation ne correspond pas à celles acceptées par l'offre."
+            ecarts.append("Spécialité de formation non compatible avec les exigences de l'offre.")
+
+    # EXPÉRIENCE (S09) — score continu, critère désactivé si aucun minimum n'est exigé.
+    contrib_experience = _score_experience(profil, offre)
+    if contrib_experience is not None:
+        contrib_experience["poids"] = params["poids_experience"]
+        if contrib_experience["score"] >= 1.0:
+            explications["experience"] = "Expérience pertinente suffisante pour ce poste."
+            points_forts.append("Expérience requise atteinte.")
+        elif not contrib_experience["connu"]:
+            explications["experience"] = "Aucune expérience renseignée."
+        elif contrib_experience["score"] > 0:
+            explications["experience"] = f"Expérience pertinente partielle ({round(contrib_experience['score'] * 100)}% du minimum requis)."
+            ecarts.append("Expérience pertinente insuffisante par rapport au minimum requis.")
+        else:
+            explications["experience"] = "Aucune expérience pertinente pour ce poste."
+            ecarts.append("Manque d'expérience pertinente dans ce domaine.")
+
+    # COMPÉTENCES (S10) — critère désactivé si l'offre n'a sélectionné aucune CompetenceOffre.
+    contrib_competences = _score_competences(profil, offre)
+    if contrib_competences is not None:
+        contrib_competences["poids"] = params["poids_competences"]
+        if contrib_competences["score"] >= 0.85:
+            explications["competences"] = "Compétences requises largement couvertes."
+            points_forts.append("Compétences clés du poste maîtrisées.")
+        elif not contrib_competences["connu"]:
+            explications["competences"] = "Compétences non renseignées."
+        elif contrib_competences["score"] > 0:
+            explications["competences"] = "Compétences partiellement couvertes."
         else:
             explications["competences"] = "Aucune des compétences requises n'a été retrouvée."
             ecarts.append("Compétences requises non alignées avec le profil.")
-    else:
-        # Pas de référentiel structuré sur cette offre — repli sur l'ancien scoring texte libre.
-        texte_offre_comp = " ".join(
-            str(v) for v in [offre.profil_recherche, offre.description, offre.missions, offre.titre]
-            if v and not callable(v)
-        )
-        if profil.competences and texte_offre_comp.strip():
-            ratio, tags_trouves = competences_score(profil.competences, texte_offre_comp)
-            details["competences"] = round(ratio * 15.0, 2)
-            if ratio >= 0.6:
-                explications["competences"] = f"Excellente adéquation ({len(tags_trouves)} compétences clés détectées)."
-                points_forts.append(f"Fortes correspondances techniques ({len(tags_trouves)} compétences validées).")
-            elif ratio >= 0.35:
-                explications["competences"] = f"Correspondance partielle ({len(tags_trouves)} compétences)."
-            elif ratio > 0:
-                explications["competences"] = "Peu de compétences correspondent au poste."
-                ecarts.append("Compétences techniques partiellement alignées.")
-            else:
-                explications["competences"] = "Aucune compétence ne correspond au poste."
-                ecarts.append("Compétences techniques non alignées avec l'offre.")
-        else:
-            # Compétences non renseignées → score neutre 5/15
-            details["competences"] = 5.0
-            donnees_manquantes.append("competences")
-            explications["competences"] = "Compétences non renseignées — score neutre appliqué."
-            ecarts.append("Renseignez vos compétences pour améliorer votre score.")
 
-    # La disqualification questionnaire est gérée par PostulerAPIView
-    # après sauvegarde des réponses — pas ici (les réponses n'existent pas encore).
-    total = min(round(sum(details.values()), 2), 100.0)
-    # Indicateur de complétude (consigne client, PARAM_MATCHING/SIMULATIONS) : pondéré par le
-    # poids réel de chaque critère (25/20/20/20/15), pas un simple compte sur 5 — une spécialité
-    # manquante (25%) pèse plus qu'une compétence manquante (15%). Vérifié contre les 6 cas
-    # SIMULATIONS fournis par le client (ex. EX-04 : diplôme+spécialité inconnus (0.20+0.25)
-    # → couverture_attendue = 1 - 0.45 = 0.55, exactement). Distingue "donnée manquante"
-    # d'"incompatible" — 1.0 = les 5 critères ont pu être réellement évalués.
-    _POIDS_CRITERES = {"specialite": 0.25, "region": 0.20, "diplome": 0.20, "experience": 0.20, "competences": 0.15}
-    completude = round(1 - sum(_POIDS_CRITERES[c] for c in set(donnees_manquantes)), 2)
+    contributions = {
+        "region": contrib_region,
+        "diplome": contrib_diplome,
+        "specialite": contrib_specialite,
+        "experience": contrib_experience,
+        "competences": contrib_competences,
+    }
+    resultat = _composer_score(contributions)
+
+    # La disqualification questionnaire est gérée par PostulerAPIView après sauvegarde des
+    # réponses — pas ici (les réponses n'existent pas encore).
+    details = {k: round(v["score"] * v["poids"] * 100, 2) if v else 0.0 for k, v in contributions.items()}
     return {
-        "total": total,
+        "total": resultat["total"],
         "details": details,
         "explications": explications,
         "highlights": {"points_forts": points_forts, "ecarts": ecarts},
         "disqualifie": False,
-        "flags": flags,
-        "completude": completude,
-        "criteres_manquants": sorted(set(donnees_manquantes)),
+        "flags": [],
+        "completude": resultat["completude"],
+        "criteres_manquants": resultat["criteres_manquants"],
+        "criteres_non_demandes": resultat["criteres_non_demandes"],
+        "algorithme_version": params["algorithme_version"],
+        "formation_id_retenue": formation_retenue.id if formation_retenue else None,
     }
 
 
@@ -628,5 +565,8 @@ def calculer_score_matching(candidat_user, offre):
             "flags": [],
             "completude": 0.0,
             "criteres_manquants": ["specialite", "region", "diplome", "experience", "competences"],
+            "criteres_non_demandes": [],
+            "algorithme_version": "matching-20-20-25-20-15-v2",
+            "formation_id_retenue": None,
         }
     return _calculer_score_algo(candidat_user, offre)

@@ -8,6 +8,7 @@ import {
   fireEvent,
   cleanup,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import CreateJob from "../src/Pages/Recruteur/CreateJob";
@@ -36,6 +37,7 @@ vi.mock("../src/Services/jobsService", () => ({
       diplome_specialite: [],
     }),
     searchMetiers: vi.fn().mockResolvedValue([]),
+    getMetierSuggestions: vi.fn().mockResolvedValue({ competences: [], diplomes_specialites: [] }),
   },
 }));
 
@@ -129,6 +131,9 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
   it("🟢 HP3 : Publication réussie", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.creerOffre.mockResolvedValue({});
+    jobsService.searchMetiers.mockResolvedValue([
+      { metier_id: 1, metier_libelle: "Développeur", appellation_libelle: "Développeur web (métier)" },
+    ]);
     const { container } = render(
       <MemoryRouter>
         <CreateJob />
@@ -137,7 +142,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
 
-    // Remplissage des champs (Titre + Wilaya + Spécialité requis par ton code)
+    // Remplissage des champs (Titre + Wilaya + Métier requis par ton code)
     fireEvent.change(screen.getByPlaceholderText(/Ex: Ingénieur Fullstack/i), {
       target: { value: "Développeur", name: "titre" },
     });
@@ -146,10 +151,12 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    const secteurSelect = screen.getAllByText(/Sélectionnez.../i)[0];
-    await selectEvent.select(secteurSelect, "Support à l'entreprise");
-    const domaineSelect = await screen.findAllByText(/Sélectionnez.../i);
-    await selectEvent.select(domaineSelect[0], "Systèmes d'information");
+    const metierField = container.querySelector("#field-metier");
+    fireEvent.change(within(metierField).getByPlaceholderText(/Développeur web, Chargé de recrutement/i), {
+      target: { value: "Développeur" },
+    });
+    const suggestion = await within(metierField).findByText("Développeur web (métier)");
+    fireEvent.mouseDown(suggestion);
 
     fireEvent.submit(container.querySelector("form"));
 
@@ -199,13 +206,16 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
   it("🔴 EC3 : Crash publication (500)", async () => {
     jobsService.getConstants.mockResolvedValue(mockConstants);
     jobsService.creerOffre.mockRejectedValue(new Error("500"));
+    jobsService.searchMetiers.mockResolvedValue([
+      { metier_id: 1, metier_libelle: "Développeur", appellation_libelle: "Développeur web (métier)" },
+    ]);
     const { container } = render(
       <MemoryRouter>
         <CreateJob />
       </MemoryRouter>,
     );
 
-    // Remplissage pour passer la validation (titre + wilaya + specialite requis)
+    // Remplissage pour passer la validation (titre + wilaya + métier requis)
     await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
     fireEvent.change(screen.getByPlaceholderText(/Ingénieur Fullstack/i), {
       target: { value: "Développeur Backend" },
@@ -214,10 +224,12 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    const secteurSelect = screen.getAllByText(/Sélectionnez.../i)[0];
-    await selectEvent.select(secteurSelect, "Support à l'entreprise");
-    const domaineSelect = await screen.findAllByText(/Sélectionnez.../i);
-    await selectEvent.select(domaineSelect[0], "Systèmes d'information");
+    const metierField = container.querySelector("#field-metier");
+    fireEvent.change(within(metierField).getByPlaceholderText(/Développeur web, Chargé de recrutement/i), {
+      target: { value: "Développeur" },
+    });
+    const suggestion = await within(metierField).findByText("Développeur web (métier)");
+    fireEvent.mouseDown(suggestion);
 
     fireEvent.submit(container.querySelector("form"));
 

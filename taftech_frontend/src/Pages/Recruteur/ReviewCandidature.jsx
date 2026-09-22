@@ -4,7 +4,6 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
-import DomaineLabel from "../../Components/DomaineLabel";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   MapPin,
@@ -27,6 +26,10 @@ const ReviewCandidature = () => {
   const [motivationMode, setMotivationMode] = useState("texte");
   const [lettreTexte, setLettreTexte] = useState("");
   const [lettreFile, setLettreFile] = useState(null);
+  // S12 — réponses du candidat aux exigences impératives de l'offre (permis, habilitation...) :
+  // exigenceId -> { statut, justificatif }. Statut par défaut INCONNU si non touché (jamais un
+  // rejet automatique, cf. jobs/models.py::ReponseExigence).
+  const [reponsesExigences, setReponsesExigences] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,7 +57,7 @@ const ReviewCandidature = () => {
     { label: "Titre professionnel", test: (p) => !!p.titre_professionnel },
     { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
     { label: "Diplôme", test: (p) => !!p.diplome },
-    { label: "Spécialité", test: (p) => !!p.specialite },
+    { label: "Métier", test: (p) => !!p.metier },
     { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
     { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
     { label: "Compétences", test: (p) => p.competences?.split(",").filter((t) => t).length > 0 },
@@ -78,6 +81,17 @@ const ReviewCandidature = () => {
         formData.append("lettre_motivation", lettreTexte);
       } else if (motivationMode === "fichier" && lettreFile) {
         formData.append("lettre_motivation_file", lettreFile);
+      }
+      if (job?.exigences_imperatives?.length > 0) {
+        const reponses = job.exigences_imperatives.map((e) => ({
+          exigence_id: e.id,
+          statut: reponsesExigences[e.id]?.statut || "INCONNU",
+        }));
+        formData.append("reponses_exigences", JSON.stringify(reponses));
+        job.exigences_imperatives.forEach((e) => {
+          const fichier = reponsesExigences[e.id]?.justificatif;
+          if (fichier) formData.append(`justificatif_exigence_${e.id}`, fichier);
+        });
       }
       await jobsService.postuler(id, formData);
       toast.success("Candidature envoyée !");
@@ -240,6 +254,56 @@ const ReviewCandidature = () => {
         </div>
       </div>
 
+      {/* EXIGENCES IMPÉRATIVES DE L'OFFRE (S12) */}
+      {job?.exigences_imperatives?.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-4">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-900">Exigences de cette offre</h2>
+            <p className="text-xs text-slate-600 mt-1">
+              Déclarez si vous répondez à chaque exigence — le recruteur pourra vérifier ensuite, cela n'affecte pas votre score de compatibilité.
+            </p>
+          </div>
+          <div className="p-5 space-y-4">
+            {job.exigences_imperatives.map((e) => (
+              <div key={e.id} className="border border-slate-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-slate-900">{e.label}</p>
+                {e.description && <p className="text-xs text-slate-600 mt-0.5">{e.description}</p>}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {[
+                    { value: "SATISFAIT", label: "Oui, j'y réponds" },
+                    { value: "NON_SATISFAIT", label: "Non" },
+                    { value: "INCONNU", label: "Je ne sais pas" },
+                  ].map((opt) => {
+                    const actif = (reponsesExigences[e.id]?.statut || "INCONNU") === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setReponsesExigences((prev) => ({ ...prev, [e.id]: { ...prev[e.id], statut: opt.value } }))}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${actif ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {e.justificatif_requis && reponsesExigences[e.id]?.statut === "SATISFAIT" && (
+                  <div className="mt-3">
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Justificatif (recommandé)</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      onChange={(ev) => setReponsesExigences((prev) => ({ ...prev, [e.id]: { ...prev[e.id], justificatif: ev.target.files[0] } }))}
+                      className="text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* APERÇU PROFIL */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -331,8 +395,8 @@ const ReviewCandidature = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 {
-                  label: "Secteur",
-                  value: <DomaineLabel code={profil.secteur_souhaite} />,
+                  label: "Métier souhaité",
+                  value: profil.metier_souhaite_libelle || "Non renseigné",
                 },
                 {
                   label: "Salaire",
@@ -422,7 +486,7 @@ const ReviewCandidature = () => {
                     </p>
                     <p className="text-xs text-indigo-600">
                       {exp.entreprise}
-                      {exp.secteur && <span className="text-slate-600 font-normal ml-1"><DomaineLabel code={exp.secteur} prefix="· " /></span>}
+                      {exp.metier_libelle && <span className="text-slate-600 font-normal ml-1">· {exp.metier_libelle}</span>}
                     </p>
                     <p className="text-xs text-slate-600 mt-0.5">
                       {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}

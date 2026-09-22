@@ -43,6 +43,7 @@ const RegisterRecruteur = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [secondes, setSecondes] = useState(REDIRECT_DELAY);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
+  const [secteursEntreprise, setSecteursEntreprise] = useState([]);
   const [formData, setFormData] = useState({
     first_name: "", last_name: "", email: "", password: "", confirmPassword: "",
     telephone: "", nom_entreprise: "", secteur_activite: "",
@@ -64,6 +65,13 @@ const RegisterRecruteur = () => {
       }
     };
     fetchConstants();
+    // Secteur d'entreprise — même référentiel v2 que la navigation publique "Offres par
+    // secteur" (16 secteurs ANEM + secteurs précis ajoutés par TAFTECH), plus l'ancienne
+    // liste figée à 16 catégories (jobsService.getNomenclature déjà utilisé/caché ailleurs).
+    jobsService
+      .getNomenclature()
+      .then((n) => setSecteursEntreprise((n.secteurs || []).map((s) => ({ value: s.code, label: s.libelle }))))
+      .catch((err) => reportError("ECHEC_CHARGEMENT_SECTEURS_ENTREPRISE", err));
   }, []);
 
   // Compte à rebours étape 3
@@ -100,7 +108,7 @@ const RegisterRecruteur = () => {
     } catch (err) {
       const serverError = err.response?.data;
       toast.error(
-        serverError?.email?.[0] || serverError?.registre_commerce?.[0] || "Une erreur est survenue.",
+        serverError?.email?.[0] || serverError?.registre_commerce?.[0] || serverError?.secteur_activite?.[0] || "Une erreur est survenue.",
         { id: toastId },
       );
       reportError("ECHEC_REGISTRATION_RECRUTEUR", err);
@@ -239,8 +247,8 @@ const RegisterRecruteur = () => {
                 <div>
                   <label className={labelClass}>Secteur d'activité</label>
                   <Select
-                    options={constants.secteurs}
-                    value={constants.secteurs?.find((s) => s.value === formData.secteur_activite) || null}
+                    options={secteursEntreprise}
+                    value={secteursEntreprise.find((s) => s.value === formData.secteur_activite) || null}
                     placeholder="Sélectionnez..."
                     onChange={(opt) => setFormData({ ...formData, secteur_activite: opt?.value || "" })}
                     styles={selectStyles}

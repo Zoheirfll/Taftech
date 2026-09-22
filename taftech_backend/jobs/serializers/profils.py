@@ -7,10 +7,14 @@ User = get_user_model()
 
 class ExperienceSerializer(serializers.ModelSerializer):
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    appellation_libelle = serializers.CharField(source='appellation.libelle', read_only=True, default=None)
 
     class Meta:
         model = ExperienceCandidat
-        fields = ['id', 'titre_poste', 'entreprise', 'secteur', 'metier', 'metier_libelle', 'date_debut', 'date_fin', 'description']
+        fields = [
+            'id', 'titre_poste', 'entreprise', 'metier', 'metier_libelle',
+            'appellation', 'appellation_libelle', 'date_debut', 'date_fin', 'description',
+        ]
 
 
 class FormationSerializer(serializers.ModelSerializer):
@@ -20,8 +24,9 @@ class FormationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormationCandidat
         fields = [
-            'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'description',
+            'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'date_fin_prevue', 'description',
             'diplome_ref', 'diplome_ref_libelle', 'specialite_ref', 'specialite_ref_libelle', 'statut',
+            'pays_formation', 'statut_validation', 'document_reference', 'est_principale', 'version_referentiel',
         ]
         # Pas de validation bloquante sur le couple diplome_ref/specialite_ref : REGLES_FORMATION F02
         # (client) — la couverture universitaire n'est pas exhaustive, un couple absent du référentiel
@@ -36,7 +41,7 @@ class CompetenceCandidatSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CompetenceCandidat
-        fields = ['id', 'label', 'niveau', 'niveau_libelle', 'source']
+        fields = ['id', 'label', 'niveau', 'niveau_libelle', 'source', 'competence_ref']
 
 
 class ProfilCandidatDTO(serializers.ModelSerializer):
@@ -61,17 +66,21 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     formations_detail = FormationSerializer(many=True, read_only=True)
     competences_detail = CompetenceCandidatSerializer(many=True, read_only=True)
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    metier_souhaite_libelle = serializers.CharField(source='metier_souhaite.libelle', read_only=True, default=None)
+    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
 
     class Meta:
         model = ProfilCandidat
         fields = (
-            'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'specialite', 'sexe',
-            'metier', 'metier_libelle',
+            'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'sexe',
+            'diplome_ref_libelle', 'niveau_scolaire_ref_libelle',
+            'metier', 'metier_libelle', 'metier_souhaite', 'metier_souhaite_libelle',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin', 'date_naissance',
             'experiences_detail', 'formations_detail',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
-            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
+            'salaire_souhaite', 'mobilite', 'situation_actuelle',
             'wilaya', 'commune', 'adresse', 'date_joined', 'is_favori', 'last_login', 'user_id',
             'est_debloque', 'bio', 'linkedin', 'github', 'visible_cvtheque'
         )

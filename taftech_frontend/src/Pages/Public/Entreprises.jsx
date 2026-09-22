@@ -192,7 +192,7 @@ const Entreprises = () => {
                       </h2>
                       {e.secteur_activite && (
                         <span className={`inline-block text-xs font-semibold ${tw.textPrimary} ${tw.bgPrimarySoft} px-2.5 py-1 rounded-full`}>
-                          {e.secteur_activite}
+                          {e.secteur_activite_libelle || e.secteur_activite}
                         </span>
                       )}
                     </div>

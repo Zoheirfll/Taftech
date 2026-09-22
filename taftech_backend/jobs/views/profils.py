@@ -149,12 +149,13 @@ def _synchroniser_competences_depuis_texte(profil):
     tags affichés sur le profil, quel que soit l'écran utilisé pour les modifier. Sens inverse
     de _resynchroniser_competences_texte (candidat_dashboard.py, appelé quand la modification
     part de "Mes compétences") — les deux écrans convergent vers la même liste."""
-    from ..models import CompetenceCandidat
+    from ..models import CompetenceCandidat, CompetenceReferentiel
     profil.refresh_from_db(fields=['competences'])
     labels_texte = {l.strip() for l in (profil.competences or '').split(',') if l.strip()}
     labels_existants = set(profil.competences_detail.values_list('label', flat=True))
     for label in labels_texte - labels_existants:
-        CompetenceCandidat.objects.create(profil=profil, label=label, niveau='DEBUTANT')
+        ref = CompetenceReferentiel.objects.filter(label__iexact=label).first()
+        CompetenceCandidat.objects.create(profil=profil, label=label, niveau='DEBUTANT', competence_ref=ref)
     profil.competences_detail.exclude(label__in=labels_texte).delete()
 
 

@@ -16,16 +16,21 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     intitule_poste = serializers.CharField(source='user.intitule_poste', read_only=True)
     photos = EntreprisePhotoSerializer(many=True, read_only=True)
     palier_actif = serializers.SerializerMethodField()
+    secteur_activite_libelle = serializers.SerializerMethodField()
 
     def get_palier_actif(self, obj):
         from ..paliers_utils import get_palier_actif
         palier = get_palier_actif(obj)
         return palier.nom if palier else None
 
+    def get_secteur_activite_libelle(self, obj):
+        from ..referentiel_utils import libelle_secteur_entreprise
+        return libelle_secteur_entreprise(obj.secteur_activite)
+
     class Meta:
         model = ProfilEntreprise
         fields = (
-            'id', 'slug', 'nom_entreprise', 'secteur_activite', 'registre_commerce',
+            'id', 'slug', 'nom_entreprise', 'secteur_activite', 'secteur_activite_libelle', 'registre_commerce',
             'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'logo',
             'banniere', 'culture_entreprise', 'annee_creation', 'linkedin', 'site_web', 'photos',
             'description', 'est_approuvee', 'mise_en_avant_accueil', 'palier_actif',

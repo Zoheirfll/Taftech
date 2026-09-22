@@ -55,6 +55,16 @@ def validate_image_mime(file_obj):
         )
 
 
+def validate_document_or_image_mime(file_obj):
+    """Valide un justificatif (S12) : PDF/DOC/DOCX OU une image (scan d'un permis/certificat
+    souvent envoyé en photo) — `validate_document_mime` seul rejetterait à tort une image."""
+    mime = _detect_mime(file_obj)
+    if mime not in ALLOWED_MIME_FOR_DOCUMENT and mime not in ALLOWED_MIME_FOR_IMAGE:
+        raise ValidationError(
+            "Format de fichier invalide. Formats acceptés : PDF, DOC, DOCX, JPG, PNG, WEBP."
+        )
+
+
 class validate_file_size:
     """Validator de taille de fichier sérialisable par les migrations Django."""
 

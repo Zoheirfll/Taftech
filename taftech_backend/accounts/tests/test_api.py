@@ -50,7 +50,7 @@ class RegistrationAPIIntegrationTest(APITestCase):
             "last_name": "Boss",
             "telephone": "0666000000",
             "nom_entreprise": "React Corp",
-            "secteur_activite": "IT",
+            "secteur_activite": "G",
             "registre_commerce": "RC123456"
         }
         

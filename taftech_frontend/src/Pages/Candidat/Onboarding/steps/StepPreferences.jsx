@@ -1,6 +1,6 @@
 import React from "react";
 import { tw } from "../../../../theme";
-import { SecteurDomaineSelect } from "../../../../Components/SecteurDomaineSelect";
+import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
 
 export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipStep, saving }) => {
   const set = (field) => (e) => {
@@ -13,10 +13,10 @@ export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipSt
       <h3 className={`${tw.pageTitlePetit} mb-5`}>Préférences de recrutement</h3>
       <div className="space-y-4">
         <div>
-          <label className={`${tw.authLabel} mb-1.5`}>Secteur souhaité</label>
-          <SecteurDomaineSelect
-            value={prefsForm.secteur_souhaite || ""}
-            onChange={(domaineCode) => setPrefsForm((prev) => ({ ...prev, secteur_souhaite: domaineCode }))}
+          <label className={`${tw.authLabel} mb-1.5`}>Métier souhaité</label>
+          <MetierAutocomplete
+            value={prefsForm.metier_souhaite_libelle || ""}
+            onSelect={(item) => setPrefsForm((prev) => ({ ...prev, metier_souhaite: item.metier_id, metier_souhaite_libelle: item.appellation_libelle }))}
           />
         </div>
         <div>

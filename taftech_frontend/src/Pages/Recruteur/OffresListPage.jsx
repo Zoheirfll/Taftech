@@ -9,10 +9,18 @@ import { confirmToast } from "../../utils/confirmToast";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
 import InfoBanner from "../../Components/InfoBanner";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
-import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X } from "lucide-react";
+import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
+import { FormationReferentielSelect } from "../../Components/FormationReferentielSelect";
+import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X, Pencil } from "lucide-react";
 
-const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 112px";
+const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 148px";
+
+const NIVEAU_LABELS = {
+  DEBUTANT: "Débutant",
+  INTERMEDIAIRE: "Intermédiaire",
+  AVANCE: "Avancé",
+  CONFIRME: "Confirmé / Expert",
+};
 
 const OffresListPage = () => {
   const navigate = useNavigate();
@@ -30,6 +38,57 @@ const OffresListPage = () => {
   const [showModifierModal, setShowModifierModal] = useState(false);
   const [offreAModifier, setOffreAModifier] = useState(null);
   const [modifierForm, setModifierForm] = useState({});
+
+  // Compétences structurées + couples diplôme/spécialité acceptés — même builder que
+  // CreateJob.jsx, manquant jusqu'ici sur le formulaire de modification (gap comblé).
+  const [competencesRequises, setCompetencesRequises] = useState([]);
+  const [compSuggestions, setCompSuggestions] = useState([]);
+  const [showCompSuggestions, setShowCompSuggestions] = useState(false);
+  const [compType, setCompType] = useState("OBLIGATOIRE");
+  const [compNiveau, setCompNiveau] = useState("");
+  const [diplomesAcceptes, setDiplomesAcceptes] = useState([]);
+  const [draftDiplomeId, setDraftDiplomeId] = useState("");
+  const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
+  const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], diplomes_specialites: [] });
+
+  // Exigences impératives (S12) — même builder que CreateJob.jsx, manquant jusqu'ici
+  // sur le formulaire de modification (même gap que compétences/diplômes ci-dessus).
+  const [exigencesImperatives, setExigencesImperatives] = useState([]);
+  const [draftExigenceLabel, setDraftExigenceLabel] = useState("");
+  const [draftExigenceDescription, setDraftExigenceDescription] = useState("");
+  const [draftExigenceJustificatif, setDraftExigenceJustificatif] = useState(false);
+
+  const ajouterExigence = () => {
+    const label = draftExigenceLabel.trim();
+    if (!label) return;
+    if (exigencesImperatives.some((e) => e.label.toLowerCase() === label.toLowerCase())) {
+      toast.error("Cette exigence est déjà dans la liste.");
+      return;
+    }
+    setExigencesImperatives((prev) => [...prev, {
+      label, description: draftExigenceDescription.trim(), justificatif_requis: draftExigenceJustificatif,
+    }]);
+    setDraftExigenceLabel("");
+    setDraftExigenceDescription("");
+    setDraftExigenceJustificatif(false);
+  };
+
+  const retirerExigence = (label) => {
+    setExigencesImperatives((prev) => prev.filter((e) => e.label !== label));
+  };
+
+  useEffect(() => {
+    jobsService.getNomenclatureFormation().then(setNomenclatureFormation).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!modifierForm.metier) {
+      setSuggestionsPourMetier({ competences: [], diplomes_specialites: [] });
+      return;
+    }
+    jobsService.getMetierSuggestions(modifierForm.metier).then(setSuggestionsPourMetier);
+  }, [modifierForm.metier]);
 
   useEffect(() => {
     const load = async () => {
@@ -57,7 +116,8 @@ const OffresListPage = () => {
       wilaya: offre.wilaya || "",
       commune: offre.commune || "",
       diplome: offre.diplome || "",
-      specialite: offre.specialite || "",
+      metier: offre.metier || "",
+      metier_libelle: offre.metier_libelle || "",
       type_contrat: offre.type_contrat || "",
       experience_requise: offre.experience_requise || "",
       nombre_postes: offre.nombre_postes || 1,
@@ -67,13 +127,39 @@ const OffresListPage = () => {
       competences: offre.competences || "",
       salaire_propose: offre.salaire_propose || "",
     });
+    setCompetencesRequises(
+      (offre.competences_requises || []).map((c) => ({
+        label: c.label, type_exigence: c.type_exigence, niveau_requis: c.niveau_requis,
+      })),
+    );
+    setDiplomesAcceptes(
+      (offre.diplomes_acceptes || []).map((d) => ({
+        id: d.couple, diplome_libelle: d.diplome_libelle, specialite_libelle: d.specialite_libelle,
+      })),
+    );
+    setDraftDiplomeId("");
+    setDraftSpecialiteId("");
+    setExigencesImperatives(
+      (offre.exigences_imperatives || []).map((e) => ({
+        label: e.label, description: e.description || "", justificatif_requis: !!e.justificatif_requis,
+      })),
+    );
+    setDraftExigenceLabel("");
+    setDraftExigenceDescription("");
+    setDraftExigenceJustificatif(false);
     setShowModifierModal(true);
   };
 
   const handleSauvegarderModification = async () => {
     const toastId = toast.loading("Envoi en cours...");
     try {
-      const response = await jobsService.modifierOffre(offreAModifier.id, modifierForm);
+      const payload = {
+        ...modifierForm,
+        competences_requises: competencesRequises,
+        diplomes_acceptes: diplomesAcceptes.map((d) => d.id),
+        exigences_imperatives: exigencesImperatives,
+      };
+      const response = await jobsService.modifierOffre(offreAModifier.id, payload);
       setOffres(offres.map((o) => (o.id === offreAModifier.id ? response.offre : o)));
       setShowModifierModal(false);
       setOffreAModifier(null);
@@ -82,6 +168,57 @@ const OffresListPage = () => {
       toast.error(apiErrMsg(err, "Erreur lors de la modification."), { id: toastId });
       reportError("ECHEC_MODIFIER_OFFRE", err);
     }
+  };
+
+  const handleAjouterCoupleAccepte = () => {
+    if (!draftDiplomeId || !draftSpecialiteId || !nomenclatureFormation) return;
+    const couple = nomenclatureFormation.diplome_specialite.find(
+      (c) => String(c.diplome_id) === String(draftDiplomeId) && String(c.specialite_id) === String(draftSpecialiteId),
+    );
+    if (!couple) {
+      toast.error("Ce couple diplôme + spécialité n'est pas reconnu dans le référentiel.");
+      return;
+    }
+    if (diplomesAcceptes.some((d) => d.id === couple.id)) return;
+    const diplomeLabel = nomenclatureFormation.types_diplomes.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
+    const specialiteLabel = nomenclatureFormation.specialites.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
+    setDiplomesAcceptes((prev) => [...prev, { id: couple.id, diplome_libelle: diplomeLabel, specialite_libelle: specialiteLabel }]);
+    setDraftDiplomeId("");
+    setDraftSpecialiteId("");
+  };
+
+  const ajouterCoupleSuggere = (item) => {
+    if (diplomesAcceptes.some((d) => d.id === item.id)) return;
+    setDiplomesAcceptes((prev) => [...prev, { id: item.id, diplome_libelle: item.diplome_libelle, specialite_libelle: item.specialite_libelle }]);
+  };
+
+  const handleCompInputChange = async (value) => {
+    if (value.length >= 2) {
+      try {
+        const data = await jobsService.searchCompetences(value);
+        setCompSuggestions(data);
+        setShowCompSuggestions(data.length > 0);
+      } catch {
+        setCompSuggestions([]);
+      }
+    } else {
+      setShowCompSuggestions(false);
+    }
+  };
+
+  const ajouterCompetenceRequise = (label) => {
+    const trimmed = (label || "").trim();
+    if (!trimmed) return;
+    if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Cette compétence est déjà ajoutée.");
+      return;
+    }
+    setCompetencesRequises((prev) => [...prev, { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null }]);
+    setShowCompSuggestions(false);
+  };
+
+  const retirerCompetenceRequise = (label) => {
+    setCompetencesRequises((prev) => prev.filter((c) => c.label !== label));
   };
 
   const handleSupprimerOffre = (offre) => {
@@ -373,9 +510,21 @@ const OffresListPage = () => {
                 );
               }
               return (
-                <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.bgTealSolid}`}>
-                  Candidats <ChevronRight size={12} />
-                </button>
+                <span className="flex items-center justify-end gap-1 w-full">
+                  {authService.peutFaire("UTILISATEUR") && (
+                    <button
+                      onClick={() => handleOuvrirModification(offre)}
+                      className={`shrink-0 p-1.5 rounded-lg ${tw.iconButton} ${tw.focusRing}`}
+                      title="Modifier l'offre"
+                      aria-label="Modifier l'offre"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  )}
+                  <button onClick={() => navigate(`/dashboard/offres/${offre.id}`)} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-colors whitespace-nowrap ${tw.bgTealSolid}`}>
+                    Candidats <ChevronRight size={11} />
+                  </button>
+                </span>
               );
             };
 
@@ -512,11 +661,10 @@ const OffresListPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Spécialité</label>
-                  <SecteurDomaineSelect
-                    value={modifierForm.specialite}
-                    onChange={(domaineCode) => setModifierForm({ ...modifierForm, specialite: domaineCode })}
-                    styles={selectStylesTeal}
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Métier</label>
+                  <MetierAutocomplete
+                    value={modifierForm.metier_libelle}
+                    onSelect={(item) => setModifierForm({ ...modifierForm, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
                   />
                 </div>
                 <div>
@@ -530,10 +678,220 @@ const OffresListPage = () => {
                   />
                 </div>
               </div>
+
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-slate-700">
+                  Diplômes/spécialités acceptés (optionnel)
+                </p>
+                <p className="text-xs text-slate-600 mb-3">
+                  "Diplôme attendu" (niveau minimum) est affiché sur l'annonce mais n'est plus utilisé pour le score de matching — précisez un ou plusieurs couples ici pour que le diplôme et la spécialité de formation soient réellement évalués sur les candidatures.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                  <FormationReferentielSelect
+                    diplomeId={draftDiplomeId}
+                    specialiteId={draftSpecialiteId}
+                    onChangeDiplome={setDraftDiplomeId}
+                    onChangeSpecialite={setDraftSpecialiteId}
+                    permettreAutre={false}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAjouterCoupleAccepte}
+                    disabled={!draftDiplomeId || !draftSpecialiteId}
+                    className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+                {diplomesAcceptes.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {diplomesAcceptes.map((d) => (
+                      <span key={d.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+                        {d.diplome_libelle} — {d.specialite_libelle}
+                        <button type="button" onClick={() => setDiplomesAcceptes((prev) => prev.filter((x) => x.id !== d.id))} className="hover:text-red-600">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {suggestionsPourMetier.diplomes_specialites.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-medium text-slate-500 mb-1.5">Suggéré pour ce métier — cliquez pour ajouter :</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestionsPourMetier.diplomes_specialites
+                        .filter((s) => !diplomesAcceptes.some((d) => d.id === s.id))
+                        .map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => ajouterCoupleSuggere(s)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
+                          >
+                            + {s.diplome_libelle} — {s.specialite_libelle}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-slate-700">
+                  Exigences impératives (optionnel)
+                </p>
+                <p className="text-xs text-slate-600 mb-3">
+                  Permis, habilitation, droit d'exercice, certification... — distinct du diplôme, jamais utilisé pour calculer le score de matching. Le candidat déclare s'il y répond au moment de postuler, vous vérifiez ensuite.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Exigence</label>
+                    <input
+                      type="text"
+                      value={draftExigenceLabel}
+                      onChange={(e) => setDraftExigenceLabel(e.target.value)}
+                      placeholder="Ex: Permis B"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Précision (optionnel)</label>
+                    <input
+                      type="text"
+                      value={draftExigenceDescription}
+                      onChange={(e) => setDraftExigenceDescription(e.target.value)}
+                      placeholder="Ex: Bulletin n°3 du casier judiciaire"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-slate-700 h-fit pb-2.5 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={draftExigenceJustificatif}
+                      onChange={(e) => setDraftExigenceJustificatif(e.target.checked)}
+                    />
+                    Justificatif requis
+                  </label>
+                  <button
+                    type="button"
+                    onClick={ajouterExigence}
+                    disabled={!draftExigenceLabel.trim()}
+                    className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+                {exigencesImperatives.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {exigencesImperatives.map((e) => (
+                      <span key={e.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+                        {e.label}{e.justificatif_requis ? " 📎" : ""}
+                        <button type="button" onClick={() => retirerExigence(e.label)} className="hover:text-red-600">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                  Compétences requises (structurées)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {competencesRequises.map((c) => (
+                    <span
+                      key={c.label}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${c.type_exigence === "OBLIGATOIRE" ? "bg-red-50 text-red-700" : "bg-slate-200 text-slate-700"}`}
+                    >
+                      {c.label}
+                      <span className="opacity-70 font-normal">
+                        · {c.type_exigence === "OBLIGATOIRE" ? "Obligatoire" : "Souhaitée"}
+                        {c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
+                      </span>
+                      <button type="button" onClick={() => retirerCompetenceRequise(c.label)} className="hover:opacity-70">
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                  {competencesRequises.length === 0 && (
+                    <p className="text-xs text-slate-600">Aucune compétence structurée ajoutée.</p>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      id="comp-modifier-input"
+                      onChange={(e) => handleCompInputChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && e.target.value.trim()) {
+                          e.preventDefault();
+                          ajouterCompetenceRequise(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                      onBlur={() => setTimeout(() => setShowCompSuggestions(false), 200)}
+                      placeholder="Tapez une compétence puis Entrée..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"
+                    />
+                    {showCompSuggestions && compSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 rounded-xl shadow-lg z-50 mt-1 overflow-hidden bg-white border border-slate-200">
+                        <div className="max-h-48 overflow-y-auto">
+                          {compSuggestions.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onMouseDown={() => {
+                                ajouterCompetenceRequise(c.label);
+                                const el = document.getElementById("comp-modifier-input");
+                                if (el) el.value = "";
+                              }}
+                              className="w-full text-left px-4 py-2.5 transition-colors text-sm font-medium hover:bg-slate-50"
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <select value={compType} onChange={(e) => setCompType(e.target.value)} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm sm:w-40">
+                    <option value="OBLIGATOIRE">Obligatoire</option>
+                    <option value="SOUHAITEE">Souhaitée</option>
+                  </select>
+                  <select value={compNiveau} onChange={(e) => setCompNiveau(e.target.value)} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm sm:w-44">
+                    <option value="">Niveau (optionnel)</option>
+                    {Object.entries(NIVEAU_LABELS).map(([code, label]) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                {suggestionsPourMetier.competences.filter((s) => !competencesRequises.some((c) => c.label.toLowerCase() === s.label.toLowerCase())).length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-medium text-slate-600 mb-1.5">Suggéré pour ce métier — cliquez pour ajouter :</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestionsPourMetier.competences
+                        .filter((s) => !competencesRequises.some((c) => c.label.toLowerCase() === s.label.toLowerCase()))
+                        .map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => ajouterCompetenceRequise(s.label)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
+                          >
+                            + {s.label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {["description", "missions", "profil_recherche", "competences"].map((field) => (
                 <div key={field}>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
-                    {field === "profil_recherche" ? "Profil recherché" : field === "competences" ? "Compétences requises" : field.charAt(0).toUpperCase() + field.slice(1)}
+                    {field === "profil_recherche" ? "Profil recherché" : field === "competences" ? "Compétences (texte libre affiché sur l'annonce)" : field.charAt(0).toUpperCase() + field.slice(1)}
                   </label>
                   <textarea
                     rows="3"

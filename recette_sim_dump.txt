@@ -1,0 +1,53 @@
+====================================================================================================
+DIPLOMES / RECETTE
+====================================================================================================
+test_id | type_test | entree_json | resultat_attendu
+T06 | normalisation | {"textes":["C","C++","C#",".NET"]} | Clés distinctes : c, cpp, csharp, dotnet.
+T07 | normalisation | {"texte":"إِعْلَام آلِي"} | Clé اعلام الي ; retrouver les alias arabes de la spécialité Informatique.
+T08 | formation | {"diplome":"BTS","requete":"DEUA"} | Aucune équivalence automatique ; demander la qualification exacte si la donnée historique était N09.
+T09 | formation | {"niveau":"doctorat","intitule":"Docteur en médecine"} | D-MED ; ne pas l’enregistrer comme D-DOC-LMD.
+T10 | formation | {"diplomes":["master finance obtenu","licence informatique obtenue"],"offre":"master informatique"} | Pas de master informatique fabriqué ; calculer les deux scores diplôme+spécialité sur une même formation.
+T11 | formation | {"diplome":"master","statut":"en_cours","offre_accepte_en_cours":false} | Ne pas le compter comme master obtenu. Le statut reste visible et les autres diplômes sont évalués.
+T18 | formation | {"specialite":"Littérature et civilisation","filiere":"Langue anglaise"} | Ne pas fusionner avec une spécialité homonyme en Langue française ou espagnole.
+T19 | formation | {"code_fp":"HTR1807"} | Conserver HTR1807, domaine F-HRT ; ne pas inventer le code HRT1807.
+T20 | formation | {"offre_source":"BEJ-329"} | Contradiction ingénieur/licence signalée ; aucun lien diplôme/spécialité attesté publié.
+T21 | formation | {"offre_source":"BEJ-348"} | Socle commun : ne pas afficher comme spécialité terminale de diplôme obtenu.
+T22 | formation | {"diplome":"Autre","specialite_texte":"Intitulé manquant au catalogue"} | Enregistrer le texte, l’établissement et le statut ; file de validation. Aucun score supérieur implicite et aucune perte du dossier.
+====================================================================================================
+METIERS / RECETTE
+====================================================================================================
+test_id | type_test | entree_json | resultat_attendu
+T01 | recherche | {"texte":"responsable moyens généraux"} | TAF2-MOYENS ; la recherche précise ne doit pas valider une expérience de DAF sur la seule fiche L1201.
+T02 | recherche | {"texte":"DAF"} | Proposer TAF2-DAF ; expansion via sigle exact, jamais par correction floue.
+T03 | recherche | {"texte":"developpeur fullstack"} | TAF000001 après normalisation/alias ; TAF-000013 redirige vers TAF000001.
+T04 | recherche | {"texte":"développeur mobile"} | Présenter Android et iOS, conserver les deux choix possibles ; ne pas attribuer iOS à un candidat Android.
+T05 | recherche | {"texte":"commercial"} | Résultats commerciaux ; aucune expansion automatique vers développeur logiciel.
+T06 | normalisation | {"textes":["C","C++","C#",".NET"]} | Clés distinctes : c, cpp, csharp, dotnet.
+T07 | normalisation | {"texte":"إِعْلَام آلِي"} | Clé اعلام الي ; retrouver les alias arabes de la spécialité Informatique.
+T08 | formation | {"diplome":"BTS","requete":"DEUA"} | Aucune équivalence automatique ; demander la qualification exacte si la donnée historique était N09.
+T09 | formation | {"niveau":"doctorat","intitule":"Docteur en médecine"} | D-MED ; ne pas l’enregistrer comme D-DOC-LMD.
+T10 | formation | {"diplomes":["master finance obtenu","licence informatique obtenue"],"offre":"master informatique"} | Pas de master informatique fabriqué ; calculer les deux scores diplôme+spécialité sur une même formation.
+T11 | formation | {"diplome":"master","statut":"en_cours","offre_accepte_en_cours":false} | Ne pas le compter comme master obtenu. Le statut reste visible et les autres diplômes sont évalués.
+T12 | competences | {"metier":"Data Scientist","competences_declarees":[]} | Aucune compétence Python ou statistique créée automatiquement ; critère manquant signalé.
+T13 | experience | {"periodes":[["2024-01","2024-12"],["2024-07","2025-06"]]} | 18 mois distincts, pas 24 mois. Convention : mois de début et de fin inclus, intervalles fermés par mois civil.
+T14 | score | {"critere_offre_non_renseigne":"diplome"} | Poids diplôme inactif pour tous les candidats ; ne pas pénaliser l’absence d’un diplôme non demandé.
+T15 | score | {"diplome_candidat_inconnu":true,"diplome_demande":true} | Contribution diplôme nulle, couverture réduite ; pas de renormalisation au bénéfice du dossier incomplet.
+T16 | import | {"code_metier":"A1101","reimport_meme_version":true} | Un seul métier A1101 ; aucune duplication à la seconde importation.
+T17 | import | {"metier_id":"inexistant","table":"METIER_FORMATIONS"} | Rejeter le lot avant publication avec une erreur de clé étrangère et le numéro de ligne.
+T18 | formation | {"specialite":"Littérature et civilisation","filiere":"Langue anglaise"} | Ne pas fusionner avec une spécialité homonyme en Langue française ou espagnole.
+T19 | formation | {"code_fp":"HTR1807"} | Conserver HTR1807, domaine F-HRT ; ne pas inventer le code HRT1807.
+T20 | formation | {"offre_source":"BEJ-329"} | Contradiction ingénieur/licence signalée ; aucun lien diplôme/spécialité attesté publié.
+T21 | formation | {"offre_source":"BEJ-348"} | Socle commun : ne pas afficher comme spécialité terminale de diplôme obtenu.
+T22 | formation | {"diplome":"Autre","specialite_texte":"Intitulé manquant au catalogue"} | Enregistrer le texte, l’établissement et le statut ; file de validation. Aucun score supérieur implicite et aucune perte du dossier.
+T23 | recherche | {"formation":"BTS dans une spécialité X","autre_formation":"Master informatique","requete":"BTS informatique"} | Pas de résultat confirmé sur le couple BTS-informatique absent ; les termes doivent appartenir à la même formation.
+T24 | source | {"competence_suggeree":"Python","origine":"METIER_COMPETENCES"} | Suggestion disponible lors de la rédaction de l’offre ; pas une preuve de compétence du candidat.
+====================================================================================================
+METIERS / SIMULATIONS
+====================================================================================================
+cas_id | scenario | s_region | s_diplome | s_specialite | s_experience | s_competences | connu_region | connu_diplome | connu_specialite | connu_experience | connu_competences | score_attendu | couverture_attendue | score_calcule | couverture_calculee | controle
+EX-01 | Correspondance complète | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 100 | 1 | 100 | 1 | OK
+EX-02 | Compétences demandées absentes, autres critères satisfaits | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | 85 | 1 | 85.00000000000001 | 1 | OK
+EX-03 | Spécialité différente explicitement renseignée | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 75 | 1 | 75.00000000000001 | 1 | OK
+EX-04 | Diplôme et spécialité inconnus | 1 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 1 | 1 | 55 | 0.55 | 55.00000000000001 | 0.55 | OK
+EX-05 | Expérience pertinente à moitié du minimum | 1 | 1 | 1 | 0.5 | 1 | 1 | 1 | 1 | 1 | 1 | 90 | 1 | 90 | 1 | OK
+EX-06 | Mobilité incompatible explicitement déclarée | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 80 | 1 | 80 | 1 | OK

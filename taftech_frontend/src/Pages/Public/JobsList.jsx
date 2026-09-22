@@ -8,7 +8,7 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
-import { SecteurDomaineSelect } from "../../Components/SecteurDomaineSelect";
+import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
 import { apiErrMsg } from "../../utils/apiErrMsg";
@@ -86,6 +86,7 @@ const JobsList = () => {
     wilaya: searchParams.get("wilaya") || "",
     commune: "", diplome: "", specialite: "", experience: "", contrat: "",
   });
+  const [specialiteLibelle, setSpecialiteLibelle] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -185,11 +186,15 @@ const JobsList = () => {
 
   const handleReset = () => {
     setFilters({ search: "", wilaya: "", commune: "", diplome: "", specialite: "", experience: "", contrat: "" });
+    setSpecialiteLibelle("");
     setSearchParams({});
     setCurrentPage(1);
   };
 
-  const removeFilter = (key) => setFilters((prev) => ({ ...prev, [key]: "", ...(key === "wilaya" ? { commune: "" } : {}) }));
+  const removeFilter = (key) => {
+    if (key === "specialite") setSpecialiteLibelle("");
+    setFilters((prev) => ({ ...prev, [key]: "", ...(key === "wilaya" ? { commune: "" } : {}) }));
+  };
 
   const hasFilters = Object.values(filters).some(Boolean);
 
@@ -200,7 +205,7 @@ const JobsList = () => {
     filters.commune && { key: "commune", label: filters.commune },
     filters.experience && { key: "experience", label: expLabel(filters.experience) },
     filters.contrat && { key: "contrat", label: CONTRAT_LABELS[filters.contrat] || filters.contrat },
-    filters.specialite && { key: "specialite", label: nomenclature.domaines.find((d) => d.code === filters.specialite)?.libelle || filters.specialite },
+    filters.specialite && { key: "specialite", label: specialiteLibelle || filters.specialite },
     filters.diplome && { key: "diplome", label: constants.diplomes.find((d) => d.value === filters.diplome)?.label || filters.diplome },
   ].filter(Boolean);
 
@@ -240,11 +245,13 @@ const JobsList = () => {
           </div>
         ))}
         <div>
-          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Secteur / Domaine</label>
-          <SecteurDomaineSelect
-            value={filters.specialite}
-            onChange={(domaineCode) => setFilters({ ...filters, specialite: domaineCode })}
-            styles={selectStyles}
+          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Métier</label>
+          <MetierAutocomplete
+            value={specialiteLibelle}
+            onSelect={(item) => {
+              setSpecialiteLibelle(item.appellation_libelle);
+              setFilters({ ...filters, specialite: String(item.metier_id) });
+            }}
           />
         </div>
         <div>

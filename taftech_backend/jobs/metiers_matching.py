@@ -1,14 +1,13 @@
 """
-Calcul déterministe du % de compatibilité candidat ↔ Domaine (nomenclature ANEM).
+Calcul déterministe du % de compatibilité candidat ↔ Metier (référentiel v2).
 
-Contrairement au matching candidat ↔ offre (jobs/matcher.py), un Domaine n'a pas
-de diplôme/compétences requis dans le référentiel — le score se limite donc à
-2 critères réellement disponibles : la spécialité déclarée et l'expérience réelle
-du candidat dans ce domaine. Volontairement pas de LLM ici : un pourcentage
+Contrairement au matching candidat ↔ offre (jobs/matcher.py), le score se limite à
+2 critères réellement disponibles : le métier déclaré/souhaité et l'expérience
+réelle du candidat dans ce métier. Volontairement pas de LLM ici : un pourcentage
 affiché comme un fait doit être reproductible, pas une estimation d'IA.
 """
-from .models import Domaine
-from .matcher import specialites_compatibles, normaliser
+from .models import Metier
+from .matcher import metiers_compatibles
 
 
 def calculer_metiers_accessibles(candidat_user, top_n=None):
@@ -16,35 +15,38 @@ def calculer_metiers_accessibles(candidat_user, top_n=None):
     if not profil:
         return []
 
-    specialite_candidat = profil.specialite or profil.secteur_souhaite
-    secteurs_experience = {
-        normaliser(exp.secteur).upper()
-        for exp in profil.experiences_detail.all()
-        if exp.secteur
+    metier_candidat = profil.metier or profil.metier_souhaite
+    if metier_candidat:
+        metier_candidat = metier_candidat.metier_canonique or metier_candidat
+    metiers_experience = {
+        exp.metier.metier_canonique or exp.metier
+        for exp in profil.experiences_detail.select_related('metier', 'metier__metier_canonique').all()
+        if exp.metier
     }
+    groupes_experience = {m.groupe_principal_id for m in metiers_experience if m.groupe_principal_id}
 
     resultats = []
-    for domaine in Domaine.objects.select_related('secteur').all():
-        code_domaine = domaine.code.upper()
+    for metier in Metier.objects.filter(selectionnable=True).select_related('groupe_principal', 'metier_canonique'):
+        m = metier.metier_canonique or metier
         score = 0.0
 
-        # Spécialité déclarée (60 pts)
-        if specialite_candidat:
-            compatible, ratio = specialites_compatibles(specialite_candidat, code_domaine)
+        # Métier déclaré/souhaité (60 pts)
+        if metier_candidat:
+            compatible, ratio = metiers_compatibles(metier_candidat, m)
             if compatible:
                 score += 60.0 * ratio
 
-        # Expérience réelle dans ce domaine (40 pts) — même domaine (40) ou même secteur (20)
-        if code_domaine in secteurs_experience:
+        # Expérience réelle dans ce métier (40 pts) — même métier (40) ou même groupe (20)
+        if m in metiers_experience:
             score += 40.0
-        elif any(s[:1] == code_domaine[:1] for s in secteurs_experience):
+        elif m.groupe_principal_id and m.groupe_principal_id in groupes_experience:
             score += 20.0
 
         if score > 0:
             resultats.append({
-                "domaine_code": domaine.code,
-                "libelle": domaine.libelle,
-                "secteur_code": domaine.secteur.code,
+                "metier_id": m.id,
+                "libelle": m.libelle,
+                "groupe_libelle": m.groupe_principal.libelle if m.groupe_principal else None,
                 "score": round(min(score, 100.0)),
             })
 

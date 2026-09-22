@@ -185,6 +185,21 @@ export const recruteurService = {
     }
   },
 
+  // S12 — vérification manuelle d'une exigence impérative (permis, habilitation...) répondue
+  // par le candidat, jamais une disqualification automatique.
+  mettreAJourReponseExigence: async (candidatureId, exigenceId, statut) => {
+    try {
+      const response = await api.patch(
+        `jobs/candidatures/${candidatureId}/exigences/${exigenceId}/`,
+        { statut },
+      );
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_MAJ_REPONSE_EXIGENCE_API", err);
+      throw err;
+    }
+  },
+
   // Candidatures
   updateStatutCandidature: async (candidatureId, payload) => {
     try {

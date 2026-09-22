@@ -47,7 +47,6 @@ class ProfilSnapshotTestCase(TestCase):
         self.profil.wilaya = "31 - Oran"
         self.profil.commune = "Bir El Djir"
         self.profil.diplome = "MASTER_2"
-        self.profil.specialite = "IT"
         self.profil.competences = "React, Django, Python"
         self.profil.langues = "Français:Avancé,Anglais:Intermédiaire"
         self.profil.save()
@@ -74,7 +73,6 @@ class ProfilSnapshotTestCase(TestCase):
             entreprise=self.entreprise,
             titre="Développeur Full-Stack",
             wilaya="31 - Oran",
-            specialite="IT",
             type_contrat="CDI",
             experience_requise="CONFIRME",
             statut_moderation="APPROUVEE",

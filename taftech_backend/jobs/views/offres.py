@@ -33,6 +33,7 @@ class JobListAPIView(APIView):
         commune = request.query_params.get('commune', '')
         diplome = request.query_params.get('diplome', '')
         specialite = request.query_params.get('specialite', '')
+        domaine_id = request.query_params.get('domaine_id', '')
         experience = request.query_params.get('experience', '')
         contrat = request.query_params.get('contrat', '')
         seuil_retention = timezone.now() - datetime.timedelta(days=RETENTION_OFFRES_CLOTUREES_JOURS)
@@ -50,12 +51,18 @@ class JobListAPIView(APIView):
         if diplome:
             offres = offres.filter(diplome__icontains=diplome)
         if specialite:
-            # Un code Secteur seul (1 lettre, ex: "A") filtre tous les domaines de
-            # ce secteur ; un code Domaine complet (ex: "A11") filtre exactement.
-            if len(specialite) == 1:
-                offres = offres.filter(specialite__istartswith=specialite)
-            else:
-                offres = offres.filter(specialite__iexact=specialite)
+            # Référentiel v2 : un id Metier (numérique) filtre exactement ce métier ; un
+            # code secteur (1 lettre, ex: "A") filtre tous les métiers de ce secteur via la
+            # hiérarchie GroupeMetier (secteur_source > domaine_source > Metier).
+            if specialite.isdigit():
+                from ..referentiel_utils import ids_metier_avec_redirections
+                offres = offres.filter(metier_id__in=ids_metier_avec_redirections(specialite))
+            elif len(specialite) == 1:
+                offres = offres.filter(metier__groupe_principal__parent__code_source__iexact=specialite)
+        if domaine_id and domaine_id.isdigit():
+            # Page "Offres par métier" (au sens GroupeMetier domaine_source, ex: "Espaces
+            # naturels et espaces verts") — id GroupeMetier, pas Metier.
+            offres = offres.filter(metier__groupe_principal_id=int(domaine_id))
         if experience:
             offres = offres.filter(experience_requise=experience)
         if contrat:
@@ -144,6 +151,34 @@ def _synchroniser_diplomes_acceptes_offre(offre, couple_ids):
         OffreDiplomeAccepte.objects.bulk_create(a_creer)
 
 
+def _synchroniser_exigences_offre(offre, items):
+    """S12 (REGLES_MATCHING) — remplace intégralement les exigences impératives de l'offre
+    (permis, habilitation, droit d'exercice...) à partir d'une liste
+    [{label, description, justificatif_requis}], même sémantique remplacement que compétences/
+    couples diplôme+spécialité. Ces exigences ne participent jamais au score de matching —
+    seulement à un contrôle d'éligibilité vérifié manuellement par le recruteur."""
+    from ..models import ExigenceImperative
+    offre.exigences_imperatives.all().delete()
+    if not items:
+        return
+    vues = set()
+    a_creer = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get('label', '')).strip()[:150]
+        if not label or label.lower() in vues:
+            continue
+        vues.add(label.lower())
+        description = str(item.get('description', '') or '')[:2000]
+        justificatif_requis = bool(item.get('justificatif_requis'))
+        a_creer.append(ExigenceImperative(
+            offre=offre, label=label, description=description, justificatif_requis=justificatif_requis,
+        ))
+    if a_creer:
+        ExigenceImperative.objects.bulk_create(a_creer)
+
+
 _NIVEAU_LABELS = dict(CompetenceOffre.NIVEAU_CHOICES)
 
 
@@ -185,6 +220,7 @@ class JobCreateAPIView(APIView):
             offre = serializer.save(entreprise=entreprise)
             _synchroniser_competences_offre(offre, request.data.get('competences_requises'))
             _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
+            _synchroniser_exigences_offre(offre, request.data.get('exigences_imperatives'))
             if offre.competences_requises.exists():
                 offre.competences = _texte_depuis_competences(offre.competences_requises.all())
                 offre.save(update_fields=['competences'])
@@ -233,6 +269,8 @@ class UpdateOffreRecruteurAPIView(APIView):
                     offre.save(update_fields=['competences'])
             if 'diplomes_acceptes' in request.data:
                 _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
+            if 'exigences_imperatives' in request.data:
+                _synchroniser_exigences_offre(offre, request.data.get('exigences_imperatives'))
             _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
             return Response({
                 "message": "Offre mise à jour.",
@@ -311,29 +349,38 @@ class ConstantsAPIView(APIView):
 
 
 class NomenclatureAPIView(APIView):
-    """Arbre complet Secteur > Domaine > Sous-domaine (nomenclature ANEM), pour
-    alimenter les filtres en cascade côté frontend (filtré côté client, comme
-    wilaya→commune)."""
+    """Arbre Secteur > Domaine > Métier (référentiel v2, GroupeMetier hiérarchique), pour
+    les pages publiques de navigation ("Offres par secteur/métier") — remplace l'ancien
+    Secteur/Domaine/SousDomaine ANEM (cutover complet, session 18/09/2026). Les formulaires
+    de saisie (offre/profil) utilisent désormais l'autocomplete `MetierAutocompleteAPIView`,
+    pas cette cascade."""
     permission_classes = [AllowAny]
     throttle_classes = [PublicReadThrottle]
     def get(self, request):
         from django.core.cache import cache
-        cached = cache.get('jobs_nomenclature')
+        cached = cache.get('jobs_nomenclature_v2')
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
-        from ..models import Secteur, Domaine, SousDomaine
+        from ..models import GroupeMetier, Metier
+        secteurs = GroupeMetier.objects.filter(type_groupe='secteur_source')
+        domaines = GroupeMetier.objects.filter(type_groupe='domaine_source').select_related('parent')
         data = {
-            "secteurs": [{"code": s.code, "libelle": s.libelle} for s in Secteur.objects.all()],
+            # `code_source` (ex: "A", "A11") est le code court d'origine, sans tiret —
+            # `code` (groupe_id, ex: "NSEC-A") est un identifiant interne non adapté aux URLs.
+            "secteurs": [{"code": s.code_source or s.code, "libelle": s.libelle} for s in secteurs],
             "domaines": [
-                {"id": d.id, "code": d.code, "libelle": d.libelle, "secteur_code": d.secteur_id and d.secteur.code}
-                for d in Domaine.objects.select_related('secteur').all()
+                {
+                    "id": d.id, "code": d.code_source or d.code, "libelle": d.libelle,
+                    "secteur_code": (d.parent.code_source or d.parent.code) if d.parent else None,
+                }
+                for d in domaines
             ],
-            "sous_domaines": [
-                {"id": sd.id, "libelle": sd.libelle, "domaine_code": sd.domaine.code}
-                for sd in SousDomaine.objects.select_related('domaine').all()
+            "metiers": [
+                {"id": m.id, "libelle": m.libelle, "domaine_id": m.groupe_principal_id}
+                for m in Metier.objects.filter(selectionnable=True).only('id', 'libelle', 'groupe_principal_id')
             ],
         }
-        cache.set('jobs_nomenclature', data, timeout=3600)
+        cache.set('jobs_nomenclature_v2', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -352,7 +399,7 @@ class NomenclatureFormationAPIView(APIView):
         from ..models import TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation, DiplomeSpecialite
         data = {
             "types_diplomes": [
-                {"id": d.id, "libelle": d.libelle, "systeme": d.systeme}
+                {"id": d.id, "code": d.code, "libelle": d.libelle, "systeme": d.systeme}
                 for d in TypeDiplome.objects.filter(selectionnable=True).order_by('systeme', 'libelle')
             ],
             "domaines": [
@@ -382,21 +429,37 @@ class MetierAutocompleteAPIView(APIView):
     """Recherche libre sur les appellations de poste (référentiel v2, 7428 entrées) — retourne
     un `metier_id` déjà résolu vers son `metier_canonique` (R04) et le libellé précis de
     l'appellation trouvée (à conserver tel quel côté candidat/offre, R03 : une fiche métier
-    peut regrouper plusieurs postes distincts)."""
+    peut regrouper plusieurs postes distincts).
+
+    Chaque résultat garde ses clés historiques (`metier_id`/`metier_libelle`/
+    `appellation_libelle`, consommées par MetierAutocomplete.jsx) et ajoute, en plus, la forme
+    recommandée par IMPORT étape 11 (`id`, `label`, `type_entite`, `contexte`, `source`,
+    `statut`, `ambiguite`) — additif, pas un remplacement, pour ne rien casser côté frontend.
+    Pagination via `limit`/`offset` (défaut 20/0, comme avant l'ajout du contrat)."""
     permission_classes = [AllowAny]
     throttle_classes = [PublicReadThrottle]
 
     def get(self, request):
         from ..models import Appellation
-        search = (request.query_params.get('search') or '').strip()
+        from ..referentiel_utils import normaliser_recherche, corriger_mots_flous, q_mots_cle_recherche
+        search = normaliser_recherche(request.query_params.get('search'))
         if not search:
             return Response([])
-        q = Q()
-        for mot in search.split():
-            q &= Q(cle_recherche__icontains=mot)
+        try:
+            limit = min(max(int(request.query_params.get('limit', 20)), 1), 100)
+        except (TypeError, ValueError):
+            limit = 20
+        try:
+            offset = max(int(request.query_params.get('offset', 0)), 0)
+        except (TypeError, ValueError):
+            offset = 0
+        mots = corriger_mots_flous(search.split())  # N04 : flou Levenshtein<=1, exact d'abord
+        # N02 : limite de mot entier (pas icontains) — "c" ne doit jamais matcher "cpp"/"c#"
+        # en tant que sous-chaîne (bug trouvé le 21/09/2026 en écrivant RechercheUniverselle).
+        q = q_mots_cle_recherche(mots)
         appellations = (
             Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
-            .select_related('metier', 'metier__metier_canonique')[:20]
+            .select_related('metier', 'metier__metier_canonique', 'metier__groupe_principal')[:offset + limit + 50]
         )
         resultats = []
         vus = set()
@@ -406,8 +469,239 @@ class MetierAutocompleteAPIView(APIView):
                 continue
             vus.add(metier.id)
             resultats.append({
+                # Clés historiques — MetierAutocomplete.jsx et ses consommateurs.
                 "metier_id": metier.id,
                 "metier_libelle": metier.libelle,
                 "appellation_libelle": app.libelle,
+                # Forme recommandée par IMPORT étape 11 (api_reference).
+                "id": metier.id,
+                "label": metier.libelle,
+                "type_entite": "metier",
+                "contexte": metier.groupe_principal.libelle if metier.groupe_principal_id else "",
+                "source": metier.source_id or app.source_id,
+                "statut": metier.statut,
+                "ambiguite": app.ambiguite,
             })
-        return Response(resultats)
+            if len(resultats) >= offset + limit:
+                break
+        return Response(resultats[offset:offset + limit])
+
+
+class RechercheUniverselleAPIView(APIView):
+    """R01/R02 (REGLES_MATCHING) — résout une requête libre INDÉPENDAMMENT contre chacun des
+    4 référentiels (métiers/appellations, compétences, diplômes, spécialités de formation) et
+    présente le type de chaque résultat, plutôt que de deviner un seul type à l'avance. Si une
+    clé cible plusieurs entrées ambiguës (`ambiguite=True` côté alias diplôme/spécialité), elles
+    sont toutes renvoyées avec leur contexte (domaine, système) — jamais un choix arbitraire.
+
+    Chaque résultat garde ses clés historiques (`type`/`libelle`/`ambigu`, vérifiées par
+    test_recherche_universelle.py) et ajoute la forme recommandée par IMPORT étape 11
+    (`type_entite`, `label`, `source`, `statut`, `ambiguite`) — additif. `limit`/`offset`
+    (défaut 10/0 par catégorie, comme avant l'ajout du contrat) paginent chaque liste."""
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request):
+        from ..models import Appellation, CompetenceReferentiel, TypeDiplome, AliasDiplome, SpecialiteFormation, AliasSpecialite, DiplomeSpecialite
+        from ..referentiel_utils import normaliser_recherche, corriger_mots_flous, q_mots_cle_recherche
+        from ..constants import WILAYAS_LIST
+
+        search_norm = normaliser_recherche(request.query_params.get('q'))
+        if not search_norm:
+            return Response({"metiers": [], "competences": [], "diplomes": [], "specialites": [], "localisation": None})
+        tous_mots = search_norm.split()
+        try:
+            limit = min(max(int(request.query_params.get('limit', 10)), 1), 50)
+        except (TypeError, ValueError):
+            limit = 10
+        try:
+            offset = max(int(request.query_params.get('offset', 0)), 0)
+        except (TypeError, ValueError):
+            offset = 0
+
+        # R06 (requête composée, ex: "data analyst Alger") : reconnaître métier ET
+        # localisation séparément — une wilaya reconnue dans la requête est extraite à part et
+        # retirée des jetons envoyés aux 4 référentiels, pour ne pas polluer leur recherche
+        # (ex: "Alger" ne doit jamais matcher une compétence ou un diplôme).
+        wilayas_normalisees = {normaliser_recherche(w): w for w in WILAYAS_LIST}
+        mots_wilaya, mots_reste = [], []
+        for mot in tous_mots:
+            if mot in wilayas_normalisees:
+                mots_wilaya.append(mot)
+            else:
+                mots_reste.append(mot)
+        localisation = wilayas_normalisees[mots_wilaya[0]] if mots_wilaya else None
+
+        mots = corriger_mots_flous(mots_reste)
+        search_reste = ' '.join(mots_reste)
+        metiers, competences, diplomes = [], [], []
+        vus_d = set()
+
+        if mots:
+            q_mots = q_mots_cle_recherche(mots)
+
+            # Métiers — même logique que MetierAutocompleteAPIView (dédupliquée par métier
+            # canonique, R04), retaggée avec le type "metier" pour l'affichage.
+            vus = set()
+            for app in (Appellation.objects.filter(q_mots, actif=True, metier__selectionnable=True)
+                        .select_related('metier', 'metier__metier_canonique', 'metier__groupe_principal')[:10]):
+                metier = app.metier.metier_canonique or app.metier
+                if metier.id in vus:
+                    continue
+                vus.add(metier.id)
+                metiers.append({
+                    "type": "metier", "id": metier.id, "libelle": metier.libelle,
+                    "appellation_libelle": app.libelle,
+                    "contexte": metier.groupe_principal.libelle if metier.groupe_principal_id else "",
+                    "type_entite": "metier", "label": metier.libelle,
+                    "source": metier.source_id or app.source_id, "statut": metier.statut,
+                    "ambiguite": app.ambiguite,
+                })
+
+            # Compétences — pas de `cle_recherche` dédiée sur ce référentiel (table modeste,
+            # 368 lignes), comparaison en Python sur label ET synonymes (ALIAS_COMPETENCES).
+            for c in CompetenceReferentiel.objects.filter(actif=True):
+                if search_reste in normaliser_recherche(c.label) or search_reste in normaliser_recherche(c.synonymes):
+                    competences.append({
+                        "type": "competence", "id": c.id, "libelle": c.label, "contexte": "",
+                        "type_entite": "competence", "label": c.label, "source": c.source_id,
+                        "statut": "actif" if c.actif else "inactif", "ambiguite": False,
+                    })
+                    if len(competences) >= 10:
+                        break
+
+            # Diplômes — recherche sur le libellé et les alias (AliasDiplome.cle_recherche déjà
+            # normalisé à l'import), `ambigu` reprend le flag du référentiel client (ne jamais
+            # décider seul lequel choisir). mode='or' : une requête composée (R06, "BTS
+            # informatique") ne met qu'UN mot par entité — exiger tous les mots ici manquerait
+            # systématiquement le diplôme quand l'autre moitié de la requête vise la spécialité.
+            q_mots_or = q_mots_cle_recherche(mots, mode='or')
+            alias_diplomes = AliasDiplome.objects.filter(q_mots_or).select_related('diplome')[:15]
+            for a in alias_diplomes:
+                if a.diplome_id in vus_d:
+                    continue
+                vus_d.add(a.diplome_id)
+                diplomes.append({
+                    "type": "diplome", "id": a.diplome_id, "libelle": a.diplome.libelle,
+                    "contexte": a.diplome.systeme, "ambigu": a.ambiguite,
+                    "type_entite": "diplome", "label": a.diplome.libelle,
+                    "source": a.diplome.source_id or a.source_id,
+                    "statut": "selectionnable" if a.diplome.selectionnable else "non_selectionnable",
+                    "ambiguite": a.ambiguite,
+                })
+            if len(diplomes) < 10:
+                # TypeDiplome n'a pas de `cle_recherche` dédiée (contrairement aux alias) —
+                # recherche directe sur son seul champ texte, `libelle`.
+                q_libelle_diplome = Q()
+                for mot in mots:
+                    q_libelle_diplome |= Q(libelle__icontains=mot)
+                for d in TypeDiplome.objects.filter(q_libelle_diplome, selectionnable=True).exclude(id__in=vus_d)[:10 - len(diplomes)]:
+                    diplomes.append({
+                        "type": "diplome", "id": d.id, "libelle": d.libelle, "contexte": d.systeme, "ambigu": False,
+                        "type_entite": "diplome", "label": d.libelle, "source": d.source_id,
+                        "statut": "selectionnable", "ambiguite": False,
+                    })
+
+            # Spécialités de formation — même principe, contexte = domaine (utile pour
+            # distinguer deux spécialités homonymes de domaines différents, F05).
+            specialites = []
+            vus_s = set()
+            alias_specialites = AliasSpecialite.objects.filter(q_mots_or).select_related('specialite', 'specialite__domaine')[:15]
+            for a in alias_specialites:
+                if a.specialite_id in vus_s:
+                    continue
+                vus_s.add(a.specialite_id)
+                specialites.append({
+                    "type": "specialite", "id": a.specialite_id, "libelle": a.specialite.libelle,
+                    "contexte": a.specialite.domaine.libelle, "ambigu": a.ambiguite,
+                    "type_entite": "specialite", "label": a.specialite.libelle,
+                    "source": a.specialite.source_id or a.source_id,
+                    "statut": "selectionnable" if a.specialite.selectionnable else "non_selectionnable",
+                    "ambiguite": a.ambiguite,
+                })
+            if len(specialites) < 10:
+                for s in (SpecialiteFormation.objects.filter(q_mots_or, selectionnable=True)
+                          .exclude(id__in=vus_s).select_related('domaine')[:10 - len(specialites)]):
+                    specialites.append({
+                        "type": "specialite", "id": s.id, "libelle": s.libelle, "contexte": s.domaine.libelle, "ambigu": False,
+                        "type_entite": "specialite", "label": s.libelle, "source": s.source_id,
+                        "statut": "selectionnable", "ambiguite": False,
+                    })
+        else:
+            specialites = []
+
+        # Pagination (api_reference, IMPORT étape 11) — appliquée après recherche/dédoublonnage,
+        # avant le calcul des couples (T23 ci-dessous doit refléter ce que la réponse renvoie
+        # réellement, pas les résultats internes non paginés).
+        metiers = metiers[offset:offset + limit]
+        competences = competences[offset:offset + limit]
+        diplomes = diplomes[offset:offset + limit]
+        specialites = specialites[offset:offset + limit]
+
+        # R06 (requête composée, ex: "BTS informatique") : quand un diplôme ET une spécialité
+        # ont TOUS LES DEUX été résolus à partir de la même requête, ne confirmer un "couple
+        # trouvé" que s'ils forment vraiment une formation attestée (DiplomeSpecialite) — sinon
+        # les deux restent des résultats indépendants, jamais présentés comme liés à tort
+        # (T23 : "les termes doivent appartenir à la même formation").
+        couples_valides = []
+        if diplomes and specialites:
+            paires = DiplomeSpecialite.objects.filter(
+                diplome_id__in=[d["id"] for d in diplomes],
+                specialite_id__in=[s["id"] for s in specialites],
+                selectionnable=True,
+            ).select_related('diplome', 'specialite')
+            for p in paires:
+                couples_valides.append({
+                    "diplome_id": p.diplome_id, "diplome_libelle": p.diplome.libelle,
+                    "specialite_id": p.specialite_id, "specialite_libelle": p.specialite.libelle,
+                })
+
+        return Response({
+            "metiers": metiers, "competences": competences,
+            "diplomes": diplomes, "specialites": specialites,
+            "localisation": localisation,
+            "couples_diplome_specialite_valides": couples_valides,
+        })
+
+
+class MetierSuggestionsAPIView(APIView):
+    """Suggestions de compétences et de couples diplôme+spécialité pour un `Metier` donné
+    (référentiel v2, `MetierCompetence`/`MetierFormation` — Phase 3 du plan client, jamais
+    branchées jusqu'ici malgré les 2792+1348 liens déjà importés en Phase 1). Purement
+    informatif : le recruteur choisit ce qu'il ajoute réellement à son offre, rien n'est
+    imposé ni pré-coché (même principe que les compétences suggérées par l'IA de génération
+    d'offre — jamais une attribution automatique, `MetierCompetence.attribution_candidat_auto`
+    reste toujours False en pratique)."""
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request, metier_id):
+        from ..models import Metier, MetierCompetence, MetierFormation, DiplomeSpecialite
+        try:
+            metier = Metier.objects.get(pk=metier_id)
+        except Metier.DoesNotExist:
+            return Response({"error": "Métier introuvable."}, status=404)
+        metier = metier.metier_canonique or metier
+
+        competences = [
+            {"id": mc.competence_id, "label": mc.competence.label}
+            for mc in MetierCompetence.objects.filter(metier=metier, competence__actif=True)
+            .select_related('competence').order_by('competence__label')[:15]
+        ]
+
+        specialite_ids = list(
+            MetierFormation.objects.filter(metier=metier).values_list('specialite_id', flat=True)
+        )
+        diplomes_specialites = [
+            {
+                "id": ds.id,
+                "diplome_id": ds.diplome_id,
+                "diplome_libelle": ds.diplome.libelle,
+                "specialite_id": ds.specialite_id,
+                "specialite_libelle": ds.specialite.libelle,
+            }
+            for ds in DiplomeSpecialite.objects.filter(specialite_id__in=specialite_ids, selectionnable=True)
+            .select_related('diplome', 'specialite')[:15]
+        ]
+
+        return Response({"competences": competences, "diplomes_specialites": diplomes_specialites})

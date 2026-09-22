@@ -1,8 +1,26 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from ..models import Candidature
+from ..models import Candidature, ReponseExigence
 from .profils import ExperienceSerializer, FormationSerializer, CompetenceCandidatSerializer
 from .questionnaires import ReponseCandidatSerializer
+
+
+class ReponseExigenceSerializer(serializers.ModelSerializer):
+    """S12 — réponse du candidat à une exigence impérative de l'offre, avec le libellé de
+    l'exigence pour l'affichage recruteur sans requête supplémentaire côté frontend."""
+    exigence_label = serializers.CharField(source='exigence.label', read_only=True)
+    exigence_id = serializers.IntegerField(source='exigence.id', read_only=True)
+    justificatif_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReponseExigence
+        fields = ('id', 'exigence_id', 'exigence_label', 'statut', 'justificatif_url', 'commentaire', 'date_reponse')
+
+    def get_justificatif_url(self, obj):
+        if not obj.justificatif:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.justificatif.url) if request else obj.justificatif.url
 
 User = get_user_model()
 
@@ -23,7 +41,7 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     permis_conduire = serializers.SerializerMethodField()
     vehicule_personnel = serializers.SerializerMethodField()
     passeport_valide = serializers.SerializerMethodField()
-    secteur_souhaite = serializers.SerializerMethodField()
+    metier_souhaite = serializers.SerializerMethodField()
     salaire_souhaite = serializers.SerializerMethodField()
     mobilite = serializers.SerializerMethodField()
     situation_actuelle = serializers.SerializerMethodField()
@@ -31,7 +49,8 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     commune = serializers.SerializerMethodField()
     adresse = serializers.SerializerMethodField()
     diplome = serializers.SerializerMethodField()
-    specialite = serializers.SerializerMethodField()
+    diplome_ref_libelle = serializers.SerializerMethodField()
+    metier = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
     linkedin = serializers.SerializerMethodField()
     github = serializers.SerializerMethodField()
@@ -43,8 +62,9 @@ class CandidatInfoDTO(serializers.ModelSerializer):
             'titre_professionnel', 'cv_pdf', 'photo_profil',
             'experiences', 'formations', 'competences', 'competences_detail', 'langues',
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
-            'secteur_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
-            'wilaya', 'commune', 'adresse', 'diplome', 'specialite', 'bio', 'linkedin', 'github',
+            'metier_souhaite', 'salaire_souhaite', 'mobilite', 'situation_actuelle',
+            'wilaya', 'commune', 'adresse', 'diplome', 'diplome_ref_libelle', 'metier',
+            'bio', 'linkedin', 'github',
         )
 
     def _profil(self, obj):
@@ -97,8 +117,8 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     def get_passeport_valide(self, obj):
         p = self._profil(obj); return p.passeport_valide if p else False
 
-    def get_secteur_souhaite(self, obj):
-        p = self._profil(obj); return p.secteur_souhaite if p else None
+    def get_metier_souhaite(self, obj):
+        p = self._profil(obj); return p.metier_souhaite.libelle if p and p.metier_souhaite else None
 
     def get_salaire_souhaite(self, obj):
         p = self._profil(obj); return p.salaire_souhaite if p else None
@@ -121,8 +141,18 @@ class CandidatInfoDTO(serializers.ModelSerializer):
     def get_diplome(self, obj):
         p = self._profil(obj); return p.diplome if p else None
 
-    def get_specialite(self, obj):
-        p = self._profil(obj); return p.specialite if p else None
+    def get_diplome_ref_libelle(self, obj):
+        p = self._profil(obj)
+        if not p:
+            return None
+        if p.diplome_ref:
+            return p.diplome_ref.libelle
+        if p.niveau_scolaire_ref:
+            return p.niveau_scolaire_ref.libelle
+        return None
+
+    def get_metier(self, obj):
+        p = self._profil(obj); return p.metier.libelle if p and p.metier else None
 
     def get_bio(self, obj):
         p = self._profil(obj); return p.bio if p else None
@@ -149,6 +179,7 @@ class PostulerRapideDTO(serializers.ModelSerializer):
 class CandidatureRecruteurDTO(serializers.ModelSerializer):
     candidat = CandidatInfoDTO(read_only=True)
     reponses = ReponseCandidatSerializer(many=True, read_only=True)
+    reponses_exigences = ReponseExigenceSerializer(many=True, read_only=True)
     lettre_motivation_file = serializers.SerializerMethodField()
     cv_rapide_url = serializers.SerializerMethodField()
 
@@ -160,7 +191,8 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
             'est_rapide', 'nom_rapide', 'prenom_rapide', 'email_rapide',
             'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien',
             'note_technique', 'note_communication', 'note_motivation', 'note_experience',
-            'note_globale', 'commentaire_evaluation', 'reponses', 'profil_snapshot', 'source'
+            'note_globale', 'commentaire_evaluation', 'reponses', 'reponses_exigences',
+            'profil_snapshot', 'source'
         )
 
     def get_lettre_motivation_file(self, obj):

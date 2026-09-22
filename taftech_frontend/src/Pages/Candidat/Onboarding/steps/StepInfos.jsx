@@ -2,9 +2,10 @@ import React, { useMemo } from "react";
 import { Check } from "lucide-react";
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
+import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
 
 const HAS_EXISTING_INFOS = (p) =>
-  !!(p?.telephone || p?.wilaya || p?.commune || p?.diplome || p?.specialite || p?.sexe || p?.bio || p?.linkedin || p?.github);
+  !!(p?.telephone || p?.wilaya || p?.commune || p?.diplome || p?.metier || p?.sexe || p?.bio || p?.linkedin || p?.github);
 
 const SERVICE_MILITAIRE_OPTIONS = [
   { value: "NON_CONCERNE", label: "Non concerné (Femme)" },
@@ -92,6 +93,13 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
             <option value="">Sélectionnez…</option>
             {(constants.diplomes || []).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
           </select>
+        </div>
+        <div>
+          <label className={`${tw.authLabel} mb-1.5`}>Métier</label>
+          <MetierAutocomplete
+            value={infosForm.metier_libelle || ""}
+            onSelect={(item) => setInfosForm((prev) => ({ ...prev, metier: item.metier_id, metier_libelle: item.appellation_libelle }))}
+          />
         </div>
         <div>
           <label htmlFor="onb-service-militaire" className={`${tw.authLabel} mb-1.5`}>Service militaire</label>

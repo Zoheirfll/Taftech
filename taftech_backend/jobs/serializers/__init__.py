@@ -32,7 +32,6 @@ from .divers import (
     AlerteEmploiSerializer,
     NotificationSerializer,
     CandidatureSpontaneeSerializer,
-    MetierReferentielSerializer,
 )
 from .entreprise import EntrepriseDashboardDetailSerializer
 from .dashboard import OffreDashboardDTO

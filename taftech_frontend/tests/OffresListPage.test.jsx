@@ -28,6 +28,9 @@ vi.mock("../src/Services/jobsService", () => ({
     getConstants: vi.fn(),
     modifierOffre: vi.fn(),
     supprimerOffre: vi.fn(),
+    getNomenclatureFormation: vi.fn(),
+    getMetierSuggestions: vi.fn(),
+    searchCompetences: vi.fn(),
   },
 }));
 
@@ -65,6 +68,9 @@ describe("📋 UI & Logique - Composant <OffresListPage />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getConstants.mockResolvedValue({ wilayas: [], secteurs: [] });
+    jobsService.getNomenclatureFormation.mockResolvedValue({ types_diplome: [], couples: [] });
+    jobsService.getMetierSuggestions.mockResolvedValue({ competences: [], diplomes_specialites: [] });
+    jobsService.searchCompetences.mockResolvedValue([]);
   });
 
   afterEach(() => {

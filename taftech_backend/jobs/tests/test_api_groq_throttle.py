@@ -7,7 +7,6 @@ from jobs.views.ia import (
     GroqThrottle,
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView,
-    MetierReferentielAPIView,
 )
 
 

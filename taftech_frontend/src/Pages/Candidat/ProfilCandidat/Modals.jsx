@@ -1,7 +1,6 @@
 import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
-import { SecteurDomaineSelect } from "../../../Components/SecteurDomaineSelect";
 import { FormationReferentielSelect } from "../../../Components/FormationReferentielSelect";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
 import { tw } from "../../../theme";
@@ -198,7 +197,7 @@ export const Modals = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={tw.formLabel}>
-                    Diplôme
+                    Niveau d'études
                   </label>
                   <Select
                     options={constants.diplomes}
@@ -216,28 +215,19 @@ export const Modals = ({
                     }
                     styles={selectStyles}
                   />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Niveau global — le diplôme et la spécialité précis se renseignent dans "Mes formations".
+                  </p>
                 </div>
                 <div>
                   <label className={tw.formLabel}>
-                    Spécialité
+                    Métier
                   </label>
-                  <SecteurDomaineSelect
-                    value={editInfo.specialite}
-                    onChange={(domaineCode) =>
-                      setEditInfo({ ...editInfo, specialite: domaineCode })
-                    }
-                    styles={selectStyles}
+                  <MetierAutocomplete
+                    value={editInfo.metier_libelle || ""}
+                    onSelect={(item) => setEditInfo({ ...editInfo, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
                   />
                 </div>
-              </div>
-              <div>
-                <label className={tw.formLabel}>
-                  Métier recherché (optionnel — améliore la précision du matching)
-                </label>
-                <MetierAutocomplete
-                  value={editInfo.metier_libelle || ""}
-                  onSelect={(item) => setEditInfo({ ...editInfo, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
-                />
               </div>
               <div>
                 <label className={tw.formLabel}>
@@ -314,14 +304,11 @@ export const Modals = ({
             >
               <div>
                 <label className={tw.formLabel}>
-                  Secteur souhaité
+                  Métier souhaité
                 </label>
-                <SecteurDomaineSelect
-                  value={editPref.secteur_souhaite}
-                  onChange={(domaineCode) =>
-                    setEditPref({ ...editPref, secteur_souhaite: domaineCode })
-                  }
-                  styles={selectStyles}
+                <MetierAutocomplete
+                  value={editPref.metier_souhaite_libelle || ""}
+                  onSelect={(item) => setEditPref({ ...editPref, metier_souhaite: item.metier_id, metier_souhaite_libelle: item.appellation_libelle })}
                 />
               </div>
               <div>
@@ -492,19 +479,19 @@ export const Modals = ({
                       <div className="max-h-48 overflow-y-auto">
                         {titreSuggestions.map((m) => (
                           <button
-                            key={m.id}
+                            key={m.metier_id}
                             type="button"
                             onMouseDown={() => {
-                              setEditCV({ ...editCV, titre: m.titre });
+                              setEditCV({ ...editCV, titre: m.appellation_libelle });
                               setShowTitreSuggestions(false);
                             }}
                             className={`w-full text-left px-4 py-2.5 transition-colors ${tw.autocompleteItem}`}
                           >
                             <p className={`text-sm font-medium ${tw.autocompleteItemTitle}`}>
-                              {m.titre}
+                              {m.appellation_libelle}
                             </p>
                             <p className={`text-xs ${tw.autocompleteItemSubtitle}`}>
-                              {m.domaine_label}
+                              {m.metier_libelle}
                             </p>
                           </button>
                         ))}
@@ -578,14 +565,14 @@ export const Modals = ({
                     <ul className={`absolute z-50 w-full rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1 ${tw.autocompleteDropdown}`}>
                       {expTitreSuggestions.map((m) => (
                         <li
-                          key={m.id}
+                          key={m.metier_id}
                           className={`px-4 py-2 text-sm cursor-pointer ${tw.textMuted700} ${tw.bgPrimaryHover}`}
                           onMouseDown={() => {
-                            setNewExp((prev) => ({ ...prev, titre_poste: m.titre }));
+                            setNewExp((prev) => ({ ...prev, titre_poste: m.appellation_libelle }));
                             setShowExpTitreSuggestions(false);
                           }}
                         >
-                          {m.titre}
+                          {m.appellation_libelle}
                         </li>
                       ))}
                     </ul>
@@ -608,17 +595,7 @@ export const Modals = ({
               </div>
               <div>
                 <label className={tw.formLabel}>
-                  Secteur du poste
-                </label>
-                <SecteurDomaineSelect
-                  value={newExp.secteur}
-                  onChange={(domaineCode) => setNewExp({ ...newExp, secteur: domaineCode })}
-                  styles={selectStyles}
-                />
-              </div>
-              <div>
-                <label className={tw.formLabel}>
-                  Métier précis (optionnel)
+                  Métier
                 </label>
                 <MetierAutocomplete
                   value={newExp.metier_libelle || ""}
@@ -712,49 +689,26 @@ export const Modals = ({
               }
               className="space-y-4"
             >
-              <div>
-                <label className={tw.formLabel}>
-                  Niveau de diplôme
-                </label>
-                <Select
-                  options={constants.diplomes}
-                  placeholder="Sélectionnez..."
-                  value={
-                    constants.diplomes.find(
-                      (d) => d.label === newForm.diplome,
-                    ) || null
-                  }
-                  onChange={(opt) =>
-                    setNewForm({ ...newForm, diplome: opt ? opt.label : "" })
-                  }
-                  styles={selectStyles}
-                  isClearable
-                />
-              </div>
-              <div>
-                <label className={tw.formLabel}>
-                  Spécialité / Domaine
-                </label>
-                <input
-                  placeholder="Ex: Informatique, Génie Civil..."
-                  className={inputClass}
-                  value={newForm.description}
-                  onChange={(e) =>
-                    setNewForm({ ...newForm, description: e.target.value })
-                  }
-                />
-              </div>
               <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
                 <p className="text-xs text-slate-600">
-                  Optionnel — précisez votre formation dans le référentiel national pour un
-                  score de correspondance plus fiable sur les offres. Absente de la liste ?
-                  Laissez vide, les champs ci-dessus (texte libre) suffisent.
+                  Type de diplôme et spécialité — choisissez dans le référentiel national pour un
+                  score de correspondance plus fiable sur les offres, ou "Autre, préciser" si votre
+                  formation n'y figure pas.
                 </p>
                 <FormationReferentielSelect
                   diplomeId={newForm.diplome_ref}
                   specialiteId={newForm.specialite_ref}
-                  onChangeDiplome={(id) => setNewForm({ ...newForm, diplome_ref: id })}
-                  onChangeSpecialite={(id) => setNewForm({ ...newForm, specialite_ref: id })}
+                  onChangeDiplome={(id, label) =>
+                    setNewForm((p) => ({ ...p, diplome_ref: id, ...(id && label ? { diplome: label } : {}) }))
+                  }
+                  onChangeSpecialite={(id, label) =>
+                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { description: label } : {}) }))
+                  }
+                  autreTexte={newForm.description}
+                  onChangeAutreTexte={(texte) => setNewForm({ ...newForm, description: texte })}
+                  diplomeAutreTexte={newForm.diplome}
+                  onChangeDiplomeAutreTexte={(texte) => setNewForm({ ...newForm, diplome: texte })}
+                  required
                 />
                 <div>
                   <label className={tw.formLabel}>Statut de la formation</label>
@@ -797,18 +751,59 @@ export const Modals = ({
                 </div>
                 <div>
                   <label className={tw.formLabel}>
-                    Fin (ou prévue)
+                    {newForm.statut === "EN_COURS" ? "Fin prévue" : "Fin (obtention)"}
                   </label>
                   <input
                     type="date"
                     className={inputClass}
-                    value={newForm.date_fin}
+                    value={
+                      newForm.statut === "EN_COURS"
+                        ? newForm.date_fin_prevue || ""
+                        : newForm.date_fin || ""
+                    }
                     onChange={(e) =>
-                      setNewForm({ ...newForm, date_fin: e.target.value })
+                      newForm.statut === "EN_COURS"
+                        ? setNewForm({ ...newForm, date_fin_prevue: e.target.value })
+                        : setNewForm({ ...newForm, date_fin: e.target.value })
                     }
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={tw.formLabel}>Pays de la formation</label>
+                  <input
+                    maxLength={2}
+                    placeholder="DZ"
+                    className={inputClass}
+                    value={newForm.pays_formation ?? "DZ"}
+                    onChange={(e) =>
+                      setNewForm({ ...newForm, pays_formation: e.target.value.toUpperCase() })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={tw.formLabel}>Référence justificatif (optionnel)</label>
+                  <input
+                    placeholder="Ex: diplome_2024.pdf"
+                    className={inputClass}
+                    value={newForm.document_reference ?? ""}
+                    onChange={(e) =>
+                      setNewForm({ ...newForm, document_reference: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={!!newForm.est_principale}
+                  onChange={(e) =>
+                    setNewForm({ ...newForm, est_principale: e.target.checked })
+                  }
+                />
+                Formation principale (mise en avant sur mon profil)
+              </label>
               <div className="flex gap-3">
                 <button
                   type="button"

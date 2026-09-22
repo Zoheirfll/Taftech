@@ -88,15 +88,19 @@ class StatsGeoAPIView(APIView):
     def get(self, request):
         from collections import Counter
         from django.db.models import Count
-        from ..models import OffreEmploi
+        from ..models import OffreEmploi, GroupeMetier
         qs = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
         wilayas = {r['wilaya']: r['count'] for r in qs.values('wilaya').annotate(count=Count('id')) if r['wilaya']}
-        # specialite stocke un code Domaine ANEM (ex: "A11") — on agrège au niveau
-        # Secteur (1ère lettre du code) pour la page "Par secteur".
+        # metier -> groupe_principal (domaine_source) -> parent (secteur_source) : on agrège
+        # au niveau secteur racine pour la page "Par secteur" (référentiel v2).
+        secteur_par_domaine = dict(
+            GroupeMetier.objects.filter(type_groupe='domaine_source').values_list('id', 'parent__code_source')
+        )
         secteurs_counter = Counter()
-        for r in qs.values('specialite'):
-            if r['specialite']:
-                secteurs_counter[r['specialite'][:1]] += 1
+        for r in qs.exclude(metier__groupe_principal__isnull=True).values('metier__groupe_principal_id'):
+            secteur_code = secteur_par_domaine.get(r['metier__groupe_principal_id'])
+            if secteur_code:
+                secteurs_counter[secteur_code] += 1
         return Response({'wilayas': wilayas, 'secteurs': dict(secteurs_counter)})
 
 class EntrepriseListAPIView(APIView):

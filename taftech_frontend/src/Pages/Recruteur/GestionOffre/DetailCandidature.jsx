@@ -20,21 +20,24 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { authService } from "../../../Services/authService";
+import { jobsService } from "../../../Services/jobsService";
 import { candidatFichierUrl, documentPartageFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
-import DomaineLabel from "../../../Components/DomaineLabel";
 import CandidatureTimeline from "../../../Components/CandidatureTimeline";
 import MatchingRadarChart from "../../../Components/MatchingRadarChart";
 import { tw } from "../../../theme";
 import { confirmToast } from "../../../utils/confirmToast";
+import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { reportError } from "../../../utils/errorReporter";
 
 const CRITERES_RADAR = [
   { key: "specialite", label: "Spécialité", max: 25 },
   { key: "diplome", label: "Diplôme", max: 20 },
   { key: "experience", label: "Expérience", max: 20 },
   { key: "competences", label: "Compétences", max: 15 },
-  { key: "region", label: "Région", max: 20 },
+  { key: "region", label: "Localisation & mobilité", max: 20 },
 ];
 
 
@@ -77,6 +80,20 @@ export const DetailCandidature = ({
   const candidatUserId = selectedCandidature?.candidat?.id;
   const [showStatutMenu, setShowStatutMenu] = React.useState(false);
   const statutMenuRef = React.useRef(null);
+  // S12 — statuts d'exigences vérifiés localement (pas de refetch complet de la candidature
+  // disponible depuis ce composant) ; surchargent l'affichage jusqu'au prochain vrai rechargement.
+  const [exigenceOverrides, setExigenceOverrides] = React.useState({});
+
+  const handleVerifierExigence = async (exigenceId, statut) => {
+    try {
+      await jobsService.mettreAJourReponseExigence(selectedCandidature.id, exigenceId, statut);
+      setExigenceOverrides((prev) => ({ ...prev, [exigenceId]: statut }));
+      toast.success("Exigence mise à jour.");
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour de l'exigence."));
+      reportError("ECHEC_VERIFICATION_EXIGENCE", err);
+    }
+  };
 
   React.useEffect(() => {
     if (!showStatutMenu) return;
@@ -135,10 +152,16 @@ export const DetailCandidature = ({
                   {candidatData.adresse}
                 </span>
               )}
-              {candidatData?.diplome && (
+              {(candidatData?.diplome_ref_libelle || candidatData?.diplome) && (
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                   <GraduationCap size={11} />
-                  {candidatData.diplome}
+                  {candidatData.diplome_ref_libelle || candidatData.diplome}
+                </span>
+              )}
+              {candidatData?.metier && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
+                  <Briefcase size={11} />
+                  {candidatData.metier}
                 </span>
               )}
             </div>
@@ -332,6 +355,56 @@ export const DetailCandidature = ({
             </div>
           )}
 
+          {/* Exigences impératives (S12) — jamais notées dans le score, filtre d'éligibilité
+              vérifié manuellement. INCONNU = à vérifier, pas une disqualification. */}
+          {selectedCandidature.reponses_exigences?.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Exigences de l'offre</h4>
+              <div className="space-y-2">
+                {selectedCandidature.reponses_exigences.map((r0) => {
+                  const r = { ...r0, statut: exigenceOverrides[r0.exigence_id] || r0.statut };
+                  const styles = {
+                    SATISFAIT: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    NON_SATISFAIT: "bg-red-50 text-red-700 border-red-200",
+                    INCONNU: "bg-amber-50 text-amber-700 border-amber-200",
+                  };
+                  const labels = { SATISFAIT: "Satisfait", NON_SATISFAIT: "Non satisfait", INCONNU: "À vérifier" };
+                  return (
+                    <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-slate-200 rounded-lg">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-900 truncate">{r.exigence_label}</p>
+                        {r.justificatif_url && (
+                          <a href={r.justificatif_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-teal-700 hover:underline">
+                            Voir le justificatif
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${styles[r.statut]}`}>{labels[r.statut]}</span>
+                        {authService.peutFaire("UTILISATEUR") && r.statut === "INCONNU" && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleVerifierExigence(r.exigence_id, "SATISFAIT")}
+                              className="px-2 py-1 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => handleVerifierExigence(r.exigence_id, "NON_SATISFAIT")}
+                              className="px-2 py-1 rounded-md text-[11px] font-semibold bg-red-100 text-red-800 hover:bg-red-200"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Coordonnées */}
           <div>
             <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Coordonnées</h4>
@@ -404,8 +477,8 @@ export const DetailCandidature = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     {
-                      label: "Secteur",
-                      value: <DomaineLabel code={candidatData.secteur_souhaite} />,
+                      label: "Métier souhaité",
+                      value: candidatData.metier_souhaite || "Non renseigné",
                     },
                     {
                       label: "Prétentions",
@@ -451,7 +524,7 @@ export const DetailCandidature = ({
                         </p>
                         <p className={`text-sm ${tw.textTeal}`}>
                           {exp.entreprise}
-                          {exp.secteur && <span className={`${tw.textMuted} font-normal ml-1`}><DomaineLabel code={exp.secteur} prefix="· " /></span>}
+                          {exp.metier_libelle && <span className={`${tw.textMuted} font-normal ml-1`}>· {exp.metier_libelle}</span>}
                         </p>
                         <p className={`text-xs ${tw.textMuted} mt-0.5 flex items-center gap-1`}>
                           <Calendar size={10} />
@@ -477,8 +550,27 @@ export const DetailCandidature = ({
                         <p className={`text-sm font-semibold ${tw.textStrong}`}>
                           {form.diplome || "Diplôme non précisé"}
                         </p>
+                        {(form.diplome_ref_libelle || form.specialite_ref_libelle) && (
+                          <p className="flex flex-wrap items-center gap-1 mt-1">
+                            {form.diplome_ref_libelle && (
+                              <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>
+                                {form.diplome_ref_libelle}
+                              </span>
+                            )}
+                            {form.specialite_ref_libelle && (
+                              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-teal-50 text-teal-700">
+                                {form.specialite_ref_libelle}
+                              </span>
+                            )}
+                            {form.statut && form.statut !== "OBTENU" && (
+                              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-700">
+                                {form.statut === "EN_COURS" ? "En cours" : form.statut === "INTERROMPU" ? "Interrompu" : form.statut}
+                              </span>
+                            )}
+                          </p>
+                        )}
                         {form.description && (
-                          <p className={`text-xs ${tw.textTeal} font-medium`}>
+                          <p className={`text-xs ${tw.textTeal} font-medium mt-1`}>
                             {form.description}
                           </p>
                         )}

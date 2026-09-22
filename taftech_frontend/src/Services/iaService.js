@@ -31,17 +31,6 @@ export const iaService = {
     }
   },
 
-  // Suggestions carrière
-  getSuggestionsCarriere: async () => {
-    try {
-      const response = await api.get("jobs/suggestions-carriere/");
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_SUGGESTIONS_CARRIERE", err);
-      throw err;
-    }
-  },
-
   // Analyse carrière Groq (candidat)
   getAnalyseCarriere: async () => {
     try {
@@ -77,19 +66,4 @@ export const iaService = {
     }
   },
 
-  // Métiers référentiel (nomenclature ANEM)
-  getMetiers: async (search = "", secteur = "", domaine = "", sousDomaine = "") => {
-    try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (secteur) params.append("secteur", secteur);
-      if (domaine) params.append("domaine", domaine);
-      if (sousDomaine) params.append("sous_domaine", sousDomaine);
-      const response = await api.get(`jobs/metiers/?${params.toString()}`);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_METIERS", err);
-      throw err;
-    }
-  },
 };

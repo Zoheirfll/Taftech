@@ -91,7 +91,7 @@ const CATEGORIES = [
     label: "Informations personnelles",
     action: "info",
     criteres: ["Numéro de téléphone", "Photo de profil", "Titre professionnel", "Wilaya / Commune", "Diplôme", "Spécialité"],
-    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.specialite],
+    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.metier],
   },
   {
     key: "experience",
@@ -520,7 +520,7 @@ const CandidatDashboard = () => {
                     <p className={`text-[10px] font-bold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>Métiers accessibles pour vous</p>
                     <div className="space-y-1.5">
                       {metiersAccessibles.map((m) => (
-                        <div key={m.domaine_code} className="flex items-center gap-2">
+                        <div key={m.metier_id} className="flex items-center gap-2">
                           <Briefcase size={12} className={`${tw.textPrimary} shrink-0`} />
                           <span className={`text-xs flex-1 truncate ${tw.textMuted700}`}>{m.libelle}</span>
                           <span className={`text-xs font-bold ${tw.textStrong}`}>{m.score}%</span>

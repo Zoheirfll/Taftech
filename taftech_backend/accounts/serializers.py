@@ -183,6 +183,18 @@ class RecruteurRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Un compte existe déjà avec cette adresse email.")
         return value
 
+    def validate_secteur_activite(self, value):
+        from jobs.referentiel_utils import secteurs_entreprise
+        codes_valides = {s["code"] for s in secteurs_entreprise()}
+        # Repli tolérant si le référentiel v2 n'est pas encore importé dans cet environnement
+        # (`GroupeMetier` peuplé uniquement par `import_referentiel_v2`, jamais par une
+        # migration) — ne jamais bloquer l'inscription recruteur pour une raison purement
+        # opérationnelle côté serveur, même pattern que les autres reprises "tolérantes" du
+        # référentiel v2 dans ce projet (ex: `resoudre_diplome_et_specialite_depuis_texte`).
+        if codes_valides and value not in codes_valides:
+            raise serializers.ValidationError("Secteur d'activité invalide — sélectionnez une valeur de la liste.")
+        return value
+
     def create(self, validated_data):
         # 1. On sépare les infos de l'entreprise
         nom_entreprise = validated_data.pop('nom_entreprise')

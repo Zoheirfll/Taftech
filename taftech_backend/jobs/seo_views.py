@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.conf import settings
 from django.utils.text import slugify
 from django.views import View
-from .models import OffreEmploi, ProfilEntreprise, Secteur, Domaine, Article
+from .models import OffreEmploi, ProfilEntreprise, GroupeMetier, Metier, Article
 from .constants import WILAYAS_CHOICES
 
 STATIC_PATHS = [
@@ -28,18 +28,24 @@ class SitemapXMLView(View):
         for path, priority, freq in STATIC_PATHS:
             urls.append(f"<url><loc>{base}{path}</loc><changefreq>{freq}</changefreq><priority>{priority}</priority></url>")
 
-        # Précharge le libellé Secteur par code Domaine pour éviter une requête par offre.
-        secteur_libelle_par_domaine = {
-            d.code: d.secteur.libelle for d in Domaine.objects.select_related('secteur').only('code', 'secteur__libelle')
-        }
+        # Précharge le libellé du secteur (groupe racine) par Metier pour éviter une requête
+        # par offre — la hiérarchie GroupeMetier est secteur_source (racine) > domaine_source
+        # (Metier.groupe_principal) > Metier.
+        secteur_libelle_par_metier = {}
+        for m in Metier.objects.select_related('groupe_principal', 'groupe_principal__parent').only(
+            'id', 'groupe_principal__libelle', 'groupe_principal__parent__libelle'
+        ):
+            groupe = m.groupe_principal
+            racine = groupe.parent if groupe and groupe.parent else groupe
+            secteur_libelle_par_metier[m.id] = racine.libelle if racine else None
 
         offres = OffreEmploi.objects.select_related('entreprise').filter(
             est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        ).only('id', 'titre', 'specialite', 'code_public', 'date_publication', 'entreprise__slug')
+        ).only('id', 'titre', 'metier_id', 'code_public', 'date_publication', 'entreprise__slug')
         for o in offres:
             lastmod = f"<lastmod>{o.date_publication.date().isoformat()}</lastmod>" if o.date_publication else ""
             entreprise_slug = o.entreprise.slug
-            secteur_libelle = secteur_libelle_par_domaine.get(o.specialite) or "offres-d-emploi"
+            secteur_libelle = secteur_libelle_par_metier.get(o.metier_id) or "offres-d-emploi"
             secteur_slug = slugify(secteur_libelle)
             titre_slug = slugify(o.titre)
             chemin = f"{titre_slug}-{o.code_public}" if titre_slug else o.code_public
@@ -55,15 +61,15 @@ class SitemapXMLView(View):
                 f"<changefreq>weekly</changefreq><priority>0.6</priority></url>"
             )
 
-        for s in Secteur.objects.only('code', 'libelle'):
+        for s in GroupeMetier.objects.filter(type_groupe='secteur_source').only('code', 'libelle'):
             chemin = f"{s.code.lower()}-{slugify(s.libelle)}"
             urls.append(
                 f"<url><loc>{base}/secteurs/{chemin}/</loc>"
                 f"<changefreq>weekly</changefreq><priority>0.5</priority></url>"
             )
 
-        for d in Domaine.objects.only('code', 'libelle'):
-            chemin = f"{d.code.lower()}-{slugify(d.libelle)}"
+        for m in Metier.objects.filter(selectionnable=True).only('id', 'code', 'libelle'):
+            chemin = f"{m.id}-{slugify(m.libelle)}"
             urls.append(
                 f"<url><loc>{base}/metiers/{chemin}/</loc>"
                 f"<changefreq>weekly</changefreq><priority>0.5</priority></url>"

@@ -78,7 +78,7 @@ class RegistrationAndAuthTests(APITestCase):
             "last_name": "Recruteur",
             "telephone": "0660445566",
             "nom_entreprise": "Sonatrach",
-            "secteur_activite": "IT",
+            "secteur_activite": "G",
             "registre_commerce": "RC123456789"
         }
 

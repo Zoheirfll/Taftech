@@ -173,7 +173,7 @@ const SuggestionsCarriere = () => {
             <div className={`divide-y ${tw.divideBase}`}>
               {paginated.map((m) => (
                 <div
-                  key={m.domaine_code}
+                  key={m.metier_id}
                   className={`flex items-center justify-between px-5 py-3 ${tw.hoverSurfaceMuted} transition-colors`}
                 >
                   <p className={`text-sm font-medium ${tw.textStrong}`}>

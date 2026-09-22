@@ -185,48 +185,6 @@ export const adminService = {
     }
   },
 
-  // Métiers
-  getAdminMetiers: async (search = "", page = 1) => {
-    try {
-      const response = await api.get(
-        `jobs/admin/metiers/?search=${search}&page=${page}`,
-      );
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_ADMIN_METIERS", err);
-      throw err;
-    }
-  },
-
-  createMetier: async (data) => {
-    try {
-      const response = await api.post("jobs/admin/metiers/", data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_CREATE_METIER", err);
-      throw err;
-    }
-  },
-
-  updateMetier: async (id, data) => {
-    try {
-      const response = await api.put(`jobs/admin/metiers/${id}/`, data);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_UPDATE_METIER", err);
-      throw err;
-    }
-  },
-
-  deleteMetier: async (id) => {
-    try {
-      const response = await api.delete(`jobs/admin/metiers/${id}/`);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_DELETE_METIER", err);
-      throw err;
-    }
-  },
 
   // Référentiel v2 (métiers/spécialités/diplômes importés) — pas de create/delete,
   // uniquement libellé + selectionnable/actif (voir jobs/views/referentiel_admin.py).

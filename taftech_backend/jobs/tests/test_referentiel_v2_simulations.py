@@ -1,15 +1,14 @@
 """Traduit en tests d'intégration les cas fournis par le client dans les onglets
 SIMULATIONS (TAFTECH_Metiers_Matching_v2.xlsx) et RECETTE (les deux classeurs) —
-session 17/09/2026, suite des Phases 1-5 du référentiel v2.
-
-Portée assumée : SIMULATIONS modélise un score de façon abstraite (une "satisfaction"
-continue par critère, ex. 0.5 = moitié du minimum d'expérience) alors que notre
-implémentation réelle (jobs/matcher.py) utilise des paliers de confiance discrets
-(20/12/6/0 pour l'expérience, par exemple) — hérités de sessions précédentes, non
-retouchés ici. Les cas EX-01/02/03/04/06 tombent exactement sur un palier de notre
-implémentation et sont vérifiés au score exact ; EX-05 (mi-expérience) est vérifié
-de façon directionnelle (score entre le cas complet et le cas nul), le palier ne
-permettant pas de reproduire une valeur continue à 90/100 pile.
+session 17/09/2026, réécrit session 21/09/2026 pour la mise en conformité S01-S14
+(voir docs/superpowers/plans/2026-09-21-matching-referentiel-v2-conformite.md) :
+le critère "spécialité" (poids 0.25) est désormais la spécialité de FORMATION
+(`SpecialiteFormation`, couplée au diplôme sur une même `FormationCandidat`, S06/S07)
+et non plus le métier/poste — conforme à PARAM_MATCHING ("spécialité... couplée au
+diplôme sur le même enregistrement candidat"). La formule est désormais une somme
+pondérée dynamique (S01/S02, `jobs.matcher._composer_score`), plus des paliers fixes
+sur 100 points — les 6 cas SIMULATIONS sont donc vérifiés au score EXACT, y compris
+EX-05 (expérience continue S09, plus de vérification seulement directionnelle).
 
 RECETTE : seuls les cas testables sans reproduire l'intégralité du référentiel (les
 ~13 000 lignes réelles ne sont pas importées dans la base de test, seule la commande
@@ -29,7 +28,7 @@ from jobs.matcher import calculer_score_matching
 from jobs.models import (
     ProfilEntreprise, OffreEmploi, ProfilCandidat, ExperienceCandidat, FormationCandidat,
     GroupeMetier, Metier, Appellation, TypeDiplome, DomaineFormation, SpecialiteFormation,
-    DiplomeSpecialite, OffreDiplomeAccepte,
+    DiplomeSpecialite, OffreDiplomeAccepte, CompetenceOffre,
 )
 
 User = get_user_model()
@@ -41,39 +40,52 @@ def _il_y_a(annees_flottant):
 
 class SimulationsMatchingTest(TestCase):
     """SIMULATIONS (fichier métiers) — poids PARAM_MATCHING : région 20 / diplôme 20 /
-    spécialité 25 / expérience 20 / compétences 15. Chemin legacy (texte) volontairement
-    utilisé ici (pas de Metier v2 sur le profil/l'offre) — déjà couvert au niveau Metier
-    précis par test_matcher_referentiel_v2.py."""
+    spécialité (formation) 25 / expérience 20 / compétences 15. `metier` reste renseigné
+    sur profil/offre/expérience (utilisé par `_experience_pertinente` pour juger la
+    pertinence d'une expérience) mais n'est plus lui-même un critère noté séparément."""
 
     def _offre(self, **overrides):
         defaults = dict(
             titre="Développeur", wilaya="31 - Oran", commune="Bir El Djir",
-            specialite="L18", diplome="MASTER_2", experience_requise="CONFIRME",
-            profil_recherche="react python django",
+            metier=self.metier_dev, experience_requise="CONFIRME",
         )
         defaults.update(overrides)
-        return OffreEmploi.objects.create(entreprise=self.entreprise, **defaults)
+        offre = OffreEmploi.objects.create(entreprise=self.entreprise, **defaults)
+        OffreDiplomeAccepte.objects.create(offre=offre, couple=self.couple_master_info)
+        CompetenceOffre.objects.create(offre=offre, label="React", type_exigence="OBLIGATOIRE")
+        return offre
 
-    def _profil_complet(self, user, **overrides):
-        defaults = dict(
-            wilaya="31 - Oran", commune="Bir El Djir", specialite="L18", diplome="MASTER_2",
-            competences="react, python, django",
-        )
+    def _profil_complet(self, user, formation_couple=None, **overrides):
+        defaults = dict(wilaya="31 - Oran", commune="Bir El Djir", metier=self.metier_dev, competences="React, Python")
         defaults.update(overrides)
         profil = ProfilCandidat.objects.create(user=user, **defaults)
         ExperienceCandidat.objects.create(
-            profil=profil, titre_poste="Développeur", entreprise="TestCo", secteur="L18",
+            profil=profil, titre_poste="Développeur", entreprise="TestCo", metier=self.metier_dev,
             date_debut=_il_y_a(4), date_fin=None,
         )
+        if formation_couple is not False:
+            diplome_ref, specialite_ref = formation_couple or (self.diplome_master, self.specialite_info)
+            FormationCandidat.objects.create(
+                profil=profil, diplome="Formation", diplome_ref=diplome_ref,
+                specialite_ref=specialite_ref, statut="OBTENU",
+            )
         return profil
 
     def setUp(self):
         rh = User.objects.create_user(username='rh_sim', email='rh_sim@test.com', password='pwd', role='RECRUTEUR')
         self.entreprise = ProfilEntreprise.objects.create(user=rh, nom_entreprise='SimCo', registre_commerce='RC-SIM', est_approuvee=True)
+        groupe_dev = GroupeMetier.objects.create(code='G-SIM-DEV', type_groupe='domaine_source', libelle='Informatique')
+        self.metier_dev = Metier.objects.create(code='M-SIM-DEV', libelle='Développeur', cle_recherche='developpeur', groupe_principal=groupe_dev)
 
-    def _candidat(self, username, **profil_overrides):
+        self.domaine = DomaineFormation.objects.create(code='D-SIM', libelle='Informatique', systeme='universitaire')
+        self.specialite_info = SpecialiteFormation.objects.create(code='SP-SIM-INFO', domaine=self.domaine, libelle='Informatique', cle_recherche='informatique')
+        self.specialite_finance = SpecialiteFormation.objects.create(code='SP-SIM-FIN', domaine=self.domaine, libelle='Finance', cle_recherche='finance')
+        self.diplome_master = TypeDiplome.objects.create(code='D-SIM-M2', libelle='Master 2', systeme='universitaire')
+        self.couple_master_info = DiplomeSpecialite.objects.create(code='DS-SIM-1', diplome=self.diplome_master, specialite=self.specialite_info)
+
+    def _candidat(self, username, formation_couple=None, **profil_overrides):
         user = User.objects.create_user(username=username, email=f'{username}@test.com', password='pwd', role='CANDIDAT')
-        self._profil_complet(user, **profil_overrides)
+        self._profil_complet(user, formation_couple=formation_couple, **profil_overrides)
         return user
 
     def test_ex01_correspondance_complete(self):
@@ -85,7 +97,7 @@ class SimulationsMatchingTest(TestCase):
 
     def test_ex02_competences_absentes_reste_satisfait(self):
         """Compétences demandées absentes, mais champ renseigné (connu=1, satisfait=0) —
-        distinct du cas 'non renseigné' qui donnerait un score neutre 5/15."""
+        distinct du cas 'non renseigné' qui donnerait un critère non demandé/manquant."""
         offre = self._offre()
         candidat = self._candidat('ex02', competences='cobol, fortran')
         resultat = calculer_score_matching(candidat, offre)
@@ -94,52 +106,88 @@ class SimulationsMatchingTest(TestCase):
         self.assertNotIn('competences', resultat['criteres_manquants'])
 
     def test_ex03_specialite_differente_explicitement_renseignee(self):
+        """Même diplôme (Master) accepté, mais spécialité Finance au lieu d'Informatique —
+        diplome=1 (type accepté), specialite=0 (spécialité différente, S06 binaire strict)."""
         offre = self._offre()
-        candidat = self._candidat('ex03', specialite='M11')
+        candidat = self._candidat('ex03', formation_couple=(self.diplome_master, self.specialite_finance))
         resultat = calculer_score_matching(candidat, offre)
         self.assertEqual(resultat['total'], 75.0)
         self.assertEqual(resultat['completude'], 1.0)
         self.assertNotIn('specialite', resultat['criteres_manquants'])
 
     def test_ex04_diplome_et_specialite_inconnus(self):
+        """Candidat sans aucune FormationCandidat obtenue référencée — diplôme ET
+        spécialité de formation inconnus (donnée manquante, pas incompatible)."""
         offre = self._offre()
-        candidat = self._candidat('ex04', diplome=None, specialite=None)
+        candidat = self._candidat('ex04', formation_couple=False)
         resultat = calculer_score_matching(candidat, offre)
         self.assertEqual(resultat['total'], 55.0)
         self.assertEqual(resultat['completude'], 0.55)
         self.assertIn('diplome', resultat['criteres_manquants'])
         self.assertIn('specialite', resultat['criteres_manquants'])
 
-    def test_ex05_experience_partielle_score_intermediaire(self):
-        """Palier discret (pas de valeur continue) : vérifié directionnellement — un
-        candidat à mi-expérience score strictement entre le cas complet (100) et le
-        cas sans aucune expérience pertinente."""
+    def test_ex05_experience_a_moitie_du_minimum_score_exact(self):
+        """S09 continu : expérience pertinente à exactement la moitié du minimum requis
+        (CONFIRME = 3 ans, ici 1.5 an) -> s_experience=0.5 pile, score EXACT 90 (plus
+        seulement vérifié directionnellement comme avant la mise en conformité S09)."""
         offre = self._offre()
-        candidat_complet = self._candidat('ex05_complet')
-        candidat_partiel = self._candidat('ex05_partiel')
-        ExperienceCandidat.objects.filter(profil=candidat_partiel.profil_candidat).update(
-            date_debut=_il_y_a(1.5),
-        )
-        candidat_absent = self._candidat('ex05_absent')
-        ExperienceCandidat.objects.filter(profil=candidat_absent.profil_candidat).delete()
-
-        score_complet = calculer_score_matching(candidat_complet, offre)['total']
-        score_partiel = calculer_score_matching(candidat_partiel, offre)['total']
-        score_absent = calculer_score_matching(candidat_absent, offre)['total']
-
-        self.assertEqual(score_complet, 100.0)
-        self.assertLess(score_partiel, score_complet)
-        self.assertLess(score_absent, score_partiel)
+        candidat = self._candidat('ex05')
+        ExperienceCandidat.objects.filter(profil=candidat.profil_candidat).update(date_debut=_il_y_a(1.5))
+        resultat = calculer_score_matching(candidat, offre)
+        self.assertAlmostEqual(resultat['total'], 90.0, places=1)
+        self.assertEqual(resultat['completude'], 1.0)
 
     def test_ex06_mobilite_incompatible_declaree(self):
         """Wilaya explicitement renseignée mais éloignée, sans mobilité déclarée —
-        donnée connue (pas manquante), simplement incompatible."""
+        donnée connue (pas manquante), simplement incompatible (région binaire S04)."""
         offre = self._offre()
         candidat = self._candidat('ex06', wilaya='01 - Adrar', commune='Adrar', mobilite=None)
         resultat = calculer_score_matching(candidat, offre)
         self.assertEqual(resultat['total'], 80.0)
         self.assertEqual(resultat['completude'], 1.0)
         self.assertNotIn('region', resultat['criteres_manquants'])
+
+
+class RecetteExperienceChevauchementTest(TestCase):
+    """RECETTE T13 — deux périodes qui se chevauchent partiellement doivent être fusionnées
+    avant de sommer (18 mois réels dans l'exemple client, jamais 24 = somme naïve des deux
+    périodes prises séparément)."""
+
+    def setUp(self):
+        rh = User.objects.create_user(username='rh_t13', email='rh_t13@test.com', password='pwd', role='RECRUTEUR')
+        self.entreprise = ProfilEntreprise.objects.create(user=rh, nom_entreprise='T13Co', registre_commerce='RC-T13', est_approuvee=True)
+        groupe = GroupeMetier.objects.create(code='G-T13', type_groupe='domaine_source', libelle='Informatique')
+        self.metier = Metier.objects.create(code='M-T13', libelle='Développeur', cle_recherche='developpeur', groupe_principal=groupe)
+        self.offre = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Développeur', wilaya='16 - Alger',
+            metier=self.metier, experience_requise='DEBUTANT',
+        )
+        user = User.objects.create_user(username='cand_t13', email='cand_t13@test.com', password='pwd', role='CANDIDAT')
+        self.profil = ProfilCandidat.objects.create(user=user, wilaya='16 - Alger', metier=self.metier)
+        self.candidat = user
+
+    def test_periodes_chevauchantes_fusionnees_pas_sommees_naivement(self):
+        # [2024-01, 2024-12] (12 mois) + [2024-07, 2025-06] (12 mois), 6 mois de recouvrement
+        # -> ~18 mois réels attendus, jamais 24 (somme naïve des deux périodes séparées).
+        ExperienceCandidat.objects.create(
+            profil=self.profil, titre_poste='Développeur', entreprise='A', metier=self.metier,
+            date_debut=datetime.date(2024, 1, 1), date_fin=datetime.date(2024, 12, 31),
+        )
+        ExperienceCandidat.objects.create(
+            profil=self.profil, titre_poste='Développeur', entreprise='B', metier=self.metier,
+            date_debut=datetime.date(2024, 7, 1), date_fin=datetime.date(2025, 6, 30),
+        )
+        # Score DEBUTANT (seuil bas) ne distingue pas 18 mois de 24 — on vérifie directement
+        # la fonction de fusion des périodes, pas seulement le score global.
+        calculer_score_matching(self.candidat, self.offre)
+        from jobs.matcher import _deduire_annees_sans_chevauchement
+        annees = _deduire_annees_sans_chevauchement([
+            (datetime.date(2024, 1, 1), datetime.date(2024, 12, 31), 1.0),
+            (datetime.date(2024, 7, 1), datetime.date(2025, 6, 30), 1.0),
+        ])
+        mois = annees * 12
+        self.assertGreater(mois, 15)  # nettement plus que 12 (une seule période)
+        self.assertLess(mois, 20)     # nettement moins que 24 (somme naïve sans fusion)
 
 
 class RecetteMetiersRechercheTest(TestCase):
@@ -211,6 +259,7 @@ class RecetteDiplomesTest(TestCase):
         self.specialite_info = SpecialiteFormation.objects.create(code='SP-INFO-R', domaine=self.domaine, libelle='Informatique', cle_recherche='informatique')
         self.specialite_finance = SpecialiteFormation.objects.create(code='SP-FIN-R', domaine=self.domaine, libelle='Finance', cle_recherche='finance')
         self.diplome_master = TypeDiplome.objects.create(code='D-M2-R', libelle='Master 2', systeme='universitaire')
+        self.diplome_licence = TypeDiplome.objects.create(code='D-LIC-R', libelle='Licence', systeme='universitaire')
         self.couple_info = DiplomeSpecialite.objects.create(code='DS-R1', diplome=self.diplome_master, specialite=self.specialite_info)
 
         rh = User.objects.create_user(username='rh_recette', email='rh_recette@test.com', password='pwd', role='RECRUTEUR')
@@ -223,13 +272,21 @@ class RecetteDiplomesTest(TestCase):
 
     def test_t10_pas_de_master_informatique_fabrique(self):
         """RECETTE T10 : 'master finance obtenu' + 'licence informatique obtenue' ne
-        doivent jamais constituer un 'master en informatique' accepté."""
+        doivent jamais constituer un 'master en informatique' accepté — S07 choisit la
+        meilleure FORMATION (licence-informatique, specialite seule 0.25) sans jamais
+        combiner le diplôme de l'une (master) avec la spécialité de l'autre (informatique)
+        pour fabriquer un score de 45 pts qui n'existe sur aucune formation réelle."""
         FormationCandidat.objects.create(
             profil=self.profil, diplome='Master Finance',
             diplome_ref=self.diplome_master, specialite_ref=self.specialite_finance, statut='OBTENU',
         )
+        FormationCandidat.objects.create(
+            profil=self.profil, diplome='Licence Informatique',
+            diplome_ref=self.diplome_licence, specialite_ref=self.specialite_info, statut='OBTENU',
+        )
         resultat = calculer_score_matching(self.candidat, self.offre)
-        self.assertLess(resultat['details']['diplome'], 20.0)
+        self.assertEqual(resultat['details']['specialite'], 25.0)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
 
     def test_t11_formation_en_cours_non_comptee_obtenue(self):
         """RECETTE T11 : un diplôme en cours ne doit jamais être compté comme obtenu."""
@@ -239,3 +296,43 @@ class RecetteDiplomesTest(TestCase):
         )
         resultat = calculer_score_matching(self.candidat, self.offre)
         self.assertNotEqual(resultat['details']['diplome'], 20.0)
+
+    def test_t14_critere_diplome_non_demande_non_penalise(self):
+        """RECETTE T14 : l'offre ne précise aucune exigence de diplôme (ni couples
+        acceptés, ni niveau minimum) -> le poids diplôme ne doit pénaliser personne,
+        et ne doit pas être compté comme une donnée manquante côté candidat (rien
+        n'était demandé)."""
+        offre_ouverte = OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre='Développeur ouvert', wilaya='16 - Alger', diplome='',
+        )
+        resultat = calculer_score_matching(self.candidat, offre_ouverte)
+        # S01 : critère non demandé -> exclu du calcul (0.0 affiché, pas de contribution),
+        # jamais un score de 20/20 "offert" pour une exigence qui n'existe pas (S05/F06).
+        self.assertEqual(resultat['details']['diplome'], 0.0)
+        self.assertNotIn('diplome', resultat['criteres_manquants'])
+        self.assertIn('diplome', resultat['criteres_non_demandes'])
+
+    def test_t22_diplome_autre_traite_comme_donnee_manquante(self):
+        """RECETTE T22 : un candidat ayant choisi 'Autre, préciser' (diplome_ref = D-AUTRE)
+        n'a pas fourni de type exploitable -> traité comme donnée manquante (0, signalé),
+        jamais comme une vraie incompatibilité, et surtout jamais un score supérieur
+        implicite par rapport à ne rien avoir déclaré du tout."""
+        diplome_autre = TypeDiplome.objects.create(code='D-AUTRE', libelle='Autre diplôme à préciser', systeme='autre')
+        FormationCandidat.objects.create(
+            profil=self.profil, diplome='Certificat maison non catalogué',
+            diplome_ref=diplome_autre, statut='OBTENU',
+        )
+        resultat = calculer_score_matching(self.candidat, self.offre)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
+        self.assertIn('diplome', resultat['criteres_manquants'])
+
+    def test_t15_diplome_candidat_inconnu_contribution_nulle(self):
+        """RECETTE T15 : l'offre exige un couple diplôme+spécialité précis, mais le
+        candidat n'a AUCUNE formation référencée (diplome_ref) obtenue -> contribution
+        diplôme nulle (0, jamais un crédit partiel inventé) et couverture réduite via
+        'criteres_manquants' -- pas de renormalisation qui gonflerait artificiellement
+        le score sur les autres critères."""
+        # Aucune FormationCandidat créée pour self.profil -> diplôme totalement inconnu.
+        resultat = calculer_score_matching(self.candidat, self.offre)
+        self.assertEqual(resultat['details']['diplome'], 0.0)
+        self.assertIn('diplome', resultat['criteres_manquants'])

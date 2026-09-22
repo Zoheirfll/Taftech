@@ -96,7 +96,7 @@ class RecruteurSerializerTest(TestCase):
             "last_name": "RH",
             "telephone": "0666000000",
             "nom_entreprise": "TechDz",
-            "secteur_activite": "IT",
+            "secteur_activite": "G",
             "registre_commerce": "RC999888"
         }
 

@@ -3,6 +3,7 @@ from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
     ConstantsAPIView, NomenclatureAPIView, NomenclatureFormationAPIView, MetierAutocompleteAPIView,
+    MetierSuggestionsAPIView, RechercheUniverselleAPIView,
     CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
     ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView, ExportGraphiqueExcelAPIView,
 
@@ -10,6 +11,7 @@ from .views import (
     PostulerAPIView, PostulerRapideAPIView, MesCandidaturesAPIView,
     UpdateCandidatureStatusAPIView, DeleteCandidatureAPIView,
     EvaluerCandidatureAPIView, Top5CandidatsAPIView, CandidatureMarquerConsulteeAPIView,
+    MettreAJourReponseExigenceAPIView,
 
     # Profil candidat
     ProfilCandidatAPIView, ExperienceAPIView, ExperienceDetailAPIView,
@@ -48,9 +50,8 @@ from .views import (
 
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
-    MetierReferentielAPIView, MetierReferentielAdminAPIView,
     AdminReferentielMetiersAPIView, AdminReferentielSpecialitesAPIView, AdminReferentielDiplomesAPIView,
-    SuggestionsCarriereAPIView, AnalyseCarriereGroqAPIView,
+    AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView,
 
     # Bulletin PDF
@@ -97,7 +98,9 @@ urlpatterns = [
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
     path('nomenclature/', NomenclatureAPIView.as_view(), name='api-nomenclature'),
     path('referentiel/nomenclature-formation/', NomenclatureFormationAPIView.as_view(), name='api-nomenclature-formation'),
+    path('referentiel/recherche-universelle/', RechercheUniverselleAPIView.as_view(), name='api-recherche-universelle'),
     path('referentiel/metiers/', MetierAutocompleteAPIView.as_view(), name='api-metiers-autocomplete'),
+    path('referentiel/metiers/<int:metier_id>/suggestions/', MetierSuggestionsAPIView.as_view(), name='api-metier-suggestions'),
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
     path('dashboard/offres/<int:offre_id>/supprimer/', SupprimerOffreAPIView.as_view(), name='supprimer-offre'),
@@ -110,6 +113,7 @@ urlpatterns = [
     path('<int:offre_id>/postuler-rapide/', PostulerRapideAPIView.as_view(), name='postuler-rapide'),
     path('mes-candidatures/', MesCandidaturesAPIView.as_view(), name='mes-candidatures'),
     path('candidatures/<int:candidature_id>/statut/', UpdateCandidatureStatusAPIView.as_view(), name='update-statut'),
+    path('candidatures/<int:candidature_id>/exigences/<int:exigence_id>/', MettreAJourReponseExigenceAPIView.as_view(), name='maj-reponse-exigence'),
     path('candidatures/<int:candidature_id>/supprimer/', DeleteCandidatureAPIView.as_view(), name='supprimer-candidature'),
     path('candidatures/<int:candidature_id>/evaluer/', EvaluerCandidatureAPIView.as_view(), name='evaluer-candidature'),
     path('candidatures/<int:candidature_id>/bulletin/', GenererBulletinPDFAPIView.as_view(), name='generer-bulletin'),
@@ -198,8 +202,6 @@ urlpatterns = [
     path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='export-entreprises'),
     path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='export-offres'),
     path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='export-utilisateurs'),
-    path('admin/metiers/', MetierReferentielAdminAPIView.as_view(), name='admin-metiers'),
-    path('admin/metiers/<int:pk>/', MetierReferentielAdminAPIView.as_view(), name='admin-metier-detail'),
     path('admin/referentiel-v2/metiers/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metiers'),
     path('admin/referentiel-v2/metiers/<int:pk>/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metier-detail'),
     path('admin/referentiel-v2/specialites/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialites'),
@@ -271,8 +273,6 @@ urlpatterns = [
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),
     path('parser-cv/', ParserCVAPIView.as_view(), name='parser-cv'),
-    path('metiers/', MetierReferentielAPIView.as_view(), name='metiers'),
-    path('suggestions-carriere/', SuggestionsCarriereAPIView.as_view(), name='suggestions-carriere'),
     path('analyse-carriere/', AnalyseCarriereGroqAPIView.as_view(), name='analyse-carriere'),
 
     # ⚠️ Doit rester en DERNIER : capture tout segment unique restant (id numérique ou

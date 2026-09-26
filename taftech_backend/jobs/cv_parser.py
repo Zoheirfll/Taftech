@@ -852,8 +852,9 @@ Analyse-le et extrais TOUT ce qui suit en UN SEUL objet JSON strict (rien d'autr
 ⚠️ NE METS JAMAIS DE FORMATIONS, DIPLÔMES OU ÉTUDES DEDANS ("Licence en...", "Master en...", "Bac", "Étudiant en...", cours, certifications, écoles où la personne n'a pas travaillé).
 Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, Stage en entreprise...).
 - Pour chaque expérience : titre_poste, entreprise, date_debut_raw, date_fin_raw, description.
-- Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui". Garde les dates dans le format brut du CV.
-- ⚠️ CV 2 colonnes : une date peut être sur sa propre ligne juste AVANT le titre (= date_debut de CETTE expérience) ou juste APRÈS titre/entreprise (= date_fin), ou collée en fin de ligne ("N8N Novembre 2025", "Oran Octobre 2025") — extrais-la et RETIRE-la de titre_poste/entreprise. Une seule date isolée trouvée → date_debut_raw, date_fin_raw="" (jamais recopiée identique).
+- Si poste actuel (pas de date de fin) : date_fin_raw = "Aujourd'hui" — UNIQUEMENT si le mot "Aujourd'hui"/"Présent"/"En cours" apparaît réellement dans le texte à côté de CETTE expérience précise. N'attribue JAMAIS "Aujourd'hui" par déduction ou par proximité avec une autre expérience.
+- ⚠️ COMPTE le nombre d'occurrences du mot "Aujourd'hui"/"Présent"/"En cours" dans tout le texte AVANT de commencer : n'attribue ce statut qu'à EXACTEMENT ce nombre d'expériences, jamais plus. S'il n'apparaît qu'une seule fois dans tout le CV, une seule expérience (généralement la première/la plus récente) a le droit à date_fin_raw = "Aujourd'hui" — toutes les autres expériences doivent avoir une vraie date de fin extraite du texte, ou "" si aucune date ne leur est associée. Ne recopie jamais ce statut d'une expérience à la suivante.
+- ⚠️ CV 2 colonnes : une date peut être sur sa propre ligne juste AVANT le titre (= date_debut de CETTE expérience) ou juste APRÈS titre/entreprise (= date_fin), ou collée en fin de ligne ("N8N Novembre 2025", "Oran Octobre 2025") — extrais-la et RETIRE-la de titre_poste/entreprise. Une seule date isolée trouvée pour une expérience → date_debut_raw = cette date, date_fin_raw = "" (jamais recopiée identique, jamais "Aujourd'hui" par défaut). Si le nombre de dates dans le bloc ne se répartit pas proprement à 2 par expérience, ne force jamais une date/un statut d'une expérience vers une autre — laisse vide plutôt que de deviner.
 - Si info manquante : "" (chaîne vide), jamais null.
 - Pour "description" : NE FUSIONNE PAS les points/missions en un paragraphe. Garde chaque point sur sa propre ligne, préfixé par "- ", séparés par \n. Ne reformule pas, reste proche du texte original.
 - Le métier précis de chaque expérience est classé séparément après cette extraction (agent dédié, référentiel v2) — n'extrais pas de champ "secteur" ici.
@@ -863,7 +864,9 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
 ⚠️ NE METS JAMAIS D'EMPLOIS DEDANS (postes occupés, stages en entreprise sauf stage académique avec école).
 - Pour chaque formation : diplome, etablissement, date_debut_raw, date_fin_raw, description.
 - Mêmes règles de "" et de description (points sur lignes séparées, préfixés "- ") que ci-dessus.
-- ⚠️ Une seule date isolée trouvée pour une formation = l'année d'OBTENTION du diplôme → date_fin_raw = cette date, date_debut_raw = "". Ne recopie JAMAIS la même date sur date_debut_raw ET date_fin_raw.
+- ⚠️ CV 2 colonnes : comme pour les expériences, la date/plage d'une formation peut être sur sa propre ligne juste AVANT le titre du diplôme, ou collée en fin de ligne du titre — cherche-la à ces deux endroits avant de conclure qu'elle est absente.
+- ⚠️ Si tu trouves une plage "AAAA - AAAA" / "AAAA-AAAA" (deux années séparées par un tiret) associée à une formation : date_debut_raw = la première année, date_fin_raw = la seconde année — ne garde JAMAIS une seule des deux quand les deux sont présentes dans le texte.
+- ⚠️ Une seule date isolée trouvée pour une formation (pas de plage à deux années) = l'année d'OBTENTION du diplôme → date_fin_raw = cette date, date_debut_raw = "". Ne recopie JAMAIS la même date sur date_debut_raw ET date_fin_raw.
 - N'écris "Présent"/"En cours"/"Aujourd'hui" comme date_fin_raw QUE si la formation est explicitement en cours (CV indique "en cours", "actuellement", année future). Une formation avec une seule date passée est TERMINÉE — n'invente jamais une date de fin ouverte pour elle.
 
 4. INFOS PERSONNELLES :
@@ -975,6 +978,59 @@ def _extract_json_array(content):
         logger.warning("Ollama : JSON invalide - %s", e)
     return None
 
+def _repair_truncated_json(json_str):
+    """Tente de récupérer les données déjà générées par une réponse Groq coupée en
+    plein milieu (max_tokens atteint pendant "experiences"/"formations", typiquement sur
+    un CV avec plusieurs entrées) — plutôt que de tout jeter, referme proprement les
+    structures encore ouvertes. Essaie d'abord de simplement fermer ce qui reste ouvert
+    (le contenu peut déjà être complet, seule la fermeture finale manque) ; si ça échoue,
+    revient au dernier élément complet du tableau/objet ("sûr", juste après une virgule),
+    puis à l'avant-dernier, etc., jusqu'à obtenir un JSON valide. Retourne le dict décodé,
+    ou None si rien n'est récupérable."""
+    stack = []
+    in_string = False
+    escape = False
+    coupures = []  # [(index juste après la virgule, snapshot de la pile)], dans l'ordre
+
+    for i, ch in enumerate(json_str):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == '\\':
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in '{[':
+            stack.append(ch)
+        elif ch in '}]':
+            if stack:
+                stack.pop()
+        elif ch == ',' and stack:
+            coupures.append((i + 1, list(stack)))
+
+    if not stack:
+        return None  # déjà bien formé — pas de coupure à réparer ici
+
+    def _fermer(texte, pile_ouverte):
+        return texte + ''.join('}' if b == '{' else ']' for b in reversed(pile_ouverte))
+
+    candidats = [_fermer(json_str, stack)]
+    for idx, pile in reversed(coupures):
+        candidats.append(_fermer(json_str[:idx], pile))
+
+    for candidat in candidats:
+        try:
+            data = json.loads(candidat)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
 def _extract_json_object(content):
     """Helper : nettoie et extrait un objet JSON depuis la réponse de Groq."""
     if not content:
@@ -984,24 +1040,36 @@ def _extract_json_object(content):
     content = re.sub(r"\s*```$", "", content)
 
     first = content.find("{")
-    last = content.rfind("}")
-    if first == -1 or last == -1:
+    if first == -1:
         return None
+    last = content.rfind("}")
+    # Aucune accolade fermante du tout = réponse coupée avant même la fin de l'objet
+    # racine (max_tokens atteint) — on garde tout depuis la 1ère accolade, la
+    # réparation ci-dessous se charge de refermer proprement.
+    json_str = content[first:last + 1] if last != -1 else content[first:]
 
-    json_str = content[first:last + 1]
-    try:
-        data = json.loads(json_str)
-        if isinstance(data, dict):
-            return data
-    except json.JSONDecodeError:
-        # Groq échappe parfois les apostrophes françaises en \' , une séquence
-        # invalide en JSON strict (seul \" est un échappement JSON valide).
+    # Groq échappe parfois les apostrophes françaises en \' , une séquence invalide en
+    # JSON strict (seul \" est un échappement JSON valide) — testé sur les deux variantes.
+    candidats = (json_str, json_str.replace("\\'", "'"))
+
+    for candidat in candidats:
         try:
-            data = json.loads(json_str.replace("\\'", "'"))
+            data = json.loads(candidat)
             if isinstance(data, dict):
                 return data
-        except json.JSONDecodeError as e:
-            logger.warning("Groq : JSON object invalide - %s", e)
+        except json.JSONDecodeError:
+            continue
+
+    for candidat in candidats:
+        data = _repair_truncated_json(candidat)
+        if isinstance(data, dict):
+            logger.warning(
+                "Groq : réponse JSON tronquée par max_tokens, récupérée partiellement "
+                "(certaines entrées de fin de tableau ont pu être perdues)"
+            )
+            return data
+
+    logger.warning("Groq : JSON object invalide, irrécupérable")
     return None
 
 _NIVEAU_LABEL_VERS_CODE = {
@@ -1251,7 +1319,12 @@ def parse_with_groq(text):
                 break
 
     if infos.get("diplome"):
-        diplome_low = str(infos["diplome"]).strip().lower()
+        diplome_texte_brut = str(infos["diplome"]).strip()
+        # Gardé à côté du code mappé (13 valeurs coarse ci-dessous) — nécessaire pour résoudre
+        # le "Niveau d'études" référentiel v2 (TypeDiplome, 37 valeurs précises) par recherche
+        # de mots entiers, seul l'intitulé original permet cette précision.
+        result["diplome_texte_brut"] = diplome_texte_brut
+        diplome_low = diplome_texte_brut.lower()
         for keywords, code in DIPLOMES_MAPPING:
             if any(re.search(r'\b' + re.escape(kw) + r'\b', diplome_low) for kw in keywords):
                 result["diplome"] = code
@@ -1384,12 +1457,31 @@ def parse_cv(file_path, file_name):
     competences_niveaux_normalisees = _normaliser_avec_referentiel(ai_data.get("competences_niveaux") or {})
     competences_texte = ", ".join(competences_niveaux_normalisees.keys()) or None
 
+    # "Niveau d'études" référentiel v2 (ProfilCandidat.diplome_ref/niveau_scolaire_ref,
+    # sélecteur TypeDiplome/Scolarite) — jusqu'ici jamais rempli par le parser, seul
+    # l'ancien champ texte `diplome` (13 valeurs coarse) l'était. Résolu par mot entier
+    # depuis l'intitulé brut extrait du CV (même logique que pour les formations
+    # individuelles, plus précise que la table de 7 cas de `resoudre_diplome_legacy`) ;
+    # repli sur cette dernière (depuis le code coarse déjà mappé) si le texte libre ne
+    # matche rien de sûr dans le référentiel — couvre les niveaux de scolarité
+    # (secondaire/universitaire sans diplôme) qu'une recherche par mot ne peut pas
+    # trouver puisqu'ils ne sont pas des `TypeDiplome`.
+    from .referentiel_utils import resoudre_diplome_et_specialite_depuis_texte, resoudre_diplome_legacy
+    diplome_ref, _ = resoudre_diplome_et_specialite_depuis_texte(ai_data.get("diplome_texte_brut"))
+    niveau_scolaire_ref = None
+    if not diplome_ref:
+        diplome_ref, niveau_scolaire_ref = resoudre_diplome_legacy(ai_data.get("diplome"))
+
     result = {
         "success": True,
         "photo": photo,
         "email": ai_data.get("email"),
         "wilaya": ai_data.get("wilaya"),
         "diplome": ai_data.get("diplome"),
+        "diplome_ref": diplome_ref.id if diplome_ref else None,
+        "diplome_ref_libelle": diplome_ref.libelle if diplome_ref else None,
+        "niveau_scolaire_ref": niveau_scolaire_ref.id if niveau_scolaire_ref else None,
+        "niveau_scolaire_ref_libelle": niveau_scolaire_ref.libelle if niveau_scolaire_ref else None,
         "specialite": None,
         "service_militaire": ai_data.get("service_militaire"),
         "sexe": _normaliser_sexe(ai_data.get("sexe")),

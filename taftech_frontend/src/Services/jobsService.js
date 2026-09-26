@@ -22,9 +22,10 @@ const offresPubliquesService = {
         search: filters.search || "",
         wilaya: filters.wilaya || "",
         commune: filters.commune || "",
-        diplome: filters.diplome || "",
+        diplome_id: filters.diplome_id || "",
         specialite: filters.specialite || "",
         domaine_id: filters.domaine_id || "",
+        secteur_id: filters.secteur_id || "",
         experience: filters.experience || "",
         contrat: filters.contrat || "",
         page: page,
@@ -89,6 +90,20 @@ const offresPubliquesService = {
     return _nomenclatureFormationCache;
   },
 
+  // Suggère un type de diplôme/spécialité à partir d'un intitulé libre (flux "Autre,
+  // préciser" — ne jamais enregistrer automatiquement, seulement proposer une confirmation).
+  suggererDiplome: async (texte, diplomeId = null) => {
+    try {
+      const params = new URLSearchParams({ texte: texte || "" });
+      if (diplomeId) params.set("diplome_id", diplomeId);
+      const response = await api.get(`jobs/referentiel/suggerer-diplome/?${params.toString()}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUGGERER_DIPLOME_API", err);
+      return { trouve: false };
+    }
+  },
+
   // Autocomplete métier (référentiel v2, Appellation → Metier résolu vers son canonique).
   searchMetiers: async (search) => {
     try {
@@ -103,13 +118,13 @@ const offresPubliquesService = {
   // Suggestions compétences/spécialités pour un métier (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur choisit ce qu'il ajoute réellement.
   getMetierSuggestions: async (metierId) => {
-    if (!metierId) return { competences: [], diplomes_specialites: [] };
+    if (!metierId) return { competences: [], specialites: [], avertissement: "" };
     try {
       const response = await api.get(`jobs/referentiel/metiers/${metierId}/suggestions/`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_METIER_SUGGESTIONS_API", err);
-      return { competences: [], diplomes_specialites: [] };
+      return { competences: [], specialites: [], avertissement: "" };
     }
   },
 

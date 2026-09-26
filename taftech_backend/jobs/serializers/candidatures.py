@@ -218,7 +218,7 @@ class MesCandidaturesDTO(serializers.ModelSerializer):
         model = Candidature
         fields = (
             'id', 'offre_titre', 'entreprise_nom', 'entreprise_logo_url', 'date_postulation',
-            'statut', 'offre_est_cloturee', 'date_entretien', 'message_entretien',
+            'date_maj', 'statut', 'offre_est_cloturee', 'date_entretien', 'message_entretien',
             'score_matching', 'details_matching'
         )
 

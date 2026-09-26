@@ -12,7 +12,6 @@ STATIC_PATHS = [
     ("/", "1.0", "daily"),
     ("/offres", "0.9", "hourly"),
     ("/secteurs", "0.6", "monthly"),
-    ("/metiers", "0.6", "monthly"),
     ("/regions", "0.6", "monthly"),
     ("/qui-sommes-nous", "0.5", "monthly"),
     ("/contact", "0.4", "monthly"),
@@ -61,17 +60,12 @@ class SitemapXMLView(View):
                 f"<changefreq>weekly</changefreq><priority>0.6</priority></url>"
             )
 
-        for s in GroupeMetier.objects.filter(type_groupe='secteur_source').only('code', 'libelle'):
-            chemin = f"{s.code.lower()}-{slugify(s.libelle)}"
+        # Route /secteurs/:slug parse l'id GroupeMetier en préfixe (pas le code — vide ou
+        # composé de plusieurs tirets pour les secteurs ajoutés par TAFTECH, voir secteurUrl).
+        for s in GroupeMetier.objects.filter(type_groupe='secteur_source').only('id', 'libelle'):
+            chemin = f"{s.id}-{slugify(s.libelle)}"
             urls.append(
                 f"<url><loc>{base}/secteurs/{chemin}/</loc>"
-                f"<changefreq>weekly</changefreq><priority>0.5</priority></url>"
-            )
-
-        for m in Metier.objects.filter(selectionnable=True).only('id', 'code', 'libelle'):
-            chemin = f"{m.id}-{slugify(m.libelle)}"
-            urls.append(
-                f"<url><loc>{base}/metiers/{chemin}/</loc>"
                 f"<changefreq>weekly</changefreq><priority>0.5</priority></url>"
             )
 

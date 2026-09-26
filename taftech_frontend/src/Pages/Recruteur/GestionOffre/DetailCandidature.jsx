@@ -152,10 +152,10 @@ export const DetailCandidature = ({
                   {candidatData.adresse}
                 </span>
               )}
-              {(candidatData?.diplome_ref_libelle || candidatData?.diplome) && (
+              {(candidatData?.diplome_ref_libelle || candidatData?.niveau_scolaire_ref_libelle || candidatData?.diplome) && (
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                   <GraduationCap size={11} />
-                  {candidatData.diplome_ref_libelle || candidatData.diplome}
+                  {candidatData.diplome_ref_libelle || candidatData.niveau_scolaire_ref_libelle || candidatData.diplome}
                 </span>
               )}
               {candidatData?.metier && (
@@ -691,6 +691,7 @@ export const DetailCandidature = ({
                         { key: "region", label: "Localisation & mobilité", max: 20 },
                         { key: "competences", label: "Compétences", max: 15 },
                       ].map(({ key, label, max }) => {
+                        const nonDemande = (DM.criteres_non_demandes || []).includes(key);
                         const val = scores[key] || 0;
                         const pct = (val / max) * 100;
                         const color =
@@ -706,15 +707,17 @@ export const DetailCandidature = ({
                                 {label}
                               </span>
                               <span className={`text-xs font-bold ${tw.textStrong}`}>
-                                {val}/{max}
+                                {nonDemande ? "Non demandé" : `${val}/${max}`}
                               </span>
                             </div>
-                            <div className={`w-full ${tw.progressTrack}`}>
-                              <div
-                                className={`${color} duration-700`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
+                            {!nonDemande && (
+                              <div className={`w-full ${tw.progressTrack}`}>
+                                <div
+                                  className={`${color} duration-700`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            )}
                             {explics[key] && (
                               <p className={`text-xs ${tw.textMuted700} mt-1`}>
                                 {explics[key]}

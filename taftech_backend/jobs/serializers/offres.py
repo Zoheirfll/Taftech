@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import OffreEmploi, ProfilEntreprise, CompetenceOffre, OffreDiplomeAccepte, ExigenceImperative
+from ..models import OffreEmploi, ProfilEntreprise, CompetenceOffre, ExigenceImperative
 from .questionnaires import QuestionnaireSerializer
 
 
@@ -7,17 +7,6 @@ class CompetenceOffreSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetenceOffre
         fields = ('id', 'label', 'type_exigence', 'niveau_requis')
-
-
-class OffreDiplomeAccepteSerializer(serializers.ModelSerializer):
-    """Couple diplôme+spécialité explicitement accepté par le recruteur (REGLES_FORMATION F06,
-    référentiel v2) — jamais une équivalence déduite automatiquement."""
-    diplome_libelle = serializers.CharField(source='couple.diplome.libelle', read_only=True)
-    specialite_libelle = serializers.CharField(source='couple.specialite.libelle', read_only=True)
-
-    class Meta:
-        model = OffreDiplomeAccepte
-        fields = ('id', 'couple', 'diplome_libelle', 'specialite_libelle')
 
 
 def _secteur_libelle_pour_offre(obj):
@@ -61,12 +50,19 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
     diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
-    diplomes_acceptes = OffreDiplomeAccepteSerializer(many=True, read_only=True)
+    diplomes_requis_detail = serializers.SerializerMethodField()
+    specialites_requises_detail = serializers.SerializerMethodField()
     exigences_imperatives = ExigenceImperativeSerializer(many=True, read_only=True)
 
     class Meta:
         model = OffreEmploi
         fields = '__all__'
+
+    def get_diplomes_requis_detail(self, obj):
+        return [{"id": d.id, "libelle": d.libelle} for d in obj.diplomes_requis.all()]
+
+    def get_specialites_requises_detail(self, obj):
+        return [{"id": s.id, "libelle": s.libelle} for s in obj.specialites_requises.all()]
 
     def get_jours_restants(self, obj):
         if not obj.date_expiration or obj.est_cloturee:
@@ -83,7 +79,7 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = (
-            'titre', 'wilaya', 'commune', 'diplome', 'metier',
+            'titre', 'wilaya', 'commune', 'metier',
             'description', 'missions', 'profil_recherche', 'competences', 'type_contrat',
             'experience_requise', 'nombre_postes', 'salaire_propose', 'questionnaire', 'date_expiration'
         )

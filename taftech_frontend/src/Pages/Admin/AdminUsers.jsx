@@ -433,7 +433,7 @@ const AdminUsers = () => {
                       {[
                         {
                           label: "Métier souhaité",
-                          value: selectedUser.profil_candidat.metier_souhaite || "—",
+                          value: selectedUser.profil_candidat.metier_souhaite_libelle || "—",
                         },
                         {
                           label: "Salaire",
@@ -488,6 +488,11 @@ const AdminUsers = () => {
                                   @ {exp.entreprise}
                                 </span>
                               </p>
+                              {exp.metier_libelle && (
+                                <p className={`text-xs font-medium ${tw.textPrimary} mt-0.5`}>
+                                  Métier (référentiel) : {exp.metier_libelle}
+                                </p>
+                              )}
                               <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                                 {exp.date_debut} —{" "}
                                 {exp.date_fin || "Aujourd'hui"}
@@ -520,6 +525,13 @@ const AdminUsers = () => {
                               <p className={`text-sm font-semibold ${tw.textStrong}`}>
                                 {form.diplome}
                               </p>
+                              {(form.diplome_ref_libelle || form.specialite_ref_libelle) && (
+                                <p className={`text-xs font-medium ${tw.textPrimary}`}>
+                                  {form.diplome_ref_libelle}
+                                  {form.diplome_ref_libelle && form.specialite_ref_libelle && " · "}
+                                  {form.specialite_ref_libelle}
+                                </p>
+                              )}
                               <p className={`text-xs ${tw.textMuted700}`}>
                                 {form.etablissement} · {form.date_debut} —{" "}
                                 {form.date_fin}

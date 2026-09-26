@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
-import { convertDateRaw } from "../../../utils/cvDates";
+import { convertDateRaw, convertDateFin } from "../../../utils/cvDates";
 import { reportError } from "../../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
@@ -53,9 +53,13 @@ export const useOnboardingWizard = () => {
   const [pendingPhoto, setPendingPhoto] = useState(null);
 
   const refresh = useCallback(async () => {
-    const [p, c] = await Promise.all([profilService.getProfil(), jobsService.getConstants()]);
+    const [p, c, nomenclatureFormation] = await Promise.all([
+      profilService.getProfil(),
+      jobsService.getConstants(),
+      jobsService.getNomenclatureFormation().catch(() => ({ types_diplomes: [] })),
+    ]);
     setProfil(p);
-    setConstants(c);
+    setConstants({ ...c, typesDiplomes: nomenclatureFormation.types_diplomes || [] });
     setInfosForm({
       first_name: p.first_name || "",
       last_name: p.last_name || "",
@@ -65,6 +69,8 @@ export const useOnboardingWizard = () => {
       commune: p.commune || "",
       telephone: p.telephone || "",
       diplome: p.diplome || "",
+      diplome_ref: p.diplome_ref || "",
+      diplome_ref_libelle: p.diplome_ref_libelle || "",
       metier: p.metier || "",
       metier_libelle: p.metier_libelle || "",
       titre_professionnel: p.titre_professionnel || "",
@@ -134,6 +140,8 @@ export const useOnboardingWizard = () => {
         telephone: result.telephone || prev.telephone,
         wilaya: result.wilaya || prev.wilaya,
         diplome: result.diplome || prev.diplome,
+        diplome_ref: result.diplome_ref || prev.diplome_ref,
+        diplome_ref_libelle: result.diplome_ref_libelle || prev.diplome_ref_libelle,
         metier: result.metier || prev.metier,
         metier_libelle: result.metier_libelle || prev.metier_libelle,
         sexe: result.sexe || prev.sexe,
@@ -173,7 +181,7 @@ export const useOnboardingWizard = () => {
             metier: exp.metier || null,
             metier_libelle: exp.metier_libelle || "",
             date_debut: convertDateRaw(exp.date_debut_raw),
-            date_fin: convertDateRaw(exp.date_fin_raw),
+            date_fin: convertDateFin(exp.date_fin_raw, exp.date_debut_raw),
             description: exp.description || "",
           })),
         );
@@ -184,7 +192,7 @@ export const useOnboardingWizard = () => {
             diplome: f.diplome,
             etablissement: f.etablissement,
             date_debut: convertDateRaw(f.date_debut_raw),
-            date_fin: convertDateRaw(f.date_fin_raw),
+            date_fin: convertDateFin(f.date_fin_raw, f.date_debut_raw),
             description: f.description || "",
             diplome_ref: f.diplome_ref || null,
             diplome_ref_libelle: f.diplome_ref_libelle || "",
@@ -221,10 +229,10 @@ export const useOnboardingWizard = () => {
     setSaving(true);
     const formData = new FormData();
     Object.entries(infosForm).forEach(([key, value]) => {
-      if (key === "metier_libelle") return;
-      // `metier` est un PrimaryKeyRelatedField nullable — une chaîne vide est rejetée par
-      // DRF, on omet simplement la clé si aucun métier n'a été choisi.
-      if (key === "metier" && !value) return;
+      if (key === "metier_libelle" || key === "diplome_ref_libelle") return;
+      // `metier`/`diplome_ref` sont des PrimaryKeyRelatedField nullables — une chaîne vide
+      // est rejetée par DRF, on omet simplement la clé si aucune valeur n'a été choisie.
+      if ((key === "metier" || key === "diplome_ref") && !value) return;
       if (infosMode === "remplacer" || value) formData.append(key, value ?? "");
     });
     if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
@@ -282,7 +290,12 @@ export const useOnboardingWizard = () => {
       }
       await Promise.allSettled(
         pendingFormations.map((f) =>
-          profilService.addFormation(f).catch((err) => reportError("ECHEC_ADD_FORMATION_ONBOARDING", err)),
+          // diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF —
+          // une chaîne vide (laissée par le Select une fois vidé) est rejetée, seul `null`
+          // est accepté (même piège déjà géré par `normalizeForm` dans useProfilCandidat.js).
+          profilService
+            .addFormation({ ...f, diplome_ref: f.diplome_ref || null, specialite_ref: f.specialite_ref || null })
+            .catch((err) => reportError("ECHEC_ADD_FORMATION_ONBOARDING", err)),
         ),
       );
       await refresh();

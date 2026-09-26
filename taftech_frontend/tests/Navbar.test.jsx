@@ -79,7 +79,6 @@ describe("🖥️ UI & Logique - Composant <Navbar />", () => {
 
     expect(screen.getAllByText(/Par secteur/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Par région/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Par métier/i).length).toBeGreaterThan(0);
   });
 
   it("🟢 Happy Path 2 : Rendu Candidat avec Notifications et Photo", async () => {

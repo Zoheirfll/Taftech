@@ -65,16 +65,22 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     experiences_detail = serializers.SerializerMethodField()
     formations_detail = FormationSerializer(many=True, read_only=True)
     competences_detail = CompetenceCandidatSerializer(many=True, read_only=True)
-    metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    linkedin = serializers.SerializerMethodField()
+    github = serializers.SerializerMethodField()
+    bio = serializers.SerializerMethodField()
+    photo_profil = serializers.SerializerMethodField()
+    commune = serializers.SerializerMethodField()
+    diplome = serializers.SerializerMethodField()
+    metier_libelle = serializers.SerializerMethodField()
     metier_souhaite_libelle = serializers.CharField(source='metier_souhaite.libelle', read_only=True, default=None)
-    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    diplome_ref_libelle = serializers.SerializerMethodField()
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
 
     class Meta:
         model = ProfilCandidat
         fields = (
             'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'sexe',
-            'diplome_ref_libelle', 'niveau_scolaire_ref_libelle',
+            'diplome_ref', 'diplome_ref_libelle', 'niveau_scolaire_ref_libelle',
             'metier', 'metier_libelle', 'metier_souhaite', 'metier_souhaite_libelle',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin', 'date_naissance',
@@ -98,16 +104,38 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     def get_est_debloque(self, obj):
         return self._peut_voir_coordonnees(obj)
 
-    def get_first_name(self, obj): return obj.user.first_name
+    def get_first_name(self, obj):
+        """Masqué avant déblocage en CVthèque — combiné au nom de famille et à la photo,
+        le prénom seul reste trop identifiable (contrairement à la wilaya/au titre de poste,
+        qui restent affichés pour permettre de parcourir la liste). Reste toujours visible
+        hors contexte CVthèque (candidat consultant son propre profil, admin)."""
+        return obj.user.first_name if self._peut_voir_coordonnees(obj) else None
 
     def get_last_name(self, obj):
-        """Tronqué à l'initiale tant que le profil n'est pas débloqué en CVthèque (ex: "T.")
-        — le prénom seul reste identifiable pour parcourir la liste, le nom complet fait
-        partie de la valeur débloquée par crédit, au même titre que email/téléphone."""
-        nom = obj.user.last_name
-        if self._peut_voir_coordonnees(obj) or not nom:
-            return nom
-        return f"{nom[0]}."
+        """Masqué avant déblocage — voir get_first_name."""
+        return obj.user.last_name if self._peut_voir_coordonnees(obj) else None
+
+    def get_photo_profil(self, obj):
+        """Masquée avant déblocage — photo la plus identifiante du profil, au même titre
+        que le nom complet."""
+        if not self._peut_voir_coordonnees(obj):
+            return None
+        return obj.photo_profil.url if obj.photo_profil else None
+
+    def get_commune(self, obj):
+        """Masquée avant déblocage — précision géographique fine, contrairement à la
+        wilaya (gardée visible, nécessaire pour parcourir/filtrer la liste)."""
+        return obj.commune if self._peut_voir_coordonnees(obj) else None
+
+    def get_diplome(self, obj):
+        return obj.diplome if self._peut_voir_coordonnees(obj) else None
+
+    def get_diplome_ref_libelle(self, obj):
+        return obj.diplome_ref.libelle if obj.diplome_ref_id and self._peut_voir_coordonnees(obj) else None
+
+    def get_metier_libelle(self, obj):
+        return obj.metier.libelle if obj.metier_id and self._peut_voir_coordonnees(obj) else None
+
     def get_date_naissance(self, obj):
         """Masquée tant que le profil n'est pas débloqué en CVthèque — au même titre
         qu'email/téléphone, oubliée du masquage initial (audit du 03/09/2026)."""
@@ -161,10 +189,25 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
         val = getattr(p, 'github', None)
         return val if self._peut_voir_coordonnees(obj) else None
 
+    def get_bio(self, obj):
+        """Masqué avant déblocage — texte libre du candidat, mentionne fréquemment des noms
+        d'employeurs/entreprises réels (identifiant au même titre qu'une expérience nommée)."""
+        return obj.bio if self._peut_voir_coordonnees(obj) else None
+
 
 class ProfilCandidatAdminSerializer(serializers.ModelSerializer):
+    """Vue admin complète (`fields='__all__'`, jamais de masquage de type CVthèque —
+    l'admin voit tout) — bug réel corrigé (26/09/2026) : `'__all__'` ne renvoie que les FK
+    brutes du référentiel v2 (`metier_souhaite`, `diplome_ref`...), jamais leur libellé
+    lisible, contrairement à `ProfilCandidatDTO` (candidat) qui les résout déjà. L'admin
+    voyait donc un ID numérique brut ("2497") à la place du métier souhaité, et aucun
+    libellé de type de diplôme malgré sa présence réelle en base."""
     experiences_detail = ExperienceSerializer(many=True, read_only=True)
     formations_detail = FormationSerializer(many=True, read_only=True)
+    metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
+    metier_souhaite_libelle = serializers.CharField(source='metier_souhaite.libelle', read_only=True, default=None)
+    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
 
     class Meta:
         model = ProfilCandidat

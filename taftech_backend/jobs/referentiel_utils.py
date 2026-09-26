@@ -11,11 +11,15 @@ volontairement déterministe (mots-clés, pas un appel LLM) : c'est un filet de
 sécurité rapide, pas un remplacement de l'agent de classification dédié
 (jobs/metier_agent.py) qui, lui, s'appuie sur un vrai appel Groq grounded sur des
 appellations réelles trouvées par recherche."""
+import json
+import logging
 import re
 import unicodedata
 from collections import Counter
 from django.db.models import Q
 from .models import Appellation
+
+logger = logging.getLogger(__name__)
 
 _TOKENS_TECHNIQUES = [
     (re.compile(r"(?<!\w)c\+\+(?!\w)", re.IGNORECASE), "cpp"),
@@ -134,6 +138,67 @@ def ids_metier_avec_redirections(metier_id):
     return ids
 
 
+def _nettoyer_libelle_secteur_nsec(libelle):
+    """Les 16 secteurs officiels ANEM (`GroupeMetier.code_source` = une seule lettre A-P)
+    ont été importés avec la lettre du code collée dans le libellé lui-même, en majuscules
+    ("A-AGRICULTURE ET PÊCHE", "L-SUPPORT A L 'ENTREPRISE" avec espace parasite avant
+    l'apostrophe) — bruit visuel signalé par l'utilisateur (2026-09-25), incohérent avec les
+    ~60 secteurs plus précis ajoutés par TAFTECH (TSEC-*), déjà propres ("Agriculture &
+    Agroalimentaire"). Correction faite à la lecture (pas en base) pour ne jamais être
+    écrasée par un futur réimport ANEM idempotent. Ne touche pas les libellés TSEC (déjà
+    propres, `code_source` vide pour ceux-là)."""
+    m = re.match(r'^[A-Z]\s*-\s*(.+)$', libelle)
+    if not m:
+        return libelle
+    reste = re.sub(r"\s+,", ",", m.group(1))     # "INSTALLATION , MAINTENANCE" -> "..., ..."
+    reste = re.sub(r",(?=\S)", ", ", reste)        # "HÔTELLERIE ,RESTAURATION" (sans espace après)
+    reste = re.sub(r"\s+'", "'", reste)             # "L 'ENTREPRISE" -> "L'ENTREPRISE"
+    return reste.capitalize()
+
+
+# Chevauchements sémantiques entre secteurs (même sujet décrit deux fois, texte différent) —
+# trouvés en auditant les 76 secteurs (2026-09-25) après le nettoyage des libellés NSEC.
+# Décision explicite de l'utilisateur pour chaque paire : garder le libellé le plus clair/
+# complet, peu importe qu'il vienne du référentiel officiel ANEM (NSEC-*) ou de TAFTECH
+# (TSEC-*) — jamais une règle automatique "l'officiel gagne toujours". Vérifié avant
+# retrait : aucune `ProfilEntreprise.secteur_activite` en base n'utilise les codes masqués
+# (3 entreprises seulement ont un secteur renseigné, aucune sur ces codes).
+SECTEURS_CODES_MASQUES = {
+    'TSEC-7081C23F6C1B': "BTP — doublon de l'officiel F, gardé sous sa forme non abrégée « Bâtiment et travaux publics »",
+    'A': "Agriculture et pêche — remplacé par le TSEC plus complet « Agriculture & Agroalimentaire » (couvre aussi l'agroalimentaire)",
+    'TSEC-9EB017D9085A': "Hôtellerie & Tourisme — doublon de l'officiel H, plus complet (« ... restauration et tourisme »)",
+    'TSEC-34F06D8D9947': "Communication & Médias — doublon de l'officiel J, plus complet (« ... et multimédia »)",
+    'K': "Banque, assurances et immobilier — remplacé par les 2 TSEC plus précis « Banque & Assurance » et « Immobilier »",
+    'I': "Transport et logistique — remplacé par les 2 TSEC plus précis « Transport » et « Logistique & Supply Chain »",
+    'TSEC-C43BAB65E355': "Éducation & Formation — doublon de l'officiel O, plus complet (couvre aussi la recherche scientifique)",
+    # Note : "Intelligence Artificielle", "Cloud Computing", "Cybersécurité",
+    # "Instrumentation & Automatisme" et "Maintenance Industrielle" ont existé un temps
+    # comme secteurs autonomes en doublon avec des domaines déjà riches sous Informatique/
+    # Industrie (incohérence signalée par l'utilisateur, 2026-09-25) — plus la peine de les
+    # masquer ici : leur contenu a été réellement fusionné (métiers doublons reliés via
+    # `metier_canonique`, métiers/sous-domaines uniques déplacés) et les secteurs supprimés
+    # par `python manage.py fusionner_secteurs_doublons` (management/commands/).
+}
+
+
+def _dedupliquer_secteurs(secteurs):
+    """1. Retire les entrées TSEC-* dont le libellé devient un doublon EXACT d'un secteur
+    officiel NSEC-* une fois ce dernier nettoyé de son préfixe (filet de sécurité
+    générique, utile si un futur réimport recrée un cas comme "Industrie"/"C-INDUSTRIE").
+    2. Retire en plus les codes de `SECTEURS_CODES_MASQUES` (chevauchements sémantiques
+    identifiés manuellement, texte différent mais même sujet — voir commentaire ci-dessus).
+    Aucun des deux ne touche la hiérarchie domaine/métier en base, seule l'apparition dans
+    cette liste plate de sélection disparaît. `secteurs` : liste de dicts avec 'code'/'libelle'."""
+    libelles_officiels = {
+        s['libelle'].strip().lower() for s in secteurs if len(s['code']) <= 2
+    }
+    return [
+        s for s in secteurs
+        if s['code'] not in SECTEURS_CODES_MASQUES
+        and (len(s['code']) <= 2 or s['libelle'].strip().lower() not in libelles_officiels)
+    ]
+
+
 def secteurs_entreprise():
     """Liste des secteurs sélectionnables pour `ProfilEntreprise.secteur_activite` — même
     source que la navigation publique "Offres par secteur" (`NomenclatureAPIView.secteurs`,
@@ -147,9 +212,10 @@ def secteurs_entreprise():
     if cached is not None:
         return cached
     secteurs = [
-        {"code": s.code_source or s.code, "libelle": s.libelle}
+        {"code": s.code_source or s.code, "libelle": _nettoyer_libelle_secteur_nsec(s.libelle)}
         for s in GroupeMetier.objects.filter(type_groupe='secteur_source').order_by('libelle')
     ]
+    secteurs = _dedupliquer_secteurs(secteurs)
     cache.set('jobs_secteurs_entreprise', secteurs, timeout=3600)
     return secteurs
 
@@ -222,6 +288,169 @@ def resoudre_metier_depuis_texte(*textes):
 _MOTS_GENERIQUES_DIPLOME = {"diplome", "formation", "professionnel", "professionnelle", "degree"}
 
 
+def _singulariser(mot):
+    """Singulier naïf ("informatiques" -> "informatique") — le pluriel français le plus
+    courant est un simple 's' final. Sans ça, un intitulé déclaré au pluriel
+    ("Informatiques") ne matchait jamais un libellé du référentiel au singulier
+    ("Informatique"), un mot ne matchait pas non plus son pluriel dans l'autre sens —
+    bug réel : "Licence en Informatique" tombait sur l'unique spécialité contenant le
+    mot exact "informatique" ("Statistique et traitement informatique des données")
+    au lieu de "Systèmes Informatiques" (bien plus pertinent, mais au pluriel), faute
+    de correspondance exacte. Garde-fou : jamais sur un mot déjà court (perte de sens,
+    ex: "gaz"/"bus") ni se terminant par un double 's' (ex: "processus")."""
+    if len(mot) > 4 and mot.endswith("s") and not mot.endswith("ss"):
+        return mot[:-1]
+    return mot
+
+
+def _mots_singularises(texte):
+    return {_singulariser(m) for m in re.findall(r"\w+", normaliser_recherche(texte))}
+
+
+def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
+    """Spécialité la plus proche parmi les couples `DiplomeSpecialite` attestés pour ce
+    diplôme (jamais hors référentiel, F06) — factorisé pour être réutilisé par la
+    résolution par mots-clés ET par le repli IA ci-dessous.
+
+    Quand plusieurs spécialités sont à égalité de score (cas fréquent : des intitulés
+    de spécialité proches partagent souvent 1-2 mots, ex: "Modèles Intelligents Et
+    Décision" / "Modélisation, optimisation et aide à la décision" / "Sciences de
+    données et aide à la décision" partagent tous "décision") et que `texte` (l'intitulé
+    complet déclaré par le candidat) est fourni, l'IA tranche entre CES candidats
+    précis uniquement — jamais un choix hors de cette liste restreinte."""
+    from .models import DiplomeSpecialite
+
+    spec_candidats = []
+    for c in DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True).select_related('specialite'):
+        lib_mots = _mots_singularises(c.specialite.libelle)
+        score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
+        if score:
+            spec_candidats.append((score, c.specialite))
+    if not spec_candidats:
+        return None
+    spec_candidats.sort(key=lambda c: -c[0])
+    meilleur = spec_candidats[0][0]
+    meilleures = [c[1] for c in spec_candidats if c[0] == meilleur]
+    if len(set(s.id for s in meilleures)) == 1:
+        return meilleures[0]
+    if texte:
+        return _resoudre_specialite_via_ia(texte, meilleures)
+    return None
+
+
+def _resoudre_specialite_via_ia(texte, candidates):
+    """Départage l'IA entre un petit nombre de spécialités déjà à égalité de score
+    (jamais parmi les ~967 spécialités du référentiel entier — uniquement celles
+    remontées par le matching par mots-clés). Un index absent/invalide = abstention,
+    jamais une spécialité hors de cette liste restreinte. Best-effort, comme le repli
+    diplôme : toute erreur retombe silencieusement sur None."""
+    from .ai_engine import call_ai
+
+    liste = "\n".join(f"{i}: {c.libelle}" for i, c in enumerate(candidates))
+    prompt = (
+        "Un candidat a déclaré cet intitulé de formation sur son CV : "
+        f"\"{texte}\"\n\n"
+        "Plusieurs spécialités du référentiel correspondent également bien à cet "
+        "intitulé. Choisis, UNIQUEMENT parmi la liste ci-dessous, celle qui correspond "
+        f"le mieux :\n\n{liste}\n\n"
+        "Réponds en JSON strict, rien d'autre : "
+        '{"index": <numéro entier de la liste ci-dessus, ou -1 si aucune ne convient '
+        "clairement mieux qu'une autre>}"
+    )
+    try:
+        content = call_ai(
+            [{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(content)
+        idx = data.get("index")
+        if isinstance(idx, int) and 0 <= idx < len(candidates):
+            return candidates[idx]
+    except Exception:
+        logger.warning("Départage IA spécialité échoué pour %r", texte, exc_info=True)
+    return None
+
+
+def _resoudre_diplome_via_ia(texte):
+    """Dernier recours quand la recherche par mots exacts ne trouve rien d'utilisable
+    (intitulé mal formulé, faute de frappe non couverte par corriger_mots_flous, diplôme
+    étranger formulé différemment...) — demande à l'IA de choisir le `TypeDiplome` le
+    plus proche PARMI LA LISTE RÉELLE du référentiel, jamais un diplôme halluciné hors
+    de cette liste. Un index absent/invalide/hors-liste = abstention (F02/F06), jamais
+    un choix par défaut. Best-effort : toute erreur (quota, réseau, JSON invalide)
+    retombe silencieusement sur None — ce repli ne doit jamais faire échouer tout le
+    parsing du CV."""
+    from .ai_engine import call_ai
+    from .models import TypeDiplome
+
+    # "D-AUTRE" (le placeholder générique "Autre diplôme — préciser") est exclu de la liste
+    # proposée à l'IA — bug réel constaté : privée de tout candidat pertinent, l'IA se
+    # rabattait sur ce placeholder ("le moins faux"), ce qui renvoie littéralement le
+    # candidat au point de départ ("Autre") au lieu d'une vraie abstention (-1).
+    types = list(TypeDiplome.objects.exclude(code='D-AUTRE').order_by('libelle'))
+    if not types:
+        return None
+    liste = "\n".join(f"{i}: {t.libelle}" for i, t in enumerate(types))
+    prompt = (
+        "Un candidat a déclaré ce diplôme sur son CV, en texte libre : "
+        f"\"{texte}\"\n\n"
+        "Choisis, UNIQUEMENT parmi la liste ci-dessous (référentiel officiel de diplômes "
+        "scolaires/universitaires/professionnels reconnus par un employeur), l'entrée qui "
+        "correspond RÉELLEMENT à ce diplôme précis.\n\n"
+        "IMPORTANT — sois strict, pas complaisant : cette liste contient des catégories "
+        "génériques (ex: \"Certification professionnelle\", \"Attestation de formation\") qui "
+        "PEUVENT sembler s'appliquer à presque n'importe quoi si tu cherches une case où faire "
+        "rentrer l'intitulé de force. Ne les choisis QUE si l'intitulé décrit vraiment une "
+        "certification/attestation professionnelle reconnue dans un contexte d'emploi — jamais "
+        "pour un loisir, un sport, un permis ou une activité personnelle (ex: un brevet de "
+        "plongée, un permis de chasse, un diplôme d'auto-école) qui n'a pas sa place dans un "
+        "référentiel de diplômes pour le recrutement. Dans le doute, réponds -1 : une mauvaise "
+        "correspondance imposée au candidat est pire qu'une absence de correspondance.\n\n"
+        f"{liste}\n\n"
+        "Réponds en JSON strict, rien d'autre : "
+        '{"index": <numéro entier de la liste ci-dessus, ou -1 si aucune entrée ne '
+        'correspond réellement>}'
+    )
+    try:
+        content = call_ai(
+            [{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(content)
+        idx = data.get("index")
+        if isinstance(idx, int) and 0 <= idx < len(types):
+            return types[idx]
+    except Exception:
+        logger.warning("Résolution diplôme via IA échouée pour %r", texte, exc_info=True)
+    return None
+
+
+def resoudre_specialite_depuis_texte(diplome_id, texte):
+    """Résout uniquement la spécialité (le type de diplôme est déjà connu/confirmé) —
+    utilisé quand le candidat tape "Autre, préciser" spécifiquement sur le champ Spécialité
+    (le Type de diplôme, lui, est soit déjà résolu, soit "Autre" mais sans texte propre à
+    exploiter). Même logique de mots-clés + fallback IA (départage) que
+    `_resoudre_specialite_pour_diplome`, restreinte aux couples `DiplomeSpecialite` de ce
+    diplôme précis (jamais hors référentiel, F06)."""
+    from .models import TypeDiplome
+
+    if not texte or not diplome_id:
+        return None
+    try:
+        type_diplome = TypeDiplome.objects.get(pk=diplome_id)
+    except TypeDiplome.DoesNotExist:
+        return None
+    t = normaliser_recherche(texte)
+    mots = [_singulariser(m) for m in re.findall(r"\w+", t) if len(m) >= 3 and m not in _MOTS_GENERIQUES_DIPLOME]
+    if not mots:
+        return None
+    return _resoudre_specialite_pour_diplome(type_diplome, mots, texte)
+
+
 def resoudre_diplome_et_specialite_depuis_texte(texte):
     """Devine le `TypeDiplome` (puis la `SpecialiteFormation`, restreinte aux couples
     `DiplomeSpecialite` attestés pour ce diplôme) à partir d'un intitulé déclaré en texte
@@ -234,49 +463,78 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
     un couple hors référentiel, F06). Retourne (type_diplome_ou_None, specialite_ou_None) —
     s'abstient (None) dès qu'il y a ambiguïté (ex: "Master"/"Licence" seuls, qui ne
     précisent pas académique/professionnel/classique) plutôt que de deviner (R02/F02)."""
-    from .models import TypeDiplome, AliasDiplome, DiplomeSpecialite
+    from .models import TypeDiplome, AliasDiplome
 
     if not texte:
         return None, None
     t = normaliser_recherche(texte)
-    mots = [m for m in re.findall(r"\w+", t) if len(m) >= 3 and m not in _MOTS_GENERIQUES_DIPLOME]
+    mots = [_singulariser(m) for m in re.findall(r"\w+", t) if len(m) >= 3 and m not in _MOTS_GENERIQUES_DIPLOME]
     if not mots:
         return None, None
 
     candidats = []
     for td in TypeDiplome.objects.all():
-        lib_mots = set(re.findall(r"\w+", normaliser_recherche(td.libelle)))
+        lib_mots = _mots_singularises(td.libelle)
         score = sum(1 for m in mots if m in lib_mots)
         if score:
             candidats.append((score, td))
     for al in AliasDiplome.objects.select_related('diplome'):
-        lib_mots = set(re.findall(r"\w+", normaliser_recherche(al.cle_recherche)))
+        lib_mots = _mots_singularises(al.cle_recherche)
         score = sum(1 for m in mots if m in lib_mots)
         if score:
             candidats.append((score, al.diplome))
     if not candidats:
-        return None, None
+        # Aucun mot ne matche le référentiel par recherche exacte (intitulé mal formulé,
+        # faute de frappe non couverte, formulation étrangère...) — plutôt qu'un champ
+        # vide que le candidat devrait forcément remplir à la main, on demande à l'IA de
+        # se rapprocher du diplôme le plus proche parmi ceux réellement disponibles.
+        type_diplome = _resoudre_diplome_via_ia(texte)
+        if not type_diplome:
+            return None, None
+        return type_diplome, _resoudre_specialite_pour_diplome(type_diplome, mots, texte)
     candidats.sort(key=lambda c: -c[0])
     meilleur_score = candidats[0][0]
     meilleurs = [c[1] for c in candidats if c[0] == meilleur_score]
     if len(set(m.id for m in meilleurs)) > 1:
-        return None, None  # ambigu (ex: "Master" seul) — ne jamais deviner
-    type_diplome = meilleurs[0]
+        # Ambiguïté entre variantes d'un même diplôme (ex: "Licence" seul matche à égalité
+        # Licence académique/professionnelle/ancien système classique/non précisée) — le
+        # référentiel prévoit justement une entrée "non précisée" (code se terminant par
+        # -NP, ex: D-LIC-NP/D-MAS-NP/D-DOC-NP) pour ce cas exact. Un candidat qui écrit
+        # juste "Licence"/"Master"/"Doctorat" sans préciser le régime mérite ce niveau
+        # générique plutôt qu'un champ vide qu'il devra forcément remplir à la main — F02
+        # préfère un référentiel réel même générique à une absence de donnée. Réservé aux
+        # cas où l'ambiguïté porte UNIQUEMENT sur la variante d'un même diplôme (même
+        # préfixe de code, ex: "D-LIC-*") — une vraie ambiguïté entre familles différentes
+        # (codes sans préfixe commun) passe par le repli IA plutôt qu'une abstention pure.
+        prefixes = {"-".join(m.code.split("-")[:-1]) for m in meilleurs}
+        prefixe_unique = next(iter(prefixes)) if len(prefixes) == 1 else None
+        # Cas "Master"/"Licence"/"Doctorat" seul (ex: "Master en Informatique" sans
+        # préciser académique/pro) : le régime académique (ou son équivalent le plus
+        # standard/répandu) l'emporte largement en Algérie pour un diplôme universitaire
+        # classique — décision produit, préférer une variante concrète à "-NP" (non
+        # précisée) dès qu'une variante par défaut existe pour la famille en question.
+        # Le Doctorat n'a pas de variante "-A" dans le référentiel (research-only par
+        # nature) — son équivalent est "-LMD" (le système actuel, standard depuis la
+        # réforme LMD), pas "-SCI" (ancien système, en voie de disparition). Repli sur
+        # "-NP" uniquement si aucun défaut n'existe pour cette famille précise.
+        suffixe_defaut = "-LMD" if prefixe_unique == "D-DOC" else "-A"
+        defaut_candidat = (
+            next((m for m in meilleurs if m.code == f"{prefixe_unique}{suffixe_defaut}"), None)
+            if prefixe_unique else None
+        )
+        np_candidat = defaut_candidat or (
+            next((m for m in meilleurs if m.code.endswith("-NP")), None) if prefixe_unique else None
+        )
+        if not np_candidat:
+            type_diplome = _resoudre_diplome_via_ia(texte)
+            if not type_diplome:
+                return None, None  # vraiment ambigu, même l'IA n'a pas su trancher
+        else:
+            type_diplome = np_candidat
+    else:
+        type_diplome = meilleurs[0]
 
-    specialite = None
-    spec_candidats = []
-    for c in DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True).select_related('specialite'):
-        lib_mots = set(re.findall(r"\w+", normaliser_recherche(c.specialite.libelle)))
-        score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
-        if score:
-            spec_candidats.append((score, c.specialite))
-    if spec_candidats:
-        spec_candidats.sort(key=lambda c: -c[0])
-        meilleur = spec_candidats[0][0]
-        meilleures = [c[1] for c in spec_candidats if c[0] == meilleur]
-        if len(set(s.id for s in meilleures)) == 1:
-            specialite = meilleures[0]
-    return type_diplome, specialite
+    return type_diplome, _resoudre_specialite_pour_diplome(type_diplome, mots, texte)
 
 
 # Résolution DIPLOMES_CHOICES (legacy, jobs.constants) -> référentiel v2 (TypeDiplome/Scolarite).

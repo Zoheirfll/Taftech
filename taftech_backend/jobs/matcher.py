@@ -1,6 +1,7 @@
 import datetime
 import difflib
 import re
+from django.db.models import Q
 
 def normaliser(texte):
     if not texte:
@@ -56,6 +57,57 @@ def _mots(texte):
 # conservée intacte comme repli tant que les anciennes fiches ne sont pas
 # migrées vers ce nouveau champ — voir CLAUDE.md, Phase 2).
 # ---------------------------------------------------------------------------
+def _relation_similaire(metier_candidat, metier_offre):
+    """Relation manuelle 'similaire' (RelationMetier) — couvre les métiers que le référentiel
+    v2 du client classe dans des branches secteur/domaine totalement séparées (artefact de la
+    nomenclature source, ex: 'Informaticien chargé d'étude' rangé sous 'Support à l'entreprise'
+    alors que 'Développeur' est sous 'Informatique') mais qu'on juge substituables en pratique.
+    Décision produit du 24/09/2026 : jamais déduite automatiquement, seulement peuplée à la
+    main via le panel admin référentiel v2 — contrairement à redirection_equivalente/
+    plus_precis_que (importées du client), ce type est propre à TafTech."""
+    from .models import RelationMetier
+    paire_directe = Q(metier_depart_id=metier_candidat.pk, metier_arrivee_id=metier_offre.pk)
+    paire_inverse = Q(metier_depart_id=metier_offre.pk, metier_arrivee_id=metier_candidat.pk)
+    return RelationMetier.objects.filter(
+        relation='similaire', active_recherche=True,
+    ).filter(paire_directe | paire_inverse).exists()
+
+
+def _racine_secteur_id(groupe):
+    """Remonte la hiérarchie GroupeMetier jusqu'au véritable secteur racine
+    (type_groupe='secteur_source', toujours `parent=None`) — quel que soit le nombre de
+    niveaux intermédiaires. Bug réel corrigé (26/09/2026, retour client sur des secteurs
+    dupliqués "Informatique"/"Système d'information"/"Cloud Computing") : l'ancienne
+    version ne consultait qu'UN seul niveau au-dessus (`g.parent_id or g.pk`), ce qui
+    fonctionnait pour un métier attaché directement à un domaine (secteur > domaine,
+    2 niveaux) mais ratait silencieusement tous les métiers attachés à un sous-domaine
+    (secteur > domaine > sous-domaine, 3 niveaux, majoritaire dans le référentiel v2 —
+    ex: "Développeur Back-End" sous Développement Web > Développement informatique >
+    Informatique) : la "racine" calculée était alors le domaine intermédiaire, pas le
+    vrai secteur, donc deux métiers du même secteur mais de branches différentes
+    tombaient à 0 point au lieu du bonus 0.45 prévu pour ce cas."""
+    vu = set()
+    courant = groupe
+    while courant and courant.parent_id and courant.pk not in vu:
+        vu.add(courant.pk)
+        courant = courant.parent
+    return courant.pk if courant else None
+
+
+def _meme_secteur_parent(metier_candidat, metier_offre):
+    """Même secteur racine (voir `_racine_secteur_id`) mais domaine différent — proximité
+    réelle mais plus faible que le même domaine exact (0.85). Décision du 24/09/2026 : le
+    référentiel v2 n'avait jusqu'ici AUCUN score intermédiaire pour ce cas (tout ou rien),
+    jugé trop strict pour deux métiers d'un même grand secteur (ex: deux métiers
+    'Informatique' mais classés dans des domaines différents du fichier client)."""
+    g1, g2 = metier_candidat.groupe_principal, metier_offre.groupe_principal
+    if not g1 or not g2:
+        return False
+    racine1 = _racine_secteur_id(g1)
+    racine2 = _racine_secteur_id(g2)
+    return racine1 is not None and racine1 == racine2
+
+
 def metiers_compatibles(metier_candidat, metier_offre):
     """Compare deux instances Metier (déjà résolues vers leur metier_canonique par
     l'appelant si besoin). Retourne (compatible: bool, ratio: float)."""
@@ -65,12 +117,46 @@ def metiers_compatibles(metier_candidat, metier_offre):
         return True, 1.0
     if metier_candidat.groupe_principal_id and metier_candidat.groupe_principal_id == metier_offre.groupe_principal_id:
         return True, 0.85
+    if _relation_similaire(metier_candidat, metier_offre):
+        return True, 0.70
     # Filet de sécurité : deux métiers différents mais au libellé très proche
     # (ex: variantes non couvertes par une RelationMetier explicite).
     ratio = difflib.SequenceMatcher(None, normaliser(metier_candidat.libelle), normaliser(metier_offre.libelle)).ratio()
     if ratio >= 0.72:
         return True, ratio
+    if _meme_secteur_parent(metier_candidat, metier_offre):
+        return True, 0.45
     return False, ratio
+
+def _specialite_relation_similaire(spec_id_a, spec_id_b):
+    """Relation manuelle 'similaire' (RelationSpecialite, session 25/09/2026) — voir docstring
+    du modèle. Jamais déduite automatiquement, seulement peuplée via le panel admin."""
+    from .models import RelationSpecialite
+    paire_directe = Q(specialite_depart_id=spec_id_a, specialite_arrivee_id=spec_id_b)
+    paire_inverse = Q(specialite_depart_id=spec_id_b, specialite_arrivee_id=spec_id_a)
+    return RelationSpecialite.objects.filter(active_recherche=True).filter(paire_directe | paire_inverse).exists()
+
+
+def specialites_formation_compatibles(spec_candidat, spec_offre):
+    """Compare deux instances SpecialiteFormation (référentiel v2 Diplômes) — même logique que
+    metiers_compatibles() : exact (1.0), relation manuelle 'similaire' (0.70, admin-only),
+    puis filet fuzzy sur le libellé pour les variantes non couvertes par une relation
+    explicite (ex: 'Système d'information' / 'Systèmes d'information'). Contrairement aux
+    métiers, PAS de bonus 'même domaine' — le référentiel client a deux domaines
+    'Informatique'-like disjoints (200 académique précis / 218 thèmes éditoriaux v1 larges)
+    qui ne sont pas garantis proches spécialité par spécialité (F06 : jamais d'équivalence
+    construite sans preuve)."""
+    if not spec_candidat or not spec_offre:
+        return 0.0
+    if spec_candidat.pk == spec_offre.pk:
+        return 1.0
+    if _specialite_relation_similaire(spec_candidat.pk, spec_offre.pk):
+        return 0.70
+    ratio = difflib.SequenceMatcher(None, normaliser(spec_candidat.libelle), normaliser(spec_offre.libelle)).ratio()
+    if ratio >= 0.80:
+        return ratio
+    return 0.0
+
 
 def specialites_compatibles(spec_candidat, spec_offre):
     if not spec_candidat or not spec_offre:
@@ -336,20 +422,36 @@ def _score_experience(profil, offre):
 
 
 def _score_diplome_specialite(profil, offre):
-    """S05/S06/S07/S08 — diplôme et spécialité-formation comme deux critères pondérés
-    indépendants, évalués sur la MÊME FormationCandidat (jamais un diplôme d'une formation
-    combiné à la spécialité d'une autre — T10). Retourne (contrib_diplome, contrib_specialite,
-    formation_retenue). (None, None, None) si l'offre ne définit aucun couple accepté
-    (critères non demandés, S01)."""
-    try:
-        diplomes_acceptes = list(offre.diplomes_acceptes.all())
-    except TypeError:
-        diplomes_acceptes = []
-    if not diplomes_acceptes:
-        return None, None, None
+    """S05/S06/S07 — diplôme et spécialité-formation comme deux critères pondérés
+    INDÉPENDANTS et non couplés (S01/S05/S06 : `offre.diplomes_requis` et
+    `offre.specialites_requises` sont deux listes plates séparées, chacune activable
+    indépendamment — jamais un couple imposé, F06 : pas de rang/équivalence construits).
+    Quand les deux sont demandés, ils restent néanmoins évalués sur la MÊME
+    FormationCandidat (jamais un diplôme d'une formation combiné à la spécialité d'une
+    autre — T10). Retourne (contrib_diplome, contrib_specialite, formation_retenue) ; un
+    élément vaut None si son critère n'est pas demandé par l'offre (S01).
 
-    couples_diplome_ids = {da.couple.diplome_id for da in diplomes_acceptes}
-    couples_specialite_ids = {da.couple.specialite_id for da in diplomes_acceptes}
+    Repli diplôme (pas de repli spécialité, qui n'a pas d'équivalent top-niveau) : si le
+    candidat n'a aucune `FormationCandidat` obtenue avec un diplôme rattaché, mais a choisi un
+    `ProfilCandidat.diplome_ref` (sélecteur référentiel v2 en haut du profil, sans ambiguïté
+    possible puisque c'est déjà une valeur précise du référentiel), ce niveau sert de repli
+    pour le critère diplôme uniquement — marqué `contrib_diplome["source"]='niveau_profil'`
+    (vs `'formation'` par défaut) pour que le recruteur distingue une correspondance vérifiée
+    sur une formation détaillée d'une simple estimation déclarative."""
+    try:
+        diplome_ids = set(offre.diplomes_requis.values_list('pk', flat=True))
+    except TypeError:
+        diplome_ids = set()
+    try:
+        specialites_offre = list(offre.specialites_requises.all())
+    except TypeError:
+        specialites_offre = []
+    specialite_ids = set(s.pk for s in specialites_offre)
+
+    diplome_actif = bool(diplome_ids)
+    specialite_actif = bool(specialite_ids)
+    if not diplome_actif and not specialite_actif:
+        return None, None, None
 
     try:
         formations = [
@@ -361,24 +463,41 @@ def _score_diplome_specialite(profil, offre):
         formations = []
 
     if not formations:
-        return {"score": 0.0, "connu": False}, {"score": 0.0, "connu": False}, None
+        niveau_profil_id = getattr(profil, 'diplome_ref_id', None)
+        if diplome_actif and niveau_profil_id:
+            sd = 1.0 if niveau_profil_id in diplome_ids else 0.0
+            contrib_diplome = {"score": sd, "connu": True, "source": "niveau_profil"}
+        else:
+            contrib_diplome = {"score": 0.0, "connu": False} if diplome_actif else None
+        contrib_specialite = {"score": 0.0, "connu": False} if specialite_actif else None
+        return contrib_diplome, contrib_specialite, None
 
     meilleure = None
     meilleur_total = -1.0
     for f in formations:
-        sd = 1.0 if f.diplome_ref_id in couples_diplome_ids else 0.0
-        ss = 1.0 if f.specialite_ref_id in couples_specialite_ids else 0.0
-        total = 0.20 * sd + 0.25 * ss
+        sd = 1.0 if (diplome_actif and f.diplome_ref_id in diplome_ids) else 0.0
+        ss = 0.0
+        if specialite_actif and f.specialite_ref_id:
+            for so in specialites_offre:
+                ss = max(ss, specialites_formation_compatibles(f.specialite_ref, so))
+        total = (0.20 * sd if diplome_actif else 0.0) + (0.25 * ss if specialite_actif else 0.0)
         if total > meilleur_total:
             meilleur_total = total
             meilleure = (f, sd, ss)
 
     formation, sd, ss = meilleure
-    return (
-        {"score": sd, "connu": True},
-        {"score": ss, "connu": True},
-        formation if (sd or ss) else None,
-    )
+    contrib_diplome = {"score": sd, "connu": True, "source": "formation"} if diplome_actif else None
+    # Spécialité non renseignée, ou "SP-AUTRE" (Autre spécialité — préciser, texte libre côté
+    # candidat via FormationReferentielSelect) : une vraie spécialité inconnue, pas une
+    # incompatibilité constatée — jamais un 0 franc qui pénaliserait le candidat comme s'il
+    # avait déclaré une spécialité qui ne correspond pas à celle demandée par l'offre.
+    specialite_vague = (not formation.specialite_ref_id) or getattr(formation.specialite_ref, 'code', None) == 'SP-AUTRE'
+    if specialite_actif:
+        contrib_specialite = {"score": 0.0, "connu": False} if specialite_vague else {"score": round(ss, 4), "connu": True}
+    else:
+        contrib_specialite = None
+    formation_retenue = formation if ((diplome_actif and sd) or (specialite_actif and ss)) else None
+    return contrib_diplome, contrib_specialite, formation_retenue
 
 
 def _score_region(profil, offre):
@@ -473,14 +592,36 @@ def _calculer_score_algo(candidat_user, offre):
     # DIPLÔME + SPÉCIALITÉ DE FORMATION (S05-S08) — deux critères pondérés indépendants,
     # évalués sur la même FormationCandidat (jamais un diplôme d'une formation combiné à la
     # spécialité d'une autre — T10).
+    # Flux "Autre, préciser" (retour client 26/09/2026) : une formation en attente de
+    # vérification (`statut_validation='A_PRECISER'` — intitulé libre sans correspondance
+    # référentiel confirmée) rend le score de ce candidat provisoire sur diplôme/spécialité,
+    # jamais une incompatibilité déguisée — le libellé de l'explication le précise et
+    # `resultat['score_provisoire']` (voir plus bas) permet au frontend de le signaler.
+    try:
+        # Itérer (pas `.filter().exists()`) — un `Mock()` (25 tests historiques de
+        # test_matcher.py) lève `TypeError` à l'itération, jamais sur un simple appel de
+        # méthode chaîné, qui renverrait un autre Mock toujours "truthy" et fausserait
+        # silencieusement `formation_a_verifier` sur tous ces tests (piège déjà documenté
+        # dans ce fichier pour `competences_requises`/`diplomes_acceptes`).
+        formation_a_verifier = any(f.statut_validation == 'A_PRECISER' for f in profil.formations_detail.all())
+    except TypeError:
+        formation_a_verifier = False
     contrib_diplome, contrib_specialite, formation_retenue = _score_diplome_specialite(profil, offre)
     if contrib_diplome is not None:
         contrib_diplome["poids"] = params["poids_diplome"]
         if contrib_diplome["score"] == 1.0:
-            explications["diplome"] = "Type de diplôme accepté par l'offre."
+            if contrib_diplome.get("source") == "niveau_profil":
+                explications["diplome"] = "Type de diplôme accepté par l'offre (estimé depuis le niveau déclaré en haut du profil, aucune formation détaillée renseignée)."
+            else:
+                explications["diplome"] = "Type de diplôme accepté par l'offre."
             points_forts.append("Diplôme conforme aux exigences de l'offre.")
         elif not contrib_diplome["connu"]:
-            explications["diplome"] = "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+            explications["diplome"] = (
+                "Une formation déclarée est en attente de vérification par un administrateur — "
+                "score provisoire sur ce critère, non compté comme incompatible."
+                if formation_a_verifier else
+                "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+            )
         else:
             explications["diplome"] = "Le diplôme du candidat ne fait pas partie des diplômes acceptés."
             ecarts.append("Diplôme non compatible avec les exigences de l'offre.")
@@ -491,7 +632,15 @@ def _calculer_score_algo(candidat_user, offre):
             explications["specialite"] = f"Spécialité de formation acceptée ({libelle_spe})." if libelle_spe else "Spécialité de formation acceptée par l'offre."
             points_forts.append("Spécialité de formation exactement acceptée par l'offre.")
         elif not contrib_specialite["connu"]:
-            explications["specialite"] = "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+            explications["specialite"] = (
+                "Une formation déclarée est en attente de vérification par un administrateur — "
+                "score provisoire sur ce critère, non compté comme incompatible."
+                if formation_a_verifier else
+                "Aucune formation obtenue référencée dans le catalogue — correspondance non vérifiable."
+            )
+        elif contrib_specialite["score"] > 0:
+            libelle_spe = formation_retenue.specialite_ref.libelle if formation_retenue and formation_retenue.specialite_ref_id else ""
+            explications["specialite"] = f"Spécialité de formation jugée proche de celles acceptées par l'offre ({libelle_spe})." if libelle_spe else "Spécialité de formation jugée proche de celles acceptées par l'offre."
         else:
             explications["specialite"] = "La spécialité de formation ne correspond pas à celles acceptées par l'offre."
             ecarts.append("Spécialité de formation non compatible avec les exigences de l'offre.")
@@ -551,6 +700,14 @@ def _calculer_score_algo(candidat_user, offre):
         "criteres_non_demandes": resultat["criteres_non_demandes"],
         "algorithme_version": params["algorithme_version"],
         "formation_id_retenue": formation_retenue.id if formation_retenue else None,
+        # "formation" (vérifié sur une FormationCandidat détaillée), "niveau_profil" (repli sur
+        # le sélecteur référentiel v2 du haut de profil, sans formation détaillée), ou None si
+        # le critère diplôme n'était pas actif/pas connu.
+        "diplome_source": contrib_diplome.get("source") if contrib_diplome else None,
+        # Score provisoire (retour client 26/09/2026) : au moins une formation déclarée est en
+        # attente de vérification admin (flux "Autre, préciser") — jamais une incompatibilité,
+        # mais le score global ne doit pas être présenté comme définitif tant que ça dure.
+        "score_provisoire": formation_a_verifier,
     }
 
 
@@ -568,5 +725,7 @@ def calculer_score_matching(candidat_user, offre):
             "criteres_non_demandes": [],
             "algorithme_version": "matching-20-20-25-20-15-v2",
             "formation_id_retenue": None,
+            "diplome_source": None,
+            "score_provisoire": False,
         }
     return _calculer_score_algo(candidat_user, offre)

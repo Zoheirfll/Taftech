@@ -28,7 +28,7 @@ from jobs.matcher import calculer_score_matching
 from jobs.models import (
     ProfilEntreprise, OffreEmploi, ProfilCandidat, ExperienceCandidat, FormationCandidat,
     GroupeMetier, Metier, Appellation, TypeDiplome, DomaineFormation, SpecialiteFormation,
-    DiplomeSpecialite, OffreDiplomeAccepte, CompetenceOffre,
+    DiplomeSpecialite, CompetenceOffre,
 )
 
 User = get_user_model()
@@ -51,7 +51,8 @@ class SimulationsMatchingTest(TestCase):
         )
         defaults.update(overrides)
         offre = OffreEmploi.objects.create(entreprise=self.entreprise, **defaults)
-        OffreDiplomeAccepte.objects.create(offre=offre, couple=self.couple_master_info)
+        offre.diplomes_requis.add(self.diplome_master)
+        offre.specialites_requises.add(self.specialite_info)
         CompetenceOffre.objects.create(offre=offre, label="React", type_exigence="OBLIGATOIRE")
         return offre
 
@@ -265,7 +266,8 @@ class RecetteDiplomesTest(TestCase):
         rh = User.objects.create_user(username='rh_recette', email='rh_recette@test.com', password='pwd', role='RECRUTEUR')
         self.entreprise = ProfilEntreprise.objects.create(user=rh, nom_entreprise='RecetteCo', registre_commerce='RC-RECETTE', est_approuvee=True)
         self.offre = OffreEmploi.objects.create(entreprise=self.entreprise, titre='Développeur', wilaya='16 - Alger')
-        OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
+        self.offre.diplomes_requis.add(self.diplome_master)
+        self.offre.specialites_requises.add(self.specialite_info)
 
         self.candidat = User.objects.create_user(username='cand_recette', email='cand_recette@test.com', password='pwd', role='CANDIDAT')
         self.profil = ProfilCandidat.objects.create(user=self.candidat, wilaya='16 - Alger')

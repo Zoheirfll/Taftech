@@ -108,6 +108,8 @@ def _phrase_activite(log, request_user):
         return f"{sujet} {verbe_avoir} retiré un membre : {detail}"
     if log.action == 'CHANGER_ROLE':
         return f"{sujet} {verbe_avoir} changé un rôle : {detail}"
+    if log.action == 'DEBLOQUER_CANDIDAT':
+        return f"{sujet} {verbe_avoir} débloqué le profil de {detail} dans la CVthèque"
     # AUTRE — déjà une phrase complète (candidature reçue, favori ajouté, invitation CVthèque)
     return detail
 
@@ -690,6 +692,10 @@ class CandidatsRecommandesAPIView(APIView):
     techniquement ouverte). Fenêtre à 60 jours (2 mois) — cohérent avec `relance_maj_cv`."""
     permission_classes = [IsAuthenticated]
     RECOMMANDES_FENETRE_JOURS = 60
+    # Même seuil que ActiviteProfil.SEUIL_SCORE_RECOMMANDE — en dessous, un candidat n'est
+    # pas réellement "recommandé", juste le moins pire parmi peu de candidatures (signalé
+    # par l'utilisateur : un score à 35-41% n'a rien d'une recommandation).
+    SEUIL_SCORE_RECOMMANDE = 80.0
 
     def get(self, request):
         entreprise = get_entreprise_for_user(request.user)
@@ -704,6 +710,7 @@ class CandidatsRecommandesAPIView(APIView):
         seuil_recence = timezone.now() - datetime.timedelta(days=self.RECOMMANDES_FENETRE_JOURS)
         qs = Candidature.objects.select_related('candidat', 'offre').filter(
             offre__entreprise=entreprise, est_rapide=False, score_matching__isnull=False,
+            score_matching__gte=self.SEUIL_SCORE_RECOMMANDE,
             offre__est_active=True, offre__est_cloturee=False,
             date_postulation__gte=seuil_recence,
         ).filter(
@@ -1095,6 +1102,7 @@ class InviterCandidatCVThequeAPIView(APIView):
             type_notif='INFO',
             titre="Une entreprise s'intéresse à votre profil",
             message=f"{entreprise.nom_entreprise} vous invite à postuler à l'offre « {offre.titre} ».",
+            lien=f"/jobs/{offre.id}",
         )
 
         lien_offre = f"{settings.SITE_URL}/jobs/{offre.id}/?invitation={invitation.token}"
@@ -1176,7 +1184,8 @@ class EnvoyerCandidatureSpontaneeAPIView(APIView):
             _notifier_equipe(
                 entreprise, 'CANDIDATURE_SPONTANEE',
                 "Nouvelle candidature spontanée",
-                f"{nom_spontane} a envoyé une candidature spontanée."
+                f"{nom_spontane} a envoyé une candidature spontanée.",
+                lien='/candidatures-spontanees'
             )
             return Response({'message': 'Candidature spontanée envoyée !'}, status=201)
         return Response(serializer.errors, status=400)

@@ -69,7 +69,7 @@ describe("📋 UI & Logique - Composant <OffresListPage />", () => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getConstants.mockResolvedValue({ wilayas: [], secteurs: [] });
     jobsService.getNomenclatureFormation.mockResolvedValue({ types_diplome: [], couples: [] });
-    jobsService.getMetierSuggestions.mockResolvedValue({ competences: [], diplomes_specialites: [] });
+    jobsService.getMetierSuggestions.mockResolvedValue({ competences: [], specialites: [], avertissement: "" });
     jobsService.searchCompetences.mockResolvedValue([]);
   });
 

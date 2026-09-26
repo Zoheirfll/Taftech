@@ -53,11 +53,11 @@ const OffresParSecteur = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [data, geo] = await Promise.all([
-          jobsService.getConstants(),
+        const [nomenclature, geo] = await Promise.all([
+          jobsService.getNomenclature(),
           jobsService.getStatsGeo(),
         ]);
-        setSecteurs(data.secteurs);
+        setSecteurs((nomenclature.secteurs || []).map((s) => ({ id: s.id, value: s.code, label: s.libelle })));
         setCounts(geo.secteurs || {});
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_SECTEURS", error);
@@ -128,12 +128,12 @@ const OffresParSecteur = () => {
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pb-8">
                     {secteursAffiches.map((secteur, index) => {
-                      const nb = counts[secteur.value] || 0;
+                      const nb = counts[secteur.id] || 0;
                       const SecteurIcon = iconsMap[secteur.value] || Briefcase;
                       return (
                         <Link
                           key={index}
-                          to={secteurUrl(secteur.value, secteur.label)}
+                          to={secteurUrl(secteur.id, secteur.label)}
                           className={`group ${tw.cardColors} rounded-2xl p-6 ${tw.borderPrimaryHover} hover:shadow-md transition-all flex items-center gap-5`}
                         >
                           <div className={`w-14 h-14 ${tw.surfaceMuted} rounded-2xl flex items-center justify-center ${tw.groupHoverBgPrimarySoft} transition-colors shrink-0`}>
@@ -159,7 +159,6 @@ const OffresParSecteur = () => {
           </>
         )}
         <div className={`mt-8 pt-6 border-t ${tw.borderSubtle} flex flex-wrap gap-4 text-sm`}>
-          <Link to="/metiers" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par métier →</Link>
           <Link to="/regions" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par région →</Link>
         </div>
       </div>

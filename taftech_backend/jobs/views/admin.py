@@ -16,14 +16,14 @@ from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
     ProfilEntreprise, AuditLog, DemandeActivationPremium, Metier, GroupeMetier,
     Article, FaqItem, CompetenceReferentiel, BanniereAccueil,
-    Palier, AbonnementEntreprise,
+    Palier, AbonnementEntreprise, FormationCandidat,
 )
 from ..constants import WILAYAS_CHOICES
 import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
     EntrepriseDashboardDetailSerializer,
-    AdminUserSerializer, CandidatureRecruteurDTO
+    AdminUserSerializer, CandidatureRecruteurDTO, QuestionnaireSerializer,
 )
 
 User = get_user_model()
@@ -230,6 +230,7 @@ class AdminStatsAPIView(APIView):
             "nb_faq_actives": FaqItem.objects.filter(actif=True).count(),
             "nb_competences_referentiel": CompetenceReferentiel.objects.count(),
             "nb_bannieres_actives": BanniereAccueil.objects.filter(actif=True).count(),
+            "formations_a_verifier": FormationCandidat.objects.filter(statut_validation='A_PRECISER').count(),
         }
         return Response(stats, status=status.HTTP_200_OK)
 
@@ -262,10 +263,7 @@ class AdminSeoStatsAPIView(APIView):
         entreprise = ProfilEntreprise.objects.filter(est_approuvee=True).only('slug').first()
         nb_entreprises = ProfilEntreprise.objects.filter(est_approuvee=True).count()
 
-        domaine_exemple = Metier.objects.filter(selectionnable=True).only('id', 'libelle').first()
-        nb_domaines = Metier.objects.filter(selectionnable=True).count()
-
-        secteur_exemple = GroupeMetier.objects.filter(type_groupe='secteur_source').only('code', 'libelle').first()
+        secteur_exemple = GroupeMetier.objects.filter(type_groupe='secteur_source').only('id', 'libelle').first()
         nb_secteurs = GroupeMetier.objects.filter(type_groupe='secteur_source').count()
 
         wilaya_exemple = WILAYAS_CHOICES[0][0] if WILAYAS_CHOICES else None
@@ -290,14 +288,8 @@ class AdminSeoStatsAPIView(APIView):
                 "ok": nb_entreprises > 0,
             },
             {
-                "type": "Métier",
-                "url": f"{base}/metiers/{domaine_exemple.id}-{_slugify(domaine_exemple.libelle)}/" if domaine_exemple else None,
-                "nb_pages_indexables": nb_domaines,
-                "ok": nb_domaines > 0,
-            },
-            {
                 "type": "Secteur",
-                "url": f"{base}/secteurs/{secteur_exemple.code.lower()}-{_slugify(secteur_exemple.libelle)}/" if secteur_exemple else None,
+                "url": f"{base}/secteurs/{secteur_exemple.id}-{_slugify(secteur_exemple.libelle)}/" if secteur_exemple else None,
                 "nb_pages_indexables": nb_secteurs,
                 "ok": nb_secteurs > 0,
             },
@@ -322,7 +314,7 @@ class AdminSeoStatsAPIView(APIView):
             "pages": pages,
             "sitemap_url": f"{base}/sitemap.xml",
             "robots_url": f"{base}/robots.txt",
-            "total_urls_sitemap": sum(p["nb_pages_indexables"] for p in pages) + 9,  # +9 = STATIC_PATHS
+            "total_urls_sitemap": sum(p["nb_pages_indexables"] for p in pages) + 8,  # +8 = STATIC_PATHS
         }, status=status.HTTP_200_OK)
 
 
@@ -418,7 +410,7 @@ class AdminCandidaturesListAPIView(APIView):
         field = ordering.lstrip('-')
         if field not in self.ORDERING_FIELDS:
             ordering = '-date_postulation'
-        candidatures = Candidature.objects.select_related('candidat', 'offre__entreprise').order_by(ordering)
+        candidatures = Candidature.objects.select_related('candidat', 'offre__entreprise', 'offre__questionnaire').order_by(ordering)
         if search:
             candidatures = candidatures.filter(
                 Q(candidat__first_name__icontains=search) |
@@ -440,6 +432,9 @@ class AdminCandidaturesListAPIView(APIView):
             item['offre_id'] = cand_obj.offre.id
             item['entreprise_nom'] = cand_obj.offre.entreprise.nom_entreprise
             item['entreprise_slug'] = cand_obj.offre.entreprise.slug
+            item['offre_questionnaire'] = (
+                QuestionnaireSerializer(cand_obj.offre.questionnaire).data if cand_obj.offre.questionnaire_id else None
+            )
             data.append(item)
         return paginator.get_paginated_response(data)
 

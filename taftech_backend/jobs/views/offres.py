@@ -1,3 +1,4 @@
+import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -31,9 +32,10 @@ class JobListAPIView(APIView):
         mot_cle = request.query_params.get('search', '')
         wilaya = request.query_params.get('wilaya', '')
         commune = request.query_params.get('commune', '')
-        diplome = request.query_params.get('diplome', '')
+        diplome_id = request.query_params.get('diplome_id', '')
         specialite = request.query_params.get('specialite', '')
         domaine_id = request.query_params.get('domaine_id', '')
+        secteur_id = request.query_params.get('secteur_id', '')
         experience = request.query_params.get('experience', '')
         contrat = request.query_params.get('contrat', '')
         seuil_retention = timezone.now() - datetime.timedelta(days=RETENTION_OFFRES_CLOTUREES_JOURS)
@@ -48,8 +50,11 @@ class JobListAPIView(APIView):
             offres = offres.filter(wilaya__icontains=wilaya)
         if commune:
             offres = offres.filter(commune__icontains=commune)
-        if diplome:
-            offres = offres.filter(diplome__icontains=diplome)
+        if diplome_id and diplome_id.isdigit():
+            # Filtre référentiel v2 (remplace l'ancien `diplome` texte libre, retiré du
+            # formulaire de création d'offre — un seul système de diplôme désormais, celui
+            # qui alimente aussi le matching, cf. `diplomes_requis`/`specialites_requises`).
+            offres = offres.filter(diplomes_requis__id=int(diplome_id))
         if specialite:
             # Référentiel v2 : un id Metier (numérique) filtre exactement ce métier ; un
             # code secteur (1 lettre, ex: "A") filtre tous les métiers de ce secteur via la
@@ -63,6 +68,13 @@ class JobListAPIView(APIView):
             # Page "Offres par métier" (au sens GroupeMetier domaine_source, ex: "Espaces
             # naturels et espaces verts") — id GroupeMetier, pas Metier.
             offres = offres.filter(metier__groupe_principal_id=int(domaine_id))
+        if secteur_id and secteur_id.isdigit():
+            # Page "Offres par secteur" (référentiel v2, GroupeMetier id) — remplace le
+            # filtre `specialite` à 1 lettre, qui ne couvrait que les 16 secteurs NAME
+            # officiels (code_source) et pas les ~61 secteurs ajoutés par TAFTECH (code_source
+            # vide). L'id GroupeMetier fonctionne pour tous les secteurs, quel que soit leur code.
+            sid = int(secteur_id)
+            offres = offres.filter(Q(metier__groupe_principal_id=sid) | Q(metier__groupe_principal__parent_id=sid))
         if experience:
             offres = offres.filter(experience_requise=experience)
         if contrat:
@@ -131,24 +143,18 @@ def _synchroniser_competences_offre(offre, items):
         CompetenceOffre.objects.bulk_create(a_creer)
 
 
-def _synchroniser_diplomes_acceptes_offre(offre, couple_ids):
-    """Remplace intégralement la liste des couples diplôme+spécialité acceptés par le recruteur
-    (REGLES_FORMATION F06, référentiel v2) — sémantique remplacement, comme les compétences
-    structurées. Une liste vide/absente signifie "aucune exigence de couple précis" (repli sur
-    `OffreEmploi.diplome`, niveau minimum), jamais une erreur."""
-    from ..models import DiplomeSpecialite, OffreDiplomeAccepte
-    offre.diplomes_acceptes.all().delete()
-    if not couple_ids:
-        return
-    couples_valides = set(
-        DiplomeSpecialite.objects.filter(pk__in=couple_ids).values_list('pk', flat=True)
-    )
-    a_creer = [
-        OffreDiplomeAccepte(offre=offre, couple_id=cid)
-        for cid in couple_ids if cid in couples_valides
-    ]
-    if a_creer:
-        OffreDiplomeAccepte.objects.bulk_create(a_creer)
+def _synchroniser_diplomes_requis_offre(offre, diplome_ids, specialite_ids):
+    """Remplace intégralement les diplômes/spécialités requis par le recruteur (REGLES_MATCHING
+    S05/S06) — deux listes plates INDÉPENDANTES, jamais un couple imposé (F06 : ne jamais
+    déduire une équivalence/un rang entre diplôme et spécialité). Chaque liste vide/absente
+    signifie "ce critère n'est pas demandé pour le matching" (exclu du calcul, S01) —
+    `OffreEmploi.diplome` reste affiché sur l'annonce et sert de filtre de recherche, mais
+    n'est plus lu par le matcher depuis la réécriture S01-S14."""
+    from ..models import TypeDiplome, SpecialiteFormation
+    diplome_ids = diplome_ids or []
+    specialite_ids = specialite_ids or []
+    offre.diplomes_requis.set(TypeDiplome.objects.filter(pk__in=diplome_ids))
+    offre.specialites_requises.set(SpecialiteFormation.objects.filter(pk__in=specialite_ids))
 
 
 def _synchroniser_exigences_offre(offre, items):
@@ -219,7 +225,7 @@ class JobCreateAPIView(APIView):
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
             _synchroniser_competences_offre(offre, request.data.get('competences_requises'))
-            _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
+            _synchroniser_diplomes_requis_offre(offre, request.data.get('diplomes_requis'), request.data.get('specialites_requises'))
             _synchroniser_exigences_offre(offre, request.data.get('exigences_imperatives'))
             if offre.competences_requises.exists():
                 offre.competences = _texte_depuis_competences(offre.competences_requises.all())
@@ -236,6 +242,7 @@ class JobCreateAPIView(APIView):
                     type_notif='INFO',
                     titre="Nouvelle offre à valider",
                     message=f"Nouvelle offre en attente de validation : « {offre.titre} » — {entreprise.nom_entreprise}",
+                    lien='/admin-taftech/offres',
                 )
             return Response(OffreEmploiSerializer(offre).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -267,8 +274,8 @@ class UpdateOffreRecruteurAPIView(APIView):
                 if offre.competences_requises.exists():
                     offre.competences = _texte_depuis_competences(offre.competences_requises.all())
                     offre.save(update_fields=['competences'])
-            if 'diplomes_acceptes' in request.data:
-                _synchroniser_diplomes_acceptes_offre(offre, request.data.get('diplomes_acceptes'))
+            if 'diplomes_requis' in request.data or 'specialites_requises' in request.data:
+                _synchroniser_diplomes_requis_offre(offre, request.data.get('diplomes_requis'), request.data.get('specialites_requises'))
             if 'exigences_imperatives' in request.data:
                 _synchroniser_exigences_offre(offre, request.data.get('exigences_imperatives'))
             _log(request.user, offre.entreprise, 'MODIFIER_OFFRE', offre.titre)
@@ -362,12 +369,17 @@ class NomenclatureAPIView(APIView):
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..models import GroupeMetier, Metier
+        from ..referentiel_utils import _nettoyer_libelle_secteur_nsec, _dedupliquer_secteurs
         secteurs = GroupeMetier.objects.filter(type_groupe='secteur_source')
         domaines = GroupeMetier.objects.filter(type_groupe='domaine_source').select_related('parent')
+        # `code_source` (ex: "A", "A11") est le code court d'origine, sans tiret —
+        # `code` (groupe_id, ex: "NSEC-A") est un identifiant interne non adapté aux URLs.
+        secteurs_data = _dedupliquer_secteurs([
+            {"id": s.id, "code": s.code_source or s.code, "libelle": _nettoyer_libelle_secteur_nsec(s.libelle)}
+            for s in secteurs
+        ])
         data = {
-            # `code_source` (ex: "A", "A11") est le code court d'origine, sans tiret —
-            # `code` (groupe_id, ex: "NSEC-A") est un identifiant interne non adapté aux URLs.
-            "secteurs": [{"code": s.code_source or s.code, "libelle": s.libelle} for s in secteurs],
+            "secteurs": secteurs_data,
             "domaines": [
                 {
                     "id": d.id, "code": d.code_source or d.code, "libelle": d.libelle,
@@ -411,7 +423,7 @@ class NomenclatureFormationAPIView(APIView):
                 for f in FiliereFormation.objects.filter(actif=True).order_by('libelle')
             ],
             "specialites": [
-                {"id": s.id, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id}
+                {"id": s.id, "code": s.code, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id}
                 for s in SpecialiteFormation.objects.filter(selectionnable=True).order_by('libelle')
             ],
             # Couples attestés — le frontend les met en avant dans la liste des spécialités
@@ -423,6 +435,49 @@ class NomenclatureFormationAPIView(APIView):
         }
         cache.set('jobs_nomenclature_formation', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
+
+
+class SuggererDiplomeAPIView(APIView):
+    """Suggère un `TypeDiplome`/`SpecialiteFormation` du référentiel v2 à partir d'un
+    intitulé déclaré en texte libre (flux "Autre, préciser" — retour client 26/09/2026) :
+    quand le candidat ne trouve pas son diplôme dans les listes déroulantes, il tape
+    l'intitulé réel, cet endpoint tente une correspondance (mots-clés puis IA en dernier
+    recours, voir `resoudre_diplome_et_specialite_depuis_texte`) et la propose pour
+    confirmation — ne l'enregistre jamais lui-même, l'IA ne doit jamais inventer une
+    équivalence sans validation humaine (consigne client explicite)."""
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicReadThrottle]
+
+    def get(self, request):
+        texte = (request.query_params.get('texte') or '').strip()
+        if not texte:
+            return Response({"trouve": False})
+        diplome_id = request.query_params.get('diplome_id')
+        if diplome_id:
+            # Type de diplôme déjà connu/confirmé — le candidat tape "Autre, préciser"
+            # uniquement sur le champ Spécialité, résolution restreinte à ce diplôme précis.
+            from ..referentiel_utils import resoudre_specialite_depuis_texte
+            specialite = resoudre_specialite_depuis_texte(diplome_id, texte)
+            if not specialite:
+                return Response({"trouve": False})
+            return Response({
+                "trouve": True,
+                "diplome_ref": None,
+                "diplome_ref_libelle": None,
+                "specialite_ref": specialite.id,
+                "specialite_ref_libelle": specialite.libelle,
+            })
+        from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte
+        diplome, specialite = resoudre_diplome_et_specialite_depuis_texte(texte)
+        if not diplome:
+            return Response({"trouve": False})
+        return Response({
+            "trouve": True,
+            "diplome_ref": diplome.id,
+            "diplome_ref_libelle": diplome.libelle,
+            "specialite_ref": specialite.id if specialite else None,
+            "specialite_ref_libelle": specialite.libelle if specialite else None,
+        })
 
 
 class MetierAutocompleteAPIView(APIView):
@@ -456,10 +511,36 @@ class MetierAutocompleteAPIView(APIView):
         mots = corriger_mots_flous(search.split())  # N04 : flou Levenshtein<=1, exact d'abord
         # N02 : limite de mot entier (pas icontains) — "c" ne doit jamais matcher "cpp"/"c#"
         # en tant que sous-chaîne (bug trouvé le 21/09/2026 en écrivant RechercheUniverselle).
-        q = q_mots_cle_recherche(mots)
+        # Autocomplete "en direct" : le DERNIER mot est traité en préfixe (pas encore fini de
+        # taper), les mots précédents restent exigés en entier — sans ça, taper "developpe"
+        # (avant de finir "développeur") ne matchait plus RIEN tant que le mot n'était pas
+        # complet, contrairement au comportement attendu d'un champ de recherche instantanée
+        # (bug réel signalé le 24/09/2026 : "rien ne sort en tapant, seulement une fois fini").
+        # Un dernier mot d'1 lettre reste exigé en entier (pas en préfixe) — sinon "c" seul
+        # matcherait à tort "cpp"/"csharp" comme au tout début du bug N02 (21/09/2026) ; un
+        # dernier mot de 2+ lettres est traité en préfixe (cas normal de la frappe en cours).
+        if mots and not search.endswith(' ') and len(mots[-1]) >= 2:
+            *mots_complets, dernier = mots
+            q = q_mots_cle_recherche(mots_complets) if mots_complets else Q()
+            prefixe = Q(cle_recherche__iregex=r'(^|\s)' + re.escape(dernier))
+            q = (q & prefixe) if mots_complets else prefixe
+        else:
+            q = q_mots_cle_recherche(mots)
+        # R07 : ordre du rappel exact > préfixe > reste — sans ce tri, un vrai match exact
+        # (ex. "controle de" -> "Contrôle de conformité...") peut tomber hors des `limit`
+        # premiers résultats parmi des centaines de matches par mots dispersés, dans un ordre
+        # DB non déterministe (bug réel trouvé le 24/09/2026 : métier introuvable en recherche).
+        priorite = Case(
+            When(cle_recherche=search, then=Value(0)),
+            When(cle_recherche__istartswith=search, then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
         appellations = (
             Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
-            .select_related('metier', 'metier__metier_canonique', 'metier__groupe_principal')[:offset + limit + 50]
+            .annotate(_priorite=priorite)
+            .select_related('metier', 'metier__metier_canonique', 'metier__groupe_principal')
+            .order_by('_priorite', 'cle_recherche')[:offset + limit + 50]
         )
         resultats = []
         vus = set()
@@ -665,18 +746,21 @@ class RechercheUniverselleAPIView(APIView):
 
 
 class MetierSuggestionsAPIView(APIView):
-    """Suggestions de compétences et de couples diplôme+spécialité pour un `Metier` donné
-    (référentiel v2, `MetierCompetence`/`MetierFormation` — Phase 3 du plan client, jamais
-    branchées jusqu'ici malgré les 2792+1348 liens déjà importés en Phase 1). Purement
-    informatif : le recruteur choisit ce qu'il ajoute réellement à son offre, rien n'est
-    imposé ni pré-coché (même principe que les compétences suggérées par l'IA de génération
-    d'offre — jamais une attribution automatique, `MetierCompetence.attribution_candidat_auto`
-    reste toujours False en pratique)."""
+    """Suggestions de compétences et de spécialités pour un `Metier` donné (référentiel v2,
+    `MetierCompetence`/`MetierFormation`). Purement informatif : le recruteur choisit ce qu'il
+    ajoute réellement à son offre, rien n'est imposé ni pré-coché (même principe que les
+    compétences suggérées par l'IA de génération d'offre — jamais une attribution automatique,
+    `MetierCompetence.attribution_candidat_auto` reste toujours False en pratique).
+
+    `METIER_FORMATIONS` (fichier client) ne lie un métier qu'à une SPÉCIALITÉ, jamais à un
+    diplôme précis — on ne suggère donc que la spécialité elle-même (jamais un diplôme reconstruit
+    en croisant `DiplomeSpecialite`, qui suggérerait un diplôme jamais validé par le client pour ce
+    métier). Le recruteur choisit ses diplômes séparément via le builder "Diplômes acceptés"."""
     permission_classes = [IsAuthenticated]
     throttle_classes = [PublicReadThrottle]
 
     def get(self, request, metier_id):
-        from ..models import Metier, MetierCompetence, MetierFormation, DiplomeSpecialite
+        from ..models import Metier, MetierCompetence, MetierFormation
         try:
             metier = Metier.objects.get(pk=metier_id)
         except Metier.DoesNotExist:
@@ -689,19 +773,16 @@ class MetierSuggestionsAPIView(APIView):
             .select_related('competence').order_by('competence__label')[:15]
         ]
 
-        specialite_ids = list(
-            MetierFormation.objects.filter(metier=metier).values_list('specialite_id', flat=True)
+        liens_formation = list(
+            MetierFormation.objects.filter(metier=metier, specialite__selectionnable=True)
+            .select_related('specialite').order_by('specialite__libelle')[:15]
         )
-        diplomes_specialites = [
-            {
-                "id": ds.id,
-                "diplome_id": ds.diplome_id,
-                "diplome_libelle": ds.diplome.libelle,
-                "specialite_id": ds.specialite_id,
-                "specialite_libelle": ds.specialite.libelle,
-            }
-            for ds in DiplomeSpecialite.objects.filter(specialite_id__in=specialite_ids, selectionnable=True)
-            .select_related('diplome', 'specialite')[:15]
+        specialites = [
+            {"id": lien.specialite_id, "libelle": lien.specialite.libelle}
+            for lien in liens_formation
         ]
+        # Texte d'avertissement du client (`precision`, identique sur toutes les lignes
+        # importées) — jamais montré jusqu'ici malgré son importation en Phase 1.
+        avertissement = next((lien.precision for lien in liens_formation if lien.precision), "")
 
-        return Response({"competences": competences, "diplomes_specialites": diplomes_specialites})
+        return Response({"competences": competences, "specialites": specialites, "avertissement": avertissement})

@@ -4,11 +4,21 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import { Search, Download } from "lucide-react";
+import { Search, Download, X, HelpCircle } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { TooltipIcon } from "../../Components/Tooltip";
 import SortableTh from "../../Components/SortableTh";
+import { mediaUrl } from "../../utils/mediaUrl";
+
+const CRITERES_SCORE = [
+  { key: "specialite", label: "Spécialité", max: 25 },
+  { key: "diplome", label: "Diplôme", max: 20 },
+  { key: "experience", label: "Expérience", max: 20 },
+  { key: "region", label: "Localisation & mobilité", max: 20 },
+  { key: "competences", label: "Compétences", max: 15 },
+];
+const CRITERES_LABELS = Object.fromEntries(CRITERES_SCORE.map((c) => [c.key, c.label]));
 
 const getBadgeStyle = (statut) => {
   const styles = {
@@ -30,6 +40,7 @@ const AdminCandidatures = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [statutFiltre, setStatutFiltre] = useState("");
   const [ordering, setOrdering] = useState("-date_postulation");
+  const [selectedCand, setSelectedCand] = useState(null);
 
   const fetchCandidatures = async (currentPage = 1, search = "", statut = statutFiltre, order = ordering) => {
     setLoading(true);
@@ -177,7 +188,8 @@ const AdminCandidatures = () => {
                 candidatures.map((cand) => (
                   <tr
                     key={cand.id}
-                    className={tw.rowHover}
+                    onClick={() => setSelectedCand(cand)}
+                    className={`${tw.rowHover} cursor-pointer`}
                   >
                     <td className="px-4 py-3">
                       <p className={`text-xs font-semibold ${tw.textStrong}`}>
@@ -280,6 +292,186 @@ const AdminCandidatures = () => {
           </div>
         )}
       </div>
+
+      {selectedCand && (
+        <div className={tw.modalOverlay + " p-4"} onClick={() => setSelectedCand(null)}>
+          <div
+            className={`${tw.surface} rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={`flex justify-between items-start mb-5 pb-4 border-b ${tw.borderSubtle}`}>
+              <div>
+                <h2 className={`text-lg font-bold ${tw.textStrong}`}>
+                  {selectedCand.candidat
+                    ? `${selectedCand.candidat.last_name} ${selectedCand.candidat.first_name}`
+                    : `${selectedCand.nom_rapide} ${selectedCand.prenom_rapide}`}
+                </h2>
+                <p className={`text-sm ${tw.textPrimary} mt-0.5`}>
+                  {selectedCand.est_rapide ? selectedCand.email_rapide : selectedCand.candidat?.email}
+                  {(selectedCand.est_rapide ? selectedCand.telephone_rapide : selectedCand.candidat?.telephone) &&
+                    ` · ${selectedCand.est_rapide ? selectedCand.telephone_rapide : selectedCand.candidat.telephone}`}
+                </p>
+                <p className={`text-xs ${tw.textMuted700} mt-1`}>
+                  Candidature à <strong>{selectedCand.offre_titre}</strong> — {selectedCand.entreprise_nom}
+                  {" · "}
+                  {new Date(selectedCand.date_postulation).toLocaleDateString("fr-FR")}
+                </p>
+              </div>
+              <button onClick={() => setSelectedCand(null)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(selectedCand.statut)}`}>
+                {selectedCand.statut.replace("_", " ")}
+              </span>
+              {selectedCand.note_globale && (
+                <span className={`px-2.5 py-1 ${tw.bgVioletSoft} ${tw.textViolet} border ${tw.borderViolet} text-xs font-semibold rounded-full`}>
+                  ⭐ {selectedCand.note_globale}/20
+                </span>
+              )}
+              {!selectedCand.est_rapide && selectedCand.score_matching != null && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tw.badgeNeutral}`}>
+                  Score IA : {selectedCand.score_matching}%
+                </span>
+              )}
+            </div>
+
+            {/* POURQUOI CE SCORE */}
+            {selectedCand.details_matching &&
+              (() => {
+                const DM = selectedCand.details_matching;
+                const scores = DM.scores || DM;
+                const explics = DM.explications || {};
+                return (
+                  <div className={`${tw.card} p-4 mb-4 space-y-3`}>
+                    <div className="flex items-center gap-2">
+                      <HelpCircle size={14} className={tw.textTeal} />
+                      <span className={`text-xs font-bold ${tw.textStrong} uppercase tracking-wide`}>Pourquoi ce score ?</span>
+                    </div>
+                    {typeof DM.completude === "number" && DM.completude < 1 && (
+                      <p className={`text-xs ${tw.textMuted700}`}>
+                        Score calculé sur des informations incomplètes ({Math.round(DM.completude * 100)}% des critères
+                        évalués — {(DM.criteres_manquants || []).map((c) => CRITERES_LABELS[c] || c).join(", ")} non renseigné(s).
+                      </p>
+                    )}
+                    {CRITERES_SCORE.map(({ key, label, max }) => {
+                      const nonDemande = (DM.criteres_non_demandes || []).includes(key);
+                      const val = scores[key] || 0;
+                      const pct = (val / max) * 100;
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`text-xs font-semibold ${tw.textMuted700}`}>{label}</span>
+                            <span className={`text-xs font-bold ${tw.textStrong}`}>{nonDemande ? "Non demandé" : `${val}/${max}`}</span>
+                          </div>
+                          {!nonDemande && (
+                            <div className={`w-full ${tw.progressTrack}`}>
+                              <div
+                                className={pct >= 100 ? tw.progressBarSuccess : pct >= 50 ? tw.progressBarWarning : tw.progressBarDanger}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          )}
+                          {explics[key] && <p className={`text-xs ${tw.textMuted700} mt-1`}>{explics[key]}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+            {/* QUESTIONNAIRE */}
+            {selectedCand.offre_questionnaire && selectedCand.reponses?.length > 0 && (
+              <div className={`${tw.card} p-4 mb-4`}>
+                <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wide mb-3`}>
+                  Questionnaire — {selectedCand.offre_questionnaire.titre}
+                </p>
+                <div className="space-y-2">
+                  {selectedCand.offre_questionnaire.questions?.map((q) => {
+                    const reponse = selectedCand.reponses.find((r) => r.question === q.id);
+                    return (
+                      <div key={q.id} className={`${tw.surfaceMuted} border ${tw.borderBase} rounded-lg p-3`}>
+                        <p className={`text-xs font-semibold ${tw.textSlate800}`}>{q.texte}</p>
+                        <p className={`text-sm ${tw.textMuted700} mt-1`}>{reponse?.reponse || "—"}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* EXIGENCES IMPÉRATIVES */}
+            {selectedCand.reponses_exigences?.length > 0 && (
+              <div className={`${tw.card} p-4 mb-4`}>
+                <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wide mb-3`}>Exigences impératives</p>
+                <div className="space-y-1.5">
+                  {selectedCand.reponses_exigences.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between text-sm">
+                      <span className={tw.textSlate800}>{r.exigence_label}</span>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          r.statut === "SATISFAIT" ? tw.bgSuccessSoft + " " + tw.textSuccess
+                          : r.statut === "NON_SATISFAIT" ? tw.bgErrorSoft + " " + tw.textError
+                          : tw.badgeNeutral
+                        }`}
+                      >
+                        {r.statut}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* LETTRE / CV */}
+            {(selectedCand.lettre_motivation || selectedCand.lettre_motivation_file || selectedCand.cv_rapide_url) && (
+              <div className={`${tw.card} p-4 mb-4`}>
+                <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wide mb-2`}>Lettre de motivation / CV</p>
+                {selectedCand.lettre_motivation && (
+                  <p className={`text-sm ${tw.textMuted700} whitespace-pre-line mb-2`}>{selectedCand.lettre_motivation}</p>
+                )}
+                <div className="flex gap-3">
+                  {selectedCand.lettre_motivation_file && (
+                    <a href={mediaUrl(selectedCand.lettre_motivation_file)} target="_blank" rel="noopener noreferrer" className={`text-xs ${tw.textPrimary} hover:underline font-medium`}>
+                      📎 Fichier joint
+                    </a>
+                  )}
+                  {selectedCand.cv_rapide_url && (
+                    <a href={mediaUrl(selectedCand.cv_rapide_url)} target="_blank" rel="noopener noreferrer" className={`text-xs ${tw.textPrimary} hover:underline font-medium`}>
+                      📄 CV
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ÉVALUATION */}
+            {selectedCand.note_globale && (
+              <div className={`${tw.card} p-4`}>
+                <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wide mb-3`}>Évaluation d'entretien</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  {[
+                    { label: "Technique", val: selectedCand.note_technique },
+                    { label: "Communication", val: selectedCand.note_communication },
+                    { label: "Motivation", val: selectedCand.note_motivation },
+                    { label: "Expérience", val: selectedCand.note_experience },
+                  ].map(({ label, val }) => (
+                    <div key={label} className={`${tw.surfaceMuted} p-2 rounded-lg text-center border ${tw.borderSubtle}`}>
+                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase`}>{label}</p>
+                      <p className={`text-sm font-bold ${tw.textStrong} mt-0.5`}>{val ?? "—"}/5</p>
+                    </div>
+                  ))}
+                </div>
+                {selectedCand.commentaire_evaluation && (
+                  <p className={`text-sm ${tw.textMuted700} whitespace-pre-line`}>{selectedCand.commentaire_evaluation}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -95,6 +95,25 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
           </select>
         </div>
         <div>
+          <label htmlFor="onb-diplome-ref" className={`${tw.authLabel} mb-1.5`}>Niveau d'études (référentiel v2)</label>
+          <select
+            id="onb-diplome-ref"
+            className={tw.authInput}
+            value={infosForm.diplome_ref || ""}
+            onChange={(e) => {
+              const opt = (constants.typesDiplomes || []).find((d) => String(d.id) === e.target.value);
+              setInfosForm((prev) => ({
+                ...prev,
+                diplome_ref: e.target.value,
+                diplome_ref_libelle: opt ? opt.libelle : "",
+              }));
+            }}
+          >
+            <option value="">Sélectionnez…</option>
+            {(constants.typesDiplomes || []).map((d) => <option key={d.id} value={d.id}>{d.libelle}</option>)}
+          </select>
+        </div>
+        <div>
           <label className={`${tw.authLabel} mb-1.5`}>Métier</label>
           <MetierAutocomplete
             value={infosForm.metier_libelle || ""}

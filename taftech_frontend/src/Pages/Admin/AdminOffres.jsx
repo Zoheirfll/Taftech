@@ -605,6 +605,80 @@ const AdminOffres = () => {
                 </div>
               )}
 
+              {/* COMPÉTENCES STRUCTURÉES */}
+              {selectedOffre.competences_requises?.length > 0 && (
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotViolet500} rounded-full`} /> Compétences requises
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOffre.competences_requises.map((c) => (
+                      <span
+                        key={c.id}
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          c.type_exigence === "OBLIGATOIRE" ? tw.chipVioletActive : tw.chipVioletInactive
+                        }`}
+                        title={c.niveau_requis ? `Niveau requis : ${c.niveau_requis}` : undefined}
+                      >
+                        {c.label}
+                        {c.type_exigence === "OBLIGATOIRE" ? " · obligatoire" : " · souhaitée"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DIPLÔMES / SPÉCIALITÉS ACCEPTÉS */}
+              {(selectedOffre.diplomes_requis_detail?.length > 0 || selectedOffre.specialites_requises_detail?.length > 0) && (
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotEmerald500} rounded-full`} /> Diplômes / spécialités acceptés
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedOffre.diplomes_requis_detail?.length > 0 && (
+                      <div>
+                        <p className={`text-xs font-semibold ${tw.textMuted} mb-1`}>Diplômes acceptés</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedOffre.diplomes_requis_detail.map((d) => (
+                            <span key={d.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${tw.chipVioletActive}`}>{d.libelle}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {selectedOffre.specialites_requises_detail?.length > 0 && (
+                      <div>
+                        <p className={`text-xs font-semibold ${tw.textMuted} mb-1`}>Spécialités acceptées</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedOffre.specialites_requises_detail.map((s) => (
+                            <span key={s.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${tw.chipVioletInactive}`}>{s.libelle}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* EXIGENCES IMPÉRATIVES */}
+              {selectedOffre.exigences_imperatives?.length > 0 && (
+                <div className={`${tw.card} p-5`}>
+                  <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                    <span className={`w-2 h-4 ${tw.dotOrange500 || tw.dotAmber400} rounded-full`} /> Exigences impératives
+                  </h3>
+                  <div className="space-y-1.5">
+                    {selectedOffre.exigences_imperatives.map((e) => (
+                      <div key={e.id} className={`text-sm ${tw.textSlate800} flex items-start gap-2`}>
+                        <span>•</span>
+                        <span>
+                          {e.label}
+                          {e.justificatif_requis && <span className={`text-xs ${tw.textMuted} ml-1`}>(justificatif requis)</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* QUESTIONNAIRE */}
               {selectedOffre.questionnaire && (
                 <div className={`${tw.card} p-5`}>

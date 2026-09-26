@@ -8,6 +8,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
+import { mediaUrl } from "../../utils/mediaUrl";
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
@@ -286,14 +287,25 @@ const AdminEntreprises = () => {
 
       {selectedEntreprise && (
         <div className={tw.modalOverlay + " p-4"}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl`}>
+          <div className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+            {selectedEntreprise.banniere && (
+              <img src={mediaUrl(selectedEntreprise.banniere)} alt="Bannière" className="w-full h-32 object-cover rounded-xl mb-4" />
+            )}
             <div className={`flex justify-between items-start mb-5 pb-4 border-b ${tw.borderSubtle}`}>
-              <div>
-                <h2 className={`text-lg font-bold ${tw.textStrong}`}>{selectedEntreprise.nom_entreprise}</h2>
-                <p className={`text-sm ${tw.textPrimary} mt-0.5`}>
-                  📍 {selectedEntreprise.wilaya_siege}
-                  {selectedEntreprise.commune_siege ? ` · ${selectedEntreprise.commune_siege}` : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                {selectedEntreprise.logo && (
+                  <img src={mediaUrl(selectedEntreprise.logo)} alt="Logo" className="w-12 h-12 object-contain rounded-lg border border-slate-200 shrink-0" />
+                )}
+                <div>
+                  <h2 className={`text-lg font-bold ${tw.textStrong}`}>{selectedEntreprise.nom_entreprise}</h2>
+                  <p className={`text-sm ${tw.textPrimary} mt-0.5`}>
+                    📍 {selectedEntreprise.wilaya_siege}
+                    {selectedEntreprise.commune_siege ? ` · ${selectedEntreprise.commune_siege}` : ""}
+                  </p>
+                  {selectedEntreprise.adresse_complete && (
+                    <p className={`text-xs ${tw.textMuted700} mt-0.5`}>{selectedEntreprise.adresse_complete}</p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setSelectedEntreprise(null)}
@@ -309,12 +321,28 @@ const AdminEntreprises = () => {
                   RC: {selectedEntreprise.registre_commerce}
                 </p>
                 <p className={`text-xs font-medium ${tw.textMuted} mt-2`}>{selectedEntreprise.secteur_activite_libelle || selectedEntreprise.secteur_activite}</p>
+                {selectedEntreprise.taille_entreprise && (
+                  <p className={`text-xs ${tw.textMuted700} mt-1`}>Taille : {selectedEntreprise.taille_entreprise}</p>
+                )}
+                {selectedEntreprise.annee_creation && (
+                  <p className={`text-xs ${tw.textMuted700} mt-1`}>Créée en {selectedEntreprise.annee_creation}</p>
+                )}
               </div>
               <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
                 <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>Contact recruteur</p>
                 <p className={`text-sm font-semibold ${tw.textStrong}`}>{selectedEntreprise.last_name} {selectedEntreprise.first_name}</p>
                 <p className={`text-xs ${tw.textPrimary} mt-1`}>{selectedEntreprise.email}</p>
                 <p className={`text-xs ${tw.textMuted700} mt-1`}>{selectedEntreprise.telephone}</p>
+                {(selectedEntreprise.site_web || selectedEntreprise.linkedin) && (
+                  <div className="flex flex-col gap-1 mt-2">
+                    {selectedEntreprise.site_web && (
+                      <a href={selectedEntreprise.site_web} target="_blank" rel="noopener noreferrer" className={`text-xs ${tw.textPrimary} hover:underline`}>🔗 Site web</a>
+                    )}
+                    {selectedEntreprise.linkedin && (
+                      <a href={selectedEntreprise.linkedin} target="_blank" rel="noopener noreferrer" className={`text-xs ${tw.textPrimary} hover:underline`}>🔗 LinkedIn</a>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div>
@@ -323,6 +351,24 @@ const AdminEntreprises = () => {
                 {selectedEntreprise.description || "Aucune présentation fournie."}
               </p>
             </div>
+            {selectedEntreprise.culture_entreprise && (
+              <div className="mt-4">
+                <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>Culture d'entreprise</p>
+                <p className={`text-sm ${tw.textMuted} ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle} leading-relaxed max-h-36 overflow-y-auto whitespace-pre-line`}>
+                  {selectedEntreprise.culture_entreprise}
+                </p>
+              </div>
+            )}
+            {selectedEntreprise.photos?.length > 0 && (
+              <div className="mt-4">
+                <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>Photos ({selectedEntreprise.photos.length})</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedEntreprise.photos.map((p) => (
+                    <img key={p.id} src={mediaUrl(p.image)} alt={p.legende || "Photo entreprise"} className="w-full h-20 object-cover rounded-lg border border-slate-200" />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -7,11 +7,13 @@ import Seo from "../../Components/Seo";
 import { ChevronLeft, ChevronRight, ArrowLeft, Briefcase } from "lucide-react";
 import { tw } from "../../theme";
 
-// Route /secteurs/:slug — "a-agriculture-et-peche" ou juste "a" (le préfixe avant le
-// premier "-" est le seul code significatif, le reste est cosmétique pour le SEO).
+// Route /secteurs/:slug — "42-agriculture-et-peche" ou juste "42" (le préfixe avant le
+// premier "-" est l'id GroupeMetier, seul segment significatif ; le reste est cosmétique
+// pour le SEO). L'id est utilisé (pas le code) car les secteurs ajoutés par TAFTECH n'ont
+// pas de code stable court (voir referentiel v2, session GROUPES).
 const SecteurDetail = () => {
   const { slug } = useParams();
-  const code = slug?.split("-")[0]?.toUpperCase();
+  const secteurId = slug?.split("-")[0];
 
   const [secteur, setSecteur] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -23,26 +25,26 @@ const SecteurDetail = () => {
   useEffect(() => {
     const fetchSecteur = async () => {
       try {
-        const constants = await jobsService.getConstants();
-        const found = (constants.secteurs || []).find((s) => s.value === code);
+        const nomenclature = await jobsService.getNomenclature();
+        const found = (nomenclature.secteurs || []).find((s) => String(s.id) === secteurId);
         if (!found) {
           setNotFound(true);
           return;
         }
-        setSecteur(found);
+        setSecteur({ value: found.id, label: found.libelle });
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_SECTEUR", error);
         setNotFound(true);
       }
     };
     fetchSecteur();
-  }, [code]);
+  }, [secteurId]);
 
   useEffect(() => {
     if (!secteur) return;
     setLoading(true);
     jobsService
-      .getAllJobs({ specialite: secteur.value }, page)
+      .getAllJobs({ secteur_id: secteur.value }, page)
       .then((data) => {
         setJobs(data.results || []);
         setCount(data.count || 0);

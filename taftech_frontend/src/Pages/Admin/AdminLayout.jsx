@@ -56,7 +56,7 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin-taftech/utilisateurs", icon: Users, label: "Utilisateurs" },
       { to: "/admin-taftech/competences", icon: Tags, label: "Référentiel compétences" },
-      { to: "/admin-taftech/referentiel-v2", icon: Briefcase, label: "Référentiel métiers/diplômes" },
+      { to: "/admin-taftech/referentiel-v2", icon: Briefcase, label: "Référentiel métiers/diplômes", badgeKey: "formations_a_verifier" },
       { to: "/admin-taftech/broadcast", icon: Megaphone, label: "Diffusion" },
       { to: "/admin-taftech/articles", icon: Newspaper, label: "Blog / Articles" },
       { to: "/admin-taftech/bannieres", icon: GalleryHorizontal, label: "Bannières" },

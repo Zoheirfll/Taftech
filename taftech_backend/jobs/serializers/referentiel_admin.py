@@ -1,5 +1,46 @@
 from rest_framework import serializers
-from ..models import Metier, SpecialiteFormation, TypeDiplome
+from ..models import Metier, SpecialiteFormation, TypeDiplome, RelationMetier, RelationSpecialite, FormationCandidat
+
+
+class AdminFormationAVerifierSerializer(serializers.ModelSerializer):
+    """Formations candidat déclarées via "Autre, préciser" sans correspondance référentiel
+    confirmée (`statut_validation='A_PRECISER'`, retour client 26/09/2026) — l'admin attribue
+    ici un `diplome_ref`/`specialite_ref` réel une fois l'intitulé vérifié manuellement.
+    L'intitulé original (`diplome`) n'est jamais modifié depuis ce panel — seule la
+    correspondance référentiel est ajustable, le texte déclaré par le candidat reste la
+    source de vérité (F02)."""
+    candidat_nom = serializers.SerializerMethodField()
+    candidat_email = serializers.EmailField(source='profil.user.email', read_only=True)
+    diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
+    specialite_ref_libelle = serializers.CharField(source='specialite_ref.libelle', read_only=True, default=None)
+
+    class Meta:
+        model = FormationCandidat
+        fields = (
+            'id', 'candidat_nom', 'candidat_email', 'diplome', 'etablissement', 'description',
+            'diplome_ref', 'diplome_ref_libelle', 'specialite_ref', 'specialite_ref_libelle',
+            'statut_validation',
+        )
+        read_only_fields = ('diplome', 'etablissement', 'description', 'statut_validation')
+
+    def get_candidat_nom(self, obj):
+        user = getattr(obj.profil, 'user', None)
+        if not user:
+            return None
+        nom = f"{user.first_name} {user.last_name}".strip()
+        return nom or user.email
+
+    def validate(self, data):
+        diplome_ref = data.get('diplome_ref')
+        specialite_ref = data.get('specialite_ref')
+        if specialite_ref and diplome_ref:
+            from ..models import DiplomeSpecialite
+            if not DiplomeSpecialite.objects.filter(diplome=diplome_ref, specialite=specialite_ref).exists():
+                raise serializers.ValidationError(
+                    "Ce couple diplôme/spécialité n'existe pas dans le référentiel — jamais une "
+                    "équivalence inventée (F06)."
+                )
+        return data
 
 
 class AdminMetierSerializer(serializers.ModelSerializer):
@@ -27,3 +68,47 @@ class AdminTypeDiplomeSerializer(serializers.ModelSerializer):
         model = TypeDiplome
         fields = ('id', 'code', 'libelle', 'systeme', 'niveau_fp', 'selectionnable', 'diplome_formel')
         read_only_fields = ('code', 'systeme', 'niveau_fp')
+
+
+class AdminRelationSimilaireSerializer(serializers.ModelSerializer):
+    """Relations 'similaire' créées manuellement par l'admin (matcher.py::_relation_similaire,
+    session 24/09/2026) — rapproche deux métiers que le référentiel v2 du client classe dans
+    des branches secteur/domaine séparées mais qu'on juge substituables en pratique. Distinct
+    des 49 relations importées (redirection_equivalente/plus_precis_que), jamais éditables ici."""
+    metier_depart_libelle = serializers.CharField(source='metier_depart.libelle', read_only=True)
+    metier_arrivee_libelle = serializers.CharField(source='metier_arrivee.libelle', read_only=True)
+
+    class Meta:
+        model = RelationMetier
+        fields = ('id', 'metier_depart', 'metier_depart_libelle', 'metier_arrivee', 'metier_arrivee_libelle',
+                   'justification', 'active_recherche')
+
+    def validate(self, data):
+        depart = data.get('metier_depart') or getattr(self.instance, 'metier_depart', None)
+        arrivee = data.get('metier_arrivee') or getattr(self.instance, 'metier_arrivee', None)
+        if depart and arrivee and depart.pk == arrivee.pk:
+            raise serializers.ValidationError("Les deux métiers doivent être différents.")
+        return data
+
+
+class AdminRelationSpecialiteSerializer(serializers.ModelSerializer):
+    """Relations 'similaire' entre spécialités de formation (matcher.py::
+    _specialite_relation_similaire, session 25/09/2026) — même pattern que
+    AdminRelationSimilaireSerializer (métiers), pour le référentiel Diplômes."""
+    specialite_depart_libelle = serializers.CharField(source='specialite_depart.libelle', read_only=True)
+    specialite_arrivee_libelle = serializers.CharField(source='specialite_arrivee.libelle', read_only=True)
+    specialite_depart_domaine = serializers.CharField(source='specialite_depart.domaine.libelle', read_only=True, default=None)
+    specialite_arrivee_domaine = serializers.CharField(source='specialite_arrivee.domaine.libelle', read_only=True, default=None)
+
+    class Meta:
+        model = RelationSpecialite
+        fields = ('id', 'specialite_depart', 'specialite_depart_libelle', 'specialite_depart_domaine',
+                   'specialite_arrivee', 'specialite_arrivee_libelle', 'specialite_arrivee_domaine',
+                   'justification', 'active_recherche')
+
+    def validate(self, data):
+        depart = data.get('specialite_depart') or getattr(self.instance, 'specialite_depart', None)
+        arrivee = data.get('specialite_arrivee') or getattr(self.instance, 'specialite_arrivee', None)
+        if depart and arrivee and depart.pk == arrivee.pk:
+            raise serializers.ValidationError("Les deux spécialités doivent être différentes.")
+        return data

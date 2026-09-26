@@ -18,6 +18,7 @@ from .offres import (
     ConstantsAPIView,
     NomenclatureAPIView,
     NomenclatureFormationAPIView,
+    SuggererDiplomeAPIView,
     MetierAutocompleteAPIView,
     MetierSuggestionsAPIView,
     RechercheUniverselleAPIView,
@@ -176,4 +177,7 @@ from .referentiel_admin import (
     AdminReferentielMetiersAPIView,
     AdminReferentielSpecialitesAPIView,
     AdminReferentielDiplomesAPIView,
+    AdminRelationsSimilaireAPIView,
+    AdminRelationsSpecialiteAPIView,
+    AdminFormationsAVerifierAPIView,
 )

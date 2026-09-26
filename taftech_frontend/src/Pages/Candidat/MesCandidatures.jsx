@@ -71,6 +71,7 @@ const AnalyseIA = ({ cand }) => {
   const ecarts = DM?.highlights?.ecarts || [];
   const completude = DM?.completude;
   const criteresManquants = DM?.criteres_manquants || [];
+  const criteresNonDemandes = DM?.criteres_non_demandes || [];
   return (
     <div className={`mt-4 border-t ${tw.borderSubtle} pt-4`}>
       <div className="flex items-center gap-2 mb-1">
@@ -91,6 +92,7 @@ const AnalyseIA = ({ cand }) => {
         </div>
         <div className="w-full sm:w-1/2 space-y-3">
           {CRITERES.map((c) => {
+            const nonDemande = criteresNonDemandes.includes(c.key);
             const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
             const bar =
               pct >= 80
@@ -102,14 +104,18 @@ const AnalyseIA = ({ cand }) => {
               <div key={c.key}>
                 <div className="flex justify-between mb-1">
                   <span className={`text-sm font-medium ${tw.textMuted}`}>{c.label}</span>
-                  <span className={`text-sm font-bold ${tw.textMuted700}`}>{pct}%</span>
+                  <span className={`text-sm font-bold ${nonDemande ? tw.textMuted : tw.textMuted700}`}>
+                    {nonDemande ? "Non demandé" : `${pct}%`}
+                  </span>
                 </div>
-                <div className={`h-1.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
-                  <div
-                    className={`h-full rounded-full ${bar}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
+                {!nonDemande && (
+                  <div className={`h-1.5 ${tw.surfaceSubtle} rounded-full overflow-hidden`}>
+                    <div
+                      className={`h-full rounded-full ${bar}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
                 {explications[c.key] && (
                   <p className={`text-xs ${tw.textMuted700} mt-1`}>{explications[c.key]}</p>
                 )}
@@ -281,6 +287,19 @@ const MesCandidatures = () => {
                       Postulé le{" "}
                       {new Date(cand.date_postulation).toLocaleDateString("fr-FR")}
                     </p>
+                    {cand.date_maj &&
+                      new Date(cand.date_maj) - new Date(cand.date_postulation) > 60000 && (
+                        <p className={`text-xs font-medium ${tw.textPrimary} mt-0.5 flex items-center gap-1.5`}>
+                          <Calendar size={12} />
+                          Mise à jour le{" "}
+                          {new Date(cand.date_maj).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
                   </div>
                 </div>
                 <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold border ${getBadgeStyle(cand.statut)}`}>

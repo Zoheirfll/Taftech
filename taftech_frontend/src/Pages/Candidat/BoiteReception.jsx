@@ -1,5 +1,6 @@
 import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
@@ -15,6 +16,7 @@ import {
   Bell,
   Info,
   Trash2,
+  ArrowRight,
 } from "lucide-react";
 
 const getStyleForType = (type) => {
@@ -37,6 +39,7 @@ const getStyleForType = (type) => {
 };
 
 const BoiteReception = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedNotif, setSelectedNotif] = useState(null);
@@ -113,7 +116,7 @@ const BoiteReception = () => {
 
       <InfoBanner storageKey="boite_reception" title="Votre boîte de réception">
         Retrouvez ici toutes les notifications liées à vos candidatures : invitations à un entretien, décisions finales, messages du recruteur.
-        Les messages non lus apparaissent en <strong>gras</strong>. Cliquez sur un message pour le marquer comme lu.
+        Les messages non lus apparaissent en <strong>gras</strong>. Cliquez sur un message pour le lire, puis sur « Aller voir » pour accéder directement au sujet concerné.
       </InfoBanner>
 
       <div className="flex flex-col md:flex-row gap-4 h-[600px]">
@@ -235,6 +238,15 @@ const BoiteReception = () => {
               <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                 {selectedNotif.message}
               </p>
+              {selectedNotif.lien && (
+                <button
+                  type="button"
+                  onClick={() => navigate(selectedNotif.lien)}
+                  className={`mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${tw.buttonPrimary}`}
+                >
+                  Aller voir <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">

@@ -399,14 +399,14 @@ class AdminSeoStatsAPITest(APITestCase):
         response = self.client.get(reverse("admin-seo-stats"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_retourne_6_types_de_page(self):
+    def test_retourne_5_types_de_page(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get(reverse("admin-seo-stats"))
         self.assertEqual(response.status_code, 200)
         types = [p["type"] for p in response.data["pages"]]
         self.assertEqual(
             types,
-            ["Offre d'emploi", "Entreprise", "Métier", "Secteur", "Wilaya", "Blog / Article"],
+            ["Offre d'emploi", "Entreprise", "Secteur", "Wilaya", "Blog / Article"],
         )
         self.assertIn("sitemap_url", response.data)
         self.assertIn("robots_url", response.data)

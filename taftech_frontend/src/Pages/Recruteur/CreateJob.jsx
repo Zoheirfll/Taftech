@@ -7,7 +7,6 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
-import { FormationReferentielSelect } from "../../Components/FormationReferentielSelect";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { iaService } from "../../Services/iaService";
@@ -72,7 +71,6 @@ const CreateJob = () => {
     salaire_propose: "",
     wilaya: "",
     commune: "",
-    diplome: "",
     metier: "",
     metier_libelle: "",
     experience_requise: "DEBUTANT",
@@ -94,16 +92,25 @@ const CreateJob = () => {
   const [compType, setCompType] = useState("OBLIGATOIRE");
   const [compNiveau, setCompNiveau] = useState("");
 
-  // Couples diplôme+spécialité explicitement acceptés (référentiel v2, REGLES_FORMATION F06) —
-  // liste de OffreDiplomeAccepte.couple à créer, jamais une équivalence déduite automatiquement.
-  const [diplomesAcceptes, setDiplomesAcceptes] = useState([]);
+  // Diplômes et spécialités requis (référentiel v2, REGLES_MATCHING S05/S06) — DEUX listes
+  // plates INDÉPENDANTES, jamais un couple imposé (F06 : pas de rang/équivalence construits).
+  const [diplomesRequis, setDiplomesRequis] = useState([]);
+  const [specialitesRequises, setSpecialitesRequises] = useState([]);
   const [draftDiplomeId, setDraftDiplomeId] = useState("");
   const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
   const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
 
+  // Les entrées génériques "Autre X — préciser" du référentiel sont masquées ici : dans une
+  // liste d'exigences utilisée pour le matching, elles ne comparent rien côté candidat (bruit
+  // pur). Le champ texte libre "Diplôme attendu" reste le bon endroit pour exprimer ce type de
+  // flexibilité de façon informative.
+  const RE_AUTRE_PRECISER = /autre.*préciser/i;
+  const typesDiplomesFiltres = (nomenclatureFormation?.types_diplomes || []).filter((d) => !RE_AUTRE_PRECISER.test(d.libelle));
+  const specialitesFiltrees = (nomenclatureFormation?.specialites || []).filter((s) => !RE_AUTRE_PRECISER.test(s.libelle));
+
   // Suggestions compétences/spécialités du métier choisi (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur ajoute ce qu'il veut, rien d'imposé.
-  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], diplomes_specialites: [] });
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], avertissement: "" });
 
   // Exigences impératives (S12, REGLES_MATCHING) — permis, habilitation, droit d'exercice...
   // Distinctes du diplôme, jamais notées dans le score de matching : un simple filtre
@@ -138,35 +145,37 @@ const CreateJob = () => {
 
   useEffect(() => {
     if (!formData.metier) {
-      setSuggestionsPourMetier({ competences: [], diplomes_specialites: [] });
+      setSuggestionsPourMetier({ competences: [], specialites: [], avertissement: "" });
       return;
     }
     jobsService.getMetierSuggestions(formData.metier).then(setSuggestionsPourMetier);
   }, [formData.metier]);
 
-  const handleAjouterCoupleAccepte = () => {
-    if (!draftDiplomeId || !draftSpecialiteId || !nomenclatureFormation) return;
-    const couple = nomenclatureFormation.diplome_specialite.find(
-      (c) => String(c.diplome_id) === String(draftDiplomeId) && String(c.specialite_id) === String(draftSpecialiteId),
-    );
-    if (!couple) {
-      toast.error("Ce couple diplôme + spécialité n'est pas reconnu dans le référentiel.");
-      return;
-    }
-    if (diplomesAcceptes.some((d) => d.id === couple.id)) return;
-    const diplomeLabel = nomenclatureFormation.types_diplomes.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
-    const specialiteLabel = nomenclatureFormation.specialites.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
-    setDiplomesAcceptes((prev) => [...prev, { id: couple.id, diplome_libelle: diplomeLabel, specialite_libelle: specialiteLabel }]);
+  const ajouterDiplomeRequis = () => {
+    if (!draftDiplomeId || !nomenclatureFormation) return;
+    if (diplomesRequis.some((d) => String(d.id) === String(draftDiplomeId))) return;
+    const libelle = typesDiplomesFiltres.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
+    setDiplomesRequis((prev) => [...prev, { id: draftDiplomeId, libelle }]);
     setDraftDiplomeId("");
+  };
+  const retirerDiplomeRequis = (id) => setDiplomesRequis((prev) => prev.filter((d) => String(d.id) !== String(id)));
+
+  const ajouterSpecialiteRequise = () => {
+    if (!draftSpecialiteId || !nomenclatureFormation) return;
+    if (specialitesRequises.some((s) => String(s.id) === String(draftSpecialiteId))) return;
+    const libelle = specialitesFiltrees.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
+    setSpecialitesRequises((prev) => [...prev, { id: draftSpecialiteId, libelle }]);
     setDraftSpecialiteId("");
   };
+  const retirerSpecialiteRequise = (id) => setSpecialitesRequises((prev) => prev.filter((s) => String(s.id) !== String(id)));
 
-  const ajouterCoupleSuggere = (item) => {
-    // `item` vient de MetierSuggestionsAPIView — le couple existe forcément déjà dans le
-    // référentiel (`id` = vraie clé DiplomeSpecialite), pas besoin de re-vérifier comme
-    // handleAjouterCoupleAccepte.
-    if (diplomesAcceptes.some((d) => d.id === item.id)) return;
-    setDiplomesAcceptes((prev) => [...prev, { id: item.id, diplome_libelle: item.diplome_libelle, specialite_libelle: item.specialite_libelle }]);
+  const ajouterSpecialiteSuggeree = (item) => {
+    // `item` vient de MetierSuggestionsAPIView (METIER_FORMATIONS, fichier client) — ne lie le
+    // métier qu'à une spécialité, jamais à un diplôme précis. On n'ajoute donc que la
+    // spécialité ; le recruteur choisit ses diplômes séparément (jamais un diplôme reconstruit
+    // par nous en croisant DiplomeSpecialite, qui suggérerait un diplôme non validé par le client
+    // pour ce métier).
+    setSpecialitesRequises((prev) => (prev.some((s) => String(s.id) === String(item.id)) ? prev : [...prev, { id: item.id, libelle: item.libelle }]));
   };
 
   const handleCompInputChange = async (value) => {
@@ -269,7 +278,6 @@ const CreateJob = () => {
       const result = await iaService.genererOffreIA({
         titre: titrePourGeneration,
         metier: formData.metier,
-        diplome: formData.diplome,
         wilaya: formData.wilaya,
         experience_requise: formData.experience_requise,
         type_contrat: formData.type_contrat,
@@ -325,7 +333,8 @@ const CreateJob = () => {
         metier: formData.metier || null,
         date_expiration: formData.date_expiration || null,
         competences_requises: competencesRequises,
-        diplomes_acceptes: diplomesAcceptes.map((d) => d.id),
+        diplomes_requis: diplomesRequis.map((d) => d.id),
+        specialites_requises: specialitesRequises.map((s) => s.id),
         exigences_imperatives: exigencesImperatives,
       };
       delete payload.metier_libelle;
@@ -374,9 +383,12 @@ const CreateJob = () => {
         {/* Section 1 — Informations du poste */}
         <Section icon={Briefcase} title="Informations du poste">
           <div className="space-y-4">
-            {/* Fix 3 : validation titre */}
+            {/* Titre + métier fusionnés : choisir une suggestion résout titre ET métier en un
+                seul geste (référentiel v2). Une saisie 100% libre reste possible mais exige
+                alors de rattacher manuellement un métier ci-dessous (obligatoire pour le 25%
+                du score de matching, REGLES_MATCHING S06/S07). */}
             <div id="field-titre">
-              <Field label="Titre du poste" required>
+              <Field label="Intitulé du poste" required>
                 <div className="relative">
                   <input
                     name="titre"
@@ -393,7 +405,11 @@ const CreateJob = () => {
                           <button
                             key={m.metier_id}
                             type="button"
-                            onMouseDown={() => { setFormData({ ...formData, titre: m.appellation_libelle }); setShowSuggestions(false); }}
+                            onMouseDown={() => {
+                              setFormData((p) => ({ ...p, titre: m.appellation_libelle, metier: m.metier_id, metier_libelle: m.metier_libelle }));
+                              setShowSuggestions(false);
+                              if (errors.metier) setErrors((p) => ({ ...p, metier: "" }));
+                            }}
                             className={`w-full text-left px-4 py-2.5 transition-colors border-b ${tw.borderSubtle} last:border-0 ${tw.bgTealHover}`}
                           >
                             <p className={`text-sm font-medium ${tw.textStrong}`}>{m.appellation_libelle}</p>
@@ -405,6 +421,36 @@ const CreateJob = () => {
                   )}
                 </div>
                 {errors.titre && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.titre}</p>}
+
+                {formData.metier ? (
+                  <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tw.badgeAccent || "bg-teal-50 text-teal-700"}`}>
+                      Métier de référence : {formData.metier_libelle}
+                    </span>
+                    <button
+                      type="button"
+                      className={`text-xs underline ${tw.textMuted700}`}
+                      onClick={() => setFormData((p) => ({ ...p, metier: "", metier_libelle: "" }))}
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                ) : (
+                  <div id="field-metier" className="mt-2">
+                    <p className={`text-xs mb-1 ${tw.textWarning || "text-amber-700"}`}>
+                      Rattachez ce poste à un métier du référentiel — obligatoire pour le matching (25% du score).
+                    </p>
+                    <MetierAutocomplete
+                      value=""
+                      onSelect={(item) => {
+                        setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.metier_libelle }));
+                        if (errors.metier) setErrors((p) => ({ ...p, metier: "" }));
+                      }}
+                      placeholder="Rechercher le métier le plus proche du poste..."
+                    />
+                    {errors.metier && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.metier}</p>}
+                  </div>
+                )}
               </Field>
             </div>
 
@@ -444,7 +490,7 @@ const CreateJob = () => {
 
         {/* Section 2 — Profil recherché */}
         <Section icon={GraduationCap} title="Profil recherché">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Expérience requise">
               <Select
                 name="experience_requise"
@@ -455,89 +501,105 @@ const CreateJob = () => {
                 styles={selectStylesTeal}
               />
             </Field>
-            <Field label="Diplôme attendu">
-              <Select
-                name="diplome"
-                options={constants.diplomes}
-                onChange={handleSelectChange}
-                value={constants.diplomes.find((d) => d.value === formData.diplome) || null}
-                placeholder="Sélectionner..."
-                isClearable
-                styles={selectStylesTeal}
-              />
-            </Field>
-            <div id="field-metier">
-              <Field label="Métier" required>
-                <MetierAutocomplete
-                  value={formData.metier_libelle}
-                  onSelect={(item) => {
-                    setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.appellation_libelle }));
-                    if (errors.metier) setErrors((p) => ({ ...p, metier: "" }));
-                  }}
-                />
-                {errors.metier && <p className={`text-xs mt-1 ${tw.textErrorMuted}`}>{errors.metier}</p>}
-              </Field>
-            </div>
           </div>
           <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
             <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.textStrong}`}>
-              Diplômes/spécialités acceptés (optionnel)
+              Formation requise (optionnel)
             </p>
             <p className="text-xs text-slate-600 mb-3">
-              "Diplôme attendu" (niveau minimum) est affiché sur l'annonce mais n'est plus utilisé pour le score de matching — précisez un ou plusieurs couples ici pour que le diplôme et la spécialité de formation soient réellement évalués sur les candidatures.
+              Le diplôme et la spécialité ci-dessous sont deux critères indépendants (jamais un couple imposé) : laisser "Spécialités acceptées" vide accepte toute spécialité pour les diplômes choisis. Cette liste alimente aussi le filtre "Diplôme" de la recherche publique d'offres.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
-              <FormationReferentielSelect
-                diplomeId={draftDiplomeId}
-                specialiteId={draftSpecialiteId}
-                onChangeDiplome={setDraftDiplomeId}
-                onChangeSpecialite={setDraftSpecialiteId}
-                permettreAutre={false}
-              />
-              <button
-                type="button"
-                onClick={handleAjouterCoupleAccepte}
-                disabled={!draftDiplomeId || !draftSpecialiteId}
-                className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
-              >
-                Ajouter
-              </button>
-            </div>
-            {diplomesAcceptes.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {diplomesAcceptes.map((d) => (
-                  <span key={d.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
-                    {d.diplome_libelle} — {d.specialite_libelle}
-                    <button
-                      type="button"
-                      onClick={() => setDiplomesAcceptes((prev) => prev.filter((x) => x.id !== d.id))}
-                      className="hover:text-red-600"
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Diplômes acceptés</p>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                <Select
+                  options={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle }))}
+                  value={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle })).find((o) => String(o.value) === String(draftDiplomeId)) || null}
+                  onChange={(opt) => setDraftDiplomeId(opt ? opt.value : "")}
+                  styles={selectStylesTeal}
+                  placeholder="Sélectionner un type de diplôme..."
+                  isClearable
+                />
+                <button
+                  type="button"
+                  onClick={ajouterDiplomeRequis}
+                  disabled={!draftDiplomeId}
+                  className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
+                >
+                  Ajouter
+                </button>
               </div>
-            )}
-            {suggestionsPourMetier.diplomes_specialites.length > 0 && (
+              {diplomesRequis.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {diplomesRequis.map((d) => (
+                    <span key={d.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
+                      {d.libelle}
+                      <button type="button" onClick={() => retirerDiplomeRequis(d.id)} className="hover:text-red-600">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Spécialités acceptées (optionnel — vide = toute spécialité)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                <Select
+                  options={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle }))}
+                  value={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle })).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
+                  onChange={(opt) => setDraftSpecialiteId(opt ? opt.value : "")}
+                  styles={selectStylesTeal}
+                  placeholder="Sélectionner une spécialité..."
+                  isClearable
+                />
+                <button
+                  type="button"
+                  onClick={ajouterSpecialiteRequise}
+                  disabled={!draftSpecialiteId}
+                  className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
+                >
+                  Ajouter
+                </button>
+              </div>
+              {specialitesRequises.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {specialitesRequises.map((s) => (
+                    <span key={s.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
+                      {s.libelle}
+                      <button type="button" onClick={() => retirerSpecialiteRequise(s.id)} className="hover:text-red-600">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {suggestionsPourMetier.specialites.length > 0 && (
               <div className="mt-3">
                 <p className="text-[11px] font-medium text-slate-500 mb-1.5">
-                  Suggéré pour ce métier — cliquez pour ajouter :
+                  Suggéré pour ce métier — cliquez pour ajouter la spécialité :
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {suggestionsPourMetier.diplomes_specialites
-                    .filter((s) => !diplomesAcceptes.some((d) => d.id === s.id))
+                  {suggestionsPourMetier.specialites
+                    .filter((s) => !specialitesRequises.some((sp) => String(sp.id) === String(s.id)))
                     .map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => ajouterCoupleSuggere(s)}
+                        onClick={() => ajouterSpecialiteSuggeree(s)}
                         className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed ${tw.borderBase} hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 text-slate-600`}
                       >
-                        + {s.diplome_libelle} — {s.specialite_libelle}
+                        + {s.libelle}
                       </button>
                     ))}
                 </div>
+                {suggestionsPourMetier.avertissement && (
+                  <p className="text-[11px] text-slate-500 italic mt-2">{suggestionsPourMetier.avertissement}</p>
+                )}
               </div>
             )}
           </div>

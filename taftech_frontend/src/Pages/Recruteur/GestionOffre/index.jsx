@@ -196,7 +196,12 @@ const GestionOffre = () => {
               {[
                 { label: "Localisation", value: `${offre.wilaya}${offre.commune ? ` · ${offre.commune}` : ""}` },
                 { label: "Métier", value: offre.metier_libelle || "Non précisé" },
-                { label: "Diplôme requis", value: offre.diplome ? formatText(offre.diplome) : "Non exigé" },
+                {
+                  label: "Diplôme requis",
+                  value: (offre.diplomes_requis_detail?.length > 0 || offre.specialites_requises_detail?.length > 0)
+                    ? [...(offre.diplomes_requis_detail || []), ...(offre.specialites_requises_detail || [])].map((d) => d.libelle).join(", ")
+                    : "Non exigé",
+                },
                 { label: "Expérience", value: formatText(offre.experience_requise) },
                 { label: "Postes", value: `${offre.nombre_postes || 1} poste${(offre.nombre_postes || 1) > 1 ? "s" : ""}` },
                 { label: "Salaire", value: offre.salaire_propose || "À discuter" },

@@ -42,10 +42,10 @@ class MatcherAlgorithmTest(TestCase):
     # ==========================================
     def test_candidat_parfait_score_maximal(self):
         """ Un candidat qui coche toutes les cases EFFECTIVEMENT DEMANDÉES doit avoir 100%.
-        Sur un `Mock`, `offre.diplomes_acceptes.all()`/`offre.competences_requises.all()`
-        lèvent `TypeError` à l'itération (pas de couples/compétences structurés) — ces deux
-        critères, ainsi que la spécialité (formation) sans OffreDiplomeAccepte, sont donc
-        "non demandés" (S01, exclus du calcul), pas notés à 0. Seuls région et expérience
+        Sur un `Mock`, `offre.diplomes_requis.values_list()`/`offre.competences_requises.all()`
+        lèvent `TypeError` à l'itération (pas de diplômes/spécialités/compétences structurés) —
+        ces deux critères, ainsi que la spécialité (formation) sans `specialites_requises`, sont
+        donc "non demandés" (S01, exclus du calcul), pas notés à 0. Seuls région et expérience
         restent actifs ici ; les critères diplôme/spécialité/compétences sont couverts avec
         de vraies relations FK dans test_matcher_diplome_specialite_s07.py et
         test_matcher_competences_s10.py. """
@@ -81,7 +81,7 @@ class MatcherAlgorithmTest(TestCase):
     # ==========================================
     def test_candidat_diplome_inferieur_offre_sans_couples_critere_non_demande(self):
         """ F06/S05 (session 21/09/2026) : plus de rang hiérarchique implicite entre diplômes
-        (BTS/Licence/Master...) — une offre sans `OffreDiplomeAccepte` explicite (le cas d'un
+        (BTS/Licence/Master...) — une offre sans `diplomes_requis` explicite (le cas d'un
         `Mock`) n'a pas de critère diplôme évaluable du tout, quel que soit `profil.diplome`.
         Le diplôme candidat n'est plus jamais comparé à un rang de diplôme requis. """
         self.profil.wilaya = "16 - Alger"

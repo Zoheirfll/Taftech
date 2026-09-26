@@ -132,7 +132,6 @@ const OffresParRegion = () => {
         )}
         <div className={`mt-8 pt-6 border-t ${tw.borderSubtle} flex flex-wrap gap-4 text-sm`}>
           <Link to="/secteurs" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par secteur →</Link>
-          <Link to="/metiers" className={`${tw.textPrimary} font-semibold hover:underline`}>Parcourir par métier →</Link>
         </div>
       </div>
     </div>

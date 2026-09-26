@@ -66,6 +66,9 @@ export const useProfilCandidat = () => {
     secteurs: [],
     diplomes: [],
   });
+  // Types de diplôme précis (référentiel v2, 37 valeurs) pour le sélecteur "Niveau d'études" —
+  // remplace l'ancien select à 13 valeurs génériques ambiguës (`constants.diplomes`).
+  const [typesDiplomes, setTypesDiplomes] = useState([]);
 
   // Modals visibility
   const [showExpForm, setShowExpForm] = useState(false);
@@ -95,12 +98,14 @@ export const useProfilCandidat = () => {
 
   const fetchData = async () => {
     try {
-      const [pData, cData] = await Promise.all([
+      const [pData, cData, nfData] = await Promise.all([
         profilService.getProfil(),
         jobsService.getConstants(),
+        jobsService.getNomenclatureFormation().catch(() => ({ types_diplomes: [] })),
       ]);
       setProfil(pData);
       setConstants(cData);
+      setTypesDiplomes(nfData.types_diplomes || []);
       setEditInfo({
         first_name: pData.first_name,
         last_name: pData.last_name,
@@ -109,7 +114,8 @@ export const useProfilCandidat = () => {
         wilaya: pData.wilaya || "",
         commune: pData.commune || "",
         adresse: pData.adresse || "",
-        diplome: pData.diplome || "",
+        diplome_ref: pData.diplome_ref || "",
+        diplome_ref_libelle: pData.diplome_ref_libelle || "",
         metier: pData.metier || "",
         metier_libelle: pData.metier_libelle || "",
         service_militaire: pData.service_militaire || "",
@@ -146,7 +152,7 @@ export const useProfilCandidat = () => {
     { label: "CV", action: "cv", test: (p) => !!p.cv_pdf },
     { label: "Titre professionnel", action: "cv-form", test: (p) => !!p.titre_professionnel },
     { label: "Wilaya / Commune", action: "info", test: (p) => !!(p.wilaya && p.commune) },
-    { label: "Diplôme", action: "info", test: (p) => !!p.diplome },
+    { label: "Diplôme", action: "info", test: (p) => !!(p.diplome_ref_libelle || p.niveau_scolaire_ref_libelle || p.diplome) },
     { label: "Métier", action: "info", test: (p) => !!p.metier },
     { label: "Expériences", action: "experiences", test: (p) => p.experiences_detail?.length > 0 },
     { label: "Formations", action: "formations", test: (p) => p.formations_detail?.length > 0 },
@@ -212,12 +218,12 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => key !== "nin" && key !== "metier_libelle" && key !== "metier_souhaite_libelle")
-        // `metier`/`metier_souhaite` sont des PrimaryKeyRelatedField nullables côté DRF — une
-        // chaîne vide (valeur par défaut tant qu'aucun métier n'est choisi) est rejetée,
+        .filter((key) => key !== "nin" && key !== "metier_libelle" && key !== "metier_souhaite_libelle" && key !== "diplome_ref_libelle")
+        // `metier`/`metier_souhaite`/`diplome_ref` sont des PrimaryKeyRelatedField nullables côté
+        // DRF — une chaîne vide (valeur par défaut tant qu'aucun choix n'est fait) est rejetée,
         // contrairement à `null` (que FormData ne sait pas transporter) : on omet simplement la
         // clé, ce qui laisse la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
-        .filter((key) => !((key === "metier" || key === "metier_souhaite") && !dataState[key]))
+        .filter((key) => !((key === "metier" || key === "metier_souhaite" || key === "diplome_ref") && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
@@ -537,6 +543,7 @@ export const useProfilCandidat = () => {
     loading,
     profil,
     constants,
+    typesDiplomes,
     titreSuggestions,
     showTitreSuggestions,
     setShowTitreSuggestions,

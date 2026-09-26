@@ -39,7 +39,7 @@ class AlerteEmploiSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'type_notif', 'titre', 'message', 'lue', 'date_creation']
+        fields = ['id', 'type_notif', 'titre', 'message', 'lue', 'date_creation', 'lien']
 
 
 class CandidatureSpontaneeSerializer(serializers.ModelSerializer):

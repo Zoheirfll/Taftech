@@ -20,6 +20,7 @@ export const Modals = ({
   btnCancel,
   // Constants
   constants,
+  typesDiplomes,
   // State modals
   showInfoForm,
   setShowInfoForm,
@@ -200,23 +201,25 @@ export const Modals = ({
                     Niveau d'études
                   </label>
                   <Select
-                    options={constants.diplomes}
+                    options={(typesDiplomes || []).map((d) => ({ value: d.id, label: d.libelle }))}
                     value={
-                      constants.diplomes.find(
-                        (d) => d.value === editInfo.diplome,
-                      ) || null
+                      (typesDiplomes || [])
+                        .map((d) => ({ value: d.id, label: d.libelle }))
+                        .find((o) => String(o.value) === String(editInfo.diplome_ref)) || null
                     }
                     placeholder="Sélectionnez..."
+                    isClearable
                     onChange={(opt) =>
                       setEditInfo({
                         ...editInfo,
-                        diplome: opt ? opt.value : "",
+                        diplome_ref: opt ? opt.value : "",
+                        diplome_ref_libelle: opt ? opt.label : "",
                       })
                     }
                     styles={selectStyles}
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Niveau global — le diplôme et la spécialité précis se renseignent dans "Mes formations".
+                    Utilisé pour le matching seulement si aucune formation détaillée n'est renseignée dans "Mes formations" — une formation détaillée reste toujours prioritaire.
                   </p>
                 </div>
                 <div>
@@ -692,8 +695,7 @@ export const Modals = ({
               <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
                 <p className="text-xs text-slate-600">
                   Type de diplôme et spécialité — choisissez dans le référentiel national pour un
-                  score de correspondance plus fiable sur les offres, ou "Autre, préciser" si votre
-                  formation n'y figure pas.
+                  score de correspondance fiable sur les offres.
                 </p>
                 <FormationReferentielSelect
                   diplomeId={newForm.diplome_ref}
@@ -708,6 +710,13 @@ export const Modals = ({
                   onChangeAutreTexte={(texte) => setNewForm({ ...newForm, description: texte })}
                   diplomeAutreTexte={newForm.diplome}
                   onChangeDiplomeAutreTexte={(texte) => setNewForm({ ...newForm, diplome: texte })}
+                  onConfirmerSuggestion={(diplomeRef, _diplomeLabel, specialiteRef) =>
+                    setNewForm((p) => ({
+                      ...p,
+                      diplome_ref: diplomeRef || p.diplome_ref,
+                      specialite_ref: specialiteRef || p.specialite_ref,
+                    }))
+                  }
                   required
                 />
                 <div>

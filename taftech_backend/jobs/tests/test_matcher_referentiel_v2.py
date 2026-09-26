@@ -13,7 +13,7 @@ from jobs.matcher import calculer_score_matching, metiers_compatibles
 from jobs.models import (
     ProfilEntreprise, OffreEmploi, ProfilCandidat, FormationCandidat,
     GroupeMetier, Metier, TypeDiplome, DomaineFormation, SpecialiteFormation,
-    DiplomeSpecialite, OffreDiplomeAccepte,
+    DiplomeSpecialite,
 )
 
 User = get_user_model()
@@ -71,9 +71,9 @@ class MatcherReferentielV2IntegrationTest(TestCase):
 
     def test_metier_ne_pese_plus_sur_le_critere_specialite(self):
         """Un métier identique/différent/absent n'a plus aucun effet sur le critère noté
-        "spécialité" (désormais la spécialité de formation) — seul un couple
-        DiplomeSpecialite via OffreDiplomeAccepte le fait varier (voir les tests diplôme/
-        spécialité plus bas). Sans couple accepté sur l'offre, le critère est non demandé."""
+        "spécialité" (désormais la spécialité de formation) — seul `offre.specialites_requises`
+        le fait varier (voir les tests diplôme/spécialité plus bas). Sans spécialité requise
+        sur l'offre, le critère est non demandé."""
         for metier_candidat in (self.metier_candidat_meme, self.metier_candidat_autre, None):
             self.profil.metier = metier_candidat
             self.profil.save()
@@ -83,7 +83,8 @@ class MatcherReferentielV2IntegrationTest(TestCase):
             self.assertNotIn('specialite', resultat['criteres_manquants'])
 
     def test_diplome_couple_exact_score_maximal(self):
-        OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
+        self.offre.diplomes_requis.add(self.diplome_master)
+        self.offre.specialites_requises.add(self.specialite_info)
         FormationCandidat.objects.create(
             profil=self.profil, diplome='Master Informatique',
             diplome_ref=self.diplome_master, specialite_ref=self.specialite_info, statut='OBTENU',
@@ -94,7 +95,8 @@ class MatcherReferentielV2IntegrationTest(TestCase):
     def test_diplome_et_specialite_de_deux_formations_differentes_pas_combines(self):
         """Règle client explicite : un master en finance + une licence en informatique ne
         doivent jamais être combinés pour simuler un 'master en informatique'."""
-        OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
+        self.offre.diplomes_requis.add(self.diplome_master)
+        self.offre.specialites_requises.add(self.specialite_info)
         # Le candidat a le bon diplôme (Master) mais dans la spécialité Finance — formation
         # SÉPARÉE de toute formation en Informatique.
         FormationCandidat.objects.create(
@@ -114,14 +116,16 @@ class MatcherReferentielV2IntegrationTest(TestCase):
         # RECETTE T15 : contribution NULLE (0.0, jamais un crédit partiel inventé) quand le
         # diplôme du candidat est totalement inconnu — corrigé session 18/09/2026, un ancien
         # `6.0` ici contredisait directement ce cas de recette client.
-        OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
+        self.offre.diplomes_requis.add(self.diplome_master)
+        self.offre.specialites_requises.add(self.specialite_info)
         resultat = calculer_score_matching(self.candidat, self.offre)
         self.assertEqual(resultat['details']['diplome'], 0.0)
         self.assertIn('diplome', resultat['criteres_manquants'])
         self.assertLess(resultat['completude'], 1.0)
 
     def test_formation_en_cours_non_comptee_comme_obtenue(self):
-        OffreDiplomeAccepte.objects.create(offre=self.offre, couple=self.couple_info)
+        self.offre.diplomes_requis.add(self.diplome_master)
+        self.offre.specialites_requises.add(self.specialite_info)
         FormationCandidat.objects.create(
             profil=self.profil, diplome='Master Informatique (en cours)',
             diplome_ref=self.diplome_master, specialite_ref=self.specialite_info, statut='EN_COURS',
@@ -131,7 +135,7 @@ class MatcherReferentielV2IntegrationTest(TestCase):
         self.assertIn('diplome', resultat['criteres_manquants'])
 
     def test_diplome_non_demande_sans_couples_jamais_donnee_manquante(self):
-        """Sans OffreDiplomeAccepte (F06 : le recruteur définit explicitement la liste, pas
+        """Sans `offre.diplomes_requis` (F06 : le recruteur définit explicitement la liste, pas
         de repli hiérarchique implicite depuis session 21/09/2026), le critère diplôme est
         exclu du calcul (non demandé, S01) — jamais compté comme 'donnée manquante' côté
         candidat, puisque rien n'a été demandé par l'offre."""

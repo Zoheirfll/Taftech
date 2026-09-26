@@ -242,6 +242,88 @@ export const adminService = {
       throw err;
     }
   },
+  getAdminRelationsSimilaires: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/relations-similaires/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_RELATIONS_SIMILAIRES", err);
+      throw err;
+    }
+  },
+  creerRelationSimilaire: async (data) => {
+    try {
+      const response = await api.post(`jobs/admin/referentiel-v2/relations-similaires/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREER_RELATION_SIMILAIRE", err);
+      throw err;
+    }
+  },
+  supprimerRelationSimilaire: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/referentiel-v2/relations-similaires/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_RELATION_SIMILAIRE", err);
+      throw err;
+    }
+  },
+  getAdminRelationsSpecialites: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/relations-specialites/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_RELATIONS_SPECIALITES", err);
+      throw err;
+    }
+  },
+  creerRelationSpecialite: async (data) => {
+    try {
+      const response = await api.post(`jobs/admin/referentiel-v2/relations-specialites/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREER_RELATION_SPECIALITE", err);
+      throw err;
+    }
+  },
+  supprimerRelationSpecialite: async (id) => {
+    try {
+      const response = await api.delete(`jobs/admin/referentiel-v2/relations-specialites/${id}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_RELATION_SPECIALITE", err);
+      throw err;
+    }
+  },
+
+  getAdminFormationsAVerifier: async (search = "", page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/formations-a-verifier/?search=${search}&page=${page}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_FORMATIONS_A_VERIFIER", err);
+      throw err;
+    }
+  },
+  validerFormationAVerifier: async (id, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/referentiel-v2/formations-a-verifier/${id}/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_VALIDER_FORMATION_A_VERIFIER", err);
+      throw err;
+    }
+  },
+  refuserFormationAVerifier: async (id, motif = "") => {
+    try {
+      const response = await api.delete(`jobs/admin/referentiel-v2/formations-a-verifier/${id}/`, { data: { motif } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_REFUSER_FORMATION_A_VERIFIER", err);
+      throw err;
+    }
+  },
 
   getDemandesPremium: async () => {
     try {

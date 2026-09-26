@@ -83,6 +83,7 @@ class Command(BaseCommand):
                         type_notif='ALERTE',
                         titre=titre_notif,
                         message=resume,
+                        lien='/offres',
                     )
                     total_notifs += 1
                 except Exception as e:

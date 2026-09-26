@@ -55,6 +55,7 @@ export const FormationReferentielSelect = ({
   onChangeAutreTexte,
   diplomeAutreTexte = "",
   onChangeDiplomeAutreTexte,
+  onConfirmerSuggestion,
   required = false,
   permettreAutre = true,
 }) => {
@@ -64,6 +65,18 @@ export const FormationReferentielSelect = ({
   const [diplomeAutre, setDiplomeAutre] = useState(false);
   const [domaineAutre, setDomaineAutre] = useState(false);
   const [specialiteAutre, setSpecialiteAutre] = useState(false);
+  // Flux "Autre, préciser" (retour client 26/09/2026) : une suggestion référentiel est
+  // proposée pour confirmation dès que le candidat tape son intitulé — jamais enregistrée
+  // automatiquement (l'IA ne doit jamais inventer une équivalence sans validation humaine).
+  const [suggestion, setSuggestion] = useState(null);
+  const [suggestionIgnoree, setSuggestionIgnoree] = useState(false);
+  const [suggestionChargement, setSuggestionChargement] = useState(false);
+  // Même mécanisme, dédié au champ Spécialité tapé indépendamment (Type de diplôme déjà
+  // connu/confirmé) — restreint aux couples DiplomeSpecialite de ce diplôme précis
+  // ("informatique" seul ne permet jamais de deviner BTS/Licence/Master, consigne client).
+  const [suggestionSpec, setSuggestionSpec] = useState(null);
+  const [suggestionSpecIgnoree, setSuggestionSpecIgnoree] = useState(false);
+  const [suggestionSpecChargement, setSuggestionSpecChargement] = useState(false);
 
   useEffect(() => {
     jobsService
@@ -71,6 +84,87 @@ export const FormationReferentielSelect = ({
       .then(setNomenclature)
       .catch((err) => reportError("ECHEC_CHARGEMENT_NOMENCLATURE_FORMATION", err));
   }, []);
+
+  // Suggestion référentiel pour l'intitulé libre tapé en mode "Autre" (Type de diplôme) —
+  // debounce 600ms, jamais tant que le candidat n'a pas ignoré une précédente suggestion
+  // sur le même texte (évite de la faire réapparaître en boucle après un "Non, garder mon
+  // texte tel quel").
+  useEffect(() => {
+    setSuggestion(null);
+    setSuggestionIgnoree(false);
+    setSuggestionChargement(false);
+    if (!diplomeAutre || !diplomeAutreTexte || diplomeAutreTexte.trim().length < 3) return;
+    setSuggestionChargement(true);
+    const t = setTimeout(() => {
+      jobsService
+        .suggererDiplome(diplomeAutreTexte)
+        .then((res) => {
+          if (res?.trouve) setSuggestion(res);
+        })
+        .catch((err) => reportError("ECHEC_SUGGESTION_DIPLOME", err))
+        .finally(() => setSuggestionChargement(false));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [diplomeAutreTexte, diplomeAutre]);
+
+  const confirmerSuggestion = () => {
+    if (!suggestion) return;
+    // Passe par `onConfirmerSuggestion` (jamais `onChangeDiplome`/`onChangeSpecialite`) : ces
+    // deux derniers recopient le libellé choisi dans le texte libre du parent lors d'un vrai
+    // choix référentiel — ici on veut l'inverse, conserver le texte original du candidat
+    // (F02/consigne client) tout en posant la correspondance référentiel confirmée.
+    if (onConfirmerSuggestion) {
+      onConfirmerSuggestion(
+        suggestion.diplome_ref, suggestion.diplome_ref_libelle,
+        suggestion.specialite_ref, suggestion.specialite_ref_libelle,
+      );
+    }
+    setDiplomeAutre(false);
+    setDomaineAutre(false);
+    setSpecialiteAutre(false);
+    setSuggestion(null);
+  };
+
+  // Suggestion dédiée au champ Spécialité — seulement quand un vrai Type de diplôme est
+  // déjà connu (diplomeId, pas en mode Autre) : "informatique" seul ne suffit jamais à
+  // deviner BTS/Licence/Master, la spécialité doit être cherchée DANS ce diplôme précis.
+  useEffect(() => {
+    setSuggestionSpec(null);
+    setSuggestionSpecIgnoree(false);
+    setSuggestionSpecChargement(false);
+    if (diplomeAutre || !diplomeId || !specialiteAutre || !autreTexte || autreTexte.trim().length < 3) return;
+    setSuggestionSpecChargement(true);
+    const t = setTimeout(() => {
+      jobsService
+        .suggererDiplome(autreTexte, diplomeId)
+        .then((res) => {
+          if (res?.trouve) setSuggestionSpec(res);
+        })
+        .catch((err) => reportError("ECHEC_SUGGESTION_SPECIALITE", err))
+        .finally(() => setSuggestionSpecChargement(false));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [autreTexte, specialiteAutre, diplomeAutre, diplomeId]);
+
+  const confirmerSuggestionSpec = () => {
+    if (!suggestionSpec) return;
+    if (onConfirmerSuggestion) {
+      onConfirmerSuggestion(null, null, suggestionSpec.specialite_ref, suggestionSpec.specialite_ref_libelle);
+    }
+    setDomaineAutre(false);
+    setSpecialiteAutre(false);
+    setSuggestionSpec(null);
+  };
+
+  const ignorerSuggestionSpec = () => {
+    setSuggestionSpec(null);
+    setSuggestionSpecIgnoree(true);
+  };
+
+  const ignorerSuggestion = () => {
+    setSuggestion(null);
+    setSuggestionIgnoree(true);
+  };
 
   // Si une spécialité est déjà connue (édition), en déduire domaine/filière parents.
   useEffect(() => {
@@ -88,7 +182,10 @@ export const FormationReferentielSelect = ({
   );
 
   const typesDiplomesOptions = useMemo(
-    () => (nomenclature ? nomenclature.types_diplomes.map((d) => ({ value: d.id, label: d.libelle })) : []),
+    () =>
+      nomenclature
+        ? nomenclature.types_diplomes.filter((d) => d.code !== "D-AUTRE").map((d) => ({ value: d.id, label: d.libelle }))
+        : [],
     [nomenclature],
   );
 
@@ -116,9 +213,10 @@ export const FormationReferentielSelect = ({
   const specialiteOptions = useMemo(() => {
     if (!nomenclature) return [];
     if (!domaineAutre && !domaineId) return [];
+    const specialitesSansAutre = nomenclature.specialites.filter((s) => s.code !== "SP-AUTRE");
     let liste = domaineAutre
-      ? nomenclature.specialites
-      : nomenclature.specialites.filter((s) => String(s.domaine_id) === String(domaineId));
+      ? specialitesSansAutre
+      : specialitesSansAutre.filter((s) => String(s.domaine_id) === String(domaineId));
     if (!domaineAutre && filiereId) liste = liste.filter((s) => String(s.filiere_id) === String(filiereId));
     // Couples attestés avec le diplôme choisi en premier (F02 : mis en avant, jamais exclusif).
     liste = [...liste].sort((a, b) => {
@@ -138,11 +236,13 @@ export const FormationReferentielSelect = ({
     setDomaineId("");
     setFiliereId("");
     onChangeSpecialite("");
+    if (onChangeAutreTexte) onChangeAutreTexte("");
   };
 
   const activerSpecialiteAutre = () => {
     setSpecialiteAutre(true);
     onChangeSpecialite("");
+    if (onChangeAutreTexte) onChangeAutreTexte("");
   };
 
   return (
@@ -158,6 +258,7 @@ export const FormationReferentielSelect = ({
               onClick={() => {
                 setDiplomeAutre(true);
                 onChangeDiplome(diplomeAutreRef ? diplomeAutreRef.id : "");
+                if (onChangeDiplomeAutreTexte) onChangeDiplomeAutreTexte("");
                 // Cascade : type inconnu => domaine et spécialité ne le sont pas plus.
                 activerDomaineAutre();
                 activerSpecialiteAutre();
@@ -191,6 +292,29 @@ export const FormationReferentielSelect = ({
               placeholder="Précisez le diplôme..."
               className={inputClass}
             />
+            {suggestion && !suggestionIgnoree && (
+              <div className="flex flex-col gap-2 px-4 py-3 bg-teal-50 border border-teal-200 rounded-lg text-sm">
+                <p className="text-teal-800">
+                  Nous pensons que vous voulez dire :{" "}
+                  <strong>{suggestion.diplome_ref_libelle}</strong>
+                  {suggestion.specialite_ref_libelle && <> — <strong>{suggestion.specialite_ref_libelle}</strong></>}
+                </p>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={confirmerSuggestion} className="text-xs font-semibold text-teal-700 hover:underline">
+                    ✓ Confirmer
+                  </button>
+                  <button type="button" onClick={ignorerSuggestion} className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline">
+                    Non, garder mon texte tel quel
+                  </button>
+                </div>
+              </div>
+            )}
+            {!suggestion && !suggestionChargement && diplomeAutreTexte.trim().length >= 3 && (
+              <p className="text-xs text-slate-500">
+                Aucune correspondance sûre trouvée — votre diplôme sera enregistré tel quel et
+                marqué "à vérifier" (il ne sera jamais compté comme incompatible entre-temps).
+              </p>
+            )}
           </div>
         ) : (
           <Select
@@ -289,6 +413,34 @@ export const FormationReferentielSelect = ({
                 placeholder="Précisez la spécialité..."
                 className={inputClass}
               />
+              {diplomeAutre ? (
+                <p className="text-xs text-slate-500">
+                  Le type de diplôme n'est pas encore reconnu — la spécialité ne peut pas être
+                  suggérée automatiquement tant qu'il n'est pas résolu. Votre saisie sera
+                  conservée telle quelle et vérifiée manuellement.
+                </p>
+              ) : suggestionSpec && !suggestionSpecIgnoree ? (
+                <div className="flex flex-col gap-2 px-4 py-3 bg-teal-50 border border-teal-200 rounded-lg text-sm">
+                  <p className="text-teal-800">
+                    Nous pensons que vous voulez dire : <strong>{suggestionSpec.specialite_ref_libelle}</strong>
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={confirmerSuggestionSpec} className="text-xs font-semibold text-teal-700 hover:underline">
+                      ✓ Confirmer
+                    </button>
+                    <button type="button" onClick={ignorerSuggestionSpec} className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline">
+                      Non, garder mon texte tel quel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                !suggestionSpecChargement && autreTexte.trim().length >= 3 && (
+                  <p className="text-xs text-slate-500">
+                    Aucune correspondance sûre trouvée pour ce diplôme précis — votre spécialité
+                    sera enregistrée telle quelle, sans jamais être comptée comme incompatible.
+                  </p>
+                )
+              )}
             </div>
           ) : (
             <Select

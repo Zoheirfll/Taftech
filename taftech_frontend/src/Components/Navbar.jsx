@@ -10,7 +10,7 @@ import { tw } from "../theme";
 import {
   User, Bookmark, Briefcase, Bell, Settings, LayoutDashboard,
   Search, Mail, LogOut, Inbox, ClipboardList, Shield, Menu, X,
-  Sparkles, MapPin, Building2, LogIn, Home, GraduationCap,
+  Sparkles, MapPin, Building2, LogIn, Home,
   ChevronDown, Newspaper,
 } from "lucide-react";
 
@@ -121,7 +121,6 @@ const Navbar = () => {
   const RECHERCHE_SUBLINKS = [
     { to: "/secteurs", label: "Par secteur", icon: Briefcase },
     { to: "/regions", label: "Par région", icon: MapPin },
-    { to: "/metiers", label: "Par métier", icon: GraduationCap },
   ];
   const TAIL_LINKS = [
     { to: "/entreprises", label: "Entreprises", icon: Building2 },

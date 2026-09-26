@@ -92,15 +92,17 @@ class StatsGeoAPIView(APIView):
         qs = OffreEmploi.objects.filter(est_active=True, statut_moderation='APPROUVEE', est_cloturee=False)
         wilayas = {r['wilaya']: r['count'] for r in qs.values('wilaya').annotate(count=Count('id')) if r['wilaya']}
         # metier -> groupe_principal (domaine_source) -> parent (secteur_source) : on agrège
-        # au niveau secteur racine pour la page "Par secteur" (référentiel v2).
-        secteur_par_domaine = dict(
-            GroupeMetier.objects.filter(type_groupe='domaine_source').values_list('id', 'parent__code_source')
+        # au niveau secteur racine pour la page "Par secteur" (référentiel v2). Clé = id
+        # GroupeMetier (pas code_source — vide pour les ~61 secteurs ajoutés par TAFTECH,
+        # ce qui les aurait exclus silencieusement du comptage).
+        domaine_vers_secteur_id = dict(
+            GroupeMetier.objects.filter(type_groupe='domaine_source').values_list('id', 'parent_id')
         )
         secteurs_counter = Counter()
         for r in qs.exclude(metier__groupe_principal__isnull=True).values('metier__groupe_principal_id'):
-            secteur_code = secteur_par_domaine.get(r['metier__groupe_principal_id'])
-            if secteur_code:
-                secteurs_counter[secteur_code] += 1
+            secteur_id = domaine_vers_secteur_id.get(r['metier__groupe_principal_id'])
+            if secteur_id:
+                secteurs_counter[secteur_id] += 1
         return Response({'wilayas': wilayas, 'secteurs': dict(secteurs_counter)})
 
 class EntrepriseListAPIView(APIView):

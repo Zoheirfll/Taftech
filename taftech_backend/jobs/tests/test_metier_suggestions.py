@@ -35,18 +35,25 @@ class MetierSuggestionsAPITest(APITestCase):
         DiplomeSpecialite.objects.create(
             code="TST-DS-SUGG", diplome=self.type_diplome, specialite=self.specialite, selectionnable=True,
         )
-        MetierFormation.objects.create(code="TST-MF-1", metier=self.metier, specialite=self.specialite)
+        MetierFormation.objects.create(
+            code="TST-MF-1", metier=self.metier, specialite=self.specialite,
+            precision="Suggestion de spécialité pour rédiger une offre ; pas de condition légale.",
+        )
 
     def test_recruteur_recoit_les_suggestions_du_metier(self):
+        # Seule la spécialité est suggérée (jamais un diplôme reconstruit par croisement avec
+        # DiplomeSpecialite — METIER_FORMATIONS, le fichier client, ne lie qu'à une spécialité,
+        # jamais à un diplôme précis).
         self.client.force_authenticate(user=self.recruteur)
         response = self.client.get(f"/api/jobs/referentiel/metiers/{self.metier.id}/suggestions/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["competences"]), 1)
         self.assertEqual(response.data["competences"][0]["label"], "Django (test)")
-        self.assertEqual(len(response.data["diplomes_specialites"]), 1)
-        self.assertEqual(response.data["diplomes_specialites"][0]["specialite_libelle"], "Spécialité Test")
-        self.assertEqual(response.data["diplomes_specialites"][0]["diplome_libelle"], "Diplôme Test")
-        self.assertIn("id", response.data["diplomes_specialites"][0])
+        self.assertEqual(len(response.data["specialites"]), 1)
+        self.assertEqual(response.data["specialites"][0]["libelle"], "Spécialité Test")
+        self.assertEqual(response.data["specialites"][0]["id"], self.specialite.id)
+        self.assertNotIn("diplomes_specialites", response.data)
+        self.assertIn("pas de condition légale", response.data["avertissement"])
 
     def test_metier_inexistant_404(self):
         self.client.force_authenticate(user=self.recruteur)
@@ -82,4 +89,4 @@ class MetierSuggestionsAPITest(APITestCase):
         response = self.client.get(f"/api/jobs/referentiel/metiers/{metier_vide.id}/suggestions/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["competences"], [])
-        self.assertEqual(response.data["diplomes_specialites"], [])
+        self.assertEqual(response.data["specialites"], [])

@@ -37,7 +37,7 @@ vi.mock("../src/Services/jobsService", () => ({
       diplome_specialite: [],
     }),
     searchMetiers: vi.fn().mockResolvedValue([]),
-    getMetierSuggestions: vi.fn().mockResolvedValue({ competences: [], diplomes_specialites: [] }),
+    getMetierSuggestions: vi.fn().mockResolvedValue({ competences: [], specialites: [], avertissement: "" }),
   },
 }));
 
@@ -142,21 +142,18 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
 
-    // Remplissage des champs (Titre + Wilaya + Métier requis par ton code)
+    // Remplissage des champs — choisir une suggestion du titre résout titre ET métier en un
+    // seul geste (champ fusionné) ; Wilaya requise séparément.
     fireEvent.change(screen.getByPlaceholderText(/Ex: Ingénieur Fullstack/i), {
       target: { value: "Développeur", name: "titre" },
     });
+    const suggestion = await screen.findByText("Développeur web (métier)");
+    fireEvent.mouseDown(suggestion);
 
     await selectEvent.select(
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    const metierField = container.querySelector("#field-metier");
-    fireEvent.change(within(metierField).getByPlaceholderText(/Développeur web, Chargé de recrutement/i), {
-      target: { value: "Développeur" },
-    });
-    const suggestion = await within(metierField).findByText("Développeur web (métier)");
-    fireEvent.mouseDown(suggestion);
 
     fireEvent.submit(container.querySelector("form"));
 
@@ -215,21 +212,19 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
       </MemoryRouter>,
     );
 
-    // Remplissage pour passer la validation (titre + wilaya + métier requis)
+    // Remplissage pour passer la validation (titre+métier résolus ensemble via la suggestion,
+    // wilaya requise séparément)
     await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
     fireEvent.change(screen.getByPlaceholderText(/Ingénieur Fullstack/i), {
-      target: { value: "Développeur Backend" },
+      target: { value: "Développeur" },
     });
+    const suggestion = await screen.findByText("Développeur web (métier)");
+    fireEvent.mouseDown(suggestion);
+
     await selectEvent.select(
       getSelectWrapper(container, "wilaya"),
       "31 - Oran",
     );
-    const metierField = container.querySelector("#field-metier");
-    fireEvent.change(within(metierField).getByPlaceholderText(/Développeur web, Chargé de recrutement/i), {
-      target: { value: "Développeur" },
-    });
-    const suggestion = await within(metierField).findByText("Développeur web (métier)");
-    fireEvent.mouseDown(suggestion);
 
     fireEvent.submit(container.querySelector("form"));
 

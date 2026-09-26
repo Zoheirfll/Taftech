@@ -440,6 +440,30 @@ class RelationMetier(models.Model):
         return f"{self.metier_depart} → {self.metier_arrivee} ({self.relation})"
 
 
+class RelationSpecialite(models.Model):
+    """Relation manuelle 'similaire' entre deux spécialités de formation (référentiel Diplômes,
+    matcher.py::_specialite_relation_similaire, session 25/09/2026) — même principe que
+    RelationMetier/'similaire' : le référentiel v2 du client contient deux taxonomies
+    parallèles pour un même grand domaine (ex: Domaine 200 'Mathématiques et informatique',
+    spécialités académiques précises importées des classeurs universités ; Domaine 218
+    'Informatique, données et numérique', thèmes éditoriaux v1 larges type 'Informatique'/
+    'Développement web') qui ne se recoupent jamais par exact match de spécialité alors
+    qu'elles décrivent le même champ en pratique. Jamais déduite automatiquement (pas de
+    bonus 'même domaine' générique, qui produirait trop de faux positifs sur des domaines
+    couvrant des spécialités hétérogènes) — seulement peuplée à la main via le panel admin
+    référentiel v2."""
+    specialite_depart = models.ForeignKey(SpecialiteFormation, on_delete=models.CASCADE, related_name='relations_similaires_depart')
+    specialite_arrivee = models.ForeignKey(SpecialiteFormation, on_delete=models.CASCADE, related_name='relations_similaires_arrivee')
+    active_recherche = models.BooleanField(default=True)
+    justification = models.TextField(blank=True, default='')
+
+    class Meta:
+        unique_together = [('specialite_depart', 'specialite_arrivee')]
+
+    def __str__(self):
+        return f"{self.specialite_depart} → {self.specialite_arrivee} (similaire)"
+
+
 class ParametreMatching(models.Model):
     """Paramètres de pondération/matching éditables (PARAM_MATCHING, 12 lignes) — consommé par
     matcher.py au lieu de poids codés en dur, une fois la Phase 4 branchée."""
@@ -478,8 +502,9 @@ class OffreEmploi(models.Model):
     diplome_ref = models.ForeignKey(
         'TypeDiplome', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres_niveau_requis',
         verbose_name="Diplôme requis (référentiel v2, résolu depuis `diplome`)",
-        help_text="Résolution non ambiguë uniquement — voir ProfilCandidat.diplome_ref. Le vrai repli de matching "
-                  "reste `diplomes_acceptes` (couples explicites) ; ce champ est informatif, pas consommé par matcher.py.",
+        help_text="Résolution non ambiguë uniquement — voir ProfilCandidat.diplome_ref. Champ purement "
+                  "informatif (affiché sur l'annonce, sert de filtre de recherche), jamais consommé par "
+                  "matcher.py — le matching lit exclusivement `diplomes_requis`/`specialites_requises`.",
     )
     niveau_scolaire_ref = models.ForeignKey(
         'Scolarite', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres_niveau_requis',
@@ -488,6 +513,19 @@ class OffreEmploi(models.Model):
     metier = models.ForeignKey(
         'Metier', null=True, blank=True, on_delete=models.SET_NULL, related_name='offres',
         verbose_name="Métier (référentiel v2)",
+    )
+    diplomes_requis = models.ManyToManyField(
+        'TypeDiplome', blank=True, related_name='offres_requises',
+        verbose_name="Diplômes acceptés (référentiel v2)",
+        help_text="Liste plate de diplômes acceptés (S05, REGLES_MATCHING) — indépendante de "
+                  "`specialites_requises`, jamais un couple imposé (F06 : pas de rang/équivalence "
+                  "construits). Vide = critère diplôme non demandé pour le matching (S01).",
+    )
+    specialites_requises = models.ManyToManyField(
+        'SpecialiteFormation', blank=True, related_name='offres_requises_specialite',
+        verbose_name="Spécialités de formation acceptées (référentiel v2, optionnel)",
+        help_text="Liste plate de spécialités acceptées (S06, REGLES_MATCHING) — indépendante de "
+                  "`diplomes_requis`. Vide = critère spécialité non demandé pour le matching (S01).",
     )
     type_contrat = models.CharField(max_length=50, choices=TYPES_CONTRAT, default='CDI')
     experience_requise = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
@@ -523,21 +561,6 @@ class OffreEmploi(models.Model):
 
     def __str__(self):
         return f"{self.titre} - {self.entreprise.nom_entreprise}"
-
-
-class OffreDiplomeAccepte(models.Model):
-    """Couple diplôme+spécialité explicitement accepté par le recruteur pour cette offre
-    (REGLES_FORMATION F06 — le recruteur définit la liste, jamais une équivalence automatique
-    déduite d'un niveau/nombre d'années). Une offre sans ligne ici n'exige aucun couple précis
-    (donnée manquante ≠ incompatibilité) — repli sur `OffreEmploi.diplome` (niveau minimum)."""
-    offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='diplomes_acceptes')
-    couple = models.ForeignKey('DiplomeSpecialite', on_delete=models.CASCADE, related_name='offres_liees')
-
-    class Meta:
-        unique_together = [('offre', 'couple')]
-
-    def __str__(self):
-        return f"{self.offre.titre} — {self.couple}"
 
 
 class ExigenceImperative(models.Model):
@@ -637,6 +660,7 @@ class Candidature(models.Model):
     )
 
     date_postulation = models.DateTimeField(auto_now_add=True)
+    date_maj = models.DateTimeField(auto_now=True, verbose_name="Dernière mise à jour")
     lettre_motivation = models.TextField(blank=True, null=True, verbose_name="Lettre de motivation (Optionnelle)")
     lettre_motivation_file = models.FileField(
         upload_to='lettres_motivation/',
@@ -810,19 +834,20 @@ class ProfilCandidat(models.Model):
     )
 
     # --- ANCIENS CHAMPS GARDÉS ---
-    diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme")
+    diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme (ancien champ, conservé pour compat historique)")
     diplome_ref = models.ForeignKey(
         'TypeDiplome', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_niveau_declare',
-        verbose_name="Diplôme (référentiel v2, résolu depuis `diplome`)",
-        help_text="Résolution non ambiguë uniquement (MIGRATION niveau_v1_vers_diplome, F02/F06) — reste vide pour "
-                  "les valeurs de `diplome` trop imprécises pour être converties sans deviner (ex: TS, MASTER_1/2, "
-                  "FORMATION_PRO). `diplome` (texte) reste la source de vérité, jamais modifié par cette résolution.",
+        verbose_name="Niveau d'études (référentiel v2)",
+        help_text="Choisi directement par le candidat (sélecteur référentiel v2, 37 valeurs précises) — remplace "
+                  "l'ancien champ `diplome` texte libre côté formulaire. Sert de repli au matching diplôme quand "
+                  "aucune `FormationCandidat` obtenue n'est renseignée (jamais pour la spécialité, qui n'a pas "
+                  "d'équivalent ici) — voir `matcher._score_diplome_specialite`, `diplome_source='niveau_profil'`.",
     )
     niveau_scolaire_ref = models.ForeignKey(
         'Scolarite', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_niveau_declare',
-        verbose_name="Niveau de scolarité (référentiel v2, résolu depuis `diplome`)",
-        help_text="Pour les valeurs de `diplome` qui ne sont pas un diplôme mais un niveau de scolarité "
-                  "(NIVEAU_SECONDAIRE, UNIVERSITAIRE_SANS_DIPLOME) — mutuellement exclusif avec `diplome_ref`.",
+        verbose_name="Niveau de scolarité (référentiel v2)",
+        help_text="Pour un niveau qui n'est pas un diplôme mais un niveau de scolarité (secondaire, universitaire "
+                  "sans diplôme) — mutuellement exclusif avec `diplome_ref`.",
     )
     experiences = models.TextField(blank=True, null=True, verbose_name="Expériences")
     competences = models.TextField(blank=True, null=True, verbose_name="Compétences")
@@ -835,8 +860,13 @@ class ProfilCandidat(models.Model):
     niveau_experience = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, blank=True, null=True, verbose_name="Niveau d'expérience global")
 
     def save(self, *args, **kwargs):
-        from .referentiel_utils import resoudre_diplome_legacy
-        self.diplome_ref, self.niveau_scolaire_ref = resoudre_diplome_legacy(self.diplome)
+        # Le candidat choisit désormais `diplome_ref` directement (sélecteur référentiel v2) —
+        # ne jamais écraser ce choix explicite. La résolution automatique depuis l'ancien champ
+        # `diplome` (texte) ne s'applique qu'aux profils qui n'ont encore jamais choisi via le
+        # nouveau sélecteur (compat des profils créés avant ce changement).
+        if self.diplome_ref_id is None and self.niveau_scolaire_ref_id is None:
+            from .referentiel_utils import resoudre_diplome_legacy
+            self.diplome_ref, self.niveau_scolaire_ref = resoudre_diplome_legacy(self.diplome)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -952,6 +982,38 @@ class FormationCandidat(models.Model):
     def __str__(self):
         return f"{self.diplome} - {self.etablissement}"
 
+    def save(self, *args, **kwargs):
+        # Flux "Autre, préciser" (retour client 26/09/2026) : un intitulé libre sans
+        # `diplome_ref` résolu passe en attente de vérification (admin ou nouvelle
+        # tentative de résolution), jamais laissé en `DECLARE` silencieux ni traité comme
+        # une incompatibilité par le matcher (voir `_score_diplome_specialite`, déjà neutre
+        # sur ce cas). Sort automatiquement de l'attente dès qu'un `diplome_ref` (et une
+        # spécialité si elle est pertinente pour ce diplôme — voir ci-dessous) est
+        # attribué (choix référentiel direct, confirmation candidat, ou validation admin) —
+        # ne touche jamais un `DOCUMENT_VERIFIE` déjà posé par un tiers.
+        #
+        # Extension (retour client 26/09/2026, suite) : la Spécialité déclenche la même
+        # attente que le Type de diplôme, mais uniquement quand elle est réellement
+        # pertinente pour CE diplôme précis (des couples `DiplomeSpecialite` existent) —
+        # sinon un Bac (qui n'a le plus souvent aucune spécialité attestée) serait à tort
+        # marqué "à vérifier" simplement parce que le champ est resté vide. `description`
+        # sert de signal d'intention : c'est le champ où `FormationReferentielSelect`
+        # recopie le texte tapé en mode "Autre, préciser" de la Spécialité (non résolu) ET
+        # le libellé d'un vrai choix référentiel confirmé — non vide + `specialite_ref`
+        # absent = une tentative est restée sans correspondance.
+        diplome_incertain = not self.diplome_ref_id and bool(self.diplome)
+        specialite_incertaine = False
+        if self.diplome_ref_id and not self.specialite_ref_id and self.description:
+            specialite_incertaine = DiplomeSpecialite.objects.filter(
+                diplome_id=self.diplome_ref_id, selectionnable=True,
+            ).exists()
+        incertain = diplome_incertain or specialite_incertaine
+        if incertain and self.statut_validation == 'DECLARE':
+            self.statut_validation = 'A_PRECISER'
+        elif not incertain and self.statut_validation == 'A_PRECISER':
+            self.statut_validation = 'DECLARE'
+        super().save(*args, **kwargs)
+
 # ==========================================
 # 3. FONCTIONNALITÉS AVANCÉES DU CANDIDAT
 # ==========================================
@@ -1024,6 +1086,11 @@ class Notification(models.Model):
     message = models.TextField()
     lue = models.BooleanField(default=False, verbose_name="Message lu")
     date_creation = models.DateTimeField(auto_now_add=True)
+    lien = models.CharField(
+        max_length=255, blank=True, default='',
+        verbose_name="Lien vers le sujet",
+        help_text="Route frontend relative vers laquelle rediriger au clic (ex: /mes-candidatures)."
+    )
 
     class Meta:
         ordering = ['-date_creation'] # Les messages les plus récents en premier
@@ -1463,7 +1530,7 @@ class AIConfig(models.Model):
     )
 
     parser_cv_actif = models.BooleanField(default=True, verbose_name="Parser CV actif")
-    parser_cv_max_tokens = models.PositiveIntegerField(default=6000, validators=[MinValueValidator(100)])
+    parser_cv_max_tokens = models.PositiveIntegerField(default=7000, validators=[MinValueValidator(100)])
     parser_cv_prompt = models.TextField(
         blank=True, verbose_name="Prompt Parser CV",
         help_text="Variables obligatoires : {cv_text} et {domaines_list}. Si vide, le prompt par défaut du code est utilisé.",

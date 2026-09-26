@@ -10,7 +10,6 @@ import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
 import InfoBanner from "../../Components/InfoBanner";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
-import { FormationReferentielSelect } from "../../Components/FormationReferentielSelect";
 import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X, Pencil } from "lucide-react";
 
 const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 148px";
@@ -46,11 +45,18 @@ const OffresListPage = () => {
   const [showCompSuggestions, setShowCompSuggestions] = useState(false);
   const [compType, setCompType] = useState("OBLIGATOIRE");
   const [compNiveau, setCompNiveau] = useState("");
-  const [diplomesAcceptes, setDiplomesAcceptes] = useState([]);
+  const [diplomesRequis, setDiplomesRequis] = useState([]);
+  const [specialitesRequises, setSpecialitesRequises] = useState([]);
   const [draftDiplomeId, setDraftDiplomeId] = useState("");
   const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
   const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
-  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], diplomes_specialites: [] });
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], avertissement: "" });
+
+  // Entrées génériques "Autre X — préciser" masquées — ne comparent rien côté candidat dans
+  // une liste d'exigences de matching (voir même décision dans CreateJob.jsx).
+  const RE_AUTRE_PRECISER = /autre.*préciser/i;
+  const typesDiplomesFiltres = (nomenclatureFormation?.types_diplomes || []).filter((d) => !RE_AUTRE_PRECISER.test(d.libelle));
+  const specialitesFiltrees = (nomenclatureFormation?.specialites || []).filter((s) => !RE_AUTRE_PRECISER.test(s.libelle));
 
   // Exigences impératives (S12) — même builder que CreateJob.jsx, manquant jusqu'ici
   // sur le formulaire de modification (même gap que compétences/diplômes ci-dessus).
@@ -84,7 +90,7 @@ const OffresListPage = () => {
 
   useEffect(() => {
     if (!modifierForm.metier) {
-      setSuggestionsPourMetier({ competences: [], diplomes_specialites: [] });
+      setSuggestionsPourMetier({ competences: [], specialites: [], avertissement: "" });
       return;
     }
     jobsService.getMetierSuggestions(modifierForm.metier).then(setSuggestionsPourMetier);
@@ -115,7 +121,6 @@ const OffresListPage = () => {
       titre: offre.titre || "",
       wilaya: offre.wilaya || "",
       commune: offre.commune || "",
-      diplome: offre.diplome || "",
       metier: offre.metier || "",
       metier_libelle: offre.metier_libelle || "",
       type_contrat: offre.type_contrat || "",
@@ -132,11 +137,8 @@ const OffresListPage = () => {
         label: c.label, type_exigence: c.type_exigence, niveau_requis: c.niveau_requis,
       })),
     );
-    setDiplomesAcceptes(
-      (offre.diplomes_acceptes || []).map((d) => ({
-        id: d.couple, diplome_libelle: d.diplome_libelle, specialite_libelle: d.specialite_libelle,
-      })),
-    );
+    setDiplomesRequis((offre.diplomes_requis_detail || []).map((d) => ({ id: d.id, libelle: d.libelle })));
+    setSpecialitesRequises((offre.specialites_requises_detail || []).map((s) => ({ id: s.id, libelle: s.libelle })));
     setDraftDiplomeId("");
     setDraftSpecialiteId("");
     setExigencesImperatives(
@@ -156,7 +158,8 @@ const OffresListPage = () => {
       const payload = {
         ...modifierForm,
         competences_requises: competencesRequises,
-        diplomes_acceptes: diplomesAcceptes.map((d) => d.id),
+        diplomes_requis: diplomesRequis.map((d) => d.id),
+        specialites_requises: specialitesRequises.map((s) => s.id),
         exigences_imperatives: exigencesImperatives,
       };
       const response = await jobsService.modifierOffre(offreAModifier.id, payload);
@@ -170,26 +173,29 @@ const OffresListPage = () => {
     }
   };
 
-  const handleAjouterCoupleAccepte = () => {
-    if (!draftDiplomeId || !draftSpecialiteId || !nomenclatureFormation) return;
-    const couple = nomenclatureFormation.diplome_specialite.find(
-      (c) => String(c.diplome_id) === String(draftDiplomeId) && String(c.specialite_id) === String(draftSpecialiteId),
-    );
-    if (!couple) {
-      toast.error("Ce couple diplôme + spécialité n'est pas reconnu dans le référentiel.");
-      return;
-    }
-    if (diplomesAcceptes.some((d) => d.id === couple.id)) return;
-    const diplomeLabel = nomenclatureFormation.types_diplomes.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
-    const specialiteLabel = nomenclatureFormation.specialites.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
-    setDiplomesAcceptes((prev) => [...prev, { id: couple.id, diplome_libelle: diplomeLabel, specialite_libelle: specialiteLabel }]);
+  const ajouterDiplomeRequis = () => {
+    if (!draftDiplomeId || !nomenclatureFormation) return;
+    if (diplomesRequis.some((d) => String(d.id) === String(draftDiplomeId))) return;
+    const libelle = typesDiplomesFiltres.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
+    setDiplomesRequis((prev) => [...prev, { id: draftDiplomeId, libelle }]);
     setDraftDiplomeId("");
+  };
+  const retirerDiplomeRequis = (id) => setDiplomesRequis((prev) => prev.filter((d) => String(d.id) !== String(id)));
+
+  const ajouterSpecialiteRequise = () => {
+    if (!draftSpecialiteId || !nomenclatureFormation) return;
+    if (specialitesRequises.some((s) => String(s.id) === String(draftSpecialiteId))) return;
+    const libelle = specialitesFiltrees.find((s) => String(s.id) === String(draftSpecialiteId))?.libelle || "";
+    setSpecialitesRequises((prev) => [...prev, { id: draftSpecialiteId, libelle }]);
     setDraftSpecialiteId("");
   };
+  const retirerSpecialiteRequise = (id) => setSpecialitesRequises((prev) => prev.filter((s) => String(s.id) !== String(id)));
 
-  const ajouterCoupleSuggere = (item) => {
-    if (diplomesAcceptes.some((d) => d.id === item.id)) return;
-    setDiplomesAcceptes((prev) => [...prev, { id: item.id, diplome_libelle: item.diplome_libelle, specialite_libelle: item.specialite_libelle }]);
+  const ajouterSpecialiteSuggeree = (item) => {
+    // METIER_FORMATIONS (fichier client) ne lie qu'à une spécialité, jamais à un diplôme précis
+    // — pas de diplôme reconstruit par croisement DiplomeSpecialite (jamais validé par le client
+    // pour ce métier).
+    setSpecialitesRequises((prev) => (prev.some((s) => String(s.id) === String(item.id)) ? prev : [...prev, { id: item.id, libelle: item.libelle }]));
   };
 
   const handleCompInputChange = async (value) => {
@@ -681,57 +687,100 @@ const OffresListPage = () => {
 
               <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
                 <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-slate-700">
-                  Diplômes/spécialités acceptés (optionnel)
+                  Formation requise (optionnel)
                 </p>
                 <p className="text-xs text-slate-600 mb-3">
-                  "Diplôme attendu" (niveau minimum) est affiché sur l'annonce mais n'est plus utilisé pour le score de matching — précisez un ou plusieurs couples ici pour que le diplôme et la spécialité de formation soient réellement évalués sur les candidatures.
+                  Le diplôme et la spécialité ci-dessous sont deux critères indépendants (jamais un couple imposé) : laisser "Spécialités acceptées" vide accepte toute spécialité pour les diplômes choisis. Cette liste alimente aussi le filtre "Diplôme" de la recherche publique d'offres.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
-                  <FormationReferentielSelect
-                    diplomeId={draftDiplomeId}
-                    specialiteId={draftSpecialiteId}
-                    onChangeDiplome={setDraftDiplomeId}
-                    onChangeSpecialite={setDraftSpecialiteId}
-                    permettreAutre={false}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAjouterCoupleAccepte}
-                    disabled={!draftDiplomeId || !draftSpecialiteId}
-                    className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
-                  >
-                    Ajouter
-                  </button>
-                </div>
-                {diplomesAcceptes.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {diplomesAcceptes.map((d) => (
-                      <span key={d.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
-                        {d.diplome_libelle} — {d.specialite_libelle}
-                        <button type="button" onClick={() => setDiplomesAcceptes((prev) => prev.filter((x) => x.id !== d.id))} className="hover:text-red-600">
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))}
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Diplômes acceptés</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                    <Select
+                      options={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle }))}
+                      value={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle })).find((o) => String(o.value) === String(draftDiplomeId)) || null}
+                      onChange={(opt) => setDraftDiplomeId(opt ? opt.value : "")}
+                      styles={selectStylesTeal}
+                      isClearable
+                      placeholder="Sélectionner un type de diplôme..."
+                    />
+                    <button
+                      type="button"
+                      onClick={ajouterDiplomeRequis}
+                      disabled={!draftDiplomeId}
+                      className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
+                    >
+                      Ajouter
+                    </button>
                   </div>
-                )}
-                {suggestionsPourMetier.diplomes_specialites.length > 0 && (
+                  {diplomesRequis.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {diplomesRequis.map((d) => (
+                        <span key={d.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+                          {d.libelle}
+                          <button type="button" onClick={() => retirerDiplomeRequis(d.id)} className="hover:text-red-600">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Spécialités acceptées (optionnel — vide = toute spécialité)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                    <Select
+                      options={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle }))}
+                      value={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle })).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
+                      onChange={(opt) => setDraftSpecialiteId(opt ? opt.value : "")}
+                      styles={selectStylesTeal}
+                      isClearable
+                      placeholder="Sélectionner une spécialité..."
+                    />
+                    <button
+                      type="button"
+                      onClick={ajouterSpecialiteRequise}
+                      disabled={!draftSpecialiteId}
+                      className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                  {specialitesRequises.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {specialitesRequises.map((s) => (
+                        <span key={s.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+                          {s.libelle}
+                          <button type="button" onClick={() => retirerSpecialiteRequise(s.id)} className="hover:text-red-600">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {suggestionsPourMetier.specialites.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-[11px] font-medium text-slate-500 mb-1.5">Suggéré pour ce métier — cliquez pour ajouter :</p>
+                    <p className="text-[11px] font-medium text-slate-500 mb-1.5">Suggéré pour ce métier — cliquez pour ajouter la spécialité :</p>
                     <div className="flex flex-wrap gap-2">
-                      {suggestionsPourMetier.diplomes_specialites
-                        .filter((s) => !diplomesAcceptes.some((d) => d.id === s.id))
+                      {suggestionsPourMetier.specialites
+                        .filter((s) => !specialitesRequises.some((sp) => String(sp.id) === String(s.id)))
                         .map((s) => (
                           <button
                             key={s.id}
                             type="button"
-                            onClick={() => ajouterCoupleSuggere(s)}
+                            onClick={() => ajouterSpecialiteSuggeree(s)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
                           >
-                            + {s.diplome_libelle} — {s.specialite_libelle}
+                            + {s.libelle}
                           </button>
                         ))}
                     </div>
+                    {suggestionsPourMetier.avertissement && (
+                      <p className="text-[11px] text-slate-500 italic mt-2">{suggestionsPourMetier.avertissement}</p>
+                    )}
                   </div>
                 )}
               </div>

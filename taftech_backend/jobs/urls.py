@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     # Offres
     JobListAPIView, JobDetailAPIView, JobCreateAPIView,
-    ConstantsAPIView, NomenclatureAPIView, NomenclatureFormationAPIView, MetierAutocompleteAPIView,
+    ConstantsAPIView, NomenclatureAPIView, NomenclatureFormationAPIView, SuggererDiplomeAPIView, MetierAutocompleteAPIView,
     MetierSuggestionsAPIView, RechercheUniverselleAPIView,
     CloturerOffreAPIView, UpdateOffreRecruteurAPIView, SupprimerOffreAPIView,
     ExportCandidaturesOffreExcelAPIView, ExportCandidaturesExcelAPIView, ExportGraphiqueExcelAPIView,
@@ -51,6 +51,8 @@ from .views import (
     # IA
     OffresRecommandeesAPIView, ParserCVAPIView,
     AdminReferentielMetiersAPIView, AdminReferentielSpecialitesAPIView, AdminReferentielDiplomesAPIView,
+    AdminRelationsSimilaireAPIView, AdminFormationsAVerifierAPIView,
+    AdminRelationsSpecialiteAPIView,
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView,
 
@@ -98,6 +100,7 @@ urlpatterns = [
     path('constants/', ConstantsAPIView.as_view(), name='api-constants'),
     path('nomenclature/', NomenclatureAPIView.as_view(), name='api-nomenclature'),
     path('referentiel/nomenclature-formation/', NomenclatureFormationAPIView.as_view(), name='api-nomenclature-formation'),
+    path('referentiel/suggerer-diplome/', SuggererDiplomeAPIView.as_view(), name='api-suggerer-diplome'),
     path('referentiel/recherche-universelle/', RechercheUniverselleAPIView.as_view(), name='api-recherche-universelle'),
     path('referentiel/metiers/', MetierAutocompleteAPIView.as_view(), name='api-metiers-autocomplete'),
     path('referentiel/metiers/<int:metier_id>/suggestions/', MetierSuggestionsAPIView.as_view(), name='api-metier-suggestions'),
@@ -208,6 +211,12 @@ urlpatterns = [
     path('admin/referentiel-v2/specialites/<int:pk>/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialite-detail'),
     path('admin/referentiel-v2/diplomes/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplomes'),
     path('admin/referentiel-v2/diplomes/<int:pk>/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplome-detail'),
+    path('admin/referentiel-v2/relations-similaires/', AdminRelationsSimilaireAPIView.as_view(), name='admin-referentiel-relations'),
+    path('admin/referentiel-v2/relations-similaires/<int:pk>/', AdminRelationsSimilaireAPIView.as_view(), name='admin-referentiel-relation-detail'),
+    path('admin/referentiel-v2/relations-specialites/', AdminRelationsSpecialiteAPIView.as_view(), name='admin-referentiel-relations-specialites'),
+    path('admin/referentiel-v2/relations-specialites/<int:pk>/', AdminRelationsSpecialiteAPIView.as_view(), name='admin-referentiel-relation-specialite-detail'),
+    path('admin/referentiel-v2/formations-a-verifier/', AdminFormationsAVerifierAPIView.as_view(), name='admin-formations-a-verifier'),
+    path('admin/referentiel-v2/formations-a-verifier/<int:pk>/', AdminFormationsAVerifierAPIView.as_view(), name='admin-formation-a-verifier-detail'),
     path('admin/comptes-admins/', AdminCompteAdminsAPIView.as_view(), name='admin-comptes-admins'),
     path('admin/comptes-admins/<int:admin_id>/', AdminCompteAdminsAPIView.as_view(), name='admin-compte-admin-detail'),
     path('admin/paliers/', PaliersAdminAPIView.as_view(), name='admin-paliers'),

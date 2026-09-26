@@ -12,8 +12,7 @@ const MOCK_DATA = {
   pages: [
     { type: "Offre d'emploi", url: "https://taftech.dz/entreprises/taftech/offres-d-emploi/rh/dev-abc123/", nb_pages_indexables: 12, ok: true },
     { type: "Entreprise", url: "https://taftech.dz/entreprise/taftech/", nb_pages_indexables: 5, ok: true },
-    { type: "Métier", url: "https://taftech.dz/metiers/l18-informatique/", nb_pages_indexables: 87, ok: true },
-    { type: "Secteur", url: "https://taftech.dz/secteurs/a-agriculture/", nb_pages_indexables: 16, ok: true },
+    { type: "Secteur", url: "https://taftech.dz/secteurs/2-agriculture/", nb_pages_indexables: 77, ok: true },
     { type: "Wilaya", url: "https://taftech.dz/regions/16-alger/", nb_pages_indexables: 58, ok: true },
     { type: "Blog / Article", url: null, nb_pages_indexables: 0, ok: false },
   ],
@@ -34,7 +33,6 @@ describe("🔍 UI - Composant <AdminSeo />", () => {
 
     await waitFor(() => expect(screen.getByText("Offre d'emploi")).toBeInTheDocument());
     expect(screen.getByText("Entreprise")).toBeInTheDocument();
-    expect(screen.getByText("Métier")).toBeInTheDocument();
     expect(screen.getByText("Secteur")).toBeInTheDocument();
     expect(screen.getByText("Wilaya")).toBeInTheDocument();
     expect(screen.getByText("Blog / Article")).toBeInTheDocument();
@@ -46,7 +44,7 @@ describe("🔍 UI - Composant <AdminSeo />", () => {
     render(<AdminSeo />);
 
     await waitFor(() => expect(screen.getByText("Aucune page publiée")).toBeInTheDocument());
-    expect(screen.getByText(/5\/6 types de page ont du contenu publié/)).toBeInTheDocument();
+    expect(screen.getByText(/4\/5 types de page ont du contenu publié/)).toBeInTheDocument();
   });
 
   it("🟢 HP3 : Affiche le bandeau de réassurance quand tout est OK", async () => {

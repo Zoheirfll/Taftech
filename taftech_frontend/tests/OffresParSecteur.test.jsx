@@ -11,16 +11,16 @@ import * as reporter from "../src/utils/errorReporter";
 // --- MOCKS ---
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
-    getConstants: vi.fn(),
+    getNomenclature: vi.fn(),
     getStatsGeo: vi.fn(),
   },
 }));
 
-const mockConstants = {
+const mockNomenclature = {
   secteurs: [
-    { value: "A", label: "Agriculture et pêche" },
-    { value: "B", label: "Énergie, extraction et hydrocarbure" },
-    { value: "Z", label: "Secteur inconnu" }, // Non listé dans le iconsMap
+    { id: 1, code: "A", libelle: "Agriculture et pêche" },
+    { id: 2, code: "B", libelle: "Énergie, extraction et hydrocarbure" },
+    { id: 99, code: "TSEC-A3819ADB0F8B", libelle: "Secteur inconnu" }, // Non listé dans le iconsMap
   ],
 };
 
@@ -38,7 +38,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
   // --- 🟢 HAPPY PATHS (3/3) ---
 
   it("🟢 HP1 : Chargement et affichage des secteurs avec la bonne icône", async () => {
-    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.getNomenclature.mockResolvedValue(mockNomenclature);
 
     const { container } = render(
       <MemoryRouter>
@@ -58,7 +58,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
   });
 
   it("🟢 HP2 : Affichage de l'icône de fallback pour un secteur inconnu", async () => {
-    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.getNomenclature.mockResolvedValue(mockNomenclature);
 
     const { container } = render(
       <MemoryRouter>
@@ -74,7 +74,7 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
   });
 
   it("🟢 HP3 : Les liens pointent vers l'URL propre du secteur (SEO)", async () => {
-    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.getNomenclature.mockResolvedValue(mockNomenclature);
 
     render(
       <MemoryRouter>
@@ -87,14 +87,14 @@ describe("🚀 UI & Logique - Composant <OffresParSecteur />", () => {
       const linkEnergie = screen
         .getByText("Énergie, extraction et hydrocarbure")
         .closest("a");
-      expect(linkEnergie).toHaveAttribute("href", "/secteurs/b-energie-extraction-et-hydrocarbure");
+      expect(linkEnergie).toHaveAttribute("href", "/secteurs/2-energie-extraction-et-hydrocarbure");
     });
   });
 
   // --- 🔴 EDGE CASES (1/1) ---
 
   it("🔴 EC1 : Gestion robuste du crash API (Télémétrie)", async () => {
-    jobsService.getConstants.mockRejectedValue(new Error("500 API Down"));
+    jobsService.getNomenclature.mockRejectedValue(new Error("500 API Down"));
 
     render(
       <MemoryRouter>

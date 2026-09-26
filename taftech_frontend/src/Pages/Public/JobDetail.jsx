@@ -22,18 +22,6 @@ const EXPERIENCE_LABELS = {
   EXPERT: "Expert",
 };
 
-const DIPLOME_LABELS = {
-  SANS_DIPLOME: "Sans diplôme",
-  BEM: "BEM (Brevet)",
-  BAC: "Baccalauréat",
-  BAC_PLUS_2: "Bac +2",
-  LICENCE: "Licence (Bac +3)",
-  MASTER_1: "Master 1 (Bac +4)",
-  MASTER_2: "Master 2 (Bac +5)",
-  INGENIEUR: "Ingénieur",
-  DOCTORAT: "Doctorat",
-};
-
 const CONTRAT_LABELS = {
   CDI: "CDI", CDD: "CDD", FREELANCE: "Freelance",
   STAGE: "Stage", ALTERNANCE: "Alternance", INTERIM: "Intérim",
@@ -291,7 +279,12 @@ const JobDetail = () => {
 
   const inputClass = `w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`;
 
-  const QuestionnaireForm = ({ onNext }) => (
+  // Fonction (pas un composant) qui renvoie du JSX directement — évite le piège déjà
+  // documenté pour FiltersPanel (JobsList.jsx) : un composant DÉFINI à l'intérieur du
+  // rendu d'un autre est recréé (nouvelle référence de type) à chaque re-render du
+  // parent, donc à chaque frappe (chaque setReponses re-render JobDetail) — React
+  // démonte/remonte tout le sous-arbre et l'input perd focus + contenu après 1 caractère.
+  const renderQuestionnaireForm = (onNext) => (
     <div className="space-y-4">
       {job.questionnaire?.questions?.map((q) => (
         <div key={q.id} className={`${tw.inputColorsMuted} rounded-lg p-4`}>
@@ -573,12 +566,6 @@ const JobDetail = () => {
                     <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><Users size={12} className={tw.iconPrimary500} />{job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""}</p>
                   </div>
                 )}
-                {job.diplome && (
-                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Diplôme</p>
-                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><GraduationCap size={12} className={tw.iconPrimary500} />{DIPLOME_LABELS[job.diplome] || job.diplome}</p>
-                  </div>
-                )}
                 {job.metier_libelle && (
                   <div className={`${tw.bgPrimarySoft} rounded-lg p-3`}>
                     <p className={`text-[10px] font-semibold ${tw.textPrimaryLight} uppercase tracking-wider mb-1`}>Métier</p>
@@ -665,14 +652,20 @@ const JobDetail = () => {
               </div>
             )}
 
-            {job.diplomes_acceptes?.length > 0 && (
+            {(job.diplomes_requis_detail?.length > 0 || job.specialites_requises_detail?.length > 0) && (
               <div className={`${tw.cardColors} rounded-xl p-6`}>
-                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Diplômes acceptés</h2>
+                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Diplômes / Spécialités acceptés</h2>
                 <div className="flex flex-wrap gap-2">
-                  {job.diplomes_acceptes.map((d) => (
-                    <span key={d.id} className={tw.badgePrimary}>
+                  {(job.diplomes_requis_detail || []).map((d) => (
+                    <span key={`d-${d.id}`} className={tw.badgePrimary}>
                       <GraduationCap size={12} className="inline mr-1" />
-                      {d.diplome_libelle}{d.specialite_libelle ? ` · ${d.specialite_libelle}` : ""}
+                      {d.libelle}
+                    </span>
+                  ))}
+                  {(job.specialites_requises_detail || []).map((s) => (
+                    <span key={`s-${s.id}`} className={tw.badgePrimary}>
+                      <GraduationCap size={12} className="inline mr-1" />
+                      {s.libelle}
                     </span>
                   ))}
                 </div>
@@ -767,11 +760,11 @@ const JobDetail = () => {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <QuestionnaireForm onNext={() => {
+              {renderQuestionnaireForm(() => {
                 if (!validateQuestionnaire()) return;
                 setShowQuestionnaireModal(false);
                 setPostulationMode("taftech");
-              }} />
+              })}
               <button onClick={() => setShowQuestionnaireModal(false)} className={`w-full py-2.5 ${tw.buttonCancelSoft} text-sm font-medium rounded-lg transition-colors`}>
                 Annuler
               </button>

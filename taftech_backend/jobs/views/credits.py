@@ -64,7 +64,10 @@ class DeverrouillerCandidatAPIView(APIView):
                 status=403,
             )
 
-        _log(request.user, entreprise, 'DEBLOQUER_CANDIDAT', candidat.email)
+        nom_candidat = f"{candidat.first_name} {candidat.last_name}".strip()
+        if not nom_candidat and profil_candidat:
+            nom_candidat = profil_candidat.titre_professionnel or ""
+        _log(request.user, entreprise, 'DEBLOQUER_CANDIDAT', nom_candidat or "un candidat")
         return Response({"est_debloque": True, "credits_disponibles": credits_disponibles(entreprise)})
 
 

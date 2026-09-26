@@ -953,12 +953,12 @@ const CVTheque = () => {
             </div>
           ) : (
             candidats.map((candidat) => {
-              const isSelected = selectedCandidat?.email === candidat.email;
+              const isSelected = selectedCandidat?.user_id === candidat.user_id;
               const recent = isRecent(candidat.date_joined);
               const statutActivite = getStatutActivite(candidat.last_login);
               return (
                 <div
-                  key={candidat.email}
+                  key={candidat.user_id}
                   onClick={() => handleSelectCandidat(candidat)}
                   className={`relative cursor-pointer w-full text-left ${tw.surface} border rounded-xl overflow-hidden transition-all ${
                     isSelected
@@ -993,7 +993,11 @@ const CVTheque = () => {
                               {statutActivite && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`} title={statutActivite.label} />}
                               <h3 className={`text-sm font-semibold truncate ${tw.textStrong}`}>{candidat.titre_professionnel || "Profil candidat"}</h3>
                             </div>
-                            <p className={`text-xs truncate ${tw.textMuted700}`}>{candidat.last_name} {candidat.first_name}</p>
+                            <p className={`text-xs truncate ${tw.textMuted700}`}>
+                              {candidat.last_name || candidat.first_name
+                                ? `${candidat.last_name ?? ""} ${candidat.first_name ?? ""}`.trim()
+                                : "Identité masquée"}
+                            </p>
                           </div>
                           <div className="flex flex-col items-end gap-0.5 shrink-0">
                             {offreId && 'score_offre' in candidat && (
@@ -1116,8 +1120,9 @@ const CVTheque = () => {
                             "Profil candidat"}
                         </h2>
                         <p className={`text-sm mt-1 ${tw.textMuted}`}>
-                          {selectedCandidat.last_name}{" "}
-                          {selectedCandidat.first_name}
+                          {selectedCandidat.last_name || selectedCandidat.first_name
+                            ? `${selectedCandidat.last_name ?? ""} ${selectedCandidat.first_name ?? ""}`.trim()
+                            : "Identité masquée — débloquez le profil pour la voir"}
                         </p>
                       </div>
                       {/* BOUTON FAVORI */}

@@ -112,8 +112,11 @@ class OffresRecommandeesAPIView(APIView):
         if not hasattr(request.user, 'profil_candidat'):
             return Response([], status=status.HTTP_200_OK)
 
+        offres_postulees_ids = set(
+            Candidature.objects.filter(candidat=request.user).values_list('offre_id', flat=True)
+        )
         scores = scores_offres_actives_pour_candidat(request.user)
-        top_ids = [oid for oid, total in scores if total >= 80]
+        top_ids = [oid for oid, total in scores if total >= 80 and oid not in offres_postulees_ids]
         top_ids.sort(key=lambda oid: dict(scores)[oid], reverse=True)
         top_ids = top_ids[:10]
         if not top_ids:

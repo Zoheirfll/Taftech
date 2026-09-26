@@ -128,13 +128,15 @@ class PostulerAPIView(APIView):
         _notifier_equipe(
             offre.entreprise, 'NOUVELLE_CANDIDATURE',
             f"Nouvelle candidature : {offre.titre}",
-            f"{nom_candidat_notif} a postulé à « {offre.titre} »."
+            f"{nom_candidat_notif} a postulé à « {offre.titre} ».",
+            lien=f"/dashboard/offres/{offre.id}"
         )
         if resultat_matching["total"] >= 80.0:
             _notifier_equipe(
                 offre.entreprise, 'CANDIDAT_RECOMMANDE',
                 f"Candidat recommandé : {nom_candidat_notif}",
-                f"{nom_candidat_notif} obtient un score IA de {int(resultat_matching['total'])}% sur « {offre.titre} »."
+                f"{nom_candidat_notif} obtient un score IA de {int(resultat_matching['total'])}% sur « {offre.titre} ».",
+                lien=f"/dashboard/offres/{offre.id}"
             )
 
         # Réponses questionnaire + détection disqualification
@@ -275,7 +277,8 @@ class PostulerRapideAPIView(APIView):
             _notifier_equipe(
                 offre.entreprise, 'NOUVELLE_CANDIDATURE',
                 f"Nouvelle candidature : {offre.titre}",
-                f"{nom_complet_rapide} a postulé (candidature rapide) à « {offre.titre} »."
+                f"{nom_complet_rapide} a postulé (candidature rapide) à « {offre.titre} ».",
+                lien=f"/dashboard/offres/{offre.id}"
             )
             return Response({"message": "Candidature rapide envoyée avec succès !"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -285,7 +288,7 @@ class MesCandidaturesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_postulation')
+        candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_maj')
         serializer = MesCandidaturesDTO(candidatures, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -407,7 +410,8 @@ class UpdateCandidatureStatusAPIView(APIView):
                     destinataire=candidature.candidat,
                     type_notif=type_n,
                     titre=titre_notif,
-                    message=message_notif
+                    message=message_notif,
+                    lien='/mes-candidatures',
                 )
 
         entreprise = get_entreprise_for_user(request.user)

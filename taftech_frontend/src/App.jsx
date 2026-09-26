@@ -108,9 +108,7 @@ const QuiSommesNous = lazy(() => import("./Pages/Public/QuiSommesNous"));
 const EntreprisePublic   = lazy(() => import("./Pages/Recruteur/EntreprisePublic"));
 const OffresParRegion    = lazy(() => import("./Pages/Public/OffresParRegion"));
 const OffresParSecteur   = lazy(() => import("./Pages/Public/OffresParSecteur"));
-const OffresParMetier    = lazy(() => import("./Pages/Public/OffresParMetier"));
 const SecteurDetail      = lazy(() => import("./Pages/Public/SecteurDetail"));
-const MetierDetail       = lazy(() => import("./Pages/Public/MetierDetail"));
 const RegionDetail       = lazy(() => import("./Pages/Public/RegionDetail"));
 const RegisterCandidat   = lazy(() => import("./Pages/Auth/RegisterCandidat"));
 const RegisterRecruteur  = lazy(() => import("./Pages/Auth/RegisterRecruteur"));
@@ -284,8 +282,6 @@ function AppContent() {
             <Route path="/regions/:slug" element={<RegionDetail />} />
             <Route path="/secteurs" element={<OffresParSecteur />} />
             <Route path="/secteurs/:slug" element={<SecteurDetail />} />
-            <Route path="/metiers" element={<OffresParMetier />} />
-            <Route path="/metiers/:slug" element={<MetierDetail />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<ArticleDetail />} />
             <Route path="/register" element={<GuestRoute><RegisterCandidat /></GuestRoute>} />

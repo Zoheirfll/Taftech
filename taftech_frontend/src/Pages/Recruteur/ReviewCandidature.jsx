@@ -56,7 +56,7 @@ const ReviewCandidature = () => {
     { label: "CV", test: (p) => !!p.cv_pdf },
     { label: "Titre professionnel", test: (p) => !!p.titre_professionnel },
     { label: "Wilaya / Commune", test: (p) => !!(p.wilaya && p.commune) },
-    { label: "Diplôme", test: (p) => !!p.diplome },
+    { label: "Diplôme", test: (p) => !!(p.diplome_ref_libelle || p.niveau_scolaire_ref_libelle || p.diplome) },
     { label: "Métier", test: (p) => !!p.metier },
     { label: "Expériences", test: (p) => p.experiences_detail?.length > 0 },
     { label: "Formations", test: (p) => p.formations_detail?.length > 0 },
@@ -352,10 +352,10 @@ const ReviewCandidature = () => {
                     {profil.adresse}
                   </span>
                 )}
-                {profil.diplome && (
+                {(profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle || profil.diplome) && (
                   <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <GraduationCap size={11} />
-                    {formatText(profil.diplome)}
+                    {profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle || formatText(profil.diplome)}
                   </span>
                 )}
               </div>

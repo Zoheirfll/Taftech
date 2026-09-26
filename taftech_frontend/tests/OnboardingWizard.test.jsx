@@ -37,6 +37,13 @@ vi.mock("../src/Services/jobsService", () => ({
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
       sous_domaines: [],
     }),
+    getNomenclatureFormation: vi.fn().mockResolvedValue({
+      types_diplomes: [{ id: 5, code: "D-LIC-NP", libelle: "Licence" }],
+      domaines: [],
+      filieres: [],
+      specialites: [],
+      diplome_specialite: [],
+    }),
   },
 }));
 vi.mock("react-hot-toast", () => ({
@@ -112,6 +119,78 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard-candidat");
+  });
+
+  it("propage diplome_ref détecté par le parser jusqu'à la sauvegarde de l'étape Infos", async () => {
+    jobsService.parserCV.mockResolvedValue({
+      success: true,
+      diplome: "MASTER_2",
+      diplome_ref: 5,
+      diplome_ref_libelle: "Licence",
+      experiences: [],
+      formations: [],
+    });
+    render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
+    await screen.findByText(/Upload CV/i);
+
+    const input = document.querySelector('input[type="file"]');
+    const file = new File(["contenu"], "cv.pdf", { type: "application/pdf" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByLabelText(/Niveau d'études/i);
+    expect(screen.getByLabelText(/Niveau d'études/i)).toHaveValue("5");
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
+
+    await waitFor(() => expect(profilService.updateProfil).toHaveBeenCalled());
+    const formData = profilService.updateProfil.mock.calls[0][0];
+    expect(formData.get("diplome_ref")).toBe("5");
+    expect(formData.get("diplome_ref_libelle")).toBeNull();
+  });
+
+  it("l'étape Formations propose le sélecteur référentiel v2 (Type de diplôme) en édition", async () => {
+    jobsService.parserCV.mockResolvedValue({
+      success: true,
+      experiences: [],
+      formations: [
+        {
+          diplome: "Baccalauréat Génie Mécanique",
+          etablissement: "Lycée X",
+          date_debut_raw: "",
+          date_fin_raw: "2019",
+          description: "",
+          diplome_ref: 5,
+          diplome_ref_libelle: "Licence",
+          specialite_ref: null,
+          specialite_ref_libelle: "",
+        },
+      ],
+    });
+    render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
+    await screen.findByText(/Upload CV/i);
+
+    const input = document.querySelector('input[type="file"]');
+    const file = new File(["contenu"], "cv.pdf", { type: "application/pdf" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    // Etape 2 (Infos) puis étape 3 (Expériences) — on les passe pour atteindre Formations.
+    await screen.findByRole("button", { name: /Continuer/i });
+    fireEvent.click(screen.getByText(/Passer cette étape/i)); // -> 3
+    await screen.findByText(/Passer cette étape/i);
+    fireEvent.click(screen.getByText(/Passer cette étape/i)); // -> 4
+
+    await screen.findByText(/Baccalauréat Génie Mécanique/i);
+    fireEvent.click(screen.getByLabelText(/Modifier/i));
+
+    // Le sélecteur référentiel v2 (autrefois absent de cette étape, "ancien menu") est
+    // désormais bien présent, pré-rempli avec la résolution faite par le parser.
+    await waitFor(() => expect(screen.getAllByText(/Type de diplôme/i).length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByRole("button", { name: /Terminé/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
+
+    await waitFor(() => expect(profilService.addFormation).toHaveBeenCalled());
+    expect(profilService.addFormation.mock.calls[0][0]).toMatchObject({ diplome_ref: 5, specialite_ref: null });
   });
 
   it("mode modal : le bouton Quitter demande confirmation puis appelle onClose", async () => {

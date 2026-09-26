@@ -1,5 +1,6 @@
 import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
@@ -14,6 +15,7 @@ import {
   Mail,
   CheckCheck,
   Trash2,
+  ArrowRight,
 } from "lucide-react";
 
 const getStyleForType = (type) => {
@@ -30,6 +32,7 @@ const getStyleForType = (type) => {
 };
 
 const NotificationsRecruteur = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedNotif, setSelectedNotif] = useState(null);
@@ -123,7 +126,7 @@ const NotificationsRecruteur = () => {
 
       <InfoBanner storageKey="notifications_recruteur" title="Votre centre de notifications">
         Retrouvez ici tous les événements de recrutement : nouvelles candidatures spontanées, nouvelles candidatures sur vos offres, et candidats recommandés (score IA ≥80%).
-        Toute l'équipe reçoit ces notifications. Cliquez sur un message pour le marquer comme lu.
+        Toute l'équipe reçoit ces notifications. Cliquez sur un message pour le lire, puis sur « Aller voir » pour accéder directement au sujet concerné.
       </InfoBanner>
 
       <div className="flex flex-col md:flex-row gap-4 h-[600px]">
@@ -229,6 +232,15 @@ const NotificationsRecruteur = () => {
               <p className={`text-sm ${tw.textMuted700} leading-relaxed whitespace-pre-line`}>
                 {selectedNotif.message}
               </p>
+              {selectedNotif.lien && (
+                <button
+                  type="button"
+                  onClick={() => navigate(selectedNotif.lien)}
+                  className={`mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${tw.bgTealSolid}`}
+                >
+                  Aller voir <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">

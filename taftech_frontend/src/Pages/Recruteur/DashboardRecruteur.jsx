@@ -397,6 +397,11 @@ const DashboardRecruteur = () => {
   // clôturée, ou sans date d'expiration) continue de faire remonter indéfiniment son meilleur
   // candidat en tête du "top match", même vieux de plusieurs mois.
   const RECOMMANDES_FENETRE_JOURS = 60;
+  // Même seuil que ActiviteProfil.SEUIL_SCORE_RECOMMANDE (backend) — un candidat n'est
+  // qualifié de "recommandé" qu'à partir de 80% de compatibilité, sinon le widget affiche
+  // un candidat à 35-41% comme s'il était pertinent alors que c'est juste le "moins pire"
+  // parmi peu de candidatures (signalé par l'utilisateur).
+  const SEUIL_SCORE_RECOMMANDE = 80;
   const candidatsRecommandesTous = (() => {
     const today = new Date().toISOString().slice(0, 10);
     const seuilRecence = new Date(Date.now() - RECOMMANDES_FENETRE_JOURS * 24 * 60 * 60 * 1000);
@@ -406,6 +411,7 @@ const DashboardRecruteur = () => {
       if (!offreActive) return;
       o.candidatures?.forEach((c) => {
         if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined
+          && parseFloat(c.score_matching) >= SEUIL_SCORE_RECOMMANDE
           && c.date_postulation && new Date(c.date_postulation) >= seuilRecence) {
           all.push({ ...c, offreTitre: o.titre, offreId: o.id });
         }
@@ -793,9 +799,20 @@ const DashboardRecruteur = () => {
                             <td className="px-1 py-2 text-xs text-center">{nbCand}</td>
                             <td className="px-1 py-2 text-xs text-center">{nbEnt}</td>
                             <td className="px-1 py-2 text-right">
-                              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${o.est_cloturee ? tw.tagSlateSoft : "bg-emerald-100 text-emerald-700"}`}>
-                                {o.est_cloturee ? "Clôturée" : "Active"}
-                              </span>
+                              {(() => {
+                                const { label, cls } = o.est_cloturee
+                                  ? { label: "Clôturée", cls: tw.tagSlateSoft }
+                                  : o.statut_moderation === "EN_ATTENTE"
+                                  ? { label: "En attente", cls: "bg-amber-100 text-amber-700" }
+                                  : o.statut_moderation === "REJETEE"
+                                  ? { label: "Rejetée", cls: "bg-red-100 text-red-700" }
+                                  : { label: "Active", cls: "bg-emerald-100 text-emerald-700" };
+                                return (
+                                  <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${cls}`}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );

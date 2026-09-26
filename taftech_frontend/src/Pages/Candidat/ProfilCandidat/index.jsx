@@ -60,7 +60,7 @@ const PROFILE_CATEGORIES = [
     key: "infos",
     label: "Informations personnelles",
     action: "info",
-    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!p.diplome, !!p.metier],
+    test: (p) => [!!p.telephone, !!p.photo_profil, !!p.titre_professionnel, !!(p.wilaya && p.commune), !!(p.diplome_ref_libelle || p.niveau_scolaire_ref_libelle || p.diplome), !!p.metier],
     actionLabelZero: "Compléter",
   },
   {
@@ -147,6 +147,7 @@ const ProfilCandidat = () => {
     setShowExpTitreSuggestions,
     handleExpTitreChange,
     constants,
+    typesDiplomes,
     fetchData,
     getPhotoUrl,
     formatText,
@@ -471,10 +472,10 @@ const ProfilCandidat = () => {
                   {profil.commune ? ` · ${profil.commune}` : ""}
                 </p>
                 <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                  {constants.diplomes.find(d => d.value === profil.diplome)?.label || formatText(profil.diplome)}
-                  {(profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle) && (
-                    <> {" · "}{profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle}</>
-                  )}
+                  {profil.diplome_ref_libelle
+                    || profil.niveau_scolaire_ref_libelle
+                    || constants.diplomes.find(d => d.value === profil.diplome)?.label
+                    || formatText(profil.diplome)}
                   {profil.metier_libelle && <> {" · "}{profil.metier_libelle}</>}
                 </p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-2">
@@ -1003,6 +1004,7 @@ const ProfilCandidat = () => {
         btnPrimary={BTN_PRIMARY}
         btnCancel={BTN_CANCEL}
         constants={constants}
+        typesDiplomes={typesDiplomes}
         profil={profil}
         showInfoForm={showInfoForm}
         setShowInfoForm={setShowInfoForm}

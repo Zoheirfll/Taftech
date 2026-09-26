@@ -81,10 +81,11 @@ const JobsList = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [], experiences: [], contrats: [] });
   const [nomenclature, setNomenclature] = useState({ domaines: [] });
+  const [typesDiplomes, setTypesDiplomes] = useState([]);
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
-    commune: "", diplome: "", specialite: "", experience: "", contrat: "",
+    commune: "", diplome_id: "", specialite: "", experience: "", contrat: "",
   });
   const [specialiteLibelle, setSpecialiteLibelle] = useState("");
 
@@ -93,14 +94,18 @@ const JobsList = () => {
       try {
         const isConnected = !!localStorage.getItem("userRole");
         const isCandidat = localStorage.getItem("userRole") === "CANDIDAT";
-        const [constantsData, nomenclatureData, favorisData, recommandationsData] = await Promise.all([
+        const [constantsData, nomenclatureData, nomenclatureFormationData, favorisData, recommandationsData] = await Promise.all([
           jobsService.getConstants(),
           jobsService.getNomenclature().catch(() => ({ domaines: [] })),
+          jobsService.getNomenclatureFormation().catch(() => ({ types_diplomes: [] })),
           isConnected ? api.get("jobs/sauvegardes/").catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
           isCandidat ? jobsService.getOffresRecommandees().catch(() => []) : Promise.resolve([]),
         ]);
         setConstants(constantsData);
         setNomenclature(nomenclatureData);
+        setTypesDiplomes(
+          (nomenclatureFormationData.types_diplomes || []).map((d) => ({ value: String(d.id), label: d.libelle })),
+        );
         setFavoris(favorisData.data);
         setRecommandations(recommandationsData || []);
       } catch (error) {
@@ -185,7 +190,7 @@ const JobsList = () => {
   };
 
   const handleReset = () => {
-    setFilters({ search: "", wilaya: "", commune: "", diplome: "", specialite: "", experience: "", contrat: "" });
+    setFilters({ search: "", wilaya: "", commune: "", diplome_id: "", specialite: "", experience: "", contrat: "" });
     setSpecialiteLibelle("");
     setSearchParams({});
     setCurrentPage(1);
@@ -206,7 +211,7 @@ const JobsList = () => {
     filters.experience && { key: "experience", label: expLabel(filters.experience) },
     filters.contrat && { key: "contrat", label: CONTRAT_LABELS[filters.contrat] || filters.contrat },
     filters.specialite && { key: "specialite", label: specialiteLibelle || filters.specialite },
-    filters.diplome && { key: "diplome", label: constants.diplomes.find((d) => d.value === filters.diplome)?.label || filters.diplome },
+    filters.diplome_id && { key: "diplome_id", label: typesDiplomes.find((d) => d.value === filters.diplome_id)?.label || filters.diplome_id },
   ].filter(Boolean);
 
   const filtersPanel = (
@@ -237,7 +242,7 @@ const JobsList = () => {
         {[
           { label: "Expérience", name: "experience", options: constants.experiences, placeholder: "Toutes" },
           { label: "Type de contrat", name: "contrat", options: constants.contrats, placeholder: "Tous" },
-          { label: "Diplôme", name: "diplome", options: constants.diplomes, placeholder: "Tous" },
+          { label: "Diplôme", name: "diplome_id", options: typesDiplomes, placeholder: "Tous" },
         ].map(({ label, name, options, placeholder }) => (
           <div key={name}>
             <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>{label}</label>

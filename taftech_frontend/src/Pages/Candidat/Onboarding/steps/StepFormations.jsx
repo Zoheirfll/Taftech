@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Trash2, Pencil, Check } from "lucide-react";
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
+import { FormationReferentielSelect } from "../../../../Components/FormationReferentielSelect";
 
 export const StepFormations = ({ pendingFormations, setPendingFormations, formationsMode, setFormationsMode, saveFormationsStep, skipStep, profil, saving }) => {
   const [editingIndex, setEditingIndex] = useState(null);
@@ -13,6 +14,10 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
 
   const updateField = (idx, field, value) => {
     setPendingFormations((list) => list.map((f, i) => (i === idx ? { ...f, [field]: value } : f)));
+  };
+
+  const updateFields = (idx, patch) => {
+    setPendingFormations((list) => list.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
   };
 
   return (
@@ -28,20 +33,48 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
         {pendingFormations.map((f, idx) =>
           editingIndex === idx ? (
             <div key={idx} className={`${tw.card} p-4 space-y-2.5`}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <input
-                  value={f.diplome || ""}
-                  onChange={(e) => updateField(idx, "diplome", e.target.value)}
-                  placeholder="Diplôme / formation"
-                  className={tw.authInput}
-                />
-                <input
-                  value={f.etablissement || ""}
-                  onChange={(e) => updateField(idx, "etablissement", e.target.value)}
-                  placeholder="Établissement"
-                  className={tw.authInput}
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
+                <p className="text-xs text-slate-600">
+                  Type de diplôme et spécialité — choisissez dans le référentiel national pour un
+                  score de correspondance fiable sur les offres.
+                </p>
+                <FormationReferentielSelect
+                  diplomeId={f.diplome_ref}
+                  specialiteId={f.specialite_ref}
+                  onChangeDiplome={(id, label) => {
+                    updateFields(idx, {
+                      diplome_ref: id,
+                      diplome_ref_libelle: label || "",
+                      ...(id && label ? { diplome: label } : {}),
+                    });
+                  }}
+                  onChangeSpecialite={(id, label) => {
+                    updateFields(idx, {
+                      specialite_ref: id,
+                      specialite_ref_libelle: label || "",
+                      ...(id && label ? { description: label } : {}),
+                    });
+                  }}
+                  autreTexte={f.description}
+                  onChangeAutreTexte={(texte) => updateField(idx, "description", texte)}
+                  diplomeAutreTexte={f.diplome}
+                  onChangeDiplomeAutreTexte={(texte) => updateField(idx, "diplome", texte)}
+                  onConfirmerSuggestion={(diplomeRef, diplomeLabel, specialiteRef, specialiteLabel) =>
+                    updateFields(idx, {
+                      diplome_ref: diplomeRef || f.diplome_ref,
+                      diplome_ref_libelle: diplomeRef ? (diplomeLabel || "") : f.diplome_ref_libelle,
+                      specialite_ref: specialiteRef || f.specialite_ref,
+                      specialite_ref_libelle: specialiteRef ? (specialiteLabel || "") : f.specialite_ref_libelle,
+                    })
+                  }
                 />
               </div>
+              <input
+                value={f.etablissement || ""}
+                onChange={(e) => updateField(idx, "etablissement", e.target.value)}
+                placeholder="Établissement"
+                className={tw.authInput}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <input
                   type="date"
@@ -77,6 +110,13 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-bold ${tw.textStrong}`}>{f.diplome}</p>
                 <p className={`text-xs ${tw.textMuted}`}>{f.etablissement}</p>
+                {(f.diplome_ref_libelle || f.specialite_ref_libelle) && (
+                  <p className="text-xs font-semibold text-teal-700 mt-0.5">
+                    {f.diplome_ref_libelle}
+                    {f.diplome_ref_libelle && f.specialite_ref_libelle && " · "}
+                    {f.specialite_ref_libelle}
+                  </p>
+                )}
                 {(f.date_debut || f.date_fin) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>{f.date_debut || "?"} — {f.date_fin || "présent"}</p>
                 )}

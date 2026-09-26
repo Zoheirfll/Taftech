@@ -27,17 +27,14 @@ export const jobUrl = (offre, entrepriseSlugOverride) => {
   return `/entreprises/${entrepriseSlug}/offres-d-emploi/${secteurSlug}/${dernierSegment}`;
 };
 
-// Même principe pour secteurs/métiers/wilayas : le préfixe avant le premier "-" est la
-// seule partie significative (code stable), le reste est cosmétique pour le SEO — voir
-// SecteurDetail/MetierDetail/RegionDetail.jsx qui font `slug.split("-")[0]` au retour.
-export const secteurUrl = (code, libelle) => {
+// Même principe pour secteurs/wilayas : le préfixe avant le premier "-" est la seule
+// partie significative (id numérique stable), le reste est cosmétique pour le SEO — voir
+// SecteurDetail/RegionDetail.jsx qui font `slug.split("-")[0]` au retour.
+// `id` = GroupeMetier.id (pas `code` — vide pour les secteurs ajoutés par TAFTECH, et parfois
+// composé de plusieurs tirets, ce qui casserait le parsing `split("-")[0]`).
+export const secteurUrl = (id, libelle) => {
   const slug = slugify(libelle);
-  return slug ? `/secteurs/${code.toLowerCase()}-${slug}` : `/secteurs/${code.toLowerCase()}`;
-};
-
-export const metierUrl = (code, libelle) => {
-  const slug = slugify(libelle);
-  return slug ? `/metiers/${code.toLowerCase()}-${slug}` : `/metiers/${code.toLowerCase()}`;
+  return slug ? `/secteurs/${id}-${slug}` : `/secteurs/${id}`;
 };
 
 // wilaya.value est au format "16 - Alger" (WILAYAS_CHOICES) — on ne garde que le code

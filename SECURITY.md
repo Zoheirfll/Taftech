@@ -276,3 +276,36 @@ Un sous-agent d'exploration produit une liste de findings candidats avec fichier
 **Ce qu'un audit de code ne couvre pas** : sécurité de l'infrastructure de déploiement (serveur, nginx, secrets en prod réels — hors de ce repo), test dynamique / pentest actif (fuzzing, exploitation réelle — ceci reste une revue statique par lecture de code), comportement des services tiers (Groq, Chargily) au-delà de l'intégration côté TafTech.
 
 **Recommandation** : avant tout lancement avec paiement réel à grande échelle, faire compléter cet audit par un pentest externe humain, en particulier sur le flux Chargily et l'authentification JWT.
+
+---
+
+## ✅ 14. Exposition de données candidat en CVthèque avant déblocage (25/09/2026)
+
+**Contexte** : signalé par l'utilisateur avec capture d'écran — un profil candidat non débloqué (bouton "Débloquer ce profil (1 crédit)" toujours affiché) exposait déjà des informations censées être réservées au déblocage.
+
+**Trouvé et corrigé** — `jobs/serializers/profils.py::ProfilCandidatDTO` :
+- **`linkedin`/`github`** : les méthodes `get_linkedin()`/`get_github()` existaient et gataient correctement sur `_peut_voir_coordonnees(obj)`, mais **n'étaient jamais appelées par DRF** — les champs `linkedin`/`github` étaient listés dans `Meta.fields` sans être déclarés comme `serializers.SerializerMethodField()` sur la classe. DRF génère alors le champ automatiquement depuis le modèle (comportement par défaut de `ModelSerializer`), en ignorant silencieusement la méthode `get_<field>` — les deux liens fuyaient donc systématiquement, avant tout déblocage. Fix : déclaration explicite en `SerializerMethodField`.
+- **`bio`** (texte "À propos") : aucune logique de masquage du tout — un champ texte libre non gaté. Vérifié sur un cas réel : le texte mentionne fréquemment des noms d'employeurs précis ("... chez Renault Algérie Production et une expérience récente sur le site Stellantis/Fiat d'Oran ..."), soit l'information la plus identifiante d'un profil, alors que les fiches d'expérience structurées affichaient correctement "Entreprise non communiquée" pour la même donnée. Nouveau `get_bio()` gaté par `_peut_voir_coordonnees()`.
+- **`photo_profil`, `first_name`/`last_name` (nom complet), `commune`, `diplome`/`diplome_ref_libelle`, `metier_libelle`** : sur demande explicite de l'utilisateur, masqués eux aussi avant déblocage (photo réelle, nom complet, précision géographique fine, diplôme, métier) — seuls le titre du poste et la wilaya restent visibles pour permettre de parcourir la liste avant de dépenser un crédit. Avant ce correctif, `last_name` était tronqué à l'initiale (`"T."`) mais `first_name` restait affiché en clair — combiné à la photo réelle, la ré-identification restait triviale malgré le masquage partiel du nom.
+
+**Bug fonctionnel corrigé au passage (pas une fuite de données, mais lié)** — `CVTheque.jsx` : la `key` React et la logique de sélection de carte (`isSelected`) reposaient sur `candidat.email`, qui est justement `null` tant que le profil n'est pas débloqué — toutes les cartes non débloquées partageaient donc la même clé et se marquaient mutuellement "sélectionnées" dans l'UI. Basculé sur `user_id` (toujours présent, débloqué ou non).
+
+**Non touché, décision produit assumée** : le titre du poste (`titre_professionnel`) et les descriptions d'expérience détaillées restent visibles avant déblocage — c'est ce qui permet à un recruteur de juger si un profil mérite un crédit ; sans ça, la CVthèque ne servirait à rien pour la découverte.
+
+**Tests** : `test_api_cvtheque.py`/`test_api_cvtheque_credits.py`/`test_serializers_profils.py`/`test_api_candidat.py`/`test_api_paliers_gating.py`/`test_api_recruteur.py` (102/102 ✅), frontend `CVTheque.test.jsx` (15/15 ✅), `npx vite build` propre.
+
+---
+
+## ✅ 15. Race condition sur la rotation du refresh token JWT — déconnexions forcées intempestives (25/09/2026)
+
+**Contexte** : signalé par l'utilisateur comme un bug récurrent — déconnecté brutalement ("session expirée") en pleine utilisation, sans avoir été inactif.
+
+**Cause** : `SIMPLE_JWT` (`taftech_backend/settings.py`) est configuré avec `ROTATE_REFRESH_TOKENS=True` + `BLACKLIST_AFTER_ROTATION=True` (bonne pratique de sécurité — empêche le rejeu d'un refresh token volé) : chaque appel réussi à `token/refresh/` **blackliste immédiatement l'ancien refresh token** et en pose un nouveau via `Set-Cookie`.
+
+Or `taftech_frontend/src/api/axiosConfig.js` ne mutualisait pas les rafraîchissements. Sur une page qui déclenche plusieurs appels API en parallèle (dashboard, CVthèque — plusieurs `useEffect`/`Promise.all` indépendants), si l'access token (durée de vie 15 min) expire pile à ce moment, **chaque requête tombant en 401 déclenchait indépendamment son propre appel `token/refresh/`**. Le premier réussissait et blacklistait l'ancien refresh token ; les suivants, partis à quelques millisecondes d'écart (avant que le navigateur applique le nouveau `Set-Cookie` du premier appel), envoyaient encore l'ancien refresh token — désormais blacklisté → échec 401 sur le refresh → l'interceptor traitait ça comme "session vraiment expirée" et forçait une déconnexion complète, alors que le premier refresh avait bel et bien réussi une fraction de seconde plus tôt.
+
+**Fix** — `axiosConfig.js` : un seul rafraîchissement en vol à la fois (variable module-level `refreshEnCours`, une `Promise` partagée). Toute requête qui échoue en 401 pendant qu'un rafraîchissement est déjà en cours **attend ce même rafraîchissement** au lieu d'en déclencher un second, puis rejoue sa requête originale une fois le nouvel access token posé. Comportement de déconnexion en cas d'échec réel du refresh (refresh token lui-même expiré/invalide après 7 jours) inchangé.
+
+**Non modifié côté backend** — la configuration `ROTATE_REFRESH_TOKENS`/`BLACKLIST_AFTER_ROTATION` reste la bonne pratique de sécurité à conserver ; le bug était uniquement dans la gestion côté client de la concurrence des appels de rafraîchissement, pas dans la politique de rotation elle-même.
+
+**Tests** : `api.test.js`/`authService.test.js` (24/24 ✅, aucun test dédié à la concurrence de refresh n'existait — à ajouter si l'occasion se présente), `npx vite build` propre.

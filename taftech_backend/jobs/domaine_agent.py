@@ -40,19 +40,43 @@ _MOTS_GENERIQUES = {
 }
 
 
+_POIDS_MOT_TITRE = 3.0  # un mot du titre du poste est un signal bien plus fort/spécifique
+_POIDS_MOT_DESCRIPTION = 1.0  # qu'un mot noyé dans les missions (souvent générique/verbal)
+
+
+def _mots_pertinents(texte):
+    """Mots significatifs (>=4 lettres, hors mots génériques, corrigés du flou N04) d'un
+    texte — factorisé pour appliquer exactement le même filtrage au titre et à la
+    description avant de les pondérer séparément."""
+    tous_mots = [m for m in re.findall(r"\w+", normaliser_recherche(texte or "")) if len(m) >= _MOTS_MIN_LEN]
+    mots = [m for m in tous_mots if m not in _MOTS_GENERIQUES]
+    return corriger_mots_flous(mots) if mots else []  # N04 : flou Levenshtein<=1, exact d'abord
+
+
 def _candidats_pour_experience(titre_poste, description, limite=10):
     """Appellations réelles (référentiel v2) dont le libellé partage des mots
     significatifs avec le poste/la description — sert d'indice concret à l'IA plutôt
-    que de la laisser deviner dans le vide. Triées par pertinence (nombre de mots
-    communs), pas par ordre brut de la base."""
-    texte = f"{titre_poste or ''} {description or ''}"
-    tous_mots = [m for m in re.findall(r"\w+", normaliser_recherche(texte)) if len(m) >= _MOTS_MIN_LEN]
-    mots = [m for m in tous_mots if m not in _MOTS_GENERIQUES]
-    # Si le titre est entièrement générique (ex: "Cadre administratif"), aucun indice fiable —
-    # mieux vaut ne rien suggérer que suggérer au hasard.
+    que de la laisser deviner dans le vide. Triées par pertinence : un mot du TITRE
+    (signal fort, ex: "développeur") pèse bien plus qu'un mot de la description (souvent
+    un verbe d'action générique, ex: "maintenance" dans "monitoring, maintenance et
+    débogage") — sans cette pondération, une appellation de maintenance industrielle
+    partageant un seul mot de description pouvait l'emporter sur l'appellation
+    "développeur" réellement correcte, faute de tout autre signal de spécificité (bug
+    réel constaté : "Développeur N8N" classé en "Maintenance informatique et
+    bureautique")."""
+    mots_titre = _mots_pertinents(titre_poste)
+    mots_desc = _mots_pertinents(description)
+    poids = {m: _POIDS_MOT_TITRE for m in mots_titre}
+    for m in mots_desc:
+        poids[m] = max(poids.get(m, 0.0), _POIDS_MOT_DESCRIPTION) if m in poids else _POIDS_MOT_DESCRIPTION
+    # Un mot présent à la fois dans le titre et la description reste au poids fort du
+    # titre (déjà géré par le max ci-dessus) — jamais additionné, pour ne pas fausser le
+    # score par simple répétition du même mot.
+    mots = list(poids.keys())
+    # Si le titre ET la description sont entièrement génériques (ex: "Cadre administratif"),
+    # aucun indice fiable — mieux vaut ne rien suggérer que suggérer au hasard.
     if not mots:
         return []
-    mots = corriger_mots_flous(mots)  # N04 : flou Levenshtein<=1, exact d'abord
     q = Q()
     for mot in mots:
         q |= Q(cle_recherche__icontains=mot)
@@ -62,11 +86,10 @@ def _candidats_pour_experience(titre_poste, description, limite=10):
         .values_list('libelle', 'metier__id', 'metier__libelle', 'metier__metier_canonique_id')
         .distinct()[:500]
     )
-    mots_set = set(mots)
 
     def _score(libelle):
         libelle_mots = set(re.findall(r"\w+", normaliser_recherche(libelle)))
-        return len(mots_set & libelle_mots)
+        return sum(poids[m] for m in mots if m in libelle_mots)
 
     pool_scores = [(lib, mid, mlib, canon_id, _score(lib)) for lib, mid, mlib, canon_id in pool]
     pool_scores = [item for item in pool_scores if item[4] > 0]

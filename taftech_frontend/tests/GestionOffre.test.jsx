@@ -47,6 +47,7 @@ vi.mock("../src/Services/jobsService", () => ({
     evaluerCandidature: vi.fn(),
     telechargerBulletin: vi.fn(),
     marquerCandidatureConsultee: vi.fn().mockResolvedValue(null),
+    getQuotaIA: vi.fn().mockResolvedValue({ quota_restant_jour: null, quota_restant_mois: null, disponible: true }),
   },
 }));
 

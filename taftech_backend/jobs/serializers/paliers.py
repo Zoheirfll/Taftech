@@ -9,4 +9,6 @@ class PalierSerializer(serializers.ModelSerializer):
             'id', 'nom', 'prix_mensuel_da', 'prix_annuel_da', 'remise_annuelle_active',
             'limite_offres', 'credits_mois', 'acces_coordonnees', 'acces_ia_recommandes',
             'acces_ia_avancee', 'acces_equipe', 'support_label', 'ordre', 'actif',
+            'quota_generation_offre_jour', 'quota_generation_offre_mois',
+            'quota_analyse_recruteur_jour', 'quota_analyse_recruteur_mois',
         ]

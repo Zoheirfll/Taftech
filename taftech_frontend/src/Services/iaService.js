@@ -55,6 +55,18 @@ export const iaService = {
     }
   },
 
+  // Quota IA courant pour une fonctionnalité (jour/mois restants) — lecture seule, ne
+  // consomme rien, sert à afficher "il vous reste X/Y" avant le premier clic.
+  getQuotaIA: async (fonction) => {
+    try {
+      const response = await api.get(`jobs/ia/quota/${fonction}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUOTA_IA", err);
+      throw err;
+    }
+  },
+
   // Offres recommandées (matching inverse)
   getOffresRecommandees: async () => {
     try {

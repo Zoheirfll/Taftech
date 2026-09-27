@@ -79,7 +79,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Parser CV")).toBeInTheDocument();
-      expect(screen.getByText("Analyse carrière candidat")).toBeInTheDocument();
+      expect(screen.getByText("Analyse carrière candidat (suggestions métiers)")).toBeInTheDocument();
       expect(screen.getByText("Analyse IA recruteur")).toBeInTheDocument();
       expect(screen.getByText("Génération d'offre IA")).toBeInTheDocument();
     });

@@ -105,6 +105,38 @@ class ProfilCandidatAPIView(APIView):
                     data[champ_url] = valeur
                 except DjangoValidationError:
                     data[champ_url] = ""
+
+        # Ces champs sont exposés en LECTURE via SerializerMethodField (masquage CVthèque avant
+        # déblocage — voir ProfilCandidatDTO) : DRF ignore silencieusement tout champ déclaré
+        # SerializerMethodField à l'écriture, `serializer.save()` ne les persisterait donc
+        # jamais. Même bypass que les champs User ci-dessus — assignés directement sur `profil`,
+        # persistés par le même `serializer.save()` plus bas (même instance Python, un seul
+        # UPDATE en base).
+        CHAMPS_TEXTE_DIRECTS = {'bio': None, 'commune': 100, 'adresse': 255, 'salaire_souhaite': 100}
+        for champ, max_len in CHAMPS_TEXTE_DIRECTS.items():
+            val = data.get(champ)
+            if val is not None:
+                if max_len and isinstance(val, str) and len(val) > max_len:
+                    val = val[:max_len]
+                setattr(profil, champ, val)
+        for champ_url in ('linkedin', 'github'):
+            val = data.get(champ_url)
+            if val is not None:
+                setattr(profil, champ_url, val)
+        diplome_val = data.get('diplome')
+        if diplome_val is not None:
+            valeurs_valides = {c[0] for c in ProfilCandidat._meta.get_field('diplome').choices}
+            if diplome_val == '' or diplome_val in valeurs_valides:
+                profil.diplome = diplome_val or None
+        nouvelle_photo = request.FILES.get('photo_profil')
+        if nouvelle_photo:
+            try:
+                for validator in ProfilCandidat._meta.get_field('photo_profil').validators:
+                    validator(nouvelle_photo)
+            except DjangoValidationError as e:
+                return Response({"error": " ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            profil.photo_profil = nouvelle_photo
+
         serializer = ProfilCandidatDTO(profil, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()

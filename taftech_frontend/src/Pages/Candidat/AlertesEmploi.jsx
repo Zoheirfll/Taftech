@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { Bell, Trash2, Plus, X } from "lucide-react";
+import { Bell, Trash2, Plus, X, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -15,6 +16,7 @@ const AlertesEmploi = () => {
   const [wilayas, setWilayas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
   const [newAlerte, setNewAlerte] = useState({
     mots_cles: "",
     wilaya: "",
@@ -78,6 +80,23 @@ const AlertesEmploi = () => {
     }
   };
 
+  const handleToggleExpand = async (alerte) => {
+    const ouverture = expandedId !== alerte.id;
+    setExpandedId(ouverture ? alerte.id : null);
+    // Marquer vue seulement à l'ouverture, et seulement s'il y avait quelque chose de
+    // nouveau à voir — évite un appel réseau inutile sur une alerte déjà à 0.
+    if (ouverture && alerte.nb_nouvelles_offres > 0) {
+      try {
+        await jobsService.marquerAlerteVue(alerte.id);
+        setAlertes((prev) =>
+          prev.map((a) => (a.id === alerte.id ? { ...a, nb_nouvelles_offres: 0 } : a)),
+        );
+      } catch (error) {
+        reportError("ECHEC_MARQUER_ALERTE_VUE", error);
+      }
+    }
+  };
+
   const handleDelete = (alerteId) => {
     confirmToast("Supprimer cette alerte ?", async () => {
       try {
@@ -138,37 +157,79 @@ const AlertesEmploi = () => {
         ) : (
           <div className={`divide-y ${tw.divideBase}`}>
             {alertes.map((alerte) => (
-              <div
-                key={alerte.id}
-                className="flex justify-between items-center px-5 py-4"
-              >
-                <div>
-                  <p className={`text-sm font-semibold ${tw.textStrong}`}>
-                    {alerte.mots_cles}
-                  </p>
-                  <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
-                    {alerte.wilaya ? (alerte.wilaya.split(" - ")[1] || alerte.wilaya) : "Toute l'Algérie"} ·{" "}
-                    {alerte.frequence === "QUOTIDIENNE"
-                      ? "Quotidienne"
-                      : "Hebdomadaire"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
+              <div key={alerte.id}>
+                <div className="flex justify-between items-center px-5 py-4">
                   <button
-                    onClick={() => handleToggle(alerte.id, alerte.est_active)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? tw.toggleTrackOn : tw.toggleTrackOff}`}
+                    type="button"
+                    onClick={() => handleToggleExpand(alerte)}
+                    className="flex items-center gap-2 text-left flex-1 min-w-0"
                   >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full transition ${tw.toggleThumb} ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}
-                    />
+                    {expandedId === alerte.id ? (
+                      <ChevronUp size={16} className={`shrink-0 ${tw.textMuted700}`} />
+                    ) : (
+                      <ChevronDown size={16} className={`shrink-0 ${tw.textMuted700}`} />
+                    )}
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold ${tw.textStrong} flex items-center gap-2`}>
+                        {alerte.mots_cles}
+                        {alerte.nb_nouvelles_offres > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${tw.badgeAccent}`}>
+                            +{alerte.nb_nouvelles_offres} nouvelle{alerte.nb_nouvelles_offres > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </p>
+                      <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
+                        {alerte.wilaya ? (alerte.wilaya.split(" - ")[1] || alerte.wilaya) : "Toute l'Algérie"} ·{" "}
+                        {alerte.frequence === "QUOTIDIENNE"
+                          ? "Quotidienne"
+                          : "Hebdomadaire"}
+                      </p>
+                    </div>
                   </button>
-                  <button
-                    onClick={() => handleDelete(alerte.id)}
-                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <button
+                      onClick={() => handleToggle(alerte.id, alerte.est_active)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${alerte.est_active ? tw.toggleTrackOn : tw.toggleTrackOff}`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full transition ${tw.toggleThumb} ${alerte.est_active ? "translate-x-5" : "translate-x-0"}`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(alerte.id)}
+                      className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
+                {expandedId === alerte.id && (
+                  <div className={`px-5 pb-4 ${tw.surfaceSubtle}`}>
+                    {(alerte.offres_nouvelles || []).length === 0 ? (
+                      <p className={`text-xs ${tw.textMuted700} py-2`}>
+                        Aucune offre trouvée pour cette alerte pour l'instant.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5 pt-1">
+                        {alerte.offres_nouvelles.map((o) => (
+                          <Link
+                            key={o.id}
+                            to={`/jobs/${o.id}`}
+                            className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors ${tw.surface} hover:bg-slate-50`}
+                          >
+                            <div className="min-w-0">
+                              <p className={`text-xs font-semibold ${tw.textStrong} truncate`}>{o.titre}</p>
+                              <p className={`text-[10px] ${tw.textMuted700} truncate`}>{o.entreprise}</p>
+                            </div>
+                            <span className={`text-[10px] ${tw.textMuted700} flex items-center gap-1 shrink-0`}>
+                              <MapPin size={10} /> {o.wilaya}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

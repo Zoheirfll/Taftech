@@ -28,14 +28,18 @@ class Command(BaseCommand):
         self.stdout.write("Lancement du robot d'alertes TafTech...")
 
         maintenant = timezone.now()
-        hier = maintenant - timedelta(days=1)
-        semaine_derniere = maintenant - timedelta(days=7)
 
         alertes_actives = AlerteEmploi.objects.filter(est_active=True).select_related('candidat', 'candidat__profil_candidat')
         total_notifs = 0
         emails_envoyes = 0
 
         for alerte in alertes_actives:
+            # Cadence : respecte la fréquence choisie par le candidat même si le cron tourne
+            # plus souvent (ou a manqué un jour) — pas de renvoi avant l'échéance.
+            delai_min = timedelta(days=1) if alerte.frequence == 'QUOTIDIENNE' else timedelta(days=7)
+            if alerte.derniere_alerte_envoyee and maintenant - alerte.derniere_alerte_envoyee < delai_min:
+                continue
+
             # Offres approuvées, actives, non clôturées
             offres = OffreEmploi.objects.filter(
                 est_active=True,
@@ -43,11 +47,11 @@ class Command(BaseCommand):
                 est_cloturee=False,
             ).select_related('entreprise')
 
-            # Filtre temporel
-            if alerte.frequence == 'QUOTIDIENNE':
-                offres = offres.filter(date_publication__gte=hier)
-            else:
-                offres = offres.filter(date_publication__gte=semaine_derniere)
+            # Filtre temporel : depuis le dernier envoi réussi (jamais un fenêtre glissante fixe
+            # par rapport à "maintenant" — une offre publiée entre deux exécutions du cron ne
+            # doit jamais être manquée). Repli sur la création de l'alerte si jamais envoyée.
+            depuis = alerte.derniere_alerte_envoyee or alerte.date_creation
+            offres = offres.filter(date_publication__gte=depuis)
 
             # Filtre géographique
             if alerte.wilaya:
@@ -88,6 +92,11 @@ class Command(BaseCommand):
                     total_notifs += 1
                 except Exception as e:
                     self.stderr.write(f"Erreur notification interne pour {candidat.email} : {e}")
+                # Avance le curseur dès que ces offres ont été traitées pour cette alerte —
+                # que l'email parte ou non (newsletter désactivée) — sinon les mêmes offres
+                # seraient re-signalées indéfiniment à chaque exécution du cron.
+                alerte.derniere_alerte_envoyee = maintenant
+                alerte.save(update_fields=['derniere_alerte_envoyee'])
 
             # Email si le candidat a activé les newsletters
             if not hasattr(candidat, 'profil_candidat') or not candidat.profil_candidat.notif_newsletter:

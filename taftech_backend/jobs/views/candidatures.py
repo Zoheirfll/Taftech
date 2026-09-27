@@ -61,6 +61,8 @@ class PostulerAPIView(APIView):
                 "wilaya": profil.wilaya,
                 "commune": profil.commune,
                 "adresse": profil.adresse,
+                "date_naissance": str(request.user.date_naissance) if request.user.date_naissance else None,
+                "sexe": profil.sexe,
                 "diplome": profil.diplome,
                 "metier": profil.metier.libelle if profil.metier else None,
                 "competences": profil.competences,

@@ -52,7 +52,7 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     expect(screen.getByText("Tableau de bord")).toBeInTheDocument();
     expect(screen.getByText("CVthèque")).toBeInTheDocument();
     expect(screen.getByText("Favoris")).toBeInTheDocument();
-    expect(screen.getByText("Messages")).toBeInTheDocument();
+    expect(screen.getByText("Candidatures spontanées")).toBeInTheDocument();
     expect(screen.getByText("Publier une offre")).toBeInTheDocument();
     expect(screen.getByText("Questionnaires")).toBeInTheDocument();
     expect(screen.getByText("Mon équipe")).toBeInTheDocument();

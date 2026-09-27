@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { jobsService } from "../../Services/jobsService";
+import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
+import QuotaIABadge from "../../Components/QuotaIABadge";
 import {
   Sparkles,
   TrendingUp,
@@ -76,6 +78,8 @@ const SuggestionsCarriere = () => {
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const [loadingAnalyse, setLoadingAnalyse] = useState(false);
   const [analysedemandee, setAnalyseDemandee] = useState(false);
+  const [analyseGenereLe, setAnalyseGenereLe] = useState(null);
+  const [quotaAnalyse, setQuotaAnalyse] = useState(null);
   const [page, setPage] = useState(1);
 
   const fetchSuggestions = async () => {
@@ -83,7 +87,7 @@ const SuggestionsCarriere = () => {
     setPage(1);
     try {
       const data = await jobsService.getMetiersAccessibles();
-      setMetiers(data);
+      setMetiers(data.filter((m) => m.score >= 35));
     } catch (err) {
       reportError("ECHEC_GET_METIERS_ACCESSIBLES", err);
     } finally {
@@ -93,6 +97,22 @@ const SuggestionsCarriere = () => {
 
   useEffect(() => {
     fetchSuggestions();
+    (async () => {
+      try {
+        const [profil, quota] = await Promise.all([
+          profilService.getProfil(),
+          jobsService.getQuotaIA("SUGGESTIONS_METIER"),
+        ]);
+        if (profil.derniere_analyse_carriere) {
+          setAnalyse(profil.derniere_analyse_carriere);
+          setAnalyseDemandee(true);
+          setAnalyseGenereLe(profil.analyse_carriere_le);
+        }
+        setQuotaAnalyse(quota);
+      } catch (err) {
+        reportError("ECHEC_CHARGEMENT_ANALYSE_CARRIERE_PERSISTEE", err);
+      }
+    })();
   }, []);
 
   const handleAnalyseIA = async () => {
@@ -102,11 +122,16 @@ const SuggestionsCarriere = () => {
     try {
       const data = await jobsService.getAnalyseCarriere();
       setAnalyse(data.analyse);
+      setAnalyseGenereLe(data.genere_le || null);
+      if (data.quota_ia) setQuotaAnalyse({ ...data.quota_ia, disponible: true });
     } catch (err) {
       reportError("ECHEC_GET_ANALYSE_CARRIERE", err);
       setAnalyse(
-        "Service IA temporairement indisponible. Réessayez plus tard.",
+        err.response?.data?.error || "Service IA temporairement indisponible. Réessayez plus tard.",
       );
+      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+        setQuotaAnalyse({ ...err.response.data, disponible: false });
+      }
     } finally {
       setLoadingAnalyse(false);
     }
@@ -220,15 +245,25 @@ const SuggestionsCarriere = () => {
               Analyse IA personnalisée
             </h2>
           </div>
-          {(!analysedemandee || (!loadingAnalyse && !analyse)) && (
+          {!loadingAnalyse && (
             <button
               onClick={handleAnalyseIA}
-              className={`flex items-center gap-2 px-4 py-2 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors`}
+              disabled={quotaAnalyse && quotaAnalyse.disponible === false}
+              className={`flex items-center gap-2 px-4 py-2 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <Sparkles size={13} /> Analyser mon profil
+              <Sparkles size={13} /> {analysedemandee && analyse ? "Ré-analyser" : "Analyser mon profil"}
             </button>
           )}
         </div>
+
+        {(analyseGenereLe || quotaAnalyse) && (
+          <div className={`px-5 py-2 border-b ${tw.borderSubtle} ${tw.surfaceMuted} flex items-center gap-2 text-[11px] ${tw.textMuted700}`}>
+            {analyseGenereLe && (
+              <span>Dernière analyse le {new Date(analyseGenereLe).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+            <QuotaIABadge quota={quotaAnalyse} />
+          </div>
+        )}
 
         <div className="p-5">
           {!analysedemandee ? (

@@ -88,7 +88,9 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'salaire_souhaite', 'mobilite', 'situation_actuelle',
             'wilaya', 'commune', 'adresse', 'date_joined', 'is_favori', 'last_login', 'user_id',
-            'est_debloque', 'bio', 'linkedin', 'github', 'visible_cvtheque'
+            'est_debloque', 'bio', 'linkedin', 'github', 'visible_cvtheque',
+            'derniers_conseils_dashboard', 'conseils_dashboard_le',
+            'derniere_analyse_carriere', 'analyse_carriere_le',
         )
 
     def _peut_voir_coordonnees(self, obj):

@@ -42,3 +42,4 @@ from .articles import ArticleCategorieSerializer, ArticleListSerializer, Article
 from .banners import SiteAnnonceSerializer, BanniereAccueilSerializer
 from .pages import PageStatiqueSerializer
 from .ai_config import AIConfigSerializer
+from .ia_quota_admin import QuotaIAOverrideSerializer

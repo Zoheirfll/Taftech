@@ -48,6 +48,10 @@ const AdminPaliers = () => {
       prix_annuel_da: form.prix_annuel_da === "" ? null : Number(form.prix_annuel_da),
       limite_offres: form.limite_offres === "" ? null : Number(form.limite_offres),
       credits_mois: form.credits_mois === "" ? null : Number(form.credits_mois),
+      quota_generation_offre_jour: form.quota_generation_offre_jour === "" ? null : Number(form.quota_generation_offre_jour),
+      quota_generation_offre_mois: form.quota_generation_offre_mois === "" ? null : Number(form.quota_generation_offre_mois),
+      quota_analyse_recruteur_jour: form.quota_analyse_recruteur_jour === "" ? null : Number(form.quota_analyse_recruteur_jour),
+      quota_analyse_recruteur_mois: form.quota_analyse_recruteur_mois === "" ? null : Number(form.quota_analyse_recruteur_mois),
       ordre: Number(form.ordre) || 0,
     };
     try {
@@ -158,6 +162,27 @@ const AdminPaliers = () => {
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="acces_equipe" className={`${tw.accentPrimary} w-4 h-4`} checked={!!form.acces_equipe} onChange={(e) => setForm({ ...form, acces_equipe: e.target.checked })} />
                 <label htmlFor="acces_equipe" className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}>Gestion d'équipe multi-utilisateurs</label>
+              </div>
+              <div className="border-t border-slate-200 pt-3">
+                <p className={`text-xs font-bold ${tw.textStrong} mb-2`}>Quotas IA</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="quota_generation_offre_jour" className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Génération d'offre — /jour</label>
+                    <input id="quota_generation_offre_jour" type="number" min="0" className={inputClass} placeholder="Illimité" value={form.quota_generation_offre_jour ?? ""} onChange={(e) => setForm({ ...form, quota_generation_offre_jour: e.target.value })} />
+                  </div>
+                  <div>
+                    <label htmlFor="quota_generation_offre_mois" className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Génération d'offre — /mois</label>
+                    <input id="quota_generation_offre_mois" type="number" min="0" className={inputClass} placeholder="Illimité" value={form.quota_generation_offre_mois ?? ""} onChange={(e) => setForm({ ...form, quota_generation_offre_mois: e.target.value })} />
+                  </div>
+                  <div>
+                    <label htmlFor="quota_analyse_recruteur_jour" className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Analyse IA candidature — /jour</label>
+                    <input id="quota_analyse_recruteur_jour" type="number" min="0" className={inputClass} placeholder="Illimité" value={form.quota_analyse_recruteur_jour ?? ""} onChange={(e) => setForm({ ...form, quota_analyse_recruteur_jour: e.target.value })} />
+                  </div>
+                  <div>
+                    <label htmlFor="quota_analyse_recruteur_mois" className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Analyse IA candidature — /mois</label>
+                    <input id="quota_analyse_recruteur_mois" type="number" min="0" className={inputClass} placeholder="Illimité" value={form.quota_analyse_recruteur_mois ?? ""} onChange={(e) => setForm({ ...form, quota_analyse_recruteur_mois: e.target.value })} />
+                  </div>
+                </div>
               </div>
               <div>
                 <label htmlFor="support_label" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Support (texte libre)</label>

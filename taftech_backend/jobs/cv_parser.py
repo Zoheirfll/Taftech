@@ -884,6 +884,7 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
 - github : URL complète du profil GitHub si présente. Sinon null.
 - bio : résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences. Sinon null.
 - wilaya : le nom de la wilaya/ville algérienne de résidence du candidat, tel qu'écrit dans le CV (ex: "Oran", "Alger"). Si non mentionnée : null.
+- adresse : l'adresse postale complète du candidat si explicitement écrite dans le CV (rue, quartier, ville — ex: "Cité 100 Logements, Bt 12, El Kerma, Oran"), telle qu'écrite. Ne recopie jamais juste la wilaya seule ici (déjà capturée par le champ wilaya). Si absente : null.
 - diplome : le libellé exact du diplôme le PLUS ÉLEVÉ obtenu par le candidat, tel qu'écrit dans le CV (ex: "Master 2 en Informatique", "Licence"). Si non déductible : null.
 - service_militaire : uniquement si explicitement mentionné dans le CV, un des mots suivants : "non concerné", "dégagé", "sursitaire", "inapte", "incorporé". Sinon null.
 - sexe : déduis "HOMME" ou "FEMME" si le prénom, les accords grammaticaux (ex: "née le", "marié"/"mariée", "responsable" au féminin) ou une mention explicite le permettent clairement. Si vraiment ambigu ou non déductible : null.
@@ -914,6 +915,7 @@ FORMAT EXIGÉ (JSON strict, un seul objet) :
   "github": "string ou null",
   "bio": "string ou null",
   "wilaya": "string ou null",
+  "adresse": "string ou null",
   "diplome": "string ou null",
   "service_militaire": "string ou null",
   "sexe": "HOMME ou FEMME ou null",
@@ -1352,24 +1354,41 @@ MOIS_FR = {
 }
 
 
-def _normaliser_date_naissance(raw):
+def _date_presente_dans_texte(jour, mois, annee, texte_norm):
+    """Vérifie que la date (jour/mois/année) apparaît littéralement dans le
+    texte brut du CV — filet anti-hallucination : Groq peut renvoyer un
+    `date_naissance_raw` plausible mais absent du document source (observé en
+    pratique sur un CV réel sans aucune date de naissance)."""
+    motif_num = r'0?{}\s*[/\-.]\s*0?{}\s*[/\-.]\s*{}'.format(jour, mois, annee)
+    if re.search(motif_num, texte_norm):
+        return True
+    mois_nom = next((nom for nom, num in MOIS_FR.items() if num == mois), None)
+    if mois_nom and re.search(r'\b0?{}\s+{}\s+{}\b'.format(jour, mois_nom, annee), texte_norm):
+        return True
+    return False
+
+
+def _normaliser_date_naissance(raw, texte_source=""):
     """Convertit une date de naissance brute extraite du CV ("12/03/1990",
-    "12-03-1990", "12 mars 1990") en ISO YYYY-MM-DD, ou None si non reconnue —
-    seul format accepté par un <input type="date"> côté frontend."""
+    "12-03-1990", "12 mars 1990") en ISO YYYY-MM-DD, ou None si non reconnue
+    OU si la date n'apparaît pas réellement dans `texte_source` (anti-
+    hallucination — voir `_date_presente_dans_texte`). Seul format accepté
+    par un <input type="date"> côté frontend."""
     if not raw:
         return None
     raw = str(raw).strip().lower()
+    texte_norm = (texte_source or "").lower()
     m = re.search(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})', raw)
     if m:
         jour, mois, annee = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if 1 <= jour <= 31 and 1 <= mois <= 12:
+        if 1 <= jour <= 31 and 1 <= mois <= 12 and _date_presente_dans_texte(jour, mois, annee, texte_norm):
             return f"{annee:04d}-{mois:02d}-{jour:02d}"
     m = re.search(r'(\d{1,2})\s+([a-zà-ÿ]+)\s+(\d{4})', raw)
     if m:
         jour = int(m.group(1))
         mois = MOIS_FR.get(m.group(2))
         annee = int(m.group(3))
-        if mois and 1 <= jour <= 31:
+        if mois and 1 <= jour <= 31 and _date_presente_dans_texte(jour, mois, annee, texte_norm):
             return f"{annee:04d}-{mois:02d}-{jour:02d}"
     return None
 
@@ -1477,6 +1496,7 @@ def parse_cv(file_path, file_name):
         "photo": photo,
         "email": ai_data.get("email"),
         "wilaya": ai_data.get("wilaya"),
+        "adresse": ai_data.get("adresse"),
         "diplome": ai_data.get("diplome"),
         "diplome_ref": diplome_ref.id if diplome_ref else None,
         "diplome_ref_libelle": diplome_ref.libelle if diplome_ref else None,
@@ -1485,7 +1505,7 @@ def parse_cv(file_path, file_name):
         "specialite": None,
         "service_militaire": ai_data.get("service_militaire"),
         "sexe": _normaliser_sexe(ai_data.get("sexe")),
-        "date_naissance": _normaliser_date_naissance(ai_data.get("date_naissance_raw")),
+        "date_naissance": _normaliser_date_naissance(ai_data.get("date_naissance_raw"), text),
         "situation_actuelle": _normaliser_situation_actuelle(ai_data.get("situation_actuelle")),
         "mobilite": _normaliser_mobilite(ai_data.get("mobilite")),
         "salaire_souhaite": ai_data.get("salaire_souhaite"),

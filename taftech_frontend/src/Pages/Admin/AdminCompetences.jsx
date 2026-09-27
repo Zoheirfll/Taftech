@@ -13,17 +13,22 @@ const AdminCompetences = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
-  const fetchItems = async (s = "") => {
+  const fetchItems = async (s = "", p = 1) => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminCompetences(s);
-      setItems(data);
+      const data = await jobsService.getAdminCompetences(s, p);
+      setItems(data.results);
+      setTotalPages(data.total_pages);
+      setTotalCount(data.count);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -39,8 +44,14 @@ const AdminCompetences = () => {
   const handleSearch = (e) => {
     const val = e.target.value;
     setSearch(val);
+    setPage(1);
     clearTimeout(window._competenceSearchTimer);
-    window._competenceSearchTimer = setTimeout(() => fetchItems(val), 400);
+    window._competenceSearchTimer = setTimeout(() => fetchItems(val, 1), 400);
+  };
+
+  const handlePage = (p) => {
+    setPage(p);
+    fetchItems(search, p);
   };
 
   const handleOpenCreate = () => {
@@ -67,7 +78,7 @@ const AdminCompetences = () => {
         toast.success("Compétence ajoutée !");
       }
       setShowModal(false);
-      fetchItems(search);
+      fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_SAVE_COMPETENCE", err);
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
@@ -79,6 +90,7 @@ const AdminCompetences = () => {
       try {
         await jobsService.deleteCompetence(id);
         setItems(items.filter((i) => i.id !== id));
+        setTotalCount((c) => c - 1);
         toast.success("Compétence supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_COMPETENCE", err);
@@ -157,6 +169,22 @@ const AdminCompetences = () => {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle}`}>
+            <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePage(p)}
+                  className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {showModal && (

@@ -34,6 +34,7 @@ export const useOnboardingWizard = () => {
   const [constants, setConstants] = useState({});
   const [parsedData, setParsedData] = useState(null);
   const [parserLoading, setParserLoading] = useState(false);
+  const [quotaParserCV, setQuotaParserCV] = useState(null);
   // Verrou anti-double-clic partagé par toutes les etapes "Continuer" — une
   // sauvegarde reseau lente ne doit jamais pouvoir en declencher une seconde
   // en parallele si l'utilisateur reclique avant la reponse.
@@ -51,6 +52,12 @@ export const useOnboardingWizard = () => {
   const [competencesMode, setCompetencesMode] = useState("remplacer");
   const [prefsForm, setPrefsForm] = useState({});
   const [pendingPhoto, setPendingPhoto] = useState(null);
+  // Le CV parsé n'était jusqu'ici jamais attaché au profil (`cv_pdf`) — seules les données
+  // extraites l'étaient, le parser backend écrit le fichier envoyé dans un temp file jeté
+  // après analyse. Même pattern que `pendingPhoto` : on garde le fichier réellement
+  // sélectionné par l'utilisateur (pas de re-upload si `uploadCV(null)` a réutilisé le CV
+  // déjà sur le profil) et on l'envoie avec le reste des infos à l'étape suivante.
+  const [pendingCvFile, setPendingCvFile] = useState(null);
 
   const refresh = useCallback(async () => {
     const [p, c, nomenclatureFormation] = await Promise.all([
@@ -67,6 +74,7 @@ export const useOnboardingWizard = () => {
       sexe: p.sexe || "",
       wilaya: p.wilaya || "",
       commune: p.commune || "",
+      adresse: p.adresse || "",
       telephone: p.telephone || "",
       diplome: p.diplome || "",
       diplome_ref: p.diplome_ref || "",
@@ -96,6 +104,7 @@ export const useOnboardingWizard = () => {
     (async () => {
       try {
         await refresh();
+        jobsService.getQuotaIA("PARSER_CV").then(setQuotaParserCV).catch(() => {});
       } catch (err) {
         toast.error(apiErrMsg(err, "Erreur de chargement du profil."));
         reportError("ECHEC_FETCH_ONBOARDING_PROFIL", err);
@@ -117,6 +126,9 @@ export const useOnboardingWizard = () => {
         toast.error(result.error || "Impossible d'analyser ce CV.");
         return;
       }
+      // Le fichier réellement choisi (pas null == "réutiliser le CV déjà sur le profil")
+      // doit être attaché au profil, pas seulement analysé — voir saveInfosStep.
+      if (file) setPendingCvFile(file);
       setParsedData(result);
       let prenom, nom;
       if (result.nom_complet) {
@@ -139,6 +151,7 @@ export const useOnboardingWizard = () => {
         last_name: nom || prev.last_name,
         telephone: result.telephone || prev.telephone,
         wilaya: result.wilaya || prev.wilaya,
+        adresse: result.adresse || prev.adresse,
         diplome: result.diplome || prev.diplome,
         diplome_ref: result.diplome_ref || prev.diplome_ref,
         diplome_ref_libelle: result.diplome_ref_libelle || prev.diplome_ref_libelle,
@@ -215,10 +228,14 @@ export const useOnboardingWizard = () => {
           })),
         );
       }
+      if (result.quota_ia) setQuotaParserCV({ ...result.quota_ia, disponible: true });
       nextStep();
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de l'analyse."));
       reportError("ECHEC_PARSER_CV_ONBOARDING", err);
+      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+        setQuotaParserCV({ ...err.response.data, disponible: false });
+      }
     } finally {
       setParserLoading(false);
     }
@@ -238,9 +255,16 @@ export const useOnboardingWizard = () => {
     if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
       formData.append("photo_profil", pendingPhoto);
     }
+    // Toujours attaché si un fichier a été réellement choisi lors du parsing — c'est le
+    // fichier que le candidat vient explicitement de sélectionner, indépendant du mode
+    // remplacer/ajouter (qui ne s'applique qu'aux champs texte du profil).
+    if (pendingCvFile) {
+      formData.append("cv_pdf", pendingCvFile);
+    }
     try {
       await profilService.updateProfil(formData);
       setPendingPhoto(null);
+      setPendingCvFile(null);
       await refresh();
       nextStep();
     } catch (err) {
@@ -249,7 +273,7 @@ export const useOnboardingWizard = () => {
     } finally {
       setSaving(false);
     }
-  }, [infosForm, infosMode, pendingPhoto, profil, nextStep, refresh, saving]);
+  }, [infosForm, infosMode, pendingPhoto, pendingCvFile, profil, nextStep, refresh, saving]);
 
   const saveExperiencesStep = useCallback(async () => {
     if (saving) return;
@@ -384,7 +408,7 @@ export const useOnboardingWizard = () => {
   return {
     step, goToStep, nextStep, skipStep,
     loading, profil, constants, saving,
-    parsedData, parserLoading, uploadCV,
+    parsedData, parserLoading, uploadCV, quotaParserCV,
     infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, pendingPhoto, setPendingPhoto,
     pendingExperiences, setPendingExperiences, experiencesMode, setExperiencesMode, saveExperiencesStep,
     pendingFormations, setPendingFormations, formationsMode, setFormationsMode, saveFormationsStep,

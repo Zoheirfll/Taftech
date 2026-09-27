@@ -54,7 +54,7 @@ from .views import (
     AdminRelationsSimilaireAPIView, AdminFormationsAVerifierAPIView,
     AdminRelationsSpecialiteAPIView,
     AnalyseCarriereGroqAPIView,
-    AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView,
+    AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView, QuotaIAAffichageAPIView,
 
     # Bulletin PDF
     GenererBulletinPDFAPIView,
@@ -81,7 +81,7 @@ from .views import (
     PageStatiquePublicAPIView, PageStatiqueAdminAPIView, PageStatiqueListePublicAPIView,
 
     # Config IA
-    AIConfigAdminAPIView,
+    AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView,
 
     # Nouveau tableau de bord candidat (specs/important-features)
     ScoreProfilAPIView, MetiersAccessiblesAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
@@ -122,6 +122,7 @@ urlpatterns = [
     path('candidatures/<int:candidature_id>/bulletin/', GenererBulletinPDFAPIView.as_view(), name='generer-bulletin'),
     path('candidatures/<int:candidature_id>/analyse-groq/', AnalyseGroqRecruteurAPIView.as_view(), name='analyse-groq'),
     path('ia/generer-offre/', GenererOffreIAAPIView.as_view(), name='generer-offre-ia'),
+    path('ia/quota/<str:fonction>/', QuotaIAAffichageAPIView.as_view(), name='quota-ia-affichage'),
     path('jobs/<int:offre_id>/top5/', Top5CandidatsAPIView.as_view(), name='offre-top5'),
     path('candidatures/<int:candidature_id>/marquer-consultee/', CandidatureMarquerConsulteeAPIView.as_view(), name='candidature-marquer-consultee'),
 
@@ -252,6 +253,9 @@ urlpatterns = [
     path('pages/', PageStatiqueListePublicAPIView.as_view(), name='pages-statiques-liste'),
     path('pages/<slug:slug>/', PageStatiquePublicAPIView.as_view(), name='page-statique-public'),
     path('admin/ai-config/', AIConfigAdminAPIView.as_view(), name='admin-ai-config'),
+    path('admin/quota-ia/overrides/', QuotaIAOverridesAPIView.as_view(), name='admin-quota-ia-overrides'),
+    path('admin/quota-ia/overrides/<int:pk>/', QuotaIAOverridesAPIView.as_view(), name='admin-quota-ia-override-detail'),
+    path('admin/quota-ia/usage/', QuotaIAUsageAPIView.as_view(), name='admin-quota-ia-usage'),
 
     # Nouveau tableau de bord candidat
     path('score-profil/', ScoreProfilAPIView.as_view(), name='score-profil'),

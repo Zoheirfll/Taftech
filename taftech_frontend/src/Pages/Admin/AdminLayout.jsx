@@ -19,11 +19,9 @@ import {
   Newspaper,
   GalleryHorizontal,
   FileEdit,
-  Bot,
   CalendarClock,
   FolderLock,
   TrendingUp,
-  Coins,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
@@ -52,17 +50,36 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "Communauté",
+    // Gestion des comptes plateforme — distinct de "Modération" (valider du contenu créé par
+    // les comptes) et de "Facturation" (ce que paie un compte) : ici, l'identité/le rôle.
+    label: "Comptes",
     items: [
       { to: "/admin-taftech/utilisateurs", icon: Users, label: "Utilisateurs" },
-      { to: "/admin-taftech/competences", icon: Tags, label: "Référentiel compétences" },
-      { to: "/admin-taftech/referentiel-v2", icon: Briefcase, label: "Référentiel métiers/diplômes", badgeKey: "formations_a_verifier" },
+      { to: "/admin-taftech/comptes-admins", icon: UserCog, label: "Comptes admins" },
+    ],
+  },
+  {
+    // Contenu éditorial du site public + référentiels de données qui l'alimentent (métiers,
+    // compétences) — tout ce qu'un admin publie ou entretient pour les visiteurs/candidats.
+    label: "Contenu & référentiels",
+    items: [
       { to: "/admin-taftech/broadcast", icon: Megaphone, label: "Diffusion" },
       { to: "/admin-taftech/articles", icon: Newspaper, label: "Blog / Articles" },
       { to: "/admin-taftech/bannieres", icon: GalleryHorizontal, label: "Bannières" },
       { to: "/admin-taftech/pages", icon: FileEdit, label: "Pages du site" },
-      { to: "/admin-taftech/ia-config", icon: Bot, label: "Configuration IA" },
+      { to: "/admin-taftech/faq", icon: HelpCircle, label: "FAQ" },
       { to: "/admin-taftech/seo", icon: TrendingUp, label: "SEO" },
+      { to: "/admin-taftech/competences", icon: Tags, label: "Référentiel compétences" },
+      { to: "/admin-taftech/referentiel-v2", icon: Briefcase, label: "Référentiel métiers/diplômes", badgeKey: "formations_a_verifier" },
+    ],
+  },
+  {
+    // Ce que paie/consomme un compte recruteur — paliers, crédits, quotas IA, mentions légales
+    // (facturation). Regroupé avec la page à onglets Abonnements & IA (session du 27/09/2026).
+    label: "Facturation",
+    items: [
+      { to: "/admin-taftech/abonnements-ia", icon: Layers, label: "Abonnements & IA" },
+      { to: "/admin-taftech/mentions-legales", icon: Receipt, label: "Mentions légales" },
     ],
   },
   {
@@ -70,11 +87,6 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin-taftech/audit", icon: ShieldCheck, label: "Journal d'audit" },
       { to: "/admin-taftech/erreurs-systeme", icon: AlertTriangle, label: "Erreurs système" },
-      { to: "/admin-taftech/comptes-admins", icon: UserCog, label: "Comptes admins" },
-      { to: "/admin-taftech/paliers", icon: Layers, label: "Config. Paliers" },
-      { to: "/admin-taftech/credit-packs", icon: Coins, label: "Packs de crédits" },
-      { to: "/admin-taftech/mentions-legales", icon: Receipt, label: "Mentions légales" },
-      { to: "/admin-taftech/faq", icon: HelpCircle, label: "FAQ" },
       { to: "/admin-taftech/rendez-vous", icon: CalendarClock, label: "Rendez-vous" },
       { to: "/admin-taftech/types-documents", icon: FolderLock, label: "Types de documents" },
     ],

@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import SuggestionsCarriere from "../src/Pages/Candidat/SuggestionsCarriere";
 import { jobsService } from "../src/Services/jobsService";
+import { profilService } from "../src/Services/profilService";
 import * as reporter from "../src/utils/errorReporter";
 
 // --- MOCKS ---
@@ -18,6 +19,12 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getMetiersAccessibles: vi.fn(),
     getAnalyseCarriere: vi.fn(),
+    getQuotaIA: vi.fn().mockResolvedValue({ quota_restant_jour: null, quota_restant_mois: null, disponible: true }),
+  },
+}));
+vi.mock("../src/Services/profilService", () => ({
+  profilService: {
+    getProfil: vi.fn().mockResolvedValue({}),
   },
 }));
 

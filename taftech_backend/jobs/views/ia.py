@@ -1,4 +1,6 @@
 import logging
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -105,8 +107,32 @@ class CVParserThrottle(UserRateThrottle):
     scope = 'cv_parser'
 
 
+class QuotaIAAffichageAPIView(APIView):
+    """Lecture seule du quota IA courant pour une fonctionnalité (jour/mois restants) —
+    jamais consommé ici (`verifier_quota_ia` n'écrit rien, seul `consommer_quota_ia` explicite
+    dans chaque vue IA le fait). Sert à afficher le compteur AVANT le premier clic sur un
+    bouton IA (\"Il vous reste X/Y aujourd'hui\") — synchronisé sur la même source que
+    l'enforcement réel, jamais un nombre en dur côté frontend."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, fonction):
+        from ..models import UtilisationIA
+        if fonction not in dict(UtilisationIA.FONCTION_CHOICES):
+            return Response({'error': 'Fonctionnalité inconnue.'}, status=404)
+        from ..ia_quota import verifier_quota_ia
+        ok, payload = verifier_quota_ia(request.user, fonction)
+        payload['disponible'] = ok
+        return Response(payload, status=200)
+
+
 class OffresRecommandeesAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    # Une offre recommandée doit rester une opportunité fraîche, pas n'importe quelle
+    # offre à 100% de matching publiée il y a un an dans un catalogue qui grossit sans
+    # cesse — sinon un nouveau candidat verrait resurgir des annonces obsolètes dès son
+    # premier jour sur le site.
+    RECOMMANDEES_FENETRE_JOURS = 7
 
     def get(self, request):
         if not hasattr(request.user, 'profil_candidat'):
@@ -116,22 +142,24 @@ class OffresRecommandeesAPIView(APIView):
             Candidature.objects.filter(candidat=request.user).values_list('offre_id', flat=True)
         )
         scores = scores_offres_actives_pour_candidat(request.user)
-        top_ids = [oid for oid, total in scores if total >= 80 and oid not in offres_postulees_ids]
-        top_ids.sort(key=lambda oid: dict(scores)[oid], reverse=True)
-        top_ids = top_ids[:10]
+        scores_map = dict(scores)
+        candidates_ids = [oid for oid, total in scores if total >= 80 and oid not in offres_postulees_ids]
+        if not candidates_ids:
+            return Response([], status=status.HTTP_200_OK)
+
+        seuil_date = timezone.now() - timedelta(days=self.RECOMMANDEES_FENETRE_JOURS)
+        offres_map = {
+            o.id: o for o in OffreEmploi.objects.filter(
+                id__in=candidates_ids, date_publication__gte=seuil_date,
+            ).select_related('entreprise')
+        }
+        top_ids = sorted(offres_map.keys(), key=lambda oid: scores_map[oid], reverse=True)[:10]
         if not top_ids:
             return Response([], status=status.HTTP_200_OK)
 
-        scores_map = dict(scores)
-        offres_map = {
-            o.id: o for o in OffreEmploi.objects.filter(id__in=top_ids).select_related('entreprise')
-        }
         offres_scorees = []
         for oid in top_ids:
-            offre = offres_map.get(oid)
-            if not offre:
-                continue
-            offre_data = OffreEmploiSerializer(offre).data
+            offre_data = OffreEmploiSerializer(offres_map[oid]).data
             offre_data['matching_score'] = scores_map[oid]
             offres_scorees.append(offre_data)
         return Response(offres_scorees, status=status.HTTP_200_OK)
@@ -151,6 +179,14 @@ class ParserCVAPIView(APIView):
         from ..models import AIConfig
         if not AIConfig.get_solo().parser_cv_actif:
             return Response({"error": "Le parser CV est temporairement désactivé par l'administrateur."}, status=503)
+
+        from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
+        ok, quota_info = verifier_quota_ia(request.user, 'PARSER_CV')
+        if not ok:
+            return Response(quota_info, status=403)
+        if not acquerir_verrou_ia(request.user, 'PARSER_CV'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'PARSER_CV')
 
         cv_file = request.FILES.get('cv')
         if cv_file:
@@ -215,10 +251,12 @@ class ParserCVAPIView(APIView):
                 f['diplome_ref_libelle'] = type_diplome.libelle if type_diplome else None
                 f['specialite_ref'] = specialite.id if specialite else None
                 f['specialite_ref_libelle'] = specialite.libelle if specialite else None
+            result['quota_ia'] = quota_info
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
+            liberer_verrou_ia(request.user, 'PARSER_CV')
             if os.path.exists(tmp_file.name):
                 os.unlink(tmp_file.name)
 
@@ -244,6 +282,10 @@ class AnalyseCarriereGroqAPIView(APIView):
         ai_config = AIConfig.get_solo()
         if not ai_config.analyse_carriere_actif:
             return Response({'error': "L'analyse carrière IA est temporairement désactivée par l'administrateur."}, status=503)
+        from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
+        ok, quota_info = verifier_quota_ia(request.user, 'SUGGESTIONS_METIER')
+        if not ok:
+            return Response(quota_info, status=403)
         try:
             profil = request.user.profil_candidat
         except Exception:
@@ -266,16 +308,27 @@ Expériences : {', '.join(experiences) if experiences else 'Aucune'}
 Formations : {', '.join(formations) if formations else 'Aucune'}
 Métier souhaité : {metier_souhaite or 'Non renseigné'}
 """
+        if not acquerir_verrou_ia(request.user, 'SUGGESTIONS_METIER'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'SUGGESTIONS_METIER')
         try:
             system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
             analyse = _appel_groq([
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
             ], max_tokens=ai_config.analyse_carriere_max_tokens)
-            return Response({'analyse': analyse})
+            profil.derniere_analyse_carriere = analyse
+            profil.analyse_carriere_le = timezone.now()
+            profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le'])
+            return Response({
+                'analyse': analyse, 'quota_ia': quota_info,
+                'genere_le': profil.analyse_carriere_le.isoformat(),
+            })
         except Exception as e:
             logger.error("Erreur Groq carrière : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
+        finally:
+            liberer_verrou_ia(request.user, 'SUGGESTIONS_METIER')
 
 
 class AnalyseGroqRecruteurAPIView(APIView):
@@ -297,6 +350,11 @@ class AnalyseGroqRecruteurAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise or candidature.offre.entreprise != entreprise:
             return Response({'error': 'Non autorisé.'}, status=403)
+
+        from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
+        ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
+        if not ok:
+            return Response(quota_info, status=403)
 
         snapshot = candidature.profil_snapshot
         if snapshot:
@@ -357,16 +415,21 @@ class AnalyseGroqRecruteurAPIView(APIView):
             .replace("{score}", str(candidature.score_matching))
         )
 
+        if not acquerir_verrou_ia(request.user, 'ANALYSE_RECRUTEUR'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
         try:
             analyse = _appel_groq(
                 [{'role': 'user', 'content': prompt}],
                 max_tokens=ai_config.analyse_recruteur_max_tokens,
                 temperature=0.5
             )
-            return Response({'analyse': analyse})
+            return Response({'analyse': analyse, 'quota_ia': quota_info})
         except Exception as e:
             logger.error("Erreur Groq recruteur : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
+        finally:
+            liberer_verrou_ia(request.user, 'ANALYSE_RECRUTEUR')
 
 
 class GenererOffreIAAPIView(APIView):
@@ -378,12 +441,12 @@ class GenererOffreIAAPIView(APIView):
         ai_config = AIConfig.get_solo()
         if not ai_config.generation_offre_actif:
             return Response({'error': "La génération d'offre IA est temporairement désactivée par l'administrateur."}, status=503)
-        # Vérification palier — génération offre IA débloquée dès Starter (premier palier payant)
-        from .equipe import get_entreprise_for_user
-        from ..paliers_utils import get_palier_actif
-        entreprise = get_entreprise_for_user(request.user)
-        if not entreprise or get_palier_actif(entreprise) is None:
-            return Response({'error': 'Fonctionnalité réservée aux comptes avec un abonnement actif.'}, status=403)
+        # Quota IA — inclut la vérification palier actif (PALIER_INSUFFISANT si aucun
+        # abonnement) et le quota jour/mois configuré sur le palier (voir jobs/ia_quota.py).
+        from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
+        ok, quota_info = verifier_quota_ia(request.user, 'GENERATION_OFFRE')
+        if not ok:
+            return Response(quota_info, status=403)
 
         titre = request.data.get('titre', '').strip()
         metier_id = request.data.get('metier') or None
@@ -422,6 +485,9 @@ class GenererOffreIAAPIView(APIView):
             .replace("{competences_referentiel}", ", ".join(labels_referentiel) if labels_referentiel else "aucun référentiel disponible")
         )
 
+        if not acquerir_verrou_ia(request.user, 'GENERATION_OFFRE'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'GENERATION_OFFRE')
         try:
             import json as _json
             from ..ai_engine import call_ai
@@ -513,7 +579,10 @@ class GenererOffreIAAPIView(APIView):
                 'questions_entretien': questions[:6],
                 'metier_resolu': metier_resolu.id if metier_resolu else None,
                 'metier_resolu_libelle': metier_resolu.libelle if metier_resolu else None,
+                'quota_ia': quota_info,
             })
         except Exception as e:
             logger.error("Erreur GenererOffreIA : %s", e)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
+        finally:
+            liberer_verrou_ia(request.user, 'GENERATION_OFFRE')

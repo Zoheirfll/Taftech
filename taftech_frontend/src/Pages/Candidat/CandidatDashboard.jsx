@@ -4,6 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import { TooltipIcon } from "../../Components/Tooltip";
+import QuotaIABadge from "../../Components/QuotaIABadge";
 import RadialGauge from "../../Components/RadialGauge";
 import { jobUrl } from "../../utils/slugify";
 import {
@@ -27,6 +28,8 @@ import {
   AlertTriangle,
   Lightbulb,
   Search,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { tw } from "../../theme";
 
@@ -161,6 +164,7 @@ const CandidatDashboard = () => {
   const [candidatures, setCandidatures] = useState([]);
   const [offresRecommandees, setOffresRecommandees] = useState([]);
   const [scoreProfil, setScoreProfil] = useState(null);
+  const [scoreDetailOuvert, setScoreDetailOuvert] = useState(false);
   const [metiersAccessibles, setMetiersAccessibles] = useState([]);
   const [alertes, setAlertes] = useState([]);
   const [activites, setActivites] = useState([]);
@@ -169,6 +173,8 @@ const CandidatDashboard = () => {
   const [conseilsErreur, setConseilsErreur] = useState(null);
   const [conseilsLoading, setConseilsLoading] = useState(false);
   const [conseilsDemandes, setConseilsDemandes] = useState(false);
+  const [conseilsGenereLe, setConseilsGenereLe] = useState(null);
+  const [quotaConseils, setQuotaConseils] = useState(null);
   const [wilayas, setWilayas] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchWilaya, setSearchWilaya] = useState("");
@@ -189,13 +195,23 @@ const CandidatDashboard = () => {
           jobsService.getActiviteProfil(),
           jobsService.getMesCompetencesDetail(),
           jobsService.getConstants(),
+          jobsService.getQuotaIA("CONSEILS_DASHBOARD"),
         ]);
-        const [profilData, candidaturesData, offresData, scoreData, metiersData, alertesData, activitesData, competencesData, constantsData] = results;
-        if (profilData.status === "fulfilled") setProfil(profilData.value);
+        const [profilData, candidaturesData, offresData, scoreData, metiersData, alertesData, activitesData, competencesData, constantsData, quotaData] = results;
+        if (profilData.status === "fulfilled") {
+          const p = profilData.value;
+          setProfil(p);
+          if (p.derniers_conseils_dashboard && p.derniers_conseils_dashboard.length > 0) {
+            setConseils(p.derniers_conseils_dashboard);
+            setConseilsDemandes(true);
+            setConseilsGenereLe(p.conseils_dashboard_le);
+          }
+        }
+        if (quotaData.status === "fulfilled") setQuotaConseils(quotaData.value);
         if (candidaturesData.status === "fulfilled") setCandidatures(candidaturesData.value);
         if (offresData.status === "fulfilled") setOffresRecommandees(offresData.value);
         if (scoreData.status === "fulfilled") setScoreProfil(scoreData.value);
-        if (metiersData.status === "fulfilled") setMetiersAccessibles(metiersData.value);
+        if (metiersData.status === "fulfilled") setMetiersAccessibles(metiersData.value.filter((m) => m.score >= 35));
         if (alertesData.status === "fulfilled") setAlertes(alertesData.value);
         if (activitesData.status === "fulfilled") setActivites(activitesData.value);
         if (competencesData.status === "fulfilled") setCompetences(competencesData.value);
@@ -216,9 +232,14 @@ const CandidatDashboard = () => {
     try {
       const data = await jobsService.getConseilsPersonnalises();
       setConseils(data.conseils || []);
+      setConseilsGenereLe(data.genere_le || null);
+      if (data.quota_ia) setQuotaConseils({ ...data.quota_ia, disponible: true });
     } catch (error) {
       reportError("ECHEC_CHARGEMENT_CONSEILS_IA", error);
       setConseilsErreur(error.response?.data?.error || "Service IA temporairement indisponible.");
+      if (error.response?.data?.quota_restant_jour !== undefined || error.response?.data?.code) {
+        setQuotaConseils({ ...error.response.data, disponible: false });
+      }
     } finally {
       setConseilsLoading(false);
     }
@@ -489,10 +510,46 @@ const CandidatDashboard = () => {
               <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-1.5`}>
                 <TrendingUp size={16} className={tw.textPrimary} /> Analyse de mon CV
               </h2>
-              <Link to="/mes-competences" className={`text-[10px] font-semibold ${tw.textPrimary} hover:underline flex items-center gap-0.5`}>
-                Voir le détail <ArrowRight size={10} />
-              </Link>
+              {scoreProfil && (
+                <button
+                  type="button"
+                  onClick={() => setScoreDetailOuvert((v) => !v)}
+                  className={`text-[10px] font-semibold ${tw.textPrimary} hover:underline flex items-center gap-0.5`}
+                >
+                  {scoreDetailOuvert ? "Masquer le détail" : "Voir le détail"}
+                  {scoreDetailOuvert ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                </button>
+              )}
             </div>
+            {scoreDetailOuvert && scoreProfil && (
+              <div className={`mb-4 pb-4 border-b ${tw.borderSubtle} space-y-2`}>
+                {scoreEntries.map(([key, d]) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between text-xs mb-0.5">
+                      <span className={`font-semibold ${tw.textStrong}`}>{SCORE_DETAIL_LABELS[key] || key}</span>
+                      <span className={tw.textMuted700}>{Math.round(d.points)}/{d.max} pts</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${Math.min(100, (d.points / d.max) * 100)}%` }}
+                      />
+                    </div>
+                    {key === "diplome" && d.libelle && (
+                      <p className={`text-[10px] ${tw.textMuted700} mt-0.5`}>{d.libelle}</p>
+                    )}
+                    {key === "experience" && d.annees != null && (
+                      <p className={`text-[10px] ${tw.textMuted700} mt-0.5`}>{d.annees} an(s) d'expérience pertinente</p>
+                    )}
+                    {key === "pertinence_marche" && (
+                      <p className={`text-[10px] ${tw.textMuted700} mt-0.5`}>
+                        {d.moyenne_pct != null ? `${d.moyenne_pct}% de compatibilité moyenne avec les offres actives` : "Pas assez d'offres actives pour calculer ce critère"}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {scoreProfil ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
@@ -611,19 +668,28 @@ const CandidatDashboard = () => {
               générés à partir du profil, du score, des candidatures et des alertes réels
               du candidat (jobs/conseils-personnalises/) */}
           <div className={`${tw.card} p-5`}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-1.5`}>
                 <Lightbulb size={16} className={tw.textPrimary} /> Conseils personnalisés
               </h2>
-              {!conseilsDemandes && (
+              {(!conseilsDemandes || conseils.length > 0) && !conseilsLoading && (
                 <button
                   onClick={handleGenererConseils}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors`}
+                  disabled={quotaConseils && quotaConseils.disponible === false}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  <Lightbulb size={12} /> Générer mes conseils
+                  <Lightbulb size={12} /> {conseilsDemandes ? "Ré-analyser" : "Générer mes conseils"}
                 </button>
               )}
             </div>
+            {(conseilsGenereLe || quotaConseils) && (
+              <div className={`flex items-center gap-2 text-[10px] ${tw.textMuted700} mb-2`}>
+                {conseilsGenereLe && (
+                  <span>Dernière analyse le {new Date(conseilsGenereLe).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                )}
+                <QuotaIABadge quota={quotaConseils} />
+              </div>
+            )}
             {!conseilsDemandes ? (
               <p className={`text-xs ${tw.textMuted} py-3 text-center`}>
                 Obtenez 3 à 5 conseils personnalisés générés par IA à partir de votre profil réel.

@@ -102,6 +102,7 @@ from .ia import (
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView,
     GenererOffreIAAPIView,
+    QuotaIAAffichageAPIView,
 )
 from .bulletin import GenererBulletinPDFAPIView
 from .equipe import (
@@ -152,7 +153,7 @@ from .pages import (
     PageStatiqueAdminAPIView,
     PageStatiqueListePublicAPIView,
 )
-from .ai_config import AIConfigAdminAPIView
+from .ai_config import AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView
 from .candidat_dashboard import (
     ScoreProfilAPIView,
     MetiersAccessiblesAPIView,

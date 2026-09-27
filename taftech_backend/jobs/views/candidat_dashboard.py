@@ -82,6 +82,11 @@ class ConseilsPersonnalisesIAAPIView(APIView):
         if not ai_config.conseils_dashboard_actif:
             return Response({"error": "Les conseils personnalisés sont temporairement désactivés par l'administrateur."}, status=503)
 
+        from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
+        ok, quota_info = verifier_quota_ia(request.user, 'CONSEILS_DASHBOARD')
+        if not ok:
+            return Response(quota_info, status=403)
+
         try:
             profil = request.user.profil_candidat
         except Exception:
@@ -110,6 +115,9 @@ Nombre d'alertes emploi configurées : {alertes.count()}
 Titre professionnel : {profil.titre_professionnel or 'Non renseigné'}
 Diplôme : {profil.diplome or 'Non renseigné'}
 """
+        if not acquerir_verrou_ia(request.user, 'CONSEILS_DASHBOARD'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'CONSEILS_DASHBOARD')
         try:
             from ..ai_engine import call_ai
             import json
@@ -127,10 +135,18 @@ Diplôme : {profil.diplome or 'Non renseigné'}
             if not isinstance(conseils, list):
                 conseils = []
             conseils = [str(c).strip() for c in conseils if str(c).strip()][:5]
-            return Response({"conseils": conseils}, status=200)
+            profil.derniers_conseils_dashboard = conseils
+            profil.conseils_dashboard_le = timezone.now()
+            profil.save(update_fields=['derniers_conseils_dashboard', 'conseils_dashboard_le'])
+            return Response({
+                "conseils": conseils, "quota_ia": quota_info,
+                "genere_le": profil.conseils_dashboard_le.isoformat(),
+            }, status=200)
         except Exception as e:
             logger.error("Erreur Groq conseils personnalisés : %s", e)
             return Response({"error": "Service IA temporairement indisponible."}, status=503)
+        finally:
+            liberer_verrou_ia(request.user, 'CONSEILS_DASHBOARD')
 
 
 # ═══════════════════════════════════════════════════════════════════════════

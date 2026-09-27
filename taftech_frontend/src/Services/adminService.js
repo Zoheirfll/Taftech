@@ -490,9 +490,9 @@ export const adminService = {
   },
 
   // Compétences (référentiel admin)
-  getAdminCompetences: async (search = "") => {
+  getAdminCompetences: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/competences/?search=${search}`);
+      const response = await api.get(`jobs/admin/competences/?search=${search}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
@@ -788,6 +788,46 @@ export const adminService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_UPDATE_AI_CONFIG", err);
+      throw err;
+    }
+  },
+
+  // Quotas IA — overrides par compte + usage
+  getQuotaIAOverrides: async (search = "") => {
+    try {
+      const response = await api.get("jobs/admin/quota-ia/overrides/", { params: search ? { search } : {} });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUOTA_IA_OVERRIDES", err);
+      throw err;
+    }
+  },
+
+  creerQuotaIAOverride: async (data) => {
+    try {
+      const response = await api.post("jobs/admin/quota-ia/overrides/", data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREER_QUOTA_IA_OVERRIDE", err);
+      throw err;
+    }
+  },
+
+  supprimerQuotaIAOverride: async (id) => {
+    try {
+      await api.delete(`jobs/admin/quota-ia/overrides/${id}/`);
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_QUOTA_IA_OVERRIDE", err);
+      throw err;
+    }
+  },
+
+  getQuotaIAUsage: async (email) => {
+    try {
+      const response = await api.get("jobs/admin/quota-ia/usage/", { params: { email } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUOTA_IA_USAGE", err);
       throw err;
     }
   },

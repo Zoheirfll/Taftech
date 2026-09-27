@@ -20,6 +20,15 @@ def _classeur_metiers_minimal(metier_formation_row):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
+    # Table partagée par les deux classeurs (IMPORT étape 19), importée avant tout le reste —
+    # une fixture synthétique sans cet onglet fait échouer l'import sur un KeyError avant même
+    # d'atteindre METIER_FORMATIONS (le comportement réellement testé par ce fichier).
+    ws = wb.create_sheet("SOURCES")
+    ws.append([
+        "source_id", "titre", "nature", "organisme", "fichier", "url",
+        "edition_annee", "consulte_le", "sha256", "perimetre_limite",
+    ])
+
     ws = wb.create_sheet("GROUPES")
     ws.append(["groupe_id", "type_groupe", "libelle_fr", "code_source", "parent_id"])
 

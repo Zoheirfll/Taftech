@@ -17,36 +17,47 @@ const FEATURES = [
     label: "Parser CV",
     desc: "Extraction automatique des infos d'un CV uploadé (candidat).",
     tokens: ["{cv_text}", "{domaines_list}"],
+    quota: true,
   },
   {
     key: "analyse_carriere",
-    label: "Analyse carrière candidat",
+    label: "Analyse carrière candidat (suggestions métiers)",
     desc: "Analyse IA personnalisée du profil candidat (métiers possibles, compétences manquantes...).",
     tokens: [],
+    quota: true,
   },
   {
     key: "analyse_recruteur",
     label: "Analyse IA recruteur",
-    desc: "Résumé de compatibilité candidat/offre affiché au recruteur.",
+    desc: "Résumé de compatibilité candidat/offre affiché au recruteur. Quota configuré par palier (page Abonnements & paliers), incluse dans l'abonnement.",
     tokens: [
       "{offre_titre}", "{entreprise}", "{specialite}", "{type_contrat}", "{offre_wilaya}",
       "{nom_candidat}", "{titre_candidat}", "{diplome}", "{wilaya_candidat}",
       "{competences}", "{experiences}", "{formations}", "{score}",
     ],
+    quota: false,
   },
   {
     key: "generation_offre",
     label: "Génération d'offre IA",
-    desc: "Pré-remplissage IA du formulaire de publication d'offre (Premium).",
+    desc: "Pré-remplissage IA du formulaire de publication d'offre. Quota configuré par palier (page Abonnements & paliers).",
     tokens: ["{titre}", "{specialite}", "{diplome}", "{experience}", "{contrat}", "{wilaya}"],
+    quota: false,
   },
   {
     key: "conseils_dashboard",
     label: "Conseils personnalisés (tableau de bord candidat)",
     desc: "Conseils générés par IA à partir du profil, du score et des candidatures réels du candidat.",
     tokens: [],
+    quota: true,
   },
 ];
+
+const FONCTION_PAR_KEY = {
+  parser_cv: "PARSER_CV",
+  analyse_carriere: "SUGGESTIONS_METIER",
+  conseils_dashboard: "CONSEILS_DASHBOARD",
+};
 
 const AdminIAConfig = () => {
   const [config, setConfig] = useState(null);
@@ -169,6 +180,19 @@ const AdminIAConfig = () => {
           </div>
         </div>
 
+        <div className={`${tw.card} rounded-2xl p-5 space-y-2`}>
+          <p className={`text-sm font-bold ${tw.textStrong}`}>Plafond global de dépense</p>
+          <p className={`text-xs ${tw.textMuted}`}>Kill-switch de sécurité : au-delà de ce nombre d'appels IA (toutes fonctions, tous comptes confondus) sur le mois en cours, l'IA devient temporairement indisponible pour tout le monde.</p>
+          <input
+            type="number"
+            min="0"
+            className={`${inputClass} max-w-[220px]`}
+            placeholder="Illimité"
+            value={config.budget_ia_appels_mois_max ?? ""}
+            onChange={(e) => setConfig({ ...config, budget_ia_appels_mois_max: e.target.value === "" ? null : Number(e.target.value) })}
+          />
+        </div>
+
         <div className={`${tw.card} rounded-2xl p-5 space-y-4`}>
           <p className={`text-sm font-bold ${tw.textStrong}`}>Fonctionnalités</p>
           {FEATURES.map((f) => (
@@ -195,6 +219,30 @@ const AdminIAConfig = () => {
                   onChange={(e) => setConfig({ ...config, [`${f.key}_max_tokens`]: Number(e.target.value) })}
                 />
               </div>
+              {f.quota && (
+                <div className="mb-3 flex gap-3">
+                  <div>
+                    <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Quota / jour (vide = illimité)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className={`${inputClass} max-w-[140px]`}
+                      value={config[`${f.key}_limite_jour`] ?? ""}
+                      onChange={(e) => setConfig({ ...config, [`${f.key}_limite_jour`]: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Quota / mois (vide = illimité)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className={`${inputClass} max-w-[140px]`}
+                      value={config[`${f.key}_limite_mois`] ?? ""}
+                      onChange={(e) => setConfig({ ...config, [`${f.key}_limite_mois`]: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -231,6 +279,157 @@ const AdminIAConfig = () => {
           {saving ? "Enregistrement..." : "Enregistrer"}
         </button>
       </form>
+
+      <QuotaOverridesPanel />
+    </div>
+  );
+};
+
+const QuotaOverridesPanel = () => {
+  const [overrides, setOverrides] = useState([]);
+  const [email, setEmail] = useState("");
+  const [usage, setUsage] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const [form, setForm] = useState({ fonction: "PARSER_CV", limite_jour: "", limite_mois: "", justification: "" });
+  const [saving, setSaving] = useState(false);
+
+  const fetchOverrides = async () => {
+    try {
+      const data = await jobsService.getQuotaIAOverrides();
+      setOverrides(data);
+    } catch (err) {
+      reportError("ECHEC_GET_QUOTA_IA_OVERRIDES", err);
+      toast.error(apiErrMsg(err, "Erreur de chargement des overrides."));
+    }
+  };
+
+  useEffect(() => {
+    fetchOverrides();
+  }, []);
+
+  const verifierCompte = async () => {
+    if (!email.trim()) return;
+    setChecking(true);
+    setUsage(null);
+    try {
+      const data = await jobsService.getQuotaIAUsage(email.trim());
+      setUsage(data);
+    } catch (err) {
+      reportError("ECHEC_GET_QUOTA_IA_USAGE", err);
+      toast.error(apiErrMsg(err, "Compte introuvable."));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const creerOverride = async (e) => {
+    e.preventDefault();
+    if (!usage) {
+      toast.error("Vérifiez d'abord le compte (email) avant de créer un override.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await jobsService.creerQuotaIAOverride({
+        user: usage.user_id,
+        fonction: form.fonction,
+        limite_jour: form.limite_jour === "" ? null : Number(form.limite_jour),
+        limite_mois: form.limite_mois === "" ? null : Number(form.limite_mois),
+        justification: form.justification,
+      });
+      toast.success("Override enregistré.");
+      setForm({ fonction: "PARSER_CV", limite_jour: "", limite_mois: "", justification: "" });
+      fetchOverrides();
+    } catch (err) {
+      reportError("ECHEC_CREER_QUOTA_IA_OVERRIDE", err);
+      toast.error(apiErrMsg(err, "Erreur lors de la création."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const supprimer = (id) => {
+    confirmToast("Supprimer cet override ? Le compte reviendra au quota par défaut (palier ou config globale).", async () => {
+      try {
+        await jobsService.supprimerQuotaIAOverride(id);
+        toast.success("Override supprimé.");
+        fetchOverrides();
+      } catch (err) {
+        reportError("ECHEC_SUPPRIMER_QUOTA_IA_OVERRIDE", err);
+        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+      }
+    });
+  };
+
+  const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
+
+  return (
+    <div className={`${tw.card} rounded-2xl p-5 space-y-4`}>
+      <div>
+        <p className={`text-sm font-bold ${tw.textStrong}`}>Quotas personnalisés par compte</p>
+        <p className={`text-xs ${tw.textMuted} mt-0.5`}>Remplace le quota par défaut (palier ou config globale) pour UN compte précis — ex. compte de test, client VIP, compte pénalisé après abus.</p>
+      </div>
+
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Email du compte</label>
+          <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="compte@exemple.com" />
+        </div>
+        <button type="button" onClick={verifierCompte} disabled={checking} className={`px-4 py-2.5 ${tw.buttonSecondary} rounded-lg text-sm font-semibold disabled:opacity-60`}>
+          {checking ? "..." : "Vérifier"}
+        </button>
+      </div>
+
+      {usage && (
+        <div className={`border ${tw.borderSubtle} rounded-xl p-3 text-xs space-y-1`}>
+          <p className={`font-semibold ${tw.textStrong}`}>{usage.user_email} — usage actuel</p>
+          {usage.usage.map((u) => (
+            <p key={u.fonction} className={tw.textMuted}>
+              {u.fonction_libelle} : {u.utilise_jour}/{u.limite_jour ?? "∞"} aujourd'hui · {u.utilise_mois}/{u.limite_mois ?? "∞"} ce mois
+            </p>
+          ))}
+        </div>
+      )}
+
+      {usage && (
+        <form onSubmit={creerOverride} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+          <div>
+            <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Fonction</label>
+            <select className={inputClass} value={form.fonction} onChange={(e) => setForm({ ...form, fonction: e.target.value })}>
+              <option value="PARSER_CV">Parser CV</option>
+              <option value="SUGGESTIONS_METIER">Suggestions métiers</option>
+              <option value="CONSEILS_DASHBOARD">Conseils personnalisés</option>
+              <option value="GENERATION_OFFRE">Génération d'offre</option>
+              <option value="ANALYSE_RECRUTEUR">Analyse IA candidature</option>
+            </select>
+          </div>
+          <div>
+            <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Quota/jour</label>
+            <input type="number" min="0" className={inputClass} placeholder="Illimité" value={form.limite_jour} onChange={(e) => setForm({ ...form, limite_jour: e.target.value })} />
+          </div>
+          <div>
+            <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Quota/mois</label>
+            <input type="number" min="0" className={inputClass} placeholder="Illimité" value={form.limite_mois} onChange={(e) => setForm({ ...form, limite_mois: e.target.value })} />
+          </div>
+          <button type="submit" disabled={saving} className={`px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white rounded-lg text-sm font-semibold disabled:opacity-60`}>
+            {saving ? "..." : "Créer"}
+          </button>
+          <input className={`${inputClass} sm:col-span-4`} placeholder="Justification (optionnel)" value={form.justification} onChange={(e) => setForm({ ...form, justification: e.target.value })} />
+        </form>
+      )}
+
+      <div className="space-y-2">
+        {overrides.length === 0 && <p className={`text-xs ${tw.textMuted}`}>Aucun override actif.</p>}
+        {overrides.map((o) => (
+          <div key={o.id} className={`flex items-center justify-between border ${tw.borderSubtle} rounded-lg px-3 py-2 text-xs`}>
+            <span>
+              <strong>{o.user_email}</strong> — {o.fonction_libelle} : {o.limite_jour ?? "∞"}/jour, {o.limite_mois ?? "∞"}/mois
+              {o.justification && <span className={tw.textMuted}> ({o.justification})</span>}
+            </span>
+            <button type="button" onClick={() => supprimer(o.id)} className="text-red-600 hover:underline font-semibold">Supprimer</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

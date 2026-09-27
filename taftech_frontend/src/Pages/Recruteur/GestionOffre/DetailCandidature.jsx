@@ -25,6 +25,7 @@ import { authService } from "../../../Services/authService";
 import { jobsService } from "../../../Services/jobsService";
 import { candidatFichierUrl, documentPartageFichierUrl } from "../../../utils/mediaUrl";
 import { TooltipIcon } from "../../../Components/Tooltip";
+import QuotaIABadge from "../../../Components/QuotaIABadge";
 import CandidatureTimeline from "../../../Components/CandidatureTimeline";
 import MatchingRadarChart from "../../../Components/MatchingRadarChart";
 import { tw } from "../../../theme";
@@ -66,6 +67,7 @@ export const DetailCandidature = ({
   isPremium,
   analyseGroq,
   loadingGroq,
+  quotaAnalyseRecruteur,
   handleAnalyseGroq,
   resumeIA,
   setResumeIA,
@@ -789,13 +791,17 @@ export const DetailCandidature = ({
                   </p>
                   {!loadingGroq && (
                     isPremium ? (
-                      <button
-                        onClick={handleAnalyseGroq}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors`}
-                      >
-                        <Sparkles size={12} />{" "}
-                        {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <QuotaIABadge quota={quotaAnalyseRecruteur} />
+                        <button
+                          onClick={handleAnalyseGroq}
+                          disabled={quotaAnalyseRecruteur?.disponible === false}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <Sparkles size={12} />{" "}
+                          {analyseGroq ? "Relancer" : "Analyser avec l'IA"}
+                        </button>
+                      </div>
                     ) : (
                       <Link
                         to="/recruteurs/premium"

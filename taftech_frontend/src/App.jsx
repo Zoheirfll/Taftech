@@ -166,17 +166,15 @@ const AdminBroadcast    = lazy(() => import("./Pages/admin/AdminBroadcast"));
 const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminReferentielV2 = lazy(() => import("./Pages/Admin/AdminReferentielV2"));
-const AdminPaliers      = lazy(() => import("./Pages/Admin/AdminPaliers"));
 const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
-const AdminCreditPacks  = lazy(() => import("./Pages/Admin/AdminCreditPacks"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
 const AdminBannieres    = lazy(() => import("./Pages/Admin/AdminBannieres"));
 const AdminPages        = lazy(() => import("./Pages/Admin/AdminPages"));
-const AdminIAConfig     = lazy(() => import("./Pages/Admin/AdminIAConfig"));
 const AdminSeo          = lazy(() => import("./Pages/Admin/AdminSeo"));
 const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
+const AdminAbonnementsIA = lazy(() => import("./Pages/Admin/AdminAbonnementsIA"));
 const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
@@ -355,15 +353,18 @@ function AppContent() {
               <Route path="candidatures" element={<AdminCandidatures />} />
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
               <Route path="/admin-taftech/referentiel-v2" element={<AdminReferentielV2 />} />
-              <Route path="/admin-taftech/paliers" element={<AdminPaliers />} />
+              <Route path="/admin-taftech/abonnements-ia" element={<AdminAbonnementsIA />} />
+              {/* Anciennes URLs (3 pages séparées, fusionnées en onglets) — redirigées pour ne
+                  jamais casser un lien déjà partagé/mis en favori. */}
+              <Route path="/admin-taftech/paliers" element={<Navigate to="/admin-taftech/abonnements-ia?tab=paliers" replace />} />
+              <Route path="/admin-taftech/credit-packs" element={<Navigate to="/admin-taftech/abonnements-ia?tab=credits" replace />} />
+              <Route path="/admin-taftech/ia-config" element={<Navigate to="/admin-taftech/abonnements-ia?tab=ia" replace />} />
               <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
-              <Route path="/admin-taftech/credit-packs" element={<AdminCreditPacks />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />
               <Route path="/admin-taftech/bannieres" element={<AdminBannieres />} />
               <Route path="/admin-taftech/pages" element={<AdminPages />} />
-              <Route path="/admin-taftech/ia-config" element={<AdminIAConfig />} />
               <Route path="/admin-taftech/seo" element={<AdminSeo />} />
               <Route path="/admin-taftech/rendez-vous" element={<AdminRendezVous />} />
               <Route path="/admin-taftech/types-documents" element={<AdminTypesDocuments />} />

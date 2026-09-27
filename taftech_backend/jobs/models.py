@@ -786,6 +786,13 @@ class ProfilCandidat(models.Model):
         ]
     )
     cv_pdf_maj_le = models.DateTimeField(null=True, blank=True, verbose_name="Dernière mise à jour du CV")
+    # Persistance des 2 analyses IA du dashboard candidat (session 27/09/2026) — jusqu'ici
+    # recalculées à chaque clic sans jamais être sauvegardées, donc perdues à la prochaine
+    # visite. Le bouton associé devient "Ré-analyser" dès qu'un résultat existe déjà.
+    derniers_conseils_dashboard = models.JSONField(null=True, blank=True, verbose_name="Derniers conseils IA (dashboard)")
+    conseils_dashboard_le = models.DateTimeField(null=True, blank=True, verbose_name="Date des derniers conseils IA")
+    derniere_analyse_carriere = models.TextField(null=True, blank=True, verbose_name="Dernière analyse carrière IA")
+    analyse_carriere_le = models.DateTimeField(null=True, blank=True, verbose_name="Date de la dernière analyse carrière IA")
     photo_profil = models.ImageField(
         upload_to='photos_profil/',
         blank=True,
@@ -1056,6 +1063,11 @@ class AlerteEmploi(models.Model):
         null=True, blank=True,
         verbose_name="Dernière consultation",
         help_text="Mise à jour quand le candidat consulte les offres de cette alerte — sert à calculer le compteur \"nouvelles offres\".",
+    )
+    derniere_alerte_envoyee = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Dernière alerte envoyée",
+        help_text="Mise à jour par la commande envoyer_alertes après un envoi réussi — sert de curseur pour ne jamais manquer/redoubler une offre, indépendamment de la régularité du cron.",
     )
 
     class Meta:
@@ -1345,6 +1357,24 @@ class Palier(models.Model):
     ordre = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage")
     actif = models.BooleanField(default=True, verbose_name="Visible/achetable")
 
+    # Quotas IA côté recruteur — génération d'offre et analyse IA d'une candidature (celle-ci
+    # "incluse dans l'abonnement" selon la décision client, donc gatée par palier comme le reste,
+    # pas par un plafond plat comme les fonctions candidat). Vide = illimité, même convention que
+    # limite_offres/credits_mois ci-dessus. Résolu par jobs/ia_quota.py, overridable par compte
+    # via QuotaIAOverride.
+    quota_generation_offre_jour = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Génération d'offre IA — quota/jour (vide = illimité)",
+    )
+    quota_generation_offre_mois = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Génération d'offre IA — quota/mois (vide = illimité)",
+    )
+    quota_analyse_recruteur_jour = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Analyse IA candidature — quota/jour (vide = illimité)",
+    )
+    quota_analyse_recruteur_mois = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Analyse IA candidature — quota/mois (vide = illimité)",
+    )
+
     class Meta:
         ordering = ['ordre']
 
@@ -1571,6 +1601,33 @@ class AIConfig(models.Model):
         help_text="Instructions système (le profil/score/activité du candidat sont envoyés séparément). Si vide, le prompt par défaut du code est utilisé.",
     )
 
+    # Quotas IA côté candidat (fonctions sans palier — flat par compte). Vide = illimité.
+    # Génération offre/analyse recruteur (côté recruteur) sont sur Palier, pas ici — voir
+    # jobs/ia_quota.py pour la résolution complète (override compte > palier/config > illimité).
+    parser_cv_limite_jour = models.PositiveIntegerField(
+        null=True, blank=True, default=3, verbose_name="Parser CV — quota/jour (vide = illimité)",
+    )
+    parser_cv_limite_mois = models.PositiveIntegerField(
+        null=True, blank=True, default=10, verbose_name="Parser CV — quota/mois (vide = illimité)",
+    )
+    analyse_carriere_limite_jour = models.PositiveIntegerField(
+        null=True, blank=True, default=10, verbose_name="Suggestions métiers — quota/jour (vide = illimité)",
+    )
+    analyse_carriere_limite_mois = models.PositiveIntegerField(
+        null=True, blank=True, default=50, verbose_name="Suggestions métiers — quota/mois (vide = illimité)",
+    )
+    conseils_dashboard_limite_jour = models.PositiveIntegerField(
+        null=True, blank=True, default=10, verbose_name="Conseils personnalisés — quota/jour (vide = illimité)",
+    )
+    conseils_dashboard_limite_mois = models.PositiveIntegerField(
+        null=True, blank=True, default=50, verbose_name="Conseils personnalisés — quota/mois (vide = illimité)",
+    )
+    budget_ia_appels_mois_max = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Plafond global — appels IA/mois tous comptes confondus (vide = illimité)",
+        help_text="Kill-switch de sécurité budgétaire : au-delà, toute fonctionnalité IA est temporairement indisponible pour tout le monde, quel que soit le quota individuel restant.",
+    )
+
     date_modification = models.DateTimeField(auto_now=True)
 
     @classmethod
@@ -1591,6 +1648,51 @@ class AIConfig(models.Model):
 
     def __str__(self):
         return f"Config IA ({self.groq_model})"
+
+
+class UtilisationIA(models.Model):
+    """Log d'un appel IA facturable (une ligne par appel demandé, compté même si l'appel Groq
+    échoue ensuite — le client a explicitement demandé que 'chaque nouvelle génération ou
+    réécriture demandée compte comme une utilisation'). Jamais un compteur stocké à incrémenter :
+    les quotas jour/mois sont toujours recalculés en comptant les lignes de la période en cours,
+    même principe que TelechargementCV/quota_cv_atteint (voir jobs/paliers_utils.py)."""
+    FONCTION_CHOICES = [
+        ('PARSER_CV', 'Parser CV (candidat)'),
+        ('SUGGESTIONS_METIER', 'Suggestions métiers (candidat)'),
+        ('CONSEILS_DASHBOARD', 'Conseils personnalisés (candidat)'),
+        ('GENERATION_OFFRE', "Génération d'offre (recruteur)"),
+        ('ANALYSE_RECRUTEUR', 'Analyse IA candidature (recruteur)'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='utilisations_ia')
+    fonction = models.CharField(max_length=25, choices=FONCTION_CHOICES)
+    date_heure = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_heure']
+        indexes = [models.Index(fields=['user', 'fonction', 'date_heure'])]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_fonction_display()} ({self.date_heure:%d/%m/%Y %H:%M})"
+
+
+class QuotaIAOverride(models.Model):
+    """Quota IA personnalisé pour UN compte précis, remplace intégralement le quota par défaut
+    (palier ou AIConfig) pour cette fonction — ex. compte de test, client VIP, compte pénalisé
+    après abus. L'existence d'une ligne = override actif ; `limite_jour`/`limite_mois` à None sur
+    la ligne signifie illimité POUR CE COMPTE (distinct de l'absence de ligne, qui signifie
+    'utiliser le défaut'). Résolu en priorité par jobs/ia_quota.py avant palier/config."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='quotas_ia_override')
+    fonction = models.CharField(max_length=25, choices=UtilisationIA.FONCTION_CHOICES)
+    limite_jour = models.PositiveIntegerField(null=True, blank=True, verbose_name="Quota/jour (vide = illimité)")
+    limite_mois = models.PositiveIntegerField(null=True, blank=True, verbose_name="Quota/mois (vide = illimité)")
+    justification = models.CharField(max_length=255, blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'fonction')
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_fonction_display()} (override)"
 
 
 class PageStatique(models.Model):

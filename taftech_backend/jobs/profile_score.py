@@ -26,7 +26,7 @@ CHAMPS_PROFIL = [
     ('titre_professionnel', lambda p: bool(p.titre_professionnel)),
     ('wilaya_commune', lambda p: bool(p.wilaya and p.commune)),
     ('diplome', lambda p: bool(p.diplome)),
-    ('specialite', lambda p: bool(p.specialite)),
+    ('metier', lambda p: bool(p.metier_id)),
     ('experiences', lambda p: p.experiences_detail.exists()),
     ('formations', lambda p: p.formations_detail.exists()),
     ('competences', lambda p: bool(p.competences and p.competences.strip())),

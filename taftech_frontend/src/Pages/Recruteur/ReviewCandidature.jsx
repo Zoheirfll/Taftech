@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Rocket,
   ExternalLink,
+  Calendar,
 } from "lucide-react";
 
 const ReviewCandidature = () => {
@@ -350,6 +351,12 @@ const ReviewCandidature = () => {
                   <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <MapPin size={11} />
                     {profil.adresse}
+                  </span>
+                )}
+                {profil.date_naissance && (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-700">
+                    <Calendar size={11} />
+                    Né(e) le {new Date(profil.date_naissance).toLocaleDateString("fr-FR")}
                   </span>
                 )}
                 {(profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle || profil.diplome) && (

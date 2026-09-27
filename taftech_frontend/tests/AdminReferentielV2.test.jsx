@@ -15,6 +15,7 @@ vi.mock("../src/Services/adminService", () => ({
     updateAdminReferentielSpecialite: vi.fn(),
     getAdminReferentielDiplomes: vi.fn(),
     updateAdminReferentielDiplome: vi.fn(),
+    getAdminStats: vi.fn().mockResolvedValue({}),
   },
 }));
 

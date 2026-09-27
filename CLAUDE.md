@@ -2,6 +2,28 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
+## 🆕 SESSION 26/09/2026 — Retour client "familles" de secteurs : audit, fusion de 9 secteurs racines dupliqués, audit diplômes
+
+**Contexte** : le client demande que deux expériences dont les métiers appartiennent à des secteurs "différents mais identiques en pratique" (son exemple : Informatique / Systèmes d'information / Cloud computing) ne reçoivent plus automatiquement 0. La pertinence doit continuer à dépendre du métier, des missions et des compétences. Le poids de l'expérience reste à 20 %, sans nouveau critère "secteur", et les anciens identifiants ainsi que leurs correspondances sont conservés.
+
+**1. Le cas cité était déjà corrigé.** Vérifié en base : les 4 domaines (Développement informatique, Support informatique, Systèmes d'information et de télécommunication, Cloud Computing) sont sous le même secteur racine "Informatique" (id 1864). `_meme_secteur_parent` renvoie bien 0.45 entre eux, grâce au correctif `_racine_secteur_id` qui remonte tous les niveaux (commit `46d33be`). Aucun nouveau système de "famille" n'était nécessaire : `_meme_secteur_parent` (automatique) et `RelationMetier` 'similaire' (manuel, panel admin) couvrent déjà ce besoin.
+
+**2. 🐛 Vrai trou trouvé en auditant** : `_dedupliquer_secteurs()` et `SECTEURS_CODES_MASQUES` (`referentiel_utils.py`) ne masquent les doublons **que dans la liste affichée** (dropdown entreprise). Les deux secteurs racines `GroupeMetier` existaient toujours côté matching, chacun avec de vrais métiers rattachés. Deux métiers du même secteur réel tombaient donc à un score fuzzy proche de 0 (ex. Industrie : 0.16). 9 paires étaient concernées :
+- **7 fusions 1↔1**, via la nouvelle commande `jobs/management/commands/fusionner_secteurs_racines_doublons.py` (`--dry-run`, idempotente, PAIRES par pk) : Industrie→C, Santé→M, BTP→F, A (Agriculture et pêche)→Agriculture & Agroalimentaire, Hôtellerie & Tourisme→H, Communication & Médias→J, Éducation & Formation→O. Aucune collision de domaine : tous les domaines ont été reparentés intacts.
+- **2 répartitions 1→2**, via la nouvelle commande `repartir_secteurs_officiels_multi_cibles.py`. Chaque domaine était homogène, donc aucun classement métier par métier n'a été nécessaire. Pour K : Banque, Assurances et **Marché financier** → Banque & Assurance, Immobilier → Immobilier. Le rattachement de Marché financier est une décision de jugement, validée par l'utilisateur. Pour I : Logistique → Logistique & Supply Chain (fusionné avec le domaine "Logistique" déjà existant, sous-domaines reparentés), et les trois domaines Transport aérien, maritime et terrestre → Transport.
+- Vérifié après coup : chaque paire interne à un secteur fusionné donne 0.45, alors que les secteurs restés réellement distincts (Banque vs Immobilier, Transport vs Logistique) ne reçoivent aucun bonus. On compte 0 métier orphelin, et aucune expérience, offre ou profil n'est cassé. Il reste 59 secteurs racines.
+- `SECTEURS_CODES_MASQUES` n'a pas été modifié : les codes masqués ne correspondent plus à aucun secteur en base, donc l'effet est nul.
+
+**3. Audit Diplômes/Spécialités** (même méthode) :
+- Doublons exacts entre domaines différents : 25 groupes, tous déjà couverts par les 39 `RelationSpecialite` existantes.
+- `TypeDiplome` (37) : aucun vrai doublon, uniquement du bruit fuzzy entre diplômes réellement distincts.
+- `DomaineFormation` : "Électricité, électronique et énergie" (theme_formation, 4 entrées) recouvre "...et énergétique" (specialite, 40 entrées). Ce cas est traité au niveau des spécialités, sans fusion de domaine.
+- Scan des 141 `theme_formation` contre les 825 `specialite` : 109 paires proches non couvertes, **en très grande majorité des faux positifs fuzzy** (Logistique~Linguistique, Construction métallique~Construction mécanique, Chimie~Biochimie). **9 relations ajoutées à la main**, uniquement là où le concept est réellement le même : Systèmes d'information, Achats et approvisionnements, Assurance(s), Hygiène sécurité environnement, Architecture intérieure, Menuiserie aluminium, Transit et douane, Froid et climatisation, Sociologie des organisations. Total : **48 `RelationSpecialite`**. Le reste est volontairement laissé non lié, car un faux lien fausserait le matching, ce qui serait pire qu'une absence de lien. "Hygiène et sécurité" a été écarté : c'est un thème trop générique, et le scan ne retient que le meilleur score.
+
+**Leçon** : un masquage à l'affichage n'est jamais une fusion. Tout futur dédoublonnage de référentiel doit vérifier la hiérarchie réellement consommée par `matcher.py`.
+
+---
+
 ## 🆕 SESSION 25/09/2026 (suite 2) — Nettoyage des secteurs GroupeMetier : préfixes, doublons stricts, chevauchements sémantiques, incohérences hiérarchiques
 
 **Contexte** : l'utilisateur a signalé que la liste "secteurs" (page publique "Offres par secteur", dropdown profil entreprise, source unique `jobs/referentiel_utils.py::secteurs_entreprise()` = `GroupeMetier.type_groupe='secteur_source'`) contenait des libellés avec une lettre collée devant et des doublons, puis a relevé une incohérence plus profonde : "Informatique", "Intelligence Artificielle" et "Cloud Computing" apparaissaient comme 3 secteurs **parallèles** alors que IA/Cloud sont déjà des domaines réels sous Informatique.

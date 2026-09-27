@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { Star, Trash2, Plus, X } from "lucide-react";
+import { Star, Trash2, Pencil, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -30,6 +30,7 @@ const MesCompetences = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [nouvelle, setNouvelle] = useState({ label: "", niveau: "INTERMEDIAIRE" });
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,16 +62,33 @@ const MesCompetences = () => {
     e.preventDefault();
     if (!nouvelle.label.trim()) return toast.error("Le nom de la compétence est obligatoire.");
     try {
-      const created = await jobsService.ajouterCompetence(nouvelle.label.trim(), nouvelle.niveau);
-      setCompetences((prev) => [created, ...prev]);
-      toast.success("Compétence ajoutée !");
-      setIsModalOpen(false);
-      setNouvelle({ label: "", niveau: "INTERMEDIAIRE" });
-      setSuggestions([]);
+      // Le backend fait un update_or_create sur (profil, label) — soumettre le même
+      // libellé qu'une compétence existante met à jour son niveau en place au lieu d'en
+      // créer une seconde, ce qui permet de réutiliser ce même flux pour "Modifier".
+      const saved = await jobsService.ajouterCompetence(nouvelle.label.trim(), nouvelle.niveau);
+      setCompetences((prev) => {
+        const existe = prev.some((c) => c.id === saved.id);
+        return existe ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev];
+      });
+      toast.success(editingId ? "Compétence mise à jour !" : "Compétence ajoutée !");
+      closeModal();
     } catch (error) {
       reportError("ECHEC_AJOUT_COMPETENCE_UI", error);
-      toast.error(apiErrMsg(error, "Impossible d'ajouter cette compétence."));
+      toast.error(apiErrMsg(error, "Impossible d'enregistrer cette compétence."));
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setNouvelle({ label: "", niveau: "INTERMEDIAIRE" });
+    setSuggestions([]);
+  };
+
+  const openEdit = (c) => {
+    setEditingId(c.id);
+    setNouvelle({ label: c.label, niveau: c.niveau });
+    setIsModalOpen(true);
   };
 
   const handleDelete = (id) => {
@@ -136,12 +154,21 @@ const MesCompetences = () => {
                     {NIVEAUX.find((n) => n.value === c.niveau)?.label || c.niveau}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
-                >
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEdit(c)}
+                    className={`p-1.5 rounded-lg transition-colors ${tw.editIconButton || "text-slate-500 hover:bg-slate-100"}`}
+                    title="Modifier le niveau"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    className={`p-1.5 rounded-lg transition-colors ${tw.deleteIconButton}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -152,9 +179,9 @@ const MesCompetences = () => {
         <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${tw.modalOverlayLight}`}>
           <div className={`${tw.surface} rounded-2xl shadow-2xl w-full max-w-md overflow-hidden`}>
             <div className={`flex justify-between items-center px-6 py-4 border-b ${tw.borderSubtle}`}>
-              <h3 className={`text-base font-bold ${tw.textStrong}`}>Ajouter une compétence</h3>
+              <h3 className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier le niveau" : "Ajouter une compétence"}</h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className={`p-1.5 rounded-lg transition-colors ${tw.modalCloseButton}`}
               >
                 <X size={18} />
@@ -166,10 +193,11 @@ const MesCompetences = () => {
                 <input
                   type="text"
                   placeholder="Ex: React, Gestion de projet..."
-                  className={INPUT_CLASS}
+                  className={`${INPUT_CLASS} ${editingId ? "opacity-60 cursor-not-allowed" : ""}`}
                   value={nouvelle.label}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoComplete="off"
+                  disabled={!!editingId}
                   required
                 />
                 {suggestions.length > 0 && (
@@ -205,7 +233,7 @@ const MesCompetences = () => {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className={`flex-1 py-3 text-base font-semibold rounded-xl transition-colors ${tw.buttonCancelSoft}`}
                 >
                   Annuler
@@ -214,7 +242,7 @@ const MesCompetences = () => {
                   type="submit"
                   className={`flex-1 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-base font-bold rounded-xl transition-colors`}
                 >
-                  Enregistrer
+                  {editingId ? "Mettre à jour" : "Enregistrer"}
                 </button>
               </div>
             </form>

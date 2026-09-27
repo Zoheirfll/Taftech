@@ -38,10 +38,12 @@ const mockItems = [
   { id: 2, label: "Compétence masquée", actif: false },
 ];
 
+const mockPage = (results) => ({ results, count: results.length, total_pages: 1 });
+
 describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
-    jobsService.getAdminCompetences.mockResolvedValue(mockItems);
+    jobsService.getAdminCompetences.mockResolvedValue(mockPage(mockItems));
   });
 
   afterEach(() => {
@@ -87,7 +89,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
 
     await waitFor(
       () => {
-        expect(jobsService.getAdminCompetences).toHaveBeenCalledWith("gestion");
+        expect(jobsService.getAdminCompetences).toHaveBeenCalledWith("gestion", 1);
       },
       { timeout: 1000 },
     );
@@ -177,7 +179,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
   });
 
   it("🔴 EC3 : Aucune compétence trouvée", async () => {
-    jobsService.getAdminCompetences.mockResolvedValue([]);
+    jobsService.getAdminCompetences.mockResolvedValue(mockPage([]));
 
     render(
       <MemoryRouter>

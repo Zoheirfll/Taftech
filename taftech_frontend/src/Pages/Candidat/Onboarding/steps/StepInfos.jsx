@@ -88,6 +88,10 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
           </div>
         </div>
         <div>
+          <label htmlFor="onb-adresse" className={`${tw.authLabel} mb-1.5`}>Adresse (rue, quartier)</label>
+          <input id="onb-adresse" placeholder="Ex: Cité 100 Logements, Bt 12, El Kerma" className={tw.authInput} value={infosForm.adresse || ""} onChange={set("adresse")} />
+        </div>
+        <div>
           <label htmlFor="onb-diplome" className={`${tw.authLabel} mb-1.5`}>Diplôme</label>
           <select id="onb-diplome" className={tw.authInput} value={infosForm.diplome || ""} onChange={set("diplome")}>
             <option value="">Sélectionnez…</option>

@@ -24,6 +24,7 @@ export const useGestionOffre = () => {
   const [isPremium, setIsPremium] = useState(false);
   const [analyseGroq, setAnalyseGroq] = useState(null);
   const [loadingGroq, setLoadingGroq] = useState(false);
+  const [quotaAnalyseRecruteur, setQuotaAnalyseRecruteur] = useState(null);
   const [resumeIA, setResumeIA] = useState(null);
   const [loadingResume, setLoadingResume] = useState(false);
   const [documentsPartages, setDocumentsPartages] = useState([]);
@@ -58,6 +59,7 @@ export const useGestionOffre = () => {
         ]);
         if (constData) setConstants(constData);
         if (dashData.palier_actif) setIsPremium(true);
+        jobsService.getQuotaIA("ANALYSE_RECRUTEUR").then(setQuotaAnalyseRecruteur).catch(() => {});
         const foundOffre = dashData.offres.find((o) => o.id === parseInt(id));
         if (foundOffre) {
           setOffre(foundOffre);
@@ -348,9 +350,13 @@ export const useGestionOffre = () => {
         selectedCandidature.id,
       );
       setAnalyseGroq(data.analyse);
+      if (data.quota_ia) setQuotaAnalyseRecruteur({ ...data.quota_ia, disponible: true });
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."));
       reportError("ECHEC_ANALYSE_GROQ_RECRUTEUR", err);
+      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+        setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });
+      }
     } finally {
       setLoadingGroq(false);
     }
@@ -363,8 +369,12 @@ export const useGestionOffre = () => {
         selectedCandidature.id,
       );
       setResumeIA(data.analyse);
+      if (data.quota_ia) setQuotaAnalyseRecruteur({ ...data.quota_ia, disponible: true });
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."));
+      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+        setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });
+      }
     } finally {
       setLoadingResume(false);
     }
@@ -412,6 +422,7 @@ export const useGestionOffre = () => {
     setTriMode,
     analyseGroq,
     loadingGroq,
+    quotaAnalyseRecruteur,
     resumeIA,
     setResumeIA,
     loadingResume,

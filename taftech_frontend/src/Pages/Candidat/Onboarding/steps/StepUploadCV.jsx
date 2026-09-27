@@ -1,8 +1,9 @@
 import React, { useRef } from "react";
 import { Sparkles, FileText } from "lucide-react";
 import { tw } from "../../../../theme";
+import QuotaIABadge from "../../../../Components/QuotaIABadge";
 
-export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil }) => {
+export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaParserCV }) => {
   const inputRef = useRef(null);
 
   const onChange = (e) => {
@@ -14,7 +15,12 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil }) => {
   return (
     <div className="text-center">
       <h3 className={`${tw.pageTitlePetit} mb-2`}>Facilitez la création de votre profil</h3>
-      <p className={`${tw.bodyText} mb-6`}>Importez votre CV, vos informations se rempliront automatiquement.</p>
+      <p className={`${tw.bodyText} mb-4`}>Importez votre CV, vos informations se rempliront automatiquement.</p>
+      {quotaParserCV && (
+        <div className="flex justify-center mb-4">
+          <QuotaIABadge quota={quotaParserCV} />
+        </div>
+      )}
 
       {profil?.cv_pdf && (
         <div className={`flex items-center gap-3 p-4 rounded-xl border text-left mb-4 ${tw.bgSuccessSoft} border-emerald-200`}>
@@ -41,7 +47,7 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil }) => {
         <button
           type="button"
           onClick={() => uploadCV(null)}
-          disabled={parserLoading}
+          disabled={parserLoading || quotaParserCV?.disponible === false}
           className={`${tw.buttonPrimary} w-full flex items-center justify-center gap-2 py-3 disabled:opacity-60 mb-4`}
         >
           {parserLoading ? (
@@ -72,7 +78,7 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil }) => {
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           accept=".pdf,.docx,.doc"
           onChange={onChange}
-          disabled={parserLoading}
+          disabled={parserLoading || quotaParserCV?.disponible === false}
         />
         {parserLoading ? (
           <div>

@@ -97,7 +97,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
           </button>
         )}
 
-        {step === 1 && <StepUploadCV parserLoading={wizard.parserLoading} uploadCV={wizard.uploadCV} skipStep={wizard.skipStep} profil={wizard.profil} />}
+        {step === 1 && <StepUploadCV parserLoading={wizard.parserLoading} uploadCV={wizard.uploadCV} skipStep={wizard.skipStep} profil={wizard.profil} quotaParserCV={wizard.quotaParserCV} />}
         {step === 2 && (
           <StepInfos
             infosForm={wizard.infosForm}

@@ -9,6 +9,7 @@ import { selectStylesTeal, tw } from "../../theme";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
+import QuotaIABadge from "../../Components/QuotaIABadge";
 import { iaService } from "../../Services/iaService";
 import { recruteurService } from "../../Services/recruteurService";
 import { CreateQuestionnaireModal } from "../../Components/CreateQuestionnaireModal";
@@ -57,6 +58,7 @@ const CreateJob = () => {
   const [loading, setLoading] = useState(false);
   const [iaLoading, setIaLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [quotaGenerationOffre, setQuotaGenerationOffre] = useState(null);
   const [questionnaires, setQuestionnaires] = useState([]);
   const [showCreateQuestionnaire, setShowCreateQuestionnaire] = useState(false);
   const [metierSuggestions, setMetierSuggestions] = useState([]);
@@ -218,6 +220,7 @@ const CreateJob = () => {
         setConstants(data);
         setQuestionnaires(qData);
         if (dash.palier_actif) setIsPremium(true);
+        jobsService.getQuotaIA("GENERATION_OFFRE").then(setQuotaGenerationOffre).catch(() => {});
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_CONSTANTES_JOB", error);
         toast.error(apiErrMsg(error, "Erreur lors du chargement des listes déroulantes."));
@@ -302,10 +305,14 @@ const CreateJob = () => {
           return [...prev, ...nouvelles];
         });
       }
+      if (result.quota_ia) setQuotaGenerationOffre({ ...result.quota_ia, disponible: true });
       toast.success("Contenu généré ! Relisez et ajustez selon vos besoins.", { id: toastId });
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."), { id: toastId });
       reportError("ECHEC_GENERER_OFFRE_IA", err);
+      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+        setQuotaGenerationOffre({ ...err.response.data, disponible: false });
+      }
     } finally {
       setIaLoading(false);
     }
@@ -718,12 +725,13 @@ const CreateJob = () => {
                     ? (iaReady ? "Description, missions, profil, compétences et questions d'entretien." : "Saisissez le titre du poste pour activer.")
                     : "Fonctionnalité réservée aux comptes Premium ⭐"}
                 </p>
+                {isPremium && <QuotaIABadge quota={quotaGenerationOffre} className="mt-1" />}
               </div>
               {isPremium ? (
                 <button
                   type="button"
                   onClick={() => handleGenererIA()}
-                  disabled={iaLoading || !iaReady}
+                  disabled={iaLoading || !iaReady || quotaGenerationOffre?.disponible === false}
                   title={!iaReady ? "Saisissez le titre du poste d'abord" : ""}
                   className={`flex items-center justify-center gap-1.5 px-4 py-2 w-full sm:w-auto text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${iaReady ? tw.bgAmberSolidHover : tw.bgSlate300}`}
                 >

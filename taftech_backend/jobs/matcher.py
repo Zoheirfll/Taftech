@@ -57,14 +57,24 @@ def _mots(texte):
 # conservée intacte comme repli tant que les anciennes fiches ne sont pas
 # migrées vers ce nouveau champ — voir CLAUDE.md, Phase 2).
 # ---------------------------------------------------------------------------
-def _relation_similaire(metier_candidat, metier_offre):
+def _relation_similaire(metier_candidat, metier_offre, relations_cache=None):
     """Relation manuelle 'similaire' (RelationMetier) — couvre les métiers que le référentiel
     v2 du client classe dans des branches secteur/domaine totalement séparées (artefact de la
     nomenclature source, ex: 'Informaticien chargé d'étude' rangé sous 'Support à l'entreprise'
     alors que 'Développeur' est sous 'Informatique') mais qu'on juge substituables en pratique.
     Décision produit du 24/09/2026 : jamais déduite automatiquement, seulement peuplée à la
     main via le panel admin référentiel v2 — contrairement à redirection_equivalente/
-    plus_precis_que (importées du client), ce type est propre à TafTech."""
+    plus_precis_que (importées du client), ce type est propre à TafTech.
+
+    `relations_cache` (set d'ids de métiers déjà liés à `metier_candidat`, précalculée en
+    UNE requête par l'appelant) évite une requête SQL par paire quand cette fonction est
+    appelée en masse (ex: `metiers_matching.calculer_metiers_accessibles`, qui compare un
+    candidat à ~1000 métiers d'affilée — sans ce cache, chaque comparaison hors groupe
+    déclenchait sa propre requête, un vrai N+1 découvert en creusant une lenteur signalée
+    sur le dashboard candidat). `None` (défaut) garde l'ancien comportement, une requête
+    par appel — correct pour les usages "une seule paire à la fois" (matching candidat↔offre)."""
+    if relations_cache is not None:
+        return metier_offre.pk in relations_cache
     from .models import RelationMetier
     paire_directe = Q(metier_depart_id=metier_candidat.pk, metier_arrivee_id=metier_offre.pk)
     paire_inverse = Q(metier_depart_id=metier_offre.pk, metier_arrivee_id=metier_candidat.pk)
@@ -108,23 +118,32 @@ def _meme_secteur_parent(metier_candidat, metier_offre):
     return racine1 is not None and racine1 == racine2
 
 
-def metiers_compatibles(metier_candidat, metier_offre):
+def metiers_compatibles(metier_candidat, metier_offre, relations_cache=None, secteur_fallback=True):
     """Compare deux instances Metier (déjà résolues vers leur metier_canonique par
-    l'appelant si besoin). Retourne (compatible: bool, ratio: float)."""
+    l'appelant si besoin). Retourne (compatible: bool, ratio: float).
+
+    `relations_cache` : voir `_relation_similaire`. `secteur_fallback=False` saute le
+    filet "même secteur racine" (0.45, `_meme_secteur_parent`) — utile pour un appelant
+    qui compare un candidat à des centaines/milliers de métiers d'affilée et ignore de
+    toute façon ce score intermédiaire (ex: `metiers_matching.calculer_metiers_accessibles`,
+    qui l'exclut du calcul final) : `_meme_secteur_parent` remonte la hiérarchie
+    `GroupeMetier.parent` en Python sans prefetch, une requête SQL par niveau et par
+    métier comparé — un vrai N+1 (avec `_relation_similaire`, la vraie cause d'une lenteur
+    de 10s+ sur le dashboard candidat, plusieurs milliers de requêtes par chargement)."""
     if not metier_candidat or not metier_offre:
         return False, 0.0
     if metier_candidat.pk == metier_offre.pk:
         return True, 1.0
     if metier_candidat.groupe_principal_id and metier_candidat.groupe_principal_id == metier_offre.groupe_principal_id:
         return True, 0.85
-    if _relation_similaire(metier_candidat, metier_offre):
+    if _relation_similaire(metier_candidat, metier_offre, relations_cache):
         return True, 0.70
     # Filet de sécurité : deux métiers différents mais au libellé très proche
     # (ex: variantes non couvertes par une RelationMetier explicite).
     ratio = difflib.SequenceMatcher(None, normaliser(metier_candidat.libelle), normaliser(metier_offre.libelle)).ratio()
     if ratio >= 0.72:
         return True, ratio
-    if _meme_secteur_parent(metier_candidat, metier_offre):
+    if secteur_fallback and _meme_secteur_parent(metier_candidat, metier_offre):
         return True, 0.45
     return False, ratio
 

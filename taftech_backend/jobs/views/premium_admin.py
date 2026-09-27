@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny
 from django.core.cache import cache
+from django.core.paginator import Paginator
 from django.db.models import Q
 from ..models import FaqItem, CompetenceReferentiel
 from ..serializers import FaqItemSerializer, CompetenceReferentielSerializer
@@ -101,17 +102,27 @@ class CompetencesAutocompleteAPIView(APIView):
 
 
 class CompetencesAdminAPIView(APIView):
-    """CRUD admin du référentiel de compétences — même pattern que MetierReferentielAdminAPIView."""
+    """CRUD admin du référentiel de compétences — même pattern que MetierReferentielAdminAPIView.
+    Pagination ajoutée (retour utilisateur 26/09/2026) : la liste renvoyait TOUTES les
+    entrées d'un coup (déjà des dizaines en base, appelée à grossir), contrairement aux
+    autres panels admin (référentiel v2, formations à vérifier...) déjà paginés."""
     permission_classes = [IsAdminUser]
 
     def get(self, request):
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
         search = request.query_params.get('search', '').strip()
-        qs = CompetenceReferentiel.objects.all()
+        qs = CompetenceReferentiel.objects.order_by('label')
         if search:
             qs = qs.filter(label__icontains=search)
-        return Response(CompetenceReferentielSerializer(qs, many=True).data)
+        page = int(request.query_params.get('page', 1))
+        paginator = Paginator(qs, 30)
+        page_obj = paginator.get_page(page)
+        return Response({
+            'results': CompetenceReferentielSerializer(page_obj.object_list, many=True).data,
+            'count': paginator.count,
+            'total_pages': paginator.num_pages,
+        })
 
     def post(self, request):
         if request.user.role != 'ADMIN':

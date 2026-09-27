@@ -57,6 +57,7 @@ const GestionOffre = () => {
     isPremium,
     analyseGroq,
     loadingGroq,
+    quotaAnalyseRecruteur,
     resumeIA,
     setResumeIA,
     loadingResume,
@@ -435,6 +436,7 @@ const GestionOffre = () => {
               isPremium={isPremium}
               analyseGroq={analyseGroq}
               loadingGroq={loadingGroq}
+              quotaAnalyseRecruteur={quotaAnalyseRecruteur}
               handleAnalyseGroq={handleAnalyseGroq}
               resumeIA={resumeIA}
               setResumeIA={setResumeIA}

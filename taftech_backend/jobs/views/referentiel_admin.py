@@ -9,6 +9,7 @@ indicateurs `selectionnable`/`actif` (masquer une entrée sans la supprimer) —
 principe déjà appliqué à `AdminPaliers.jsx` (4 paliers fixes, pas d'ajout/suppression)."""
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
@@ -163,9 +164,13 @@ class AdminFormationsAVerifierAPIView(APIView):
 
     def delete(self, request, pk):
         """"Refuser" une formation en attente — utilisé quand l'intitulé déclaré ne
-        correspond à rien de vérifiable (spam, texte incompréhensible...) plutôt que de la
-        laisser indéfiniment dans la file d'attente. Le candidat est notifié pour pouvoir la
-        re-déclarer avec un intitulé plus précis — pas une sanction silencieuse."""
+        correspond à rien de vérifiable (spam, texte incompréhensible...). Soft-refuse
+        (statut_validation='REFUSEE'), jamais un hard delete : la formation reste visible sur
+        le profil du candidat (règle projet — aucune suppression de donnée candidat sans
+        garde-fou/trace), sort de la file "à vérifier" (celle-ci filtre 'A_PRECISER' seulement)
+        et le motif/l'auteur/la date sont conservés pour audit. Le candidat est notifié et peut
+        corriger l'intitulé pour revenir dans le flux normal (FormationCandidat.save() la
+        remet en 'DECLARE' dès qu'un diplome_ref valide est fourni)."""
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
         try:
@@ -176,13 +181,13 @@ class AdminFormationsAVerifierAPIView(APIView):
         from ..models import Notification
         message = (
             f"Votre formation \"{formation.diplome}\" n'a pas pu être rattachée à un diplôme "
-            "reconnu de notre référentiel et a été retirée de votre profil."
+            "reconnu de notre référentiel."
         )
         if motif:
             message += f" Motif indiqué par l'administrateur : {motif}."
         message += (
-            " Vous pouvez la redéclarer avec un intitulé plus précis (type de diplôme officiel, "
-            "ex: \"Licence\", \"BTS\", \"Master\")."
+            " Vous pouvez corriger l'intitulé (type de diplôme officiel, ex: \"Licence\", "
+            "\"BTS\", \"Master\") pour qu'elle soit revérifiée."
         )
         Notification.objects.create(
             destinataire=formation.profil.user,
@@ -191,7 +196,11 @@ class AdminFormationsAVerifierAPIView(APIView):
             message=message,
             lien='/profil',
         )
-        formation.delete()
+        formation.statut_validation = 'REFUSEE'
+        formation.motif_refus = motif
+        formation.refusee_par = request.user
+        formation.date_refus = timezone.now()
+        formation.save()
         return Response(status=204)
 
 

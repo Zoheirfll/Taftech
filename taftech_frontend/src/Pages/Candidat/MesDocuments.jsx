@@ -1,16 +1,22 @@
+import { Link } from "react-router-dom";
 import React, { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
-import { FolderLock, Trash2, Upload, FileText, Lock, ShieldCheck, Share2, X, Building2 } from "lucide-react";
+import { FolderLock, Trash2, Upload, FileText, Lock, ShieldCheck, Share2, X, Building2, Clock } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
+import Tooltip from "../../Components/Tooltip";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
+
+// Doit rester synchronisé avec MAX_DOCUMENTS_CANDIDAT (taftech_backend/jobs/views/candidat_dashboard.py)
+// — purement pour l'affichage du compteur, le backend reste la seule source de vérité qui bloque.
+const MAX_DOCUMENTS_CANDIDAT = 20;
 
 const MesDocuments = () => {
   const [types, setTypes] = useState([]);
@@ -184,6 +190,8 @@ const MesDocuments = () => {
     });
   };
 
+  const documentsAuMax = documents.length >= MAX_DOCUMENTS_CANDIDAT;
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
@@ -250,7 +258,7 @@ const MesDocuments = () => {
         {profil && (
           <div className={`${tw.card} p-4 mt-3 flex items-center justify-between gap-3`}>
             <div>
-              <p className={`text-sm font-semibold ${tw.textStrong}`}>Déblocage par les recruteurs</p>
+              <p className={`text-sm font-semibold ${tw.textStrong}`}>Déblocage par les recruteurs <Link to="/confidentialite-recruteurs" className="ml-1 text-xs font-normal text-indigo-700 underline">Ce que voient les recruteurs</Link></p>
               <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
                 {profil.visible_cvtheque
                   ? "Un recruteur peut débloquer vos coordonnées/CV via un crédit CVthèque."
@@ -278,9 +286,27 @@ const MesDocuments = () => {
 
       {/* ── Documents privés — jamais visibles par les recruteurs sans autorisation ── */}
       <div>
-        <h2 className={`text-sm font-bold ${tw.textStrong} mb-2 flex items-center gap-1.5`}>
-          <Lock size={16} className={tw.textMuted700} /> Documents privés
-        </h2>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h2 className={`text-sm font-bold ${tw.textStrong} flex items-center gap-1.5`}>
+            <Lock size={16} className={tw.textMuted700} /> Documents privés
+          </h2>
+          <Tooltip
+            text={
+              documentsAuMax
+                ? "Limite atteinte — supprimez un document pour en ajouter un nouveau."
+                : "Un seul document par type (le nouvel envoi remplace l'ancien). Supprimez un document existant pour libérer de la place."
+            }
+            position="top"
+          >
+            <span
+              className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                documentsAuMax ? "text-amber-600" : tw.textMuted700
+              }`}
+            >
+              <Clock size={11} /> {documents.length}/{MAX_DOCUMENTS_CANDIDAT} documents
+            </span>
+          </Tooltip>
+        </div>
         <InfoBanner storageKey="mes_documents" title="Confidentialité">
           Diplômes, attestations, certificats, pièces justificatives et autres documents : strictement
           personnels, <strong>jamais visibles</strong> par les recruteurs sans votre autorisation.
@@ -298,11 +324,12 @@ const MesDocuments = () => {
             </div>
             <button
               type="button"
-              disabled={uploading}
+              disabled={uploading || documentsAuMax}
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center justify-center gap-2 px-4 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50`}
+              title={documentsAuMax ? `Limite de ${MAX_DOCUMENTS_CANDIDAT} documents atteinte.` : undefined}
+              className={`flex items-center justify-center gap-2 px-4 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-sm font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <Upload size={16} /> {uploading ? "Envoi..." : "Ajouter un fichier"}
+              <Upload size={16} /> {uploading ? "Envoi..." : documentsAuMax ? "Limite atteinte" : "Ajouter un fichier"}
             </button>
             <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
           </div>

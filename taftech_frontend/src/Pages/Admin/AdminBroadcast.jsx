@@ -2,9 +2,16 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
-import { Send } from "lucide-react";
+import { Send, Megaphone } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+
+const AUDIENCES = {
+  NEWSLETTER: "Newsletter",
+  EXCLUSIF: "Offres exclusives",
+};
 
 const AdminBroadcast = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +26,7 @@ const AdminBroadcast = () => {
     if (!formData.sujet.trim() || !formData.message.trim())
       return toast.error("Le sujet et le message sont obligatoires.");
     confirmToast(
-      `Envoyer cet email à tous les abonnés "${formData.type_envoi}" ?`,
+      `Envoyer « ${formData.sujet.trim()} » à tous les candidats abonnés à « ${AUDIENCES[formData.type_envoi]} » ? L'envoi est immédiat et ne peut pas être annulé.`,
       async () => {
         setIsSending(true);
         try {
@@ -28,7 +35,7 @@ const AdminBroadcast = () => {
           setFormData({ ...formData, sujet: "", message: "" });
         } catch (error) {
           reportError("ECHEC_ENVOI_BROADCAST", error);
-          toast.error(error.response?.data?.error || "Erreur lors de l'envoi.");
+          toast.error(apiErrMsg(error, "Erreur lors de l'envoi."));
         } finally {
           setIsSending(false);
         }
@@ -40,14 +47,19 @@ const AdminBroadcast = () => {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className={tw.pageTitle}>
-          Diffusion d'emails
-        </h1>
-        <p className={`${tw.pageSubtitle} mt-0.5`}>
-          Envoyez des communications ciblées aux candidats.
-        </p>
-      </div>
+      <AdminPageHeader
+        icon={Megaphone}
+        color="teal"
+        title="Diffusion d'emails"
+        subtitle="Envoyez des communications ciblées aux candidats."
+        aideKey="diffusion"
+        aide={[
+          "Seuls les candidats ayant accepté ce type d'email dans leurs paramètres le reçoivent (Newsletter ou Offres exclusives) — conformité loi 18-07.",
+          "Les destinataires sont en copie cachée (BCC) : aucun candidat ne voit l'adresse des autres.",
+          "L'envoi est immédiat et définitif : relisez le sujet et le message avant de confirmer.",
+          "Pour une annonce visible sur le site (et non par email), utilisez plutôt « Bannières » → bandeau d'annonce.",
+        ]}
+      />
 
       <div className={`${tw.card} p-6`}>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -117,12 +129,15 @@ const AdminBroadcast = () => {
               required
               rows="7"
               placeholder="Rédigez votre email ici..."
-              className={inputClass + " resize-none"}
+              className={inputClass + " resize-y"}
               value={formData.message}
               onChange={(e) =>
                 setFormData({ ...formData, message: e.target.value })
               }
             />
+            <p className={`text-[11px] ${tw.textMuted} mt-1 text-right tabular-nums`}>
+              {formData.message.length} caractère{formData.message.length > 1 ? "s" : ""}
+            </p>
             <p className={`text-xs ${tw.textMuted} mt-1.5`}>
               Les emails seront envoyés en copie cachée (BCC) pour protéger la
               vie privée.
@@ -133,7 +148,7 @@ const AdminBroadcast = () => {
             <button
               type="submit"
               disabled={isSending}
-              className={`flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg`}
+              className={`flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg disabled:opacity-60 ${tw.focusRing}`}
             >
               {isSending ? (
                 <>

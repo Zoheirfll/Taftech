@@ -699,7 +699,15 @@ class Candidature(models.Model):
     note_experience = models.IntegerField(null=True, blank=True, verbose_name="Expérience pertinente (1-5)")
     note_globale = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, verbose_name="Note globale (/20)")
     commentaire_evaluation = models.TextField(blank=True, null=True, verbose_name="Commentaire (privé recruteur)")
-    profil_snapshot = models.JSONField(null=True, blank=True)    
+    profil_snapshot = models.JSONField(null=True, blank=True)
+    # Persistance de l'analyse IA recruteur (session 27/09/2026, même principe que
+    # ProfilCandidat.derniere_analyse_carriere) — jusqu'ici recalculée à chaque ouverture de la
+    # candidature (perdue en changeant de candidat dans la liste), le bouton associé devient
+    # "Régénérer" dès qu'un résultat existe déjà. Le "Résumé IA" et l'"Analyse approfondie" du
+    # panel recruteur consomment le même appel/champ (jobs/views/ia.py::AnalyseGroqRecruteurAPIView).
+    derniere_analyse_ia = models.TextField(null=True, blank=True, verbose_name="Dernière analyse IA (recruteur)")
+    analyse_ia_le = models.DateTimeField(null=True, blank=True, verbose_name="Date de la dernière analyse IA")
+
     def __str__(self):
         nom = self.candidat.username if self.candidat else f"{self.nom_rapide} {self.prenom_rapide} (Rapide)"
         score_display = f" - {self.score_matching}%" if self.score_matching else ""
@@ -921,6 +929,15 @@ class FormationCandidat(models.Model):
         ('DECLARE', 'Déclaré'),
         ('DOCUMENT_VERIFIE', 'Document vérifié'),
         ('A_PRECISER', 'À préciser'),
+        # Décision candidat vs admin sur une formation en attente : refusée par un admin, jamais
+        # supprimée (règle projet — pas de hard delete de données candidat sans garde-fou/trace).
+        # La formation reste visible sur le profil, sort de la file "à vérifier"
+        # (AdminFormationsAVerifierAPIView filtre A_PRECISER seulement) et n'est plus traitée
+        # comme provisoire par le matcher (`formation_a_verifier` ne teste que A_PRECISER) —
+        # un candidat qui corrige l'intitulé et re-sauvegarde revient en A_PRECISER (save()
+        # ci-dessous ne bascule REFUSEE qu'à travers ce même incertain/DECLARE, donc une
+        # nouvelle tentative repasse par le flux normal, jamais bloquée définitivement).
+        ('REFUSEE', 'Refusée par un administrateur'),
     ]
     VERSION_REFERENTIEL_DEFAUT = 'TAFTECH-2026.09.11-v2'
 
@@ -983,6 +1000,16 @@ class FormationCandidat(models.Model):
 
     description = models.TextField(blank=True, null=True, verbose_name="Description ou mention")
 
+    # Trace d'audit du refus admin (statut_validation='REFUSEE') — jamais de hard delete d'une
+    # formation candidat sans garde-fou : motif + auteur + date conservés même si le candidat
+    # corrige ensuite l'intitulé et repasse en DECLARE (voir save()).
+    motif_refus = models.TextField(blank=True, default='', verbose_name="Motif du refus (si refusée par un admin)")
+    refusee_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='formations_refusees', verbose_name="Admin ayant refusé cette formation",
+    )
+    date_refus = models.DateTimeField(null=True, blank=True, verbose_name="Date du refus")
+
     class Meta:
         ordering = ['-date_fin']
 
@@ -1015,9 +1042,13 @@ class FormationCandidat(models.Model):
                 diplome_id=self.diplome_ref_id, selectionnable=True,
             ).exists()
         incertain = diplome_incertain or specialite_incertaine
+        # REFUSEE traité comme A_PRECISER côté bascule (mais jamais listé dans la file
+        # d'attente admin, qui filtre strictement 'A_PRECISER') : un candidat qui corrige
+        # l'intitulé après un refus et fournit un diplome_ref valide doit pouvoir revenir en
+        # DECLARE sans intervention admin, plutôt que rester bloqué en REFUSEE pour toujours.
         if incertain and self.statut_validation == 'DECLARE':
             self.statut_validation = 'A_PRECISER'
-        elif not incertain and self.statut_validation == 'A_PRECISER':
+        elif not incertain and self.statut_validation in ('A_PRECISER', 'REFUSEE'):
             self.statut_validation = 'DECLARE'
         super().save(*args, **kwargs)
 
@@ -1090,6 +1121,7 @@ class Notification(models.Model):
         ('CANDIDATURE_SPONTANEE', 'Candidature spontanée reçue'),
         ('NOUVELLE_CANDIDATURE', 'Nouvelle candidature'),
         ('CANDIDAT_RECOMMANDE', 'Candidat recommandé'),
+        ('OFFRE_EXPIREE', 'Offre expirée et archivée'),
     )
 
     destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
@@ -1211,6 +1243,9 @@ class AuditLog(models.Model):
         ('REFUSER_ENTREPRISE', 'Refuser entreprise'),
         ('SUPPRIMER_USER', 'Supprimer utilisateur'),
         ('SUPPRIMER_OFFRE', 'Supprimer offre'),
+        ('ACTIVER_ABONNEMENT', 'Activer un abonnement (palier)'),
+        ('MODIFIER_PRIX_PALIER', "Modifier le prix d'un palier"),
+        ('SUPPRIMER_ADMIN', 'Supprimer un compte administrateur'),
         ('AUTRE', 'Autre'),
     ]
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

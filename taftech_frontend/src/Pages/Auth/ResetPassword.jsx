@@ -1,3 +1,5 @@
+import FieldError from "../../Components/FieldError";
+import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
@@ -13,6 +15,7 @@ const ResetPassword = () => {
   const [email, setEmail] = useState(location.state?.email || "");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [form, setForm] = useState({ nouveau_mdp: "", confirmer_mdp: "" });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -38,9 +41,11 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.nouveau_mdp !== form.confirmer_mdp) {
+      setFieldErrors({ confirmer_mdp: "Les mots de passe ne correspondent pas." });
       return toast.error("Les mots de passe ne correspondent pas.");
     }
     if (form.nouveau_mdp.length < 8) {
+      setFieldErrors({ nouveau_mdp: "Au moins 8 caractères." });
       return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
     }
     const code = otp.join("");
@@ -54,7 +59,9 @@ const ResetPassword = () => {
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
       reportError("ECHEC_RESET_PASSWORD", err);
-      toast.error(err.response?.data?.error || "Code invalide ou expiré.");
+      const msg = err.response?.data?.error;
+      if (msg && /mot de passe/i.test(msg)) setFieldErrors({ nouveau_mdp: msg });
+      toast.error(msg || "Code invalide ou expiré.");
     } finally {
       setLoading(false);
     }
@@ -123,8 +130,8 @@ const ResetPassword = () => {
                   <input
                     type={showPass ? "text" : "password"}
                     required
-                    value={form.nouveau_mdp}
-                    onChange={(e) => setForm({ ...form, nouveau_mdp: e.target.value })}
+                    name="nouveau_mdp" aria-invalid={!!fieldErrors.nouveau_mdp} aria-describedby={fieldErrors.nouveau_mdp ? "err-nouveau_mdp" : undefined} value={form.nouveau_mdp}
+                    onChange={(e) => { setForm({ ...form, nouveau_mdp: e.target.value }); setFieldErrors({}); }}
                     placeholder="Minimum 8 caractères"
                     className={`${tw.authInput} pr-10`}
                   />
@@ -132,6 +139,7 @@ const ResetPassword = () => {
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+<FieldError id="err-nouveau_mdp" message={fieldErrors.nouveau_mdp} />
               </div>
 
               <div>
@@ -140,8 +148,8 @@ const ResetPassword = () => {
                   <input
                     type={showConfirm ? "text" : "password"}
                     required
-                    value={form.confirmer_mdp}
-                    onChange={(e) => setForm({ ...form, confirmer_mdp: e.target.value })}
+                    name="confirmer_mdp" aria-invalid={!!fieldErrors.confirmer_mdp} aria-describedby={fieldErrors.confirmer_mdp ? "err-confirmer_mdp" : undefined} value={form.confirmer_mdp}
+                    onChange={(e) => { setForm({ ...form, confirmer_mdp: e.target.value }); setFieldErrors({}); }}
                     placeholder="Répétez le mot de passe"
                     className={`${tw.authInput} pr-10`}
                   />
@@ -149,6 +157,7 @@ const ResetPassword = () => {
                     {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+<FieldError id="err-confirmer_mdp" message={fieldErrors.confirmer_mdp} />
               </div>
 
               <button

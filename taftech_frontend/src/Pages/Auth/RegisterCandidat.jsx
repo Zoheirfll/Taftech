@@ -1,3 +1,5 @@
+import FieldError from "../../Components/FieldError";
+import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
@@ -76,13 +78,17 @@ const RegisterCandidat = () => {
     fetchConstants();
   }, []);
 
+  const [fieldErrors, setFieldErrors] = useState({});
+
   const handleChange = (e) => {
     const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
+    if (fieldErrors[e.target.name]) setFieldErrors({ ...fieldErrors, [e.target.name]: undefined });
   };
 
   const handleSelectChange = (selectedOption, actionMeta) => {
     setFormData({ ...formData, [actionMeta.name]: selectedOption ? selectedOption.value : "" });
+    if (fieldErrors[actionMeta.name]) setFieldErrors({ ...fieldErrors, [actionMeta.name]: undefined });
   };
 
   const handleSubmit = async (e) => {
@@ -92,13 +98,16 @@ const RegisterCandidat = () => {
       return;
     }
     if (!formData.wilaya) {
+      setFieldErrors({ wilaya: "Veuillez sélectionner votre wilaya." });
       toast.error("Veuillez sélectionner votre wilaya.");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
+      setFieldErrors({ confirmPassword: "Les mots de passe ne correspondent pas." });
       toast.error("Les mots de passe ne correspondent pas.");
       return;
     }
+    setFieldErrors({});
     setLoading(true);
     const toastId = toast.loading("Création de votre profil...");
     sessionStorage.setItem("taftech_new_registration", "1");
@@ -111,6 +120,7 @@ const RegisterCandidat = () => {
       setRegisteredEmail(formData.email);
       setStep(2);
     } catch (err) {
+      setFieldErrors(extraireErreursChamps(err));
       const data = err.response?.data;
       const premierMsg = data && typeof data === "object"
         ? Object.values(data).flat().find(Boolean)
@@ -247,62 +257,71 @@ const RegisterCandidat = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Nom *</label>
-                    <input type="text" name="last_name" required value={formData.last_name} onChange={handleChange}
+                    <input type="text" name="last_name" aria-invalid={!!fieldErrors.last_name} aria-describedby={fieldErrors.last_name ? "err-last_name" : undefined} required value={formData.last_name} onChange={handleChange}
                       className={tw.authInput} />
+<FieldError id="err-last_name" message={fieldErrors.last_name} />
                   </div>
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Prénom *</label>
-                    <input type="text" name="first_name" required value={formData.first_name} onChange={handleChange}
+                    <input type="text" name="first_name" aria-invalid={!!fieldErrors.first_name} aria-describedby={fieldErrors.first_name ? "err-first_name" : undefined} required value={formData.first_name} onChange={handleChange}
                       className={tw.authInput} />
+<FieldError id="err-first_name" message={fieldErrors.first_name} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Date de naissance *</label>
-                    <input type="date" name="date_naissance" required value={formData.date_naissance} onChange={handleChange}
+                    <input type="date" name="date_naissance" aria-invalid={!!fieldErrors.date_naissance} aria-describedby={fieldErrors.date_naissance ? "err-date_naissance" : undefined} required value={formData.date_naissance} onChange={handleChange}
                       className={tw.authInput} />
+<FieldError id="err-date_naissance" message={fieldErrors.date_naissance} />
                   </div>
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Téléphone *</label>
-                    <input type="tel" name="telephone" required placeholder="0555..." value={formData.telephone} onChange={handleChange}
+                    <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required placeholder="0555..." value={formData.telephone} onChange={handleChange}
                       className={tw.authInput} />
+<FieldError id="err-telephone" message={fieldErrors.telephone} />
                   </div>
                 </div>
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Wilaya *</label>
                   <Select name="wilaya" options={wilayasList} value={wilayasList.find((w) => w.value === formData.wilaya) || null} onChange={handleSelectChange} placeholder="Sélectionnez votre wilaya..." styles={selectStyles} classNamePrefix="wilaya-select" />
+<FieldError id="err-wilaya" message={fieldErrors.wilaya} />
                 </div>
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Adresse *</label>
-                  <input type="text" name="adresse" required value={formData.adresse} onChange={handleChange}
+                  <input type="text" name="adresse" aria-invalid={!!fieldErrors.adresse} aria-describedby={fieldErrors.adresse ? "err-adresse" : undefined} required value={formData.adresse} onChange={handleChange}
                     className={tw.authInput} />
+<FieldError id="err-adresse" message={fieldErrors.adresse} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Email *</label>
-                    <input type="email" name="email" required value={formData.email} onChange={handleChange}
+                    <input type="email" name="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} required value={formData.email} onChange={handleChange}
                       className={tw.authInput} />
+<FieldError id="err-email" message={fieldErrors.email} />
                   </div>
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Mot de passe *</label>
                     <div className="relative">
-                      <input type={showPass ? "text" : "password"} name="password" required minLength="8" value={formData.password} onChange={handleChange}
+                      <input type={showPass ? "text" : "password"} name="password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? "err-password" : undefined} required minLength="8" value={formData.password} onChange={handleChange}
                         className={`${tw.authInput} pr-10`} />
                       <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                         {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+<FieldError id="err-password" message={fieldErrors.password} />
                   </div>
                 </div>
                 <div>
                   <label className={`${tw.authLabel} mb-1.5`}>Confirmer le mot de passe *</label>
                   <div className="relative">
-                    <input type={showConfirmPass ? "text" : "password"} name="confirmPassword" required minLength="8" value={formData.confirmPassword} onChange={handleChange}
+                    <input type={showConfirmPass ? "text" : "password"} name="confirmPassword" aria-invalid={!!fieldErrors.confirmPassword} aria-describedby={fieldErrors.confirmPassword ? "err-confirmPassword" : undefined} required minLength="8" value={formData.confirmPassword} onChange={handleChange}
                       className={`${tw.authInput} pr-10`} />
                     <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${tw.authEyeToggle}`}>
                       {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+<FieldError id="err-confirmPassword" message={fieldErrors.confirmPassword} />
                 </div>
 
                 {/* Consentement */}

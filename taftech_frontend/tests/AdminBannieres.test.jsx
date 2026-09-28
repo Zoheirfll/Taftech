@@ -66,7 +66,8 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Promo Premium -20%")).toBeInTheDocument();
+      // Annonce active : présente dans le tableau ET dans l'aperçu du bandeau
+      expect(screen.getAllByText("Promo Premium -20%").length).toBe(2);
       expect(screen.getByText("Ancienne annonce")).toBeInTheDocument();
     });
   });
@@ -91,7 +92,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Promo Premium -20%"));
+    await waitFor(() => screen.getByText("Ancienne annonce"));
     fireEvent.click(screen.getByText("Carrousel accueil"));
 
     await waitFor(() => {
@@ -133,10 +134,8 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Promo Premium -20%"));
-    const allButtons = screen.getAllByRole("button");
-    // 0 = Nouvelle annonce, 1-2 = onglets, 3 = pencil(annonce1), 4 = trash(annonce1)
-    fireEvent.click(allButtons[4]);
+    await waitFor(() => screen.getByText("Ancienne annonce"));
+    fireEvent.click(screen.getByLabelText("Supprimer l'annonce Promo Premium -20%"));
     fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
@@ -194,7 +193,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("Promo Premium -20%"));
+    await waitFor(() => screen.getByText("Ancienne annonce"));
     fireEvent.click(screen.getByText("Carrousel accueil"));
 
     await waitFor(() => {

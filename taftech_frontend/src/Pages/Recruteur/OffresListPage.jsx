@@ -287,8 +287,11 @@ const OffresListPage = () => {
     const meilleurScore = offre.candidatures?.length > 0
       ? Math.max(...offre.candidatures.map((c) => parseFloat(c.score_matching) || 0))
       : null;
+    // Pas de clamp à 0 : une valeur négative signale une offre déjà expirée mais pas
+    // encore archivée par le cron `archiver_offres_expirees` — l'affichage doit le montrer
+    // ("Expirée") au lieu d'afficher indéfiniment "Auj." une fois la date dépassée.
     const jours = offre.date_expiration && !offre.est_cloturee
-      ? Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000))
+      ? Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000)
       : null;
     return { offre, nbCandidatures, nbNouvelles, nbEntretiens, nbRetenus, meilleurScore, jours };
   });
@@ -477,7 +480,7 @@ const OffresListPage = () => {
               : tw.rowDefault;
 
             const expColor = jours === null ? tw.textSubtle
-              : jours === 0 ? tw.textError
+              : jours <= 0 ? tw.textError
               : jours <= 7 ? tw.textErrorMuted
               : jours <= 30 ? tw.textAmber500
               : jours <= 60 ? tw.textTeal600
@@ -557,7 +560,13 @@ const OffresListPage = () => {
                   <span className={`text-xs ${tw.textMuted}`}>{offre.type_contrat}</span>
 
                   <span className={`text-xs font-semibold text-center tabular-nums ${expColor}`}>
-                    {jours === null ? <span className={`${tw.textSubtle} text-base`}>∞</span> : jours === 0 ? "Auj." : `${jours}j`}
+                    {jours === null
+                      ? <span className={`${tw.textSubtle} text-base`}>∞</span>
+                      : jours < 0
+                        ? "Expirée"
+                        : jours === 0
+                          ? "Auj."
+                          : `${jours}j`}
                   </span>
 
                   {[
@@ -593,7 +602,9 @@ const OffresListPage = () => {
                         <span>{offre.type_contrat}</span>
                         {jours === null
                           ? <span className={tw.textSubtle}>∞ sans limite</span>
-                          : <span className={`font-semibold ${expColor}`}>{jours === 0 ? "Expire auj." : `${jours}j`}</span>}
+                          : <span className={`font-semibold ${expColor}`}>
+                              {jours < 0 ? "Expirée" : jours === 0 ? "Expire auj." : `${jours}j`}
+                            </span>}
                       </div>
                       {offre.motif_rejet && (
                         <p className={`text-xs mt-1 flex items-center gap-1 ${tw.textErrorMuted}`}>

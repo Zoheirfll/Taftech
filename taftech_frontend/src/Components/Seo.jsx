@@ -3,7 +3,7 @@ import { useEffect } from "react";
 const SITE_NAME = "TafTech";
 const DEFAULT_DESCRIPTION =
   "Plateforme de recrutement en ligne en Algérie. Trouvez un emploi ou recrutez les meilleurs profils grâce au matching intelligent.";
-const DEFAULT_IMAGE = "/taftech-favicon-original.ico";
+const DEFAULT_IMAGE = "/taftech-logo.png";
 
 const setMeta = (attr, key, content) => {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`);

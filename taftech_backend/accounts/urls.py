@@ -1,7 +1,7 @@
 # accounts/urls.py
 from django.urls import path
 from .views import CandidatRegistrationAPIView, RecruteurRegisterAPIView, CookieTokenObtainView, VerifyEmailAPIView, ErrorReportAPIView
-from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView, GoogleSocialAuthView, AdminSystemLogAPIView, ConsentementLoi1807View, ConsentementCVThequeView, RenvoyerCodeVerificationAPIView, ChangerMotDePasseAPIView, MeAPIView, ContactMessageAPIView
+from .views import ForgotPasswordAPIView, ResetPasswordAPIView, LogoutAPIView, GoogleSocialAuthView, AdminSystemLogAPIView, ConsentementLoi1807View, ConsentementCVThequeView, RenvoyerCodeVerificationAPIView, ChangerMotDePasseAPIView, MeAPIView, ContactMessageAPIView, SupprimerCompteAPIView
 from django.conf import settings
 
 
@@ -22,6 +22,7 @@ urlpatterns = [
     path('consentement/', ConsentementLoi1807View.as_view(), name='consentement-loi'),
     path('consentement-cvtheque/', ConsentementCVThequeView.as_view(), name='consentement-cvtheque'),
     path('changer-mot-de-passe/', ChangerMotDePasseAPIView.as_view(), name='changer-mot-de-passe'),
+    path('supprimer-mon-compte/', SupprimerCompteAPIView.as_view(), name='supprimer-mon-compte'),
     path('me/', MeAPIView.as_view(), name='me'),
     path('contact/', ContactMessageAPIView.as_view(), name='contact-message'),
 ]

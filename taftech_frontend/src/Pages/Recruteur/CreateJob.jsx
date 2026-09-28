@@ -7,7 +7,7 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { selectStylesTeal, tw } from "../../theme";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
-import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X } from "lucide-react";
+import { Briefcase, MapPin, GraduationCap, FileText, ClipboardList, Send, Sparkles, Clock, Calendar, ArrowLeft, X, ShieldCheck, Paperclip } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import QuotaIABadge from "../../Components/QuotaIABadge";
 import { iaService } from "../../Services/iaService";
@@ -509,11 +509,14 @@ const CreateJob = () => {
               />
             </Field>
           </div>
-          <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${tw.textStrong}`}>
-              Formation requise (optionnel)
-            </p>
-            <p className="text-xs text-slate-600 mb-3">
+          <div className="mt-5 border border-slate-200 rounded-xl p-5 bg-slate-50/60">
+            <div className="flex items-center gap-2 mb-1">
+              <GraduationCap size={14} className={`${tw.textTeal} shrink-0`} />
+              <p className={`text-sm font-bold ${tw.textStrong}`}>
+                Formation requise <span className="font-normal text-slate-500">(optionnel)</span>
+              </p>
+            </div>
+            <p className="text-xs text-slate-600 mb-4">
               Le diplôme et la spécialité ci-dessous sont deux critères indépendants (jamais un couple imposé) : laisser "Spécialités acceptées" vide accepte toute spécialité pour les diplômes choisis. Cette liste alimente aussi le filtre "Diplôme" de la recherche publique d'offres.
             </p>
 
@@ -610,14 +613,17 @@ const CreateJob = () => {
               </div>
             )}
           </div>
-          <div className="mt-4 border border-slate-200 rounded-lg p-4 bg-slate-50/60">
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${tw.textStrong}`}>
-              Exigences impératives (optionnel)
-            </p>
-            <p className="text-xs text-slate-600 mb-3">
+          <div className="mt-5 border border-slate-200 rounded-xl p-5 bg-slate-50/60">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck size={14} className={`${tw.textTeal} shrink-0`} />
+              <p className={`text-sm font-bold ${tw.textStrong}`}>
+                Exigences impératives <span className="font-normal text-slate-500">(optionnel)</span>
+              </p>
+            </div>
+            <p className="text-xs text-slate-600 mb-4">
               Permis, habilitation, droit d'exercice, certification... — distinct du diplôme, jamais utilisé pour calculer le score de matching. Le candidat déclare s'il y répond au moment de postuler, vous vérifiez ensuite.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={tw.formLabel}>Exigence</label>
                 <input
@@ -625,7 +631,7 @@ const CreateJob = () => {
                   value={draftExigenceLabel}
                   onChange={(e) => setDraftExigenceLabel(e.target.value)}
                   placeholder="Ex: Permis B"
-                  className={tw.inputColorsWhite}
+                  className={inputClass}
                 />
               </div>
               <div>
@@ -635,31 +641,36 @@ const CreateJob = () => {
                   value={draftExigenceDescription}
                   onChange={(e) => setDraftExigenceDescription(e.target.value)}
                   placeholder="Ex: Bulletin n°3 du casier judiciaire"
-                  className={tw.inputColorsWhite}
+                  className={inputClass}
                 />
               </div>
-              <label className="flex items-center gap-2 text-xs text-slate-700 h-fit pb-2.5 whitespace-nowrap">
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700 cursor-pointer hover:border-slate-300 transition-colors">
                 <input
                   type="checkbox"
                   checked={draftExigenceJustificatif}
                   onChange={(e) => setDraftExigenceJustificatif(e.target.checked)}
+                  className={`${tw.accentPrimary} w-3.5 h-3.5`}
                 />
+                <Paperclip size={12} className="text-slate-400" />
                 Justificatif requis
               </label>
               <button
                 type="button"
                 onClick={ajouterExigence}
                 disabled={!draftExigenceLabel.trim()}
-                className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
+                className={`${tw.buttonSecondary} px-4 py-2.5 disabled:opacity-50`}
               >
                 Ajouter
               </button>
             </div>
             {exigencesImperatives.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-4">
                 {exigencesImperatives.map((e) => (
                   <span key={e.label} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
-                    {e.label}{e.justificatif_requis ? " 📎" : ""}
+                    {e.label}
+                    {e.justificatif_requis && <Paperclip size={11} className="opacity-70" />}
                     <button type="button" onClick={() => retirerExigence(e.label)} className="hover:text-red-600">
                       <X size={12} />
                     </button>

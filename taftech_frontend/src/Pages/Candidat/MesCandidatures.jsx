@@ -79,6 +79,7 @@ const AnalyseIA = ({ cand }) => {
         <span className={`text-sm font-semibold ${tw.textPrimaryStrong} uppercase tracking-wide`}>
           Pourquoi ce score ?
         </span>
+        <Link to="/comprendre-mes-scores" className="ml-auto text-xs font-semibold text-indigo-700 underline">Comment est-il calculé ?</Link>
       </div>
       {typeof completude === "number" && completude < 1 && (
         <p className={`text-xs ${tw.textMuted700} mb-3`}>
@@ -260,7 +261,7 @@ const MesCandidatures = () => {
                         <span className="text-base font-bold leading-tight">{Math.round(cand.score_matching)}%</span>
                       </div>
                       <span className="absolute -top-1 -right-1">
-                        <TooltipIcon text="Score calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts). 80%+ = excellent match." position="right" />
+                        <TooltipIcon text="Score calculé sur 5 critères pondérés : localisation/mobilité (20), diplôme (20), spécialité de formation (25), expérience pertinente (20), compétences (15). Un critère non demandé par l'offre est retiré du calcul. 80 %+ = excellent match." position="right" />
                       </span>
                     </div>
                   ) : (

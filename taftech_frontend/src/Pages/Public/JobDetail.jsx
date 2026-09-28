@@ -332,7 +332,7 @@ const JobDetail = () => {
             <TrendingUp size={14} />
             <p className="text-xs font-medium flex items-center gap-1">
               Votre profil correspond à <strong>{matchingScore}%</strong>
-              <TooltipIcon text="Score calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts)." position="left" />
+              <TooltipIcon text="Score calculé sur 5 critères pondérés : localisation/mobilité (20), diplôme (20), spécialité de formation (25), expérience pertinente (20), compétences (15). Un critère non demandé par l'offre est retiré du calcul. 80 %+ = excellent match." position="left" />
             </p>
           </div>
         )}
@@ -591,7 +591,11 @@ const JobDetail = () => {
                   </span>
                 ) : job.jours_restants !== null && job.jours_restants !== undefined && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${job.jours_restants <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : job.jours_restants <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`}`}>
-                    {job.jours_restants === 0 ? "Expire aujourd'hui" : `Expire dans ${job.jours_restants} jour${job.jours_restants > 1 ? "s" : ""}`}
+                    {job.jours_restants < 0
+                      ? "Expirée"
+                      : job.jours_restants === 0
+                        ? "Expire aujourd'hui"
+                        : `Expire dans ${job.jours_restants} jour${job.jours_restants > 1 ? "s" : ""}`}
                   </span>
                 )}
               </div>

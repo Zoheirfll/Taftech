@@ -72,6 +72,29 @@ class ApiAdminTest(APITestCase):
         self.assertEqual(self.offre.statut_moderation, "APPROUVEE")
 
     # =======================================================
+    # BLOCAGE D'UTILISATEUR
+    # =======================================================
+    def test_admin_ne_peut_pas_se_bloquer_lui_meme(self):
+        """ Edge Case : un admin qui se bloque perdrait l'accès au panel """
+        url = reverse('admin-user-moderer', kwargs={'user_id': self.user_admin.id})
+        self.client.force_authenticate(user=self.user_admin)
+
+        response = self.client.patch(url, {})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user_admin.refresh_from_db()
+        self.assertTrue(self.user_admin.is_active)
+
+    def test_admin_bloque_un_autre_utilisateur(self):
+        """ Happy Path : bloquer puis débloquer un recruteur """
+        url = reverse('admin-user-moderer', kwargs={'user_id': self.user_rh.id})
+        self.client.force_authenticate(user=self.user_admin)
+
+        self.assertEqual(self.client.patch(url, {}).status_code, status.HTTP_200_OK)
+        self.user_rh.refresh_from_db()
+        self.assertFalse(self.user_rh.is_active)
+
+    # =======================================================
     # TESTS DES EXPORTS CSV
     # =======================================================
     def test_admin_export_utilisateurs_csv(self):

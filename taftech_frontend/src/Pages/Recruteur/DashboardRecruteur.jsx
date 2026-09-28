@@ -392,11 +392,11 @@ const DashboardRecruteur = () => {
   // Pas de filtre "masquer retenus/refusés" ici (widget compact sans toggle,
   // contrairement à la page dédiée /candidats-recommandes) — sinon des
   // candidats scorés disparaissent silencieusement sans moyen de les revoir.
-  // Restreint aux offres encore actives (est_active, non clôturée, non expirée) ET aux
-  // candidatures des 90 derniers jours — sinon une offre postée il y a des mois (jamais
-  // clôturée, ou sans date d'expiration) continue de faire remonter indéfiniment son meilleur
-  // candidat en tête du "top match", même vieux de plusieurs mois.
-  const RECOMMANDES_FENETRE_JOURS = 60;
+  // Restreint aux offres encore actives (est_active, non clôturée, non expirée) — une offre
+  // expirée est désormais fermée automatiquement par `archiver_offres_expirees` (cron
+  // quotidien), donc ce filtre suffit à garantir la fraîcheur. La fenêtre de récence sur la
+  // date de candidature (60 jours) a été retirée sur demande explicite (27/09/2026) — un bon
+  // candidat reste recommandé tant que l'offre est active, peu importe la date de candidature.
   // Même seuil que ActiviteProfil.SEUIL_SCORE_RECOMMANDE (backend) — un candidat n'est
   // qualifié de "recommandé" qu'à partir de 80% de compatibilité, sinon le widget affiche
   // un candidat à 35-41% comme s'il était pertinent alors que c'est juste le "moins pire"
@@ -404,15 +404,13 @@ const DashboardRecruteur = () => {
   const SEUIL_SCORE_RECOMMANDE = 80;
   const candidatsRecommandesTous = (() => {
     const today = new Date().toISOString().slice(0, 10);
-    const seuilRecence = new Date(Date.now() - RECOMMANDES_FENETRE_JOURS * 24 * 60 * 60 * 1000);
     const all = [];
     offresPourAnalyse.forEach((o) => {
       const offreActive = o.est_active !== false && !o.est_cloturee && (!o.date_expiration || o.date_expiration >= today);
       if (!offreActive) return;
       o.candidatures?.forEach((c) => {
         if (!c.est_rapide && c.candidat && c.score_matching !== null && c.score_matching !== undefined
-          && parseFloat(c.score_matching) >= SEUIL_SCORE_RECOMMANDE
-          && c.date_postulation && new Date(c.date_postulation) >= seuilRecence) {
+          && parseFloat(c.score_matching) >= SEUIL_SCORE_RECOMMANDE) {
           all.push({ ...c, offreTitre: o.titre, offreId: o.id });
         }
       });

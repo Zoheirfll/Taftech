@@ -1,15 +1,23 @@
+import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Coins } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import { AdminVide } from "../../Components/AdminEtat";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
+
+const prixParCredit = (prix, credits) => (credits > 0 ? Math.round(prix / credits) : null);
 
 const PACK_VIDE = { nom: "", credits: "", prix_da: "", ordre: 0, actif: true };
 
 const AdminCreditPacks = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -22,7 +30,7 @@ const AdminCreditPacks = () => {
     setLoading(true);
     try {
       const data = await jobsService.getAdminCreditPacks();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_CREDIT_PACKS", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -34,6 +42,9 @@ const AdminCreditPacks = () => {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  const fermerModal = React.useCallback(() => setShowModal(false), []);
+  useEchapPourFermer(showModal, fermerModal);
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -50,6 +61,8 @@ const AdminCreditPacks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.nom.trim()) return toast.error("Le nom est obligatoire.");
+    if (!(Number(form.credits) >= 1)) return toast.error("Un pack doit contenir au moins 1 crédit.");
+    if (!(Number(form.prix_da) >= 1)) return toast.error("Le prix doit être d'au moins 1 DA.");
     const payload = {
       ...form,
       credits: Number(form.credits) || 0,
@@ -73,10 +86,10 @@ const AdminCreditPacks = () => {
   };
 
   const handleDelete = (id) => {
-    confirmToast("Supprimer ce pack ?", async () => {
+    confirmToast("Supprimer ce pack ? Les crédits déjà achetés par les recruteurs restent valables. Pour seulement le retirer de la vente, décochez plutôt « Pack visible ».", async () => {
       try {
         await jobsService.deleteCreditPack(id);
-        setItems(items.filter((i) => i.id !== id));
+        setItems((prev) => prev.filter((i) => i.id !== id));
         toast.success("Pack supprimé.");
       } catch (err) {
         reportError("ECHEC_DELETE_CREDIT_PACK", err);
@@ -87,20 +100,28 @@ const AdminCreditPacks = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>Packs de crédits CVthèque</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Crédits achetables par les recruteurs quand leur quota mensuel est épuisé.
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
-        >
-          <Plus size={16} /> Ajouter un pack
-        </button>
-      </div>
+      <AdminPageHeader
+        compact
+        icon={Coins}
+        color="emerald"
+        title="Packs de crédits CVthèque"
+        subtitle="Crédits achetables par les recruteurs quand leur quota mensuel est épuisé."
+        aideKey="credit-packs"
+        aide={[
+          "1 crédit = débloquer les coordonnées et le CV d'un candidat, définitivement, pour toute l'équipe de l'entreprise.",
+          "Les crédits achetés n'expirent jamais ; ils sont utilisés après le quota mensuel inclus dans le palier.",
+          "Le prix par crédit aide à rendre les gros packs plus avantageux que les petits.",
+          "Paiement par Chargily : le montant facturé est exactement le prix indiqué ici.",
+        ]}
+        actions={
+          <button
+            onClick={handleOpenCreate}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
+          >
+            <Plus size={16} /> Ajouter un pack
+          </button>
+        }
+      />
 
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
@@ -110,21 +131,25 @@ const AdminCreditPacks = () => {
                 <th className="px-5 py-3">Nom</th>
                 <th className="px-5 py-3">Crédits</th>
                 <th className="px-5 py-3">Prix</th>
+                <th className="px-5 py-3">Prix / crédit</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="5" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <SkeletonTableRows columns={6} />
               ) : items.length === 0 ? (
-                <tr><td colSpan="5" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucun pack configuré.</td></tr>
+                <tr><td colSpan="6"><AdminVide icon={Coins} titre="Aucun pack configuré." texte="Sans pack actif, un recruteur au quota épuisé ne peut plus débloquer de profil avant le mois suivant." /></td></tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.id} className={tw.rowHover}>
                     <td className="px-5 py-3"><p className={`text-sm font-medium ${tw.textStrong}`}>{item.nom}</p></td>
-                    <td className="px-5 py-3 text-sm">{item.credits}</td>
-                    <td className="px-5 py-3 text-sm">{item.prix_da.toLocaleString("fr-FR")} DA</td>
+                    <td className="px-5 py-3 text-sm tabular-nums">{item.credits}</td>
+                    <td className={`px-5 py-3 text-sm font-semibold ${tw.textStrong} tabular-nums`}>{Number(item.prix_da).toLocaleString("fr-FR")} DA</td>
+                    <td className={`px-5 py-3 text-xs ${tw.textMuted700} tabular-nums`}>
+                      {prixParCredit(item.prix_da, item.credits) != null ? `${prixParCredit(item.prix_da, item.credits).toLocaleString("fr-FR")} DA` : "—"}
+                    </td>
                     <td className="px-5 py-3 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${item.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
                         {item.actif ? "Actif" : "Inactif"}
@@ -132,8 +157,8 @@ const AdminCreditPacks = () => {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(item)} className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors`}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} title="Supprimer" className={`p-2 ${tw.textMuted} hover:${tw.textError} hover:${tw.bgErrorSoft} rounded-lg transition-colors`}><Trash2 size={14} /></button>
+                        <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier le pack ${item.nom}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer le pack ${item.nom}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -145,13 +170,13 @@ const AdminCreditPacks = () => {
       </div>
 
       {showModal && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
+        <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="titre-modal-pack" className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
             <div className="flex justify-between items-center mb-5">
-              <h3 className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier le pack" : "Ajouter un pack"}</h3>
-              <button onClick={() => setShowModal(false)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}><X size={18} /></button>
+              <h3 id="titre-modal-pack" className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier le pack" : "Ajouter un pack"}</h3>
+              <button onClick={fermerModal} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label htmlFor="pack_nom" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Nom *</label>
                 <input id="pack_nom" required className={inputClass} placeholder="Ex: Pack 10" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
@@ -163,6 +188,11 @@ const AdminCreditPacks = () => {
               <div>
                 <label htmlFor="pack_prix" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Prix (DA) *</label>
                 <input id="pack_prix" type="number" min="1" required className={inputClass} value={form.prix_da} onChange={(e) => setForm({ ...form, prix_da: e.target.value })} />
+                {Number(form.credits) >= 1 && Number(form.prix_da) >= 1 && (
+                  <p className={`text-[11px] ${tw.textMuted} mt-1`}>
+                    Soit {prixParCredit(Number(form.prix_da), Number(form.credits)).toLocaleString("fr-FR")} DA par crédit.
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="pack_ordre" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Ordre d'affichage</label>
@@ -173,8 +203,8 @@ const AdminCreditPacks = () => {
                 <label htmlFor="pack_actif" className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}>Pack visible/achetable</label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
-                <button type="submit" className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
+                <button type="button" onClick={fermerModal} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
+                <button type="submit" disabled={submitBusy} className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
               </div>
             </form>
           </div>

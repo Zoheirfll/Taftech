@@ -1,3 +1,4 @@
+import { useSubmitLock } from "../../../utils/useSubmitLock";
 import React from "react";
 import Select from "react-select";
 import { selectStyles } from "../../../theme";
@@ -70,6 +71,7 @@ export const Modals = ({
   handleUpdateFormation,
   getCommunesOptions,
 }) => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const communesOptions = getCommunesOptions(editInfo.wilaya);
 
   return (
@@ -82,9 +84,8 @@ export const Modals = ({
               Informations personnelles
             </h3>
             <form
-              onSubmit={(e) =>
-                handleUpdateGeneric(e, editInfo, setShowInfoForm)
-              }
+              onSubmit={lockSubmit((e) =>
+                handleUpdateGeneric(e, editInfo, setShowInfoForm))}
               className="space-y-4"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -283,7 +284,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Sauvegarder
                 </button>
               </div>
@@ -300,9 +301,8 @@ export const Modals = ({
               Préférences de recrutement
             </h3>
             <form
-              onSubmit={(e) =>
-                handleUpdateGeneric(e, editPref, setShowPrefForm)
-              }
+              onSubmit={lockSubmit((e) =>
+                handleUpdateGeneric(e, editPref, setShowPrefForm))}
               className="space-y-4"
             >
               <div>
@@ -379,7 +379,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Sauvegarder
                 </button>
               </div>
@@ -395,7 +395,7 @@ export const Modals = ({
             <h3 className={tw.modalHeading}>
               Bio & Réseaux sociaux
             </h3>
-            <form onSubmit={handleUpdateLinks} className="space-y-4">
+            <form onSubmit={lockSubmit(handleUpdateLinks)} className="space-y-4">
               <div>
                 <label className={tw.formLabel}>
                   Bio / Résumé de profil
@@ -446,7 +446,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Sauvegarder
                 </button>
               </div>
@@ -462,7 +462,7 @@ export const Modals = ({
             <h3 className={tw.modalHeading}>
               Mettre à jour mon CV
             </h3>
-            <form onSubmit={handleUpdateCV} className="space-y-4">
+            <form onSubmit={lockSubmit(handleUpdateCV)} className="space-y-4">
               <div>
                 <label className={tw.formLabel}>
                   Titre professionnel
@@ -526,7 +526,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Téléverser
                 </button>
               </div>
@@ -545,9 +545,7 @@ export const Modals = ({
                 : "Ajouter une expérience"}
             </h3>
             <form
-              onSubmit={
-                editingExpId ? handleUpdateExperience : handleAddExperience
-              }
+              onSubmit={lockSubmit(editingExpId ? handleUpdateExperience : handleAddExperience)}
               className="space-y-4"
             >
               <div>
@@ -668,7 +666,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Sauvegarder
                 </button>
               </div>
@@ -687,9 +685,7 @@ export const Modals = ({
                 : "Ajouter une formation"}
             </h3>
             <form
-              onSubmit={
-                editingFormId ? handleUpdateFormation : handleAddFormation
-              }
+              onSubmit={lockSubmit(editingFormId ? handleUpdateFormation : handleAddFormation)}
               className="space-y-4"
             >
               <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
@@ -831,7 +827,7 @@ export const Modals = ({
                 >
                   Annuler
                 </button>
-                <button type="submit" className={btnPrimary}>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
                   Enregistrer
                 </button>
               </div>

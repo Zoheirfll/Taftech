@@ -526,6 +526,7 @@ const CVTheque = () => {
             Acheter des crédits →
           </Link>
         )}
+        <Link to="/comment-fonctionnent-credits" className={`text-xs underline ${tw.textTeal}`}>Comment ça marche ?</Link>
       </div>
 
       {/* HEADER + ONGLETS fusionnés */}

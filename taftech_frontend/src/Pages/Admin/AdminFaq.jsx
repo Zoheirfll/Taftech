@@ -1,21 +1,32 @@
-import React, { useState, useEffect } from "react";
+import { useSubmitLock } from "../../utils/useSubmitLock";
+import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, HelpCircle } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import { AdminVide } from "../../Components/AdminEtat";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
+// Catégories réellement affichées sur le site (FaqItem.CATEGORIE_CHOICES). "PALIERS" est lue
+// par la page Abonnements recruteur ; elle manquait ici (seule "PREMIUM", page supprimée le
+// 27/08/2026, était proposée) — les questions de la page Abonnements étaient ingérables.
 const CATEGORIES = [
-  { value: "GENERAL", label: "Général (page Contact)" },
-  { value: "RECRUTEUR", label: "Recruteur (landing)" },
-  { value: "PREMIUM", label: "Premium" },
+  { value: "GENERAL", label: "Général (page Contact)", couleur: "bg-indigo-50 text-indigo-700" },
+  { value: "RECRUTEUR", label: "Recruteur (landing)", couleur: "bg-teal-50 text-teal-700" },
+  { value: "PALIERS", label: "Abonnements (tarifs recruteur)", couleur: "bg-amber-50 text-amber-800" },
 ];
+// Ancienne catégorie conservée en base mais affichée nulle part — signalée comme telle.
+const CATEGORIE_OBSOLETE = { value: "PREMIUM", label: "Premium (obsolète, non affichée)", couleur: "bg-slate-100 text-slate-600" };
 
 const ITEM_VIDE = { categorie: "GENERAL", question: "", reponse: "", ordre: 0, actif: true };
 
 const AdminFaq = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [items, setItems] = useState([]);
   const [filtreCategorie, setFiltreCategorie] = useState("TOUTES");
   const [loading, setLoading] = useState(true);
@@ -29,7 +40,7 @@ const AdminFaq = () => {
     setLoading(true);
     try {
       const data = await jobsService.getAdminFaq();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_FAQ", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -42,11 +53,17 @@ const AdminFaq = () => {
     fetchItems();
   }, []);
 
-  const itemsAffiches = filtreCategorie === "TOUTES" ? items : items.filter((i) => i.categorie === filtreCategorie);
+  const aDesObsoletes = items.some((i) => i.categorie === CATEGORIE_OBSOLETE.value);
+  const categoriesFiltre = aDesObsoletes ? [...CATEGORIES, CATEGORIE_OBSOLETE] : CATEGORIES;
+
+  const itemsAffiches = (filtreCategorie === "TOUTES" ? items : items.filter((i) => i.categorie === filtreCategorie))
+    .slice()
+    .sort((a, b) => (a.categorie === b.categorie ? (a.ordre || 0) - (b.ordre || 0) : a.categorie.localeCompare(b.categorie)));
 
   const handleOpenCreate = () => {
     setEditingId(null);
-    setForm({ ...ITEM_VIDE, categorie: filtreCategorie === "TOUTES" ? "GENERAL" : filtreCategorie });
+    const categorieParDefaut = CATEGORIES.some((c) => c.value === filtreCategorie) ? filtreCategorie : "GENERAL";
+    setForm({ ...ITEM_VIDE, categorie: categorieParDefaut });
     setShowModal(true);
   };
 
@@ -55,6 +72,9 @@ const AdminFaq = () => {
     setForm({ categorie: item.categorie, question: item.question, reponse: item.reponse, ordre: item.ordre, actif: item.actif });
     setShowModal(true);
   };
+
+  const fermerModal = useCallback(() => setShowModal(false), []);
+  useEchapPourFermer(showModal, fermerModal);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,7 +101,7 @@ const AdminFaq = () => {
     confirmToast("Supprimer cette question ?", async () => {
       try {
         await jobsService.deleteFaqItem(id);
-        setItems(items.filter((i) => i.id !== id));
+        setItems((prev) => prev.filter((i) => i.id !== id));
         toast.success("Question supprimée.");
       } catch (err) {
         reportError("ECHEC_DELETE_FAQ_ITEM", err);
@@ -90,33 +110,42 @@ const AdminFaq = () => {
     });
   };
 
-  const labelCategorie = (v) => CATEGORIES.find((c) => c.value === v)?.label || v;
+  const infoCategorie = (v) => [...CATEGORIES, CATEGORIE_OBSOLETE].find((c) => c.value === v) || { label: v, couleur: tw.badgeNeutral };
+  const nbParCategorie = (v) => items.filter((i) => i.categorie === v).length;
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>FAQ</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Questions/réponses affichées sur les pages Contact, Espace recruteur et Premium.
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
-        >
-          <Plus size={16} /> Ajouter une question
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={HelpCircle}
+        color="teal"
+        title="FAQ"
+        subtitle="Questions/réponses affichées sur les pages Contact, Espace recruteur et Abonnements."
+        aideKey="faq"
+        aide={[
+          "Chaque catégorie correspond à une page du site : Général → page Contact, Recruteur → page d'accueil recruteur, Abonnements → page des tarifs recruteur.",
+          "« Ordre d'affichage » : les questions s'affichent de la plus petite valeur à la plus grande dans leur catégorie.",
+          "Décochez « Question visible » pour retirer temporairement une question sans la supprimer.",
+          "Les modifications sont visibles sur le site en moins d'une heure (cache).",
+        ]}
+        actions={
+          <button
+            onClick={handleOpenCreate}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
+          >
+            <Plus size={16} /> Ajouter une question
+          </button>
+        }
+      />
 
-      <div className="flex gap-2 flex-wrap">
-        {["TOUTES", ...CATEGORIES.map((c) => c.value)].map((cat) => (
+      <div className="flex gap-2 flex-wrap" role="group" aria-label="Filtrer par catégorie">
+        {["TOUTES", ...categoriesFiltre.map((c) => c.value)].map((cat) => (
           <button
             key={cat}
             onClick={() => setFiltreCategorie(cat)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${filtreCategorie === cat ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted} ${tw.hoverSurfaceSubtle}`}`}
+            aria-pressed={filtreCategorie === cat}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${tw.focusRing} ${filtreCategorie === cat ? "bg-teal-600 border-teal-600 text-white" : `${tw.surface} ${tw.borderBase} ${tw.textMuted} ${tw.hoverSurfaceSubtle}`}`}
           >
-            {cat === "TOUTES" ? "Toutes" : labelCategorie(cat)}
+            {cat === "TOUTES" ? `Toutes (${items.length})` : `${infoCategorie(cat).label} (${nbParCategorie(cat)})`}
           </button>
         ))}
       </div>
@@ -128,26 +157,29 @@ const AdminFaq = () => {
               <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                 <th className="px-5 py-3">Catégorie</th>
                 <th className="px-5 py-3">Question</th>
+                <th className="px-5 py-3 text-center">Ordre</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <SkeletonTableRows columns={5} />
               ) : itemsAffiches.length === 0 ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucune question configurée.</td></tr>
+                <tr><td colSpan="5"><AdminVide icon={HelpCircle} titre="Aucune question configurée." /></td></tr>
               ) : (
                 itemsAffiches.map((item) => (
                   <tr key={item.id} className={tw.rowHover}>
                     <td className="px-5 py-3">
-                      <span className={`px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-medium rounded-full`}>
-                        {labelCategorie(item.categorie)}
+                      <span className={`px-2.5 py-1 ${infoCategorie(item.categorie).couleur} text-xs font-medium rounded-full whitespace-nowrap`}>
+                        {infoCategorie(item.categorie).label}
                       </span>
                     </td>
                     <td className="px-5 py-3">
                       <p className={`text-sm font-medium ${tw.textStrong} max-w-md`}>{item.question}</p>
+                      <p className={`text-xs ${tw.textMuted} max-w-md truncate mt-0.5`} title={item.reponse}>{item.reponse}</p>
                     </td>
+                    <td className={`px-5 py-3 text-center text-sm ${tw.textMuted700} tabular-nums`}>{item.ordre}</td>
                     <td className="px-5 py-3 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${item.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
                         {item.actif ? "Actif" : "Inactif"}
@@ -155,8 +187,8 @@ const AdminFaq = () => {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(item)} className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors`}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} className={`p-2 ${tw.textMuted} hover:${tw.textError} hover:${tw.bgErrorSoft} rounded-lg transition-colors`}><Trash2 size={14} /></button>
+                        <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier la question ${item.question}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer la question ${item.question}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -168,26 +200,29 @@ const AdminFaq = () => {
       </div>
 
       {showModal && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
+        <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>
+          <div role="dialog" aria-modal="true" aria-label={editingId ? "Modifier la question" : "Ajouter une question"} className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
             <div className="flex justify-between items-center mb-5">
               <h3 className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier la question" : "Ajouter une question"}</h3>
-              <button onClick={() => setShowModal(false)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}><X size={18} /></button>
+              <button onClick={fermerModal} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Catégorie *</label>
                 <select required className={inputClass} value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })}>
                   {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  {form.categorie === CATEGORIE_OBSOLETE.value && (
+                    <option value={CATEGORIE_OBSOLETE.value}>{CATEGORIE_OBSOLETE.label}</option>
+                  )}
                 </select>
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Question *</label>
-                <input required className={inputClass} placeholder="Ex: L'inscription est-elle gratuite ?" value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
+                <input required maxLength={300} className={inputClass} placeholder="Ex: L'inscription est-elle gratuite ?" value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Réponse *</label>
-                <textarea required rows={4} className={inputClass} value={form.reponse} onChange={(e) => setForm({ ...form, reponse: e.target.value })} />
+                <textarea required rows={5} className={inputClass} value={form.reponse} onChange={(e) => setForm({ ...form, reponse: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Ordre d'affichage</label>
@@ -198,8 +233,8 @@ const AdminFaq = () => {
                 <label htmlFor="faq_actif" className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}>Question visible</label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
-                <button type="submit" className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
+                <button type="button" onClick={fermerModal} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
+                <button type="submit" disabled={submitBusy} className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
               </div>
             </form>
           </div>

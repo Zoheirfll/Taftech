@@ -1,3 +1,5 @@
+import FieldError from "../../Components/FieldError";
+import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
@@ -35,7 +37,11 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [estCompteGoogle, setEstCompteGoogle] = useState(false);
   const [passwords, setPasswords] = useState({ old: "", new: "", confirm: "" });
+  const [pwdErrors, setPwdErrors] = useState({});
   const [pwdLoading, setPwdLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteForm, setDeleteForm] = useState({ confirmation: "", mot_de_passe: "" });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,10 +78,15 @@ const Settings = () => {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    if (passwords.new !== passwords.confirm)
+    setPwdErrors({});
+    if (passwords.new !== passwords.confirm) {
+      setPwdErrors({ confirm: "Les mots de passe ne correspondent pas." });
       return toast.error("Les mots de passe ne correspondent pas.");
-    if (passwords.new.length < 8)
+    }
+    if (passwords.new.length < 8) {
+      setPwdErrors({ new: "Au moins 8 caractères." });
       return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+    }
     setPwdLoading(true);
     try {
       await authService.changerMotDePasse({
@@ -86,10 +97,32 @@ const Settings = () => {
       setPasswords({ old: "", new: "", confirm: "" });
       if (estCompteGoogle) setEstCompteGoogle(false);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du changement."));
+      const msg = apiErrMsg(err, "Erreur lors du changement.");
+      setPwdErrors(/ancien|actuel/i.test(msg) ? { old: msg } : /mot de passe/i.test(msg) ? { new: msg } : {});
+      toast.error(msg);
       reportError("ECHEC_CHANGER_MDP_SETTINGS", err);
     } finally {
       setPwdLoading(false);
+    }
+  };
+
+  const handleSupprimerCompte = async (e) => {
+    e.preventDefault();
+    if (deleteForm.confirmation.trim().toUpperCase() !== "SUPPRIMER") {
+      return toast.error("Tapez SUPPRIMER pour confirmer.");
+    }
+    setDeleteLoading(true);
+    try {
+      await authService.supprimerCompte({
+        confirmation: deleteForm.confirmation,
+        mot_de_passe: deleteForm.mot_de_passe,
+      });
+      toast.success("Votre compte a été désactivé.");
+      authService.logout("/login");
+    } catch (error) {
+      toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+      reportError("ECHEC_SUPPRIMER_COMPTE_SETTINGS", error);
+      setDeleteLoading(false);
     }
   };
 
@@ -140,13 +173,13 @@ const Settings = () => {
           )}
         </div>
         <div className="p-5">
-          <form onSubmit={handleUpdatePassword} className="flex flex-col md:flex-row gap-3">
+          <form onSubmit={handleUpdatePassword} className="flex flex-col md:flex-row md:flex-wrap gap-3">
             {!estCompteGoogle && (
               <input
                 type="password"
                 placeholder="Mot de passe actuel"
                 className={INPUT_CLASS}
-                value={passwords.old}
+                name="old" aria-invalid={!!pwdErrors.old} aria-describedby={pwdErrors.old ? "err-old" : undefined} value={passwords.old}
                 onChange={(e) => setPasswords(prev => ({ ...prev, old: e.target.value }))}
               />
             )}
@@ -154,14 +187,14 @@ const Settings = () => {
               type="password"
               placeholder="Nouveau mot de passe"
               className={INPUT_CLASS}
-              value={passwords.new}
+              name="new" aria-invalid={!!pwdErrors.new} aria-describedby={pwdErrors.new ? "err-new" : undefined} value={passwords.new}
               onChange={(e) => setPasswords(prev => ({ ...prev, new: e.target.value }))}
             />
             <input
               type="password"
               placeholder="Confirmer"
               className={INPUT_CLASS}
-              value={passwords.confirm}
+              name="confirm" aria-invalid={!!pwdErrors.confirm} aria-describedby={pwdErrors.confirm ? "err-confirm" : undefined} value={passwords.confirm}
               onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
             />
             <button
@@ -171,6 +204,9 @@ const Settings = () => {
             >
               {pwdLoading ? "..." : estCompteGoogle ? "Définir" : "Modifier"}
             </button>
+            <div className="basis-full">
+              {["old", "new", "confirm"].map((k) => <FieldError key={k} id={`err-${k}`} message={pwdErrors[k]} />)}
+            </div>
           </form>
         </div>
       </div>
@@ -182,12 +218,73 @@ const Settings = () => {
           <p className={`text-xs ${tw.textMuted} mt-0.5`}>Cette action est irréversible.</p>
         </div>
         <button
-          onClick={() => toast.error("Action désactivée pour l'instant.")}
+          onClick={() => setShowDeleteModal(true)}
           className={`text-sm font-medium hover:underline ${tw.textErrorMuted}`}
         >
           Supprimer
         </button>
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <form
+            onSubmit={handleSupprimerCompte}
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4"
+          >
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Supprimer mon compte</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Votre compte sera désactivé immédiatement (déconnexion, plus visible dans la CVthèque).
+                Cette action est <strong>irréversible</strong> depuis cette interface.
+              </p>
+            </div>
+            {!estCompteGoogle && (
+              <div>
+                <label htmlFor="delete-mot-de-passe" className="text-xs font-medium text-slate-600 mb-1 block">
+                  Mot de passe actuel
+                </label>
+                <input
+                  id="delete-mot-de-passe"
+                  type="password"
+                  required
+                  className={INPUT_CLASS}
+                  value={deleteForm.mot_de_passe}
+                  onChange={(e) => setDeleteForm((prev) => ({ ...prev, mot_de_passe: e.target.value }))}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="delete-confirmation" className="text-xs font-medium text-slate-600 mb-1 block">
+                Tapez <strong>SUPPRIMER</strong> pour confirmer
+              </label>
+              <input
+                id="delete-confirmation"
+                type="text"
+                required
+                className={INPUT_CLASS}
+                value={deleteForm.confirmation}
+                onChange={(e) => setDeleteForm((prev) => ({ ...prev, confirmation: e.target.value }))}
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={deleteLoading || deleteForm.confirmation.trim().toUpperCase() !== "SUPPRIMER"}
+                className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleteLoading ? "..." : "Supprimer définitivement"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,8 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import RouteTitle from "./Components/RouteTitle";
+import OfflineBanner from "./Components/OfflineBanner";
 import { ConfirmModalHost } from "./utils/confirmToast";
 import SiteAnnonceBar from "./Components/SiteAnnonceBar";
 import { ShieldOff } from "lucide-react";
@@ -104,6 +106,7 @@ import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
 const Entreprises        = lazy(() => import("./Pages/Public/Entreprises"));
 const ContactezNous = lazy(() => import("./Pages/Public/ContactezNous"));
 const PageStatiqueGenerique = lazy(() => import("./Pages/Public/PageStatiqueGenerique"));
+const NotFound = lazy(() => import("./Pages/Public/NotFound"));
 const QuiSommesNous = lazy(() => import("./Pages/Public/QuiSommesNous"));
 const EntreprisePublic   = lazy(() => import("./Pages/Recruteur/EntreprisePublic"));
 const OffresParRegion    = lazy(() => import("./Pages/Public/OffresParRegion"));
@@ -139,6 +142,10 @@ const CandidaturesListPage   = lazy(() => import("./Pages/Recruteur/Candidatures
 const RecrutementsPage       = lazy(() => import("./Pages/Recruteur/RecrutementsPage"));
 const CandidatsRecommandesPage = lazy(() => import("./Pages/Recruteur/CandidatsRecommandesPage"));
 const StatistiquesPage       = lazy(() => import("./Pages/Recruteur/StatistiquesPage"));
+const CommentFonctionneMatching = lazy(() => import("./Pages/Recruteur/CommentFonctionneMatching"));
+const CommentFonctionnentCredits = lazy(() => import("./Pages/Recruteur/CommentFonctionnentCredits"));
+const ComprendreMesScores = lazy(() => import("./Pages/Candidat/ComprendreMesScores"));
+const ConfidentialiteRecruteurs = lazy(() => import("./Pages/Candidat/ConfidentialiteRecruteurs"));
 const EvaluationsPage        = lazy(() => import("./Pages/Recruteur/EvaluationsPage"));
 const ActiviteCompletePage   = lazy(() => import("./Pages/Recruteur/ActiviteCompletePage"));
 const EntretiensPage         = lazy(() => import("./Pages/Recruteur/EntretiensPage"));
@@ -251,6 +258,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
+      <RouteTitle />
+      <OfflineBanner />
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -319,6 +328,8 @@ function AppContent() {
               <Route path="/recrutements" element={<RecrutementsPage />} />
               <Route path="/candidats-recommandes" element={<CandidatsRecommandesPage />} />
               <Route path="/statistiques" element={<StatistiquesPage />} />
+              <Route path="/comment-fonctionne-matching" element={<CommentFonctionneMatching />} />
+              <Route path="/comment-fonctionnent-credits" element={<CommentFonctionnentCredits />} />
               <Route path="/evaluations" element={<EvaluationsPage />} />
               <Route path="/activite" element={<ActiviteCompletePage />} />
               <Route path="/entretiens" element={<EntretiensPage />} />
@@ -328,6 +339,8 @@ function AppContent() {
             {/* ESPACE CANDIDAT */}
             <Route element={<CandidatRoute><CandidatLayout /></CandidatRoute>}>
               <Route path="/dashboard-candidat" element={<CandidatDashboard />} />
+              <Route path="/comprendre-mes-scores" element={<ComprendreMesScores />} />
+              <Route path="/confidentialite-recruteurs" element={<ConfidentialiteRecruteurs />} />
               <Route path="/profil" element={<ProfilCandidat />} />
               <Route path="/mes-candidatures" element={<MesCandidatures />} />
               <Route path="/inbox" element={<BoiteReception />} />
@@ -344,7 +357,7 @@ function AppContent() {
 
             {/* ZONE ADMINISTRATION */}
             <Route path="/admin-taftech" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<AdminEntreprises />} />
+              <Route index element={<Navigate to="/admin-taftech/dashboard" replace />} />
               <Route path="entreprises" element={<AdminEntreprises />} />
               <Route path="offres" element={<AdminOffres />} />
               <Route path="dashboard" element={<AdminStatistiques />} />
@@ -372,6 +385,7 @@ function AppContent() {
               <Route path="comptes-admins" element={<AdminComptes />} />
               <Route path="erreurs-systeme" element={<AdminSystemLogs />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>

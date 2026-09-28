@@ -39,7 +39,6 @@ const MOBILE_MENU_GROUPS = [
     label: "Candidats",
     items: [
       { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
-      { to: "/cvtheque?favoris=true", label: "Favoris", icon: Star, minRole: "UTILISATEUR" },
       { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
       { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
       { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },

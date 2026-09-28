@@ -18,7 +18,7 @@ class NotificationPagination(PageNumberPagination):
 
 
 # Types envoyés exclusivement au portail recruteur (jobs/views/equipe.py::_notifier_equipe)
-TYPES_NOTIF_RECRUTEUR = ('CANDIDATURE_SPONTANEE', 'NOUVELLE_CANDIDATURE', 'CANDIDAT_RECOMMANDE')
+TYPES_NOTIF_RECRUTEUR = ('CANDIDATURE_SPONTANEE', 'NOUVELLE_CANDIDATURE', 'CANDIDAT_RECOMMANDE', 'OFFRE_EXPIREE')
 
 
 def _filtrer_par_portail(qs, portail):

@@ -3,6 +3,7 @@ import { CheckCircle2, AlertTriangle, TrendingUp, ExternalLink, RefreshCw } from
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
+import AdminPageHeader from "../../Components/AdminPageHeader";
 
 const AdminSeo = () => {
   const [data, setData] = useState(null);
@@ -33,26 +34,34 @@ const AdminSeo = () => {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>SEO</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            URLs générées automatiquement et pages réellement indexables, calculées en direct.
-          </p>
-        </div>
-        <button
-          onClick={charger}
-          disabled={loading}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Actualiser
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={TrendingUp}
+        color="teal"
+        title="SEO"
+        subtitle="URLs générées automatiquement et pages réellement indexables, calculées en direct."
+        aideKey="seo"
+        aide={[
+          "Chaque offre, entreprise, métier, secteur, wilaya et article a une URL lisible générée automatiquement : rien à configurer.",
+          "« Pages indexables » = pages publiées que Google peut réellement référencer (offres approuvées, entreprises validées, articles publiés…).",
+          "Un ⚠️ signifie seulement qu'aucun contenu de ce type n'est encore publié. Ce n'est pas une erreur technique.",
+          "Le sitemap.xml se met à jour tout seul. Déclarez-le une fois dans Google Search Console après la mise en ligne.",
+        ]}
+        actions={
+          <button
+            onClick={charger}
+            disabled={loading}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border ${tw.borderSubtle} bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 ${tw.focusRing}`}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Actualiser
+          </button>
+        }
+      />
 
       {erreur && (
-        <div className="bg-red-50 border border-red-100 rounded-xl px-5 py-4 text-sm text-red-700">
-          {erreur}
+        <div className="bg-red-50 border border-red-100 rounded-xl px-5 py-4 text-sm text-red-700 flex items-center justify-between gap-3">
+          <span>{erreur}</span>
+          <button onClick={charger} className="text-xs font-semibold underline">Réessayer</button>
         </div>
       )}
 

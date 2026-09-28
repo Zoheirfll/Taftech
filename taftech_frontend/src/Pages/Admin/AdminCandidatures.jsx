@@ -4,12 +4,28 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import { Search, Download, X, HelpCircle } from "lucide-react";
+import { Search, Download, X, HelpCircle, FileText } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { TooltipIcon } from "../../Components/Tooltip";
 import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminVide } from "../../Components/AdminEtat";
+import AdminPagination from "../../Components/AdminPagination";
+import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
+
+const STATUT_LABELS = {
+  RECUE: "Reçue",
+  EN_COURS: "En cours",
+  PRESELECTION: "Présélection",
+  ENTRETIEN: "Entretien",
+  RETENU: "Retenu(e)",
+  REFUSE: "Refusé(e)",
+};
+
+const EXIGENCE_LABELS = { SATISFAIT: "Satisfait", NON_SATISFAIT: "Non satisfait", INCONNU: "À vérifier" };
 
 const CRITERES_SCORE = [
   { key: "specialite", label: "Spécialité", max: 25 },
@@ -38,6 +54,7 @@ const AdminCandidatures = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [statutFiltre, setStatutFiltre] = useState("");
   const [ordering, setOrdering] = useState("-date_postulation");
   const [selectedCand, setSelectedCand] = useState(null);
@@ -46,8 +63,9 @@ const AdminCandidatures = () => {
     setLoading(true);
     try {
       const data = await jobsService.getAdminCandidatures(currentPage, search, statut, order);
-      setCandidatures(data.results);
-      setTotalPages(Math.ceil(data.count / 10));
+      setCandidatures(data.results || []);
+      setTotalCount(data.count || 0);
+      setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors du chargement."));
       reportError("ECHEC_CHARGEMENT_CANDIDATURES_ADMIN", err);
@@ -64,6 +82,9 @@ const AdminCandidatures = () => {
     setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
     setPage(1);
   };
+
+  const fermerFiche = React.useCallback(() => setSelectedCand(null), []);
+  useEchapPourFermer(!!selectedCand, fermerFiche);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -94,25 +115,30 @@ const AdminCandidatures = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>
-            Candidatures globales
-          </h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Vue d'ensemble de tous les recrutements.
-          </p>
-        </div>
-        <button
-          onClick={handleExport}
-          className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors`}
-        >
-          <Download size={15} /> Exporter CSV
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={FileText}
+        color="amber"
+        title="Candidatures globales"
+        subtitle="Vue d'ensemble de tous les recrutements de la plateforme."
+        aideKey="candidatures"
+        aide={[
+          "Lecture seule : le statut d'une candidature est géré par le recruteur, pas par l'administration.",
+          "Cliquez sur une ligne (ou Entrée au clavier) pour voir le détail : explication du score IA, réponses au questionnaire, exigences, lettre/CV et évaluation d'entretien.",
+          "« ⚡ Rapide » = candidature sans compte TafTech (pas de score IA possible, pas de profil).",
+          "La recherche porte sur le nom du candidat, le titre de l'offre et l'entreprise ; validez avec Entrée ou « Chercher ».",
+        ]}
+        actions={
+          <button
+            onClick={handleExport}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors ${tw.focusRing}`}
+          >
+            <Download size={15} /> Exporter CSV
+          </button>
+        }
+      />
 
       <div className={`${tw.card} p-4`}>
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search
               size={15}
@@ -123,13 +149,15 @@ const AdminCandidatures = () => {
               placeholder="Candidat, offre, entreprise..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Rechercher une candidature"
               className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
             />
           </div>
           <select
             value={statutFiltre}
             onChange={(e) => { setStatutFiltre(e.target.value); setPage(1); }}
-            className={`${tw.inputColorsMuted} rounded-lg text-sm px-3`}
+            aria-label="Filtrer par statut"
+            className={`${tw.inputColorsMuted} rounded-lg text-sm px-3 py-2.5`}
           >
             <option value="">Tous statuts</option>
             <option value="RECUE">Reçue</option>
@@ -158,7 +186,7 @@ const AdminCandidatures = () => {
                 <th className="px-4 py-3 text-left">Offre & Entreprise</th>
                 <SortableTh
                   field="score_matching"
-                  label={<span className="inline-flex items-center gap-1">Score IA <TooltipIcon text="Score de compatibilité calculé automatiquement (spécialité, diplôme, expérience, région, compétences). Absent pour les candidatures rapides (sans profil)." /></span>}
+                  label={<span className="inline-flex items-center gap-1">Score IA <TooltipIcon text="Score de compatibilité calculé automatiquement (localisation, diplôme, spécialité de formation, expérience, compétences — seuls les critères demandés par l'offre comptent). Absent pour les candidatures rapides (sans profil)." /></span>}
                   ordering={ordering}
                   onSort={handleSort}
                   className="px-4 py-3"
@@ -172,16 +200,17 @@ const AdminCandidatures = () => {
                 <th className="px-4 py-3 text-center">Statut</th>
               </tr>
             </thead>
-            <tbody className={tw.divideBase}>
+            <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
                 <SkeletonTableRows columns={6} />
               ) : candidatures.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="6"
-                    className={`py-12 text-center text-sm ${tw.textMuted} italic`}
-                  >
-                    Aucune candidature trouvée.
+                  <td colSpan="6">
+                    <AdminVide
+                      icon={FileText}
+                      titre="Aucune candidature trouvée."
+                      texte={searchTerm || statutFiltre ? "Modifiez la recherche ou le filtre de statut." : undefined}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -189,7 +218,10 @@ const AdminCandidatures = () => {
                   <tr
                     key={cand.id}
                     onClick={() => setSelectedCand(cand)}
-                    className={`${tw.rowHover} cursor-pointer`}
+                    onKeyDown={(e) => { if (e.key === "Enter") setSelectedCand(cand); }}
+                    tabIndex={0}
+                    aria-label={`Voir le détail de la candidature #${cand.id}`}
+                    className={`${tw.rowHover} cursor-pointer ${tw.focusRing}`}
                   >
                     <td className="px-4 py-3">
                       <p className={`text-xs font-semibold ${tw.textStrong}`}>
@@ -214,6 +246,7 @@ const AdminCandidatures = () => {
                         <Link
                           to={`/jobs/${cand.offre_id}`}
                           target="_blank"
+                          onClick={(e) => e.stopPropagation()}
                           className={`text-sm font-semibold ${tw.textStrong} hover:underline truncate max-w-[200px] block`}
                         >
                           {cand.offre_titre}
@@ -227,6 +260,7 @@ const AdminCandidatures = () => {
                         <Link
                           to={`/entreprise/${cand.entreprise_slug}`}
                           target="_blank"
+                          onClick={(e) => e.stopPropagation()}
                           className={`text-xs ${tw.textPrimary} hover:underline`}
                         >
                           {cand.entreprise_nom}
@@ -238,10 +272,14 @@ const AdminCandidatures = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {cand.est_rapide ? (
-                        <span className={`text-xs ${tw.textMuted}`}>N/A</span>
+                      {cand.est_rapide || cand.score_matching == null ? (
+                        <span className={`text-xs ${tw.textMuted}`}>—</span>
                       ) : (
-                        <span className={`text-sm font-semibold ${tw.textSlate800}`}>
+                        <span
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                            parseFloat(cand.score_matching) >= 70 ? tw.scoreHigh : parseFloat(cand.score_matching) >= 40 ? tw.scoreMid : tw.scoreLow
+                          }`}
+                        >
                           {cand.score_matching}%
                         </span>
                       )}
@@ -259,9 +297,9 @@ const AdminCandidatures = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(cand.statut)}`}
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${getBadgeStyle(cand.statut)}`}
                       >
-                        {cand.statut.replace("_", " ")}
+                        {STATUT_LABELS[cand.statut] || cand.statut}
                       </span>
                     </td>
                   </tr>
@@ -270,32 +308,15 @@ const AdminCandidatures = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} ${tw.textMuted} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              ← Précédent
-            </button>
-            <span className={`text-xs font-medium ${tw.textMuted}`}>
-              Page {page} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} ${tw.textMuted} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={setPage} disabled={loading} />
       </div>
 
       {selectedCand && (
-        <div className={tw.modalOverlay + " p-4"} onClick={() => setSelectedCand(null)}>
+        <div className={tw.modalOverlay + " p-4"} onClick={fermerFiche}>
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Détail de la candidature"
             className={`${tw.surface} rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -317,14 +338,14 @@ const AdminCandidatures = () => {
                   {new Date(selectedCand.date_postulation).toLocaleDateString("fr-FR")}
                 </p>
               </div>
-              <button onClick={() => setSelectedCand(null)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}>
+              <button onClick={fermerFiche} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}>
                 <X size={18} />
               </button>
             </div>
 
             <div className="flex items-center gap-2 mb-4">
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(selectedCand.statut)}`}>
-                {selectedCand.statut.replace("_", " ")}
+                {STATUT_LABELS[selectedCand.statut] || selectedCand.statut}
               </span>
               {selectedCand.note_globale && (
                 <span className={`px-2.5 py-1 ${tw.bgVioletSoft} ${tw.textViolet} border ${tw.borderViolet} text-xs font-semibold rounded-full`}>
@@ -359,7 +380,7 @@ const AdminCandidatures = () => {
                     {CRITERES_SCORE.map(({ key, label, max }) => {
                       const nonDemande = (DM.criteres_non_demandes || []).includes(key);
                       const val = scores[key] || 0;
-                      const pct = (val / max) * 100;
+                      const pct = Math.min(100, (val / max) * 100);
                       return (
                         <div key={key}>
                           <div className="flex justify-between items-center mb-1">
@@ -417,7 +438,7 @@ const AdminCandidatures = () => {
                           : tw.badgeNeutral
                         }`}
                       >
-                        {r.statut}
+                        {EXIGENCE_LABELS[r.statut] || r.statut}
                       </span>
                     </div>
                   ))}

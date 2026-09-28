@@ -18,7 +18,6 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
-  Users,
   Download,
   QrCode,
   Lock,
@@ -27,7 +26,6 @@ import {
   X,
 } from "lucide-react";
 import api from "../../api/axiosConfig";
-import MonEquipe from "./MonEquipe";
 import InfoBanner from "../../Components/InfoBanner";
 import ImageCropperModal from "../../Components/ImageCropperModal";
 import { apiErrMsg } from "../../utils/apiErrMsg";
@@ -47,7 +45,6 @@ const ParametresRecruteur = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
-  const [accesEquipe, setAccesEquipe] = useState(false);
 
   // Profil commun
   const [profilForm, setProfilForm] = useState({
@@ -119,7 +116,6 @@ const ParametresRecruteur = () => {
             jobsService.getParametresRecruteur(),
           ]);
           setIsPremium(!!dash.palier_actif);
-          setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           setEntreprise(e);
           setEntrepriseForm({
@@ -157,7 +153,6 @@ const ParametresRecruteur = () => {
           ]);
           setConstants(constData);
           setIsPremium(!!dash.palier_actif);
-          setAccesEquipe(!!dash.acces_equipe);
           const e = dash.entreprise;
           if (e) {
             setEntreprise(e);
@@ -442,9 +437,6 @@ const ParametresRecruteur = () => {
     { key: "profil", label: "Mon profil", icon: User, minRole: "INVITE" },
     { key: "entreprise", label: "Mon entreprise", icon: Building2, minRole: "ADMIN" },
     { key: "notifications", label: "Notifications", icon: Bell, minRole: "PROPRIETAIRE" },
-    // Toujours visible pour le propriétaire (même si premium expiré — pour pouvoir supprimer les membres)
-    // Visible pour les membres uniquement si premium actif
-    ...((accesEquipe || role === "RECRUTEUR") ? [{ key: "equipe", label: "Mon équipe ⭐", icon: Users, minRole: "PROPRIETAIRE" }] : []),
   ].filter(({ minRole }) => authService.peutFaire(minRole));
 
   if (loading)
@@ -492,7 +484,7 @@ const ParametresRecruteur = () => {
       <div className="mb-6">
         <InfoBanner storageKey="parametres_recruteur" title="Paramètres de votre espace recruteur" color="teal">
           <strong>Mon entreprise</strong> : modifiez le logo, la description et les infos de votre entreprise (admin uniquement). ·{" "}
-          <strong>Mon équipe</strong> : invitez des collaborateurs avec différents rôles (ADMIN, UTILISATEUR, INVITÉ). ·{" "}
+          <strong>Mon équipe</strong> : gérez vos collaborateurs depuis la page dédiée dans la barre latérale. ·{" "}
           <strong>Changer le mot de passe</strong> depuis l'onglet compte. ·{" "}
           <strong>QR Code</strong> : disponible après validation de votre entreprise.
         </InfoBanner>
@@ -585,15 +577,13 @@ const ParametresRecruteur = () => {
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
-                  Email
+                  Email <span className={tw.textMuted}>(non modifiable — identifiant de connexion)</span>
                 </label>
                 <input
                   type="email"
                   value={profilForm.email}
-                  onChange={(e) =>
-                    setProfilForm({ ...profilForm, email: e.target.value })
-                  }
-                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
+                  disabled
+                  className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal} opacity-60 cursor-not-allowed`}
                 />
               </div>
               <div>
@@ -1223,9 +1213,6 @@ const ParametresRecruteur = () => {
           </div>
         </div>
       )}
-
-      {/* ONGLET ÉQUIPE */}
-      {activeTab === "equipe" && <MonEquipe />}
 
       {cropper && (
         <ImageCropperModal

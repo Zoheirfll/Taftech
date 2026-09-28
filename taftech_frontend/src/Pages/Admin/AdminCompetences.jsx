@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from "react";
+import { useSubmitLock } from "../../utils/useSubmitLock";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Tags } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import AdminPagination from "../../Components/AdminPagination";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import { AdminVide } from "../../Components/AdminEtat";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
 const ITEM_VIDE = { label: "", synonymes: "", actif: true };
 
 const AdminCompetences = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -19,6 +26,8 @@ const AdminCompetences = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
+  // Minuteur de recherche local au composant (avant : variable globale window._competenceSearchTimer).
+  const searchTimer = useRef(null);
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
@@ -26,9 +35,9 @@ const AdminCompetences = () => {
     setLoading(true);
     try {
       const data = await jobsService.getAdminCompetences(s, p);
-      setItems(data.results);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.count);
+      setItems(data.results || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -39,14 +48,15 @@ const AdminCompetences = () => {
 
   useEffect(() => {
     fetchItems();
+    return () => clearTimeout(searchTimer.current);
   }, []);
 
   const handleSearch = (e) => {
     const val = e.target.value;
     setSearch(val);
     setPage(1);
-    clearTimeout(window._competenceSearchTimer);
-    window._competenceSearchTimer = setTimeout(() => fetchItems(val, 1), 400);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchItems(val, 1), 400);
   };
 
   const handlePage = (p) => {
@@ -65,6 +75,9 @@ const AdminCompetences = () => {
     setForm({ label: item.label, synonymes: item.synonymes || "", actif: item.actif });
     setShowModal(true);
   };
+
+  const fermerModal = useCallback(() => setShowModal(false), []);
+  useEchapPourFermer(showModal, fermerModal);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,35 +99,47 @@ const AdminCompetences = () => {
   };
 
   const handleDelete = (id) => {
-    confirmToast("Supprimer cette compétence ?", async () => {
-      try {
-        await jobsService.deleteCompetence(id);
-        setItems(items.filter((i) => i.id !== id));
-        setTotalCount((c) => c - 1);
-        toast.success("Compétence supprimée.");
-      } catch (err) {
-        reportError("ECHEC_DELETE_COMPETENCE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
-      }
-    });
+    // CASCADE côté modèle : supprimer une compétence retire aussi ses liens avec les métiers du
+    // référentiel (suggestions "compétences pour ce métier" des recruteurs).
+    confirmToast(
+      "Supprimer cette compétence ? Ses liens avec les métiers du référentiel seront aussi supprimés. Pour seulement la retirer des suggestions, décochez plutôt « Suggérée ».",
+      async () => {
+        try {
+          await jobsService.deleteCompetence(id);
+          setItems((prev) => prev.filter((i) => i.id !== id));
+          setTotalCount((c) => Math.max(0, c - 1));
+          toast.success("Compétence supprimée.");
+        } catch (err) {
+          reportError("ECHEC_DELETE_COMPETENCE", err);
+          toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        }
+      },
+    );
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>Référentiel compétences</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Suggestions affichées quand un candidat tape dans le champ "Compétences" — le champ reste libre, ceci ne fait qu'aider la saisie.
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
-        >
-          <Plus size={16} /> Ajouter une compétence
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={Tags}
+        color="violet"
+        title="Référentiel compétences"
+        subtitle="Suggestions proposées aux candidats et recruteurs quand ils saisissent une compétence."
+        aideKey="competences"
+        aide={[
+          "Le champ « Compétences » reste libre pour les utilisateurs : ce référentiel sert à proposer des suggestions et à normaliser les saisies.",
+          "Synonymes : une compétence extraite d'un CV sous l'un de ces intitulés (ex. « Project Management ») est automatiquement ramenée au libellé principal.",
+          "« Masquée » retire la compétence des suggestions sans rien supprimer. C'est l'option à privilégier.",
+          "La génération d'offre par IA ne choisit ses compétences que dans ce référentiel (compétences suggérées uniquement).",
+        ]}
+        actions={
+          <button
+            onClick={handleOpenCreate}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
+          >
+            <Plus size={16} /> Ajouter une compétence
+          </button>
+        }
+      />
 
       <div className="relative">
         <Search size={15} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
@@ -123,6 +148,7 @@ const AdminCompetences = () => {
           placeholder="Rechercher une compétence..."
           value={search}
           onChange={handleSearch}
+          aria-label="Rechercher une compétence"
           className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-xl text-sm`}
         />
       </div>
@@ -140,9 +166,13 @@ const AdminCompetences = () => {
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <SkeletonTableRows columns={4} />
               ) : items.length === 0 ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucune compétence trouvée.</td></tr>
+                <tr>
+                  <td colSpan="4">
+                    <AdminVide icon={Tags} titre="Aucune compétence trouvée." texte={search ? "Essayez un autre mot-clé." : undefined} />
+                  </td>
+                </tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.id} className={tw.rowHover}>
@@ -159,8 +189,8 @@ const AdminCompetences = () => {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(item)} className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors`}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} className={`p-2 ${tw.textMuted} hover:${tw.textError} hover:${tw.bgErrorSoft} rounded-lg transition-colors`}><Trash2 size={14} /></button>
+                        <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -169,32 +199,17 @@ const AdminCompetences = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle}`}>
-            <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handlePage(p)}
-                  className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={handlePage} disabled={loading} />
       </div>
 
       {showModal && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
+        <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>
+          <div role="dialog" aria-modal="true" aria-label={editingId ? "Modifier la compétence" : "Ajouter une compétence"} className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
             <div className="flex justify-between items-center mb-5">
               <h3 className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier la compétence" : "Ajouter une compétence"}</h3>
-              <button onClick={() => setShowModal(false)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}><X size={18} /></button>
+              <button onClick={fermerModal} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé *</label>
                 <input required className={inputClass} placeholder="Ex: Gestion de projet" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
@@ -217,8 +232,8 @@ const AdminCompetences = () => {
                 <label htmlFor="competence_actif" className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}>Suggérée (visible dans l'autocomplete)</label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
-                <button type="submit" className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
+                <button type="button" onClick={fermerModal} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
+                <button type="submit" disabled={submitBusy} className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
               </div>
             </form>
           </div>

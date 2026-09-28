@@ -197,7 +197,7 @@ class CandidatureRecruteurDTO(serializers.ModelSerializer):
             'telephone_rapide', 'cv_rapide_url', 'date_entretien', 'message_entretien',
             'note_technique', 'note_communication', 'note_motivation', 'note_experience',
             'note_globale', 'commentaire_evaluation', 'reponses', 'reponses_exigences',
-            'profil_snapshot', 'source'
+            'profil_snapshot', 'source', 'derniere_analyse_ia', 'analyse_ia_le',
         )
 
     def get_lettre_motivation_file(self, obj):

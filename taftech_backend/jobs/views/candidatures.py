@@ -23,6 +23,7 @@ from ..serializers import (
     MesCandidaturesDTO, CandidatureRecruteurDTO
 )
 from ..serializers.candidatures import ReponseExigenceSerializer
+from ..serializers.profils import CompetenceCandidatSerializer
 from ..matcher import calculer_score_matching, normaliser
 
 User = get_user_model()
@@ -64,8 +65,19 @@ class PostulerAPIView(APIView):
                 "date_naissance": str(request.user.date_naissance) if request.user.date_naissance else None,
                 "sexe": profil.sexe,
                 "diplome": profil.diplome,
+                "diplome_ref_libelle": profil.diplome_ref.libelle if profil.diplome_ref else None,
+                "niveau_scolaire_ref_libelle": profil.niveau_scolaire_ref.libelle if profil.niveau_scolaire_ref else None,
                 "metier": profil.metier.libelle if profil.metier else None,
+                "metier_souhaite": profil.metier_souhaite.libelle if profil.metier_souhaite else None,
+                "salaire_souhaite": profil.salaire_souhaite,
+                "mobilite": profil.mobilite,
+                "situation_actuelle": profil.situation_actuelle,
+                "service_militaire": profil.service_militaire,
+                "permis_conduire": profil.permis_conduire,
+                "passeport_valide": profil.passeport_valide,
+                "vehicule_personnel": profil.vehicule_personnel,
                 "competences": profil.competences,
+                "competences_detail": CompetenceCandidatSerializer(profil.competences_detail.all(), many=True).data,
                 "langues": profil.langues,
                 "cv_pdf": profil.cv_pdf.url if profil.cv_pdf else None,
                 "photo_profil": profil.photo_profil.url if profil.photo_profil else None,
@@ -76,7 +88,7 @@ class PostulerAPIView(APIView):
                     {
                         "titre_poste": exp.titre_poste,
                         "entreprise": exp.entreprise,
-                        "metier": exp.metier.libelle if exp.metier else None,
+                        "metier_libelle": exp.metier.libelle if exp.metier else None,
                         "date_debut": str(exp.date_debut),
                         "date_fin": str(exp.date_fin) if exp.date_fin else None,
                         "description": exp.description,
@@ -86,8 +98,11 @@ class PostulerAPIView(APIView):
                 "formations": [
                     {
                         "diplome": f.diplome,
+                        "diplome_ref_libelle": f.diplome_ref.libelle if f.diplome_ref else None,
+                        "specialite_ref_libelle": f.specialite_ref.libelle if f.specialite_ref else None,
+                        "statut": f.statut,
                         "etablissement": f.etablissement,
-                        "date_debut": str(f.date_debut),
+                        "date_debut": str(f.date_debut) if f.date_debut else None,
                         "date_fin": str(f.date_fin) if f.date_fin else None,
                         "description": f.description,
                     }
@@ -320,7 +335,14 @@ class UpdateCandidatureStatusAPIView(APIView):
             date_entretien_str = request.data.get('date_entretien')
             message_custom = request.data.get('message_entretien', '')
             if date_entretien_str:
-                candidature.date_entretien = parse_datetime(date_entretien_str)
+                date_parsee = parse_datetime(date_entretien_str)
+                # Le frontend envoie une heure locale sans offset ("2026-09-30T14:00") —
+                # parse_datetime() renvoie alors un datetime naïf, que timezone.localtime()
+                # (utilisé plus bas pour la notification) rejette avec ValueError. On le rend
+                # conscient du fuseau avant stockage, comme partout ailleurs avec USE_TZ=True.
+                if date_parsee and timezone.is_naive(date_parsee):
+                    date_parsee = timezone.make_aware(date_parsee)
+                candidature.date_entretien = date_parsee
             email_destinataire = candidature.candidat.email if candidature.candidat else candidature.email_rapide
             nom_candidat = candidature.candidat.first_name if candidature.candidat else candidature.prenom_rapide
             if email_destinataire:

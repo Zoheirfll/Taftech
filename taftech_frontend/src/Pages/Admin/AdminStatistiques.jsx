@@ -22,27 +22,43 @@ import {
   Sparkles,
   Image as ImageIcon,
   Clock,
+  LayoutDashboard,
+  FileEdit,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminErreurChargement, AdminVide } from "../../Components/AdminEtat";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
-const StatCard = ({ icon: Icon, label, value, color, info }) => (
-  <div
-    className={`${tw.surface} border ${tw.borderSubtle} rounded-xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow`}
-  >
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${tw.kpiIconBg[color]} text-white shadow-sm`}>
-      <Icon size={20} />
-    </div>
-    <div>
-      <p className={`text-[11px] font-semibold ${tw.textMuted} uppercase tracking-wider flex items-center gap-1`}>
-        {label}
-        {info && <TooltipIcon text={info} />}
-      </p>
-      <p className={`text-2xl font-extrabold ${tw.textStrong} mt-0.5 tabular-nums`}>{value}</p>
-    </div>
-  </div>
-);
+// Carte KPI — cliquable (`to`) quand une page admin permet d'agir sur ce chiffre.
+const StatCard = ({ icon: Icon, label, value, color, info, to }) => {
+  const contenu = (
+    <>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${tw.kpiIconBg[color]} text-white shadow-sm`}>
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0">
+        <p className={`text-[11px] font-semibold ${tw.textMuted} uppercase tracking-wider flex items-center gap-1`}>
+          {label}
+          {info && <TooltipIcon text={info} />}
+        </p>
+        <p className={`text-2xl font-extrabold ${tw.textStrong} mt-0.5 tabular-nums`}>{value ?? 0}</p>
+      </div>
+    </>
+  );
+  const classes = `${tw.surface} border ${tw.borderSubtle} rounded-xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow`;
+  return to ? (
+    <Link to={to} className={`${classes} hover:border-indigo-300 ${tw.focusRing}`}>
+      {contenu}
+    </Link>
+  ) : (
+    <div className={classes}>{contenu}</div>
+  );
+};
+
+// Largeur de barre en % — protège contre max=0 (NaN% sinon, barre invisible/cassée).
+const pourcent = (valeur, max) => (max > 0 ? (valeur / max) * 100 : 0);
 
 const formatSalaire = (montant) => {
   if (!montant) return "Non renseigné";
@@ -56,6 +72,7 @@ const AdminStatistiques = () => {
   const [marche, setMarche] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMarche, setLoadingMarche] = useState(false);
+  const [erreurMarche, setErreurMarche] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
   const fetchStats = async () => {
@@ -73,10 +90,12 @@ const AdminStatistiques = () => {
 
   const fetchMarche = async () => {
     setLoadingMarche(true);
+    setErreurMarche(false);
     try {
       const data = await jobsService.getAdminMarche();
       setMarche(data);
     } catch (err) {
+      setErreurMarche(true);
       toast.error(apiErrMsg(err, "Erreur lors du chargement des données marché."));
       reportError("ECHEC_CHARGEMENT_MARCHE_ADMIN", err);
     } finally {
@@ -94,33 +113,55 @@ const AdminStatistiques = () => {
     }
   }, [activeTab]);
 
-  if (loading)
+  const header = (
+    <AdminPageHeader
+      icon={LayoutDashboard}
+      color="indigo"
+      title="Tableau de bord"
+      subtitle="Contrôle global de la plateforme TafTech"
+      aideKey="dashboard"
+      aide={[
+        "Les bandeaux colorés en haut signalent ce qui attend une action de votre part (entreprises, offres, abonnements). Cliquez dessus pour y aller directement.",
+        "Chaque carte chiffrée est cliquable et ouvre la page de gestion correspondante.",
+        "L'onglet « Données marché » montre la tension candidats/offres par secteur et les régions les plus actives. Il est calculé à la demande.",
+        "Le bouton « Rafraîchir » recharge les chiffres sans recharger la page.",
+      ]}
+      actions={
+        <button
+          onClick={() => {
+            fetchStats();
+            if (activeTab === "marche") fetchMarche();
+          }}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border ${tw.borderSubtle} bg-white text-xs font-semibold ${tw.textMuted700} hover:bg-slate-50 transition-colors ${tw.focusRing}`}
+          title="Rafraîchir"
+        >
+          <RefreshCw size={14} className={loading || loadingMarche ? "animate-spin" : ""} /> Rafraîchir
+        </button>
+      }
+    />
+  );
+
+  if (loading && !stats)
     return (
-      <div className="flex items-center justify-center h-48">
-        <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.spinnerBorderPrimary}`}></div>
+      <div className="space-y-6">
+        {header}
+        <div className="flex items-center justify-center h-48">
+          <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.spinnerBorderPrimary}`}></div>
+        </div>
       </div>
     );
 
-  if (!stats) return null;
+  if (!stats)
+    return (
+      <div className="space-y-6">
+        {header}
+        <AdminErreurChargement message="Impossible de charger les statistiques." onRetry={fetchStats} />
+      </div>
+    );
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className={tw.pageTitle}>Tableau de bord</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Contrôle global TAFTECH
-          </p>
-        </div>
-        <button
-          onClick={fetchStats}
-          className={`p-2 ${tw.hoverSurfaceSubtle} rounded-lg transition-colors`}
-          title="Rafraîchir"
-        >
-          <RefreshCw size={18} className={tw.textMuted700} />
-        </button>
-      </div>
+      {header}
 
       {/* ONGLETS */}
       <div className={`flex gap-1 border-b ${tw.borderBase}`}>
@@ -186,12 +227,14 @@ const AdminStatistiques = () => {
                 label: "Candidats",
                 value: stats.total_candidats,
                 color: "blue",
+                to: "/admin-taftech/utilisateurs",
               },
               {
                 icon: Briefcase,
                 label: "Recruteurs",
                 value: stats.total_recruteurs,
                 color: "violet",
+                to: "/admin-taftech/utilisateurs",
               },
               {
                 icon: PartyPopper,
@@ -199,12 +242,14 @@ const AdminStatistiques = () => {
                 value: stats.total_recrutements,
                 color: "pink",
                 info: "Nombre de candidatures dont le statut final est \"Retenu\".",
+                to: "/admin-taftech/candidatures",
               },
               {
                 icon: Building2,
                 label: "Entreprises",
                 value: stats.total_entreprises,
                 color: "emerald",
+                to: "/admin-taftech/entreprises",
               },
               {
                 icon: Hourglass,
@@ -212,6 +257,7 @@ const AdminStatistiques = () => {
                 value: stats.entreprises_attente,
                 color: "amber",
                 info: "Entreprises inscrites qui attendent une validation manuelle avant de pouvoir publier des offres.",
+                to: "/admin-taftech/entreprises",
               },
               {
                 icon: BarChart3,
@@ -219,6 +265,7 @@ const AdminStatistiques = () => {
                 value: stats.total_offres,
                 color: "indigo",
                 info: "Offres actuellement visibles côté candidat (approuvées, actives, non clôturées).",
+                to: "/admin-taftech/offres",
               },
               {
                 icon: FolderClock,
@@ -226,6 +273,7 @@ const AdminStatistiques = () => {
                 value: stats.offres_attente,
                 color: "red",
                 info: "Offres soumises par des recruteurs qui attendent une modération (approbation ou rejet).",
+                to: "/admin-taftech/offres",
               },
             ].map((card) => (
               <StatCard key={card.label} {...card} />
@@ -242,31 +290,33 @@ const AdminStatistiques = () => {
                 <Clock size={17} />
               </div>
               <p className={`text-sm font-semibold ${tw.textWarning900}`}>
-                {stats.premium_expirant_bientot} abonnement(s) Premium expirent dans les 7 prochains jours
+                {stats.premium_expirant_bientot} abonnement(s) expirent dans les 7 prochains jours
               </p>
             </Link>
           )}
           <div>
-            <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>Premium</p>
+            <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>Abonnements recruteurs</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard
                 icon={Star}
                 label="Abonnements actifs"
                 value={stats.premium_actifs}
                 color="gold"
+                to="/admin-taftech/abonnements-ia"
               />
               <StatCard
                 icon={TrendingUp}
-                label="Revenu Premium estimé"
+                label="Revenu estimé"
                 value={formatDA(stats.revenu_premium_estime)}
                 color="gold"
-                info="Estimation basée sur le dernier palier tarifaire traité pour chaque entreprise actuellement Premium — pas une comptabilité exacte (n'inclut pas les paiements Chargily sans demande d'activation correspondante)."
+                info="Estimation basée sur le dernier palier tarifaire traité pour chaque entreprise actuellement abonnée — pas une comptabilité exacte (n'inclut pas les paiements Chargily sans demande d'activation correspondante)."
               />
               <StatCard
                 icon={Hourglass}
-                label="Demandes Premium en attente"
+                label="Demandes en attente"
                 value={stats.demandes_premium_attente}
                 color="amber"
+                to="/admin-taftech/demandes-premium"
               />
             </div>
           </div>
@@ -274,12 +324,12 @@ const AdminStatistiques = () => {
           {/* CONTENU DU SITE (CMS) */}
           <div>
             <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>Contenu du site</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              <StatCard icon={Newspaper} label="Articles publiés" value={stats.nb_articles_publies} color="slate" />
-              <StatCard icon={Newspaper} label="Brouillons" value={stats.nb_articles_brouillons} color="slate" />
-              <StatCard icon={HelpCircle} label="Questions FAQ" value={stats.nb_faq_actives} color="slate" />
-              <StatCard icon={Sparkles} label="Compétences référencées" value={stats.nb_competences_referentiel} color="slate" />
-              <StatCard icon={ImageIcon} label="Bannières actives" value={stats.nb_bannieres_actives} color="slate" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <StatCard icon={Newspaper} label="Articles publiés" value={stats.nb_articles_publies} color="slate" to="/admin-taftech/articles" />
+              <StatCard icon={FileEdit} label="Brouillons" value={stats.nb_articles_brouillons} color="slate" to="/admin-taftech/articles" />
+              <StatCard icon={HelpCircle} label="Questions FAQ" value={stats.nb_faq_actives} color="slate" to="/admin-taftech/faq" />
+              <StatCard icon={Sparkles} label="Compétences" value={stats.nb_competences_referentiel} color="slate" to="/admin-taftech/competences" />
+              <StatCard icon={ImageIcon} label="Bannières actives" value={stats.nb_bannieres_actives} color="slate" to="/admin-taftech/bannieres" />
             </div>
           </div>
         </div>
@@ -292,7 +342,17 @@ const AdminStatistiques = () => {
             <div className="flex items-center justify-center h-48">
               <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${tw.spinnerBorderPrimary}`}></div>
             </div>
-          ) : !marche ? null : (
+          ) : erreurMarche || !marche ? (
+            <AdminErreurChargement message="Impossible de charger les données marché." onRetry={fetchMarche} />
+          ) : !marche.matching_moyen && !marche.tension_par_secteur?.length && !marche.top_wilayas?.length && !marche.top_secteurs?.length ? (
+            <div className={tw.card}>
+              <AdminVide
+                icon={BarChart3}
+                titre="Pas encore assez de données"
+                texte="Les indicateurs marché apparaîtront dès que des offres auront été publiées et que des candidatures auront été reçues."
+              />
+            </div>
+          ) : (
             <>
               {/* MATCHING MOYEN */}
               {marche.matching_moyen && (
@@ -303,7 +363,7 @@ const AdminStatistiques = () => {
                   <div>
                     <p className={`text-xs font-semibold ${tw.textMuted} uppercase tracking-wider flex items-center gap-1`}>
                       Score matching moyen global
-                      <TooltipIcon text="Moyenne du score de compatibilité IA (spécialité, diplôme, expérience, région, compétences) calculé sur toutes les candidatures ayant un score." />
+                      <TooltipIcon text="Moyenne du score de compatibilité IA (localisation, diplôme, spécialité de formation, expérience, compétences — seuls les critères demandés par l'offre comptent) calculé sur toutes les candidatures ayant un score." />
                     </p>
                     <p className={`text-3xl font-bold ${tw.textPrimary}`}>
                       {marche.matching_moyen}%
@@ -389,8 +449,7 @@ const AdminStatistiques = () => {
                     </div>
                     <div className="p-4 space-y-3">
                       {marche.top_wilayas.map((w, i) => {
-                        const max = marche.top_wilayas[0].nb_offres;
-                        const pct = (w.nb_offres / max) * 100;
+                        const pct = pourcent(w.nb_offres, marche.top_wilayas[0].nb_offres);
                         return (
                           <div key={w.wilaya}>
                             <div className="flex justify-between items-center mb-1">
@@ -425,8 +484,7 @@ const AdminStatistiques = () => {
                     </div>
                     <div className="p-4 space-y-3">
                       {marche.top_secteurs.map((s, i) => {
-                        const max = marche.top_secteurs[0].nb_offres;
-                        const pct = (s.nb_offres / max) * 100;
+                        const pct = pourcent(s.nb_offres, marche.top_secteurs[0].nb_offres);
                         return (
                           <div key={s.metier_id}>
                             <div className="flex justify-between items-center mb-1">

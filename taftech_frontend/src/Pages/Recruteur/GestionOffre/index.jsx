@@ -58,9 +58,6 @@ const GestionOffre = () => {
     analyseGroq,
     loadingGroq,
     quotaAnalyseRecruteur,
-    resumeIA,
-    setResumeIA,
-    loadingResume,
     documentsPartages,
     activeDetailTab,
     setActiveDetailTab,
@@ -87,7 +84,6 @@ const GestionOffre = () => {
     supprimerEvaluation,
     handleDownloadBulletin,
     handleAnalyseGroq,
-    handleResumeIA,
     toggleCompare,
   } = hook;
 
@@ -132,11 +128,11 @@ const GestionOffre = () => {
           {!offre.est_cloturee && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               {offre.date_expiration && (() => {
-                const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
+                const jours = Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000);
                 const badge = jours <= 7 ? tw.expirationBadgeUrgent : jours <= 30 ? tw.expirationBadgeWarning : jours <= 60 ? tw.expirationBadgeOk : tw.expirationBadgeNeutral;
                 return (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge}`}>
-                    ⏱ {jours === 0 ? "Expire aujourd'hui" : `Expire dans ${jours}j`}
+                    ⏱ {jours < 0 ? "Expirée" : jours === 0 ? "Expire aujourd'hui" : `Expire dans ${jours}j`}
                   </span>
                 );
               })()}
@@ -271,7 +267,7 @@ const GestionOffre = () => {
                   {triMode === "score" ? (
                     <>
                       <Sparkles size={11} /> Score
-                      <TooltipIcon text="Score de compatibilité calculé sur 5 critères : spécialité (25pts), diplôme (20pts), expérience (20pts), région (20pts), compétences (15pts)." position="bottom" />
+                      <TooltipIcon text="Score calculé sur 5 critères pondérés : localisation/mobilité (20), diplôme (20), spécialité de formation (25), expérience pertinente (20), compétences (15). Un critère non demandé par l'offre est retiré du calcul. 80 %+ = excellent match." position="bottom" />
                     </>
                   ) : (
                     <>
@@ -438,10 +434,6 @@ const GestionOffre = () => {
               loadingGroq={loadingGroq}
               quotaAnalyseRecruteur={quotaAnalyseRecruteur}
               handleAnalyseGroq={handleAnalyseGroq}
-              resumeIA={resumeIA}
-              setResumeIA={setResumeIA}
-              loadingResume={loadingResume}
-              handleResumeIA={handleResumeIA}
               setModalEval={setModalEval}
               setEvalForm={setEvalForm}
               documentsPartages={documentsPartages}

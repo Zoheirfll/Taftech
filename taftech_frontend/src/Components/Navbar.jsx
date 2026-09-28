@@ -12,6 +12,7 @@ import {
   Search, Mail, LogOut, Inbox, ClipboardList, Shield, Menu, X,
   Sparkles, MapPin, Building2, LogIn, Home,
   ChevronDown, Newspaper,
+  HelpCircle, ShieldCheck,
 } from "lucide-react";
 
 const DropdownLink = ({ to, icon: IconComp, onClick, children }) => (
@@ -239,6 +240,7 @@ const Navbar = () => {
                         <DropdownLink to="/dashboard-candidat" icon={LayoutDashboard} onClick={closeDropdown}>Tableau de bord</DropdownLink>
                         <DropdownLink to="/profil" icon={User} onClick={closeDropdown}>Mon profil</DropdownLink>
                         <DropdownLink to="/parametres/candidat" icon={Settings} onClick={closeDropdown}>Paramètres</DropdownLink>
+                        <DropdownLink to="/confidentialite-recruteurs" icon={ShieldCheck} onClick={closeDropdown}>Confidentialité</DropdownLink>
                       </>
                     )}
                     {role === "RECRUTEUR" && (
@@ -341,6 +343,8 @@ const Navbar = () => {
                   <Link to="/alertes" onClick={closeMobile} className={mobileLinkClass("/alertes")}><Bell size={16} className="shrink-0" /> Alertes d'emploi</Link>
                   <Link to="/suggestions-carriere" onClick={closeMobile} className={mobileLinkClass("/suggestions-carriere")}><Sparkles size={16} className="shrink-0" /> Suggestions carrière</Link>
                   <Link to="/parametres/candidat" onClick={closeMobile} className={mobileLinkClass("/parametres/candidat")}><Settings size={16} className="shrink-0" /> Paramètres</Link>
+                  <Link to="/comprendre-mes-scores" onClick={closeMobile} className={mobileLinkClass("/comprendre-mes-scores")}><HelpCircle size={16} className="shrink-0" /> Comprendre mes scores</Link>
+                  <Link to="/confidentialite-recruteurs" onClick={closeMobile} className={mobileLinkClass("/confidentialite-recruteurs")}><ShieldCheck size={16} className="shrink-0" /> Confidentialité (recruteurs)</Link>
                 </>
               )}
               {role === "RECRUTEUR" && (

@@ -76,6 +76,27 @@ class RecruteurManagementTests(APITestCase):
         from jobs.models import Notification
         self.assertTrue(Notification.objects.filter(destinataire=self.cand, type_notif='ENTRETIEN').exists())
 
+    def test_convocation_entretien_avec_date_sans_offset_naive(self):
+        """Reproduit le payload réel envoyé par le frontend (useGestionOffre.js::changerStatut,
+        `${date}T${heure}` sans "Z"/offset) — provoquait un ValueError ("localtime() cannot be
+        applied to a naive datetime") car parse_datetime() renvoie un datetime naïf sur cette
+        chaîne, et la notification appelle ensuite timezone.localtime() dessus."""
+        self.client.force_authenticate(user=self.rh)
+        url = reverse('update-statut', kwargs={'candidature_id': self.candidature.id})
+
+        data = {
+            "statut": "ENTRETIEN",
+            "date_entretien": "2026-06-01T10:00",
+            "message_entretien": "Venez avec votre portfolio.",
+        }
+        response = self.client.patch(url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.candidature.refresh_from_db()
+        self.assertIsNotNone(self.candidature.date_entretien)
+        from django.utils import timezone
+        self.assertFalse(timezone.is_naive(self.candidature.date_entretien))
+
     def test_evaluation_candidat_retenu(self):
         """ US-REC-03: Note post-entretien """
         self.client.force_authenticate(user=self.rh)

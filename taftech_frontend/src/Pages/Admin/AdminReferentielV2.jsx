@@ -11,6 +11,12 @@ import { CheckCircle2 } from "lucide-react";
 import ReactSelect from "react-select";
 import { selectStyles } from "../../theme";
 import { jobsService } from "../../Services/jobsService";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import AdminPagination from "../../Components/AdminPagination";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import { AdminVide } from "../../Components/AdminEtat";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
+import { GraduationCap } from "lucide-react";
 
 /**
  * Panel admin du référentiel v2 (métiers/spécialités/diplômes importés depuis les
@@ -67,9 +73,9 @@ const AdminReferentielV2 = () => {
     setLoading(true);
     try {
       const data = await FETCHERS[tab](s, p);
-      setItems(data.results);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.count);
+      setItems(data.results || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_V2", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -102,6 +108,7 @@ const AdminReferentielV2 = () => {
     try {
       await UPDATERS[onglet](item.id, { selectionnable: !item.selectionnable });
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, selectionnable: !i.selectionnable } : i)));
+      toast.success(item.selectionnable ? `« ${item.libelle} » masqué des listes de choix.` : `« ${item.libelle} » de nouveau proposé.`);
     } catch (err) {
       reportError("ECHEC_TOGGLE_ADMIN_REFERENTIEL_V2", err);
       toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
@@ -113,10 +120,17 @@ const AdminReferentielV2 = () => {
     setEditLibelle(item.libelle);
   };
 
+  const fermerEdition = React.useCallback(() => setEditing(null), []);
+  useEchapPourFermer(!!editing, fermerEdition);
+
   const handleSaveLibelle = async (e) => {
     e.preventDefault();
+    if (!editLibelle.trim()) {
+      toast.error("Le libellé ne peut pas être vide.");
+      return;
+    }
     try {
-      await UPDATERS[onglet](editing.id, { libelle: editLibelle });
+      await UPDATERS[onglet](editing.id, { libelle: editLibelle.trim() });
       toast.success("Libellé mis à jour.");
       setEditing(null);
       fetchItems(search, page);
@@ -128,20 +142,29 @@ const AdminReferentielV2 = () => {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className={tw.pageTitle}>Référentiel v2 (métiers, spécialités, diplômes)</h1>
-        <p className={`${tw.pageSubtitle} mt-0.5`}>
-          Contenu importé depuis les classeurs client — masquez une entrée (bascule "Actif") ou
-          corrigez son libellé, sans créer ni supprimer d'identifiant.
-        </p>
-      </div>
+      <AdminPageHeader
+        icon={GraduationCap}
+        color="violet"
+        title="Référentiel métiers & diplômes"
+        subtitle="Contenu importé depuis les classeurs client — masquez une entrée ou corrigez son libellé, sans créer ni supprimer d'identifiant."
+        aideKey="referentiel-v2"
+        aide={[
+          "Métiers / Spécialités / Types de diplôme : cliquez sur le badge « Actif » pour masquer une entrée des listes de choix. Les profils et offres qui l'utilisent déjà ne sont pas modifiés.",
+          "Le crayon corrige un libellé (faute, formulation). Le code reste identique : il sert aux réimports du classeur client.",
+          "Métiers / Spécialités similaires : rapprochez manuellement deux entrées substituables classées à des endroits différents du référentiel. Elles comptent alors 70 % de compatibilité dans le matching.",
+          "Formations à vérifier : diplômes saisis en « Autre » par les candidats. Attribuez un type de diplôme (et une spécialité si possible) pour qu'ils comptent dans le matching, ou refusez avec un motif.",
+          "Toute consolidation de fond (fusion de secteurs, doublons) passe par la commande « consolider_referentiel », jamais par ce panel.",
+        ]}
+      />
 
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto" role="tablist" aria-label="Sections du référentiel">
         {ONGLETS.map((o) => (
           <button
             key={o.key}
+            role="tab"
+            aria-selected={onglet === o.key}
             onClick={() => setOnglet(o.key)}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
               onglet === o.key ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -186,12 +209,12 @@ const AdminReferentielV2 = () => {
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <SkeletonTableRows columns={4} />
               ) : items.length === 0 ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucun résultat.</td></tr>
+                <tr><td colSpan="4"><AdminVide icon={GraduationCap} titre="Aucun résultat." texte={search ? "Essayez un autre mot-clé (la recherche ignore les accents)." : undefined} /></td></tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
+                  <tr key={item.id} className={`${tw.rowHover} ${item.selectionnable ? "" : "opacity-60"}`}>
                     <td className="px-5 py-3">
                       <p className={`text-sm font-medium ${tw.textStrong}`}>{item.libelle}</p>
                       <p className="text-xs text-slate-500">{item.code}</p>
@@ -221,32 +244,17 @@ const AdminReferentielV2 = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle}`}>
-            <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handlePage(p)}
-                  className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={handlePage} disabled={loading} />
       </div>
         </>
       )}
 
       {editing && onglet !== "relations" && onglet !== "relations-specialites" && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
+        <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerEdition()}>
+          <div role="dialog" aria-modal="true" aria-label="Modifier le libellé" className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
             <div className="flex justify-between items-center mb-5">
               <h3 className={`text-base font-bold ${tw.textStrong}`}>Modifier le libellé</h3>
-              <button onClick={() => setEditing(null)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}>
+              <button onClick={fermerEdition} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}>
                 <X size={18} />
               </button>
             </div>
@@ -300,9 +308,9 @@ const RelationsSimilairesPanel = () => {
     setLoading(true);
     try {
       const data = await adminService.getAdminRelationsSimilaires(s, p);
-      setItems(data.results);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.count);
+      setItems(data.results || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_RELATIONS_SIMILAIRES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -462,22 +470,7 @@ const RelationsSimilairesPanel = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle}`}>
-            <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => { setPage(p); fetchItems(search, p); }}
-                  className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={(p) => { setPage(p); fetchItems(search, p); }} disabled={loading} />
       </div>
     </div>
   );
@@ -577,9 +570,9 @@ const RelationsSpecialitesPanel = () => {
     setLoading(true);
     try {
       const data = await adminService.getAdminRelationsSpecialites(s, p);
-      setItems(data.results);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.count);
+      setItems(data.results || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_RELATIONS_SPECIALITES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -739,22 +732,7 @@ const RelationsSpecialitesPanel = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`flex items-center justify-between px-5 py-3 border-t ${tw.borderSubtle}`}>
-            <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => { setPage(p); fetchItems(search, p); }}
-                  className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={(p) => { setPage(p); fetchItems(search, p); }} disabled={loading} />
       </div>
     </div>
   );
@@ -793,9 +771,9 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
     setLoading(true);
     try {
       const data = await adminService.getAdminFormationsAVerifier(s, p);
-      setItems(data.results);
-      setTotalPages(data.total_pages);
-      setTotalCount(data.count);
+      setItems(data.results || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_FORMATIONS_A_VERIFIER", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -830,6 +808,18 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
     specialiteLibelle: selections[item.id]?.specialiteLibelle ?? (item.specialite_ref_libelle || ""),
   });
 
+  // Retire une formation traitée ; si la page devient vide alors qu'il en reste ailleurs,
+  // recharge la 1re page (avant : page blanche "Aucune formation" malgré des éléments restants).
+  const retirerDeLaListe = (id) => {
+    const restants = items.filter((i) => i.id !== id);
+    setItems(restants);
+    setTotalCount((c) => Math.max(0, c - 1));
+    if (restants.length === 0 && totalCount > 1) {
+      setPage(1);
+      fetchItems(search, 1);
+    }
+  };
+
   const handleValider = async (item) => {
     const sel = selectionPour(item);
     if (!sel.diplomeId) {
@@ -843,8 +833,7 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
         specialite_ref: sel.specialiteId || null,
       });
       toast.success("Formation validée — elle sort de la liste d'attente.");
-      setItems((prev) => prev.filter((i) => i.id !== item.id));
-      setTotalCount((c) => c - 1);
+      retirerDeLaListe(item.id);
       if (onTraitee) onTraitee();
     } catch (err) {
       reportError("ECHEC_VALIDER_FORMATION_A_VERIFIER", err);
@@ -859,8 +848,7 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
     try {
       await adminService.refuserFormationAVerifier(item.id, motifs[item.id] || "");
       toast.success("Formation refusée et retirée du profil du candidat.");
-      setItems((prev) => prev.filter((i) => i.id !== item.id));
-      setTotalCount((c) => c - 1);
+      retirerDeLaListe(item.id);
       setRefusOuvertPour(null);
       if (onTraitee) onTraitee();
     } catch (err) {
@@ -993,19 +981,8 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-xs text-slate-500">{totalCount} résultat(s)</p>
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 10).map((p) => (
-              <button
-                key={p}
-                onClick={() => { setPage(p); fetchItems(search, p); }}
-                className={`w-7 h-7 text-xs font-semibold rounded-lg ${p === page ? "bg-indigo-600 text-white" : "hover:bg-slate-100 text-slate-600"}`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+        <div className={`${tw.card} overflow-hidden`}>
+          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={(p) => { setPage(p); fetchItems(search, p); }} disabled={loading} />
         </div>
       )}
     </div>

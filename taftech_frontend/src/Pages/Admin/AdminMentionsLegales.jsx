@@ -1,32 +1,50 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
+import { Receipt } from "lucide-react";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminErreurChargement } from "../../Components/AdminEtat";
 
 const CHAMP_VIDE = { raison_sociale: "", registre_commerce: "", nif: "", adresse: "", tva: "" };
+
+const CHAMPS = [
+  { key: "raison_sociale", label: "Raison sociale", requis: true, placeholder: "Ex : SARL TafTech" },
+  { key: "registre_commerce", label: "Registre de commerce (RC)", requis: true, placeholder: "Ex : 31/00-1234567B26" },
+  { key: "nif", label: "NIF", requis: true, placeholder: "Numéro d'identification fiscale" },
+  { key: "adresse", label: "Adresse du siège", requis: true, placeholder: "Adresse complète, wilaya" },
+  { key: "tva", label: "N° TVA (le cas échéant)", requis: false, placeholder: "Laisser vide si non assujetti" },
+];
 
 const AdminMentionsLegales = () => {
   const [form, setForm] = useState(CHAMP_VIDE);
   const [loading, setLoading] = useState(true);
+  const [erreur, setErreur] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await api.get("jobs/admin/mentions-legales/");
-        setForm(response.data);
-      } catch (err) {
-        reportError("ECHEC_GET_MENTIONS_LEGALES", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErreur(false);
+    try {
+      const response = await api.get("jobs/admin/mentions-legales/");
+      setForm({ ...CHAMP_VIDE, ...response.data });
+    } catch (err) {
+      reportError("ECHEC_GET_MENTIONS_LEGALES", err);
+      // Ne jamais afficher un formulaire vide après un échec : l'enregistrer écraserait les
+      // vraies mentions légales avec des champs vides.
+      setErreur(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,39 +60,52 @@ const AdminMentionsLegales = () => {
     }
   };
 
-  if (loading) return <p className="text-sm text-slate-500 animate-pulse">Chargement...</p>;
-
   return (
-    <div className="space-y-5 max-w-xl">
-      <div>
-        <h1 className={tw.pageTitle}>Mentions légales</h1>
-        <p className={`${tw.pageSubtitle} mt-0.5`}>Affichées sur toutes les nouvelles factures PDF générées.</p>
-      </div>
-      <form onSubmit={handleSubmit} className={`${tw.card} p-6 space-y-4`}>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Raison sociale</label>
-          <input className={inputClass} value={form.raison_sociale} onChange={(e) => setForm({ ...form, raison_sociale: e.target.value })} />
+    <div className="space-y-5 max-w-2xl">
+      <AdminPageHeader
+        icon={Receipt}
+        color="emerald"
+        title="Mentions légales"
+        subtitle="Informations légales imprimées sur les factures PDF des recruteurs."
+        aideKey="mentions-legales"
+        aide={[
+          "Ces informations apparaissent en bas de chaque facture PDF générée après un paiement d'abonnement ou de pack de crédits.",
+          "Une modification ne s'applique qu'aux factures générées ensuite : les factures déjà téléchargées ne changent pas.",
+          "Vérifiez le RC et le NIF sur vos documents officiels : une facture avec des mentions erronées n'est pas valable.",
+        ]}
+      />
+
+      {loading ? (
+        <div className={`${tw.card} p-6 space-y-4`}>
+          {CHAMPS.map((c) => (
+            <div key={c.key} className="h-10 rounded-lg bg-slate-100 animate-pulse" />
+          ))}
         </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Registre de commerce (RC)</label>
-          <input className={inputClass} value={form.registre_commerce} onChange={(e) => setForm({ ...form, registre_commerce: e.target.value })} />
-        </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>NIF</label>
-          <input className={inputClass} value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} />
-        </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Adresse</label>
-          <input className={inputClass} value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} />
-        </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>N° TVA (le cas échéant)</label>
-          <input className={inputClass} value={form.tva} onChange={(e) => setForm({ ...form, tva: e.target.value })} />
-        </div>
-        <button type="submit" disabled={saving} className={`w-full py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>
-          {saving ? "Enregistrement..." : "Enregistrer"}
-        </button>
-      </form>
+      ) : erreur ? (
+        <AdminErreurChargement message="Impossible de charger les mentions légales." onRetry={load} />
+      ) : (
+        <form onSubmit={handleSubmit} className={`${tw.card} p-6 space-y-4`}>
+          {CHAMPS.map((c) => (
+            <div key={c.key}>
+              <label htmlFor={`ml-${c.key}`} className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
+                {c.label}
+                {c.requis && <span className="text-red-500"> *</span>}
+              </label>
+              <input
+                id={`ml-${c.key}`}
+                className={inputClass}
+                required={c.requis}
+                placeholder={c.placeholder}
+                value={form[c.key] || ""}
+                onChange={(e) => setForm({ ...form, [c.key]: e.target.value })}
+              />
+            </div>
+          ))}
+          <button type="submit" disabled={saving} className={`w-full py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.focusRing}`}>
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </form>
+      )}
     </div>
   );
 };

@@ -96,8 +96,11 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     );
 
     await waitFor(() => screen.getByText("Parser CV"));
-    const checkboxes = screen.getAllByRole("checkbox");
-    fireEvent.click(checkboxes[0]); // Parser CV toggle (premier de la liste FEATURES)
+    // Interrupteur explicite par fonctionnalité (role="switch", libellé accessible)
+    const toggleParser = screen.getByRole("switch", { name: "Activer Parser CV" });
+    expect(toggleParser).toBeChecked();
+    fireEvent.click(toggleParser);
+    expect(toggleParser).not.toBeChecked();
 
     fireEvent.click(screen.getByText("Enregistrer"));
     await waitFor(() => screen.getByText("Confirmer"));
@@ -164,6 +167,37 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
       );
       expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
     });
+  });
+
+  it("🔴 EC3 : Erreur de chargement affiche un bouton Réessayer (plus de chargement infini)", async () => {
+    jobsService.getAIConfig.mockRejectedValueOnce(new Error("API Down")).mockResolvedValueOnce(mockConfig);
+
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByText("Réessayer"));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("openai/gpt-oss-20b")).toBeInTheDocument();
+    });
+  });
+
+  it("🔴 EC4 : Température vide bloque l'enregistrement", async () => {
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByDisplayValue("0.7"));
+    fireEvent.change(screen.getByDisplayValue("0.7"), { target: { value: "" } });
+    fireEvent.click(screen.getByText("Enregistrer"));
+
+    expect(toast.error).toHaveBeenCalledWith("La température doit être comprise entre 0 et 2.");
+    expect(jobsService.updateAIConfig).not.toHaveBeenCalled();
   });
 
   it("🔴 EC2 : Erreur sauvegarde déclenche reportError", async () => {

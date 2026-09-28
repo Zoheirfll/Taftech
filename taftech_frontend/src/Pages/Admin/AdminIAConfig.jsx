@@ -4,8 +4,10 @@ import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import toast from "react-hot-toast";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Cpu } from "lucide-react";
 import { tw } from "../../theme";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminErreurChargement } from "../../Components/AdminEtat";
 
 // `tokens` = variables que le prompt DOIT conserver pour que la fonctionnalité marche —
 // vérifiées avant sauvegarde pour éviter qu'un admin efface par erreur un jeton et casse
@@ -29,7 +31,7 @@ const FEATURES = [
   {
     key: "analyse_recruteur",
     label: "Analyse IA recruteur",
-    desc: "Résumé de compatibilité candidat/offre affiché au recruteur. Quota configuré par palier (page Abonnements & paliers), incluse dans l'abonnement.",
+    desc: "Résumé de compatibilité candidat/offre affiché au recruteur. Quota configuré par palier (onglet « Paliers & tarifs »), inclus dans l'abonnement.",
     tokens: [
       "{offre_titre}", "{entreprise}", "{specialite}", "{type_contrat}", "{offre_wilaya}",
       "{nom_candidat}", "{titre_candidat}", "{diplome}", "{wilaya_candidat}",
@@ -40,7 +42,7 @@ const FEATURES = [
   {
     key: "generation_offre",
     label: "Génération d'offre IA",
-    desc: "Pré-remplissage IA du formulaire de publication d'offre. Quota configuré par palier (page Abonnements & paliers).",
+    desc: "Pré-remplissage IA du formulaire de publication d'offre. Quota configuré par palier (onglet « Paliers & tarifs »).",
     tokens: ["{titre}", "{specialite}", "{diplome}", "{experience}", "{contrat}", "{wilaya}"],
     quota: false,
   },
@@ -64,13 +66,16 @@ const AdminIAConfig = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [openPrompt, setOpenPrompt] = useState(null);
+  const [erreur, setErreur] = useState(false);
 
   const fetchConfig = async () => {
     setLoading(true);
+    setErreur(false);
     try {
       const data = await jobsService.getAIConfig();
       setConfig(data);
     } catch (err) {
+      setErreur(true);
       reportError("ECHEC_GET_AI_CONFIG", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
     } finally {
@@ -111,6 +116,20 @@ const AdminIAConfig = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Champ vide : Number("") vaut 0 — à exclure explicitement, sinon il passerait pour 0.
+    const temperature = config.temperature === "" || config.temperature == null ? NaN : Number(config.temperature);
+    if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) {
+      toast.error("La température doit être comprise entre 0 et 2.");
+      return;
+    }
+    const tokensTropBas = FEATURES.filter((f) => {
+      const v = config[`${f.key}_max_tokens`];
+      return v !== undefined && v !== null && !(Number(v) >= 100);
+    });
+    if (tokensTropBas.length > 0) {
+      toast.error(`max_tokens doit être d'au moins 100 — ${tokensTropBas.map((f) => f.label).join(", ")}.`);
+      return;
+    }
     const problemes = getTokensManquants();
     if (problemes.length > 0) {
       toast.error(
@@ -128,16 +147,47 @@ const AdminIAConfig = () => {
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
   const textareaClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-xs font-mono leading-relaxed`;
 
-  if (loading || !config) {
-    return <p className={`text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</p>;
+  const header = (
+    <AdminPageHeader
+      compact
+      icon={Cpu}
+      color="violet"
+      title="Configuration IA"
+      subtitle="Modèle utilisé et interrupteurs par fonctionnalité — pour couper une fonctionnalité en panne sans déploiement."
+      aideKey="ia-config"
+      aide={[
+        "Chaque fonctionnalité IA peut être coupée individuellement (interrupteur Activée/Désactivée) : les utilisateurs voient alors un message « service indisponible » au lieu d'une erreur.",
+        "max_tokens = longueur maximale de la réponse de l'IA. Trop bas, la réponse est tronquée ; ne descendez pas sous les valeurs actuelles sans raison.",
+        "Les quotas candidats se règlent ici ; les quotas recruteurs se règlent par palier (onglet « Paliers & tarifs »). Un compte précis peut recevoir un quota personnalisé tout en bas.",
+        "Prompt vide = retour automatique au prompt d'origine. Les variables entre accolades {…} ne doivent jamais être supprimées.",
+        "Tout enregistrement s'applique immédiatement à tout le site : une confirmation est demandée.",
+      ]}
+    />
+  );
+
+  if (loading && !config) {
+    return (
+      <div className="space-y-5 max-w-2xl">
+        {header}
+        <div className={`${tw.card} p-6 space-y-3`}>
+          {[0, 1, 2].map((i) => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (erreur || !config) {
+    return (
+      <div className="space-y-5 max-w-2xl">
+        {header}
+        <AdminErreurChargement message="Impossible de charger la configuration IA." onRetry={fetchConfig} />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div>
-        <h1 className={tw.pageTitle}>Configuration IA</h1>
-        <p className={`${tw.pageSubtitle} mt-0.5`}>Modèle utilisé et interrupteurs par fonctionnalité — pour couper une fonctionnalité en panne sans déploiement.</p>
-      </div>
+      {header}
 
       <div className={`${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl p-4 flex items-start gap-3`}>
         <AlertTriangle size={18} className={`${tw.textWarning} shrink-0 mt-0.5`} />
@@ -164,10 +214,10 @@ const AdminIAConfig = () => {
             <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Modèle Ollama (local)</label>
             <input className={inputClass} value={config.ollama_model} onChange={(e) => setConfig({ ...config, ollama_model: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Température</label>
-              <input type="number" step="0.1" min="0" max="2" className={inputClass} value={config.temperature} onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })} />
+              <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Température (0 = précis, 2 = créatif)</label>
+              <input type="number" step="0.1" min="0" max="2" className={inputClass} value={config.temperature ?? ""} onChange={(e) => setConfig({ ...config, temperature: e.target.value === "" ? "" : parseFloat(e.target.value) })} />
             </div>
             <div>
               <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Effort de raisonnement</label>
@@ -196,16 +246,23 @@ const AdminIAConfig = () => {
         <div className={`${tw.card} rounded-2xl p-5 space-y-4`}>
           <p className={`text-sm font-bold ${tw.textStrong}`}>Fonctionnalités</p>
           {FEATURES.map((f) => (
-            <div key={f.key} className={`border ${tw.borderSubtle} rounded-xl p-4`}>
-              <div className="flex items-center justify-between mb-1">
+            <div key={f.key} className={`border rounded-xl p-4 ${config[`${f.key}_actif`] ? tw.borderSubtle : "border-red-200 bg-red-50/40"}`}>
+              <div className="flex items-center justify-between gap-3 mb-1">
                 <p className={`text-sm font-semibold ${tw.textStrong}`}>{f.label}</p>
-                <label className="inline-flex items-center cursor-pointer">
+                {/* Interrupteur explicite (avant : case à cocher nue, sans libellé ni état lisible) */}
+                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                  <span className={`text-[11px] font-semibold ${config[`${f.key}_actif`] ? "text-emerald-700" : "text-red-600"}`}>
+                    {config[`${f.key}_actif`] ? "Activée" : "Désactivée"}
+                  </span>
                   <input
                     type="checkbox"
-                    className={`${tw.accentPrimary} w-4 h-4`}
-                    checked={config[`${f.key}_actif`]}
+                    role="switch"
+                    aria-label={`Activer ${f.label}`}
+                    className="sr-only peer"
+                    checked={!!config[`${f.key}_actif`]}
                     onChange={(e) => setConfig({ ...config, [`${f.key}_actif`]: e.target.checked })}
                   />
+                  <span className="relative w-9 h-5 rounded-full bg-slate-300 peer-checked:bg-emerald-500 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-4" />
                 </label>
               </div>
               <p className={`text-xs ${tw.textMuted} mb-2`}>{f.desc}</p>
@@ -215,12 +272,12 @@ const AdminIAConfig = () => {
                   type="number"
                   min="100"
                   className={`${inputClass} max-w-[140px]`}
-                  value={config[`${f.key}_max_tokens`]}
+                  value={config[`${f.key}_max_tokens`] ?? ""}
                   onChange={(e) => setConfig({ ...config, [`${f.key}_max_tokens`]: Number(e.target.value) })}
                 />
               </div>
               {f.quota && (
-                <div className="mb-3 flex gap-3">
+                <div className="mb-3 flex flex-wrap gap-3">
                   <div>
                     <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Quota / jour (vide = illimité)</label>
                     <input
@@ -296,7 +353,7 @@ const QuotaOverridesPanel = () => {
   const fetchOverrides = async () => {
     try {
       const data = await jobsService.getQuotaIAOverrides();
-      setOverrides(data);
+      setOverrides(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_QUOTA_IA_OVERRIDES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement des overrides."));
@@ -373,7 +430,14 @@ const QuotaOverridesPanel = () => {
       <div className="flex gap-2 items-end">
         <div className="flex-1">
           <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Email du compte</label>
-          <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="compte@exemple.com" />
+          <input
+            className={inputClass}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); verifierCompte(); } }}
+            placeholder="compte@exemple.com"
+          />
         </div>
         <button type="button" onClick={verifierCompte} disabled={checking} className={`px-4 py-2.5 ${tw.buttonSecondary} rounded-lg text-sm font-semibold disabled:opacity-60`}>
           {checking ? "..." : "Vérifier"}
@@ -426,7 +490,7 @@ const QuotaOverridesPanel = () => {
               <strong>{o.user_email}</strong> — {o.fonction_libelle} : {o.limite_jour ?? "∞"}/jour, {o.limite_mois ?? "∞"}/mois
               {o.justification && <span className={tw.textMuted}> ({o.justification})</span>}
             </span>
-            <button type="button" onClick={() => supprimer(o.id)} className="text-red-600 hover:underline font-semibold">Supprimer</button>
+            <button type="button" onClick={() => supprimer(o.id)} aria-label={`Supprimer le quota personnalisé de ${o.user_email}`} className={`text-red-600 hover:underline font-semibold shrink-0 ml-2 ${tw.focusRing} rounded`}>Supprimer</button>
           </div>
         ))}
       </div>

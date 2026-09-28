@@ -1,4 +1,5 @@
 import InfoBanner from "../../Components/InfoBanner";
+import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
@@ -27,6 +28,7 @@ const questionVide = () => ({
 const MAX_CHOIX = 6;
 
 const Questionnaires = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [questionnaires, setQuestionnaires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -289,7 +291,7 @@ const Questionnaires = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={lockSubmit(handleSubmit)} className="p-6 space-y-5">
               <div>
                 <label className={`text-sm font-semibold ${tw.textMuted} mb-2 block`}>
                   Titre du questionnaire *
@@ -450,7 +452,7 @@ const Questionnaires = () => {
                   Annuler
                 </button>
                 <button
-                  type="submit"
+                  type="submit" disabled={submitBusy}
                   className={`flex-1 py-2.5 ${tw.bgTealSolid} text-sm font-semibold rounded-xl transition-colors`}
                 >
                   {editingId ? "Mettre à jour" : "Créer le questionnaire"}

@@ -17,6 +17,8 @@ import {
   Star,
   FolderLock,
   CalendarClock,
+  HelpCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 const CandidatLayout = () => {
@@ -61,6 +63,7 @@ const CandidatLayout = () => {
       items: [
         { name: "Suggestions carrière", path: "/suggestions-carriere", icon: Sparkles },
         { name: "Prendre rendez-vous", path: "/rendez-vous", icon: CalendarClock },
+        { name: "Comprendre mes scores", path: "/comprendre-mes-scores", icon: HelpCircle },
       ],
     },
     {
@@ -68,6 +71,7 @@ const CandidatLayout = () => {
       items: [
         { name: "Mes documents", path: "/mes-documents", icon: FolderLock },
         { name: "Paramètres", path: "/parametres/candidat", icon: Settings },
+        { name: "Confidentialité (recruteurs)", path: "/confidentialite-recruteurs", icon: ShieldCheck },
       ],
     },
   ], [unreadCount]);

@@ -1,3 +1,5 @@
+import FieldError from "../../Components/FieldError";
+import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -35,12 +37,24 @@ const ContactezNous = () => {
       .catch((err) => reportError("ECHEC_GET_FAQ_CONTACT", err));
   }, [portalRecruteur]);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (fieldErrors[e.target.name]) setFieldErrors({ ...fieldErrors, [e.target.name]: undefined });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!accepte) {
       toast.error("Merci d'accepter l'utilisation de vos données.");
+      return;
+    }
+    const erreurs = {};
+    ["nom", "email", "motif", "objet", "message"].forEach((c) => { if (!String(form[c] || "").trim()) erreurs[c] = "Champ obligatoire."; });
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) erreurs.email = "Adresse e-mail invalide.";
+    setFieldErrors(erreurs);
+    if (Object.keys(erreurs).length) {
+      toast.error("Veuillez corriger les champs signalés.");
       return;
     }
     setIsSubmitting(true);
@@ -50,7 +64,9 @@ const ContactezNous = () => {
       setForm({ nom: "", email: "", entreprise: "", motif: "", objet: "", message: "" });
       setAccepte(false);
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi.");
+      const msg = err.response?.data?.error;
+      if (msg === "Adresse e-mail invalide.") setFieldErrors({ email: msg });
+      toast.error(msg || "Erreur lors de l'envoi.");
       reportError("ECHEC_FORM_CONTACT", err);
     } finally {
       setIsSubmitting(false);
@@ -82,11 +98,13 @@ const ContactezNous = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Nom *</label>
-              <input name="nom" required value={form.nom} onChange={handleChange} className={inputClass} />
+              <input name="nom" aria-invalid={!!fieldErrors.nom} aria-describedby={fieldErrors.nom ? "err-nom" : undefined} required value={form.nom} onChange={handleChange} className={inputClass} />
+<FieldError id="err-nom" message={fieldErrors.nom} />
             </div>
             <div>
               <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Email *</label>
-              <input type="email" name="email" required value={form.email} onChange={handleChange} className={inputClass} />
+              <input type="email" name="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} required value={form.email} onChange={handleChange} className={inputClass} />
+<FieldError id="err-email" message={fieldErrors.email} />
             </div>
           </div>
 
@@ -97,21 +115,24 @@ const ContactezNous = () => {
             </div>
             <div>
               <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Motif de contact *</label>
-              <select name="motif" required value={form.motif} onChange={handleChange} className={inputClass}>
+              <select name="motif" aria-invalid={!!fieldErrors.motif} aria-describedby={fieldErrors.motif ? "err-motif" : undefined} required value={form.motif} onChange={handleChange} className={inputClass}>
                 <option value="">Motif de contact</option>
                 {MOTIFS.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
+<FieldError id="err-motif" message={fieldErrors.motif} />
             </div>
           </div>
 
           <div>
             <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Objet *</label>
-            <input name="objet" placeholder="Objet" required value={form.objet} onChange={handleChange} className={inputClass} />
+            <input name="objet" aria-invalid={!!fieldErrors.objet} aria-describedby={fieldErrors.objet ? "err-objet" : undefined} placeholder="Objet" required value={form.objet} onChange={handleChange} className={inputClass} />
+<FieldError id="err-objet" message={fieldErrors.objet} />
           </div>
 
           <div>
             <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Message *</label>
-            <textarea name="message" placeholder="Message" required rows="5" value={form.message} onChange={handleChange} className={`${inputClass} resize-none`} />
+            <textarea name="message" aria-invalid={!!fieldErrors.message} aria-describedby={fieldErrors.message ? "err-message" : undefined} placeholder="Message" required rows="5" value={form.message} onChange={handleChange} className={`${inputClass} resize-none`} />
+<FieldError id="err-message" message={fieldErrors.message} />
           </div>
 
           <label className="flex items-start gap-2.5 cursor-pointer">
@@ -134,8 +155,8 @@ const ContactezNous = () => {
         <div className="w-full lg:w-80 shrink-0 space-y-4">
           <div className={`${tw.cardColors} rounded-2xl p-5 space-y-3`}>
             <p className={`text-xs font-semibold uppercase tracking-wider ${tw.textMuted}`}>Coordonnées</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Mail size={15} className={`${accentText} shrink-0`} /> taftech963@gmail.com</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Phone size={15} className={`${accentText} shrink-0`} /> 0770 123 440</p>
+            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Mail size={15} className={`${accentText} shrink-0`} /> <a href="mailto:taftech963@gmail.com" className="hover:underline">taftech963@gmail.com</a></p>
+            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Phone size={15} className={`${accentText} shrink-0`} /> <a href="tel:+213770123440" className="hover:underline">0770 123 440</a></p>
             <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><MapPin size={15} className={`${accentText} shrink-0`} /> Oran, Algérie</p>
           </div>
 

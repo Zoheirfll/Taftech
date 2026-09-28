@@ -120,7 +120,9 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         statut_moderation: "REJETEE",
         motif_rejet: "Salaire manquant",
       });
-      expect(toast.success).toHaveBeenCalledWith("Offre rejetée.");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Offre rejetée — le recruteur voit le motif dans son tableau de bord.",
+      );
     });
   });
 

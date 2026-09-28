@@ -128,9 +128,8 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     );
 
     await waitFor(() => screen.getByText("Gestion de projet"));
-    const allButtons = screen.getAllByRole("button");
-    // 0 = Ajouter, 1 = pencil(item1), 2 = trash(item1)
-    fireEvent.click(allButtons[2]);
+    // Ciblage par libellé accessible (plus robuste qu'un index de bouton)
+    fireEvent.click(screen.getByLabelText("Supprimer Gestion de projet"));
     fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {

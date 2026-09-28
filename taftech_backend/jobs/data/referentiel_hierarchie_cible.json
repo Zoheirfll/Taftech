@@ -1,0 +1,685 @@
+{
+ "groupes": {
+  "NDOM-A11": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A12": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A13": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A14": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A15": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A16": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A17": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-A18": {
+   "parent": "TSEC-984487DB1E56"
+  },
+  "NDOM-I2": {
+   "parent": "TSEC-6694EA807500"
+  },
+  "NDOM-I3": {
+   "parent": "TSEC-6694EA807500"
+  },
+  "NDOM-I4": {
+   "parent": "TSEC-6694EA807500"
+  },
+  "NDOM-K11": {
+   "parent": "TSEC-7170CD339BEB"
+  },
+  "NDOM-K12": {
+   "parent": "TSEC-7170CD339BEB"
+  },
+  "NDOM-K13": {
+   "parent": "TSEC-7170CD339BEB"
+  },
+  "NDOM-K14": {
+   "parent": "TSEC-5679221E6385"
+  },
+  "NDOM-L12": {
+   "parent": "TSEC-EAB762A03FD9"
+  },
+  "NDOM-L15": {
+   "parent": "TSEC-D4AA98B50484"
+  },
+  "NDOM-L17": {
+   "parent": "TSEC-B5617C76F0C1"
+  },
+  "NDOM-L18": {
+   "parent": "TSEC-97D0F8B65803"
+  },
+  "NDOM-P16": {
+   "parent": "TSEC-ED7C7AD4A000"
+  },
+  "TDOM-00B008D22895": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-0140E3A5844C": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-09A6F46DFE42": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-0ACA56116731": {
+   "parent": "TSEC-C18016BA15C1"
+  },
+  "TDOM-18C4DAF8AD12": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-1E69CE1C36B6": {
+   "libelle": "Facility Management",
+   "parent": "TSEC-3A5565748ABD"
+  },
+  "TDOM-2EFACD57488D": {
+   "parent": "TSEC-B5617C76F0C1"
+  },
+  "TDOM-2F828AC054D8": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-3FBA3B3D50BE": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-4514498F63A2": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-460B237EF425": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-4AF4905F9D23": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-56530DF9905D": {
+   "parent": "NSEC-J"
+  },
+  "TDOM-595B65308FA1": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-5C91BC22657A": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-5E3621F98DA4": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-68CEBC822FAD": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-75606B6B6A75": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-76D1BE954C56": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-76EE6E30E7A2": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-777C136F5B69": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-8240C7907C13": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-84C3A21C8997": {
+   "libelle": "Utilités industrielles",
+   "parent": "NSEC-C"
+  },
+  "TDOM-9153E7E27927": {
+   "parent": "NSEC-M"
+  },
+  "TDOM-963E451912A3": {
+   "parent": "NSEC-M"
+  },
+  "TDOM-A26F21D3F223": {
+   "parent": "NSEC-M"
+  },
+  "TDOM-A5D01F73A438": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-AD05C76BF335": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-BEF3F3FFB85D": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-C469C0E1615E": {
+   "parent": "TSEC-7175905AE92E"
+  },
+  "TDOM-C48293F52742": {
+   "parent": "NSEC-M"
+  },
+  "TDOM-C652AF8508EB": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-CD5A74B174B7": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-DCC7EBA7CA9F": {
+   "parent": "NSEC-C"
+  },
+  "TDOM-E040EA8101F8": {
+   "parent": "TSEC-7175905AE92E"
+  },
+  "TDOM-E8F56A9CC8A5": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-ED6CF0BECDC2": {
+   "parent": "NSEC-B"
+  },
+  "TDOM-F006145EA65C": {
+   "parent": "NSEC-F"
+  },
+  "TDOM-FB1AC6049570": {
+   "parent": "NSEC-M"
+  },
+  "TDOM-FCAE63E8E164": {
+   "parent": "NSEC-M"
+  },
+  "TSUB-035E267A6DB0": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-058BE658D8EB": {
+   "parent": "NDOM-M15"
+  },
+  "TSUB-0D611560FB79": {
+   "parent": "TDOM-00B008D22895"
+  },
+  "TSUB-100731E96431": {
+   "parent": "NDOM-G17"
+  },
+  "TSUB-121D7D87FB89": {
+   "parent": "TDOM-6A4ACF6DCF87"
+  },
+  "TSUB-128CB1426AC0": {
+   "parent": "NDOM-K12"
+  },
+  "TSUB-175482A43B7E": {
+   "parent": "NDOM-H13"
+  },
+  "TSUB-1C9E4ADA1FAC": {
+   "parent": "NDOM-J11"
+  },
+  "TSUB-1DA962D13D61": {
+   "parent": "NDOM-K12"
+  },
+  "TSUB-1FB991F9797C": {
+   "parent": "NDOM-G17"
+  },
+  "TSUB-22B5B7086E92": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-22F9E30C9440": {
+   "parent": "NDOM-M11"
+  },
+  "TSUB-24DC5D689AB7": {
+   "parent": "TDOM-3F1D2D317A33"
+  },
+  "TSUB-2873D20AF7FD": {
+   "parent": "NDOM-O11"
+  },
+  "TSUB-2A09A9461DA3": {
+   "parent": "TDOM-A5D01F73A438"
+  },
+  "TSUB-2BF340E61DAE": {
+   "parent": "NDOM-O14"
+  },
+  "TSUB-2DA67F7FFB40": {
+   "parent": "NDOM-J12"
+  },
+  "TSUB-2EBDF8F1CE4B": {
+   "parent": "NDOM-J12"
+  },
+  "TSUB-2F16753815AB": {
+   "parent": "NDOM-O14"
+  },
+  "TSUB-2F3FC21DCCCA": {
+   "parent": "TDOM-00B008D22895"
+  },
+  "TSUB-2F435A2D3B1E": {
+   "parent": "NDOM-M15"
+  },
+  "TSUB-37185987CA30": {
+   "parent": "TDOM-84C3A21C8997"
+  },
+  "TSUB-3A5C1AE80C12": {
+   "parent": "NDOM-G17"
+  },
+  "TSUB-3E8FC75C1321": {
+   "parent": "TDOM-0140E3A5844C"
+  },
+  "TSUB-4337E4FF342E": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-481B793C9BA8": {
+   "parent": "NDOM-M15"
+  },
+  "TSUB-48628F8064C8": {
+   "parent": "TDOM-A5D01F73A438"
+  },
+  "TSUB-4B8499F61778": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-4DA122690533": {
+   "parent": "NDOM-O14"
+  },
+  "TSUB-502B657CF839": {
+   "parent": "NDOM-O13"
+  },
+  "TSUB-569A13EA5C0E": {
+   "parent": "TDOM-8D6EE9F18748"
+  },
+  "TSUB-5B148C56DA5D": {
+   "parent": "NDOM-O13"
+  },
+  "TSUB-5CDA3CA0BDA1": {
+   "parent": "NDOM-K12"
+  },
+  "TSUB-5E31BA4EAF3B": {
+   "parent": "NDOM-O13"
+  },
+  "TSUB-60A53C4BCB4A": {
+   "parent": "TDOM-6A4ACF6DCF87"
+  },
+  "TSUB-66CE6C6C2A10": {
+   "parent": "TDOM-6A4ACF6DCF87"
+  },
+  "TSUB-67EA311B7C1A": {
+   "parent": "TDOM-8D6EE9F18748"
+  },
+  "TSUB-68E0B4BCC3D2": {
+   "parent": "NDOM-J12"
+  },
+  "TSUB-693CB706DDF6": {
+   "parent": "TDOM-6A4ACF6DCF87"
+  },
+  "TSUB-713EEE902E62": {
+   "parent": "TDOM-8D6EE9F18748"
+  },
+  "TSUB-7143A8272C13": {
+   "parent": "TDOM-007FB12D1551"
+  },
+  "TSUB-78FE084A0943": {
+   "parent": "NDOM-J11"
+  },
+  "TSUB-7931595EC209": {
+   "parent": "TDOM-76EE6E30E7A2"
+  },
+  "TSUB-798CFF2A327B": {
+   "parent": "TDOM-75606B6B6A75"
+  },
+  "TSUB-7A051D51E20D": {
+   "parent": "NDOM-J12"
+  },
+  "TSUB-7F81E442B756": {
+   "parent": "NDOM-H12"
+  },
+  "TSUB-88AFFFA05F8F": {
+   "parent": "TDOM-84C3A21C8997"
+  },
+  "TSUB-92892C4E1CC2": {
+   "parent": "NDOM-J11"
+  },
+  "TSUB-9569AB9A1184": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-96833EA9FDE1": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-997E5F4D9042": {
+   "parent": "NDOM-O14"
+  },
+  "TSUB-9E73243FEF6E": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-9EF475A12506": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-A06BF4C8CFB6": {
+   "parent": "TDOM-1E69CE1C36B6"
+  },
+  "TSUB-A0B531498458": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-A2BC99743981": {
+   "parent": "NDOM-K12"
+  },
+  "TSUB-A4A255315402": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-A5ADCDB691E7": {
+   "parent": "NDOM-H11"
+  },
+  "TSUB-A6E1C3221F41": {
+   "parent": "TDOM-76EE6E30E7A2"
+  },
+  "TSUB-A924331F9897": {
+   "parent": "TDOM-1E69CE1C36B6"
+  },
+  "TSUB-ACD3452E9A1E": {
+   "parent": "NDOM-H12"
+  },
+  "TSUB-AFEDAB626B28": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-B25E7726A5A0": {
+   "parent": "TDOM-00B008D22895"
+  },
+  "TSUB-B68F36165958": {
+   "parent": "TDOM-939ECD7F330F"
+  },
+  "TSUB-C1943DD4EFF8": {
+   "parent": "TDOM-6A4ACF6DCF87"
+  },
+  "TSUB-C733E0F7658D": {
+   "parent": "NDOM-H12"
+  },
+  "TSUB-C73FA606D002": {
+   "parent": "TDOM-00B008D22895"
+  },
+  "TSUB-C76C0877A6FC": {
+   "parent": "NDOM-M15"
+  },
+  "TSUB-CF58598C5A41": {
+   "parent": "NDOM-M11"
+  },
+  "TSUB-D105EBFB9F4A": {
+   "parent": "NDOM-M11"
+  },
+  "TSUB-DD172DD00CF7": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-DE761FF64DBC": {
+   "parent": "NDOM-O14"
+  },
+  "TSUB-E1B99D429E28": {
+   "parent": "NDOM-G17"
+  },
+  "TSUB-EA190873F15B": {
+   "parent": "TDOM-3F1D2D317A33"
+  },
+  "TSUB-ED0F21182691": {
+   "parent": "NDOM-O11"
+  },
+  "TSUB-F3BC520277D5": {
+   "parent": "NDOM-O13"
+  },
+  "TSUB-F528A691E0C6": {
+   "parent": "TDOM-0140E3A5844C"
+  },
+  "TSUB-F598D37E2510": {
+   "parent": "NDOM-G17"
+  },
+  "TSUB-F67DD7929F28": {
+   "parent": "TDOM-84C3A21C8997"
+  },
+  "TSUB-F7EA9C7AA195": {
+   "parent": "TDOM-F3DC0707D381"
+  },
+  "TSUB-F814D863A975": {
+   "parent": "TDOM-007FB12D1551"
+  },
+  "TSUB-FA2151F3A094": {
+   "parent": "TDOM-0140E3A5844C"
+  },
+  "TSUB-FDE941D17A08": {
+   "parent": "NDOM-M11"
+  }
+ },
+ "groupes_supprimes": [
+  "NDOM-I1",
+  "NDOM-L11",
+  "NDOM-P17",
+  "NSEC-A",
+  "NSEC-I",
+  "NSEC-K",
+  "TDOM-03753B6809FF",
+  "TDOM-062C30799DF8",
+  "TDOM-14E956B1378D",
+  "TDOM-1564D34BCAEC",
+  "TDOM-23C1A7D5A7C6",
+  "TDOM-26F75F77F70F",
+  "TDOM-38CB6107F186",
+  "TDOM-3B1AA899F238",
+  "TDOM-3BF5A98FB716",
+  "TDOM-4AAA73E1FED3",
+  "TDOM-599EE508248A",
+  "TDOM-5DE9D2D8B388",
+  "TDOM-5E38B21388F9",
+  "TDOM-6FACF3742875",
+  "TDOM-76EEA8AF4E8D",
+  "TDOM-7B2572662D32",
+  "TDOM-7F42EF8126D5",
+  "TDOM-83721E8C9715",
+  "TDOM-89B484A8B99E",
+  "TDOM-95073C41C2FD",
+  "TDOM-A21538EE301B",
+  "TDOM-BB6FD8B58934",
+  "TDOM-C294F781ECAD",
+  "TDOM-C6CF34AFE567",
+  "TDOM-C97CF82A91F6",
+  "TDOM-CC9EE4C97BFC",
+  "TDOM-D60CCCADF4F3",
+  "TDOM-D8E6CCF07001",
+  "TDOM-D9B4D0C032A5",
+  "TDOM-DD633FD21422",
+  "TDOM-E3AAC77FCC66",
+  "TDOM-E919DE85F015",
+  "TDOM-F029412388DC",
+  "TDOM-F4E946A30860",
+  "TDOM-FA773DA6BAD0",
+  "TSEC-1B69769639C0",
+  "TSEC-31059CAD8E98",
+  "TSEC-34F06D8D9947",
+  "TSEC-35892E057AF8",
+  "TSEC-3B9981073E1A",
+  "TSEC-4FE47BAAA01A",
+  "TSEC-553D28C1F2A4",
+  "TSEC-55AC0B9A6376",
+  "TSEC-58F3D2DE8561",
+  "TSEC-660365ACD08C",
+  "TSEC-7081C23F6C1B",
+  "TSEC-81121F330A98",
+  "TSEC-846D80662D33",
+  "TSEC-8F773F1D0420",
+  "TSEC-933548450302",
+  "TSEC-9EB017D9085A",
+  "TSEC-A1DA41DC7DDA",
+  "TSEC-A3819ADB0F8B",
+  "TSEC-A4511012C618",
+  "TSEC-B81F37A043A6",
+  "TSEC-BED30497BD22",
+  "TSEC-C43BAB65E355",
+  "TSEC-D078838DB1FE",
+  "TSEC-D9E943CD1BE0",
+  "TSEC-DBCAB8275E1A",
+  "TSEC-DD882975DC87",
+  "TSEC-E3534A60C8E9",
+  "TSEC-FA7E83BC1AE8",
+  "TSUB-01DC22072342",
+  "TSUB-0671CBBD6C9D",
+  "TSUB-0C0113C71164",
+  "TSUB-0F8B41D64C71",
+  "TSUB-13FA3C1FB8D3",
+  "TSUB-180045A8D201",
+  "TSUB-3A699DB4A9B3",
+  "TSUB-603A1283FD1A",
+  "TSUB-6E749745AA36",
+  "TSUB-70EEBC6FBA0B",
+  "TSUB-7D857B65CDDA",
+  "TSUB-7EA5ABDF39DB",
+  "TSUB-84D47D3F3602",
+  "TSUB-8B0BCF6E1A7E",
+  "TSUB-9FFC1AAA6CE6",
+  "TSUB-A7A8D2F584FF",
+  "TSUB-AA99F0EBDBED",
+  "TSUB-C7F3DCFE69C7",
+  "TSUB-CA077308ED9B",
+  "TSUB-CE1EE6121988",
+  "TSUB-D58A17CD165D",
+  "TSUB-D5B0ACAC619B",
+  "TSUB-D768990AB6A8",
+  "TSUB-FAD0F2E8AA2D",
+  "TSUB-FCFC9EC769C6"
+ ],
+ "metiers": {
+  "L1101": {
+   "canonique": null,
+   "groupe": "TDOM-0ACA56116731"
+  },
+  "L1102": {
+   "canonique": null,
+   "groupe": "TDOM-0ACA56116731"
+  },
+  "P1701": {
+   "canonique": null,
+   "groupe": "TDOM-9FDF0E6AC0CD"
+  },
+  "P1702": {
+   "canonique": null,
+   "groupe": "TDOM-9FDF0E6AC0CD"
+  },
+  "TAF-000163": {
+   "canonique": null,
+   "groupe": "TSUB-4E261AD58883"
+  },
+  "TAF-000164": {
+   "canonique": null,
+   "groupe": "TSUB-4E261AD58883"
+  },
+  "TAF-000217": {
+   "canonique": null,
+   "groupe": "TSUB-59262B01D320"
+  },
+  "TAF-000218": {
+   "canonique": null,
+   "groupe": "TSUB-7D5069E60DE1"
+  },
+  "TAF-000219": {
+   "canonique": null,
+   "groupe": "TSUB-7D5069E60DE1"
+  },
+  "TAF-000220": {
+   "canonique": null,
+   "groupe": "TSUB-87F6C3429233"
+  },
+  "TAF-000317": {
+   "canonique": null,
+   "groupe": "NDOM-H14"
+  },
+  "TAF-000318": {
+   "canonique": null,
+   "groupe": "NDOM-H14"
+  },
+  "TAF-000319": {
+   "canonique": null,
+   "groupe": "NDOM-H14"
+  },
+  "TAF-000320": {
+   "canonique": null,
+   "groupe": "NDOM-H14"
+  },
+  "TAF-000321": {
+   "canonique": null,
+   "groupe": "NDOM-H15"
+  },
+  "TAF-000322": {
+   "canonique": null,
+   "groupe": "NDOM-H15"
+  },
+  "TAF-000323": {
+   "canonique": null,
+   "groupe": "NDOM-H15"
+  },
+  "TAF-000324": {
+   "canonique": null,
+   "groupe": "NDOM-H15"
+  },
+  "TAF-000495": {
+   "canonique": "TAF-000130",
+   "groupe": "TSUB-8A07A98C640C"
+  },
+  "TAF-000496": {
+   "canonique": "TAF-000129",
+   "groupe": "TSUB-8A07A98C640C"
+  },
+  "TAF-000524": {
+   "canonique": "TAF-000157",
+   "groupe": "TSUB-63E6F8F50D31"
+  },
+  "TAF-000527": {
+   "canonique": "TAF-000160",
+   "groupe": "TSUB-5885130D42BD"
+  },
+  "TAF-000528": {
+   "canonique": null,
+   "groupe": "TSUB-5885130D42BD"
+  },
+  "TAF-000539": {
+   "canonique": null,
+   "groupe": "TSUB-E74DE7053BA3"
+  },
+  "TAF-000541": {
+   "canonique": "TAF-000092",
+   "groupe": "TSUB-45EE188C1805"
+  },
+  "TAF-000554": {
+   "canonique": "TAF-000023",
+   "groupe": "TSUB-3AD032B37F38"
+  },
+  "TAF-000564": {
+   "canonique": null,
+   "groupe": "TSUB-29E5E49C6E7E"
+  },
+  "TAF-000576": {
+   "canonique": "TAF-000033",
+   "groupe": "TSUB-10C62F535EB4"
+  },
+  "TAF-000587": {
+   "canonique": "TAF-000076",
+   "groupe": "TSUB-7224324970A8"
+  },
+  "TAF-000588": {
+   "canonique": "TAF-000131",
+   "groupe": "TSUB-8A07A98C640C"
+  },
+  "TAF-000589": {
+   "canonique": "TAF-000130",
+   "groupe": "TSUB-8A07A98C640C"
+  },
+  "TAF-000590": {
+   "canonique": "TAF-000129",
+   "groupe": "TSUB-8A07A98C640C"
+  },
+  "TAF-000606": {
+   "canonique": null,
+   "groupe": "TSUB-2C245D5DE89A"
+  },
+  "TAF-000613": {
+   "canonique": "TAF-000132",
+   "groupe": "TSUB-2887011833CC"
+  },
+  "TAF-000614": {
+   "canonique": "TAF-000133",
+   "groupe": "TSUB-724C7413A5C4"
+  },
+  "TAF-000616": {
+   "canonique": null,
+   "groupe": "TSUB-DE04E4B8EB73"
+  },
+  "TAF-000617": {
+   "canonique": null,
+   "groupe": "TSUB-DE04E4B8EB73"
+  },
+  "TAF2-MOYENS": {
+   "canonique": null,
+   "groupe": "TDOM-59BBA97E696B"
+  }
+ }
+}

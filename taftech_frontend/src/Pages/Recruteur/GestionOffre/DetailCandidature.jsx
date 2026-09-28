@@ -18,6 +18,7 @@ import {
   Copy,
   ChevronDown,
   HelpCircle,
+  CheckCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -69,10 +70,6 @@ export const DetailCandidature = ({
   loadingGroq,
   quotaAnalyseRecruteur,
   handleAnalyseGroq,
-  resumeIA,
-  setResumeIA,
-  loadingResume,
-  handleResumeIA,
   setModalEval,
   setEvalForm,
   supprimerEvaluation,
@@ -166,29 +163,59 @@ export const DetailCandidature = ({
                   {candidatData.metier}
                 </span>
               )}
+              {candidatData?.date_naissance && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
+                  <Calendar size={11} />
+                  Né(e) le {new Date(candidatData.date_naissance).toLocaleDateString("fr-FR")}
+                </span>
+              )}
             </div>
+            {candidatData && (candidatData.service_militaire || candidatData.permis_conduire || candidatData.passeport_valide || candidatData.vehicule_personnel) && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {candidatData.service_militaire && (
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${candidatData.service_militaire === "DEGAGE" ? "bg-emerald-50 text-emerald-700" : tw.tagSlateSoft}`}>
+                    Militaire : {formatText(candidatData.service_militaire)}
+                  </span>
+                )}
+                {[
+                  { label: "Permis", active: candidatData.permis_conduire },
+                  { label: "Passeport", active: candidatData.passeport_valide },
+                  { label: "Véhicule", active: candidatData.vehicule_personnel },
+                ].filter(({ active }) => active).map(({ label }) => (
+                  <span key={label} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                    ✓ {label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="relative shrink-0" ref={statutMenuRef}>
             <button
+              type="button"
               onClick={() => authService.peutFaire("UTILISATEUR") && setShowStatutMenu(p => !p)}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors ${STATUTS_STYLES[selectedCandidature.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer" : "cursor-default opacity-70"}`}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors ${STATUTS_STYLES[selectedCandidature.statut]} ${authService.peutFaire("UTILISATEUR") ? "cursor-pointer hover:brightness-95" : "cursor-default opacity-70"}`}
             >
               {STATUTS_LABELS[selectedCandidature.statut]}
-              {authService.peutFaire("UTILISATEUR") && <ChevronDown size={12} />}
+              {authService.peutFaire("UTILISATEUR") && <ChevronDown size={12} className={showStatutMenu ? "rotate-180 transition-transform" : "transition-transform"} />}
             </button>
             {showStatutMenu && authService.peutFaire("UTILISATEUR") && (
-              <div className={`absolute right-0 top-full mt-1 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-30 overflow-hidden min-w-[180px]`}>
-                {Object.entries(STATUTS_LABELS).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => { handleStatusChange(selectedCandidature.id, key); setShowStatutMenu(false); }}
-                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors hover:bg-slate-50 ${key === selectedCandidature.statut ? tw.surfaceMuted : ""}`}
-                  >
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${STATUTS_STYLES[key]}`}>
-                      {label}
-                    </span>
-                  </button>
-                ))}
+              <div className="absolute right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden min-w-[200px] py-1">
+                {Object.entries(STATUTS_LABELS).map(([key, label]) => {
+                  const estActif = key === selectedCandidature.statut;
+                  return (
+                    <button
+                      type="button"
+                      key={key}
+                      onClick={() => { handleStatusChange(selectedCandidature.id, key); setShowStatutMenu(false); }}
+                      className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2.5 text-xs font-semibold cursor-pointer transition-colors hover:bg-slate-100 ${estActif ? "bg-slate-50" : ""}`}
+                    >
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border ${STATUTS_STYLES[key]}`}>
+                        {label}
+                      </span>
+                      {estActif && <CheckCircle size={14} className={tw.textSuccess} />}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -304,54 +331,36 @@ export const DetailCandidature = ({
       {/* ONGLET PROFIL */}
       {activeDetailTab === "profil" && (
         <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-220px)]">
-          {/* Résumé IA */}
+          {/* Résumé IA — lecture seule, fusionné avec "Analyse approfondie IA" (onglet Analyse
+              IA) : une seule action/quota génère les deux affichages du même résultat. */}
           {candidatData && (
             <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2">
                   <Sparkles size={13} className={tw.textTeal} />
                   <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
                     Résumé IA
                   </span>
                 </div>
-                {!loadingResume && !resumeIA && (
-                  isPremium ? (
-                    <button
-                      onClick={handleResumeIA}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.bgTealSolid} text-xs font-semibold rounded-lg transition-colors`}
-                    >
-                      <Sparkles size={11} /> Générer
-                    </button>
-                  ) : (
-                    <span className={`text-xs ${tw.textMuted} font-semibold`}>🔒 Premium</span>
-                  )
-                )}
-                {resumeIA && (
-                  <button
-                    onClick={() => setResumeIA(null)}
-                    className={`text-xs ${tw.clearLinkTeal}`}
-                  >
-                    Effacer
-                  </button>
-                )}
+                <button
+                  onClick={() => setActiveDetailTab("ia")}
+                  className={`text-xs font-semibold ${tw.textTeal} hover:underline`}
+                >
+                  {analyseGroq ? "Voir le détail" : "Analyser ce candidat"}
+                </button>
               </div>
-              {loadingResume ? (
-                <div className={`flex items-center gap-2 ${tw.textTeal}`}>
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-teal-700"></div>
-                  <span className="text-xs animate-pulse">
-                    Analyse en cours...
-                  </span>
-                </div>
-              ) : resumeIA ? (
+              {analyseGroq ? (
                 <p className={`text-xs ${tw.textMuted700} leading-relaxed`}>
-                  {resumeIA
+                  {analyseGroq
                     .replace(/#{1,3}[A-ZÀ-Ÿ\s]+#{1,3}/g, "")
                     .replace(/\n{2,}/g, " ")
                     .trim()}
                 </p>
               ) : (
                 <p className={`text-xs ${tw.textMuted} italic`}>
-                  Cliquez sur "Générer" pour obtenir un résumé IA.
+                  {isPremium
+                    ? "Générez une analyse IA depuis l'onglet \"Analyse IA\"."
+                    : "🔒 Fonctionnalité Premium — passez sur un palier supérieur pour l'activer."}
                 </p>
               )}
             </div>
@@ -590,34 +599,58 @@ export const DetailCandidature = ({
                 </div>
               )}
 
-              {candidatData.competences && (
-                <div>
-                  <h4 className={`${tw.sectionLabel} mb-3`}>
-                    Compétences
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {candidatData.competences_detail?.length > 0
-                      ? candidatData.competences_detail.map((c) => (
-                          <span
-                            key={c.id}
-                            className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md flex items-center gap-1`}
-                          >
-                            {c.label}
-                            <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
-                          </span>
-                        ))
-                      : candidatData.competences
+              {(candidatData.competences || candidatData.langues) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {candidatData.competences && (
+                    <div>
+                      <h4 className={`${tw.sectionLabel} mb-3`}>
+                        Compétences
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {candidatData.competences_detail?.length > 0
+                          ? candidatData.competences_detail.map((c) => (
+                              <span
+                                key={c.id}
+                                className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md flex items-center gap-1`}
+                              >
+                                {c.label}
+                                <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
+                              </span>
+                            ))
+                          : candidatData.competences
+                              .split(",")
+                              .filter(Boolean)
+                              .map((c, i) => (
+                                <span
+                                  key={i}
+                                  className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md`}
+                                >
+                                  {c.trim()}
+                                </span>
+                              ))}
+                      </div>
+                    </div>
+                  )}
+                  {candidatData.langues && (
+                    <div>
+                      <h4 className={`${tw.sectionLabel} mb-3`}>
+                        Langues
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {candidatData.langues
                           .split(",")
                           .filter(Boolean)
-                          .map((c, i) => (
+                          .map((l, i) => (
                             <span
                               key={i}
-                              className={`px-2.5 py-1 ${tw.chipTealSoft} text-xs rounded-md`}
+                              className={`px-2.5 py-1 ${tw.tagSlateSoft} text-xs rounded-md`}
                             >
-                              {c.trim()}
+                              {l.trim()}
                             </span>
                           ))}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -679,6 +712,7 @@ export const DetailCandidature = ({
                         <span className={`text-xs font-bold ${tw.textStrong} uppercase tracking-wide`}>
                           Pourquoi ce score ?
                         </span>
+                        <Link to="/comment-fonctionne-matching" className="ml-auto text-xs font-semibold text-teal-700 underline">Comment est calculé le score ?</Link>
                       </div>
                       {typeof DM.completude === "number" && DM.completude < 1 && (
                         <p className={`text-xs ${tw.textMuted700}`}>

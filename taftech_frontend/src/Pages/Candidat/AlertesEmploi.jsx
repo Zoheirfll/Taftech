@@ -1,3 +1,4 @@
+import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -12,6 +13,7 @@ import { apiErrMsg } from "../../utils/apiErrMsg";
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
 const AlertesEmploi = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [alertes, setAlertes] = useState([]);
   const [wilayas, setWilayas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -251,7 +253,7 @@ const AlertesEmploi = () => {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleCreateAlerte} className="p-6 space-y-4">
+            <form onSubmit={lockSubmit(handleCreateAlerte)} className="p-6 space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Mots-clés *
@@ -310,7 +312,7 @@ const AlertesEmploi = () => {
                   Annuler
                 </button>
                 <button
-                  type="submit"
+                  type="submit" disabled={submitBusy}
                   className={`flex-1 py-3 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-base font-bold rounded-xl transition-colors`}
                 >
                   Enregistrer

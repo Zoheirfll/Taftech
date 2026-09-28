@@ -88,10 +88,13 @@ describe("📄 UI & Logique - Composant <AdminPages />", () => {
     );
 
     await waitFor(() => screen.getByText("Conditions Générales d'Utilisation"));
-    // Une seule ligne "libre" (partenaires) doit avoir un bouton delete ; cgu n'en a pas.
-    // 0 = Nouvelle page, puis pencil(cgu), pencil(partenaires), trash(partenaires)
-    const allButtons = screen.getAllByRole("button");
-    expect(allButtons.length).toBe(4);
+    // Seule la page libre (partenaires) a un bouton de suppression ; cgu (page système) n'en a pas.
+    expect(screen.getByLabelText("Supprimer la page Nos partenaires")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Supprimer la page Conditions Générales d'Utilisation"),
+    ).not.toBeInTheDocument();
+    // Mais les deux restent modifiables
+    expect(screen.getByLabelText("Modifier la page Conditions Générales d'Utilisation")).toBeInTheDocument();
   });
 
   it("🟢 HP4 : Ouverture du formulaire de création", async () => {

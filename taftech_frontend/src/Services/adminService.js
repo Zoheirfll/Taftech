@@ -1,12 +1,21 @@
 import api from "../api/axiosConfig";
 import { reportError } from "../utils/errorReporter";
 
+// Taille de page des tableaux admin paginés (offres/entreprises/utilisateurs/candidatures) —
+// 5 lignes par défaut côté API était trop peu pour de la modération. Les composants
+// calculent leur nombre de pages avec cette même constante.
+export const ADMIN_PAGE_SIZE = 20;
+
+// Toute saisie libre passée en query string doit être encodée (un "&" ou "#" tapé dans une
+// recherche cassait sinon la requête).
+const q = (v) => encodeURIComponent(v ?? "");
+
 export const adminService = {
   // Offres
   getAdminOffres: async (page = 1, search = "", statut = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/offres/?page=${page}&search=${search}&statut=${statut}&ordering=${ordering}`,
+        `jobs/admin/offres/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&statut=${q(statut)}&ordering=${q(ordering)}`,
       );
       return response.data;
     } catch (err) {
@@ -32,7 +41,7 @@ export const adminService = {
   getAdminEntreprises: async (page = 1, search = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/entreprises/?page=${page}&search=${search}&ordering=${ordering}`,
+        `jobs/admin/entreprises/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&ordering=${q(ordering)}`,
       );
       return response.data;
     } catch (err) {
@@ -79,7 +88,7 @@ export const adminService = {
   getAdminUsers: async (page = 1, search = "", role = "", ordering = "") => {
     try {
       const response = await api.get(
-        `jobs/admin/utilisateurs/?page=${page}&search=${search}&role=${role}&ordering=${ordering}`,
+        `jobs/admin/utilisateurs/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&role=${q(role)}&ordering=${q(ordering)}`,
       );
       return response.data;
     } catch (err) {
@@ -105,7 +114,7 @@ export const adminService = {
   getAdminCandidatures: async (page = 1, search = "", statut = "", ordering = "") => {
     try {
       const response = await api.get(
-        `/jobs/admin/candidatures/?page=${page}&search=${search}&statut=${statut}&ordering=${ordering}`,
+        `/jobs/admin/candidatures/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&statut=${q(statut)}&ordering=${q(ordering)}`,
       );
       return response.data;
     } catch (err) {
@@ -190,7 +199,7 @@ export const adminService = {
   // uniquement libellé + selectionnable/actif (voir jobs/views/referentiel_admin.py).
   getAdminReferentielMetiers: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/metiers/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/metiers/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_METIERS", err);
@@ -208,7 +217,7 @@ export const adminService = {
   },
   getAdminReferentielSpecialites: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/specialites/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/specialites/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_SPECIALITES", err);
@@ -226,7 +235,7 @@ export const adminService = {
   },
   getAdminReferentielDiplomes: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/diplomes/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/diplomes/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_DIPLOMES", err);
@@ -244,7 +253,7 @@ export const adminService = {
   },
   getAdminRelationsSimilaires: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/relations-similaires/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/relations-similaires/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_RELATIONS_SIMILAIRES", err);
@@ -271,7 +280,7 @@ export const adminService = {
   },
   getAdminRelationsSpecialites: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/relations-specialites/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/relations-specialites/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_RELATIONS_SPECIALITES", err);
@@ -299,7 +308,7 @@ export const adminService = {
 
   getAdminFormationsAVerifier: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/formations-a-verifier/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/formations-a-verifier/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_FORMATIONS_A_VERIFIER", err);
@@ -492,7 +501,7 @@ export const adminService = {
   // Compétences (référentiel admin)
   getAdminCompetences: async (search = "", page = 1) => {
     try {
-      const response = await api.get(`jobs/admin/competences/?search=${search}&page=${page}`);
+      const response = await api.get(`jobs/admin/competences/?search=${q(search)}&page=${page}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);

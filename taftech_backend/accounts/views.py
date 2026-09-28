@@ -568,6 +568,41 @@ class ChangerMotDePasseAPIView(APIView):
         return Response({'message': 'Mot de passe modifié avec succès !'})
 
 
+class SupprimerCompteAPIView(APIView):
+    """Suppression de compte en libre-service — soft-delete (is_active=False), pas d'effacement
+    des données. Cohérent avec le blocage/déblocage admin déjà en place (jobs/views/admin.py) et
+    avec les filtres existants (CVthèque, comptages publics) qui excluent déjà `is_active=False`.
+    Double garde-fou (mot-clé tapé + mot de passe) car l'action est irréversible côté utilisateur."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        if request.data.get('confirmation', '').strip().upper() != 'SUPPRIMER':
+            return Response({'error': 'Veuillez taper SUPPRIMER pour confirmer.'}, status=400)
+
+        if not getattr(user, 'est_compte_google', False):
+            mot_de_passe = request.data.get('mot_de_passe', '')
+            if not user.check_password(mot_de_passe):
+                return Response({'error': 'Mot de passe incorrect.'}, status=400)
+
+        refresh_token = request.COOKIES.get('refreshToken')
+        if refresh_token:
+            try:
+                RefreshToken(refresh_token).blacklist()
+            except Exception:
+                pass  # Token déjà expiré/invalide — on désactive le compte quand même
+
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+
+        response = Response({'message': 'Votre compte a été désactivé.'}, status=200)
+        response.delete_cookie('accessToken')
+        response.delete_cookie('refreshToken')
+        response.delete_cookie('rememberMe')
+        return response
+
+
 class MeAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

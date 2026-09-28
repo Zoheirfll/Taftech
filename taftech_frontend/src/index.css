@@ -71,3 +71,24 @@ html.portal-recruteur::-webkit-scrollbar-thumb:hover {
     scroll-behavior: auto !important;
   }
 }
+
+/* Checklist qualité (27/09/2026) : pas de scroll horizontal parasite, bouton désactivé
+   visible pendant l'envoi, retour tactile au clic sur tous les boutons. */
+@layer base {
+  html, body { overflow-x: clip; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:not(:disabled):active { transform: scale(0.97); }
+}
+
+/* Checklist qualité (27/09/2026) : pas de scroll horizontal parasite, bouton désactivé
+   visible pendant l'envoi, retour tactile au clic sur tous les boutons. */
+@layer base {
+  html, body { overflow-x: clip; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:not(:disabled):active { transform: scale(0.97); }
+}
+
+/* Champ en erreur (voir Components/FieldError.jsx) */
+@layer base {
+  [aria-invalid="true"] { border-color: #dc2626 !important; box-shadow: 0 0 0 2px #fee2e2 !important; }
+}

@@ -125,6 +125,38 @@ class PalierAPITest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Palier.objects.filter(id=self.palier_actif.id).exists())
 
+    def test_staff_sans_role_admin_refuse(self):
+        """IsAdminRole (harmonisé le 28/09/2026) : is_staff seul ne suffit plus."""
+        staff_non_admin = User.objects.create_user(
+            username="staff_paliers", email="staff_paliers@test.dz", password="pwd",
+            role="RECRUTEUR", is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_non_admin)
+        response = self.client.get(reverse("admin-paliers"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_modification_prix_cree_un_audit_log(self):
+        from jobs.models import AuditLog
+        self.client.force_authenticate(user=self.admin)
+        self.client.put(
+            reverse("admin-palier-detail", args=[self.palier_actif.id]),
+            {"prix_mensuel_da": 6900},
+        )
+        log = AuditLog.objects.filter(action="MODIFIER_PRIX_PALIER").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.admin_id, self.admin.id)
+        self.assertIn("5900", log.detail)
+        self.assertIn("6900", log.detail)
+
+    def test_modification_sans_changement_prix_ne_journalise_pas(self):
+        from jobs.models import AuditLog
+        self.client.force_authenticate(user=self.admin)
+        self.client.put(
+            reverse("admin-palier-detail", args=[self.palier_actif.id]),
+            {"support_label": "Email sous 24h"},
+        )
+        self.assertFalse(AuditLog.objects.filter(action="MODIFIER_PRIX_PALIER").exists())
+
 
 class PalierCreditsMoisFieldTest(TestCase):
     def test_credits_mois_remplace_limite_cv_mois(self):

@@ -2,6 +2,149 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
+## 🆕 SESSION 28/09/2026 — Revue complète du panel admin (25 pages)
+
+**Demande** : vérifier toutes les pages admin (organisation, détails, erreurs, manques, cohérence, aide, couleurs), en autonomie totale. Détail sécurité dans `SECURITY.md` §18.
+
+**Nouveaux composants partagés** (un seul pattern pour toutes les pages) :
+- `Components/AdminPageHeader.jsx` : icône colorée (couleur = section de la sidebar), titre, sous-titre, actions, et bouton **« Aide »** repliable. Replié par défaut, l'état est mémorisé par page (`admin_aide_<clé>`, localStorage en try/catch). Prop `compact` pour les pages affichées dans des onglets (`AbonnementsIA`), afin d'éviter deux grands titres empilés.
+- `Components/AdminEtat.jsx` : `AdminErreurChargement` (message + « Réessayer », plus de page blanche) et `AdminVide` (état vide illustré).
+- `Components/AdminPagination.jsx` : pages fenêtrées `1 … 4 5 6 … 52`.
+- `utils/useEchapPourFermer.js` : toutes les modales admin se ferment avec Échap et par clic à l'extérieur.
+
+**Structure (`AdminLayout.jsx`)** :
+- `/admin-taftech` ouvre le tableau de bord (ouvrait Entreprises).
+- Sidebar responsive : tiroir mobile + barre supérieure avec point rouge d'alerte. Avant, 256 px fixes, inutilisable sur téléphone.
+- Badges rechargés à chaque navigation (restaient figés jusqu'au F5).
+- Groupes réorganisés et colorés : Principal / Modération / Comptes / Contenu du site / Référentiels / **Espace candidat** (Rendez-vous + Types de documents, auparavant rangés dans « Système ») / Facturation / Système. « Demandes Premium » renommé « Demandes d'abonnement ».
+
+**Bugs réels corrigés** :
+- **Pagination tronquée à 10 pages** (`.slice(0, 10)`) : Compétences et les 4 listes du Référentiel v2. Plus de la moitié des 1 038 métiers et 922 spécialités était inaccessible depuis l'admin.
+- **FAQ** : la catégorie `PALIERS`, lue par la page Abonnements recruteur, n'était ni créable ni filtrable. Seule `PREMIUM` était proposée, catégorie morte depuis la suppression de la page Premium le 27/08. `PREMIUM` reste affichée « obsolète » si des questions existent encore.
+- **Tailles de page** : `ADMIN_PAGE_SIZE = 20` (`adminService.js`) au lieu de 5 pour Offres, Entreprises, Utilisateurs et Candidatures. `AdminCandidaturesListAPIView` utilisait un `PageNumberPagination` brut qui ignorait `?page_size=` ; il passe sur `AdminPagination`.
+- **Journal d'audit** : rechercher depuis la page 3 interrogeait la page 3 (valeur de `page` périmée), deux requêtes partaient au montage, et une erreur réseau s'affichait comme « Aucun log ». Réécrit avec un seul effet `[page, searchApplique]` et un état d'erreur.
+- Classes Tailwind construites dynamiquement (`hover:${tw.textError}`) : invisibles pour Tailwind, le survol rouge des corbeilles ne marchait sur aucune page (9 fichiers).
+- Codes bruts affichés remplacés par des libellés : statuts de candidature, exigences, rôles (Recruteur et Admin partageaient le même violet), types d'annonce, dates ISO, heures `09:00:00`.
+- Offres : une offre expirée affichait « Expire aujourd'hui » ; le motif de rejet restait pré-rempli d'une offre à l'autre ; aucun anti double-clic sur le rejet ; description `null` passée au formulaire.
+- Candidatures : `<tbody>` sans `divide-y`, score « null% », et un clic sur un lien d'offre ouvrait aussi la fiche. Approbations groupées (offres, entreprises) : `Promise.allSettled` pour compter les échecs partiels.
+- `<td className="flex">` cassait l'alignement des tableaux Entreprises et Comptes.
+- Rendez-vous : on pouvait créer un créneau fin ≤ début et bloquer une date passée ; l'annulation d'un rendez-vous ne demandait pas de confirmation. Ajout d'une séparation à venir / passés et de statuts colorés.
+- Paliers : libellé trompeur « Coordonnées candidats visibles ». Depuis les crédits (29/08), `acces_coordonnees` ne commande plus que « Inviter à postuler » (`recruteur.py:1071`). Ajout de la remise annuelle calculée, avec alerte si l'annuel coûte plus que 12 × le mensuel.
+- Configuration IA : interrupteurs explicites (`role="switch"`, Activée/Désactivée) ; température vide rejetée (`Number("")` valait 0) ; `max_tokens` ≥ 100 ; écran d'erreur au lieu d'un « Chargement… » infini.
+- Formulaires Articles et Pages : confirmation avant de quitter avec des modifications non enregistrées ; slugs système réservés refusés à la création.
+- Formations à vérifier : la page vidée par le dernier traitement se recharge s'il reste des éléments ailleurs.
+
+**Ajouts** :
+- Tableau de bord : cartes KPI cliquables, état vide ou erreur sur l'onglet marché, protection contre les divisions par zéro.
+- Articles : miniature, date, lien public, filtre Publiés/Brouillons, compteur SEO de l'extrait.
+- Bannières : aperçu du bandeau actif tel qu'affiché sur le site.
+- Packs de crédits : prix par crédit.
+- Pages du site : lien public et cadenas sur les pages système.
+- Types de documents et compétences : avertissement de cascade à la suppression. `TypeDocument` est en `SET_NULL`, `MetierCompetence` en `CASCADE`, d'où la recommandation de masquer plutôt que supprimer.
+- Diffusion : compteur de caractères et confirmation qui rappelle le sujet.
+- Mentions légales : champs obligatoires ; un échec de chargement n'affiche plus un formulaire vide qui écraserait RC/NIF.
+
+Toutes les aides ont été vérifiées contre le code : prix vide = paiement Chargily refusé, quota 0 = bloqué (`ia_quota.py:91`), candidat non notifié d'une annulation de rendez-vous, journal d'audit sans endpoint d'écriture.
+
+**Tests** :
+- Frontend **450/450** ✅ (69 fichiers). Nouveaux : `AdminDemandesPremium.test.jsx` (confirmation d'activation), `AdminComptes.test.jsx` (mot-clé SUPPRIMER, mot de passe ≥ 8). Tests ajoutés dans FAQ (PALIERS), Paliers (confirmation de prix) et IA (Réessayer, température vide).
+- Les tests qui ciblaient les boutons par index (`allButtons[2]`) passent sur des `aria-label` explicites, le nouveau bouton « Aide » décalant les positions.
+- Backend : `test_api_admin` (+2 tests d'auto-blocage), `test_api_audit_logs`, `test_api_admin_exports`, `test_api_cms`, `test_urls_Candidat_Recruteur` : 65/65 ✅.
+- `manage.py check` propre, `npx vite build` propre.
+
+**Non fait, à décider** : ~~harmoniser `role == 'ADMIN'` sur les vues de `jobs/views/admin.py`~~ / ~~soft-delete formation refusée~~ / ~~audit log activation-abonnement/prix-palier/suppression-admin~~ — **les 3 traités le 28/09/2026, voir section suivante.**
+
+## 🆕 SESSION 28/09/2026 (suite) — Les 3 points laissés en attente : permission `IsAdminRole`, soft-refuse formation, audit log manquants
+
+**Contexte** : suite directe de la revue admin ci-dessus — l'utilisateur a demandé de traiter les 3 points identifiés comme non faits ("faites les 3"), avec une interruption "on laisse pour après" puis reprise via "continuez tt". Entre les deux, un bug réel signalé par capture d'écran (`ProgrammingError` sur `/api/jobs/admin/offres/`) a été corrigé en urgence, hors de ce plan — cause : la migration `0126` (nouveaux champs `FormationCandidat`, voir point 2) avait été générée mais jamais appliquée à la base de dev avant que le code du point 2 l'utilise déjà. Nouvelle confirmation de la leçon déjà documentée plusieurs fois dans ce fichier : **toujours lancer `migrate` immédiatement après `makemigrations`**, jamais après avoir déjà écrit le code qui consomme les nouveaux champs.
+
+**1. `IsAdminRole` — permission harmonisée sur `jobs/views/admin.py`** : nouveau `jobs/permissions.py::IsAdminRole` (`IsAdminUser` + `role == 'ADMIN'` combinés en une seule permission) — remplace les 18 occurrences de `permission_classes = [IsAdminUser]` dans `admin.py`, seul fichier de vues admin du projet qui n'avait pas déjà ce double contrôle (les 10 autres fichiers de vues admin le faisaient déjà en dur dans chaque méthode). Supprime au passage le check manuel redondant dans `AdminMarcheAPIView.get()`. Étendu aussi à `jobs/views/paliers_admin.py::PaliersAdminAPIView` (trouvé non harmonisé en traitant le point 3, même pattern `IsAdminUser` + check manuel dans chaque méthode). `test_api_audit_logs.py`/`test_api_paliers.py` : nouveaux tests `test_..._refuse_staff_sans_role_admin` (un compte `is_staff=True` avec un rôle non-ADMIN reste bloqué).
+
+**2. Refus d'une formation "à vérifier" — soft-refuse au lieu d'un hard delete** : `AdminFormationsAVerifierAPIView.delete()` (`jobs/views/referentiel_admin.py`) ne supprime plus la ligne (`formation.delete()` retiré) — bascule `FormationCandidat.statut_validation` sur un nouveau statut `REFUSEE` (migration `0126`), avec 3 nouveaux champs de traçabilité : `motif_refus` (texte, optionnel), `refusee_par` (FK admin, `SET_NULL`), `date_refus`. La formation reste visible sur le profil candidat (règle projet : pas de suppression de donnée candidat sans garde-fou), sort de la file "à vérifier" (celle-ci filtre strictement `A_PRECISER`) et le candidat est notifié avec le motif s'il est renseigné. `FormationCandidat.save()` : `REFUSEE` est traité comme `A_PRECISER` côté bascule — si le candidat corrige l'intitulé et qu'un `diplome_ref` valide est fourni ensuite (par lui ou par un admin), la formation ressort automatiquement de `REFUSEE` vers `DECLARE`, jamais bloquée définitivement.
+- Nouveau `jobs/tests/test_admin_formations_a_verifier.py` (9 tests, endpoint qui n'avait aucune couverture avant) : accès (non-admin, staff sans rôle admin), liste filtrée sur `A_PRECISER` uniquement, validation (PATCH), refus ne supprime pas la ligne + notifie avec le motif + sort de la file, et le cas de correction post-refus qui repasse en `DECLARE`.
+
+**3. Audit log — 3 actions qui échappaient à la traçabilité (ou y étaient noyées sous `AUTRE`)** : `AuditLog.ACTIONS` (migration `0127`) gagne `ACTIVER_ABONNEMENT`, `MODIFIER_PRIX_PALIER`, `SUPPRIMER_ADMIN`.
+- **Activation d'abonnement** (`AdminDemandesPremiumAPIView.patch`) et **suppression de compte admin** (`AdminCompteAdminsAPIView.delete`) étaient déjà loggués, mais sous l'action générique `AUTRE` — recatégorisés sur leur action dédiée, sans changement de comportement.
+- **Changement de prix palier** (`PaliersAdminAPIView.put`, `jobs/views/paliers_admin.py`) : **vrai trou trouvé** — aucun audit log n'existait sur cette vue avant cette session, alors que c'est directement le tarif facturé aux entreprises. Ajouté : log créé uniquement si `prix_mensuel_da` ou `prix_annuel_da` change réellement (pas sur les autres champs du palier — limites, accès, ordre — pour ne pas noyer le journal), avec l'ancien et le nouveau prix dans le détail.
+- Nouveau `jobs/tests/test_api_admin_audit_actions.py` (aucun test n'existait avant pour `AdminDemandesPremiumAPIView`/`AdminCompteAdminsAPIView`) : activation crée bien `ACTIVER_ABONNEMENT`, suppression admin crée bien `SUPPRIMER_ADMIN` (+ non-admin refusé, auto-suppression refusée). `test_api_paliers.py` : nouveaux tests `test_modification_prix_cree_un_audit_log` / `test_modification_sans_changement_prix_ne_journalise_pas`.
+- **Frontend** : `AdminAuditLogs.jsx` (`ACTION_LABELS`) étendu avec les 3 nouvelles actions (libellé + couleur) — sans ça, elles seraient retombées sur le fallback `AUTRE` dans l'affichage (pas de crash, juste un libellé trompeur qui aurait annulé l'intérêt de les avoir dédiées).
+
+**Tests** : backend ciblé (`test_api_paliers`, `test_api_admin_audit_actions`, `test_admin_formations_a_verifier`, `test_api_audit_logs`, `test_api_admin`) 42/42 ✅. Suite complète `jobs accounts` relancée en tâche de fond pour confirmation finale sans régression. `manage.py check` propre, `npx vite build` propre.
+
+## 🆕 SESSION 27/09/2026 (suite 2) — Consolidation secteurs/domaines/spécialités + protection contre le réimport
+
+**Demande** : plus aucune répétition/redondance dans les secteurs et les spécialités, en combinant si besoin, sans casser le matching. Décisions utilisateur : fusionner tous les doublons exacts de spécialités ainsi que leurs quasi-doublons orthographiques, rejouer les fusions après import, et me laisser trancher sur les secteurs.
+
+**Nouveau `jobs/referentiel_fusions.py`** (tout y est exprimé en **codes stables**, jamais en pk) et commande `consolider_referentiel` (`--dry-run`, idempotente). La commande exécute des contrôles d'intégrité bloquants avant validation : groupe orphelin, métier sans groupe, secteur vide, chaîne ou cycle de redirection métier, référence candidat/offre perdue.
+- **Secteurs 59 → 45, domaines 251 → 225** (`GROUPES_OPERATIONS`, chaque ligne commentée).
+  - Rattachements de secteurs :
+    - Audit → Finance>Audit.
+    - Emballage → Imprimerie & Packaging.
+    - Mines & Carrières, Énergie, Pétrole & Gaz → secteur officiel B.
+    - Bureau d'études, Construction Numérique, Topographie & Géomatique → BTP.
+    - Facility Management → Services Généraux.
+    - Gestion des Déchets → Environnement.
+    - Robotique, Utilités Industrielles → Industrie.
+    - Distribution → Commerce > Grande distribution.
+    - E-commerce → Commerce & Marketing.
+  - Achats regroupés en un seul secteur (ils étaient éclatés entre Achats, Logistique et L).
+  - L (Support à l'entreprise) perd RH, Comptabilité-finance et Stratégie commerciale au profit des secteurs dédiés. P (Services à la personne) perd Droit au profit de Juridique et Sécurité privée au profit de Sécurité.
+  - Paie Finance → Paie RH.
+  - Médecine Nucléaire, rangée par erreur sous Énergie → Santé.
+  - Domaines homonymes créés par les fusions TSEC→officiel des 25-26/09, désormais fusionnés : Assurance/Assurances, 3 domaines en O, 4 en H, 2 en J, 2 en M.
+- **Spécialités 967 → 922** (`SPECIALITES_FUSIONS`, 45 entrées).
+  - 27 doublons de la Formation Pro : une fiche par niveau CAP/CMP/BT/BTS. Il n'en reste qu'une par spécialité, qui porte tous ses niveaux via `DiplomeSpecialite`.
+  - 5 doublons d'import (même Master).
+  - 13 variantes orthographiques vérifiées une à une.
+  - Tout est repointé : couples diplôme+spécialité, alias, liens métier, relations, offres, formations candidats.
+- **Volontairement non touchés** :
+  - Options réellement distinctes (Usinage/Outillage, Flexo/Offset…) et « Économie monétaire et bancaire » ≠ « …et financière ».
+  - Doublons *entre* domaines (thème éditorial v1 ↔ spécialité académique), déjà reliés par `RelationSpecialite` : décision client du 25/09.
+  - HSE / Sécurité / Qualité, Transport / Logistique, Télécom / Informatique : périmètres réellement différents.
+  - Domaines génériques homonymes dans des secteurs différents (« Production », « Qualité »…).
+
+**Méthode garde-fou matching** : j'ai rejoué `metiers_compatibles` sur toutes les paires touchées, ancienne hiérarchie (sauvegarde) contre nouvelle.
+- 3 688 paires en hausse : même vrai secteur 0 → 0.45, sous-domaines fusionnés → 0.85.
+- 530 baisses 0.45 → 0, voulues : un domaine sorti d'un secteur fourre-tout, par exemple Acheteur ↔ Magasinier.
+- **1 seule baisse forte** : « Gestionnaire de Paie » ↔ « …RH » passait de 0.93 à 0.85, car la branche « même groupe » renvoyait 0.85 avant d'essayer le fuzzy. **Corrigé dans `matcher.metiers_compatibles`** : même groupe → `max(0.85, fuzzy)`. Un regroupement ne peut plus jamais faire baisser un score.
+- La fusion de groupes relie les métiers homonymes via `metier_canonique`, en suivant toujours la **racine** canonique.
+
+**🐛 Bug trouvé et corrigé pendant l'exécution** : le classeur redirigeait déjà Acheteur/Category Manager/Responsable Achats (TAF-0005xx → TAF-0002xx). La 1ʳᵉ exécution a relié l'autre sens, ce qui créait 3 cycles A→B→A. Les 3 fiches ont été réparées depuis la sauvegarde, la logique est corrigée, et un contrôle d'intégrité ainsi qu'un test bloquent désormais ce cas.
+
+**🔴 Trou majeur comblé — le réimport annulait toutes les fusions (y compris celles des 25-26/09)** : `import_referentiel_v2` refait l'upsert du `parent`/`libelle` des groupes et du `groupe_principal`/`metier_canonique` des métiers depuis l'Excel. Les commandes de fusion précédentes ciblaient les fiches par pk ou libellé, et certaines fusions avaient été faites à la main en shell : aucune n'était rejouable. De plus, une spécialité doublon recréée aurait fait **planter** l'import, puisque le `code` unique de son couple diplôme+spécialité est déjà porté par le couple fusionné. Fix :
+1. L'import résout les codes de spécialités fusionnées (`code_specialite_canonique`) et ne recrée jamais les doublons.
+2. `jobs/data/referentiel_hierarchie_cible.json` (versionné) contient l'écart base consolidée ↔ classeur : 143 groupes, 38 métiers, 94 groupes fusionnés. Il est réécrit par `consolider_referentiel` et **rejoué en fin d'import** (option `--sans-consolidation` pour désactiver). Le rejeu ne supprime un groupe que s'il est vide.
+
+Les anciennes commandes `fusionner_secteurs_*`/`repartir_*` sont désormais couvertes par l'instantané. **Toute future fusion doit passer par `referentiel_fusions.py` puis `consolider_referentiel`**, jamais en shell.
+
+**Cosmétique** : les libellés de secteurs officiels s'affichent avec « à » (« Support à l'entreprise »), dans `_nettoyer_libelle_secteur_nsec`.
+
+**Sauvegarde avant écriture** : `C:\Users\filali\Desktop\Taftech_backups\referentiel_avant_consolidation_20260927.json` (dumpdata des 10 tables touchées, hors repo). `verifier_referentiel_v2` a été mis à jour : SpecialiteFormation 922 (+45 fusionnées), DiplomeSpecialite 839 (+82), MetierFormation 1325 (+86). Les totaux lus dans le classeur sont inchangés.
+
+**Tests** : nouveau `test_consolidation_referentiel.py`. Il contient notamment un import des vrais classeurs sur base vierge ×2, qui doit reproduire exactement l'instantané. Il couvre aussi la fusion de spécialité sans perte, l'absence de cycle et le score qui ne baisse pas.
+
+**Non traité, signalé** : une entreprise a `secteur_activite='VENTE'`, code qui ne correspond à aucun secteur. C'est antérieur à cette session.
+
+---
+
+## 🆕 SESSION 27/09/2026 (suite) — Checklist qualité site (anti-vibecoding)
+
+Checklist fournie par l'utilisateur vérifiée point par point dans le code. Implémenté : page 404 (`Pages/Public/NotFound.jsx`, route `path="*"` en dernier dans `App.jsx`, `noindex`) ; titre d'onglet par route pour les pages sans `<Seo>` (`Components/RouteTitle.jsx`, placé avant `<Routes>` pour que les `<Seo>` publics gardent la priorité) ; bandeau hors ligne (`Components/OfflineBanner.jsx`, événements `online`/`offline` — pas de PWA/service worker) ; email/téléphone cliquables sur `/contact` ; image Open Graph passée du `.ico` à `public/taftech-logo.png` + `apple-touch-icon` + `theme-color` ; logo compressé (1008×813, 585 Ko → 400 px 125 Ko dans `src/assets`, 512 px 195 Ko dans `public`, original sauvegardé hors repo). Déjà conformes (vérifiés) : meta description, sitemap/robots, favicon, CGU/confidentialité, menu mobile + bottom nav, alt sur toutes les `<img>`, pas de `href="#"`, toasts erreur/succès. **Aussi : `utils/useSubmitLock.js` (bloque le double envoi + `disabled` sur le bouton submit) branché sur les 10 formulaires sans aucune protection (AlertesEmploi, Questionnaires, 6 modales ProfilCandidat, 7 formulaires admin : Bannières/Compétences/CreditPacks/FAQ/Paliers/RendezVous/TypesDocuments) ; règles CSS globales dans `index.css` (`overflow-x: clip` sur html/body, `button:disabled` grisé, `button:active` scale 0.97 — neutralisé par la règle `prefers-reduced-motion` existante). Erreurs sous chaque champ : `Components/FieldError.jsx` (message + `role="alert"`) + `utils/fieldErrors.js::extraireErreursChamps()` (erreurs DRF par champ) + règle CSS globale `[aria-invalid="true"]` (bordure rouge). Branché sur inscription candidat, inscription recruteur (dont les 2 Select secteur/wilaya), contact (validation client : champs requis + format email), réinitialisation mot de passe, changement de mot de passe (Settings — messages regroupés sous la ligne pour ne pas casser la mise en page horizontale). Chaque erreur s'efface dès que l'utilisateur modifie le champ ; le toast est conservé en complément. Formulaires déjà équipés avant : CreateJob, Questionnaires. **Non faits, décision utilisateur requise** : analytics (choix d'outil), bannière cookies (inutile tant qu'il n'y a que des cookies d'auth httpOnly strictement nécessaires — requise dès qu'un analytics est ajouté), adresse postale réelle (seulement « Oran, Algérie »), support hors ligne complet (PWA).
+
+---
+
+## 🆕 SESSION 27/09/2026 — Page explicative du matching (recruteur) + tooltips mis à jour
+
+Nouvelle page `Pages/Recruteur/CommentFonctionneMatching.jsx` (route `/comment-fonctionne-matching`, sous `RecruteurLayout`, lien sidebar « Comprendre le matching » groupe Analyse, lien « Comment est calculé le score ? » à côté de « Pourquoi ce score ? » dans `DetailCandidature.jsx`). Contenu statique, **doit rester aligné sur `jobs/matcher.py`/`matching_params.py`** : formule à poids actifs, 5 critères (région binaire, diplôme, spécialité 1.0/0.70/fuzzy, expérience continue mois pertinents, compétences Obligatoire×2), barème métiers (1.0/0.85/0.70/fuzzy/0.45), donnée manquante ≠ incompatible, seuil 80 %. Tooltips obsolètes « spécialité (25pts)… » (ancien barème fixe) corrigés dans `MesCandidatures.jsx`, `JobDetail.jsx`, `GestionOffre/index.jsx`, `AdminCandidatures.jsx`, `AdminStatistiques.jsx`. Aucun endpoint backend.
+
+**Suite — 3 autres pages explicatives** (gabarit partagé `Components/ExplicationPage.jsx` : `ExplicationPage` + `Bloc`), toutes statiques, à garder alignées sur le code source cité en commentaire de chaque fichier :
+- `Pages/Recruteur/CommentFonctionnentCredits.jsx` (`/comment-fonctionnent-credits`, sidebar recruteur « Comprendre les crédits », lien « Comment ça marche ? » dans le bandeau crédits de la CVthèque) — source `credits_utils.py`.
+- `Pages/Candidat/ComprendreMesScores.jsx` (`/comprendre-mes-scores`, sidebar candidat Carrière, lien « Comment est-il calculé ? » dans « Pourquoi ce score ? » de `MesCandidatures.jsx`) — score de compatibilité + score de profil + métiers accessibles + conseils d'amélioration ; sources `matcher.py`, `profile_score.py`, `metiers_matching.py`.
+- `Pages/Candidat/ConfidentialiteRecruteurs.jsx` (`/confidentialite-recruteurs`, sidebar candidat Compte, lien à côté du toggle « Déblocage par les recruteurs » de `MesDocuments.jsx`) — source `ProfilCandidatDTO._peut_voir_coordonnees`, `visible_cvtheque`, `PartageDocument`.
+Routes placées sous `RecruteurRoute`/`CandidatRoute` existants (audit sécu : contenu statique, aucune donnée exposée).
+
+---
+
 ## 🆕 SESSION 26/09/2026 — Retour client "familles" de secteurs : audit, fusion de 9 secteurs racines dupliqués, audit diplômes
 
 **Contexte** : le client demande que deux expériences dont les métiers appartiennent à des secteurs "différents mais identiques en pratique" (son exemple : Informatique / Systèmes d'information / Cloud computing) ne reçoivent plus automatiquement 0. La pertinence doit continuer à dépendre du métier, des missions et des compétences. Le poids de l'expérience reste à 20 %, sans nouveau critère "secteur", et les anciens identifiants ainsi que leurs correspondances sont conservés.

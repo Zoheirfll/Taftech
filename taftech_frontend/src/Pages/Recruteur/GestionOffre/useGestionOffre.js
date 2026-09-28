@@ -22,11 +22,12 @@ export const useGestionOffre = () => {
   const [showCompare, setShowCompare] = useState(false);
   const [triMode, setTriMode] = useState("score");
   const [isPremium, setIsPremium] = useState(false);
+  // Résumé (Profil) et Analyse approfondie (onglet IA) sont fusionnés en une seule action —
+  // les deux affichages lisent `analyseGroq`, un seul bouton/quota déclenche la génération
+  // (jobs/views/ia.py::AnalyseGroqRecruteurAPIView ne fait qu'un seul appel Groq de toute façon).
   const [analyseGroq, setAnalyseGroq] = useState(null);
   const [loadingGroq, setLoadingGroq] = useState(false);
   const [quotaAnalyseRecruteur, setQuotaAnalyseRecruteur] = useState(null);
-  const [resumeIA, setResumeIA] = useState(null);
-  const [loadingResume, setLoadingResume] = useState(false);
   const [documentsPartages, setDocumentsPartages] = useState([]);
   const [activeDetailTab, setActiveDetailTab] = useState("profil");
   const [modalEntretien, setModalEntretien] = useState({
@@ -85,10 +86,13 @@ export const useGestionOffre = () => {
   }, [id, navigate]);
 
   useEffect(() => {
-    setAnalyseGroq(null);
+    // Persistance de l'analyse IA (backend, `Candidature.derniere_analyse_ia`) — au lieu de
+    // repartir de zéro à chaque changement de candidature sélectionnée, on réhydrate l'état
+    // local avec la dernière analyse déjà enregistrée. Le bouton associé (DetailCandidature)
+    // passe alors sur "Régénérer" plutôt que "Générer"/"Analyser", jusqu'à ce que l'utilisateur
+    // relance explicitement un appel — même principe que Suggestions carrière côté candidat.
+    setAnalyseGroq(selectedCandidature?.derniere_analyse_ia || null);
     setLoadingGroq(false);
-    setResumeIA(null);
-    setLoadingResume(false);
     setDocumentsPartages([]);
     const candidatId = selectedCandidature?.candidat?.id;
     if (!candidatId) return;
@@ -342,14 +346,29 @@ export const useGestionOffre = () => {
     }
   };
 
+  // Persiste l'analyse (déjà sauvegardée côté backend sur la candidature) dans le state local
+  // `offre.candidatures`/`selectedCandidature` — sans ça, revenir sur cette candidature après en
+  // avoir sélectionné une autre perdrait le résultat tant que la page n'est pas rechargée.
+  const patchAnalyseCandidature = (candidatureId, analyse) => {
+    setOffre((prev) => prev && ({
+      ...prev,
+      candidatures: prev.candidatures.map((c) =>
+        c.id === candidatureId ? { ...c, derniere_analyse_ia: analyse } : c,
+      ),
+    }));
+    setSelectedCandidature((prev) =>
+      prev?.id === candidatureId ? { ...prev, derniere_analyse_ia: analyse } : prev,
+    );
+  };
+
   const handleAnalyseGroq = async () => {
     setLoadingGroq(true);
-    setAnalyseGroq(null);
     try {
       const data = await jobsService.getAnalyseGroqRecruteur(
         selectedCandidature.id,
       );
       setAnalyseGroq(data.analyse);
+      patchAnalyseCandidature(selectedCandidature.id, data.analyse);
       if (data.quota_ia) setQuotaAnalyseRecruteur({ ...data.quota_ia, disponible: true });
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."));
@@ -359,24 +378,6 @@ export const useGestionOffre = () => {
       }
     } finally {
       setLoadingGroq(false);
-    }
-  };
-
-  const handleResumeIA = async () => {
-    setLoadingResume(true);
-    try {
-      const data = await jobsService.getAnalyseGroqRecruteur(
-        selectedCandidature.id,
-      );
-      setResumeIA(data.analyse);
-      if (data.quota_ia) setQuotaAnalyseRecruteur({ ...data.quota_ia, disponible: true });
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Service IA indisponible."));
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
-        setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });
-      }
-    } finally {
-      setLoadingResume(false);
     }
   };
 
@@ -423,9 +424,6 @@ export const useGestionOffre = () => {
     analyseGroq,
     loadingGroq,
     quotaAnalyseRecruteur,
-    resumeIA,
-    setResumeIA,
-    loadingResume,
     documentsPartages,
     activeDetailTab,
     setActiveDetailTab,
@@ -456,7 +454,6 @@ export const useGestionOffre = () => {
     handleDownloadBulletin,
     isPremium,
     handleAnalyseGroq,
-    handleResumeIA,
     toggleCompare,
   };
 };

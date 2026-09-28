@@ -238,6 +238,70 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
     });
   });
 
+  it("🟢 HP5 : Questionnaire de l'offre — réponses transmises à la soumission", async () => {
+    const mockJobAvecQuestionnaire = {
+      ...mockJob,
+      questionnaire: {
+        titre: "Questionnaire technique",
+        questions: [
+          { id: 10, texte: "Combien d'années d'expérience ?", type_question: "COURT", requis: true },
+          { id: 11, texte: "Décrivez un projet", type_question: "LONG", requis: false },
+        ],
+      },
+    };
+    jobsService.getJobById.mockResolvedValue(mockJobAvecQuestionnaire);
+    jobsService.getProfilCandidat.mockResolvedValue(mockProfil);
+    jobsService.postuler.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <ReviewCandidature />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText("Questionnaire technique"));
+
+    fireEvent.change(screen.getByText(/Combien d'années/i).parentElement.querySelector("input"), {
+      target: { value: "3 ans" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirmer & postuler/i }));
+
+    await waitFor(() => {
+      const formDataSent = vi.mocked(jobsService.postuler).mock.calls[0][1];
+      const reponses = JSON.parse(formDataSent.get("reponses"));
+      expect(reponses["10"]).toBe("3 ans");
+      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée !");
+    });
+  });
+
+  it("🔴 EC4 : Question obligatoire du questionnaire non répondue bloque l'envoi", async () => {
+    const mockJobAvecQuestionnaire = {
+      ...mockJob,
+      questionnaire: {
+        titre: "Questionnaire technique",
+        questions: [
+          { id: 10, texte: "Combien d'années d'expérience ?", type_question: "COURT", requis: true },
+        ],
+      },
+    };
+    jobsService.getJobById.mockResolvedValue(mockJobAvecQuestionnaire);
+    jobsService.getProfilCandidat.mockResolvedValue(mockProfil);
+
+    render(
+      <MemoryRouter>
+        <ReviewCandidature />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText("Questionnaire technique"));
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirmer & postuler/i }));
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'La question "Combien d\'années d\'expérience ?" est obligatoire.',
+    );
+    expect(jobsService.postuler).not.toHaveBeenCalled();
+  });
+
   // --- 🔴 EDGE CASES ---
 
   it("🔴 EC1 : Gestion de l'erreur au chargement initial (Télémétrie)", async () => {

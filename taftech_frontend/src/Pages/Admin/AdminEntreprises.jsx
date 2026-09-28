@@ -3,12 +3,17 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import { Search, Download, X } from "lucide-react";
+import { Search, Download, X, Building2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminVide } from "../../Components/AdminEtat";
+import AdminPagination from "../../Components/AdminPagination";
+import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
 const AdminEntreprises = () => {
   const [entreprises, setEntreprises] = useState([]);
@@ -17,6 +22,7 @@ const AdminEntreprises = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [ordering, setOrdering] = useState("-id");
@@ -26,7 +32,8 @@ const AdminEntreprises = () => {
     try {
       const data = await jobsService.getAdminEntreprises(currentPage, searchTerm, ordering);
       setEntreprises(data.results || []);
-      setTotalPages(Math.ceil(data.count / 5) || 1);
+      setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
+      setTotalCount(data.count || 0);
       setSelectedIds([]);
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -60,16 +67,20 @@ const AdminEntreprises = () => {
   const handleApprouverSelection = () => {
     confirmToast(`Approuver ${selectedIds.length} entreprise(s) sélectionnée(s) ?`, async () => {
       setBulkLoading(true);
-      try {
-        await Promise.all(selectedIds.map((id) => jobsService.moderateEntreprise(id, { est_approuvee: true })));
-        toast.success(`${selectedIds.length} entreprise(s) approuvée(s) !`);
-        chargerEntreprises();
-      } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de l'approbation groupée."));
-        reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", err);
-      } finally {
-        setBulkLoading(false);
+      // allSettled : une entreprise en échec ne doit pas masquer celles réellement approuvées
+      // (Promise.all affichait "Erreur" alors qu'une partie était déjà passée).
+      const resultats = await Promise.allSettled(
+        selectedIds.map((id) => jobsService.moderateEntreprise(id, { est_approuvee: true })),
+      );
+      const echecs = resultats.filter((r) => r.status === "rejected");
+      const reussites = resultats.length - echecs.length;
+      if (reussites > 0) toast.success(`${reussites} entreprise(s) approuvée(s) !`);
+      if (echecs.length > 0) {
+        toast.error(apiErrMsg(echecs[0].reason, `${echecs.length} approbation(s) en échec.`));
+        reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", echecs[0].reason);
       }
+      setBulkLoading(false);
+      chargerEntreprises();
     });
   };
 
@@ -84,12 +95,16 @@ const AdminEntreprises = () => {
     }
   };
 
+  const fermerFiche = useCallback(() => setSelectedEntreprise(null), []);
+  useEchapPourFermer(!!selectedEntreprise, fermerFiche);
+
   const handleToggleApprobation = (id, statutActuel) => {
     confirmToast(`Voulez-vous vraiment ${statutActuel ? "suspendre" : "approuver"} cette entreprise ?`, async () => {
       try {
         await jobsService.moderateEntreprise(id, { est_approuvee: !statutActuel });
         chargerEntreprises();
-        toast.success("Statut mis à jour !");
+        setSelectedEntreprise((sel) => (sel && sel.id === id ? { ...sel, est_approuvee: !statutActuel } : sel));
+        toast.success(statutActuel ? "Entreprise suspendue." : "Entreprise approuvée — le recruteur est prévenu par email.");
       } catch (err) {
         toast.error(apiErrMsg(err, "Erreur lors de la modification."));
         reportError("ECHEC_MODERATION_ENTREPRISE", err);
@@ -118,44 +133,32 @@ const AdminEntreprises = () => {
     }
   };
 
-  const Pagination = () =>
-    totalPages > 1 ? (
-      <div className={`flex items-center justify-between px-4 py-3 ${tw.surfaceMuted} border-t ${tw.borderSubtle}`}>
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1 || loading}
-          className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-        >
-          ← Précédent
-        </button>
-        <span className={`text-xs font-medium ${tw.textMuted}`}>Page {currentPage} / {totalPages}</span>
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages || loading}
-          className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-        >
-          Suivant →
-        </button>
-      </div>
-    ) : null;
-
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>Validation des entreprises</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Approuvez ou suspendez les entreprises inscrites. Les paiements Premium sont gérés automatiquement via Chargily Pay — consultez le journal d'audit.
-          </p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
+      <AdminPageHeader
+        icon={Building2}
+        color="amber"
+        title="Validation des entreprises"
+        subtitle="Approuvez, suspendez ou mettez en avant les entreprises inscrites."
+        aideKey="entreprises"
+        aide={[
+          "Une entreprise « En attente » ne peut ni publier d'offre, ni accéder à la CVthèque, ni souscrire un abonnement tant qu'elle n'est pas approuvée.",
+          "Approuver envoie automatiquement un email au recruteur. Cochez plusieurs entreprises en attente pour les approuver en une fois.",
+          "« Bloquer » suspend une entreprise déjà validée ; ses offres ne sont pas supprimées.",
+          "« Mettre en avant » affiche le logo dans « Ils nous font confiance » sur la page Abonnements recruteur.",
+          "« Voir » ouvre la fiche complète (légal, contact, présentation, photos). Échap ou un clic à l'extérieur la ferme.",
+        ]}
+        actions={
           <button
             onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
           >
-            <Download size={15} /> Exporter
+            <Download size={15} /> Exporter CSV
           </button>
-          <div className="relative flex-1 md:w-72">
+        }
+      />
+      <div className="flex">
+          <div className="relative w-full md:w-80">
             <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
             <input
               type="text"
@@ -163,9 +166,9 @@ const AdminEntreprises = () => {
               className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-lg text-sm`}
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              aria-label="Rechercher une entreprise"
             />
           </div>
-        </div>
       </div>
 
       {selectedIds.length > 0 && (
@@ -209,13 +212,23 @@ const AdminEntreprises = () => {
               <SortableTh field="nom_entreprise" label="Entreprise" ordering={ordering} onSort={handleSort} className="px-5 py-3" />
               <th className="px-5 py-3">Contact</th>
               <th className="px-5 py-3">Statut</th>
-              <th className="px-5 py-3">Premium</th>
+              <th className="px-5 py-3">Abonnement</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${tw.divideBase}`}>
             {loading && entreprises.length === 0 ? (
               <SkeletonTableRows columns={6} />
+            ) : entreprises.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <AdminVide
+                    icon={Building2}
+                    titre={searchTerm ? "Aucune entreprise ne correspond à cette recherche" : "Aucune entreprise inscrite"}
+                    texte={searchTerm ? "Vérifiez l'orthographe ou cherchez par numéro de registre de commerce." : undefined}
+                  />
+                </td>
+              </tr>
             ) : (
               entreprises.map((ent) => (
                 <tr key={ent.id} className={tw.rowHover}>
@@ -253,7 +266,8 @@ const AdminEntreprises = () => {
                       <span className={`px-2.5 py-1 ${tw.surfaceMuted} ${tw.textMuted} border ${tw.borderBase} text-[10px] font-semibold rounded-full`}>Gratuit</span>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-right flex items-center justify-end gap-2">
+                  <td className="px-5 py-4 text-right">
+                   <div className="flex items-center justify-end gap-2 flex-wrap">
                     <button
                       onClick={() => setSelectedEntreprise(ent)}
                       className={`px-3 py-1.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg ${tw.bgIndigoHover100} transition-colors ${tw.focusRing}`}
@@ -275,6 +289,7 @@ const AdminEntreprises = () => {
                         {ent.mise_en_avant_accueil ? "Client mis en avant ✓" : "Mettre en avant"}
                       </button>
                     )}
+                   </div>
                   </td>
                 </tr>
               ))
@@ -282,12 +297,12 @@ const AdminEntreprises = () => {
           </tbody>
         </table>
         </div>
-        <Pagination />
+        <AdminPagination page={currentPage} totalPages={totalPages} totalCount={totalCount} onChange={setCurrentPage} disabled={loading} />
       </div>
 
       {selectedEntreprise && (
-        <div className={tw.modalOverlay + " p-4"}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+        <div className={tw.modalOverlay + " p-4"} onClick={(e) => e.target === e.currentTarget && fermerFiche()}>
+          <div role="dialog" aria-modal="true" aria-label={`Fiche ${selectedEntreprise.nom_entreprise}`} className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
             {selectedEntreprise.banniere && (
               <img src={mediaUrl(selectedEntreprise.banniere)} alt="Bannière" className="w-full h-32 object-cover rounded-xl mb-4" />
             )}
@@ -308,8 +323,9 @@ const AdminEntreprises = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedEntreprise(null)}
-                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}
+                onClick={fermerFiche}
+                aria-label="Fermer la fiche"
+                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}
               >
                 <X size={18} />
               </button>
@@ -369,6 +385,24 @@ const AdminEntreprises = () => {
                 </div>
               </div>
             )}
+            <div className={`flex flex-wrap justify-end gap-2 mt-6 pt-4 border-t ${tw.borderSubtle}`}>
+              {selectedEntreprise.slug && selectedEntreprise.est_approuvee && (
+                <a
+                  href={`/entreprise/${selectedEntreprise.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} ${tw.focusRing}`}
+                >
+                  Voir la page publique
+                </a>
+              )}
+              <button
+                onClick={() => handleToggleApprobation(selectedEntreprise.id, selectedEntreprise.est_approuvee)}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tw.focusRing} ${selectedEntreprise.est_approuvee ? tw.dangerPillSoft : tw.buttonSuccessSolid}`}
+              >
+                {selectedEntreprise.est_approuvee ? "Bloquer l'entreprise" : "Approuver l'entreprise"}
+              </button>
+            </div>
           </div>
         </div>
       )}

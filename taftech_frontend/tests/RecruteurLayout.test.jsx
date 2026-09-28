@@ -45,13 +45,12 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     vi.clearAllMocks();
   });
 
-  it("🟢 HP1 : affiche les 8 liens de la sidebar avec leurs labels", async () => {
+  it("🟢 HP1 : affiche les liens de la sidebar avec leurs labels", async () => {
     renderLayout();
     await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
 
     expect(screen.getByText("Tableau de bord")).toBeInTheDocument();
     expect(screen.getByText("CVthèque")).toBeInTheDocument();
-    expect(screen.getByText("Favoris")).toBeInTheDocument();
     expect(screen.getByText("Candidatures spontanées")).toBeInTheDocument();
     expect(screen.getByText("Publier une offre")).toBeInTheDocument();
     expect(screen.getByText("Questionnaires")).toBeInTheDocument();
@@ -72,13 +71,6 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     ]);
     renderLayout();
     await waitFor(() => expect(screen.getAllByText("2").length).toBeGreaterThan(0));
-  });
-
-  it("🟢 HP4 : le lien Favoris pointe vers /cvtheque?favoris=true", async () => {
-    renderLayout();
-    await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
-    const lien = screen.getByText("Favoris").closest("a");
-    expect(lien).toHaveAttribute("href", "/cvtheque?favoris=true");
   });
 
   it("🟡 EC1 : un lien caché par le rôle (peutFaire=false) n'apparaît pas", async () => {
@@ -112,30 +104,10 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     await waitFor(() => expect(screen.getByText("Contenu CVthèque")).toBeInTheDocument());
   });
 
-  it("🟢 HP8 : sur /cvtheque (sans favoris), seul le lien CVthèque est actif, pas Favoris", async () => {
+  it("🟢 HP8 : sur /cvtheque, le lien CVthèque est actif", async () => {
     renderLayout("/cvtheque");
     await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
     const lienCVtheque = screen.getByText("CVthèque").closest("a");
-    const lienFavoris = screen.getByText("Favoris").closest("a");
     expect(lienCVtheque.className).toMatch(/bg-teal-700/);
-    expect(lienFavoris.className).not.toMatch(/bg-teal-700/);
-  });
-
-  it("🟢 HP9 : sur /cvtheque?favoris=true, seul le lien Favoris est actif, pas CVthèque", async () => {
-    render(
-      <MemoryRouter initialEntries={["/cvtheque?favoris=true"]}>
-        <Routes>
-          <Route element={<RecruteurLayout />}>
-            <Route path="/dashboard" element={<div>Contenu Dashboard</div>} />
-            <Route path="/cvtheque" element={<div>Contenu CVthèque</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
-    await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
-    const lienCVtheque = screen.getByText("CVthèque").closest("a");
-    const lienFavoris = screen.getByText("Favoris").closest("a");
-    expect(lienFavoris.className).toMatch(/bg-teal-700/);
-    expect(lienCVtheque.className).not.toMatch(/bg-teal-700/);
   });
 });

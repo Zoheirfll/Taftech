@@ -424,6 +424,9 @@ class AnalyseGroqRecruteurAPIView(APIView):
                 max_tokens=ai_config.analyse_recruteur_max_tokens,
                 temperature=0.5
             )
+            candidature.derniere_analyse_ia = analyse
+            candidature.analyse_ia_le = timezone.now()
+            candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le'])
             return Response({'analyse': analyse, 'quota_ia': quota_info})
         except Exception as e:
             logger.error("Erreur Groq recruteur : %s", e)

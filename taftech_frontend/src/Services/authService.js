@@ -257,4 +257,14 @@ export const authService = {
       throw err;
     }
   },
+
+  supprimerCompte: async (payload) => {
+    try {
+      const response = await api.post("accounts/supprimer-mon-compte/", payload);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_SUPPRIMER_COMPTE_API", err);
+      throw err;
+    }
+  },
 };

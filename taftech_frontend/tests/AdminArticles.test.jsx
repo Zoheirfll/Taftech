@@ -145,9 +145,7 @@ describe("📰 UI & Logique - Composant <AdminArticles />", () => {
     );
 
     await waitFor(() => screen.getByText("Comment réussir son entretien"));
-    const allButtons = screen.getAllByRole("button");
-    // 0 = Nouvel article, puis pencil/trash par ligne — 1er trash après le 1er pencil
-    fireEvent.click(allButtons[2]);
+    fireEvent.click(screen.getByLabelText("Supprimer l'article Comment réussir son entretien"));
     fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {

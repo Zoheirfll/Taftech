@@ -56,8 +56,26 @@ describe("🏢 AdminPaliers — panel admin paliers d'abonnement", () => {
     fireEvent.change(input, { target: { value: "6900" } });
     fireEvent.click(screen.getByRole("button", { name: /enregistrer|mettre à jour/i }));
 
+    // Changement de prix = confirmation obligatoire (ancien → nouveau tarif) avant envoi
+    expect(jobsService.updatePalier).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByText("Confirmer"));
+
     await waitFor(() => {
       expect(jobsService.updatePalier).toHaveBeenCalledWith(1, expect.objectContaining({ prix_mensuel_da: 6900 }));
+    });
+  });
+
+  it("🟢 HP4 : modifier une limite sans toucher au prix n'exige pas de confirmation", async () => {
+    jobsService.updatePalier.mockResolvedValue({});
+    render(<><AdminPaliers /><ConfirmModalHost /></>);
+    await waitFor(() => expect(screen.getByText("Starter")).toBeInTheDocument());
+
+    fireEvent.click(screen.getAllByLabelText(/modifier/i)[0]);
+    fireEvent.change(await screen.findByLabelText(/offres actives/i), { target: { value: "8" } });
+    fireEvent.click(screen.getByRole("button", { name: /mettre à jour/i }));
+
+    await waitFor(() => {
+      expect(jobsService.updatePalier).toHaveBeenCalledWith(1, expect.objectContaining({ limite_offres: 8, prix_mensuel_da: 5900 }));
     });
   });
 

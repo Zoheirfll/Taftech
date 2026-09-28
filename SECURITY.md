@@ -10,6 +10,26 @@ Travail initial effectué sur `security/audit-2026-07` (créée depuis `main`) �
 
 ---
 
+## ✅ 18. Revue complète du panel admin — garde-fous sur les actions sensibles (28/09/2026)
+
+Revue page par page des 25 écrans `/admin-taftech`. Findings sécurité/intégrité (le reste — UX, bugs d'affichage — est dans `CLAUDE.md`, session du 28/09/2026) :
+
+| # | Finding | Risque | Correctif |
+|---|---------|--------|-----------|
+| 1 | `AdminUserModerateAPIView` (PATCH `admin/utilisateurs/<id>/moderer/`) laissait un admin **bloquer son propre compte** | Perte d'accès immédiate au panel, retour arrière uniquement en base | Refus 400 si `user.pk == request.user.pk` + 2 tests (`test_api_admin.py`) |
+| 2 | Diffusion email (`AdminBroadcastEmailAPIView`) envoyée aussi aux comptes **bloqués** par l'admin | Un compte suspendu continuait à recevoir des communications | Filtre `user__is_active=True` |
+| 3 | Suppression d'un compte admin = un seul clic de confirmation | Suppression définitive par mégarde | Confirmation renforcée : saisie du mot-clé `SUPPRIMER` (bouton désactivé sinon) + test |
+| 4 | Activation d'un abonnement payant (demandes CIB/EDAHABIA) en **un clic, sans confirmation**, et double clic = **prolongation en double** | Accorder un abonnement non payé / durée doublée | Confirmation avec récapitulatif (palier, durée, entreprise) + verrou anti double-clic + test |
+| 5 | Changement de prix d'un palier appliqué sans confirmation | Erreur de saisie facturée via Chargily aux prochains paiements | Confirmation « ancien → nouveau tarif » (seulement si un prix change) + test |
+| 6 | Recherches admin non encodées dans l'URL (`search=${search}`) | Saisie `&`/`#` → paramètres injectés/tronqués dans la requête | `encodeURIComponent` sur tous les paramètres libres de `adminService.js` |
+| 7 | Mentions légales : formulaire vide affiché après un échec de chargement | Un « Enregistrer » écrasait RC/NIF/adresse réels par des champs vides | Écran d'erreur + « Réessayer » à la place du formulaire |
+
+**Vérifié sans anomalie** : journal d'audit en lecture seule (aucune méthode d'écriture sur `AdminAuditLogAPIView`) ; suppression d'admin déjà protégée côté backend (auto-suppression et superutilisateur refusés, mot de passe ≥ 8 caractères) ; rendez-vous admin scopés `role == 'ADMIN'`.
+
+**Non modifié (volontairement)** : les vues de `jobs/views/admin.py` s'appuient sur `IsAdminUser` (`is_staff`) sans vérification `role == 'ADMIN'` explicite. Pas de faille (un non-staff reste bloqué), mais incohérent avec la convention des vues CMS ; l'ajouter casserait les tests qui créent des superusers sans `role`. À harmoniser dans une passe dédiée si souhaité.
+
+---
+
 ## ✅ 17. Throttling par endpoint — uploads & IA (03/09/2026)
 
 **Contexte** : demande explicite de l'utilisateur de resserrer le rate limiting sur les uploads de fichiers et la génération IA, au-delà des scopes déjà en place (`auth`, `groq`, `public_read`, `write_action`, `email_write`, `invitation_cvtheque`). Audit ciblé de tous les endpoints authentifiés avec `MultiPartParser` ou appel Groq, pas un audit de vulnérabilité classique (pas de nouveau finding IDOR/injection).

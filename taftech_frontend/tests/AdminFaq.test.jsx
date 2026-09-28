@@ -35,7 +35,8 @@ vi.mock("react-hot-toast", () => ({
 
 const mockItems = [
   { id: 1, categorie: "GENERAL", question: "Comment postuler ?", reponse: "Créez un profil.", ordre: 0, actif: true },
-  { id: 2, categorie: "PREMIUM", question: "Le paiement est-il sécurisé ?", reponse: "Oui, via Chargily.", ordre: 0, actif: false },
+  // PALIERS = catégorie lue par la page Abonnements recruteur (ex-"PREMIUM", page supprimée)
+  { id: 2, categorie: "PALIERS", question: "Le paiement est-il sécurisé ?", reponse: "Oui, via Chargily.", ordre: 0, actif: false },
 ];
 
 describe("❓ UI & Logique - Composant <AdminFaq />", () => {
@@ -70,7 +71,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
     );
 
     await waitFor(() => screen.getByText("Comment postuler ?"));
-    fireEvent.click(screen.getByRole("button", { name: "Premium" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Abonnements/ }));
 
     await waitFor(() => {
       expect(screen.queryByText("Comment postuler ?")).not.toBeInTheDocument();
@@ -114,9 +115,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
     );
 
     await waitFor(() => screen.getByText("Comment postuler ?"));
-    const allButtons = screen.getAllByRole("button");
-    // 0 = Ajouter, 1-4 = filtres catégorie (Toutes/Général/Recruteur/Premium), puis pencil/trash par ligne
-    fireEvent.click(allButtons[6]);
+    fireEvent.click(screen.getByLabelText("Supprimer la question Comment postuler ?"));
     fireEvent.click(await screen.findByText("Confirmer"));
 
     await waitFor(() => {
@@ -162,6 +161,18 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
       expect(toast.error).toHaveBeenCalledWith("La question est obligatoire.");
       expect(jobsService.createFaqItem).not.toHaveBeenCalled();
     });
+  });
+
+  it("🟢 HP5 : La catégorie Abonnements (PALIERS) est proposée à la création", async () => {
+    render(
+      <MemoryRouter>
+        <AdminFaq />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("Comment postuler ?"));
+    fireEvent.click(screen.getByText(/Ajouter une question/i));
+    expect(screen.getByRole("option", { name: /Abonnements/ })).toHaveAttribute("value", "PALIERS");
   });
 
   it("🔴 EC3 : Aucune question configurée", async () => {

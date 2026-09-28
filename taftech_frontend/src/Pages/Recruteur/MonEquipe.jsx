@@ -186,7 +186,7 @@ const MonEquipe = () => {
 
   if (loading)
     return (
-      <div className={`flex justify-center py-16 ${tw.textPrimary} text-sm font-medium animate-pulse`}>
+      <div className={`flex justify-center py-16 ${tw.textTeal} text-sm font-medium animate-pulse`}>
         Chargement de l'équipe...
       </div>
     );
@@ -197,7 +197,7 @@ const MonEquipe = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className={`text-2xl font-extrabold ${tw.textStrong} flex items-center gap-2`}>
-            <Users size={22} className={tw.textPrimary} /> Mon équipe
+            <Users size={22} className={tw.textTeal} /> Mon équipe
           </h2>
           <p className={`text-sm ${tw.textMuted700} mt-1`}>
             {data?.membres?.length || 0} membre
@@ -210,7 +210,7 @@ const MonEquipe = () => {
               setForm({ email: "", role: "UTILISATEUR" });
               setModal({ mode: "inviter" });
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-bold rounded-xl transition-colors shadow-sm`}
+            className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgTealSolid} text-sm font-bold rounded-xl transition-colors shadow-sm`}
           >
             <Plus size={15} /> Inviter un membre
           </button>
@@ -462,7 +462,7 @@ const MonEquipe = () => {
               <button
                 onClick={handleInviter}
                 disabled={saving}
-                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60`}
+                className={`flex-1 py-2.5 ${tw.bgTealSolid} text-sm font-bold rounded-xl transition-colors disabled:opacity-60`}
               >
                 {saving ? "Envoi..." : "Envoyer l'invitation"}
               </button>
@@ -508,7 +508,7 @@ const MonEquipe = () => {
               <button
                 onClick={handleChanger}
                 disabled={saving}
-                className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-bold rounded-xl disabled:opacity-60`}
+                className={`flex-1 py-2.5 ${tw.bgTealSolid} text-sm font-bold rounded-xl disabled:opacity-60`}
               >
                 {saving ? "..." : "Confirmer"}
               </button>
@@ -525,9 +525,9 @@ const MonEquipe = () => {
             className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <Activity size={16} className={tw.textPrimary} />
+              <Activity size={16} className={tw.textTeal} />
               <span className={`text-sm font-semibold ${tw.textStrong}`}>Journal d'activité</span>
-              <span className={`px-2 py-0.5 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs rounded-full font-medium`}>
+              <span className={`px-2 py-0.5 ${tw.bgTealSoft} ${tw.textTeal800} text-xs rounded-full font-medium`}>
                 100 derniers événements
               </span>
             </div>

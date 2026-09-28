@@ -8,8 +8,10 @@ User = get_user_model()
 
 class AuditLogTest(APITestCase):
     def setUp(self):
+        # role='ADMIN' explicite : create_superuser ne le déduit pas de is_staff/is_superuser
+        # (le champ role a pour défaut 'CANDIDAT'), et IsAdminRole exige les deux.
         self.admin = User.objects.create_superuser(
-            username='auditadmin', email='auditadmin@test.com', password='pass1234'
+            username='auditadmin', email='auditadmin@test.com', password='pass1234', role='ADMIN'
         )
         self.client.force_authenticate(user=self.admin)
 
@@ -40,6 +42,18 @@ class AuditLogTest(APITestCase):
             username='cand_audit', email='cand_audit@test.com', password='pass', role='CANDIDAT'
         )
         self.client.force_authenticate(user=candidat)
+        url = reverse('admin-audit-logs')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_liste_audit_logs_refuse_staff_sans_role_admin(self):
+        """ is_staff seul ne suffit plus (IsAdminRole) — un compte staff avec un autre
+        rôle (ex. RECRUTEUR promu is_staff par erreur) doit rester bloqué. """
+        staff_non_admin = User.objects.create_user(
+            username='staff_pas_admin', email='staff_pas_admin@test.com', password='pass',
+            role='RECRUTEUR', is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_non_admin)
         url = reverse('admin-audit-logs')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)

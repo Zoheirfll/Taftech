@@ -1,3 +1,5 @@
+import FieldError from "../../Components/FieldError";
+import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../../Services/authService";
@@ -86,16 +88,26 @@ const RegisterRecruteur = () => {
     return () => clearInterval(interval);
   }, [step, navigate]);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (fieldErrors[e.target.name]) setFieldErrors({ ...fieldErrors, [e.target.name]: undefined });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.secteur_activite || !formData.wilaya_siege) {
+      setFieldErrors({
+        ...(formData.secteur_activite ? {} : { secteur_activite: "Sélectionnez un secteur." }),
+        ...(formData.wilaya_siege ? {} : { wilaya_siege: "Sélectionnez une wilaya." }),
+      });
       return toast.error("Veuillez sélectionner un secteur et une wilaya.");
     }
     if (formData.password !== formData.confirmPassword) {
+      setFieldErrors({ confirmPassword: "Les mots de passe ne correspondent pas." });
       return toast.error("Les mots de passe ne correspondent pas.");
     }
+    setFieldErrors({});
     setLoading(true);
     const toastId = toast.loading("Création de votre compte entreprise...");
     try {
@@ -106,6 +118,7 @@ const RegisterRecruteur = () => {
       sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
       setStep(2);
     } catch (err) {
+      setFieldErrors(extraireErreursChamps(err));
       const serverError = err.response?.data;
       toast.error(
         serverError?.email?.[0] || serverError?.registre_commerce?.[0] || serverError?.secteur_activite?.[0] || "Une erreur est survenue.",
@@ -219,28 +232,33 @@ const RegisterRecruteur = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Nom</label>
-                  <input type="text" name="last_name" required onChange={handleChange} className={inputClass} />
+                  <input type="text" name="last_name" aria-invalid={!!fieldErrors.last_name} aria-describedby={fieldErrors.last_name ? "err-last_name" : undefined} required onChange={handleChange} className={inputClass} />
+<FieldError id="err-last_name" message={fieldErrors.last_name} />
                 </div>
                 <div>
                   <label className={labelClass}>Prénom</label>
-                  <input type="text" name="first_name" required onChange={handleChange} className={inputClass} />
+                  <input type="text" name="first_name" aria-invalid={!!fieldErrors.first_name} aria-describedby={fieldErrors.first_name ? "err-first_name" : undefined} required onChange={handleChange} className={inputClass} />
+<FieldError id="err-first_name" message={fieldErrors.first_name} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Email professionnel</label>
-                  <input type="email" name="email" required onChange={handleChange} className={inputClass} />
+                  <input type="email" name="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} required onChange={handleChange} className={inputClass} />
+<FieldError id="err-email" message={fieldErrors.email} />
                 </div>
                 <div>
                   <label className={labelClass}>Téléphone</label>
-                  <input type="tel" name="telephone" required onChange={handleChange} className={inputClass} />
+                  <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required onChange={handleChange} className={inputClass} />
+<FieldError id="err-telephone" message={fieldErrors.telephone} />
                 </div>
               </div>
 
               <div className={`border-t ${tw.borderSubtle} pt-4`}>
                 <label className={labelClass}>Nom de l'entreprise</label>
-                <input type="text" name="nom_entreprise" required onChange={handleChange} className={inputClass} />
+                <input type="text" name="nom_entreprise" aria-invalid={!!fieldErrors.nom_entreprise} aria-describedby={fieldErrors.nom_entreprise ? "err-nom_entreprise" : undefined} required onChange={handleChange} className={inputClass} />
+<FieldError id="err-nom_entreprise" message={fieldErrors.nom_entreprise} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -250,9 +268,10 @@ const RegisterRecruteur = () => {
                     options={secteursEntreprise}
                     value={secteursEntreprise.find((s) => s.value === formData.secteur_activite) || null}
                     placeholder="Sélectionnez..."
-                    onChange={(opt) => setFormData({ ...formData, secteur_activite: opt?.value || "" })}
+                    onChange={(opt) => { setFormData({ ...formData, secteur_activite: opt?.value || "" }); setFieldErrors({ ...fieldErrors, secteur_activite: undefined }); }}
                     styles={selectStyles}
                   />
+                  <FieldError message={fieldErrors.secteur_activite} />
                 </div>
                 <div>
                   <label className={labelClass}>Wilaya du siège</label>
@@ -260,9 +279,10 @@ const RegisterRecruteur = () => {
                     options={constants.wilayas}
                     value={constants.wilayas?.find((w) => w.value === formData.wilaya_siege) || null}
                     placeholder="Sélectionnez..."
-                    onChange={(opt) => setFormData({ ...formData, wilaya_siege: opt?.value || "" })}
+                    onChange={(opt) => { setFormData({ ...formData, wilaya_siege: opt?.value || "" }); setFieldErrors({ ...fieldErrors, wilaya_siege: undefined }); }}
                     styles={selectStyles}
                   />
+                  <FieldError message={fieldErrors.wilaya_siege} />
                 </div>
               </div>
 
@@ -279,19 +299,20 @@ const RegisterRecruteur = () => {
                   </div>
                   <input
                     type="text"
-                    name="registre_commerce"
+                    name="registre_commerce" aria-invalid={!!fieldErrors.registre_commerce} aria-describedby={fieldErrors.registre_commerce ? "err-registre_commerce" : undefined}
                     required
                     placeholder="Ex : 1234567B89"
                     onChange={handleChange}
                     className={inputClass}
                   />
+<FieldError id="err-registre_commerce" message={fieldErrors.registre_commerce} />
                 </div>
                 <div>
                   <label className={labelClass}>Mot de passe</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
-                      name="password"
+                      name="password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? "err-password" : undefined}
                       minLength="8"
                       required
                       onChange={handleChange}
@@ -306,6 +327,7 @@ const RegisterRecruteur = () => {
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
+<FieldError id="err-password" message={fieldErrors.password} />
                 </div>
               </div>
 
@@ -314,7 +336,7 @@ const RegisterRecruteur = () => {
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
+                    name="confirmPassword" aria-invalid={!!fieldErrors.confirmPassword} aria-describedby={fieldErrors.confirmPassword ? "err-confirmPassword" : undefined}
                     minLength="8"
                     required
                     onChange={handleChange}
@@ -329,6 +351,7 @@ const RegisterRecruteur = () => {
                     {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+<FieldError id="err-confirmPassword" message={fieldErrors.confirmPassword} />
               </div>
 
               <button

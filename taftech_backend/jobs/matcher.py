@@ -135,7 +135,12 @@ def metiers_compatibles(metier_candidat, metier_offre, relations_cache=None, sec
     if metier_candidat.pk == metier_offre.pk:
         return True, 1.0
     if metier_candidat.groupe_principal_id and metier_candidat.groupe_principal_id == metier_offre.groupe_principal_id:
-        return True, 0.85
+        # Plancher 0.85, jamais en dessous du filet fuzzy : sans ce max, regrouper deux métiers
+        # au libellé quasi identique DANS le même groupe faisait baisser leur score (ex:
+        # "Gestionnaire de Paie" / "Gestionnaire de Paie RH" : 0.93 -> 0.85 après la
+        # consolidation du 27/09/2026 qui a réuni les deux domaines "Paie").
+        ratio = difflib.SequenceMatcher(None, normaliser(metier_candidat.libelle), normaliser(metier_offre.libelle)).ratio()
+        return True, max(0.85, ratio)
     if _relation_similaire(metier_candidat, metier_offre, relations_cache):
         return True, 0.70
     # Filet de sécurité : deux métiers différents mais au libellé très proche

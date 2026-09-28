@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
 const AdminSystemLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -19,10 +21,10 @@ const AdminSystemLogs = () => {
     setLoading(true);
     try {
       const res = await api.get(`/accounts/admin/system-logs/?page=${p}`);
-      setLogs(res.data.results);
-      setTotal(res.data.count);
-      setTotalPages(res.data.total_pages);
-      setPage(res.data.page);
+      setLogs(res.data.results || []);
+      setTotal(res.data.count || 0);
+      setTotalPages(res.data.total_pages || 1);
+      setPage(res.data.page || p);
     } catch (err) {
       reportError("ADMIN_SYSTEM_LOGS_FETCH", err);
       toast.error(apiErrMsg(err, "Impossible de charger les erreurs."));
@@ -32,6 +34,9 @@ const AdminSystemLogs = () => {
   };
 
   useEffect(() => { fetchLogs(1); }, []);
+
+  const fermerDetail = React.useCallback(() => setSelected(null), []);
+  useEchapPourFermer(!!selected, fermerDetail);
 
   const handleClearAll = () => {
     confirmToast("Supprimer tous les logs d'erreurs ? Cette action est irréversible.", async () => {
@@ -55,32 +60,37 @@ const AdminSystemLogs = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className={`${tw.pageTitle} flex items-center gap-2`}>
-            <AlertTriangle size={22} className="text-red-500" />
-            Erreurs Système
-          </h1>
-          <p className={`${tw.pageSubtitle} mt-1`}>{total} erreur{total > 1 ? "s" : ""} enregistrée{total > 1 ? "s" : ""}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => fetchLogs(page)}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.surfaceMuted} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} text-sm font-medium`}
-          >
-            <RefreshCw size={14} /> Actualiser
-          </button>
-          {total > 0 && (
+      <AdminPageHeader
+        icon={AlertTriangle}
+        color="red"
+        title="Erreurs système"
+        subtitle={`${total} erreur${total > 1 ? "s" : ""} enregistrée${total > 1 ? "s" : ""}`}
+        aideKey="erreurs-systeme"
+        aide={[
+          "Chaque erreur rencontrée par un utilisateur dans le navigateur (échec d'appel API, plantage d'écran) est remontée ici automatiquement.",
+          "« Détail » affiche la page concernée, l'utilisateur, le navigateur et la trace technique : transmettez-la au développeur pour corriger.",
+          "Beaucoup d'erreurs identiques d'un coup signalent souvent une panne (serveur, IA, email) plutôt qu'un bug isolé.",
+          "« Tout effacer » vide la liste une fois les problèmes traités. Ce journal technique n'est pas le journal d'audit.",
+        ]}
+        actions={
+          <>
             <button
-              onClick={handleClearAll}
-              className={`flex items-center gap-2 px-4 py-2 ${tw.dangerPillSoft} rounded-lg text-sm font-medium`}
+              onClick={() => fetchLogs(page)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border ${tw.borderSubtle} bg-white text-xs font-semibold ${tw.textMuted700} hover:bg-slate-50 transition-colors ${tw.focusRing}`}
             >
-              <Trash2 size={14} /> Tout effacer
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Actualiser
             </button>
-          )}
-        </div>
-      </div>
+            {total > 0 && (
+              <button
+                onClick={handleClearAll}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 ${tw.dangerPillSoft} rounded-lg text-xs font-semibold ${tw.focusRing}`}
+              >
+                <Trash2 size={14} /> Tout effacer
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Tableau */}
       <div className={`${tw.card} overflow-hidden`}>
@@ -89,9 +99,11 @@ const AdminSystemLogs = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500" />
           </div>
         ) : logs.length === 0 ? (
-          <div className={`text-center py-16 ${tw.textMuted}`}>
-            <AlertTriangle size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Aucune erreur enregistrée — tout va bien !</p>
+          <div className="text-center py-16">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle size={22} />
+            </div>
+            <p className={`text-sm font-semibold ${tw.textStrong}`}>Aucune erreur enregistrée — tout va bien !</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -115,7 +127,7 @@ const AdminSystemLogs = () => {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => setSelected(log)}
-                      className={`text-xs ${tw.textPrimary} hover:underline font-medium`}
+                      className={`text-xs ${tw.textPrimary} hover:underline font-medium ${tw.focusRing} rounded`}
                     >
                       Détail
                     </button>
@@ -153,11 +165,11 @@ const AdminSystemLogs = () => {
 
       {/* Modal détail */}
       {selected && (
-        <div className={tw.modalOverlay + " p-4"}>
-          <div className={`${tw.surface} rounded-xl border ${tw.borderBase} w-full max-w-2xl max-h-[80vh] overflow-y-auto`}>
+        <div className={tw.modalOverlay + " p-4"} onClick={(e) => e.target === e.currentTarget && fermerDetail()}>
+          <div role="dialog" aria-modal="true" aria-label="Détail de l'erreur" className={`${tw.surface} rounded-xl border ${tw.borderBase} w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl`}>
             <div className={`flex items-center justify-between px-6 py-4 border-b ${tw.borderSubtle}`}>
               <h2 className={`font-bold ${tw.textStrong}`}>Détail de l'erreur</h2>
-              <button onClick={() => setSelected(null)} className={`${tw.iconButtonHoverNeutral} rounded-lg p-1`}>
+              <button onClick={fermerDetail} aria-label="Fermer" className={`${tw.iconButtonHoverNeutral} rounded-lg p-1 ${tw.focusRing}`}>
                 <X size={18} />
               </button>
             </div>

@@ -91,7 +91,8 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     // Le waitFor va attendre patiemment les 300ms du useEffect
     await waitFor(() => {
       expect(screen.getByText("Wayne Bruce")).toBeInTheDocument();
-      expect(screen.getByText("CANDIDAT")).toBeInTheDocument();
+      // Libellé lisible du rôle (plus le code brut "CANDIDAT")
+      expect(screen.getByText("Candidat")).toBeInTheDocument();
     });
   });
 

@@ -6,8 +6,8 @@ import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import {
   LayoutDashboard,
+  HelpCircle,
   Search,
-  Star,
   Inbox,
   Briefcase,
   ClipboardList,
@@ -106,14 +106,6 @@ const RecruteurLayout = () => {
             path: "/cvtheque",
             icon: Search,
             minRole: "UTILISATEUR",
-            isActive: () => location.pathname === "/cvtheque" && !location.search.includes("favoris=true"),
-          },
-          {
-            name: "Favoris",
-            path: "/cvtheque?favoris=true",
-            icon: Star,
-            minRole: "UTILISATEUR",
-            isActive: () => location.pathname === "/cvtheque" && location.search.includes("favoris=true"),
           },
           {
             name: "Candidatures spontanées",
@@ -132,6 +124,8 @@ const RecruteurLayout = () => {
         label: "Analyse",
         items: [
           { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "INVITE" },
+          { name: "Comprendre le matching", path: "/comment-fonctionne-matching", icon: HelpCircle, minRole: "INVITE" },
+          { name: "Comprendre les crédits", path: "/comment-fonctionnent-credits", icon: HelpCircle, minRole: "INVITE" },
         ],
       },
       {

@@ -153,7 +153,9 @@ def _nettoyer_libelle_secteur_nsec(libelle):
     reste = re.sub(r"\s+,", ",", m.group(1))     # "INSTALLATION , MAINTENANCE" -> "..., ..."
     reste = re.sub(r",(?=\S)", ", ", reste)        # "HÔTELLERIE ,RESTAURATION" (sans espace après)
     reste = re.sub(r"\s+'", "'", reste)             # "L 'ENTREPRISE" -> "L'ENTREPRISE"
-    return reste.capitalize()
+    # Majuscules source sans accent : "SUPPORT A L'ENTREPRISE" -> "Support à l'entreprise"
+    # ("a" isolé = toujours la préposition dans ces 16 libellés).
+    return re.sub(r"\ba\b", "à", reste.capitalize())
 
 
 # Chevauchements sémantiques entre secteurs (même sujet décrit deux fois, texte différent) —

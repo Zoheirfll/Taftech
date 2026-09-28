@@ -81,12 +81,8 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
     fireEvent.click(screen.getByText("Voir"));
     expect(screen.getByText(/Filiale Sonatrach/i)).toBeInTheDocument();
     expect(screen.getByText(/📍 Oran/i)).toBeInTheDocument();
-    // Ferme la modale — le bouton close a la classe p-1.5
-    const allButtons = screen.getAllByRole("button");
-    const closeBtn = allButtons.find(
-      (btn) => btn.className.includes("p-1.5") && btn.querySelector("svg"),
-    );
-    fireEvent.click(closeBtn);
+    // Ferme la modale via son bouton ✕ (libellé accessible)
+    fireEvent.click(screen.getByLabelText("Fermer la fiche"));
     await waitFor(() => {
       expect(screen.queryByText(/Filiale Sonatrach/i)).not.toBeInTheDocument();
     });
@@ -108,7 +104,9 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
       expect(jobsService.moderateEntreprise).toHaveBeenCalledWith(1, {
         est_approuvee: true,
       });
-      expect(toast.success).toHaveBeenCalledWith("Statut mis à jour !");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Entreprise approuvée — le recruteur est prévenu par email.",
+      );
     });
   });
 

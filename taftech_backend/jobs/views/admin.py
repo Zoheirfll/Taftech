@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Avg, Count
@@ -19,6 +19,7 @@ from ..models import (
     Palier, AbonnementEntreprise, FormationCandidat,
 )
 from ..constants import WILAYAS_CHOICES
+from ..permissions import IsAdminRole
 import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
@@ -70,7 +71,7 @@ def _envoyer_email_offre_approuvee(offre):
 
 
 class AdminOffresListAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     ORDERING_FIELDS = {
         'date_publication': 'date_publication',
@@ -101,7 +102,7 @@ class AdminOffresListAPIView(APIView):
 
 
 class AdminOffreModerateAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def patch(self, request, offre_id):
         try:
@@ -125,7 +126,7 @@ class AdminOffreModerateAPIView(APIView):
 
 
 class AdminEntreprisesListAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
     ORDERING_FIELDS = {'id': 'id', 'nom_entreprise': 'nom_entreprise'}
 
     def get(self, request):
@@ -169,7 +170,7 @@ def _envoyer_email_entreprise_approuvee(entreprise):
 
 
 class AdminEntrepriseModerateAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def patch(self, request, entreprise_id):
         try:
@@ -190,7 +191,7 @@ class AdminEntrepriseModerateAPIView(APIView):
 
 
 class AdminStatsAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         maintenant = timezone.now()
@@ -239,7 +240,7 @@ class AdminSeoStatsAPIView(APIView):
     """Compteurs réels par type de page publique + un exemple d'URL tel que généré par
     seo_views.py::SitemapXMLView — pour que le panel SEO admin ne montre jamais un
     statut ✓ figé ou une URL d'exemple qui ne correspond plus au vrai schéma."""
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         base = settings.SITE_URL.rstrip('/')
@@ -319,7 +320,7 @@ class AdminSeoStatsAPIView(APIView):
 
 
 class AdminUsersListAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
     ORDERING_FIELDS = {'date_joined': 'date_joined', 'last_name': 'last_name'}
 
     def get(self, request):
@@ -352,11 +353,18 @@ class AdminUsersListAPIView(APIView):
 
 
 class AdminUserModerateAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def patch(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
+            # Un admin qui se bloque lui-même perd immédiatement l'accès au panel (plus aucun
+            # moyen de revenir en arrière sans intervention en base).
+            if user.pk == request.user.pk:
+                return Response(
+                    {"error": "Vous ne pouvez pas bloquer votre propre compte."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             user.is_active = not user.is_active
             user.save()
             statut = "débloqué" if user.is_active else "bloqué"
@@ -367,7 +375,7 @@ class AdminUserModerateAPIView(APIView):
 
 
 class AdminBroadcastEmailAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def post(self, request):
         sujet = request.data.get('sujet')
@@ -375,10 +383,12 @@ class AdminBroadcastEmailAPIView(APIView):
         type_envoi = request.data.get('type_envoi')
         if not sujet or not message or type_envoi not in ['NEWSLETTER', 'EXCLUSIF']:
             return Response({"error": "Sujet, message et type valides requis."}, status=status.HTTP_400_BAD_REQUEST)
+        # Comptes bloqués par l'admin exclus : un compte suspendu ne doit plus rien recevoir.
+        profils = ProfilCandidat.objects.filter(user__is_active=True).select_related('user')
         if type_envoi == 'NEWSLETTER':
-            profils = ProfilCandidat.objects.filter(notif_newsletter=True)
+            profils = profils.filter(notif_newsletter=True)
         else:
-            profils = ProfilCandidat.objects.filter(notif_offres_exclusives=True)
+            profils = profils.filter(notif_offres_exclusives=True)
         liste_emails = [p.user.email for p in profils if p.user.email]
         if not liste_emails:
             return Response({"message": "Aucun candidat abonné."}, status=status.HTTP_200_OK)
@@ -400,7 +410,7 @@ class AdminBroadcastEmailAPIView(APIView):
 
 
 class AdminCandidaturesListAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
     ORDERING_FIELDS = {'date_postulation': 'date_postulation', 'score_matching': 'score_matching', 'note_globale': 'note_globale'}
 
     def get(self, request):
@@ -421,7 +431,9 @@ class AdminCandidaturesListAPIView(APIView):
             )
         if statut:
             candidatures = candidatures.filter(statut=statut)
-        paginator = PageNumberPagination()
+        # AdminPagination (et non PageNumberPagination brut) : honore `?page_size=` comme les
+        # autres listes admin — le frontend demande 20 lignes par page partout.
+        paginator = AdminPagination()
         paginator.page_size = 10
         result_page = paginator.paginate_queryset(candidatures, request)
         serializer = CandidatureRecruteurDTO(result_page, many=True)
@@ -440,7 +452,7 @@ class AdminCandidaturesListAPIView(APIView):
 
 
 class ExportCandidaturesCSVAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -468,7 +480,7 @@ class ExportCandidaturesCSVAPIView(APIView):
 
 
 class ExportEntreprisesCSVAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -489,7 +501,7 @@ class ExportEntreprisesCSVAPIView(APIView):
 
 
 class ExportOffresCSVAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -510,7 +522,7 @@ class ExportOffresCSVAPIView(APIView):
 
 
 class ExportUtilisateursCSVAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -528,12 +540,9 @@ class ExportUtilisateursCSVAPIView(APIView):
 
 
 class AdminMarcheAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-
         def extraire_montant(s):
             if not s:
                 return None
@@ -621,7 +630,7 @@ class AdminMarcheAPIView(APIView):
 
 
 class AdminAuditLogAPIView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         logs = AuditLog.objects.select_related('admin').all()
@@ -654,7 +663,7 @@ class AdminDemandesPremiumAPIView(APIView):
     AbonnementEntreprise(palier=<choisi par l'admin>) au lieu d'écrire est_premium/
     premium_expire_at (système legacy supprimé). `nb_mois` reste sur DemandeActivationPremium
     pour l'affichage historique de la demande, mais n'est plus utilisé pour calculer un prix."""
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         from ..paliers_utils import get_palier_actif
@@ -712,7 +721,7 @@ class AdminDemandesPremiumAPIView(APIView):
         demande.est_traitee = True
         demande.date_traitement = timezone.now()
         demande.save()
-        _audit(request, 'AUTRE', f"Palier {palier.get_nom_display()} ({nb_mois} mois) activé pour {entreprise.nom_entreprise} — expire {nouvelle_expiration.strftime('%d/%m/%Y')}")
+        _audit(request, 'ACTIVER_ABONNEMENT', f"Palier {palier.get_nom_display()} ({nb_mois} mois) activé pour {entreprise.nom_entreprise} — expire {nouvelle_expiration.strftime('%d/%m/%Y')}")
         return Response({
             'message': 'Abonnement activé.',
             'palier': palier.nom,
@@ -722,7 +731,7 @@ class AdminDemandesPremiumAPIView(APIView):
 
 class AdminCompteAdminsAPIView(APIView):
     """Gestion des comptes administrateurs (liste, créer, modifier, supprimer)."""
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         admins = User.objects.filter(is_staff=True).order_by('-date_joined')
@@ -814,5 +823,5 @@ class AdminCompteAdminsAPIView(APIView):
 
         email = user.email
         user.delete()
-        _audit(request, 'AUTRE', f"Compte admin supprimé : {email}")
+        _audit(request, 'SUPPRIMER_ADMIN', f"Compte admin supprimé : {email}")
         return Response({'message': 'Compte admin supprimé.'}, status=204)

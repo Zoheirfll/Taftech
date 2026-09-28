@@ -69,7 +69,10 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
             return None
         from django.utils import timezone
         delta = obj.date_expiration - timezone.now().date()
-        return max(0, delta.days)
+        # Négatif si la date est dépassée (offre pas encore archivée par le cron
+        # `archiver_offres_expirees`) — ne jamais clamper à 0, sinon une offre expirée
+        # depuis plusieurs jours s'affiche indéfiniment comme "expire aujourd'hui".
+        return delta.days
 
     def get_secteur_libelle(self, obj):
         return _secteur_libelle_pour_offre(obj)

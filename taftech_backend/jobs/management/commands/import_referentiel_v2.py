@@ -40,6 +40,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from jobs.referentiel_fusions import code_specialite_canonique, rejouer_consolidation
+
 from jobs.models import (
     Source, Scolarite, TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation,
     DiplomeSpecialite, AliasDiplome, AliasSpecialite,
@@ -124,6 +126,8 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help="N'écrit rien, affiche seulement le rapport.")
         parser.add_argument('--diplomes', type=str, default=None, help="Chemin du classeur Diplômes/Spécialités.")
         parser.add_argument('--metiers', type=str, default=None, help="Chemin du classeur Métiers/Matching.")
+        parser.add_argument('--sans-consolidation', action='store_true',
+                            help="Ne rejoue pas la consolidation secteurs/spécialités (jobs/referentiel_fusions.py) après l'import.")
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
@@ -146,6 +150,12 @@ class Command(BaseCommand):
                 self._import_sources(wb_dip, wb_met)
                 self._import_diplomes(wb_dip)
                 self._import_metiers(wb_met)
+
+                # Consolidation (fusions de secteurs/domaines/spécialités, session 27/09/2026) :
+                # sans ce rejeu, un réimport annulerait silencieusement toutes les fusions.
+                if not options['sans_consolidation']:
+                    self.stdout.write("Rejeu de la consolidation du référentiel :")
+                    rejouer_consolidation(lambda l: self.stdout.write(l))
 
                 if dry_run:
                     raise _DryRunRollback()
@@ -267,7 +277,13 @@ class Command(BaseCommand):
         filieres = {f.code: f for f in FiliereFormation.objects.all()}
 
         n = 0
+        n_fusionnees = 0
         for r in sheet_rows(wb, 'SPECIALITES'):
+            if code_specialite_canonique(_s(r['specialite_id'])) != _s(r['specialite_id']):
+                # Doublon consolidé (jobs/referentiel_fusions.py) : jamais recréé, ses couples/
+                # alias/liens métier sont rattachés à la fiche conservée plus bas.
+                n_fusionnees += 1
+                continue
             domaine = domaines.get(_s(r['domaine_id']))
             if not domaine:
                 self.stderr.write(self.style.WARNING(f"SPECIALITES {r['specialite_id']}: domaine {r['domaine_id']} introuvable, ignorée."))
@@ -291,6 +307,7 @@ class Command(BaseCommand):
             )
             n += 1
         self.compteurs['SpecialiteFormation'] = n
+        self.compteurs['SpecialiteFormation (doublons fusionnés)'] = n_fusionnees
 
         diplomes = {d.code: d for d in TypeDiplome.objects.all()}
         specialites = {s.code: s for s in SpecialiteFormation.objects.all()}
@@ -300,7 +317,7 @@ class Command(BaseCommand):
         couples_vus = set()
         for r in sheet_rows(wb, 'DIPLOME_SPECIALITE'):
             diplome = diplomes.get(_s(r['diplome_id']))
-            specialite = specialites.get(_s(r['specialite_id']))
+            specialite = specialites.get(code_specialite_canonique(_s(r['specialite_id'])))
             if not diplome or not specialite:
                 self.stderr.write(self.style.WARNING(f"DIPLOME_SPECIALITE {r['lien_id']}: diplome/specialite introuvable, ignorée."))
                 continue
@@ -347,7 +364,7 @@ class Command(BaseCommand):
 
         n = 0
         for r in sheet_rows(wb, 'ALIAS_SPECIALITES'):
-            specialite = specialites.get(_s(r['specialite_id']))
+            specialite = specialites.get(code_specialite_canonique(_s(r['specialite_id'])))
             if not specialite:
                 continue
             AliasSpecialite.objects.update_or_create(
@@ -551,7 +568,7 @@ class Command(BaseCommand):
         couples_vus = set()
         for numero_ligne, r in sheet_rows_numerotees(wb, 'METIER_FORMATIONS'):
             metier = metiers.get(_s(r['metier_id']))
-            specialite = specialites.get(_s(r['specialite_id']))
+            specialite = specialites.get(code_specialite_canonique(_s(r['specialite_id'])))
             if not metier or not specialite:
                 champ = 'metier_id' if not metier else 'specialite_id'
                 valeur = r.get('metier_id') if not metier else r.get('specialite_id')

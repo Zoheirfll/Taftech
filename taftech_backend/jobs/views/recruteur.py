@@ -683,15 +683,13 @@ class CandidatsRecommandesAPIView(APIView):
     côté serveur, pas seulement en façade frontend — contrairement au score de matching affiché
     au fil de l'eau dans GestionOffre (jamais restreint), cette vue agrégée classée est bien la
     fonctionnalité vendue comme premium.
-    Restreint aux offres est_active=True/est_cloturee=False/non expirées ET aux candidatures
-    déposées dans les RECOMMANDES_FENETRE_JOURS derniers jours : sans ces deux filtres, une offre
-    publiée il y a des mois (jamais clôturée, ou sans date_expiration renseignée — champ nullable)
-    continue de faire remonter indéfiniment son meilleur candidat en tête, même vieux de plusieurs
-    mois (signalé par l'utilisateur avec un scénario concret : 500 offres postées en 6 mois, le
-    "top match" recommandé pouvait provenir d'une candidature ancienne sur une offre toujours
-    techniquement ouverte). Fenêtre à 60 jours (2 mois) — cohérent avec `relance_maj_cv`."""
+    Restreint aux offres est_active=True/est_cloturee=False/non expirées — une offre dont la date
+    d'expiration est dépassée est désormais fermée automatiquement par la commande
+    `archiver_offres_expirees` (cron quotidien), donc ce filtre suffit à garantir la fraîcheur de
+    l'offre elle-même. La fenêtre de récence sur la date de candidature (60 jours) a été retirée
+    sur demande explicite (27/09/2026) — un bon candidat reste recommandé tant que l'offre est
+    active, peu importe la date de sa candidature, plutôt que de disparaître arbitrairement."""
     permission_classes = [IsAuthenticated]
-    RECOMMANDES_FENETRE_JOURS = 60
     # Même seuil que ActiviteProfil.SEUIL_SCORE_RECOMMANDE — en dessous, un candidat n'est
     # pas réellement "recommandé", juste le moins pire parmi peu de candidatures (signalé
     # par l'utilisateur : un score à 35-41% n'a rien d'une recommandation).
@@ -707,12 +705,10 @@ class CandidatsRecommandesAPIView(APIView):
             return Response({"error": "Fonctionnalité réservée au palier Pro ou supérieur.", "code": "PALIER_INSUFFISANT"}, status=403)
 
         masquer_decides = request.GET.get('masquer_decides', 'true') == 'true'
-        seuil_recence = timezone.now() - datetime.timedelta(days=self.RECOMMANDES_FENETRE_JOURS)
         qs = Candidature.objects.select_related('candidat', 'offre').filter(
             offre__entreprise=entreprise, est_rapide=False, score_matching__isnull=False,
             score_matching__gte=self.SEUIL_SCORE_RECOMMANDE,
             offre__est_active=True, offre__est_cloturee=False,
-            date_postulation__gte=seuil_recence,
         ).filter(
             Q(offre__date_expiration__isnull=True) | Q(offre__date_expiration__gte=timezone.now().date())
         )

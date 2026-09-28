@@ -9,6 +9,20 @@ import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import AdminPagination from "../../Components/AdminPagination";
+import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
+
+// Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
+const ROLE_BADGES = {
+  CANDIDAT: { label: "Candidat", classe: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
+  RECRUTEUR: { label: "Recruteur", classe: "bg-teal-50 text-teal-700 border border-teal-200" },
+  ADMIN: { label: "Admin", classe: "bg-violet-50 text-violet-700 border border-violet-200" },
+};
+
+// Date ISO "2026-09-28" → "28/09/2026" ; renvoie "—" si absente.
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
 
 const ROLE_TABS = [
   { key: "", label: "Tous", icon: Users2 },
@@ -24,6 +38,7 @@ const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [roleFiltre, setRoleFiltre] = useState("");
   const [counts, setCounts] = useState({ CANDIDAT: 0, RECRUTEUR: 0, ADMIN: 0 });
   const [ordering, setOrdering] = useState("-date_joined");
@@ -34,7 +49,8 @@ const AdminUsers = () => {
       const data = await jobsService.getAdminUsers(currentPage, searchTerm, roleFiltre, ordering);
       if (data.results) {
         setUsers(data.results);
-        setTotalPages(Math.ceil(data.count / 5));
+        setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
+        setTotalCount(data.count || 0);
         if (data.counts) setCounts(data.counts);
       } else setUsers(data);
     } catch (err) {
@@ -55,6 +71,9 @@ const AdminUsers = () => {
     return () => clearTimeout(delay);
   }, [chargerUsers]);
 
+  const fermerFiche = useCallback(() => setSelectedUser(null), []);
+  useEchapPourFermer(!!selectedUser, fermerFiche);
+
   const handleToggleBlock = (id, isActif) => {
     confirmToast(
       `Voulez-vous vraiment ${isActif ? "bloquer" : "débloquer"} cet utilisateur ?`,
@@ -65,8 +84,7 @@ const AdminUsers = () => {
           toast.success(
             isActif ? "Utilisateur bloqué." : "Utilisateur débloqué !",
           );
-          if (selectedUser?.id === id)
-            setSelectedUser({ ...selectedUser, is_active: !isActif });
+          setSelectedUser((sel) => (sel?.id === id ? { ...sel, is_active: !isActif } : sel));
         } catch (err) {
           toast.error(apiErrMsg(err, "Erreur lors de la modification."));
           reportError("ECHEC_MODERATION_USER", err);
@@ -123,21 +141,30 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>Utilisateurs inscrits</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Gestion de la communauté TAFTECH.
-          </p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
+      <AdminPageHeader
+        icon={Users2}
+        color="blue"
+        title="Utilisateurs inscrits"
+        subtitle="Gestion de la communauté TafTech : candidats, recruteurs et administrateurs."
+        aideKey="utilisateurs"
+        aide={[
+          "Les onglets filtrent par rôle ; le chiffre indique le nombre total de comptes de ce rôle.",
+          "« Inspecter » ouvre la fiche complète (contact, consentement loi 18-07, dossier candidat, CV).",
+          "« Bloquer » désactive la connexion du compte sans supprimer ses données. « Débloquer » la réactive. Vous ne pouvez pas bloquer votre propre compte.",
+          "Les lignes sur fond rosé sont des comptes actuellement bloqués.",
+          "Pour créer ou retirer un administrateur, utilisez la page « Comptes admins ».",
+        ]}
+        actions={
           <button
             onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
           >
-            <Download size={15} /> Exporter
+            <Download size={15} /> Exporter CSV
           </button>
-          <div className="relative flex-1 md:w-72">
+        }
+      />
+      <div className="flex">
+          <div className="relative w-full md:w-80">
             <Search
               size={14}
               className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
@@ -151,9 +178,9 @@ const AdminUsers = () => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
+              aria-label="Rechercher un utilisateur"
             />
           </div>
-        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -164,7 +191,8 @@ const AdminUsers = () => {
             <button
               key={key || "TOUS"}
               onClick={() => { setRoleFiltre(key); setCurrentPage(1); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              aria-pressed={active}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tw.focusRing} ${
                 active ? tw.bgPrimarySolid : `${tw.surfaceMuted} ${tw.textMuted700} ${tw.hoverSurfaceSubtleStrong}`
               }`}
             >
@@ -239,10 +267,15 @@ const AdminUsers = () => {
                   </td>
                   <td className="px-5 py-4">
                     <span
-                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${user.role === "CANDIDAT" ? tw.scoreHigh : "bg-violet-50 text-violet-700"}`}
+                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${ROLE_BADGES[user.role]?.classe || tw.badgeNeutral}`}
                     >
-                      {user.role}
+                      {ROLE_BADGES[user.role]?.label || user.role}
                     </span>
+                    {!user.is_active && (
+                      <span className="ml-1.5 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">
+                        Bloqué
+                      </span>
+                    )}
                   </td>
                   <td className={`px-5 py-4 text-xs ${tw.textMuted700} font-medium`}>
                     {new Date(user.date_joined).toLocaleDateString("fr-FR")}
@@ -271,32 +304,12 @@ const AdminUsers = () => {
           </tbody>
         </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1 || loading}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              ← Précédent
-            </button>
-            <span className={`text-xs font-medium ${tw.textMuted}`}>
-              Page {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages || loading}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
+        <AdminPagination page={currentPage} totalPages={totalPages} totalCount={totalCount} onChange={setCurrentPage} disabled={loading} />
       </div>
 
       {selectedUser && (
-        <div className={tw.modalOverlay + " p-4"}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+        <div className={tw.modalOverlay + " p-4"} onClick={(e) => e.target === e.currentTarget && fermerFiche()}>
+          <div role="dialog" aria-modal="true" aria-label={`Fiche de ${selectedUser.first_name || selectedUser.email}`} className={`${tw.surface} rounded-2xl p-7 max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
             <div className={`flex justify-between items-start mb-6 pb-4 border-b ${tw.borderSubtle}`}>
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-xl ${tw.surfaceMuted} flex items-center justify-center overflow-hidden border ${tw.borderBase}`}>
@@ -327,8 +340,9 @@ const AdminUsers = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedUser(null)}
-                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}
+                onClick={fermerFiche}
+                aria-label="Fermer la fiche"
+                className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}
               >
                 <X size={18} />
               </button>
@@ -345,8 +359,8 @@ const AdminUsers = () => {
                 <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
                   📞 {selectedUser.telephone || "Non renseigné"}
                 </p>
-                <p className={`text-xs ${tw.textPrimary} font-semibold mt-1 uppercase`}>
-                  {selectedUser.role}
+                <p className={`text-xs ${tw.textPrimary} font-semibold mt-1`}>
+                  {ROLE_BADGES[selectedUser.role]?.label || selectedUser.role} · inscrit le {formatDate(selectedUser.date_joined)}
                 </p>
               </div>
               <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
@@ -360,7 +374,7 @@ const AdminUsers = () => {
                   Adresse : {selectedUser.profil_candidat?.adresse || "N/A"}
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
-                  Né(e) le : {selectedUser.date_naissance || "N/A"}
+                  Né(e) le : {formatDate(selectedUser.date_naissance)}
                 </p>
                 <span
                   className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? tw.scoreHigh : "bg-red-50 text-red-600"}`}
@@ -403,7 +417,7 @@ const AdminUsers = () => {
                           : ""}
                       </p>
                     </div>
-                    <div className="col-span-2 flex flex-wrap gap-2 pt-3 border-t border-indigo-100">
+                    <div className="sm:col-span-2 flex flex-wrap gap-2 pt-3 border-t border-indigo-100">
                       {[
                         {
                           label: `Militaire: ${formatField(selectedUser.profil_candidat.service_militaire)}`,
@@ -494,8 +508,8 @@ const AdminUsers = () => {
                                 </p>
                               )}
                               <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                                {exp.date_debut} —{" "}
-                                {exp.date_fin || "Aujourd'hui"}
+                                {formatDate(exp.date_debut)} —{" "}
+                                {exp.date_fin ? formatDate(exp.date_fin) : "Aujourd'hui"}
                               </p>
                               {exp.description && (
                                 <p className={`text-xs ${tw.textMuted} mt-1`}>
@@ -533,8 +547,8 @@ const AdminUsers = () => {
                                 </p>
                               )}
                               <p className={`text-xs ${tw.textMuted700}`}>
-                                {form.etablissement} · {form.date_debut} —{" "}
-                                {form.date_fin}
+                                {[form.etablissement, form.date_debut && formatDate(form.date_debut)].filter(Boolean).join(" · ")}
+                                {form.date_fin ? ` — ${formatDate(form.date_fin)}` : form.date_fin_prevue ? ` — prévue ${formatDate(form.date_fin_prevue)}` : ""}
                               </p>
                             </div>
                           ),

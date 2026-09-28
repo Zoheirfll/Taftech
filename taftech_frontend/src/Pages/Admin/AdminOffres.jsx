@@ -19,6 +19,31 @@ import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminVide } from "../../Components/AdminEtat";
+import AdminPagination from "../../Components/AdminPagination";
+import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
+import { Briefcase } from "lucide-react";
+
+// Libellés lisibles des statuts de candidature (avant : code brut "EN_COURS" → "EN COURS").
+const STATUT_CAND_LABELS = {
+  RECUE: "Reçue",
+  EN_COURS: "En cours",
+  PRESELECTION: "Présélection",
+  ENTRETIEN: "Entretien",
+  RETENU: "Retenu(e)",
+  REFUSE: "Refusé(e)",
+};
+
+// Badge d'expiration — une date passée affiche "Expirée" (avant : Math.max(0, …) affichait
+// "Expire aujourd'hui" pour une offre expirée depuis des semaines).
+const badgeExpiration = (dateExpiration) => {
+  const jours = Math.ceil((new Date(dateExpiration) - new Date()) / 86400000);
+  if (jours < 0) return { texte: "Expirée", style: `${tw.bgSlate800} text-white` };
+  const style = jours <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : jours <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : jours <= 60 ? `${tw.bgTealSoft} ${tw.textTeal}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`;
+  return { texte: jours === 0 ? "Expire aujourd'hui" : `${jours}j`, style };
+};
 
 const getBadge = (offre) => {
   if (offre.est_cloturee)
@@ -68,6 +93,7 @@ const AdminOffres = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [editingOffre, setEditingOffre] = useState(null);
   const [rejectingOffre, setRejectingOffre] = useState(null);
   const [selectedOffre, setSelectedOffre] = useState(null);
@@ -84,7 +110,8 @@ const AdminOffres = () => {
       const data = await jobsService.getAdminOffres(currentPage, searchTerm, statutFiltre, ordering);
       if (data.results) {
         setOffres(data.results);
-        setTotalPages(Math.ceil(data.count / 5));
+        setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
+        setTotalCount(data.count || 0);
       } else setOffres(data);
       setSelectedIds([]);
     } catch (err) {
@@ -119,22 +146,36 @@ const AdminOffres = () => {
   const handleApprouverSelection = () => {
     confirmToast(`Approuver ${selectedIds.length} offre(s) sélectionnée(s) ?`, async () => {
       setBulkLoading(true);
-      try {
-        await Promise.all(
-          selectedIds.map((id) =>
-            jobsService.moderateOffre(id, { statut_moderation: "APPROUVEE", motif_rejet: "" })
-          )
-        );
-        toast.success(`${selectedIds.length} offre(s) approuvée(s) !`);
-        chargerOffres();
-      } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de l'approbation groupée."));
-        reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", err);
-      } finally {
-        setBulkLoading(false);
+      // allSettled : signaler précisément les échecs sans masquer les approbations réussies.
+      const resultats = await Promise.allSettled(
+        selectedIds.map((id) =>
+          jobsService.moderateOffre(id, { statut_moderation: "APPROUVEE", motif_rejet: "" })
+        )
+      );
+      const echecs = resultats.filter((r) => r.status === "rejected");
+      const reussites = resultats.length - echecs.length;
+      if (reussites > 0) toast.success(`${reussites} offre(s) approuvée(s) !`);
+      if (echecs.length > 0) {
+        toast.error(apiErrMsg(echecs[0].reason, `${echecs.length} approbation(s) en échec.`));
+        reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", echecs[0].reason);
       }
+      setBulkLoading(false);
+      chargerOffres();
     });
   };
+
+  const [rejetEnCours, setRejetEnCours] = useState(false);
+  const [editionEnCours, setEditionEnCours] = useState(false);
+
+  const fermerDetail = useCallback(() => setSelectedOffre(null), []);
+  const fermerEdition = useCallback(() => setEditingOffre(null), []);
+  const fermerRejet = useCallback(() => {
+    setRejectingOffre(null);
+    setMotifRejet("");
+  }, []);
+  useEchapPourFermer(!!selectedOffre, fermerDetail);
+  useEchapPourFermer(!!editingOffre, fermerEdition);
+  useEchapPourFermer(!!rejectingOffre, fermerRejet);
 
   const handleApprouver = (id) => {
     confirmToast("Publier cette offre en ligne ?", async () => {
@@ -154,27 +195,32 @@ const AdminOffres = () => {
 
   const handleRefuserSubmit = async () => {
     if (!motifRejet.trim()) return toast.error("Veuillez saisir un motif.");
+    if (rejetEnCours) return;
+    setRejetEnCours(true);
     try {
       await jobsService.moderateOffre(rejectingOffre.id, {
         statut_moderation: "REJETEE",
-        motif_rejet: motifRejet,
+        motif_rejet: motifRejet.trim(),
       });
-      setRejectingOffre(null);
-      setMotifRejet("");
+      fermerRejet();
       chargerOffres();
-      toast.success("Offre rejetée.");
+      toast.success("Offre rejetée — le recruteur voit le motif dans son tableau de bord.");
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors du rejet."));
       reportError("ECHEC_REJET_OFFRE", err);
+    } finally {
+      setRejetEnCours(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (!editingOffre.titre?.trim()) return toast.error("Le titre ne peut pas être vide.");
+    setEditionEnCours(true);
     try {
       await jobsService.moderateOffre(editingOffre.id, {
-        titre: editingOffre.titre,
-        description: editingOffre.description,
+        titre: editingOffre.titre.trim(),
+        description: editingOffre.description || "",
       });
       setEditingOffre(null);
       chargerOffres();
@@ -182,6 +228,8 @@ const AdminOffres = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la modification."));
       reportError("ECHEC_MODIFICATION_OFFRE", err);
+    } finally {
+      setEditionEnCours(false);
     }
   };
 
@@ -211,25 +259,33 @@ const AdminOffres = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>
-            Modération des offres
-          </h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Approuvez, rejetez ou corrigez les offres publiées.
-          </p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
+      <AdminPageHeader
+        icon={Briefcase}
+        color="amber"
+        title="Modération des offres"
+        subtitle="Approuvez, rejetez ou corrigez les offres publiées par les recruteurs."
+        aideKey="offres"
+        aide={[
+          "Une offre « En attente » n'est pas visible par les candidats tant qu'elle n'est pas approuvée. Le recruteur reçoit un email à l'approbation.",
+          "Rejeter demande un motif, que le recruteur voit pour corriger son offre et la resoumettre.",
+          "Le crayon corrige directement le titre ou la description (faute, mention interdite) sans repasser l'offre en attente.",
+          "L'œil ouvre le détail complet : critères, compétences, questionnaire et candidatures reçues avec leur score IA.",
+          "Filtrez par statut et triez par date ou expiration en cliquant sur l'en-tête des colonnes.",
+        ]}
+        actions={
           <button
             onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2.5 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
           >
-            <Download size={15} /> Exporter
+            <Download size={15} /> Exporter CSV
           </button>
+        }
+      />
+        <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={statutFiltre}
             onChange={(e) => { setStatutFiltre(e.target.value); setCurrentPage(1); }}
+            aria-label="Filtrer par statut"
             className={`${tw.inputColorsWhite} rounded-lg text-sm px-3 py-2.5`}
           >
             <option value="">Tous statuts</option>
@@ -238,7 +294,7 @@ const AdminOffres = () => {
             <option value="REJETEE">Rejetées</option>
             <option value="CLOTUREE">Clôturées</option>
           </select>
-          <div className="relative flex-1 md:w-72">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search
               size={14}
               className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`}
@@ -246,6 +302,7 @@ const AdminOffres = () => {
             <input
               type="text"
               placeholder="Rechercher un poste..."
+              aria-label="Rechercher une offre"
               className={`w-full pl-9 pr-4 py-2.5 ${tw.inputColorsWhite} rounded-lg text-sm`}
               value={searchTerm}
               onChange={(e) => {
@@ -255,7 +312,6 @@ const AdminOffres = () => {
             />
           </div>
         </div>
-      </div>
 
       {selectedIds.length > 0 && (
         <div className={`flex items-center justify-between ${tw.bgPrimarySoft} border border-indigo-200 rounded-xl px-4 py-3`}>
@@ -307,11 +363,12 @@ const AdminOffres = () => {
               <SkeletonTableRows columns={6} />
             ) : offres.length === 0 ? (
               <tr>
-                <td
-                  colSpan="6"
-                  className={`py-12 text-center text-sm ${tw.textMuted} italic`}
-                >
-                  Aucune offre trouvée.
+                <td colSpan="6">
+                  <AdminVide
+                    icon={Briefcase}
+                    titre="Aucune offre trouvée."
+                    texte={searchTerm || statutFiltre ? "Modifiez la recherche ou le filtre de statut." : "Les offres publiées par les recruteurs apparaîtront ici."}
+                  />
                 </td>
               </tr>
             ) : (
@@ -370,11 +427,13 @@ const AdminOffres = () => {
                   <td className="px-5 py-4 text-xs">
                     {offre.date_expiration ? (
                       (() => {
-                        const jours = Math.max(0, Math.ceil((new Date(offre.date_expiration) - new Date()) / 86400000));
-                        const style = jours <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : jours <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : jours <= 60 ? `${tw.bgTealSoft} ${tw.textTeal}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`;
+                        const { texte, style } = badgeExpiration(offre.date_expiration);
                         return (
-                          <span className={`px-2 py-1 rounded-full font-semibold ${style}`}>
-                            {jours === 0 ? "Expire aujourd'hui" : `${jours}j`}
+                          <span
+                            className={`px-2 py-1 rounded-full font-semibold whitespace-nowrap ${style}`}
+                            title={`Expire le ${new Date(offre.date_expiration).toLocaleDateString("fr-FR")}`}
+                          >
+                            {texte}
                           </span>
                         );
                       })()
@@ -418,7 +477,7 @@ const AdminOffres = () => {
                       {offre.statut_moderation !== "REJETEE" &&
                         !offre.est_cloturee && (
                           <button
-                            onClick={() => setRejectingOffre(offre)}
+                            onClick={() => { setMotifRejet(""); setRejectingOffre(offre); }}
                             className={`p-2 ${tw.bgErrorSoft} ${tw.textError} rounded-lg ${tw.hoverErrorSoft} transition-colors ${tw.focusRing}`}
                             title="Rejeter"
                             aria-label="Rejeter l'offre"
@@ -434,38 +493,19 @@ const AdminOffres = () => {
           </tbody>
         </table>
         </div>
-        {totalPages > 1 && (
-          <div className={`px-4 py-3 border-t ${tw.borderSubtle} flex items-center justify-between ${tw.surfaceMuted}`}>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1 || loading}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              ← Précédent
-            </button>
-            <span className={`text-xs font-medium ${tw.textMuted}`}>
-              Page {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages || loading}
-              className={`px-3 py-1.5 ${tw.surface} border ${tw.borderBase} text-xs font-medium rounded-lg disabled:opacity-40 ${tw.hoverSurfaceSubtle} transition-colors`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
+        <AdminPagination page={currentPage} totalPages={totalPages} totalCount={totalCount} onChange={setCurrentPage} disabled={loading} />
       </div>
 
       {/* MODAL DÉTAILS */}
       {selectedOffre && (
-        <div className={modalClass}>
-          <div className={`${tw.surfaceSubtle} rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+        <div className={modalClass} onClick={(e) => e.target === e.currentTarget && fermerDetail()}>
+          <div role="dialog" aria-modal="true" aria-label={`Détail de l'offre ${selectedOffre.titre}`} className={`${tw.surfaceSubtle} rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
 
             {/* BANDEAU EN-TÊTE */}
             <div className={`${tw.bannerGradientPrimary} rounded-t-2xl px-6 py-6 relative`}>
               <button
-                onClick={() => setSelectedOffre(null)}
+                onClick={fermerDetail}
+                aria-label="Fermer le détail"
                 className={`absolute top-4 right-4 p-1.5 ${tw.closeButtonOnDark} rounded-lg transition-colors`}
               >
                 <X size={18} />
@@ -552,7 +592,7 @@ const AdminOffres = () => {
                         <CheckCircle size={15} /> Approuver
                       </button>
                       <button
-                        onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }}
+                        onClick={() => { setMotifRejet(""); setRejectingOffre(selectedOffre); setSelectedOffre(null); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-lg transition-colors`}
                       >
                         <XCircle size={15} /> Rejeter
@@ -562,7 +602,7 @@ const AdminOffres = () => {
                     <div className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgSuccessSoft} border ${tw.borderSuccess} rounded-lg`}>
                       <CheckCircle size={15} className={tw.textSuccessIcon} />
                       <span className={`text-sm font-medium ${tw.textSuccess}`}>Offre approuvée et en ligne</span>
-                      <button onClick={() => { setRejectingOffre(selectedOffre); setSelectedOffre(null); }} className={`ml-auto text-xs ${tw.textError} hover:underline font-medium`}>Retirer</button>
+                      <button onClick={() => { setMotifRejet(""); setRejectingOffre(selectedOffre); setSelectedOffre(null); }} className={`ml-auto text-xs ${tw.textError} hover:underline font-medium`} title="Retirer l'offre du site en la rejetant avec un motif">Retirer</button>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -748,7 +788,7 @@ const AdminOffres = () => {
                               </td>
                               <td className="px-3 py-2.5 text-right">
                                 <span className={`text-xs font-medium ${tw.candStatutColors[cand.statut] || tw.candStatutColors.DEFAULT}`}>
-                                  {cand.statut.replace("_", " ")}
+                                  {STATUT_CAND_LABELS[cand.statut] || cand.statut}
                                 </span>
                               </td>
                             </tr>
@@ -768,11 +808,14 @@ const AdminOffres = () => {
 
       {/* MODAL ÉDITION */}
       {editingOffre && (
-        <div className={modalClass}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl`}>
-            <h2 className={`text-lg font-bold ${tw.textStrong} mb-5`}>
+        <div className={modalClass} onClick={(e) => e.target === e.currentTarget && fermerEdition()}>
+          <div role="dialog" aria-modal="true" aria-label="Corriger l'offre" className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl`}>
+            <h2 className={`text-lg font-bold ${tw.textStrong} mb-1`}>
               Corriger l'offre
             </h2>
+            <p className={`text-xs ${tw.textMuted700} mb-5`}>
+              Correction directe par l'administration (faute, formulation interdite). L'offre garde son statut actuel.
+            </p>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
@@ -780,7 +823,8 @@ const AdminOffres = () => {
                 </label>
                 <input
                   type="text"
-                  value={editingOffre.titre}
+                  value={editingOffre.titre || ""}
+                  required
                   className={inputClass}
                   onChange={(e) =>
                     setEditingOffre({ ...editingOffre, titre: e.target.value })
@@ -792,8 +836,8 @@ const AdminOffres = () => {
                   Description
                 </label>
                 <textarea
-                  rows="5"
-                  value={editingOffre.description}
+                  rows="8"
+                  value={editingOffre.description || ""}
                   className={inputClass + " resize-none"}
                   onChange={(e) =>
                     setEditingOffre({
@@ -813,9 +857,10 @@ const AdminOffres = () => {
                 </button>
                 <button
                   type="submit"
-                  className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}
+                  disabled={editionEnCours}
+                  className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}
                 >
-                  Sauvegarder
+                  {editionEnCours ? "Enregistrement..." : "Sauvegarder"}
                 </button>
               </div>
             </form>
@@ -825,13 +870,13 @@ const AdminOffres = () => {
 
       {/* MODAL REJET */}
       {rejectingOffre && (
-        <div className={modalClass}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
+        <div className={modalClass} onClick={(e) => e.target === e.currentTarget && fermerRejet()}>
+          <div role="dialog" aria-modal="true" aria-label="Rejeter l'offre" className={`${tw.surface} rounded-2xl p-7 max-w-md w-full shadow-2xl`}>
             <h2 className={`text-lg font-bold ${tw.textError} mb-1`}>
-              Rejeter l'offre
+              {rejectingOffre.statut_moderation === "APPROUVEE" ? "Retirer l'offre du site" : "Rejeter l'offre"}
             </h2>
             <p className={`text-xs ${tw.textMuted700} mb-4`}>
-              Précisez le motif pour le recruteur
+              « {rejectingOffre.titre} » — précisez le motif, il sera affiché au recruteur pour qu'il corrige son offre.
             </p>
             <textarea
               rows="4"
@@ -842,16 +887,17 @@ const AdminOffres = () => {
             />
             <div className="flex gap-3">
               <button
-                onClick={() => setRejectingOffre(null)}
+                onClick={fermerRejet}
                 className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
               >
                 Annuler
               </button>
               <button
                 onClick={handleRefuserSubmit}
-                className={`flex-1 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-lg transition-colors`}
+                disabled={rejetEnCours}
+                className={`flex-1 py-2.5 ${tw.buttonDangerSolid} text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}
               >
-                Confirmer le rejet
+                {rejetEnCours ? "Envoi..." : "Confirmer le rejet"}
               </button>
             </div>
           </div>

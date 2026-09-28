@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import Settings from "../src/Pages/Candidat/Settings";
 import { jobsService } from "../src/Services/jobsService";
+import { authService } from "../src/Services/authService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
@@ -130,5 +131,36 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "Les mots de passe ne correspondent pas.",
     );
+  });
+
+  it("🔴 EC4 : Bouton de suppression désactivé tant que le mot-clé de confirmation est incorrect", async () => {
+    jobsService.getParametres.mockResolvedValue(mockSettings);
+    const supprimerSpy = vi.spyOn(authService, "supprimerCompte").mockResolvedValue({});
+    render(<Settings />);
+    await waitFor(() => screen.getByText("Supprimer"));
+    fireEvent.click(screen.getByText("Supprimer"));
+    const confirmationInput = screen.getByLabelText(/Tapez/i);
+    fireEvent.change(confirmationInput, { target: { value: "pas-le-bon-mot" } });
+    expect(screen.getByText("Supprimer définitivement")).toBeDisabled();
+    fireEvent.click(screen.getByText("Supprimer définitivement"));
+    expect(supprimerSpy).not.toHaveBeenCalled();
+  });
+
+  it("🟢 HP3 : Suppression de compte réussie envoie la confirmation et déconnecte", async () => {
+    jobsService.getParametres.mockResolvedValue(mockSettings);
+    const supprimerSpy = vi.spyOn(authService, "supprimerCompte").mockResolvedValue({});
+    const logoutSpy = vi.spyOn(authService, "logout").mockImplementation(() => {});
+    render(<Settings />);
+    await waitFor(() => screen.getByText("Supprimer"));
+    fireEvent.click(screen.getByText("Supprimer"));
+    fireEvent.change(screen.getByLabelText("Mot de passe actuel"), { target: { value: "MonMdp123!" } });
+    fireEvent.change(screen.getByLabelText(/Tapez/i), { target: { value: "SUPPRIMER" } });
+    fireEvent.click(screen.getByText("Supprimer définitivement"));
+    await waitFor(() => {
+      expect(supprimerSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ confirmation: "SUPPRIMER" }),
+      );
+      expect(logoutSpy).toHaveBeenCalledWith("/login");
+    });
   });
 });

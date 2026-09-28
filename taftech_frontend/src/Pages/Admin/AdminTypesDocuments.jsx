@@ -1,15 +1,21 @@
+import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, FolderLock } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import AdminPageHeader from "../../Components/AdminPageHeader";
+import { AdminVide } from "../../Components/AdminEtat";
+import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
 const ITEM_VIDE = { label: "", ordre: 0, actif: true };
 
 const AdminTypesDocuments = () => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -34,6 +40,9 @@ const AdminTypesDocuments = () => {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  const fermerModal = React.useCallback(() => setShowModal(false), []);
+  useEchapPourFermer(showModal, fermerModal);
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -68,7 +77,8 @@ const AdminTypesDocuments = () => {
   };
 
   const handleDelete = (id) => {
-    confirmToast("Supprimer ce type de document ?", async () => {
+    // SET_NULL côté modèle : les documents déjà classés dans ce type perdent leur catégorie.
+    confirmToast("Supprimer ce type de document ? Les documents des candidats déjà classés dans ce type deviendront « sans catégorie ». Pour simplement le masquer, décochez plutôt « Type visible ».", async () => {
       try {
         await jobsService.supprimerAdminTypeDocument(id);
         setItems((prev) => prev.filter((i) => i.id !== id));
@@ -82,20 +92,27 @@ const AdminTypesDocuments = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className={tw.pageTitle}>Types de documents</h1>
-          <p className={`${tw.pageSubtitle} mt-0.5`}>
-            Catégories proposées aux candidats dans "Mes documents".
-          </p>
-        </div>
-        <button
-          onClick={handleOpenCreate}
-          className={`flex items-center gap-2 px-4 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}
-        >
-          <Plus size={16} /> Ajouter un type
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={FolderLock}
+        color="rose"
+        title="Types de documents"
+        subtitle="Catégories proposées aux candidats dans « Mes documents » (documents privés)."
+        aideKey="types-documents"
+        aide={[
+          "Le candidat choisit l'un de ces types quand il ajoute un document privé (diplôme, attestation…). Il ne peut déposer qu'un document par type.",
+          "« Ordre d'affichage » : plus le nombre est petit, plus le type apparaît haut dans la liste du candidat.",
+          "Pour retirer un type, décochez « Type visible » plutôt que de le supprimer : la suppression retire la catégorie des documents déjà déposés.",
+          "Ces documents sont privés : un recruteur ne les voit que si le candidat les partage explicitement avec son entreprise.",
+        ]}
+        actions={
+          <button
+            onClick={handleOpenCreate}
+            className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
+          >
+            <Plus size={16} /> Ajouter un type
+          </button>
+        }
+      />
 
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
@@ -110,9 +127,9 @@ const AdminTypesDocuments = () => {
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</td></tr>
+                <SkeletonTableRows columns={4} />
               ) : items.length === 0 ? (
-                <tr><td colSpan="4" className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucun type configuré.</td></tr>
+                <tr><td colSpan="4"><AdminVide icon={FolderLock} titre="Aucun type configuré." texte="Ajoutez au moins un type pour que les candidats puissent classer leurs documents." /></td></tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.id} className={tw.rowHover}>
@@ -125,8 +142,8 @@ const AdminTypesDocuments = () => {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(item)} className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors`}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} className={`p-2 ${tw.textMuted} hover:${tw.textError} hover:${tw.bgErrorSoft} rounded-lg transition-colors`}><Trash2 size={14} /></button>
+                        <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -138,13 +155,13 @@ const AdminTypesDocuments = () => {
       </div>
 
       {showModal && (
-        <div className={`${tw.modalOverlay} p-4`}>
-          <div className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
+        <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>
+          <div role="dialog" aria-modal="true" aria-label={editingId ? "Modifier le type" : "Ajouter un type"} className={`${tw.surface} rounded-2xl p-7 max-w-lg w-full shadow-2xl`}>
             <div className="flex justify-between items-center mb-5">
               <h3 className={`text-base font-bold ${tw.textStrong}`}>{editingId ? "Modifier le type" : "Ajouter un type"}</h3>
-              <button onClick={() => setShowModal(false)} className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors`}><X size={18} /></button>
+              <button onClick={fermerModal} aria-label="Fermer" className={`p-1.5 ${tw.iconButtonHoverNeutral} rounded-lg transition-colors ${tw.focusRing}`}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé *</label>
                 <input required className={inputClass} placeholder="Ex: Diplôme" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
@@ -159,7 +176,7 @@ const AdminTypesDocuments = () => {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
-                <button type="submit" className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
+                <button type="submit" disabled={submitBusy} className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>
               </div>
             </form>
           </div>

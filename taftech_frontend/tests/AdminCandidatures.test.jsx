@@ -33,7 +33,8 @@ vi.mock("react-hot-toast", () => ({
 
 // Données fictives pour simuler l'API
 const mockData = {
-  count: 15,
+  // 25 candidatures / 20 par page (ADMIN_PAGE_SIZE) = 2 pages
+  count: 25,
   results: [
     {
       id: 101,

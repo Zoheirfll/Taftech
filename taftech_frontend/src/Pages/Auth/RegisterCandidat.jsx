@@ -277,7 +277,7 @@ const RegisterCandidat = () => {
                   </div>
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Téléphone *</label>
-                    <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required placeholder="0555..." value={formData.telephone} onChange={handleChange}
+                    <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required value={formData.telephone} onChange={handleChange}
                       className={tw.authInput} />
 <FieldError id="err-telephone" message={fieldErrors.telephone} />
                   </div>

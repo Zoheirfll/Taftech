@@ -440,7 +440,7 @@ const AdminRendezVous = () => {
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Motif (optionnel)</label>
-                <input className={inputCls} value={formJour.motif} onChange={(e) => setFormJour({ ...formJour, motif: e.target.value })} placeholder="Ex: Congé, jour férié..." />
+                <input className={inputCls} value={formJour.motif} onChange={(e) => setFormJour({ ...formJour, motif: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={fermerJour} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>

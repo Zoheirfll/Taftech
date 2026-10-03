@@ -31,6 +31,16 @@ export const iaService = {
     }
   },
 
+  // Corrections faites par le candidat sur les champs pré-remplis (améliore le parser, voir
+  // jobs/views/qualite_ia.py). Best-effort : ne doit jamais bloquer l'enregistrement du profil.
+  envoyerCorrectionsParsing: async (parsingId, corrections) => {
+    try {
+      await api.post(`jobs/parsing/${parsingId}/corrections/`, { corrections });
+    } catch (err) {
+      reportError("ECHEC_ENVOI_CORRECTIONS_PARSING", err);
+    }
+  },
+
   // Analyse carrière Groq (candidat)
   getAnalyseCarriere: async () => {
     try {

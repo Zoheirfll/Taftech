@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
 import { convertDateRaw, convertDateFin } from "../../../utils/cvDates";
@@ -58,6 +58,7 @@ export const useOnboardingWizard = () => {
   // sélectionné par l'utilisateur (pas de re-upload si `uploadCV(null)` a réutilisé le CV
   // déjà sur le profil) et on l'envoie avec le reste des infos à l'étape suivante.
   const [pendingCvFile, setPendingCvFile] = useState(null);
+  const parsingIdRef = useRef(null);
 
   const refresh = useCallback(async () => {
     const [p, c, nomenclatureFormation] = await Promise.all([
@@ -130,13 +131,24 @@ export const useOnboardingWizard = () => {
       // doit être attaché au profil, pas seulement analysé — voir saveInfosStep.
       if (file) setPendingCvFile(file);
       setParsedData(result);
+      parsingIdRef.current = result.parsing_id || null;
       let prenom, nom;
       if (result.nom_complet) {
-        const parts = result.nom_complet.trim().split(/\s+/).filter(Boolean);
+        // Civilités en tête de CV ("Mme TABTI Samira") : sans ce retrait, "Mme" était pris pour le prénom.
+        const civilite = /^(mme|mlle|mr|m|monsieur|madame|mademoiselle|dr|pr)\.?$/i;
+        let parts = result.nom_complet.trim().split(/\s+/).filter(Boolean);
+        while (parts.length > 1 && civilite.test(parts[0])) parts = parts.slice(1);
         if (parts.length >= 2) {
-          if (parts[0] === parts[0].toUpperCase()) {
+          const estMajuscules = (p) => p === p.toUpperCase() && p !== p.toLowerCase();
+          const nbMaj = parts.findIndex((p) => !estMajuscules(p));
+          if (nbMaj === -1) {
+            // Tout en majuscules ("TABTI SAMIRA") : premier mot = nom, comportement historique.
             nom = parts[0];
             prenom = parts.slice(1).join(" ");
+          } else if (nbMaj > 0) {
+            // Mots en MAJUSCULES au début = nom de famille, le reste = prénom(s).
+            nom = parts.slice(0, nbMaj).join(" ");
+            prenom = parts.slice(nbMaj).join(" ");
           } else {
             prenom = parts[0];
             nom = parts.slice(1).join(" ");
@@ -193,6 +205,8 @@ export const useOnboardingWizard = () => {
             entreprise: exp.entreprise,
             metier: exp.metier || null,
             metier_libelle: exp.metier_libelle || "",
+            metier_propose: exp.metier || null,
+            metier_propose_libelle: exp.metier_libelle || "",
             date_debut: convertDateRaw(exp.date_debut_raw),
             date_fin: convertDateFin(exp.date_fin_raw, exp.date_debut_raw),
             description: exp.description || "",
@@ -211,6 +225,10 @@ export const useOnboardingWizard = () => {
             diplome_ref_libelle: f.diplome_ref_libelle || "",
             specialite_ref: f.specialite_ref || null,
             specialite_ref_libelle: f.specialite_ref_libelle || "",
+            diplome_propose: f.diplome_ref || null,
+            diplome_propose_libelle: f.diplome_ref_libelle || "",
+            specialite_propose: f.specialite_ref || null,
+            specialite_propose_libelle: f.specialite_ref_libelle || "",
           })),
         );
       }
@@ -275,6 +293,14 @@ export const useOnboardingWizard = () => {
     }
   }, [infosForm, infosMode, pendingPhoto, pendingCvFile, profil, nextStep, refresh, saving]);
 
+  // Champs pré-remplis par le parser puis modifiés par le candidat -> paires (proposé, choisi).
+  const envoyerCorrections = useCallback((corrections) => {
+    const utiles = corrections.filter((c) => (c.propose_id ?? null) !== (c.corrige_id ?? null));
+    if (parsingIdRef.current && utiles.length > 0) {
+      jobsService.envoyerCorrectionsParsing(parsingIdRef.current, utiles);
+    }
+  }, []);
+
   const saveExperiencesStep = useCallback(async () => {
     if (saving) return;
     setSaving(true);
@@ -286,8 +312,13 @@ export const useOnboardingWizard = () => {
           ),
         );
       }
+      envoyerCorrections(pendingExperiences.map((exp) => ({
+        type_correction: "METIER_EXPERIENCE", texte_source: exp.titre_poste,
+        propose_id: exp.metier_propose, propose_libelle: exp.metier_propose_libelle,
+        corrige_id: exp.metier, corrige_libelle: exp.metier_libelle,
+      })));
       await Promise.allSettled(
-        pendingExperiences.map((exp) =>
+        pendingExperiences.map(({ metier_propose, metier_propose_libelle, ...exp }) => // eslint-disable-line no-unused-vars
           profilService.addExperience(exp).catch((err) => reportError("ECHEC_ADD_EXP_ONBOARDING", err)),
         ),
       );
@@ -299,7 +330,7 @@ export const useOnboardingWizard = () => {
     } finally {
       setSaving(false);
     }
-  }, [pendingExperiences, experiencesMode, profil, nextStep, refresh, saving]);
+  }, [pendingExperiences, experiencesMode, profil, nextStep, refresh, saving, envoyerCorrections]);
 
   const saveFormationsStep = useCallback(async () => {
     if (saving) return;
@@ -312,8 +343,20 @@ export const useOnboardingWizard = () => {
           ),
         );
       }
+      envoyerCorrections(pendingFormations.flatMap((f) => [
+        {
+          type_correction: "DIPLOME", texte_source: f.diplome,
+          propose_id: f.diplome_propose, propose_libelle: f.diplome_propose_libelle,
+          corrige_id: f.diplome_ref || null, corrige_libelle: f.diplome_ref_libelle,
+        },
+        {
+          type_correction: "SPECIALITE", texte_source: f.diplome,
+          propose_id: f.specialite_propose, propose_libelle: f.specialite_propose_libelle,
+          corrige_id: f.specialite_ref || null, corrige_libelle: f.specialite_ref_libelle,
+        },
+      ]));
       await Promise.allSettled(
-        pendingFormations.map((f) =>
+        pendingFormations.map(({ diplome_propose, diplome_propose_libelle, specialite_propose, specialite_propose_libelle, ...f }) => // eslint-disable-line no-unused-vars
           // diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF —
           // une chaîne vide (laissée par le Select une fois vidé) est rejetée, seul `null`
           // est accepté (même piège déjà géré par `normalizeForm` dans useProfilCandidat.js).
@@ -330,7 +373,7 @@ export const useOnboardingWizard = () => {
     } finally {
       setSaving(false);
     }
-  }, [pendingFormations, formationsMode, profil, nextStep, refresh, saving]);
+  }, [pendingFormations, formationsMode, profil, nextStep, refresh, saving, envoyerCorrections]);
 
   const saveLanguesStep = useCallback(async () => {
     if (saving) return;

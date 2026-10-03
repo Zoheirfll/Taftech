@@ -965,7 +965,7 @@ const ProfilCandidat = () => {
             <div className="space-y-2">
               <input
                 id="lang-input"
-                placeholder="Langue (ex: Anglais)"
+                placeholder="Langue"
                 className={INPUT_CLASS}
                 value={langName}
                 onChange={(e) => setLangName(e.target.value)}

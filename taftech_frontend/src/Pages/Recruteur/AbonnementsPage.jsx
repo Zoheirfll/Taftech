@@ -11,19 +11,11 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
+import { CARACTERISTIQUES_PALIER, lignesCartePalier, valeurTableau, remiseAnnuellePct } from "../../utils/paliersAffichage";
+
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 
 const formatDA = (n) => (n != null ? `${n.toLocaleString("fr-FR")} DA` : "Sur devis");
-
-const CRITERES_TABLEAU = [
-  { key: "limite_offres", label: "Offres d'emploi actives", format: (v) => (v != null ? v : "Illimité") },
-  { key: "acces_coordonnees", label: "Coordonnées candidats", format: (v) => (v ? "✓" : "—") },
-  { key: "credits_mois", label: "Crédits CVthèque / mois", format: (v) => (v != null ? v : "Illimité") },
-  { key: "acces_ia_recommandes", label: "Candidats recommandés (IA)", format: (v) => (v ? "✓" : "—") },
-  { key: "acces_ia_avancee", label: "Recherche/filtres/stats avancés (IA)", format: (v) => (v ? "✓" : "—") },
-  { key: "acces_equipe", label: "Gestion d'équipe multi-utilisateurs", format: (v) => (v ? "✓" : "—") },
-  { key: "support_label", label: "Support", format: (v) => v || "—" },
-];
 
 const BADGES_AVANTAGES = [
   { icon: Zap, titre: "Accès immédiat", description: "Activation en quelques clics" },
@@ -357,39 +349,25 @@ const AbonnementsPage = () => {
                   <>
                     <p className="text-2xl font-extrabold text-slate-900">{formatDA(prix)}<span className="text-sm font-medium text-slate-600">/{periode === "mensuel" ? "mois" : "an"}</span></p>
                     {periode === "annuel" && p.prix_mensuel_da != null && (
-                      <p className="text-xs text-slate-600 mt-0.5">Facturé {formatDA(p.prix_annuel_da)}/an</p>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Facturé {formatDA(p.prix_annuel_da)}/an
+                        {remiseAnnuellePct(p) != null && (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">-{remiseAnnuellePct(p)}%</span>
+                        )}
+                      </p>
                     )}
                   </>
                 )}
               </div>
               <ul className="mt-4 space-y-2 flex-1">
                 <li className="flex items-center gap-2 text-xs text-slate-700">
-                  <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
-                  {p.limite_offres != null ? `${p.limite_offres} offres d'emploi actives` : "Offres d'emploi illimitées"}
+                  <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Accès à la CVthèque
                 </li>
-                <li className="flex items-center gap-2 text-xs text-slate-700">
-                  <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
-                  Accès à la CVthèque
-                </li>
-                <li className="flex items-center gap-2 text-xs text-slate-700">
-                  <CheckCircle2 size={14} className="text-teal-700 shrink-0" />
-                  {p.credits_mois != null ? `${p.credits_mois} crédits CVthèque/mois` : "Crédits CVthèque illimités"}
-                </li>
-                {p.acces_ia_recommandes && (
-                  <li className="flex items-center gap-2 text-xs text-slate-700">
-                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Candidats recommandés (IA)
+                {lignesCartePalier(p).map((l) => (
+                  <li key={l.id} className="flex items-center gap-2 text-xs text-slate-700">
+                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> {l.texte}
                   </li>
-                )}
-                {p.acces_ia_avancee && (
-                  <li className="flex items-center gap-2 text-xs text-slate-700">
-                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Recherche & statistiques avancées (IA)
-                  </li>
-                )}
-                {p.acces_equipe && (
-                  <li className="flex items-center gap-2 text-xs text-slate-700">
-                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Gestion d'équipe multi-utilisateurs
-                  </li>
-                )}
+                ))}
                 {p.nom === "BUSINESS" && (
                   <li className="flex items-center gap-2 text-xs text-slate-700">
                     <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Export & rapports personnalisés
@@ -413,11 +391,6 @@ const AbonnementsPage = () => {
                       <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Confidentialité renforcée
                     </li>
                   </>
-                )}
-                {p.support_label && (
-                  <li className="flex items-center gap-2 text-xs text-slate-700">
-                    <CheckCircle2 size={14} className="text-teal-700 shrink-0" /> Support {p.support_label.toLowerCase()}
-                  </li>
                 )}
               </ul>
               {estEnterprise ? (
@@ -470,11 +443,11 @@ const AbonnementsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {CRITERES_TABLEAU.map((c) => (
-                      <tr key={c.key}>
+                    {CARACTERISTIQUES_PALIER.map((c) => (
+                      <tr key={c.id}>
                         <td className="px-4 py-2.5 text-xs font-medium text-slate-700">{c.label}</td>
                         {paliersTries.map((p) => (
-                          <td key={p.id} className="px-4 py-2.5 text-xs text-center text-slate-900">{c.format(p[c.key])}</td>
+                          <td key={p.id} className="px-4 py-2.5 text-xs text-center text-slate-900">{valeurTableau(c, p)}</td>
                         ))}
                       </tr>
                     ))}
@@ -604,7 +577,6 @@ const AbonnementsPage = () => {
                     value={messageManuel}
                     onChange={(e) => setMessageManuel(e.target.value)}
                     rows={3}
-                    placeholder="Ex : Virement CIB effectué le 12/06/2026, référence #XXXXXXXX"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 resize-none"
                   />
                 </div>

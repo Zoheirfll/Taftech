@@ -23,6 +23,7 @@ import {
   FolderLock,
   TrendingUp,
   GraduationCap,
+  Gauge,
   Menu,
   X,
 } from "lucide-react";
@@ -109,6 +110,7 @@ const NAV_GROUPS = [
     label: "Système",
     dot: "bg-slate-500",
     items: [
+      { to: "/admin-taftech/qualite-ia", icon: Gauge, label: "Qualité IA" },
       { to: "/admin-taftech/audit", icon: ShieldCheck, label: "Journal d'audit" },
       { to: "/admin-taftech/erreurs-systeme", icon: AlertTriangle, label: "Erreurs système" },
     ],

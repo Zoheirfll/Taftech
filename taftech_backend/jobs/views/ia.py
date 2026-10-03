@@ -11,13 +11,14 @@ from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
 import os
+import time
 import tempfile
 from ..models import OffreEmploi, ProfilCandidat, Candidature
 from ..serializers import OffreEmploiSerializer
 from ..matcher import calculer_score_matching
 from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv
-from .equipe import get_entreprise_for_user
+from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import PublicReadThrottle, FileUploadThrottle
 
 User = get_user_model()
@@ -91,9 +92,23 @@ Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNI
 def _deviner_metier_experience(titre_poste, description=""):
     """Metier (référentiel v2) d'une expérience — repli déterministe (mots-clés) utilisé
     quand l'agent de classification dédié (metier_agent, RAG+Groq) n'a rien retourné pour
-    cette expérience. Retourne un objet Metier ou None."""
-    from ..referentiel_utils import resoudre_metier_depuis_texte
-    return resoudre_metier_depuis_texte(titre_poste, description)
+    cette expérience.
+
+    Réutilise le scoring pondéré de `domaine_agent._candidats_pour_experience` (titre
+    pesé plus fort que la description, mots génériques filtrés) plutôt que l'ancien
+    `resoudre_metier_depuis_texte` (fréquence brute par `icontains`, sans pondération) —
+    ce dernier produisait des métiers aberrants sur des intitulés RH réels ("Cheffe de
+    Département Administration des Ressources Humaines" résolu en "Hygiène Sécurité
+    Environnement industriels") car des mots courants comme "administration"/"gestion"
+    noient le signal parmi des centaines d'appellations sans rapport une fois le titre
+    et la description mélangés sans poids. Retourne un objet Metier ou None."""
+    from ..domaine_agent import _candidats_pour_experience
+    from ..models import Metier
+    candidats = _candidats_pour_experience(titre_poste, description, limite=1)
+    if not candidats:
+        return None
+    metier_id = candidats[0][1]
+    return Metier.objects.filter(pk=metier_id).first()
 
 
 class GroqThrottle(UserRateThrottle):
@@ -165,6 +180,40 @@ class OffresRecommandeesAPIView(APIView):
         return Response(offres_scorees, status=status.HTTP_200_OK)
 
 
+def _journaliser_parsing(user, result, cv_name, debut, stats_metier=None, code_erreur=''):
+    """Enregistre le parsing dans le journal de qualité (compteurs uniquement, jamais le contenu du CV).
+    Ne doit JAMAIS faire échouer le parsing : toute erreur ici est avalée. Retourne l'id du journal."""
+    try:
+        from ..models import ParsingCV
+        from ..cv_parser import PARSER_VERSION
+        result = result or {}
+        stats_metier = stats_metier or {'ia': 0, 'repli': 0, 'aucun': 0}
+        formations = [f for f in result.get('formations', []) if isinstance(f, dict)]
+        champs = ['nom_complet', 'telephone', 'titre_professionnel', 'bio', 'langues', 'competences']
+        entree = ParsingCV.objects.create(
+            user=user,
+            duree_ms=int((time.monotonic() - debut) * 1000),
+            succes=not code_erreur,
+            code_erreur=code_erreur,
+            version_parser=PARSER_VERSION,
+            extension=os.path.splitext(cv_name or '')[1].lower().lstrip('.')[:6],
+            nb_experiences=len(result.get('experiences') or []),
+            nb_formations=len(formations),
+            nb_competences=len(result.get('competences_niveaux') or {}),
+            nb_langues=len([l for l in str(result.get('langues') or '').split(',') if l.strip()]),
+            champs_vides=[c for c in champs if not result.get(c)],
+            nb_exp_metier_ia=stats_metier['ia'],
+            nb_exp_metier_repli=stats_metier['repli'],
+            nb_exp_sans_metier=stats_metier['aucun'],
+            nb_formations_sans_diplome_ref=sum(1 for f in formations if not f.get('diplome_ref')),
+            source_competences=result.get('competences_source', ''),
+        )
+        return entree.id
+    except Exception:
+        logger.warning("Journal de parsing CV non enregistré", exc_info=True)
+        return None
+
+
 class ParserCVAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
@@ -217,7 +266,14 @@ class ParserCVAPIView(APIView):
                     for chunk in f.chunks():
                         tmp_file.write(chunk)
             tmp_file.close()
+            debut_parsing = time.monotonic()
             result = parse_cv(tmp_file.name, cv_name)
+            if result.get('success') is False:
+                # Échec du parsing : journalisé (scanné vs IA indisponible/limite de débit), réponse inchangée.
+                code = 'PDF_SCANNE' if 'scann' in str(result.get('error', '')).lower() else 'IA_INDISPONIBLE'
+                result['quota_ia'] = quota_info
+                result['parsing_id'] = _journaliser_parsing(request.user, {}, cv_name, debut_parsing, code_erreur=code)
+                return Response(result, status=status.HTTP_200_OK)
             experiences = result.get('experiences', [])
             from ..domaine_agent import classifier_metiers_experiences, SPECIALITE_INDEX
             from ..models import Metier
@@ -227,6 +283,7 @@ class ParserCVAPIView(APIView):
             metiers_par_id = {
                 m.id: m.libelle for m in Metier.objects.filter(pk__in=set(classifications.values()))
             }
+            stats_metier = {'ia': 0, 'repli': 0, 'aucun': 0}
             for i, exp in enumerate(experiences):
                 if not isinstance(exp, dict):
                     continue
@@ -234,10 +291,12 @@ class ParserCVAPIView(APIView):
                 if metier_id:
                     exp['metier'] = metier_id
                     exp['metier_libelle'] = metiers_par_id.get(metier_id)
+                    stats_metier['ia'] += 1
                 else:
                     metier = _deviner_metier_experience(exp.get('titre_poste'), exp.get('description'))
                     exp['metier'] = metier.id if metier else None
                     exp['metier_libelle'] = metier.libelle if metier else None
+                    stats_metier['repli' if metier else 'aucun'] += 1
             if SPECIALITE_INDEX in classifications:
                 result['metier'] = classifications[SPECIALITE_INDEX]
                 result['metier_libelle'] = metiers_par_id.get(classifications[SPECIALITE_INDEX])
@@ -252,6 +311,9 @@ class ParserCVAPIView(APIView):
                 f['specialite_ref'] = specialite.id if specialite else None
                 f['specialite_ref_libelle'] = specialite.libelle if specialite else None
             result['quota_ia'] = quota_info
+            result['parsing_id'] = _journaliser_parsing(
+                request.user, result, cv_name, debut_parsing, stats_metier,
+            )
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -336,8 +398,6 @@ class AnalyseGroqRecruteurAPIView(APIView):
     throttle_classes = [GroqThrottle]
 
     def post(self, request, candidature_id):
-        if request.user.role != 'RECRUTEUR':
-            return Response({'error': 'Accès refusé.'}, status=403)
         from ..models import AIConfig
         ai_config = AIConfig.get_solo()
         if not ai_config.analyse_recruteur_actif:
@@ -350,6 +410,11 @@ class AnalyseGroqRecruteurAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise or candidature.offre.entreprise != entreprise:
             return Response({'error': 'Non autorisé.'}, status=403)
+        # Contrôle par appartenance à l'entreprise et rôle d'équipe (et non `user.role`, qui
+        # écartait à tort les membres d'équipe dont le compte est de type CANDIDAT). L'analyse
+        # consomme le quota du palier : un membre « Invité » (lecture seule) ne peut pas la lancer.
+        if get_membre_role(request.user, entreprise) not in ('UTILISATEUR', 'ADMIN', 'PROPRIETAIRE'):
+            return Response({'error': 'Action non autorisée pour votre rôle.'}, status=403)
 
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
         ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')

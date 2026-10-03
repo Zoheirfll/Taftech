@@ -882,7 +882,6 @@ const AdminOffres = () => {
               rows="4"
               value={motifRejet}
               onChange={(e) => setMotifRejet(e.target.value)}
-              placeholder="Ex: Le titre n'est pas clair ou le salaire est manquant..."
               className={inputClass + " resize-none mb-4"}
             />
             <div className="flex gap-3">

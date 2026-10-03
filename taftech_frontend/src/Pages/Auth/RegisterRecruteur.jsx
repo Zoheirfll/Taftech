@@ -301,7 +301,6 @@ const RegisterRecruteur = () => {
                     type="text"
                     name="registre_commerce" aria-invalid={!!fieldErrors.registre_commerce} aria-describedby={fieldErrors.registre_commerce ? "err-registre_commerce" : undefined}
                     required
-                    placeholder="Ex : 1234567B89"
                     onChange={handleChange}
                     className={inputClass}
                   />
@@ -381,7 +380,6 @@ const RegisterRecruteur = () => {
                   maxLength="6"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="______"
                   className={`w-48 mx-auto block text-center text-2xl tracking-[0.5em] px-4 py-3 ${tw.inputColorsTeal} rounded-xl outline-none font-bold ${tw.textStrong}`}
                   required
                 />

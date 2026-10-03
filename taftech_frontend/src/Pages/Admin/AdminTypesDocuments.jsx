@@ -164,7 +164,7 @@ const AdminTypesDocuments = () => {
             <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé *</label>
-                <input required className={inputClass} placeholder="Ex: Diplôme" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+                <input required className={inputClass} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Ordre d'affichage</label>

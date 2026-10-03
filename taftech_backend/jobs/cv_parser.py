@@ -386,6 +386,80 @@ def extract_competences(text_section):
     return ", ".join(result)
 
 
+_PUCES = "•●▪■⁃–—-*>"
+_RE_TITRE_COMPETENCES = re.compile(r"^\s*comp[eé]tences?(\s+cl[eé]s?)?\s*:?\s*$", re.IGNORECASE)
+_RE_TITRE_OUTILS = re.compile(r"^\s*(informatique|outils?|logiciels?|bureautique)\b[^:]{0,30}$", re.IGNORECASE)
+
+
+def _est_titre_de_section(ligne):
+    """Ligne d'en-tete de section : tout en majuscules, sans puce, courte (ex: 'INFORMATIQUE & LANGUES')."""
+    l = ligne.strip()
+    lettres = [c for c in l if c.isalpha()]
+    return (len(lettres) >= 4 and l == l.upper() and l[0] not in _PUCES and len(l.split()) <= 6)
+
+
+def _raccourcir_competence(item):
+    item = re.split(r"\s*:\s*", item, maxsplit=1)[0]
+    item = re.split(r"\s+(?:dans|pour|afin)\s+", item, maxsplit=1)[0]
+    mots = item.split()
+    return " ".join(mots[:6]) if len(mots) > 8 else item
+
+
+def extraire_competences_par_ligne(text):
+    """Competences lues LIGNE PAR LIGNE dans un bloc dedie du CV (titre 'COMPETENCES [CLES]' suivi
+    de puces, puis eventuel bloc 'INFORMATIQUE'/'Outils' avec 'Libelle : a, b, c'). Deterministe :
+    le modele IA ne respecte pas toujours la consigne 'une competence par ligne'. Retourne [] si
+    aucun bloc identifiable (l'extraction IA reste alors la seule source)."""
+    lignes = [l.rstrip() for l in (text or "").splitlines()]
+    items = []
+    i = 0
+    while i < len(lignes):
+        l = lignes[i]
+        if _RE_TITRE_COMPETENCES.match(l) and (_est_titre_de_section(l) or l.strip().lower().startswith("comp")):
+            i += 1
+            courant = None
+            while i < len(lignes) and not _est_titre_de_section(lignes[i]):
+                brut = lignes[i].strip()
+                i += 1
+                if not brut:
+                    continue
+                if brut[0] in _PUCES:
+                    if courant:
+                        items.append(courant)
+                    courant = brut.lstrip(_PUCES + " ").strip()
+                elif courant:
+                    courant += " " + brut
+            if courant:
+                items.append(courant)
+            continue
+        if _RE_TITRE_OUTILS.match(l) and _est_titre_de_section(l):
+            i += 1
+            while i < len(lignes) and not _est_titre_de_section(lignes[i]):
+                brut = lignes[i].strip()
+                i += 1
+                if ":" not in brut or brut.lower().startswith(("langue", "language")):
+                    continue
+                for outil in brut.split(":", 1)[1].split(","):
+                    outil = re.sub(r"\s*\([^)]*\)", "", outil).strip(" .;")
+                    # Phrase coupée par un retour à la ligne ("logiciels développés en / interne") : ignorée.
+                    if outil and len(outil.split()) <= 4 and outil.split()[-1].lower() not in ("en", "de", "du", "des", "et", "à", "la", "le", "les", "d'"):
+                        items.append(outil)
+            continue
+        i += 1
+    resultat, vus = [], set()
+    for it in items:
+        # Puce longue (description de projet) : un seul intitulé court, jamais coupée sur ses virgules.
+        morceaux = [_raccourcir_competence(it)] if (":" in it or len(it.split()) > 8) else re.split(r"\s*,\s*", it)
+        for morceau in morceaux:
+            morceau = _raccourcir_competence(morceau.strip())
+            cle = morceau.lower()
+            if morceau and len(morceau) > 1 and cle not in vus:
+                vus.add(cle)
+                resultat.append(morceau)
+    return resultat if len(resultat) >= 3 else []
+
+
+
 def extract_langues(text_section):
     if not text_section:
         return ""
@@ -875,10 +949,11 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
 - email : l'adresse email du candidat si présente dans le texte. Sinon null.
 - competences : TOUTES les compétences techniques (langages, outils, logiciels, méthodologies, soft skills), séparées par virgules. Chaque compétence est un INTITULÉ COURT (1 à 3 mots, ex: "Python", "Kaizen", "Gestion de la paie", "Leadership", "Ergonomie") — comme une étiquette dans un CV, JAMAIS une phrase complète copiée d'une expérience professionnelle.
   ⚠️ EXCLUS SYSTÉMATIQUEMENT de "competences" : les montants ("30 M$", "50 000 DA"), les pourcentages ("50 %"), les dates ou plages d'années ("2019-2023"), les effectifs ("500 employés"), les chiffres isolés ("400", "30"), les phrases complètes, et toute mission/description d'expérience recopiée telle quelle. Ce sont des données d'expérience, jamais des compétences.
-  Si une mission contient une ou plusieurs compétences identifiables, DÉCOMPOSE-la en plusieurs intitulés courts normalisés au lieu de la recopier — n'écris jamais la phrase entière.
-  Exemple : la mission "Pilotage des observations de poste pour améliorer qualité, ergonomie et sécurité" ne devient PAS une compétence telle quelle, mais donne par exemple : "Ergonomie", "Amélioration continue", "Analyse des risques", "Sécurité industrielle".
+  SI LE CV A UNE SECTION DÉDIÉE (« Compétences », « Compétences clés », « Informatique », « Outils »…) : prends UNE compétence PAR LIGNE/puce de cette section, telle qu'écrite (garde un « & » à l'intérieur d'une ligne : « Relations sociales & dialogue syndical » = UNE seule compétence). Ajoute les outils/logiciels cités (ex: « Excel avancé », « Navision », « HR Access », « Word ») comme compétences séparées. Une ligne longue qui décrit un projet (plus de 8 mots) se résume en un intitulé court. N'AJOUTE AUCUNE compétence déduite des expériences professionnelles quand cette section existe.
+  SEULEMENT SI le CV n'a aucune section de compétences : déduis 5 à 10 intitulés courts des missions (jamais la phrase recopiée). Exemple : la mission "Pilotage des observations de poste pour améliorer qualité, ergonomie et sécurité" donne par exemple : "Ergonomie", "Amélioration continue", "Analyse des risques".
+  Ne mets pas de virgule à l'intérieur d'un intitulé (la virgule sépare les compétences).
   Si absent : null.
-- competences_niveaux : pour CHAQUE compétence listée ci-dessus, estime un niveau de maîtrise d'après le contexte du CV (ancienneté, nombre de mentions, poste occupé, mots comme "maîtrise"/"notions"/"expert"). Format "Compétence:Niveau" séparés par virgules, niveau parmi EXACTEMENT : "Débutant", "Intermédiaire", "Avancé", "Confirmé". Si le contexte ne permet vraiment aucune estimation : "Intermédiaire" par défaut. Si absent : null.
+- competences_niveaux : pour CHAQUE compétence listée ci-dessus, estime un niveau de maîtrise d'après le contexte du CV (ancienneté, nombre de mentions, poste occupé, mots comme "maîtrise"/"notions"/"expert"). Format "Compétence:Niveau" séparés par virgules, niveau parmi EXACTEMENT : "Débutant", "Intermédiaire", "Avancé", "Confirmé". Ne mets "Confirmé" que si le CV le justifie clairement (plusieurs années sur ce sujet, mention explicite « expert »/« maîtrise ») ; pour une simple liste de compétences sans précision : "Intermédiaire". Si absent : null.
 - langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
 - linkedin : URL complète du profil LinkedIn si présente. Sinon null.
 - github : URL complète du profil GitHub si présente. Sinon null.
@@ -948,7 +1023,7 @@ def _call_groq(prompt, max_tokens=3000):
         content = call_ai(
             [{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.1,
+            temperature=0,  # extraction/classification : mêmes entrées => mêmes sorties
         )
         return content.strip() if content else None
     except Exception as e:
@@ -1079,8 +1154,10 @@ _NIVEAU_LABEL_VERS_CODE = {
 }
 
 
-_MAX_MOTS_COMPETENCE = 5
-_MAX_CHARS_COMPETENCE = 45
+PARSER_VERSION = "parser-2026.09.29"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
+_MAX_MOTS_COMPETENCE = 8
+_MAX_MOTS_COMPETENCE_LIGNE = 8  # au-delà, un libellé composé est éclaté (voir _eclater_competence_composee)
+_MAX_CHARS_COMPETENCE = 70
 _RE_SEPARATEUR_COMPOSE = re.compile(r'\s*(?:&|/|\bet\b)\s*', re.IGNORECASE)
 
 
@@ -1089,6 +1166,11 @@ def _eclater_competence_composee(label):
     sociales & dialogue syndical", "Reporting RH & indicateurs sociaux") est éclatée en
     plusieurs intitulés distincts au lieu d'être gardée comme un seul bloc composé qui
     dépasserait la longueur/le nombre de mots attendu d'une vraie compétence."""
+    # Une ligne courte de la section "Compétences" du CV reste UNE compétence, telle qu'écrite
+    # ("Administration du personnel & conformité réglementaire") : on n'éclate que les
+    # libellés trop longs pour être un intitulé.
+    if len(label.split()) <= _MAX_MOTS_COMPETENCE_LIGNE:
+        return [label]
     morceaux = [m.strip() for m in _RE_SEPARATEUR_COMPOSE.split(label) if m.strip()]
     return morceaux if len(morceaux) > 1 else [label]
 
@@ -1473,7 +1555,14 @@ def parse_cv(file_path, file_name):
     # projets") vers un seul libellé canonique avant de proposer les compétences au
     # candidat. Reconstruit "competences" (texte) depuis le dict normalisé pour que les
     # deux champs restent cohérents entre eux.
-    competences_niveaux_normalisees = _normaliser_avec_referentiel(ai_data.get("competences_niveaux") or {})
+    competences_niveaux_ia = ai_data.get("competences_niveaux") or {}
+    lignes_cv = extraire_competences_par_ligne(text)
+    if lignes_cv:
+        # Bloc "Competences" identifie dans le CV : il fait foi (une competence par ligne),
+        # l'IA ne sert plus qu'a proposer un niveau quand elle a garde le meme intitule.
+        niveaux_ia_bas = {k.lower(): v for k, v in competences_niveaux_ia.items()}
+        competences_niveaux_ia = {c: niveaux_ia_bas.get(c.lower(), "INTERMEDIAIRE") for c in lignes_cv}
+    competences_niveaux_normalisees = _normaliser_avec_referentiel(competences_niveaux_ia)
     competences_texte = ", ".join(competences_niveaux_normalisees.keys()) or None
 
     # "Niveau d'études" référentiel v2 (ProfilCandidat.diplome_ref/niveau_scolaire_ref,
@@ -1517,6 +1606,7 @@ def parse_cv(file_path, file_name):
         "titre_professionnel": ai_data.get("titre_professionnel"),
         "competences": competences_texte if competences_niveaux_normalisees else ai_data.get("competences"),
         "competences_niveaux": competences_niveaux_normalisees,
+        "competences_source": "SECTION" if lignes_cv else "IA",
         "langues": ai_data.get("langues"),
         "linkedin": ai_data.get("linkedin"),
         "github": ai_data.get("github"),

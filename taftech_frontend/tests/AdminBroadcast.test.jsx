@@ -45,7 +45,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     );
 
     // ✅ CORRECTION : On cherche le VRAI placeholder du composant
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
+    fireEvent.change(document.querySelector('input[type="text"]'), {
       target: { value: "Nouvelle mise à jour" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Rédigez votre email/i), {
@@ -75,7 +75,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     );
 
     // ✅ CORRECTION
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
+    fireEvent.change(document.querySelector('input[type="text"]'), {
       target: { value: "Test Annulation" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Rédigez votre email/i), {
@@ -100,7 +100,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
     );
 
     // ✅ CORRECTION
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Les 5 compétences/i), {
+    fireEvent.change(document.querySelector('input[type="text"]'), {
       target: { value: "Crash Test" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Rédigez votre email/i), {

@@ -107,8 +107,8 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     await waitFor(() => screen.getByText(/Ajouter une compétence/i));
     fireEvent.click(screen.getByText(/Ajouter une compétence/i));
 
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Gestion de projet/i), { target: { value: "Nouvelle" } });
-    const form = screen.getByPlaceholderText(/Ex: Gestion de projet/i).closest("form");
+    fireEvent.change(document.querySelector("form input"), { target: { value: "Nouvelle" } });
+    const form = document.querySelector("form input").closest("form");
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -168,7 +168,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     await waitFor(() => screen.getByText(/Ajouter une compétence/i));
     fireEvent.click(screen.getByText(/Ajouter une compétence/i));
 
-    const form = screen.getByPlaceholderText(/Ex: Gestion de projet/i).closest("form");
+    const form = document.querySelector("form input").closest("form");
     fireEvent.submit(form);
 
     await waitFor(() => {

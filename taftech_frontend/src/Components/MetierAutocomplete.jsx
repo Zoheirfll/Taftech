@@ -13,7 +13,7 @@ import { tw } from "../theme";
  *  - onSelect({ metier_id, metier_libelle, appellation_libelle }): appelé au choix d'une suggestion
  *  - placeholder
  */
-export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "Ex: Développeur web, Chargé de recrutement..." }) => {
+export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "" }) => {
   const [texte, setTexte] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
   const [ouvert, setOuvert] = useState(false);

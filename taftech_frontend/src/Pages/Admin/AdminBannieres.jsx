@@ -311,7 +311,7 @@ const AdminBannieres = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Lien (URL)</label>
-                  <input className={inputClass} value={formAnnonce.lien_url} onChange={(e) => setFormAnnonce({ ...formAnnonce, lien_url: e.target.value })} placeholder="https://..." />
+                  <input className={inputClass} value={formAnnonce.lien_url} onChange={(e) => setFormAnnonce({ ...formAnnonce, lien_url: e.target.value })} />
                 </div>
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé du lien</label>
@@ -368,7 +368,7 @@ const AdminBannieres = () => {
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Lien (URL)</label>
-                <input className={inputClass} value={formBanniere.lien_url} onChange={(e) => setFormBanniere({ ...formBanniere, lien_url: e.target.value })} placeholder="https://..." />
+                <input className={inputClass} value={formBanniere.lien_url} onChange={(e) => setFormBanniere({ ...formBanniere, lien_url: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Ordre d'affichage</label>

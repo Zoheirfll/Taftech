@@ -5,6 +5,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 
+import { nomCandidature } from "../../utils/candidatureNom";
 const STATUT_LABELS = {
   RECUE: "Reçue", EN_COURS: "En cours", PRESELECTION: "Présélection",
   ENTRETIEN: "Entretien", RETENU: "Retenu", REFUSE: "Refusé",
@@ -52,13 +53,13 @@ const CandidaturesListPage = () => {
       toutes = toutes.filter((c) => {
         const nom = c.est_rapide
           ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}`
-          : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`;
+          : nomCandidature(c);
         const email = c.est_rapide ? c.email_rapide || "" : c.candidat?.email || "";
         return nom.toLowerCase().includes(q) || email.toLowerCase().includes(q);
       });
     }
     const dir = sortConfig.dir === "asc" ? 1 : -1;
-    const nomDe = (c) => (c.est_rapide ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}` : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`).trim();
+    const nomDe = (c) => (c.est_rapide ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}` : nomCandidature(c)).trim();
     toutes.sort((a, b) => {
       const map = {
         candidat: [nomDe(a).toLowerCase(), nomDe(b).toLowerCase()],
@@ -141,7 +142,7 @@ const CandidaturesListPage = () => {
                 candidatures.map((c) => (
                   <tr key={c.id} onClick={() => navigate(`/dashboard/offres/${c.offre_id}`)} className={`${tw.rowHover} cursor-pointer`}>
                     <td className="px-4 py-3 text-sm font-semibold text-slate-900">
-                      {c.est_rapide ? `${c.prenom_rapide} ${c.nom_rapide}` : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`}
+                      {c.est_rapide ? `${c.prenom_rapide} ${c.nom_rapide}` : nomCandidature(c)}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">{c.offre_titre}</td>
                     <td className="px-4 py-3 text-center text-sm font-bold text-teal-700">{c.score_matching != null ? `${Math.round(c.score_matching)}%` : "—"}</td>

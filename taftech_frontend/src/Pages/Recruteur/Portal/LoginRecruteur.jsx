@@ -92,7 +92,6 @@ const LoginRecruteur = () => {
               </label>
               <input
                 type="email"
-                placeholder="votre@entreprise.com"
                 required
                 value={credentials.username}
                 onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
@@ -105,7 +104,6 @@ const LoginRecruteur = () => {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   required
                   value={credentials.password}
                   onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}

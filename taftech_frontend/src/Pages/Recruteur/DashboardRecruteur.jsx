@@ -39,9 +39,11 @@ import {
 import MiniAreaChart from "../../Components/MiniAreaChart";
 import FunnelChart from "../../Components/FunnelChart";
 import DonutChart from "../../Components/DonutChart";
+import { StatSparkline } from "../../Components/StatCharts";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 
+import { identiteCandidature } from "../../utils/candidatureNom";
 // ─── Constantes pipeline / recommandations ────────────────────────────────────
 const ACTIVITE_EMOJIS = {
   CREER_OFFRE: "📢",
@@ -358,10 +360,10 @@ const DashboardRecruteur = () => {
     const entretien = candidatures.filter((c) => ["ENTRETIEN", "RETENU"].includes(c.statut)).length;
     const retenu = candidatures.filter((c) => c.statut === "RETENU").length;
     return [
-      { label: "Candidatures reçues", count: candidatures.length, pct: 100, couleur: "#4f46e5" },
-      { label: "Présélection", count: presel, pct: Math.round((presel / total) * 100), couleur: "#6366f1" },
-      { label: "Entretiens", count: entretien, pct: Math.round((entretien / total) * 100), couleur: "#0ea5e9" },
-      { label: "Recrutements", count: retenu, pct: Math.round((retenu / total) * 100), couleur: "#10b981" },
+      { label: "Candidatures reçues", count: candidatures.length, pct: 100, couleur: "#204883" },
+      { label: "Présélection", count: presel, pct: Math.round((presel / total) * 100), couleur: "#2563eb" },
+      { label: "Entretiens", count: entretien, pct: Math.round((entretien / total) * 100), couleur: "#ea580c" },
+      { label: "Recrutements", count: retenu, pct: Math.round((retenu / total) * 100), couleur: "#059669" },
     ];
   })();
 
@@ -382,8 +384,8 @@ const DashboardRecruteur = () => {
     });
     const total = candidatures.length || 1;
     return [
-      { key: "SITE", label: "Site TafTech", count: counts.SITE, pct: Math.round((counts.SITE / total) * 100), couleur: "#4f46e5" },
-      { key: "CVTHEQUE", label: "CVthèque", count: counts.CVTHEQUE, pct: Math.round((counts.CVTHEQUE / total) * 100), couleur: "#0ea5e9" },
+      { key: "SITE", label: "Site TafTech", count: counts.SITE, pct: Math.round((counts.SITE / total) * 100), couleur: "#204883" },
+      { key: "CVTHEQUE", label: "CVthèque", count: counts.CVTHEQUE, pct: Math.round((counts.CVTHEQUE / total) * 100), couleur: "#3a8226" },
       { key: "AUTRE", label: "Autres", count: counts.AUTRE, pct: Math.round((counts.AUTRE / total) * 100), couleur: "#94a3b8" },
     ];
   })();
@@ -542,28 +544,33 @@ const DashboardRecruteur = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-5">
           {[
             { cle: "offres_actives", label: "Offres actives", icon: Building2 },
-            { cle: "candidatures_recues", label: "Candidatures reçues", icon: Users },
+            { cle: "candidatures_recues", label: "Candidatures reçues", icon: Users, spark: "candidatures", couleur: "#204883" },
             { cle: "candidats_entretien", label: "Candidats en entretien", icon: Calendar },
-            { cle: "recrutements", label: "Recrutements", icon: CheckCircle },
-            { cle: "taux_conversion", label: "Taux de conversion", icon: TrendingUp, suffixe: "%" },
-          ].map(({ cle, label, icon: Icon, suffixe }) => {
+            { cle: "recrutements", label: "Recrutements", icon: CheckCircle, spark: "recrutements", couleur: "#059669" },
+            { cle: "taux_conversion", label: "Taux de conversion", icon: TrendingUp, suffixe: "%", spark: "tauxConversion", couleur: "#3a8226" },
+          ].map(({ cle, label, icon: Icon, suffixe, spark, couleur }) => {
             const kpi = kpis[cle];
             if (!kpi) return null;
             const variation = kpi.variation_pct;
             return (
-              <div key={cle} className={`${tw.cardColors} rounded-2xl p-4`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-xs ${tw.textMuted}`}>{label}</p>
-                    <p className={`text-2xl font-bold ${tw.textStrong}`}>{kpi.valeur}{suffixe || ""}</p>
-                    {variation !== null && variation !== undefined && (
-                      <p className={`text-xs font-medium ${variation >= 0 ? tw.scoreTextSuccess : tw.textRed400}`}>
-                        {variation >= 0 ? "↗" : "↘"} {Math.abs(variation)}% vs période précédente
-                      </p>
-                    )}
-                  </div>
-                  <Icon size={18} className={tw.textMuted} />
+              <div key={cle} className={`${tw.cardColors} rounded-2xl p-4 flex flex-col gap-1.5 overflow-hidden`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">{label}</p>
+                  <span className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                    <Icon size={15} className="text-teal-700" />
+                  </span>
                 </div>
+                <p className={`text-3xl font-extrabold tabular-nums ${tw.textStrong}`}>{kpi.valeur}{suffixe || ""}</p>
+                {variation !== null && variation !== undefined ? (
+                  <p className={`text-xs font-semibold ${variation >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                    {variation >= 0 ? "↗" : "↘"} {Math.abs(variation)}% vs période précédente
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500">Pas de période comparable</p>
+                )}
+                {spark && evolution.length >= 2 && (
+                  <StatSparkline data={evolution} dataKey={spark} color={couleur} />
+                )}
               </div>
             );
           })}
@@ -650,7 +657,7 @@ const DashboardRecruteur = () => {
                   chartType={chartType}
                   exportTitle="evolution-candidatures"
                   series={[
-                    { key: "candidatures", color: "#4f46e5", label: "Candidatures reçues" },
+                    { key: "candidatures", color: "#204883", label: "Candidatures reçues" },
                     { key: "recrutements", color: "#059669", label: "Recrutements" },
                   ]}
                   compareValues={evolutionPrevValues}
@@ -696,7 +703,8 @@ const DashboardRecruteur = () => {
                   <div className="grid grid-cols-1 gap-3">
                     {candidatsRecommandesTous.slice(0, 3).map((cand) => {
                       const score = Math.round(parseFloat(cand.score_matching));
-                      const nomAffiche = `${cand.candidat.first_name} ${(cand.candidat.last_name || "").slice(0, 1)}.`
+                      const identite = identiteCandidature(cand);
+                      const nomAffiche = `${identite.first_name} ${(identite.last_name || "").slice(0, 1)}.`
                         .trim();
                       const tags = (cand.candidat.competences || "").split(",").map((c) => c.trim()).filter(Boolean).slice(0, 3);
                       return (
@@ -929,7 +937,6 @@ const DashboardRecruteur = () => {
             type="text"
             value={titreIA}
             onChange={(e) => setTitreIA(e.target.value)}
-            placeholder="Ex: Ingénieur qualité avec 5 ans d'expérience"
             disabled={!palierActif}
             className={`w-full px-3 py-2 rounded-lg text-sm mb-3 ${tw.inputColorsWhite} disabled:opacity-50`}
           />

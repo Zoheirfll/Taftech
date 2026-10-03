@@ -120,6 +120,12 @@ class DashboardRecruteurAPIView(APIView):
     def get(self, request):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
+            from .equipe import membre_bloque_par_palier
+            if membre_bloque_par_palier(request.user):
+                return Response(
+                    {"error": "L'abonnement de votre entreprise a expiré ou n'inclut plus la gestion d'équipe. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response({"error": "Profil entreprise introuvable."}, status=status.HTTP_404_NOT_FOUND)
         mon_role = get_membre_role(request.user, entreprise)
         from ..paliers_utils import get_palier_actif

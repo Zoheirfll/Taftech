@@ -122,7 +122,7 @@ class EquipeAuditLogAPIViewTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@audit.dz", "owner_audit")
-        self.entreprise = _make_entreprise(self.owner, nom="AuditCorp", rc="RC_AUDIT")
+        self.entreprise = _make_entreprise(self.owner, nom="AuditCorp", rc="RC_AUDIT", premium=True)
 
         # Membre ADMIN
         self.admin_user = _make_recruteur("admin@audit.dz", "admin_audit")
@@ -211,7 +211,7 @@ class EquipeListTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@equipe.dz", "owner_equipe")
-        self.entreprise = _make_entreprise(self.owner, nom="EquipeCorp", rc="RC_EQ")
+        self.entreprise = _make_entreprise(self.owner, nom="EquipeCorp", rc="RC_EQ", premium=True)
 
         self.membre = _make_recruteur("membre@equipe.dz", "membre_equipe")
         MembreEquipe.objects.create(user=self.membre, entreprise=self.entreprise, role="UTILISATEUR")
@@ -249,7 +249,7 @@ class EquipePatchRoleTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@patch.dz", "owner_patch")
-        self.entreprise = _make_entreprise(self.owner, nom="PatchCorp", rc="RC_PATCH")
+        self.entreprise = _make_entreprise(self.owner, nom="PatchCorp", rc="RC_PATCH", premium=True)
 
         self.membre = _make_recruteur("m@patch.dz", "m_patch")
         self.mem_obj = MembreEquipe.objects.create(
@@ -305,7 +305,7 @@ class EquipeDeleteMembreTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@del.dz", "owner_del")
-        self.entreprise = _make_entreprise(self.owner, nom="DelCorp", rc="RC_DEL")
+        self.entreprise = _make_entreprise(self.owner, nom="DelCorp", rc="RC_DEL", premium=True)
 
         self.target = _make_recruteur("target@del.dz", "target_del")
         self.target_obj = MembreEquipe.objects.create(
@@ -458,7 +458,7 @@ class AnnulerInvitationTests(APITestCase):
 
     def setUp(self):
         self.owner = _make_recruteur("owner@cancel.dz", "owner_cancel")
-        self.entreprise = _make_entreprise(self.owner, nom="CancelCorp", rc="RC_CANCEL")
+        self.entreprise = _make_entreprise(self.owner, nom="CancelCorp", rc="RC_CANCEL", premium=True)
 
         self.invitation = InvitationEquipe.objects.create(
             entreprise=self.entreprise,

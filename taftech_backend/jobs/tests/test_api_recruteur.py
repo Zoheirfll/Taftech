@@ -33,7 +33,9 @@ class ApiRecruteurTest(APITestCase):
         """ Happy Path : Le recruteur A crée une offre """
         url = reverse('creer-offre')
         self.client.force_authenticate(user=self.user_rh_a)
-        
+        # setUp crée déjà une offre (EN_ATTENTE, comptée dans la limite) : palier avec place libre.
+        AbonnementEntreprise.objects.create(entreprise=self.entreprise_a, palier=_business_palier())
+
         payload = {
             "titre": "Développeur Front",
             "wilaya": "31 - Oran",

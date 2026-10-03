@@ -52,7 +52,6 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
         <input
           value={nouvelleCompetence}
           onChange={(e) => setNouvelleCompetence(e.target.value)}
-          placeholder="Ex: React"
           className={`${tw.authInput} flex-1`}
         />
         <div className="w-40 shrink-0">

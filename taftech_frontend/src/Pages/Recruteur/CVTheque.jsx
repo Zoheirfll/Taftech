@@ -745,7 +745,7 @@ const CVTheque = () => {
               type="text"
               value={langues}
               onChange={(e) => { setLangues(e.target.value); setCurrentPage(1); }}
-              placeholder={rechercheAvancee ? "Langue (ex: Anglais)" : "Langue (palier Business+)"}
+              placeholder={rechercheAvancee ? "Langue" : "Langue (palier Business+)"}
               disabled={!rechercheAvancee}
               title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
               className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -754,7 +754,7 @@ const CVTheque = () => {
               type="text"
               value={competencesFiltre}
               onChange={(e) => { setCompetencesFiltre(e.target.value); setCurrentPage(1); }}
-              placeholder={rechercheAvancee ? "Compétence (ex: React)" : "Compétence (palier Business+)"}
+              placeholder={rechercheAvancee ? "Compétence" : "Compétence (palier Business+)"}
               disabled={!rechercheAvancee}
               title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
               className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}

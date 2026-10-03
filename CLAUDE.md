@@ -2,6 +2,59 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
+## 🆕 SESSION 03/10/2026 — Placeholders « exemple » retirés + menu mobile candidat réorganisé
+
+- **Placeholders** : 65 placeholders « exemple » retirés (« Ex : … », `votre@email…`, `https://…`, `0555…`, `DZ`, `••••`, `____`, gabarits « Bonjour {prenom} », puces d'exemple de CreateJob, « (ex: Anglais) »), car ils donnaient un air « généré par IA ». Conservés : placeholders fonctionnels (« Rechercher… », « Sélectionnez… », « Illimité », « Tapez une compétence puis Entrée… », consignes comme « 8 caractères minimum »). Les tests qui ciblaient ces placeholders utilisent désormais des sélecteurs structurels (`input[type="email"]`, `input[maxlength="6"]`, `input[name="titre"]`…). **Règle : ne plus ajouter de placeholder d'exemple ; le libellé visible suffit.**
+- **Menu mobile candidat** (`Navbar.jsx`) : liste plate remplacée par des sections « Explorer » / « Mon espace » / « Aide et compte » (recruteur : « Espace recruteur »). Liens déjà présents dans la bottom nav toujours masqués sous 768 px.
+- `StatistiquesPage.test.jsx` réparé (environnement jsdom manquant, pas de `cleanup`, textes multiples).
+- **ngrok** : page blanche sur Chrome mobile mais pas Samsung Internet = très probablement l'avertissement ngrok gratuit + mode dev Vite (centaines de modules). Tester avec `npm run build` + `vite preview --host` plutôt que `npm run dev`. Le proxy `/api` de `vite.config.js` vise le port **8001** (vérifier que Django tourne bien dessus).
+
+---
+
+## 🆕 SESSION 29/09/2026 (suite) — Refonte de la page Statistiques recruteur (inspirée de SOMIZ)
+
+**Demande** : la page `/statistiques` (recruteur) était trop pauvre (4 KPI, 1 courbe, barres). Inspirée de `SOMIZ/frontend/src/pages/Statistiques.jsx` (KPI + variation + sparkline, filtres de période, donuts/histogramme recharts, export, impression).
+
+**Réalisé, 100 % côté frontend, aucun endpoint ajouté** (tout est calculé sur `getDashboard().offres[].candidatures[]`, déjà scopé à l'entreprise) :
+- `Components/StatCharts.jsx` (nouveau, recharts déjà en dépendance) : `StatAreaChart`, `StatDonutChart` (total au centre, légende scrollable), `StatHistogram`, `StatSparkline`, `ChartTooltip`.
+- `Pages/Recruteur/StatistiquesPage.jsx` réécrite : filtres période (30 j / 3 m / 6 m / 12 m / Tout + dates libres) et filtre par offre ; 6 KPI (candidatures, entretiens, recrutements, taux de conversion, score moyen, offres actives) avec **variation vs période précédente de même durée** (masquée pour « Tout », non comparable) et sparkline ; évolution 3 séries à granularité automatique (jour ≤ 35 j, semaine ≤ 200 j, mois au-delà) ; entonnoir cumulatif ; donuts statut / source / type de contrat ; candidatures par wilaya de l'offre ; tableau « Performance par offre » ; export CSV (`;` + BOM UTF-8) et impression (`window.print`, contrôles en `print:hidden`).
+- **Choix assumé** : « entretien » = `date_entretien` renseignée OU statut ENTRETIEN (un RETENU sans entretien tracé n'est pas compté). Les statuts sont l'état **actuel** de la candidature (aucun historique de transitions n'existe), donc pas de « délai moyen de traitement ».
+- **Palier Business+** : l'appel `getStatistiquesAvancees()` est conservé pour le contrôle d'accès serveur (403 `PALIER_INSUFFISANT`), mais l'histogramme de score est désormais calculé sur la période filtrée (l'endpoint global ne filtre pas par date). Les scores étant déjà exposés par le dashboard à tous les paliers, le gating reste un gating d'affichage cohérent avec l'existant, pas une nouvelle protection.
+- Test : `tests/StatistiquesPage.test.jsx`.
+
+## 🆕 SESSION 29/09/2026 — Corrections du parser CV + page admin « Qualité IA »
+
+**Demande** : améliorer le parser et le matching au fil de l'eau à partir de l'usage réel, avec de la visibilité dans l'admin. Périmètre validé par l'utilisateur : journal de parsing + corrections des candidats + file de correction + suivi du matching.
+
+**Bugs du parser corrigés (CV réel de test « Mme TABTI Samira »)** :
+- **Métier des expériences faux** (`jobs/domaine_agent.py::_candidats_pour_experience`) : le pool d'appellations était plafonné à `[:500]` dans un ordre arbitraire ; avec une longue description, les appellations RH étaient coupées avant notation et l'IA ne voyait que des « Chef de département » industriels (« Encadrement d'exploitation gisement d'hydrocarbures »). Plafond retiré. Le repli déterministe (`_deviner_metier_experience`, `jobs/views/ia.py`) réutilise désormais ce même scoring pondéré (titre > description, mots génériques filtrés) au lieu de `resoudre_metier_depuis_texte` (fréquence brute, résultats aberrants). `resoudre_metier_depuis_texte` reste utilisée par `GenererOffreIAAPIView`.
+- **Nom/prénom** (`useOnboardingWizard.js`) : « Mme TABTI Samira » donnait Prénom « Mme ». Civilités retirées, mots en MAJUSCULES = nom, reste = prénom.
+- **Diplôme/spécialité** (`jobs/referentiel_utils.py`) : une spécialité n'est acceptée que si ≥ 2 mots significatifs correspondent (avant : 1 seul mot, « Sciences de Gestion… » → « Sciences De La Mer ») ; singularisation symétrique du féminin (« internationales » ↔ « international ») ; à score égal, préférence au libellé le plus couvert ; indice « professionnalisant/professionnel » → variante `-P` ; formation courte (« Formation en… », « Stage… ») sans mot-diplôme → `D-ATTEST` (Attestation de formation) ; repli sur les variantes de la même famille (`D-MAS-*`, `D-LIC-*`) quand la variante exacte n'a aucune spécialité attestée (« Master professionnel » n'a pas de spécialité RH, seul « Master académique » en a).
+- **Compétences** (`jobs/cv_parser.py::extraire_competences_par_ligne`) : le modèle ignorait parfois la consigne « une compétence par ligne » même à température 0. Le bloc « COMPÉTENCES [CLÉS] » (puces) et le bloc « INFORMATIQUE / Outils » (`Libellé : a, b, c`) sont désormais lus **directement dans le texte** ; l'IA ne sert plus qu'à proposer un niveau. Sans bloc identifiable (< 3 éléments), extraction IA inchangée. Niveau par défaut « Intermédiaire » (plus de « Confirmé » systématique). `_call_groq` passe à `temperature=0`. `AIConfig.parser_cv_prompt` resynchronisé en base de dev (piège habituel : la valeur en base prime sur la constante du code).
+- **Erreurs système admin** : `Navbar.jsx` appelait le profil candidat pour un ADMIN (aucun profil) à chaque page → 3 517 erreurs `ECHEC_GET_PROFIL_API`/`ECHEC_CHARGEMENT_PHOTO_NAVBAR`. Appel limité au rôle CANDIDAT.
+- **Paliers** : `utils/paliersAffichage.js` = source unique de l'affichage (tableau admin, cartes et comparatif de `AbonnementsPage.jsx`), calculée depuis les champs du modèle `Palier` (accès, quotas IA génération d'offre / analyse candidature, support, remise annuelle « -X% »). Vide = illimité, 0 = « Non inclus ».
+
+**Qualité IA (nouveau)** :
+- Modèles `ParsingCV` (compteurs et indicateurs de résolution par CV analysé, **jamais le contenu du CV**) et `CorrectionParsing` (paire proposé → choisi sur métier/diplôme/spécialité ; `texte_source` = intitulé du poste ou du diplôme, 200 caractères max, jamais l'employeur ni les missions), migration `0128`. `ParsingCV.user` passe à NULL à la suppression du compte. Commande `purger_qualite_ia` (12 mois, `--mois`, `--dry-run`).
+- `ParserCVAPIView` journalise chaque analyse (succès, `IA_INDISPONIBLE`, `PDF_SCANNE`) via `_journaliser_parsing` (n'échoue jamais le parsing) et renvoie `parsing_id`. `PARSER_VERSION` (`cv_parser.py`) est à incrémenter à chaque changement de prompt/logique pour comparer les versions.
+- `POST jobs/parsing/<id>/corrections/` (candidat propriétaire uniquement, `WriteActionThrottle`, 30 corrections max, doublons et non-changements ignorés). L'assistant (`useOnboardingWizard.js`) envoie les corrections à l'enregistrement des expériences et des formations (best-effort).
+- Admin (`jobs/views/qualite_ia.py`, `IsAdminRole`) : `/admin-taftech/qualite-ia` (`AdminQualiteIA.jsx`, 3 onglets). Parser : taux de réussite, % expériences sans métier / par repli, % formations sans diplôme, erreurs, champs vides, courbe hebdomadaire, versions. Corrections : paires triées par fréquence + bouton « Ajouter l'appellation » (crée une `Appellation` `type_alias='correction_candidat'` et un `AuditLog`). Matching : taux de présélection/entretien/embauche par tranche de score, ≥ 80 % refusés ou non traités depuis 14 j (calculé sur `Candidature`, aucune table dédiée). Le matching n'est lisible qu'avec assez de décisions de recruteurs.
+
+**Tests** : backend `test_qualite_ia` (10) + suites voisines 66/66 ✅, frontend `AdminQualiteIA.test.jsx` (5), `AdminPaliers`, Onboarding/ProfilCandidat/RegisterCandidat, `Navbar` ✅, `npx vite build` propre, `manage.py check` propre.
+
+**À faire (déploiement)** : crontab `0 3 1 * * python manage.py purger_qualite_ia`.
+
+**Audit des accès par palier (tableau « Comparez toutes les fonctionnalités », même jour)** — chaque ligne vérifiée côté serveur ; 4 corrections :
+- **Limite d'offres actives** (`jobs/views/offres.py::_limite_offres_atteinte`) : compte désormais les offres `APPROUVEE` **et `EN_ATTENTE`** non clôturées (avant : on pouvait en déposer autant qu'on voulait pendant la modération). Revérifiée aussi quand une offre `REJETEE` est corrigée et resoumise (`UpdateOffreRecruteurAPIView`, 403 `LIMITE_OFFRES_ATTEINTE`). La clôture est définitive (aucune réouverture).
+- **Analyse IA d'une candidature** (`AnalyseGroqRecruteurAPIView`) : le contrôle `user.role == 'RECRUTEUR'` écartait les membres d'équipe de compte CANDIDAT et laissait passer le rôle « Invité ». Remplacé par l'appartenance à l'entreprise + rôle d'équipe UTILISATEUR/ADMIN/PROPRIETAIRE.
+- **Quotas IA recruteur par ENTREPRISE** (`jobs/ia_quota.py::_utilisateurs_du_quota`) : décision produit « 10 au total » — propriétaire + membres partagent un seul compteur (avant : par utilisateur, une équipe multipliait le quota). Une dérogation `QuotaIAOverride` reste par compte ; les fonctions candidat restent par compte.
+- **Membres d'équipe et palier** (`get_entreprise_for_user`) : un membre (non-propriétaire) n'a plus accès à l'entreprise dès que son palier n'inclut plus `acces_equipe` (expiration **ou rétrogradation** vers Starter/Pro) — sur tous les endpoints, plus seulement au login/dashboard. Login et dashboard répondent toujours `403 PREMIUM_EXPIRE` (`membre_bloque_par_palier`). Conséquence pour les tests : les fixtures d'équipe doivent avoir un palier avec équipe (Business).
+- Vérifiés sans changement : crédits CVthèque (rôle, entreprise validée, abonnement, `visible_cvtheque`, décrément atomique des crédits achetés), « Inviter à postuler » (palier, rôle, offre de l'entreprise, anti-doublon), Candidats recommandés, Recherche avancée/statistiques IA (403 sous Business), génération d'offre IA. « Niveau de support » = libellé non appliqué techniquement.
+- Résiduel connu : deux déblocages simultanés du dernier crédit **mensuel** pourraient passer (risque faible).
+- Tests : `jobs/tests/test_audit_acces_paliers.py` (14).
+
+---
+
 ## 🆕 SESSION 28/09/2026 — Revue complète du panel admin (25 pages)
 
 **Demande** : vérifier toutes les pages admin (organisation, détails, erreurs, manques, cohérence, aide, couleurs), en autonomie totale. Détail sécurité dans `SECURITY.md` §18.
@@ -2517,6 +2570,9 @@ Crontab :
 
 # Pré-chauffe cache scores matching dashboard candidat — toutes les 10 min (aligné sur SCORES_CACHE_TTL)
 */10 * * * * cd /chemin/vers/taftech_backend && python manage.py precalculer_scores_matching >> /var/log/taftech_scores.log 2>&1
+
+# Purge du journal de qualité IA (parsing CV + corrections, > 12 mois) — le 1er de chaque mois à 3h
+0 3 1 * * cd /chemin/vers/taftech_backend && python manage.py purger_qualite_ia >> /var/log/taftech_purge_ia.log 2>&1
 ```
 
 Checklist avant déploiement :

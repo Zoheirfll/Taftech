@@ -11,6 +11,7 @@ import AdminPageHeader from "../../Components/AdminPageHeader";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
+import { CARACTERISTIQUES_PALIER, formaterQuotaIA, remiseAnnuellePct } from "../../utils/paliersAffichage";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 const COULEUR_PALIER = {
@@ -138,7 +139,7 @@ const AdminPaliers = () => {
 
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[860px]">
+          <table className="w-full text-left min-w-[1180px]">
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                 <th className="px-5 py-3">Palier</th>
@@ -146,15 +147,18 @@ const AdminPaliers = () => {
                 <th className="px-5 py-3">Prix annuel</th>
                 <th className="px-5 py-3">Offres actives</th>
                 <th className="px-5 py-3">Crédits CVthèque / mois</th>
+                <th className="px-5 py-3">Accès inclus</th>
+                <th className="px-5 py-3">Quotas IA</th>
+                <th className="px-5 py-3">Support</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <SkeletonTableRows columns={7} />
+                <SkeletonTableRows columns={10} />
               ) : paliers.length === 0 ? (
-                <tr><td colSpan="7"><AdminVide icon={Layers} titre="Aucun palier configuré." /></td></tr>
+                <tr><td colSpan="10"><AdminVide icon={Layers} titre="Aucun palier configuré." /></td></tr>
               ) : (
                 paliers.map((p) => (
                   <tr key={p.id} className={tw.rowHover}>
@@ -162,9 +166,27 @@ const AdminPaliers = () => {
                       <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${COULEUR_PALIER[p.nom] || tw.badgeNeutral}`}>{NOM_LABELS[p.nom] || p.nom}</span>
                     </td>
                     <td className={`px-5 py-3 text-sm font-semibold ${tw.textStrong} tabular-nums`}>{p.prix_mensuel_da != null ? fmtDA(p.prix_mensuel_da) : "Sur devis"}</td>
-                    <td className="px-5 py-3 text-sm tabular-nums">{p.prix_annuel_da != null ? fmtDA(p.prix_annuel_da) : "—"}</td>
+                    <td className="px-5 py-3 text-sm tabular-nums">
+                      {p.prix_annuel_da != null ? fmtDA(p.prix_annuel_da) : "—"}
+                      {remiseAnnuellePct(p) != null && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full ${tw.bgSuccessSoft} ${tw.textSuccess} text-[10px] font-bold`}>-{remiseAnnuellePct(p)}%</span>}
+                    </td>
                     <td className="px-5 py-3 text-sm">{p.limite_offres != null ? p.limite_offres : "Illimité"}</td>
                     <td className="px-5 py-3 text-sm">{p.credits_mois != null ? p.credits_mois : "Illimité"}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap gap-1 max-w-[240px]">
+                        {CARACTERISTIQUES_PALIER.filter((c) => c.type === "booleen" && c.valeur(p)).map((c) => (
+                          <span key={c.id} className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgSuccessSoft} ${tw.textSuccess}`}>{c.label}</span>
+                        ))}
+                        {!CARACTERISTIQUES_PALIER.some((c) => c.type === "booleen" && c.valeur(p)) && <span className={`text-xs ${tw.textMuted}`}>Aucun</span>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-xs">
+                      <div className="space-y-0.5">
+                        <p><span className={tw.textMuted}>Génération d'offre :</span> <span className="font-semibold">{formaterQuotaIA(p.quota_generation_offre_jour, p.quota_generation_offre_mois).texte}</span></p>
+                        <p><span className={tw.textMuted}>Analyse candidature :</span> <span className="font-semibold">{formaterQuotaIA(p.quota_analyse_recruteur_jour, p.quota_analyse_recruteur_mois).texte}</span></p>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-xs">{p.support_label || "—"}</td>
                     <td className="px-5 py-3 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
                         {p.actif ? "Actif" : "Inactif"}
@@ -261,7 +283,7 @@ const AdminPaliers = () => {
                 <legend className={`text-xs font-bold uppercase tracking-wider ${tw.textMuted} mb-2`}>Affichage</legend>
                 <div>
                   <label htmlFor="support_label" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Niveau de support (texte affiché)</label>
-                  <input id="support_label" className={inputClass} placeholder="Ex : Support prioritaire" value={form.support_label ?? ""} onChange={(e) => setForm({ ...form, support_label: e.target.value })} />
+                  <input id="support_label" className={inputClass} value={form.support_label ?? ""} onChange={(e) => setForm({ ...form, support_label: e.target.value })} />
                 </div>
                 {caseACocher("actif", "Palier actif (visible et achetable)")}
               </fieldset>

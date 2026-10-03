@@ -107,7 +107,6 @@ const Login = () => {
               <label className={`${tw.authLabel} mb-1.5`}>Email</label>
               <input
                 type="email"
-                placeholder="votre@email.com"
                 required
                 value={credentials.username}
                 onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
@@ -119,7 +118,6 @@ const Login = () => {
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}
-                  placeholder="••••••••"
                   required
                   value={credentials.password}
                   onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}

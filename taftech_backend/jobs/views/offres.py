@@ -200,6 +200,24 @@ def _texte_depuis_competences(competences_requises):
     return "\n".join(lignes)
 
 
+def _limite_offres_atteinte(entreprise, exclure_offre_id=None):
+    """Retourne la limite du palier si l'entreprise l'a déjà atteinte, sinon None.
+
+    Compte les offres APPROUVEES **et EN_ATTENTE** non clôturées : sans les offres en attente, on
+    pouvait en déposer un nombre illimité pendant la modération puis dépasser la limite dès leur
+    approbation. `exclure_offre_id` évite de compter l'offre qu'on est en train de resoumettre."""
+    from ..paliers_utils import limite_offres_actives
+    limite = limite_offres_actives(entreprise)
+    if limite is None:
+        return None
+    offres = OffreEmploi.objects.filter(
+        entreprise=entreprise, statut_moderation__in=['APPROUVEE', 'EN_ATTENTE'], est_cloturee=False,
+    )
+    if exclure_offre_id is not None:
+        offres = offres.exclude(pk=exclure_offre_id)
+    return limite if offres.count() >= limite else None
+
+
 class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -210,17 +228,12 @@ class JobCreateAPIView(APIView):
             return Response({"error": "Votre entreprise doit être validée par TafTech avant de publier."}, status=status.HTTP_403_FORBIDDEN)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Accès refusé."}, status=403)
-        from ..paliers_utils import limite_offres_actives
-        limite = limite_offres_actives(entreprise)
+        limite = _limite_offres_atteinte(entreprise)
         if limite is not None:
-            nb_actives = OffreEmploi.objects.filter(
-                entreprise=entreprise, statut_moderation='APPROUVEE', est_cloturee=False
-            ).count()
-            if nb_actives >= limite:
-                return Response(
-                    {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier. Passez à un palier supérieur pour publier plus d'offres.", "code": "LIMITE_OFFRES_ATTEINTE"},
-                    status=403,
-                )
+            return Response(
+                {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier. Passez à un palier supérieur pour publier plus d'offres.", "code": "LIMITE_OFFRES_ATTEINTE"},
+                status=403,
+            )
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
@@ -263,6 +276,15 @@ class UpdateOffreRecruteurAPIView(APIView):
         # date_expiration seule → autorisé même si APPROUVEE
         if offre.statut_moderation == "APPROUVEE" and set(request.data.keys()) - {"date_expiration"}:
             return Response({"error": "Impossible de modifier une offre déjà publiée."}, status=400)
+        # Une offre REJETEE n'est pas comptée dans la limite ; la corriger la remet EN_ATTENTE
+        # (donc comptée) : on revérifie ici, sinon le refus puis la resoumission contournent la limite.
+        if offre.statut_moderation == "REJETEE" and not offre.est_cloturee:
+            limite = _limite_offres_atteinte(entreprise, exclure_offre_id=offre.id)
+            if limite is not None:
+                return Response(
+                    {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier : impossible de soumettre à nouveau cette offre.", "code": "LIMITE_OFFRES_ATTEINTE"},
+                    status=403,
+                )
         serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
         if serializer.is_valid():
             if offre.statut_moderation == "APPROUVEE":

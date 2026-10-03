@@ -1706,6 +1706,55 @@ class UtilisationIA(models.Model):
         ordering = ['-date_heure']
         indexes = [models.Index(fields=['user', 'fonction', 'date_heure'])]
 
+
+class ParsingCV(models.Model):
+    """Journal d'un parsing de CV, pour mesurer et améliorer le parser au fil de l'eau.
+    Ne stocke JAMAIS le contenu du CV (ni texte, ni noms d'employeurs) : uniquement des compteurs
+    et des indicateurs de résolution. `user` passe à NULL à la suppression du compte
+    (anonymisation), purge auto des lignes de plus de 12 mois (commande purger_qualite_ia)."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='parsings_cv')
+    date = models.DateTimeField(auto_now_add=True, db_index=True)
+    duree_ms = models.PositiveIntegerField(default=0)
+    succes = models.BooleanField(default=True)
+    code_erreur = models.CharField(max_length=30, blank=True, default='')
+    version_parser = models.CharField(max_length=30, blank=True, default='')
+    extension = models.CharField(max_length=6, blank=True, default='')
+    nb_experiences = models.PositiveSmallIntegerField(default=0)
+    nb_formations = models.PositiveSmallIntegerField(default=0)
+    nb_competences = models.PositiveSmallIntegerField(default=0)
+    nb_langues = models.PositiveSmallIntegerField(default=0)
+    champs_vides = models.JSONField(default=list, blank=True)
+    nb_exp_metier_ia = models.PositiveSmallIntegerField(default=0)
+    nb_exp_metier_repli = models.PositiveSmallIntegerField(default=0)
+    nb_exp_sans_metier = models.PositiveSmallIntegerField(default=0)
+    nb_formations_sans_diplome_ref = models.PositiveSmallIntegerField(default=0)
+    source_competences = models.CharField(max_length=10, blank=True, default='')  # SECTION | IA
+
+    class Meta:
+        ordering = ['-date']
+
+
+class CorrectionParsing(models.Model):
+    """Correction faite par le candidat sur un champ pré-rempli par le parser : paire
+    (proposé -> choisi). `texte_source` = intitulé du poste ou du diplôme tel que déclaré
+    (200 caractères max), jamais le nom de l'employeur ni les missions."""
+    TYPES = [
+        ('METIER_EXPERIENCE', "Métier d'une expérience"),
+        ('DIPLOME', 'Diplôme'),
+        ('SPECIALITE', 'Spécialité'),
+    ]
+    parsing = models.ForeignKey(ParsingCV, null=True, blank=True, on_delete=models.SET_NULL, related_name='corrections')
+    date = models.DateTimeField(auto_now_add=True, db_index=True)
+    type_correction = models.CharField(max_length=20, choices=TYPES)
+    texte_source = models.CharField(max_length=200, blank=True, default='')
+    propose_id = models.PositiveIntegerField(null=True, blank=True)
+    propose_libelle = models.CharField(max_length=250, blank=True, default='')
+    corrige_id = models.PositiveIntegerField(null=True, blank=True)
+    corrige_libelle = models.CharField(max_length=250, blank=True, default='')
+
+    class Meta:
+        ordering = ['-date']
+
     def __str__(self):
         return f"{self.user.email} — {self.get_fonction_display()} ({self.date_heure:%d/%m/%Y %H:%M})"
 

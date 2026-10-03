@@ -54,7 +54,7 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
         </div>
         <div>
           <label htmlFor="onb-titre" className={`${tw.authLabel} mb-1.5`}>Titre professionnel</label>
-          <input id="onb-titre" placeholder="Ex: Développeur Full-Stack" className={tw.authInput} value={infosForm.titre_professionnel || ""} onChange={set("titre_professionnel")} />
+          <input id="onb-titre" className={tw.authInput} value={infosForm.titre_professionnel || ""} onChange={set("titre_professionnel")} />
         </div>
         <div>
           <label htmlFor="onb-bio" className={`${tw.authLabel} mb-1.5`}>Bio</label>
@@ -89,7 +89,7 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
         </div>
         <div>
           <label htmlFor="onb-adresse" className={`${tw.authLabel} mb-1.5`}>Adresse (rue, quartier)</label>
-          <input id="onb-adresse" placeholder="Ex: Cité 100 Logements, Bt 12, El Kerma" className={tw.authInput} value={infosForm.adresse || ""} onChange={set("adresse")} />
+          <input id="onb-adresse" className={tw.authInput} value={infosForm.adresse || ""} onChange={set("adresse")} />
         </div>
         <div>
           <label htmlFor="onb-diplome" className={`${tw.authLabel} mb-1.5`}>Diplôme</label>
@@ -134,11 +134,11 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="onb-linkedin" className={`${tw.authLabel} mb-1.5`}>LinkedIn</label>
-            <input id="onb-linkedin" placeholder="linkedin.com/in/…" className={tw.authInput} value={infosForm.linkedin || ""} onChange={set("linkedin")} />
+            <input id="onb-linkedin" className={tw.authInput} value={infosForm.linkedin || ""} onChange={set("linkedin")} />
           </div>
           <div>
             <label htmlFor="onb-github" className={`${tw.authLabel} mb-1.5`}>GitHub</label>
-            <input id="onb-github" placeholder="github.com/…" className={tw.authInput} value={infosForm.github || ""} onChange={set("github")} />
+            <input id="onb-github" className={tw.authInput} value={infosForm.github || ""} onChange={set("github")} />
           </div>
         </div>
         <div className="flex flex-wrap gap-4 pt-1">

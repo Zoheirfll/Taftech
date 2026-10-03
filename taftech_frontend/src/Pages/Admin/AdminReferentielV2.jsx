@@ -409,7 +409,6 @@ const RelationsSimilairesPanel = () => {
             <input
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
-              placeholder="Ex : profils substituables sur le marché algérien"
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
@@ -665,7 +664,6 @@ const RelationsSpecialitesPanel = () => {
             <input
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
-              placeholder="Ex : deux domaines informatique disjoints du référentiel qui décrivent le même champ"
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
@@ -933,7 +931,6 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
                   <textarea
                     value={motifs[item.id] || ""}
                     onChange={(e) => setMotifs((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                    placeholder="Ex : intitulé illisible, ne correspond à aucun diplôme reconnu..."
                     rows={2}
                     className="w-full px-3 py-2 bg-white border border-red-200 rounded-lg text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   />

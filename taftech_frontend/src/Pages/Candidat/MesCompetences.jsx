@@ -192,7 +192,6 @@ const MesCompetences = () => {
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Compétence *</label>
                 <input
                   type="text"
-                  placeholder="Ex: React, Gestion de projet..."
                   className={`${INPUT_CLASS} ${editingId ? "opacity-60 cursor-not-allowed" : ""}`}
                   value={nouvelle.label}
                   onChange={(e) => handleSearchChange(e.target.value)}

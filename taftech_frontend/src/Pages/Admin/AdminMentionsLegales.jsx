@@ -11,8 +11,8 @@ import { AdminErreurChargement } from "../../Components/AdminEtat";
 const CHAMP_VIDE = { raison_sociale: "", registre_commerce: "", nif: "", adresse: "", tva: "" };
 
 const CHAMPS = [
-  { key: "raison_sociale", label: "Raison sociale", requis: true, placeholder: "Ex : SARL TafTech" },
-  { key: "registre_commerce", label: "Registre de commerce (RC)", requis: true, placeholder: "Ex : 31/00-1234567B26" },
+  { key: "raison_sociale", label: "Raison sociale", requis: true },
+  { key: "registre_commerce", label: "Registre de commerce (RC)", requis: true },
   { key: "nif", label: "NIF", requis: true, placeholder: "Numéro d'identification fiscale" },
   { key: "adresse", label: "Adresse du siège", requis: true, placeholder: "Adresse complète, wilaya" },
   { key: "tva", label: "N° TVA (le cas échéant)", requis: false, placeholder: "Laisser vide si non assujetti" },

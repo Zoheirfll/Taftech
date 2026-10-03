@@ -5,6 +5,7 @@ import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import { ChevronDown, ChevronUp, Lock } from "lucide-react";
 
+import { nomCandidature } from "../../utils/candidatureNom";
 const CRITERES_MATCHING = {
   specialite: { label: "Spécialité", max: 25 },
   diplome: { label: "Diplôme", max: 20 },
@@ -89,7 +90,7 @@ const CandidatsRecommandesPage = () => {
             const DM = c.details_matching || {};
             const scores = DM.scores || DM;
             const explications = DM.explications || {};
-            const nom = c.candidat ? `${c.candidat.first_name || ""} ${c.candidat.last_name || ""}` : "Candidat";
+            const nom = nomCandidature(c) || "Candidat";
             const isOpen = expandedId === c.id;
             return (
               <div key={c.id} className={`${tw.card} p-4`}>

@@ -182,3 +182,7 @@ from .referentiel_admin import (
     AdminRelationsSpecialiteAPIView,
     AdminFormationsAVerifierAPIView,
 )
+from .qualite_ia import (
+    EnregistrerCorrectionsParsingAPIView, AdminQualiteIAParserAPIView, AdminQualiteIACorrectionsAPIView,
+    AdminQualiteIACreerAppellationAPIView, AdminQualiteIAMatchingAPIView,
+)

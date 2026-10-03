@@ -329,3 +329,19 @@ Or `taftech_frontend/src/api/axiosConfig.js` ne mutualisait pas les rafraîchiss
 **Non modifié côté backend** — la configuration `ROTATE_REFRESH_TOKENS`/`BLACKLIST_AFTER_ROTATION` reste la bonne pratique de sécurité à conserver ; le bug était uniquement dans la gestion côté client de la concurrence des appels de rafraîchissement, pas dans la politique de rotation elle-même.
 
 **Tests** : `api.test.js`/`authService.test.js` (24/24 ✅, aucun test dédié à la concurrence de refresh n'existait — à ajouter si l'occasion se présente), `npx vite build` propre.
+
+## ✅ 19. Journal « Qualité IA » : minimisation des données et contrôle d'accès (29/09/2026)
+
+- **Minimisation (loi 18-07)** : `ParsingCV` ne stocke que des compteurs ; `CorrectionParsing` que des intitulés de poste/diplôme (200 caractères) et des identifiants de référentiel, jamais le texte du CV, l'employeur ni les missions. `user` passe à NULL à la suppression du compte. Purge automatique à 12 mois (`purger_qualite_ia`).
+- **Accès** : lecture réservée à `IsAdminRole` (staff **et** `role='ADMIN'`). Écriture des corrections : candidat authentifié, uniquement sur **son propre** `ParsingCV` (404 sinon), `WriteActionThrottle`, 30 entrées maximum par envoi, types validés contre une liste fermée, chaînes tronquées.
+- **Action admin** : la création d'une appellation depuis une correction écrit un `AuditLog`.
+- Tests : `jobs/tests/test_qualite_ia.py` (propriété du parsing, validation, permissions admin, 409 sur doublon, purge).
+
+## ✅ 20. Audit des accès par palier — contournements de limites corrigés (29/09/2026)
+
+- **Limite d'offres contournable** : les offres `EN_ATTENTE` n'étaient pas comptées (dépôt illimité pendant la modération, dépassement à l'approbation) ; une offre `REJETEE` corrigée revenait `EN_ATTENTE` sans revérification. Comptage et revérification ajoutés.
+- **Analyse IA — contrôle d'accès erroné** : filtre sur `user.role` (au lieu de l'appartenance à l'entreprise et du rôle d'équipe) → refus à tort des membres de compte CANDIDAT, acceptation du rôle « Invité » (lecture seule) qui consommait le quota du palier.
+- **Quotas IA multipliables par l'équipe** : compteur par utilisateur → une équipe Business de N personnes avait N fois le quota. Compteur désormais par entreprise (propriétaire + membres).
+- **Membres après rétrogradation** : seule l'expiration bloquait les membres (login + dashboard). Un passage de Business à Pro/Starter laissait l'équipe active. Le contrôle est maintenant centralisé dans `get_entreprise_for_user` (tous les endpoints).
+- Tests : `jobs/tests/test_audit_acces_paliers.py`.
+

@@ -84,8 +84,13 @@ def _candidats_pour_experience(titre_poste, description, limite=10):
         Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
         .select_related('metier', 'metier__metier_canonique')
         .values_list('libelle', 'metier__id', 'metier__libelle', 'metier__metier_canonique_id')
-        .distinct()[:500]
+        .distinct()
     )
+    # Pas de plafond sur le pool : couper à N lignes dans un ordre arbitraire écartait les
+    # bonnes appellations (ex: RH) avant leur notation dès que la description contenait
+    # beaucoup de mots courants (bug réel : "Cheffe de Département Administration des RH"
+    # proposée uniquement avec des "Chef de département" industriels). ~7 400 appellations
+    # au total : le coût de tout lire est négligeable.
 
     def _score(libelle):
         libelle_mots = set(re.findall(r"\w+", normaliser_recherche(libelle)))

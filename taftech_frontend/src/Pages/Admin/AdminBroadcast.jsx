@@ -112,7 +112,6 @@ const AdminBroadcast = () => {
             <input
               type="text"
               required
-              placeholder="Ex: Les 5 compétences les plus recherchées en 2026..."
               className={inputClass}
               value={formData.sujet}
               onChange={(e) =>

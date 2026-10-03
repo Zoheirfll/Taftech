@@ -17,11 +17,36 @@ INVITATION_EXPIRY_HOURS = 72
 
 
 def get_entreprise_for_user(user):
-    """Retourne le ProfilEntreprise lié à l'utilisateur (owner ou membre)."""
+    """Retourne le ProfilEntreprise lié à l'utilisateur (owner ou membre).
+
+    Un MEMBRE (non-propriétaire) n'a accès à l'entreprise que tant que son palier actuel inclut la
+    gestion d'équipe : à l'expiration ou après une rétrogradation vers un palier sans équipe
+    (Starter/Pro), il n'a plus aucun accès — sur TOUS les endpoints qui passent par cette fonction,
+    pas seulement au login. Le propriétaire n'est jamais concerné."""
     if hasattr(user, 'profil_entreprise'):
         return user.profil_entreprise
     membre = MembreEquipe.objects.filter(user=user).select_related('entreprise').first()
-    return membre.entreprise if membre else None
+    if not membre:
+        return None
+    from ..paliers_utils import get_palier_actif
+    palier = get_palier_actif(membre.entreprise)
+    if palier is None or not palier.acces_equipe:
+        return None
+    return membre.entreprise
+
+
+def membre_bloque_par_palier(user):
+    """True si `user` est MEMBRE (non-propriétaire) d'une entreprise dont le palier actuel n'inclut
+    plus la gestion d'équipe (abonnement expiré ou rétrogradation). Sert à répondre 403
+    PREMIUM_EXPIRE — message explicite — plutôt qu'un « entreprise introuvable » trompeur."""
+    if hasattr(user, 'profil_entreprise'):
+        return False
+    membre = MembreEquipe.objects.filter(user=user).select_related('entreprise').first()
+    if not membre:
+        return False
+    from ..paliers_utils import get_palier_actif
+    palier = get_palier_actif(membre.entreprise)
+    return palier is None or not palier.acces_equipe
 
 
 def get_membre_role(user, entreprise):

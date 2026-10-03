@@ -810,7 +810,6 @@ const OffresListPage = () => {
                       type="text"
                       value={draftExigenceLabel}
                       onChange={(e) => setDraftExigenceLabel(e.target.value)}
-                      placeholder="Ex: Permis B"
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
                     />
                   </div>
@@ -820,7 +819,6 @@ const OffresListPage = () => {
                       type="text"
                       value={draftExigenceDescription}
                       onChange={(e) => setDraftExigenceDescription(e.target.value)}
-                      placeholder="Ex: Bulletin n°3 du casier judiciaire"
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
                     />
                   </div>

@@ -890,7 +890,6 @@ const ParametresRecruteur = () => {
                   type="text"
                   value={entrepriseForm.adresse_complete || ""}
                   onChange={(e) => setEntrepriseForm({ ...entrepriseForm, adresse_complete: e.target.value })}
-                  placeholder="Ex : 12 Rue Larbi Ben M'hidi, Oran"
                   className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
                 />
               </div>
@@ -931,7 +930,6 @@ const ParametresRecruteur = () => {
                       annee_creation: e.target.value,
                     })
                   }
-                  placeholder="Ex : 2015"
                   className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
                 />
               </div>
@@ -977,7 +975,6 @@ const ParametresRecruteur = () => {
                   type="url"
                   value={entrepriseForm.linkedin}
                   onChange={(e) => setEntrepriseForm({ ...entrepriseForm, linkedin: e.target.value })}
-                  placeholder="https://www.linkedin.com/company/..."
                   className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
@@ -987,7 +984,6 @@ const ParametresRecruteur = () => {
                   type="url"
                   value={entrepriseForm.site_web}
                   onChange={(e) => setEntrepriseForm({ ...entrepriseForm, site_web: e.target.value })}
-                  placeholder="https://www.monentreprise.dz"
                   className={`w-full px-4 py-3 rounded-xl text-base ${tw.inputTeal}`}
                 />
               </div>
@@ -1181,7 +1177,6 @@ const ParametresRecruteur = () => {
                     value={notifForm.message_refus_auto}
                     onChange={(e) => setNotifForm({ ...notifForm, message_refus_auto: e.target.value })}
                     className={`w-full px-4 py-3 rounded-xl text-sm resize-none font-mono ${tw.inputTeal}`}
-                    placeholder="Bonjour {prenom},&#10;&#10;Nous avons bien étudié votre candidature pour le poste de {titre_offre} au sein de {nom_entreprise}...&#10;&#10;Cordialement,"
                   />
                 )}
 

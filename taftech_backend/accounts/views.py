@@ -289,11 +289,17 @@ class CookieTokenObtainView(TokenObtainPairView):
             try:
                 email = request.data.get('email') or request.data.get('username')
                 user_obj = User.objects.get(email=email)
-                entreprise = get_entreprise_for_user(user_obj)
+                from jobs.models import MembreEquipe
                 from jobs.paliers_utils import get_palier_actif
-                if entreprise and get_palier_actif(entreprise) is None:
+                # Recherche directe du rattachement : get_entreprise_for_user renvoie None pour un
+                # membre sans palier d'équipe, ce qui masquerait ici la vraie raison du refus.
+                membre = None
+                if not hasattr(user_obj, 'profil_entreprise'):
+                    membre = MembreEquipe.objects.filter(user=user_obj).select_related('entreprise').first()
+                palier = get_palier_actif(membre.entreprise) if membre else None
+                if membre and (palier is None or not palier.acces_equipe):
                     return Response(
-                        {"detail": "L'abonnement Premium de votre entreprise a expiré. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
+                        {"detail": "L'abonnement de votre entreprise a expiré ou n'inclut plus la gestion d'équipe. Contactez le propriétaire.", "code": "PREMIUM_EXPIRE"},
                         status=status.HTTP_403_FORBIDDEN,
                     )
             except Exception:

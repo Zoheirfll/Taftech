@@ -403,7 +403,6 @@ const CreateJob = () => {
                     onChange={(e) => { handleTitreChange(e.target.value); if (errors.titre) setErrors(p => ({ ...p, titre: "" })); }}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     className={inputClass + " font-semibold" + errClass("titre")}
-                    placeholder="Ex: Ingénieur Fullstack Django/React"
                   />
                   {showSuggestions && metierSuggestions.length > 0 && (
                     <div className={`absolute top-full left-0 right-0 ${tw.surface} border ${tw.borderBase} rounded-xl shadow-lg z-50 mt-1 overflow-hidden`}>
@@ -488,7 +487,6 @@ const CreateJob = () => {
                   value={formData.salaire_propose}
                   onChange={handleChange}
                   className={inputClass}
-                  placeholder="Ex: 80 000 DA / Négociable"
                 />
               </Field>
             </div>
@@ -630,7 +628,6 @@ const CreateJob = () => {
                   type="text"
                   value={draftExigenceLabel}
                   onChange={(e) => setDraftExigenceLabel(e.target.value)}
-                  placeholder="Ex: Permis B"
                   className={inputClass}
                 />
               </div>
@@ -640,7 +637,6 @@ const CreateJob = () => {
                   type="text"
                   value={draftExigenceDescription}
                   onChange={(e) => setDraftExigenceDescription(e.target.value)}
-                  placeholder="Ex: Bulletin n°3 du casier judiciaire"
                   className={inputClass}
                 />
               </div>
@@ -773,7 +769,6 @@ const CreateJob = () => {
                   onChange={handleChange}
                   rows={6}
                   className={textareaClass}
-                  placeholder="- Développer les fonctionnalités&#10;- Participer aux réunions techniques&#10;- ..."
                 />
               </Field>
               <Field label="Profil recherché">
@@ -783,7 +778,6 @@ const CreateJob = () => {
                   onChange={handleChange}
                   rows={6}
                   className={textareaClass}
-                  placeholder="- Maîtrise de Python/Django&#10;- 2 ans d'expérience minimum&#10;- ..."
                 />
               </Field>
             </div>

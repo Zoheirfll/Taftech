@@ -301,7 +301,11 @@ def _singulariser(mot):
     de correspondance exacte. Garde-fou : jamais sur un mot déjà court (perte de sens,
     ex: "gaz"/"bus") ni se terminant par un double 's' (ex: "processus")."""
     if len(mot) > 4 and mot.endswith("s") and not mot.endswith("ss"):
-        return mot[:-1]
+        mot = mot[:-1]
+    # Féminin ("internationale" -> "international", "humaine" -> "humain") : appliqué des
+    # deux côtés (texte du candidat ET libellé du référentiel), donc toujours symétrique.
+    if len(mot) > 6 and mot.endswith("e"):
+        mot = mot[:-1]
     return mot
 
 
@@ -314,6 +318,17 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     diplôme (jamais hors référentiel, F06) — factorisé pour être réutilisé par la
     résolution par mots-clés ET par le repli IA ci-dessous.
 
+    Un score de 1 seul mot commun est trop peu fiable pour être accepté seul — un mot
+    isolément large mais peu signifiant ("sciences", "gestion"...) partagé par une
+    poignée de libellés sans rapport suffisait à faire remonter une spécialité
+    aberrante par défaut de tout autre candidat (bug réel : "Master en Sciences de
+    Gestion, option Ressources Humaines" résolu en "Sciences De La Mer", le seul
+    candidat où "sciences" apparaissait pour ce diplôme). Un score >= 2 (au moins deux
+    mots distincts partagés) reste accepté tel quel — c'est ce qui permet à un
+    intitulé complet type "Management des Ressources Humaines" de l'emporter
+    clairement même si chacun de ses mots pris séparément (management/ressources/
+    humaines) est aussi partagé par quelques autres spécialités du même diplôme.
+
     Quand plusieurs spécialités sont à égalité de score (cas fréquent : des intitulés
     de spécialité proches partagent souvent 1-2 mots, ex: "Modèles Intelligents Et
     Décision" / "Modélisation, optimisation et aide à la décision" / "Sciences de
@@ -322,19 +337,36 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     précis uniquement — jamais un choix hors de cette liste restreinte."""
     from .models import DiplomeSpecialite
 
-    spec_candidats = []
-    for c in DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True).select_related('specialite'):
-        lib_mots = _mots_singularises(c.specialite.libelle)
-        score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
-        if score:
-            spec_candidats.append((score, c.specialite))
+    def _candidats(queryset):
+        trouves = []
+        for c in queryset.select_related('specialite'):
+            lib_mots = _mots_singularises(c.specialite.libelle)
+            score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
+            if score >= 2:
+                # À score égal, préférer la spécialité dont le libellé est le plus entièrement
+                # couvert par le texte ("Commerce international" avant "Finance et commerce
+                # international" pour "Commerce et Affaires Internationales").
+                non_couverts = sum(1 for m in lib_mots if len(m) >= 4 and m not in mots)
+                trouves.append((score, -non_couverts, c.specialite))
+        return trouves
+
+    spec_candidats = _candidats(DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True))
+    if not spec_candidats and type_diplome.code.count("-") >= 2:
+        # Aucune spécialité attestée pour CETTE variante (ex: "Master professionnel" n'a pas
+        # de spécialité RH dans le référentiel, seul "Master académique" en a) : la spécialité
+        # est un sujet indépendant du régime du diplôme, on cherche dans la même famille
+        # (D-MAS-*, D-LIC-*). Sans ce repli le champ Spécialité restait vide.
+        famille = type_diplome.code.rsplit("-", 1)[0] + "-"
+        spec_candidats = _candidats(
+            DiplomeSpecialite.objects.filter(diplome__code__startswith=famille, selectionnable=True).exclude(diplome=type_diplome)
+        )
     if not spec_candidats:
         return None
-    spec_candidats.sort(key=lambda c: -c[0])
-    meilleur = spec_candidats[0][0]
-    meilleures = [c[1] for c in spec_candidats if c[0] == meilleur]
-    if len(set(s.id for s in meilleures)) == 1:
-        return meilleures[0]
+    spec_candidats.sort(key=lambda c: (-c[0], -c[1]))
+    meilleur = (spec_candidats[0][0], spec_candidats[0][1])
+    meilleures = [c[2] for c in spec_candidats if (c[0], c[1]) == meilleur]
+    if len(set(normaliser_recherche(s.libelle) for s in meilleures)) == 1:
+        return min(meilleures, key=lambda s: s.id)  # homonymes exacts : le plus ancien
     if texte:
         return _resoudre_specialite_via_ia(texte, meilleures)
     return None
@@ -474,6 +506,14 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
     if not mots:
         return None, None
 
+    if re.match(r"\s*(formation|stage|atelier|seminaire|session|cycle)\b", t) and not re.search(
+        r"\b(master|licence|doctorat|ingenieur|magister|bts|dut|baccalaureat|bac|cap|deua|mba|technicien)\b", t
+    ):
+        # Formation courte sans diplôme : "Attestation de formation", pas une certification d'éditeur.
+        attest = TypeDiplome.objects.filter(code='D-ATTEST').first()
+        if attest:
+            return attest, None
+
     candidats = []
     for td in TypeDiplome.objects.all():
         lib_mots = _mots_singularises(td.libelle)
@@ -490,6 +530,12 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # faute de frappe non couverte, formulation étrangère...) — plutôt qu'un champ
         # vide que le candidat devrait forcément remplir à la main, on demande à l'IA de
         # se rapprocher du diplôme le plus proche parmi ceux réellement disponibles.
+        if re.match(r"\s*(formation|stage|atelier|seminaire|session|cycle)\b", t):
+            # Formation courte sans diplôme : "Attestation de formation", pas une
+            # certification d'éditeur.
+            attest = TypeDiplome.objects.filter(code='D-ATTEST').first()
+            if attest:
+                return attest, None
         type_diplome = _resoudre_diplome_via_ia(texte)
         if not type_diplome:
             return None, None
@@ -508,6 +554,13 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # cas où l'ambiguïté porte UNIQUEMENT sur la variante d'un même diplôme (même
         # préfixe de code, ex: "D-LIC-*") — une vraie ambiguïté entre familles différentes
         # (codes sans préfixe commun) passe par le repli IA plutôt qu'une abstention pure.
+        # Le 1er mot de l'intitulé désigne presque toujours le diplôme ("Master ...",
+        # "Licence ...") : à égalité, on écarte les candidats parasites qui ne partagent
+        # qu'un mot secondaire avec un autre diplôme.
+        if mots:
+            famille = [m for m in meilleurs if mots[0] in _mots_singularises(m.libelle)]
+            if famille:
+                meilleurs = famille
         prefixes = {"-".join(m.code.split("-")[:-1]) for m in meilleurs}
         prefixe_unique = next(iter(prefixes)) if len(prefixes) == 1 else None
         # Cas "Master"/"Licence"/"Doctorat" seul (ex: "Master en Informatique" sans
@@ -520,6 +573,10 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # réforme LMD), pas "-SCI" (ancien système, en voie de disparition). Repli sur
         # "-NP" uniquement si aucun défaut n'existe pour cette famille précise.
         suffixe_defaut = "-LMD" if prefixe_unique == "D-DOC" else "-A"
+        # Indice explicite dans l'intitulé : "professionnalisant/professionnel" -> variante
+        # professionnelle ; "recherche" -> académique (déjà le défaut).
+        if prefixe_unique and re.search(r"\bprofessionnalis|\bprofessionnel", t):
+            suffixe_defaut = "-P"
         defaut_candidat = (
             next((m for m in meilleurs if m.code == f"{prefixe_unique}{suffixe_defaut}"), None)
             if prefixe_unique else None

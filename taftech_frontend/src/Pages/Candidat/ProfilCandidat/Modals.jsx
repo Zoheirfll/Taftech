@@ -319,7 +319,6 @@ export const Modals = ({
                   Salaire mensuel attendu
                 </label>
                 <input
-                  placeholder="Ex: 80 000 DA"
                   className={inputClass}
                   value={editPref.salaire_souhaite}
                   onChange={(e) =>
@@ -416,7 +415,6 @@ export const Modals = ({
                 </label>
                 <input
                   type="url"
-                  placeholder="https://linkedin.com/in/votre-profil"
                   className={inputClass}
                   value={editLinks.linkedin}
                   onChange={(e) =>
@@ -430,7 +428,6 @@ export const Modals = ({
                 </label>
                 <input
                   type="url"
-                  placeholder="https://github.com/votre-profil"
                   className={inputClass}
                   value={editLinks.github}
                   onChange={(e) =>
@@ -469,7 +466,6 @@ export const Modals = ({
                 </label>
                 <div className="relative">
                   <input
-                    placeholder="Ex: Développeur Fullstack"
                     className={inputClass}
                     value={editCV.titre}
                     onChange={(e) => handleTitreProChange(e.target.value)}
@@ -555,7 +551,6 @@ export const Modals = ({
                 <div className="relative">
                   <input
                     required
-                    placeholder="Ex: Développeur Backend"
                     className={inputClass}
                     value={newExp.titre_poste}
                     onChange={(e) => handleExpTitreChange(e.target.value)}
@@ -779,7 +774,6 @@ export const Modals = ({
                   <label className={tw.formLabel}>Pays de la formation</label>
                   <input
                     maxLength={2}
-                    placeholder="DZ"
                     className={inputClass}
                     value={newForm.pays_formation ?? "DZ"}
                     onChange={(e) =>
@@ -790,7 +784,6 @@ export const Modals = ({
                 <div>
                   <label className={tw.formLabel}>Référence justificatif (optionnel)</label>
                   <input
-                    placeholder="Ex: diplome_2024.pdf"
                     className={inputClass}
                     value={newForm.document_reference ?? ""}
                     onChange={(e) =>

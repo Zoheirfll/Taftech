@@ -52,6 +52,8 @@ from .views import (
     OffresRecommandeesAPIView, ParserCVAPIView,
     AdminReferentielMetiersAPIView, AdminReferentielSpecialitesAPIView, AdminReferentielDiplomesAPIView,
     AdminRelationsSimilaireAPIView, AdminFormationsAVerifierAPIView,
+    EnregistrerCorrectionsParsingAPIView, AdminQualiteIAParserAPIView, AdminQualiteIACorrectionsAPIView,
+    AdminQualiteIACreerAppellationAPIView, AdminQualiteIAMatchingAPIView,
     AdminRelationsSpecialiteAPIView,
     AnalyseCarriereGroqAPIView,
     AnalyseGroqRecruteurAPIView, GenererOffreIAAPIView, QuotaIAAffichageAPIView,
@@ -286,6 +288,11 @@ urlpatterns = [
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),
     path('parser-cv/', ParserCVAPIView.as_view(), name='parser-cv'),
+    path('parsing/<int:parsing_id>/corrections/', EnregistrerCorrectionsParsingAPIView.as_view(), name='parsing-corrections'),
+    path('admin/qualite-ia/parser/', AdminQualiteIAParserAPIView.as_view(), name='admin-qualite-ia-parser'),
+    path('admin/qualite-ia/corrections/', AdminQualiteIACorrectionsAPIView.as_view(), name='admin-qualite-ia-corrections'),
+    path('admin/qualite-ia/appellation/', AdminQualiteIACreerAppellationAPIView.as_view(), name='admin-qualite-ia-appellation'),
+    path('admin/qualite-ia/matching/', AdminQualiteIAMatchingAPIView.as_view(), name='admin-qualite-ia-matching'),
     path('analyse-carriere/', AnalyseCarriereGroqAPIView.as_view(), name='analyse-carriere'),
 
     # ⚠️ Doit rester en DERNIER : capture tout segment unique restant (id numérique ou

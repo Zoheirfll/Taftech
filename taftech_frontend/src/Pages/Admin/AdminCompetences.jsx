@@ -212,14 +212,13 @@ const AdminCompetences = () => {
             <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Libellé *</label>
-                <input required className={inputClass} placeholder="Ex: Gestion de projet" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+                <input required className={inputClass} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Synonymes / traductions</label>
                 <textarea
                   rows={2}
                   className={inputClass}
-                  placeholder="Ex: Project Management, Gestion des projets"
                   value={form.synonymes}
                   onChange={(e) => setForm({ ...form, synonymes: e.target.value })}
                 />

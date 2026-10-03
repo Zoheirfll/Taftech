@@ -69,8 +69,31 @@ def _limites_effectives(user, fonction):
     return _limites_defaut(user, fonction)
 
 
+def _utilisateurs_du_quota(user, fonction):
+    """Comptes dont la consommation s'additionne pour le quota de `user`.
+
+    Fonctions recruteur (génération d'offre, analyse candidature) : le quota du palier est celui
+    de l'ENTREPRISE — propriétaire + tous ses membres partagent un seul compteur (« 10 au total »,
+    pas 10 par membre, sinon une équipe multiplierait le quota affiché). Une dérogation
+    (`QuotaIAOverride`) reste par compte, et les fonctions candidat sont toujours par compte."""
+    if fonction not in FONCTIONS_RECRUTEUR:
+        return [user.id]
+    if QuotaIAOverride.objects.filter(user=user, fonction=fonction).exists():
+        return [user.id]
+    from .views.equipe import get_entreprise_for_user
+    from .models import MembreEquipe
+    entreprise = get_entreprise_for_user(user)
+    if entreprise is None:
+        return [user.id]
+    ids = {entreprise.user_id, user.id}
+    ids.update(MembreEquipe.objects.filter(entreprise=entreprise).values_list('user_id', flat=True))
+    return list(ids)
+
+
 def _compter(user, fonction, depuis):
-    return UtilisationIA.objects.filter(user=user, fonction=fonction, date_heure__gte=depuis).count()
+    return UtilisationIA.objects.filter(
+        user_id__in=_utilisateurs_du_quota(user, fonction), fonction=fonction, date_heure__gte=depuis,
+    ).count()
 
 
 def verifier_quota_ia(user, fonction):

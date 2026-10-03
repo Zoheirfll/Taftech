@@ -144,7 +144,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     // Remplissage des champs — choisir une suggestion du titre résout titre ET métier en un
     // seul geste (champ fusionné) ; Wilaya requise séparément.
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Ingénieur Fullstack/i), {
+    fireEvent.change(document.querySelector('input[name="titre"]'), {
       target: { value: "Développeur", name: "titre" },
     });
     const suggestion = await screen.findByText("Développeur web (métier)");
@@ -215,7 +215,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
     // Remplissage pour passer la validation (titre+métier résolus ensemble via la suggestion,
     // wilaya requise séparément)
     await waitFor(() => expect(jobsService.getConstants).toHaveBeenCalled());
-    fireEvent.change(screen.getByPlaceholderText(/Ingénieur Fullstack/i), {
+    fireEvent.change(document.querySelector('input[name="titre"]'), {
       target: { value: "Développeur" },
     });
     const suggestion = await screen.findByText("Développeur web (métier)");

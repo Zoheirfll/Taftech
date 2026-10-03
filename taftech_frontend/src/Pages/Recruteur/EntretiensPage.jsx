@@ -5,6 +5,7 @@ import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 
+import { nomCandidature } from "../../utils/candidatureNom";
 const JOURS_SEMAINE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const clefJour = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -127,7 +128,7 @@ const EntretiensPage = () => {
                     {c.date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                   </div>
                   <p className="text-sm font-semibold text-slate-900">
-                    {c.est_rapide ? `${c.prenom_rapide} ${c.nom_rapide}` : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`}
+                    {c.est_rapide ? `${c.prenom_rapide} ${c.nom_rapide}` : nomCandidature(c)}
                   </p>
                   <p className="text-xs text-slate-500">{c.offre_titre}</p>
                 </Link>

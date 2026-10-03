@@ -260,7 +260,6 @@ const AlertesEmploi = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Développeur React, Comptable..."
                   className={INPUT_CLASS}
                   value={newAlerte.mots_cles}
                   onChange={(e) =>

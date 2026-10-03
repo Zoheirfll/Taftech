@@ -395,6 +395,44 @@ export const adminService = {
     }
   },
 
+  // Qualité IA : journal de parsing CV, corrections des candidats, suivi du matching
+  getQualiteIAParser: async (jours = 30) => {
+    try {
+      const response = await api.get("jobs/admin/qualite-ia/parser/", { params: { jours } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUALITE_IA_PARSER", err);
+      throw err;
+    }
+  },
+  getQualiteIACorrections: async (type = "") => {
+    try {
+      const response = await api.get("jobs/admin/qualite-ia/corrections/", { params: type ? { type } : {} });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUALITE_IA_CORRECTIONS", err);
+      throw err;
+    }
+  },
+  creerAppellationDepuisCorrection: async (texteSource, metierId) => {
+    try {
+      const response = await api.post("jobs/admin/qualite-ia/appellation/", { texte_source: texteSource, metier_id: metierId });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CREER_APPELLATION_CORRECTION", err);
+      throw err;
+    }
+  },
+  getQualiteIAMatching: async () => {
+    try {
+      const response = await api.get("jobs/admin/qualite-ia/matching/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_QUALITE_IA_MATCHING", err);
+      throw err;
+    }
+  },
+
   // Paliers d'abonnement recruteur (Starter/Pro/Business/Enterprise)
   getAdminPaliers: async () => {
     try {

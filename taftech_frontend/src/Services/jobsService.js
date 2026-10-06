@@ -118,13 +118,13 @@ const offresPubliquesService = {
   // Suggestions compétences/spécialités pour un métier (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur choisit ce qu'il ajoute réellement.
   getMetierSuggestions: async (metierId) => {
-    if (!metierId) return { competences: [], specialites: [], avertissement: "" };
+    if (!metierId) return { competences: [], specialites: [], diplomes: [], avertissement: "" };
     try {
       const response = await api.get(`jobs/referentiel/metiers/${metierId}/suggestions/`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_METIER_SUGGESTIONS_API", err);
-      return { competences: [], specialites: [], avertissement: "" };
+      return { competences: [], specialites: [], diplomes: [], avertissement: "" };
     }
   },
 

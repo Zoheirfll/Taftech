@@ -1,3 +1,5 @@
+import SuggestionsDiplomes from "../../Components/SuggestionsDiplomes";
+import { libelleUsage } from "../../utils/suggestionStats";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
@@ -112,7 +114,7 @@ const CreateJob = () => {
 
   // Suggestions compétences/spécialités du métier choisi (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur ajoute ce qu'il veut, rien d'imposé.
-  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], avertissement: "" });
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], diplomes: [], avertissement: "" });
 
   // Exigences impératives (S12, REGLES_MATCHING) — permis, habilitation, droit d'exercice...
   // Distinctes du diplôme, jamais notées dans le score de matching : un simple filtre
@@ -147,7 +149,7 @@ const CreateJob = () => {
 
   useEffect(() => {
     if (!formData.metier) {
-      setSuggestionsPourMetier({ competences: [], specialites: [], avertissement: "" });
+      setSuggestionsPourMetier({ competences: [], specialites: [], diplomes: [], avertissement: "" });
       return;
     }
     jobsService.getMetierSuggestions(formData.metier).then(setSuggestionsPourMetier);
@@ -550,6 +552,12 @@ const CreateJob = () => {
                   ))}
                 </div>
               )}
+              <SuggestionsDiplomes
+                diplomes={suggestionsPourMetier.diplomes}
+                dejaAjoutes={diplomesRequis}
+                elargi={suggestionsPourMetier.elargi}
+                onAjouter={(d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }]))}
+              />
             </div>
 
             <div>
@@ -602,6 +610,7 @@ const CreateJob = () => {
                         className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed ${tw.borderBase} hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 text-slate-600`}
                       >
                         + {s.libelle}
+                        {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                       </button>
                     ))}
                 </div>
@@ -866,12 +875,13 @@ const CreateJob = () => {
                       .filter((s) => !competencesRequises.some((c) => c.label.toLowerCase() === s.label.toLowerCase()))
                       .map((s) => (
                         <button
-                          key={s.id}
+                          key={s.label}
                           type="button"
                           onClick={() => ajouterCompetenceRequise(s.label)}
                           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed ${tw.borderBase} hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 text-slate-600`}
                         >
                           + {s.label}
+                          {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                         </button>
                       ))}
                   </div>

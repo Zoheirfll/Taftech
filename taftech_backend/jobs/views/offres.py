@@ -807,4 +807,49 @@ class MetierSuggestionsAPIView(APIView):
         # importées) — jamais montré jusqu'ici malgré son importation en Phase 1.
         avertissement = next((lien.precision for lien in liens_formation if lien.precision), "")
 
-        return Response({"competences": competences, "specialites": specialites, "avertissement": avertissement})
+        # Statistiques d'usage (candidats + offres du même métier, voir suggestions_stats.py) :
+        # servent à annoter et TRIER, jamais à retirer une suggestion du référentiel. Les
+        # éléments très utilisés mais absents du référentiel sont ajoutés (plafonnés).
+        from ..suggestions_stats import MAX_PAR_CATEGORIE, calculer_stats_metier, score_tri
+        stats = calculer_stats_metier(metier)
+
+        def enrichir(items, cat, cle_item, extra_label):
+            index = stats[cat]
+            vus = set()
+            for it in items:
+                cle = cle_item(it)
+                vus.add(cle)
+                s = index.get(cle) or {}
+                it['pct_candidats'] = s.get('pct_candidats')
+                it['nb_offres'] = s.get('nb_offres')
+            # Éléments fréquents hors référentiel (au plus MAX_PAR_CATEGORIE, déjà triés).
+            frequents = sorted(
+                (s for k, s in index.items() if k not in vus and (s.get('pct_candidats') or s.get('nb_offres'))),
+                key=score_tri, reverse=True,
+            )[:MAX_PAR_CATEGORIE]
+            for s in frequents:
+                items.append({
+                    'id': s['id'], extra_label: s['label'],
+                    'pct_candidats': s['pct_candidats'], 'nb_offres': s['nb_offres'],
+                })
+            # sorted() est stable : sans statistique, l'ordre alphabétique d'origine est conservé.
+            items.sort(key=score_tri, reverse=True)
+            return items
+
+        competences = enrichir(competences, 'competences', lambda i: i['label'].strip().lower(), 'label')
+        specialites = enrichir(specialites, 'specialites', lambda i: str(i['id']), 'libelle')
+        diplomes = enrichir([], 'diplomes', lambda i: str(i['id']), 'libelle')
+        from ..models import TypeDiplome
+        codes = dict(TypeDiplome.objects.filter(pk__in=[d['id'] for d in diplomes]).values_list('pk', 'code'))
+        for d in diplomes:
+            from ..suggestions_stats import _famille
+            fam = _famille(codes.get(d['id'], ''))
+            d['famille'] = fam
+            d['pct_famille'] = stats['familles'].get(fam)
+
+        return Response({
+            "competences": competences, "specialites": specialites, "diplomes": diplomes,
+            "avertissement": avertissement,
+            "nb_candidats": stats['nb_candidats'], "nb_offres": stats['nb_offres'],
+            "elargi": stats['elargi'],
+        })

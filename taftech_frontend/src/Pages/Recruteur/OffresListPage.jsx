@@ -1,3 +1,5 @@
+import SuggestionsDiplomes from "../../Components/SuggestionsDiplomes";
+import { libelleUsage } from "../../utils/suggestionStats";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Select from "react-select";
@@ -50,7 +52,7 @@ const OffresListPage = () => {
   const [draftDiplomeId, setDraftDiplomeId] = useState("");
   const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
   const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
-  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], avertissement: "" });
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], diplomes: [], avertissement: "" });
 
   // Entrées génériques "Autre X — préciser" masquées — ne comparent rien côté candidat dans
   // une liste d'exigences de matching (voir même décision dans CreateJob.jsx).
@@ -90,7 +92,7 @@ const OffresListPage = () => {
 
   useEffect(() => {
     if (!modifierForm.metier) {
-      setSuggestionsPourMetier({ competences: [], specialites: [], avertissement: "" });
+      setSuggestionsPourMetier({ competences: [], specialites: [], diplomes: [], avertissement: "" });
       return;
     }
     jobsService.getMetierSuggestions(modifierForm.metier).then(setSuggestionsPourMetier);
@@ -736,6 +738,12 @@ const OffresListPage = () => {
                       ))}
                     </div>
                   )}
+                  <SuggestionsDiplomes
+                    diplomes={suggestionsPourMetier.diplomes}
+                    dejaAjoutes={diplomesRequis}
+                    elargi={suggestionsPourMetier.elargi}
+                    onAjouter={(d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }]))}
+                  />
                 </div>
 
                 <div>
@@ -786,6 +794,7 @@ const OffresListPage = () => {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
                           >
                             + {s.libelle}
+                        {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                           </button>
                         ))}
                     </div>
@@ -939,6 +948,7 @@ const OffresListPage = () => {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
                           >
                             + {s.label}
+                          {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                           </button>
                         ))}
                     </div>

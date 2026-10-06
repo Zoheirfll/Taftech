@@ -2,6 +2,21 @@
 
 > **Lire ce fichier en entier avant toute action dans ce projet.**
 
+## 🆕 SESSION 06/10/2026 — Suggestions d'offre appuyées par l'usage réel (candidats + offres)
+
+**Demande** : à la création d'offre, un recruteur ne sait pas que 90 % des candidats RH ont « Licence académique » plutôt que « Licence nature non précisée ». Les suggestions (compétences, spécialités, diplômes) doivent être annotées et triées par usage réel. Choix validés : sources candidats **et** offres, seuil de confidentialité, cache 1 h, aucune suggestion retirée (anti-effet de boucle).
+
+- **`jobs/suggestions_stats.py`** (nouveau) : `calculer_stats_metier(metier)` — population candidats = `ProfilCandidat` dont `metier` OU `metier_souhaite` ∈ métier canonique + redirections ; population offres = `OffreEmploi` `APPROUVEE` du métier. Compétences (`CompetenceCandidat`/`CompetenceOffre`, par label insensible à la casse), spécialités (`FormationCandidat.specialite_ref`/`specialites_requises`), diplômes (`diplome_ref`/`diplomes_requis`), un profil/offre compté une fois par élément.
+- **Seuils** : `MIN_CANDIDATS = 10`, `MIN_OFFRES = 5` — en dessous, le chiffre correspondant est `None` (jamais exposé). Seuil offres (5) choisi sans validation explicite de l'utilisateur. Agrégats uniquement.
+- **Élargissement domaine voisin** : si le métier est sous un seuil, calcul étendu aux métiers du même `groupe_principal` (`elargi: true` dans la réponse).
+- **Familles de diplôme** : `D-LIC-A`/`D-LIC-NP` → `D-LIC` (`_famille`), % de la famille exposé (`pct_famille`) ; en-tête affiché seulement pour Licence/Master/Doctorat (`D-LIC`/`D-MAS`/`D-DOC`, codes **non revérifiés en base**).
+- **`MetierSuggestionsAPIView`** : réponse enrichie (`pct_candidats`, `nb_offres` par suggestion, nouvelle liste `diplomes`, `nb_candidats`, `nb_offres`, `elargi`) ; tri décroissant stable (sans stat → ordre alphabétique d'origine) ; éléments fréquents hors référentiel ajoutés (max 12/catégorie). Les diplômes ne viennent QUE des données réelles (jamais reconstruits depuis `DiplomeSpecialite`, règle F06 inchangée).
+- **Frontend** : `utils/suggestionStats.js::libelleUsage`, `Components/SuggestionsDiplomes.jsx` (groupé par famille), branchés sur `CreateJob.jsx` et `OffresListPage.jsx` (modification d'offre).
+- **Limites** : le cache (1 h) n'est pas invalidé à l'écriture ; peu de profils en base de dev, donc peu de pourcentages visibles tant que les inscriptions sont rares ; compétences non regroupées par proximité (pas de familles dans le référentiel).
+- **Tests** : `jobs/tests/test_suggestions_stats.py` (seuil + calcul), `test_metier_suggestions` ✅, `CreateJob`/`OffresListPage` ✅, `vite build` propre.
+
+---
+
 ## 🆕 SESSION 03/10/2026 — Placeholders « exemple » retirés + menu mobile candidat réorganisé
 
 - **Placeholders** : 65 placeholders « exemple » retirés (« Ex : … », `votre@email…`, `https://…`, `0555…`, `DZ`, `••••`, `____`, gabarits « Bonjour {prenom} », puces d'exemple de CreateJob, « (ex: Anglais) »), car ils donnaient un air « généré par IA ». Conservés : placeholders fonctionnels (« Rechercher… », « Sélectionnez… », « Illimité », « Tapez une compétence puis Entrée… », consignes comme « 8 caractères minimum »). Les tests qui ciblaient ces placeholders utilisent désormais des sélecteurs structurels (`input[type="email"]`, `input[maxlength="6"]`, `input[name="titre"]`…). **Règle : ne plus ajouter de placeholder d'exemple ; le libellé visible suffit.**

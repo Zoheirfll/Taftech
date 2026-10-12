@@ -169,11 +169,11 @@ const RegisterRecruteur = () => {
   const left = LEFT_CONTENT[step];
 
   return (
-    <div className={`min-h-screen ${tw.authPageBg} py-10 px-4`}>
-      <div className={`max-w-5xl mx-auto ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
+    <div className={`min-h-screen ${tw.authPageBg} py-6 sm:py-10 px-3 sm:px-4 overflow-x-hidden`}>
+      <div className={`max-w-5xl mx-auto ${tw.authCardShell} overflow-hidden flex flex-col lg:flex-row min-w-0`}>
 
         {/* COLONNE GAUCHE */}
-        <div className={`order-2 md:order-1 md:w-5/12 ${tw.heroPanelDark} p-10 flex flex-col justify-between`}>
+        <div className={`order-2 lg:order-1 lg:w-5/12 min-w-0 ${tw.heroPanelDark} p-6 sm:p-10 flex flex-col justify-between`}>
           <div>
             <p className={`text-xs font-semibold ${tw.textTealLight} uppercase tracking-widest mb-6`}>Espace Recruteur</p>
             <h2 className="text-xl font-extrabold leading-snug mb-3 transition-all duration-300">
@@ -198,7 +198,7 @@ const RegisterRecruteur = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 lg:order-2 lg:w-7/12 min-w-0 p-5 sm:p-8 lg:p-10 flex flex-col justify-center">
 
           {/* STEPPER */}
           <div className="flex items-center gap-2 mb-8">
@@ -292,7 +292,7 @@ const RegisterRecruteur = () => {
                     <label className={`text-sm font-semibold ${tw.textMuted}`}>Registre de commerce</label>
                     <div className="group relative">
                       <Info size={13} className={`${tw.textMuted} cursor-help`} />
-                      <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 ${tw.tooltipPanelDark900} text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed`}>
+                      <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 max-w-[70vw] ${tw.tooltipPanelDark900} text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed`}>
                         Numéro figurant sur votre extrait de registre de commerce (RC). Exemple : 1234567B89. Requis pour valider votre compte employeur.
                       </div>
                     </div>

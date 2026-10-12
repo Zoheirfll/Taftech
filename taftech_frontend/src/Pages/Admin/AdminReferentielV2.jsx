@@ -10,6 +10,7 @@ import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { CheckCircle2 } from "lucide-react";
 import ReactSelect from "react-select";
 import { selectStyles } from "../../theme";
+import { grouperParFamille } from "../../utils/familleFormation";
 import { jobsService } from "../../Services/jobsService";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import AdminPagination from "../../Components/AdminPagination";
@@ -29,7 +30,7 @@ import { GraduationCap } from "lucide-react";
 
 const ONGLETS = [
   { key: "metiers", label: "Métiers", secondaryKey: "groupe_libelle", secondaryLabel: "Groupe" },
-  { key: "specialites", label: "Spécialités", secondaryKey: "domaine_libelle", secondaryLabel: "Domaine" },
+  { key: "specialites", label: "Spécialités", secondaryKey: "domaine_complet", secondaryLabel: "Domaine" },
   { key: "diplomes", label: "Types de diplôme", secondaryKey: "systeme", secondaryLabel: "Système" },
   { key: "relations", label: "Métiers similaires" },
   { key: "relations-specialites", label: "Spécialités similaires" },
@@ -537,7 +538,7 @@ const SpecialiteAutocomplete = ({ value = "", onSelect, placeholder = "Recherche
               onMouseDown={() => handleSelect(item)}
             >
               <div className={tw.autocompleteItemTitle}>{item.libelle}</div>
-              <div className={`text-xs ${tw.autocompleteItemSubtitle}`}>{item.domaine_libelle}</div>
+              <div className={`text-xs ${tw.autocompleteItemSubtitle}`}>{item.domaine_complet || item.domaine_libelle}</div>
             </li>
           ))}
         </ul>
@@ -901,7 +902,7 @@ const FormationsAVerifierPanel = ({ onTraitee }) => {
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">Type de diplôme</label>
                   <ReactSelect
-                    options={typesDiplomes.map((d) => ({ value: d.id, label: d.libelle }))}
+                    options={grouperParFamille(typesDiplomes, null, (d) => ({ value: d.id, label: d.libelle }))}
                     value={
                       typesDiplomes
                         .map((d) => ({ value: d.id, label: d.libelle }))

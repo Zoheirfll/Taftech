@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
-import { convertDateRaw, convertDateFin } from "../../../utils/cvDates";
+import { convertDateRaw, convertDateFin, precisionDateRaw, precisionDateFin } from "../../../utils/cvDates";
 import { reportError } from "../../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
@@ -209,6 +209,8 @@ export const useOnboardingWizard = () => {
             metier_propose_libelle: exp.metier_libelle || "",
             date_debut: convertDateRaw(exp.date_debut_raw),
             date_fin: convertDateFin(exp.date_fin_raw, exp.date_debut_raw),
+            date_debut_precision: precisionDateRaw(exp.date_debut_raw),
+            date_fin_precision: precisionDateFin(exp.date_fin_raw, exp.date_debut_raw),
             description: exp.description || "",
           })),
         );
@@ -220,6 +222,8 @@ export const useOnboardingWizard = () => {
             etablissement: f.etablissement,
             date_debut: convertDateRaw(f.date_debut_raw),
             date_fin: convertDateFin(f.date_fin_raw, f.date_debut_raw),
+            date_debut_precision: precisionDateRaw(f.date_debut_raw),
+            date_fin_precision: precisionDateFin(f.date_fin_raw, f.date_debut_raw),
             description: f.description || "",
             diplome_ref: f.diplome_ref || null,
             diplome_ref_libelle: f.diplome_ref_libelle || "",
@@ -239,10 +243,17 @@ export const useOnboardingWizard = () => {
       }
       if (result.competences) {
         const niveaux = result.competences_niveaux || {};
+        // Rapprochement avec le référentiel TAFTECH (calculé côté serveur) : permet à l'étape
+        // de signaler les compétences reconnues et celles à vérifier.
+        const reconnues = new Set((result.competences_referentiel || []).map((l) => l.toLowerCase()));
+        const rapprochees = result.competences_rapprochees || {};
+        const intituleCv = Object.fromEntries(Object.entries(rapprochees).map(([orig, canon]) => [canon, orig]));
         setPendingCompetences(
           result.competences.split(",").map((c) => c.trim()).filter(Boolean).map((label) => ({
             label,
             niveau: niveaux[label] || "DEBUTANT",
+            dans_referentiel: reconnues.has(label.toLowerCase()),
+            intitule_cv: intituleCv[label] || null,
           })),
         );
       }

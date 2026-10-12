@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Select from "react-select";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { selectStyles } from "../theme";
+import { grouperParFamille, aplatirGroupes, familleDuDiplome, typesPourNiveau, niveauPourType } from "../utils/familleFormation";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
@@ -60,6 +61,9 @@ export const FormationReferentielSelect = ({
   permettreAutre = true,
 }) => {
   const [nomenclature, setNomenclature] = useState(null);
+  // Étape 1 de la cascade : niveau d'études (Scolarite) -> type de diplôme -> domaine -> filière
+  // -> spécialité. Simple filtre d'aide à la saisie (non enregistré à part : il se déduit du type).
+  const [niveauId, setNiveauId] = useState("");
   const [domaineId, setDomaineId] = useState("");
   const [filiereId, setFiliereId] = useState("");
   const [diplomeAutre, setDiplomeAutre] = useState(false);
@@ -176,23 +180,60 @@ export const FormationReferentielSelect = ({
     }
   }, [nomenclature, specialiteId, domaineId]);
 
+  // Édition d'une formation existante : le niveau d'études se déduit du type de diplôme choisi.
+  // Une seule fois : ensuite l'utilisateur garde la main (il peut effacer le niveau).
+  const niveauDeduit = useRef(false);
+  useEffect(() => {
+    if (niveauDeduit.current || !nomenclature || !diplomeId) return;
+    niveauDeduit.current = true;
+    const niveau = niveauPourType(nomenclature.niveaux_etudes, nomenclature.types_diplomes, diplomeId);
+    if (niveau) setNiveauId(String(niveau.id));
+  }, [nomenclature, diplomeId]);
+
+  const niveauChoisi = useMemo(
+    () => nomenclature?.niveaux_etudes?.find((n) => String(n.id) === String(niveauId)) || null,
+    [nomenclature, niveauId],
+  );
+  const niveauOptions = useMemo(
+    () => (nomenclature?.niveaux_etudes || []).map((n) => ({ value: n.id, label: n.libelle })),
+    [nomenclature],
+  );
+
   const diplomeAutreRef = useMemo(
     () => nomenclature?.types_diplomes.find((d) => d.code === "D-AUTRE") || null,
     [nomenclature],
   );
 
-  const typesDiplomesOptions = useMemo(
+  // Point 8 : types de diplôme et domaines sont présentés par famille (enseignement supérieur /
+  // formation professionnelle / thèmes TafTech), jamais mélangés dans une même liste.
+  const typesDiplomesGroupes = useMemo(
     () =>
       nomenclature
-        ? nomenclature.types_diplomes.filter((d) => d.code !== "D-AUTRE").map((d) => ({ value: d.id, label: d.libelle }))
+        ? grouperParFamille(
+            typesPourNiveau(nomenclature.types_diplomes.filter((d) => d.code !== "D-AUTRE"), niveauChoisi),
+            nomenclature.familles,
+            (d) => ({ value: d.id, label: d.libelle }),
+          )
         : [],
-    [nomenclature],
+    [nomenclature, niveauChoisi],
   );
+  const typesDiplomesOptions = useMemo(() => aplatirGroupes(typesDiplomesGroupes), [typesDiplomesGroupes]);
 
-  const domaineOptions = useMemo(
-    () => (nomenclature ? nomenclature.domaines.map((d) => ({ value: d.id, label: d.libelle })) : []),
-    [nomenclature],
+  // Une fois le type de diplôme choisi, seuls les domaines de la même famille sont proposés
+  // (un BTS ne se classe pas dans « Droit et sciences politiques », une Licence pas dans
+  // « Bâtiment et travaux publics »). Le domaine déjà sélectionné reste toujours visible.
+  const familleDiplome = useMemo(
+    () => (nomenclature && !diplomeAutre ? familleDuDiplome(nomenclature.types_diplomes, diplomeId) : ""),
+    [nomenclature, diplomeId, diplomeAutre],
   );
+  const domaineGroupes = useMemo(() => {
+    if (!nomenclature) return [];
+    const domaines = nomenclature.domaines.filter(
+      (d) => !familleDiplome || d.famille === familleDiplome || String(d.id) === String(domaineId),
+    );
+    return grouperParFamille(domaines, nomenclature.familles, (d) => ({ value: d.id, label: d.libelle }));
+  }, [nomenclature, familleDiplome, domaineId]);
+  const domaineOptions = useMemo(() => aplatirGroupes(domaineGroupes), [domaineGroupes]);
 
   const filiereOptions = useMemo(() => {
     if (!nomenclature || !domaineId || domaineAutre) return [];
@@ -247,6 +288,35 @@ export const FormationReferentielSelect = ({
 
   return (
     <div className="space-y-3">
+      {niveauOptions.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Niveau d'études</label>
+          <Select
+            options={niveauOptions}
+            value={niveauOptions.find((o) => String(o.value) === String(niveauId)) || null}
+            onChange={(opt) => {
+              const niveau = opt ? nomenclature.niveaux_etudes.find((n) => n.id === opt.value) : null;
+              setNiveauId(opt ? String(opt.value) : "");
+              // Un diplôme qui n'appartient plus au niveau choisi est retiré, avec ce qui en dépend.
+              const typeActuel = nomenclature.types_diplomes.find((t) => String(t.id) === String(diplomeId));
+              if (niveau && typeActuel && !diplomeAutre && !niveau.familles.includes(typeActuel.famille)) {
+                onChangeDiplome("");
+                setDomaineId("");
+                setFiliereId("");
+                onChangeSpecialite("");
+              }
+            }}
+            styles={selectStyles}
+            placeholder="Tous niveaux..."
+            isClearable
+          />
+          {niveauChoisi && niveauChoisi.familles.length === 0 && (
+            <p className="mt-1.5 text-xs text-slate-500">
+              Aucun diplôme à renseigner pour ce niveau. {niveauChoisi.usage}
+            </p>
+          )}
+        </div>
+      )}
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-sm font-medium text-slate-700">
@@ -318,9 +388,20 @@ export const FormationReferentielSelect = ({
           </div>
         ) : (
           <Select
-            options={typesDiplomesOptions}
+            options={typesDiplomesGroupes}
             value={typesDiplomesOptions.find((o) => String(o.value) === String(diplomeId)) || null}
-            onChange={(opt) => (opt ? onChangeDiplome(opt.value, opt.label) : onChangeDiplome(""))}
+            onChange={(opt) => {
+              // Changer de famille (ex. Licence -> CAP) invalide le domaine déjà choisi.
+              const nouvelleFamille = opt && nomenclature ? familleDuDiplome(nomenclature.types_diplomes, opt.value) : "";
+              const domaineActuel = nomenclature?.domaines.find((d) => String(d.id) === String(domaineId));
+              if (nouvelleFamille && domaineActuel && domaineActuel.famille !== nouvelleFamille) {
+                setDomaineId("");
+                setFiliereId("");
+                onChangeSpecialite("");
+              }
+              if (opt) onChangeDiplome(opt.value, opt.label);
+              else onChangeDiplome("");
+            }}
             styles={selectStyles}
             placeholder="Sélectionner un type de diplôme..."
             isClearable
@@ -352,7 +433,7 @@ export const FormationReferentielSelect = ({
           </div>
         ) : (
           <Select
-            options={domaineOptions}
+            options={domaineGroupes}
             value={domaineOptions.find((o) => String(o.value) === String(domaineId)) || null}
             onChange={(opt) => {
               setDomaineId(opt?.value ? String(opt.value) : "");

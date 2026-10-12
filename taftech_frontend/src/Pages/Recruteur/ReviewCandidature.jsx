@@ -20,6 +20,7 @@ import {
   BadgeCheck,
   Languages,
 } from "lucide-react";
+import { formatDatePrecise } from "../../utils/cvDates";
 
 const STATUT_FORMATION = {
   OBTENU: { label: "Obtenu", className: "bg-emerald-50 text-emerald-700" },
@@ -619,7 +620,7 @@ const ReviewCandidature = () => {
                         {exp.metier_libelle && <span className="text-slate-600 font-normal ml-1">· {exp.metier_libelle}</span>}
                       </p>
                       <p className="text-xs text-slate-600 mt-0.5">
-                        {exp.date_debut} — {exp.date_fin || "Aujourd'hui"}
+                        {formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — {exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "Aujourd'hui"}
                       </p>
                     </div>
                   </div>
@@ -666,9 +667,9 @@ const ReviewCandidature = () => {
                         <p className="text-xs text-slate-700 mt-0.5">
                           {form.etablissement}
                         </p>
-                        {form.date_debut && (
+                        {(form.date_debut || form.date_fin || form.date_fin_prevue) && (
                           <p className="text-xs text-slate-600 mt-0.5">
-                            {form.date_debut} — {form.date_fin_prevue || form.date_fin || "En cours"}
+                            {form.date_debut ? `${formatDatePrecise(form.date_debut, form.date_debut_precision)} — ` : ""}{form.date_fin_prevue ? formatDatePrecise(form.date_fin_prevue) : form.date_fin ? formatDatePrecise(form.date_fin, form.date_fin_precision) : "En cours"}
                           </p>
                         )}
                       </div>

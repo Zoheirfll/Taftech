@@ -203,6 +203,9 @@ const NavbarRecruteur = () => {
         <div className="flex items-center gap-3">
           {!isLogged && (
             <>
+              <Link to="/" className="hidden md:block shrink-0 whitespace-nowrap text-sm font-semibold text-slate-700 pr-3 border-r border-slate-200">
+                Vous cherchez un emploi ? <span className="font-semibold text-indigo-600 hover:underline">Espace candidat</span>
+              </Link>
               <Link to="/recruteurs/connexion" className={tw.navLinkTealActive}>
                 <LogIn size={14} /> Se connecter
               </Link>
@@ -331,6 +334,9 @@ const NavbarRecruteur = () => {
                 </Link>
                 <Link to="/recruteurs/inscription" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold ${tw.textTeal} hover:bg-teal-50 rounded-lg transition-colors`}>
                   <User size={16} className="shrink-0" /> S'inscrire
+                </Link>
+                <Link to="/" onClick={() => setIsMobileOpen(false)} className={`flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors`}>
+                  <Briefcase size={16} className="shrink-0" /> Espace candidat
                 </Link>
               </div>
             </>

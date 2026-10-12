@@ -8,6 +8,7 @@ import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
+import { grouperParFamille } from "../../utils/familleFormation";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
@@ -82,6 +83,7 @@ const JobsList = () => {
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [], experiences: [], contrats: [] });
   const [nomenclature, setNomenclature] = useState({ domaines: [] });
   const [typesDiplomes, setTypesDiplomes] = useState([]);
+  const [famillesFormation, setFamillesFormation] = useState([]);
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
@@ -104,8 +106,9 @@ const JobsList = () => {
         setConstants(constantsData);
         setNomenclature(nomenclatureData);
         setTypesDiplomes(
-          (nomenclatureFormationData.types_diplomes || []).map((d) => ({ value: String(d.id), label: d.libelle })),
+          (nomenclatureFormationData.types_diplomes || []).map((d) => ({ value: String(d.id), label: d.libelle, famille: d.famille })),
         );
+        setFamillesFormation(nomenclatureFormationData.familles || []);
         setFavoris(favorisData.data);
         setRecommandations(recommandationsData || []);
       } catch (error) {
@@ -242,11 +245,12 @@ const JobsList = () => {
         {[
           { label: "Expérience", name: "experience", options: constants.experiences, placeholder: "Toutes" },
           { label: "Type de contrat", name: "contrat", options: constants.contrats, placeholder: "Tous" },
-          { label: "Diplôme", name: "diplome_id", options: typesDiplomes, placeholder: "Tous" },
-        ].map(({ label, name, options, placeholder }) => (
+          { label: "Diplôme", name: "diplome_id", options: typesDiplomes, placeholder: "Tous",
+            groupes: grouperParFamille(typesDiplomes, famillesFormation, (o) => o) },
+        ].map(({ label, name, options, placeholder, groupes }) => (
           <div key={name}>
             <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>{label}</label>
-            <Select name={name} options={options} onChange={handleSelectChange} value={options.find((c) => c.value === filters[name]) || null} placeholder={placeholder} isClearable styles={selectStyles} />
+            <Select name={name} options={groupes || options} onChange={handleSelectChange} value={options.find((c) => c.value === filters[name]) || null} placeholder={placeholder} isClearable styles={selectStyles} />
           </div>
         ))}
         <div>

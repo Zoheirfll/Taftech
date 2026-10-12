@@ -13,6 +13,7 @@ import AdminPageHeader from "../../Components/AdminPageHeader";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
+import { formatDatePrecise } from "../../utils/cvDates";
 
 // Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
 const ROLE_BADGES = {
@@ -508,8 +509,8 @@ const AdminUsers = () => {
                                 </p>
                               )}
                               <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                                {formatDate(exp.date_debut)} —{" "}
-                                {exp.date_fin ? formatDate(exp.date_fin) : "Aujourd'hui"}
+                                {formatDatePrecise(exp.date_debut, exp.date_debut_precision)} —{" "}
+                                {exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "Aujourd'hui"}
                               </p>
                               {exp.description && (
                                 <p className={`text-xs ${tw.textMuted} mt-1`}>
@@ -547,8 +548,8 @@ const AdminUsers = () => {
                                 </p>
                               )}
                               <p className={`text-xs ${tw.textMuted700}`}>
-                                {[form.etablissement, form.date_debut && formatDate(form.date_debut)].filter(Boolean).join(" · ")}
-                                {form.date_fin ? ` — ${formatDate(form.date_fin)}` : form.date_fin_prevue ? ` — prévue ${formatDate(form.date_fin_prevue)}` : ""}
+                                {[form.etablissement, form.date_debut && formatDatePrecise(form.date_debut, form.date_debut_precision)].filter(Boolean).join(" · ")}
+                                {form.date_fin ? ` — ${formatDatePrecise(form.date_fin, form.date_fin_precision)}` : form.date_fin_prevue ? ` — prévue ${formatDate(form.date_fin_prevue)}` : ""}
                               </p>
                             </div>
                           ),

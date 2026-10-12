@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Check } from "lucide-react";
 import { tw } from "../../../../theme";
+import { grouperParFamille } from "../../../../utils/familleFormation";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
 import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
 
@@ -114,7 +115,11 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
             }}
           >
             <option value="">Sélectionnez…</option>
-            {(constants.typesDiplomes || []).map((d) => <option key={d.id} value={d.id}>{d.libelle}</option>)}
+            {grouperParFamille(constants.typesDiplomes, null, (d) => d).map((groupe) => (
+              <optgroup key={groupe.label} label={groupe.label}>
+                {groupe.options.map((d) => <option key={d.id} value={d.id}>{d.libelle}</option>)}
+              </optgroup>
+            ))}
           </select>
         </div>
         <div>

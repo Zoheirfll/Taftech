@@ -446,7 +446,7 @@ class CandidatFichierPriveAPIView(APIView):
         if user.id == profil.user_id or user.role == 'ADMIN':
             return True
         entreprise = get_entreprise_for_user(user)
-        if not entreprise:
+        if not entreprise or not entreprise.est_approuvee:
             return False
         if Candidature.objects.filter(candidat_id=profil.user_id, offre__entreprise=entreprise).exists():
             return True

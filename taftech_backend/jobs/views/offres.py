@@ -427,25 +427,42 @@ class NomenclatureFormationAPIView(APIView):
 
     def get(self, request):
         from django.core.cache import cache
-        cached = cache.get('jobs_nomenclature_formation')
+        cached = cache.get('jobs_nomenclature_formation_v2')
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..models import TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation, DiplomeSpecialite
+        from ..models import Scolarite
+        from ..referentiel_utils import famille_formation, FAMILLES_FORMATION, FAMILLES_PAR_NIVEAU_ETUDES
+        # Point 8 : chaque type de diplôme, domaine et spécialité porte sa `famille` (supérieur /
+        # formation professionnelle / thèmes TafTech) pour que l'interface ne les mélange jamais
+        # dans une même liste. Le domaine « non répertorié » (D-AUTRE) est géré par le flux
+        # « Autre, préciser », pas proposé comme un domaine.
+        domaines = list(DomaineFormation.objects.filter(actif=True).exclude(code='D-AUTRE').order_by('libelle'))
+        famille_par_domaine = {d.id: famille_formation(d.systeme) for d in domaines}
         data = {
+            "familles": [{"code": code, "libelle": libelle} for code, libelle in FAMILLES_FORMATION.items()],
+            # 1ʳᵉ étape de la cascade : niveau d'études -> familles de diplômes proposées.
+            "niveaux_etudes": [
+                {"id": s.id, "code": s.code, "libelle": s.libelle, "usage": s.usage,
+                 "familles": FAMILLES_PAR_NIVEAU_ETUDES.get(s.code, [])}
+                for s in Scolarite.objects.order_by('id')
+            ],
             "types_diplomes": [
-                {"id": d.id, "code": d.code, "libelle": d.libelle, "systeme": d.systeme}
+                {"id": d.id, "code": d.code, "libelle": d.libelle, "systeme": d.systeme,
+                 "famille": famille_formation(d.systeme)}
                 for d in TypeDiplome.objects.filter(selectionnable=True).order_by('systeme', 'libelle')
             ],
             "domaines": [
-                {"id": d.id, "libelle": d.libelle}
-                for d in DomaineFormation.objects.filter(actif=True).order_by('libelle')
+                {"id": d.id, "libelle": d.libelle, "famille": famille_par_domaine[d.id]}
+                for d in domaines
             ],
             "filieres": [
                 {"id": f.id, "libelle": f.libelle, "domaine_id": f.domaine_id}
                 for f in FiliereFormation.objects.filter(actif=True).order_by('libelle')
             ],
             "specialites": [
-                {"id": s.id, "code": s.code, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id}
+                {"id": s.id, "code": s.code, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id,
+                 "famille": famille_par_domaine.get(s.domaine_id, 'autre')}
                 for s in SpecialiteFormation.objects.filter(selectionnable=True).order_by('libelle')
             ],
             # Couples attestés — le frontend les met en avant dans la liste des spécialités
@@ -455,7 +472,7 @@ class NomenclatureFormationAPIView(APIView):
                 for ds in DiplomeSpecialite.objects.filter(selectionnable=True)
             ],
         }
-        cache.set('jobs_nomenclature_formation', data, timeout=3600)
+        cache.set('jobs_nomenclature_formation_v2', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -519,8 +536,16 @@ class MetierAutocompleteAPIView(APIView):
     def get(self, request):
         from ..models import Appellation
         from ..referentiel_utils import normaliser_recherche, corriger_mots_flous, q_mots_cle_recherche
-        search = normaliser_recherche(request.query_params.get('search'))
-        if not search:
+        from ..referentiel_utils import developper_abreviations
+        search_brut = normaliser_recherche(request.query_params.get('search'))
+        # « gestionnaire rh » doit trouver « … ressources humaines » ; l'espace final (mot
+        # terminé) est conservé car il change le traitement du dernier mot (préfixe ou entier).
+        search = developper_abreviations(search_brut) + (' ' if search_brut.endswith(' ') else '')
+        # Un sigle qui existe tel quel comme appellation (« DAF ») n'est jamais développé.
+        if search.strip() != search_brut.strip() and Appellation.objects.filter(
+                cle_recherche=search_brut.strip(), actif=True).exists():
+            search = search_brut
+        if not search.strip():
             return Response([])
         try:
             limit = min(max(int(request.query_params.get('limit', 20)), 1), 100)
@@ -797,10 +822,14 @@ class MetierSuggestionsAPIView(APIView):
 
         liens_formation = list(
             MetierFormation.objects.filter(metier=metier, specialite__selectionnable=True)
-            .select_related('specialite').order_by('specialite__libelle')[:15]
+            .select_related('specialite', 'specialite__domaine').order_by('specialite__libelle')[:15]
         )
+        from ..referentiel_utils import FAMILLES_FORMATION, famille_formation
         specialites = [
-            {"id": lien.specialite_id, "libelle": lien.specialite.libelle}
+            {"id": lien.specialite_id, "libelle": lien.specialite.libelle,
+             # Point 8 : la suggestion indique sa famille (supérieur / formation professionnelle…)
+             # pour que le recruteur ne les confonde jamais.
+             "famille_libelle": FAMILLES_FORMATION[famille_formation(lien.specialite.domaine.systeme)]}
             for lien in liens_formation
         ]
         # Texte d'avertissement du client (`precision`, identique sur toutes les lignes

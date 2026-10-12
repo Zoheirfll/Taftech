@@ -345,3 +345,13 @@ Or `taftech_frontend/src/api/axiosConfig.js` ne mutualisait pas les rafraîchiss
 - **Membres après rétrogradation** : seule l'expiration bloquait les membres (login + dashboard). Un passage de Business à Pro/Starter laissait l'équipe active. Le contrôle est maintenant centralisé dans `get_entreprise_for_user` (tous les endpoints).
 - Tests : `jobs/tests/test_audit_acces_paliers.py`.
 
+## ✅ 21. Entreprise non validée : aucun accès aux données personnelles des candidats (12/10/2026)
+
+- **Règle (contrôlée côté serveur)** : entreprise validée par TAFTECH (`est_approuvee`) + abonnement/droit actif + permission = accès aux coordonnées et CV. Avant ce correctif, seule la partie abonnement/palier était vérifiée sur la plupart des points : une entreprise non validée avec un abonnement actif, ou ayant déjà reçu une candidature, pouvait accéder aux données.
+- **Garde commune** : `jobs/paliers_utils.py::reponse_entreprise_non_validee(entreprise)` → 403 `ENTREPRISE_NON_VALIDEE`.
+- **Points protégés** : CVthèque, déblocage de profil, téléchargement CV/photo (`CandidatFichierPriveAPIView._acces_autorise`, y compris après un déblocage ou une candidature reçue), documents privés partagés (liste + fichier), favoris, invitation à postuler, candidats recommandés, exports Excel (global et par offre), candidatures spontanées, Top 5.
+- **Tableau de bord** : reste accessible (état de validation, abonnement) mais `candidatures: []` pour toute entreprise non validée (`_offres_sans_candidats_si_non_validee`).
+- **Limite connue** : les vues de statut/évaluation d'une candidature n'ont pas de garde explicite (sans candidature visible, une entreprise non validée n'a rien à traiter).
+- **Autre** : le 403 `PALIER_INSUFFISANT` de « Candidats recommandés » (palier < Pro) est un blocage normal, plus journalisé comme erreur système côté frontend.
+- Tests : `jobs/tests/test_entreprise_non_validee_acces_candidats.py` (8), `jobs/tests/test_api_candidats_recommandes.py` (11).
+

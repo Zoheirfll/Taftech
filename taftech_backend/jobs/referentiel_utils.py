@@ -259,32 +259,96 @@ def q_mots_cle_recherche(mots, champ='cle_recherche', mode='and'):
     return q
 
 
+FAMILLES_FORMATION = {
+    'superieur': 'Enseignement supérieur',
+    'formation_professionnelle': 'Formation professionnelle',
+    'scolaire': 'Enseignement moyen et secondaire',
+    'certification': 'Certifications et attestations',
+    'theme': 'Thèmes généraux TafTech',
+    'autre': 'Autres diplômes',
+}
+
+# Niveau d'études (Scolarite, 1ʳᵉ étape de la cascade) -> familles de diplômes proposées ensuite.
+# Liste vide = aucun diplôme à renseigner (le niveau seul suffit, sans score négatif : table
+# Scolarite.usage). Le baccalauréat reste un diplôme séparé du niveau « secondaire ».
+FAMILLES_PAR_NIVEAU_ETUDES = {
+    'SC-SANS': [],
+    'SC-PRIM': [],
+    'SC-MOY': ['scolaire'],
+    'SC-SEC': ['scolaire'],
+    'SC-FP': ['formation_professionnelle', 'certification'],
+    'SC-SUP': ['superieur', 'autre'],
+    'SC-AUTRE': ['superieur', 'formation_professionnelle', 'scolaire', 'certification', 'autre'],
+}
+
+
+def famille_formation(systeme):
+    """Regroupe les `systeme` du référentiel en familles qui ne doivent jamais être mélangées dans
+    une même liste (point 8, 12/10/2026) : enseignement supérieur, formation professionnelle,
+    enseignement moyen/secondaire (BEM, BEF, Baccalauréat), certifications et attestations,
+    thèmes généraux TafTech (regroupements éditoriaux v1), autres (paramédical, ENS...)."""
+    systeme = systeme or ''
+    if systeme.startswith('superieur') or systeme == 'postgraduation_sante':
+        return 'superieur'
+    if systeme == 'formation_professionnelle':
+        return 'formation_professionnelle'
+    if systeme.startswith('scolaire'):
+        return 'scolaire'
+    if systeme in ('certification', 'formation_continue'):
+        return 'certification'
+    if systeme == 'theme_taftech':
+        return 'theme'
+    return 'autre'
+
+
+_ABREVIATIONS = {
+    "rh": "ressources humaines",
+    "drh": "directeur ressources humaines",
+    "daf": "directeur administratif financier",
+}
+
+
+def developper_abreviations(texte_normalise):
+    """Remplace les abréviations métier courantes (mots entiers, texte déjà normalisé) par leur
+    forme longue : « gestionnaire rh » -> « gestionnaire ressources humaines ». Sans ça, « rh »
+    (moins de 4 lettres) était ignoré des recherches par mots-clés et un intitulé comme
+    « Gestionnaire RH » se rattachait au premier « Gestionnaire … » venu (point 7, 12/10/2026)."""
+    if not texte_normalise:
+        return texte_normalise
+    return " ".join(_ABREVIATIONS.get(mot, mot) for mot in texte_normalise.split())
+
+
 def resoudre_metier_depuis_texte(*textes):
-    """Devine le Metier le plus probable à partir d'un ou plusieurs textes (titre de
-    poste, description...). Cherche les appellations dont le libellé contient un des
-    mots (4+ lettres) du texte fourni, retourne le métier (résolu vers son canonique)
-    le plus fréquent parmi les correspondances. Retourne None si rien n'est trouvé —
-    ne jamais deviner au hasard (REGLES_MATCHING R02/F02 du client)."""
+    """Rattache un intitulé de poste à son Metier canonique, SANS jamais deviner
+    (REGLES_MATCHING R02/F02 du client, point 7 de la liste de corrections finales).
+
+    Seule une appellation dont la clé de recherche est EXACTEMENT l'intitulé normalisé
+    (casse, accents, ponctuation ignorés) est acceptée, et seulement si toutes les
+    appellations exactes mènent au même métier canonique. Sinon None : le recruteur
+    choisit alors le métier de référence dans la liste (l'intitulé public reste libre).
+
+    L'ancienne version votait à la fréquence des mots (4+ lettres) trouvés par `icontains` :
+    « Gestionnaire RH » (« RH » ignoré car trop court) était rattaché à « Assistant en
+    ressources humaines »."""
     texte = normaliser_recherche(" ".join(t for t in textes if t))
-    mots = [m for m in re.findall(r"\w+", texte) if len(m) >= 4]
-    if not mots:
+    if not texte:
         return None
-    mots = corriger_mots_flous(mots)  # N04
-    q = Q()
-    for mot in mots:
-        q |= Q(cle_recherche__icontains=mot)
     appellations = list(
-        Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
-        .select_related('metier', 'metier__metier_canonique')[:50]
+        Appellation.objects.filter(cle_recherche=texte, actif=True, metier__selectionnable=True)
+        .select_related('metier', 'metier__metier_canonique')[:20]
     )
-    if not appellations:
+    metiers = {(a.metier.metier_canonique or a.metier).id: (a.metier.metier_canonique or a.metier) for a in appellations}
+    if len(metiers) > 1:
+        # Même appellation portée par plusieurs métiers (ex. « Chargé de recrutement » :
+        # métier ANEM large + métier TafTech précis). Seul le métier qui porte exactement
+        # ce libellé est retenu ; sinon on s'abstient.
+        homonymes = [m for m in metiers.values() if normaliser_recherche(m.libelle) == texte]
+        if len(homonymes) != 1:
+            return None
+        return homonymes[0]
+    if len(metiers) != 1:
         return None
-    metiers = [(a.metier.metier_canonique or a.metier) for a in appellations]
-    plus_frequent = Counter(m.id for m in metiers).most_common(1)[0][0]
-    for m in metiers:
-        if m.id == plus_frequent:
-            return m
-    return None
+    return next(iter(metiers.values()))
 
 
 _MOTS_GENERIQUES_DIPLOME = {"diplome", "formation", "professionnel", "professionnelle", "degree"}

@@ -13,7 +13,7 @@ class ExperienceSerializer(serializers.ModelSerializer):
         model = ExperienceCandidat
         fields = [
             'id', 'titre_poste', 'entreprise', 'metier', 'metier_libelle',
-            'appellation', 'appellation_libelle', 'date_debut', 'date_fin', 'description',
+            'appellation', 'appellation_libelle', 'date_debut', 'date_fin', 'date_debut_precision', 'date_fin_precision', 'description',
         ]
 
 
@@ -24,7 +24,8 @@ class FormationSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormationCandidat
         fields = [
-            'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'date_fin_prevue', 'description',
+            'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'date_fin_prevue',
+            'date_debut_precision', 'date_fin_precision', 'description',
             'diplome_ref', 'diplome_ref_libelle', 'specialite_ref', 'specialite_ref_libelle', 'statut',
             'pays_formation', 'statut_validation', 'document_reference', 'est_principale', 'version_referentiel',
         ]

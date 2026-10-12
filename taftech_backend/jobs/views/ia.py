@@ -89,6 +89,22 @@ Génère EXACTEMENT ce format JSON (sans markdown, sans explication) :
 Le champ "choix" ne doit contenir des valeurs que si type_question est CHOIX_UNIQUE ou CHOIX_MULTIPLE, sinon un tableau vide. Génère 4 à 6 questions au total, en variant les types (pas uniquement du texte libre). Pour "competences_structurees", propose 3 à 6 entrées maximum, avec un mélange raisonnable d'Obligatoire/Souhaitée."""
 
 
+_MOIS_LONGS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
+               'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+
+def _date_precise(d, precision):
+    """Affiche une date selon la précision réellement connue (« 2023 », « mars 2023 »
+    ou « 12/03/2023 ») — jamais le 01/01 technique d'une année seule."""
+    if not d:
+        return ''
+    if precision == 'ANNEE':
+        return str(d.year)
+    if precision == 'MOIS':
+        return f"{_MOIS_LONGS[d.month - 1]} {d.year}"
+    return d.strftime('%d/%m/%Y')
+
+
 def _deviner_metier_experience(titre_poste, description=""):
     """Metier (référentiel v2) d'une expérience — repli déterministe (mots-clés) utilisé
     quand l'agent de classification dédié (metier_agent, RAG+Groq) n'a rien retourné pour
@@ -102,13 +118,12 @@ def _deviner_metier_experience(titre_poste, description=""):
     Environnement industriels") car des mots courants comme "administration"/"gestion"
     noient le signal parmi des centaines d'appellations sans rapport une fois le titre
     et la description mélangés sans poids. Retourne un objet Metier ou None."""
-    from ..domaine_agent import _candidats_pour_experience
-    from ..models import Metier
-    candidats = _candidats_pour_experience(titre_poste, description, limite=1)
-    if not candidats:
-        return None
-    metier_id = candidats[0][1]
-    return Metier.objects.filter(pk=metier_id).first()
+    # Point 7 (12/10/2026) : le repli ne devine plus. Un classement « meilleur candidat »
+    # rattachait « Gestionnaire RH » à « Assistant RH ». Seul un intitulé identique à une
+    # appellation du référentiel est rattaché ; sinon le champ reste vide et le candidat
+    # le renseigne lui-même.
+    from ..referentiel_utils import resoudre_metier_depuis_texte
+    return resoudre_metier_depuis_texte(titre_poste)
 
 
 class GroqThrottle(UserRateThrottle):
@@ -354,7 +369,7 @@ class AnalyseCarriereGroqAPIView(APIView):
             return Response({'error': 'Profil introuvable.'}, status=404)
 
         experiences = [
-            f"{e.titre_poste} chez {e.entreprise} ({e.date_debut} - {e.date_fin or 'présent'})"
+            f"{e.titre_poste} chez {e.entreprise} ({_date_precise(e.date_debut, e.date_debut_precision)} - {_date_precise(e.date_fin, e.date_fin_precision) or 'présent'})"
             for e in profil.experiences_detail.all()
         ]
         formations = [f"{f.diplome} à {f.etablissement}" for f in profil.formations_detail.all()]
@@ -440,7 +455,8 @@ class AnalyseGroqRecruteurAPIView(APIView):
                 wilaya = profil.wilaya or 'Non renseigné'
                 experiences = [
                     {'titre_poste': e.titre_poste, 'entreprise': e.entreprise,
-                     'date_debut': str(e.date_debut), 'date_fin': str(e.date_fin) if e.date_fin else None}
+                     'date_debut': _date_precise(e.date_debut, e.date_debut_precision),
+                     'date_fin': _date_precise(e.date_fin, e.date_fin_precision) or None}
                     for e in profil.experiences_detail.all()
                 ]
                 formations = [

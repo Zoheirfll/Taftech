@@ -16,7 +16,7 @@
   - **PRO** : 12900 DA/mois, 154800 DA/an, limite_offres=15, limite_cv_mois=None (illimité), acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=False, acces_equipe=False, support_label="Prioritaire"
   - **BUSINESS** : 22900 DA/mois, 274800 DA/an, limite_offres=None, limite_cv_mois=None, acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, support_label="Prioritaire + dédié"
   - **ENTERPRISE** : prix_mensuel_da=None, prix_annuel_da=None ("Sur devis"), limite_offres=None, limite_cv_mois=None, acces_coordonnees=True, acces_ia_recommandes=True, acces_ia_avancee=True, acces_equipe=True, support_label="Dédié 24/7"
-- Entreprises déjà `est_premium=True` (ancien système) : migrées vers `AbonnementEntreprise(palier=BUSINESS, date_expiration=<leur premium_expire_at actuelle>)`, sans re-paiement forcé — voir spec `docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md`, section "Migration des Premium existants".
+- Entreprises déjà `est_premium=True` (ancien système) : migrées vers `AbonnementEntreprise(palier=BUSINESS, date_expiration=<leur premium_expire_at actuelle>)`, sans re-paiement forcé — voir spec `docs/conception/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md`, section "Migration des Premium existants".
 - Tests : `python manage.py test jobs.tests` (backend) et `npm test -- --run` (frontend) doivent rester à 100%. `npx vite build` propre.
 
 ---
@@ -37,7 +37,7 @@ Créer `taftech_backend/jobs/tests/test_api_paliers.py` :
 
 ```python
 """Tests pour le modèle Palier (session 22/08/2026, Phase 2a — voir
-docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md)."""
+docs/conception/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md)."""
 from django.test import TestCase
 from django.core.cache import cache
 from jobs.models import Palier, AbonnementEntreprise, ProfilEntreprise
@@ -113,7 +113,7 @@ Dans `taftech_backend/jobs/models.py`, juste après la classe `PremiumAvantage` 
 ```python
 class Palier(models.Model):
     """Palier d'abonnement recruteur (Starter/Pro/Business/Enterprise) — remplace le système
-    Premium binaire (voir docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md).
+    Premium binaire (voir docs/conception/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md).
     'Gratuit' n'est PAS une ligne ici : c'est l'absence d'AbonnementEntreprise actif pour une
     entreprise (voir Phase 2b, non câblée dans cette migration)."""
     NOM_CHOICES = [

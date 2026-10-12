@@ -18,7 +18,7 @@
 - Packs de crédits (Chargily) : seed 10 crédits/2500 DA, 25/5500 DA, 50/9900 DA — éditables sans déploiement (panel admin).
 - Crédits achetés en pack : **n'expirent jamais**, consommés seulement après épuisement du quota mensuel du mois en cours.
 - Aucun rétro-déblocage : toutes les entreprises repartent de zéro déblocage à la mise en prod.
-- Spec source : `docs/superpowers/specs/2026-08-29-credits-cvtheque-design.md`.
+- Spec source : `docs/conception/specs/2026-08-29-credits-cvtheque-design.md`.
 - **Décision de résolution d'ambiguïté (prise pendant ce plan, pas dans la spec initiale)** : `Palier.acces_coordonnees` (booléen existant, aujourd'hui `False` pour STARTER) ne gate plus la visibilité des coordonnées dans `CVThequeView`/`ProfilCandidatDTO` — remplacé entièrement par le déblocage par crédit, cohérent avec la décision spec "Starter+ minimum peut acheter/dépenser des crédits". Le champ `acces_coordonnees` reste inchangé sur le modèle et continue de gater `InviterCandidatCVThequeAPIView` et le flag `acces_coordonnees` du dashboard (hors périmètre de ce plan, non touchés).
 - Prochain numéro de migration disponible : `0093` (dernière migration existante : `0092_alter_notification_type_notif.py`).
 
@@ -283,7 +283,7 @@ Dans `taftech_backend/jobs/models.py`, insérer juste après la classe `Telechar
 ```python
 class CreditPack(models.Model):
     """Pack de crédits CVthèque achetable via Chargily quand le quota mensuel d'un palier
-    est épuisé — voir docs/superpowers/specs/2026-08-29-credits-cvtheque-design.md."""
+    est épuisé — voir docs/conception/specs/2026-08-29-credits-cvtheque-design.md."""
     nom = models.CharField(max_length=50, verbose_name="Nom du pack")
     credits = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     prix_da = models.PositiveIntegerField(verbose_name="Prix (DA)", validators=[MinValueValidator(1)])
@@ -545,7 +545,7 @@ Créer `taftech_backend/jobs/credits_utils.py` :
 
 ```python
 """Helpers de gestion des crédits CVthèque — voir
-docs/superpowers/specs/2026-08-29-credits-cvtheque-design.md.
+docs/conception/specs/2026-08-29-credits-cvtheque-design.md.
 
 1 crédit débloque coordonnées + CV d'un candidat, à vie, partagé par toute l'équipe de
 l'entreprise. Deux pools consommés dans l'ordre : le quota mensuel du palier
@@ -762,7 +762,7 @@ _ROLES_ACTION = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
 
 class DeverrouillerCandidatAPIView(APIView):
     """Débloque coordonnées+CV d'un candidat CVthèque pour l'entreprise, en consommant
-    1 crédit — voir docs/superpowers/specs/2026-08-29-credits-cvtheque-design.md."""
+    1 crédit — voir docs/conception/specs/2026-08-29-credits-cvtheque-design.md."""
     permission_classes = [IsAuthenticated]
     throttle_classes = [WriteActionThrottle]
 

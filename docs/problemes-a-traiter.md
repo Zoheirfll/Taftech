@@ -6,7 +6,7 @@
 
 ## 🔴 Diplôme/Spécialité exclus du score si le recruteur ne remplit que "Diplôme attendu"
 
-**Trouvé le** : 21/09/2026, session de mise en conformité matching (`docs/superpowers/plans/2026-09-21-matching-referentiel-v2-conformite.md`).
+**Trouvé le** : 21/09/2026, session de mise en conformité matching (`docs/conception/plans/2026-09-21-matching-referentiel-v2-conformite.md`).
 
 **Contexte** : cette session a supprimé le repli hiérarchique de comparaison de diplômes (`hierarchie = {'TS':7,'LICENCE':8,'MASTER_1':9,...}`) dans `jobs/matcher.py`, conformément à la règle client F06 ("aucune équivalence légale automatique... ne pas utiliser ordre d'affichage, niveau_fp ou nombre d'années comme rang inter-systèmes"). Décision confirmée par l'utilisateur ("suivre le référentiel à la lettre").
 

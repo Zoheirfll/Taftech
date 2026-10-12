@@ -35,7 +35,7 @@ Dans `taftech_backend/jobs/models.py`, après la classe `InvitationCVTheque` (aj
 ```python
 class RechercheSauvegardee(models.Model):
     """Filtres CVthèque sauvegardés par un recruteur pour être rappelés plus tard —
-    voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    voir docs/conception/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
     entreprise = models.ForeignKey(
         'ProfilEntreprise', on_delete=models.CASCADE, related_name='recherches_sauvegardees'
     )
@@ -95,7 +95,7 @@ Dans `taftech_backend/jobs/views/recruteur.py`, avant la classe `DashboardRecrut
 ```python
 def _calculer_kpis_periode(entreprise, date_debut, date_fin):
     """Calcule les 5 KPIs du dashboard sur [date_debut, date_fin] et la variation % vs la
-    période précédente de même durée. Voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    période précédente de même durée. Voir docs/conception/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
     duree = (date_fin - date_debut).days + 1
     debut_precedent = date_debut - datetime.timedelta(days=duree)
     fin_precedent = date_debut - datetime.timedelta(days=1)
@@ -212,7 +212,7 @@ _TEMPLATES_ACTIVITE = {
 
 class ActiviteRecenteAPIView(APIView):
     """Fil d'activité récente de l'entreprise (10 derniers événements), formaté en phrases
-    lisibles — voir docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
+    lisibles — voir docs/conception/specs/2026-08-23-dashboard-recruteur-refonte-design.md."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -977,7 +977,7 @@ Créer `taftech_backend/jobs/tests/test_api_dashboard_refonte.py` — s'inspirer
 
 ```python
 """Tests pour la refonte dashboard recruteur (sous-projet 2, voir
-docs/superpowers/specs/2026-08-23-dashboard-recruteur-refonte-design.md)."""
+docs/conception/specs/2026-08-23-dashboard-recruteur-refonte-design.md)."""
 from django.test import TestCase
 from django.core.cache import cache
 from django.urls import reverse

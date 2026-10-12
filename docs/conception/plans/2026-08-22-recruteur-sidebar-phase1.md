@@ -546,7 +546,7 @@ Se connecter en recruteur, vérifier : sidebar visible sur `/dashboard`, `/cvthe
 
 - [ ] **Step 4: Mettre à jour CLAUDE.md**
 
-Ajouter une entrée dans `CLAUDE.md` (section session du jour) documentant : nouveau `RecruteurLayout.jsx`, routes recruteur nichées, 8 liens actifs (liste), Favoris = filtre CVthèque via query param, Ctrl+K = redirection recherche. Référencer le spec `docs/superpowers/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md` et noter que les 8 liens restants arrivent en phases suivantes.
+Ajouter une entrée dans `CLAUDE.md` (section session du jour) documentant : nouveau `RecruteurLayout.jsx`, routes recruteur nichées, 8 liens actifs (liste), Favoris = filtre CVthèque via query param, Ctrl+K = redirection recherche. Référencer le spec `docs/conception/specs/2026-08-22-portail-recruteur-sidebar-premium-design.md` et noter que les 8 liens restants arrivent en phases suivantes.
 
 - [ ] **Step 5: Commit final**
 

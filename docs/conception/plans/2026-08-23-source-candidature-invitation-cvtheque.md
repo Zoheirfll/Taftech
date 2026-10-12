@@ -47,7 +47,7 @@ Dans `taftech_backend/jobs/models.py`, juste après la classe `TelechargementCV`
 class InvitationCVTheque(models.Model):
     """Invitation d'un recruteur à un candidat de la CVthèque pour postuler à une offre
     précise — permet de tracer Candidature.source='CVTHEQUE' (voir
-    docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md)."""
+    docs/conception/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md)."""
     entreprise = models.ForeignKey(
         'ProfilEntreprise', on_delete=models.CASCADE, related_name='invitations_cvtheque'
     )
@@ -173,7 +173,7 @@ Ajouter la classe suivante après `CVThequeView` (chercher la fin de cette class
 ```python
 class InviterCandidatCVThequeAPIView(APIView):
     """Invite un candidat de la CVthèque à postuler à une offre précise — voir
-    docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md."""
+    docs/conception/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md."""
     permission_classes = [IsAuthenticated]
     throttle_classes = [InvitationCVThequeThrottle]
 
@@ -481,7 +481,7 @@ Créer `taftech_backend/jobs/tests/test_api_invitation_cvtheque.py` :
 
 ```python
 """Tests pour InvitationCVTheque + Candidature.source (sous-projet 1, voir
-docs/superpowers/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md)."""
+docs/conception/specs/2026-08-23-source-candidature-invitation-cvtheque-design.md)."""
 from django.test import TestCase
 from django.core.cache import cache
 from django.urls import reverse

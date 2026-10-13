@@ -199,7 +199,6 @@ const PrendreRendezVous = () => {
                   rows={3}
                   value={motif}
                   onChange={(e) => setMotif(e.target.value)}
-                  placeholder="Ex: Aide à la rédaction de mon CV"
                 />
               </div>
               <div className="flex gap-3 pt-2">

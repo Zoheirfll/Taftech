@@ -20,7 +20,7 @@ import re
 from django.db.models import Q
 
 from .models import Appellation
-from .referentiel_utils import normaliser_recherche, corriger_mots_flous
+from .referentiel_utils import normaliser_recherche, corriger_mots_flous, developper_abreviations
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,8 @@ def _mots_pertinents(texte):
     """Mots significatifs (>=4 lettres, hors mots génériques, corrigés du flou N04) d'un
     texte — factorisé pour appliquer exactement le même filtrage au titre et à la
     description avant de les pondérer séparément."""
-    tous_mots = [m for m in re.findall(r"\w+", normaliser_recherche(texte or "")) if len(m) >= _MOTS_MIN_LEN]
+    texte_long = developper_abreviations(normaliser_recherche(texte or ""))  # « RH » -> « ressources humaines »
+    tous_mots = [m for m in re.findall(r"\w+", texte_long) if len(m) >= _MOTS_MIN_LEN]
     mots = [m for m in tous_mots if m not in _MOTS_GENERIQUES]
     return corriger_mots_flous(mots) if mots else []  # N04 : flou Levenshtein<=1, exact d'abord
 
@@ -84,12 +85,22 @@ def _candidats_pour_experience(titre_poste, description, limite=10):
         Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
         .select_related('metier', 'metier__metier_canonique')
         .values_list('libelle', 'metier__id', 'metier__libelle', 'metier__metier_canonique_id')
-        .distinct()[:500]
+        .distinct()
     )
+    # Pas de plafond sur le pool : couper à N lignes dans un ordre arbitraire écartait les
+    # bonnes appellations (ex: RH) avant leur notation dès que la description contenait
+    # beaucoup de mots courants (bug réel : "Cheffe de Département Administration des RH"
+    # proposée uniquement avec des "Chef de département" industriels). ~7 400 appellations
+    # au total : le coût de tout lire est négligeable.
 
     def _score(libelle):
         libelle_mots = set(re.findall(r"\w+", normaliser_recherche(libelle)))
-        return sum(poids[m] for m in mots if m in libelle_mots)
+        score = sum(poids[m] for m in mots if m in libelle_mots)
+        # Bonus de couverture : une appellation qui contient TOUS les mots du titre passe
+        # devant celles qui n'en partagent qu'un (« Gestionnaire … » hors RH).
+        if mots_titre and all(m in libelle_mots for m in mots_titre):
+            score += _POIDS_MOT_TITRE * len(mots_titre)
+        return score
 
     pool_scores = [(lib, mid, mlib, canon_id, _score(lib)) for lib, mid, mlib, canon_id in pool]
     pool_scores = [item for item in pool_scores if item[4] > 0]
@@ -187,6 +198,16 @@ def classifier_metiers_experiences(experiences, titre_professionnel=None):
             continue
         candidats = candidats_par_index.get(idx, [])
         if 0 <= choix < len(candidats):
+            # Garde-fou serveur (point 7) : le choix de l'IA n'est retenu que si l'appellation
+            # choisie contient tous les mots significatifs du titre du poste (l'élément
+            # [PROFIL], titre composite choisi par le candidat, en est exempté). Sinon le
+            # métier reste vide : le candidat le renseigne via la liste de référence.
+            if not (titre_professionnel and idx == 0):
+                exp = experiences[idx - decalage]
+                titre = exp.get('titre_poste', '') if isinstance(exp, dict) else ''
+                mots_libelle = set(re.findall(r"\w+", developper_abreviations(normaliser_recherche(candidats[choix][0]))))
+                if not all(m in mots_libelle for m in _mots_pertinents(titre)):
+                    continue
             brut[idx] = candidats[choix][1]  # metier_id
 
     # Ramène les index à ceux attendus par l'appelant : SPECIALITE_INDEX pour le profil,

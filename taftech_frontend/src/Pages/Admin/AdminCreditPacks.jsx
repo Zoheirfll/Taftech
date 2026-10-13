@@ -179,7 +179,7 @@ const AdminCreditPacks = () => {
             <form onSubmit={lockSubmit(handleSubmit)} className="space-y-4">
               <div>
                 <label htmlFor="pack_nom" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Nom *</label>
-                <input id="pack_nom" required className={inputClass} placeholder="Ex: Pack 10" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+                <input id="pack_nom" required className={inputClass} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
               </div>
               <div>
                 <label htmlFor="pack_credits" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Crédits *</label>

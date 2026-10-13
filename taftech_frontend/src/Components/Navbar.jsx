@@ -62,7 +62,8 @@ const Navbar = () => {
           if (role === "RECRUTEUR") {
             const dash = await jobsService.getDashboard();
             if (dash.entreprise?.logo) setUserPhoto(mediaUrl(dash.entreprise.logo));
-          } else {
+          } else if (role === "CANDIDAT") {
+            // Un ADMIN n'a pas de profil candidat : l'appel échouait (et journalisait une erreur) à chaque page.
             const data = await profilService.getProfil();
             if (data.photo_profil) setUserPhoto(mediaUrl(data.photo_profil));
           }
@@ -127,6 +128,7 @@ const Navbar = () => {
     { to: "/entreprises", label: "Entreprises", icon: Building2 },
     { to: "/blog", label: "Blog", icon: Newspaper },
   ];
+  const sectionLabel = `px-4 pt-3 pb-1 text-xs font-bold uppercase tracking-wider ${tw.textMuted}`;
   const isRechercheActive = RECHERCHE_SUBLINKS.some((l) => isActive(l.to));
 
   return (
@@ -281,32 +283,10 @@ const Navbar = () => {
         <>
           <div className={`lg:hidden ${tw.mobileMenuBackdrop}`} onClick={closeMobile} />
           <div className={`lg:hidden ${tw.mobileMenuSheet} px-4 py-3 space-y-1`}>
-          {MAIN_LINKS.map(({ to, label, icon: Icon }) => {
-            // Bottom nav guest : Accueil/Offres/Secteurs/Entreprises. Bottom nav candidat : Accueil/Offres.
-            const dup = isLogged ? ["/", "/offres"].includes(to) : ["/", "/offres"].includes(to);
-            return (
-              <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
-                <Icon size={16} className="shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
-
-          <p className={`px-4 pt-2 pb-1 text-xs font-bold uppercase tracking-wider ${tw.textMuted}`}>
-            Recherche avancée
-          </p>
-          {RECHERCHE_SUBLINKS.map(({ to, label, icon: Icon }) => {
-            const dup = !isLogged && to === "/secteurs";
-            return (
-              <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
-                <Icon size={16} className="shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
-
-          {TAIL_LINKS.map(({ to, label, icon: Icon }) => {
-            const dup = !isLogged && to === "/entreprises";
+          <p className={sectionLabel}>Explorer</p>
+          {[...MAIN_LINKS, ...RECHERCHE_SUBLINKS, ...TAIL_LINKS].map(({ to, label, icon: Icon }) => {
+            // Doublons avec la bottom nav (<md) : Accueil/Offres (connecté ou non), Secteurs/Entreprises (visiteur).
+            const dup = ["/", "/offres"].includes(to) || (!isLogged && ["/secteurs", "/entreprises"].includes(to));
             return (
               <Link key={to} to={to} onClick={closeMobile} className={mobileLinkClass(to, dup)}>
                 <Icon size={16} className="shrink-0" />
@@ -335,6 +315,7 @@ const Navbar = () => {
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               {role === "CANDIDAT" && (
                 <>
+                  <p className={sectionLabel}>Mon espace</p>
                   <Link to="/dashboard-candidat" onClick={closeMobile} className={mobileLinkClass("/dashboard-candidat", true)}><LayoutDashboard size={16} className="shrink-0" /> Tableau de bord</Link>
                   <Link to="/profil" onClick={closeMobile} className={mobileLinkClass("/profil", true)}><User size={16} className="shrink-0" /> Mon profil</Link>
                   <Link to="/mes-candidatures" onClick={closeMobile} className={mobileLinkClass("/mes-candidatures", true)}><Briefcase size={16} className="shrink-0" /> Mes candidatures</Link>
@@ -342,6 +323,7 @@ const Navbar = () => {
                   <Link to="/offres-sauvegardees" onClick={closeMobile} className={mobileLinkClass("/offres-sauvegardees")}><Bookmark size={16} className="shrink-0" /> Offres sauvegardées</Link>
                   <Link to="/alertes" onClick={closeMobile} className={mobileLinkClass("/alertes")}><Bell size={16} className="shrink-0" /> Alertes d'emploi</Link>
                   <Link to="/suggestions-carriere" onClick={closeMobile} className={mobileLinkClass("/suggestions-carriere")}><Sparkles size={16} className="shrink-0" /> Suggestions carrière</Link>
+                  <p className={sectionLabel}>Aide et compte</p>
                   <Link to="/parametres/candidat" onClick={closeMobile} className={mobileLinkClass("/parametres/candidat")}><Settings size={16} className="shrink-0" /> Paramètres</Link>
                   <Link to="/comprendre-mes-scores" onClick={closeMobile} className={mobileLinkClass("/comprendre-mes-scores")}><HelpCircle size={16} className="shrink-0" /> Comprendre mes scores</Link>
                   <Link to="/confidentialite-recruteurs" onClick={closeMobile} className={mobileLinkClass("/confidentialite-recruteurs")}><ShieldCheck size={16} className="shrink-0" /> Confidentialité (recruteurs)</Link>
@@ -349,6 +331,7 @@ const Navbar = () => {
               )}
               {role === "RECRUTEUR" && (
                 <>
+                  <p className={sectionLabel}>Espace recruteur</p>
                   <Link to="/dashboard" onClick={closeMobile} className={mobileLinkClass("/dashboard")}><LayoutDashboard size={16} className="shrink-0" /> Tableau de bord</Link>
                   <Link to="/cvtheque" onClick={closeMobile} className={mobileLinkClass("/cvtheque")}><Search size={16} className="shrink-0" /> CVthèque</Link>
                   <Link to="/candidatures-spontanees" onClick={closeMobile} className={mobileLinkClass("/candidatures-spontanees")}><Inbox size={16} className="shrink-0" /> Candidatures spontanées</Link>

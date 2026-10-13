@@ -146,9 +146,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     await waitFor(() => screen.getByText(/Nouveau questionnaire/i));
     fireEvent.click(screen.getByText(/Nouveau questionnaire/i));
 
-    const titreInput = screen.getByPlaceholderText(
-      /Ex: Questionnaire Développeur React/i,
-    );
+    const titreInput = document.querySelector('form input[required]');
     fireEvent.change(titreInput, {
       target: { value: "Nouveau Questionnaire" },
     });
@@ -281,9 +279,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     await waitFor(() => screen.getByText(/Nouveau questionnaire/i));
     fireEvent.click(screen.getByText(/Nouveau questionnaire/i));
 
-    const titreInput = screen.getByPlaceholderText(
-      /Ex: Questionnaire Développeur React/i,
-    );
+    const titreInput = document.querySelector('form input[required]');
     fireEvent.change(titreInput, { target: { value: "Mon Questionnaire" } });
 
     fireEvent.click(screen.getByText(/Créer le questionnaire/i));

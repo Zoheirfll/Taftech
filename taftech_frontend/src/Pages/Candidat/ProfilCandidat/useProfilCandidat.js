@@ -7,7 +7,7 @@ import { confirmToast } from "../../../utils/confirmToast";
 import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
-import { convertDateRaw } from "../../../utils/cvDates";
+import { formatDatePrecise } from "../../../utils/cvDates";
 
 const INITIAL_EXP = {
   titre_poste: "",
@@ -351,6 +351,8 @@ export const useProfilCandidat = () => {
       metier_libelle: exp.metier_libelle || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
+      date_debut_precision: exp.date_debut_precision || "JOUR",
+      date_fin_precision: exp.date_fin_precision || "JOUR",
       description: exp.description || "",
     });
     setEditingExpId(exp.id);
@@ -404,6 +406,8 @@ export const useProfilCandidat = () => {
       etablissement: form.etablissement || "",
       date_debut: form.date_debut || "",
       date_fin: form.date_fin || "",
+      date_debut_precision: form.date_debut_precision || "JOUR",
+      date_fin_precision: form.date_fin_precision || "JOUR",
       description: form.description || "",
       diplome_ref: form.diplome_ref || "",
       specialite_ref: form.specialite_ref || "",
@@ -520,11 +524,10 @@ export const useProfilCandidat = () => {
     }
   };
 
-  const formatDate = (dateStr) => {
+  // Affichage selon la précision réellement connue (année seule, mois/année, date complète).
+  const formatDate = (dateStr, precision = "MOIS") => {
     if (!dateStr) return null;
-    const [year, month] = dateStr.split("-");
-    const mois = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-    return `${mois[parseInt(month, 10) - 1]} ${year}`;
+    return formatDatePrecise(dateStr, precision);
   };
 
   const getCommunesOptions = (wilaya) => {

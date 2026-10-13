@@ -259,32 +259,96 @@ def q_mots_cle_recherche(mots, champ='cle_recherche', mode='and'):
     return q
 
 
+FAMILLES_FORMATION = {
+    'superieur': 'Enseignement supérieur',
+    'formation_professionnelle': 'Formation professionnelle',
+    'scolaire': 'Enseignement moyen et secondaire',
+    'certification': 'Certifications et attestations',
+    'theme': 'Thèmes généraux TafTech',
+    'autre': 'Autres diplômes',
+}
+
+# Niveau d'études (Scolarite, 1ʳᵉ étape de la cascade) -> familles de diplômes proposées ensuite.
+# Liste vide = aucun diplôme à renseigner (le niveau seul suffit, sans score négatif : table
+# Scolarite.usage). Le baccalauréat reste un diplôme séparé du niveau « secondaire ».
+FAMILLES_PAR_NIVEAU_ETUDES = {
+    'SC-SANS': [],
+    'SC-PRIM': [],
+    'SC-MOY': ['scolaire'],
+    'SC-SEC': ['scolaire'],
+    'SC-FP': ['formation_professionnelle', 'certification'],
+    'SC-SUP': ['superieur', 'autre'],
+    'SC-AUTRE': ['superieur', 'formation_professionnelle', 'scolaire', 'certification', 'autre'],
+}
+
+
+def famille_formation(systeme):
+    """Regroupe les `systeme` du référentiel en familles qui ne doivent jamais être mélangées dans
+    une même liste (point 8, 12/10/2026) : enseignement supérieur, formation professionnelle,
+    enseignement moyen/secondaire (BEM, BEF, Baccalauréat), certifications et attestations,
+    thèmes généraux TafTech (regroupements éditoriaux v1), autres (paramédical, ENS...)."""
+    systeme = systeme or ''
+    if systeme.startswith('superieur') or systeme == 'postgraduation_sante':
+        return 'superieur'
+    if systeme == 'formation_professionnelle':
+        return 'formation_professionnelle'
+    if systeme.startswith('scolaire'):
+        return 'scolaire'
+    if systeme in ('certification', 'formation_continue'):
+        return 'certification'
+    if systeme == 'theme_taftech':
+        return 'theme'
+    return 'autre'
+
+
+_ABREVIATIONS = {
+    "rh": "ressources humaines",
+    "drh": "directeur ressources humaines",
+    "daf": "directeur administratif financier",
+}
+
+
+def developper_abreviations(texte_normalise):
+    """Remplace les abréviations métier courantes (mots entiers, texte déjà normalisé) par leur
+    forme longue : « gestionnaire rh » -> « gestionnaire ressources humaines ». Sans ça, « rh »
+    (moins de 4 lettres) était ignoré des recherches par mots-clés et un intitulé comme
+    « Gestionnaire RH » se rattachait au premier « Gestionnaire … » venu (point 7, 12/10/2026)."""
+    if not texte_normalise:
+        return texte_normalise
+    return " ".join(_ABREVIATIONS.get(mot, mot) for mot in texte_normalise.split())
+
+
 def resoudre_metier_depuis_texte(*textes):
-    """Devine le Metier le plus probable à partir d'un ou plusieurs textes (titre de
-    poste, description...). Cherche les appellations dont le libellé contient un des
-    mots (4+ lettres) du texte fourni, retourne le métier (résolu vers son canonique)
-    le plus fréquent parmi les correspondances. Retourne None si rien n'est trouvé —
-    ne jamais deviner au hasard (REGLES_MATCHING R02/F02 du client)."""
+    """Rattache un intitulé de poste à son Metier canonique, SANS jamais deviner
+    (REGLES_MATCHING R02/F02 du client, point 7 de la liste de corrections finales).
+
+    Seule une appellation dont la clé de recherche est EXACTEMENT l'intitulé normalisé
+    (casse, accents, ponctuation ignorés) est acceptée, et seulement si toutes les
+    appellations exactes mènent au même métier canonique. Sinon None : le recruteur
+    choisit alors le métier de référence dans la liste (l'intitulé public reste libre).
+
+    L'ancienne version votait à la fréquence des mots (4+ lettres) trouvés par `icontains` :
+    « Gestionnaire RH » (« RH » ignoré car trop court) était rattaché à « Assistant en
+    ressources humaines »."""
     texte = normaliser_recherche(" ".join(t for t in textes if t))
-    mots = [m for m in re.findall(r"\w+", texte) if len(m) >= 4]
-    if not mots:
+    if not texte:
         return None
-    mots = corriger_mots_flous(mots)  # N04
-    q = Q()
-    for mot in mots:
-        q |= Q(cle_recherche__icontains=mot)
     appellations = list(
-        Appellation.objects.filter(q, actif=True, metier__selectionnable=True)
-        .select_related('metier', 'metier__metier_canonique')[:50]
+        Appellation.objects.filter(cle_recherche=texte, actif=True, metier__selectionnable=True)
+        .select_related('metier', 'metier__metier_canonique')[:20]
     )
-    if not appellations:
+    metiers = {(a.metier.metier_canonique or a.metier).id: (a.metier.metier_canonique or a.metier) for a in appellations}
+    if len(metiers) > 1:
+        # Même appellation portée par plusieurs métiers (ex. « Chargé de recrutement » :
+        # métier ANEM large + métier TafTech précis). Seul le métier qui porte exactement
+        # ce libellé est retenu ; sinon on s'abstient.
+        homonymes = [m for m in metiers.values() if normaliser_recherche(m.libelle) == texte]
+        if len(homonymes) != 1:
+            return None
+        return homonymes[0]
+    if len(metiers) != 1:
         return None
-    metiers = [(a.metier.metier_canonique or a.metier) for a in appellations]
-    plus_frequent = Counter(m.id for m in metiers).most_common(1)[0][0]
-    for m in metiers:
-        if m.id == plus_frequent:
-            return m
-    return None
+    return next(iter(metiers.values()))
 
 
 _MOTS_GENERIQUES_DIPLOME = {"diplome", "formation", "professionnel", "professionnelle", "degree"}
@@ -301,7 +365,11 @@ def _singulariser(mot):
     de correspondance exacte. Garde-fou : jamais sur un mot déjà court (perte de sens,
     ex: "gaz"/"bus") ni se terminant par un double 's' (ex: "processus")."""
     if len(mot) > 4 and mot.endswith("s") and not mot.endswith("ss"):
-        return mot[:-1]
+        mot = mot[:-1]
+    # Féminin ("internationale" -> "international", "humaine" -> "humain") : appliqué des
+    # deux côtés (texte du candidat ET libellé du référentiel), donc toujours symétrique.
+    if len(mot) > 6 and mot.endswith("e"):
+        mot = mot[:-1]
     return mot
 
 
@@ -314,6 +382,17 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     diplôme (jamais hors référentiel, F06) — factorisé pour être réutilisé par la
     résolution par mots-clés ET par le repli IA ci-dessous.
 
+    Un score de 1 seul mot commun est trop peu fiable pour être accepté seul — un mot
+    isolément large mais peu signifiant ("sciences", "gestion"...) partagé par une
+    poignée de libellés sans rapport suffisait à faire remonter une spécialité
+    aberrante par défaut de tout autre candidat (bug réel : "Master en Sciences de
+    Gestion, option Ressources Humaines" résolu en "Sciences De La Mer", le seul
+    candidat où "sciences" apparaissait pour ce diplôme). Un score >= 2 (au moins deux
+    mots distincts partagés) reste accepté tel quel — c'est ce qui permet à un
+    intitulé complet type "Management des Ressources Humaines" de l'emporter
+    clairement même si chacun de ses mots pris séparément (management/ressources/
+    humaines) est aussi partagé par quelques autres spécialités du même diplôme.
+
     Quand plusieurs spécialités sont à égalité de score (cas fréquent : des intitulés
     de spécialité proches partagent souvent 1-2 mots, ex: "Modèles Intelligents Et
     Décision" / "Modélisation, optimisation et aide à la décision" / "Sciences de
@@ -322,19 +401,36 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     précis uniquement — jamais un choix hors de cette liste restreinte."""
     from .models import DiplomeSpecialite
 
-    spec_candidats = []
-    for c in DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True).select_related('specialite'):
-        lib_mots = _mots_singularises(c.specialite.libelle)
-        score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
-        if score:
-            spec_candidats.append((score, c.specialite))
+    def _candidats(queryset):
+        trouves = []
+        for c in queryset.select_related('specialite'):
+            lib_mots = _mots_singularises(c.specialite.libelle)
+            score = sum(1 for m in mots if len(m) >= 4 and m in lib_mots)
+            if score >= 2:
+                # À score égal, préférer la spécialité dont le libellé est le plus entièrement
+                # couvert par le texte ("Commerce international" avant "Finance et commerce
+                # international" pour "Commerce et Affaires Internationales").
+                non_couverts = sum(1 for m in lib_mots if len(m) >= 4 and m not in mots)
+                trouves.append((score, -non_couverts, c.specialite))
+        return trouves
+
+    spec_candidats = _candidats(DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True))
+    if not spec_candidats and type_diplome.code.count("-") >= 2:
+        # Aucune spécialité attestée pour CETTE variante (ex: "Master professionnel" n'a pas
+        # de spécialité RH dans le référentiel, seul "Master académique" en a) : la spécialité
+        # est un sujet indépendant du régime du diplôme, on cherche dans la même famille
+        # (D-MAS-*, D-LIC-*). Sans ce repli le champ Spécialité restait vide.
+        famille = type_diplome.code.rsplit("-", 1)[0] + "-"
+        spec_candidats = _candidats(
+            DiplomeSpecialite.objects.filter(diplome__code__startswith=famille, selectionnable=True).exclude(diplome=type_diplome)
+        )
     if not spec_candidats:
         return None
-    spec_candidats.sort(key=lambda c: -c[0])
-    meilleur = spec_candidats[0][0]
-    meilleures = [c[1] for c in spec_candidats if c[0] == meilleur]
-    if len(set(s.id for s in meilleures)) == 1:
-        return meilleures[0]
+    spec_candidats.sort(key=lambda c: (-c[0], -c[1]))
+    meilleur = (spec_candidats[0][0], spec_candidats[0][1])
+    meilleures = [c[2] for c in spec_candidats if (c[0], c[1]) == meilleur]
+    if len(set(normaliser_recherche(s.libelle) for s in meilleures)) == 1:
+        return min(meilleures, key=lambda s: s.id)  # homonymes exacts : le plus ancien
     if texte:
         return _resoudre_specialite_via_ia(texte, meilleures)
     return None
@@ -474,6 +570,14 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
     if not mots:
         return None, None
 
+    if re.match(r"\s*(formation|stage|atelier|seminaire|session|cycle)\b", t) and not re.search(
+        r"\b(master|licence|doctorat|ingenieur|magister|bts|dut|baccalaureat|bac|cap|deua|mba|technicien)\b", t
+    ):
+        # Formation courte sans diplôme : "Attestation de formation", pas une certification d'éditeur.
+        attest = TypeDiplome.objects.filter(code='D-ATTEST').first()
+        if attest:
+            return attest, None
+
     candidats = []
     for td in TypeDiplome.objects.all():
         lib_mots = _mots_singularises(td.libelle)
@@ -490,6 +594,12 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # faute de frappe non couverte, formulation étrangère...) — plutôt qu'un champ
         # vide que le candidat devrait forcément remplir à la main, on demande à l'IA de
         # se rapprocher du diplôme le plus proche parmi ceux réellement disponibles.
+        if re.match(r"\s*(formation|stage|atelier|seminaire|session|cycle)\b", t):
+            # Formation courte sans diplôme : "Attestation de formation", pas une
+            # certification d'éditeur.
+            attest = TypeDiplome.objects.filter(code='D-ATTEST').first()
+            if attest:
+                return attest, None
         type_diplome = _resoudre_diplome_via_ia(texte)
         if not type_diplome:
             return None, None
@@ -508,6 +618,13 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # cas où l'ambiguïté porte UNIQUEMENT sur la variante d'un même diplôme (même
         # préfixe de code, ex: "D-LIC-*") — une vraie ambiguïté entre familles différentes
         # (codes sans préfixe commun) passe par le repli IA plutôt qu'une abstention pure.
+        # Le 1er mot de l'intitulé désigne presque toujours le diplôme ("Master ...",
+        # "Licence ...") : à égalité, on écarte les candidats parasites qui ne partagent
+        # qu'un mot secondaire avec un autre diplôme.
+        if mots:
+            famille = [m for m in meilleurs if mots[0] in _mots_singularises(m.libelle)]
+            if famille:
+                meilleurs = famille
         prefixes = {"-".join(m.code.split("-")[:-1]) for m in meilleurs}
         prefixe_unique = next(iter(prefixes)) if len(prefixes) == 1 else None
         # Cas "Master"/"Licence"/"Doctorat" seul (ex: "Master en Informatique" sans
@@ -520,6 +637,10 @@ def resoudre_diplome_et_specialite_depuis_texte(texte):
         # réforme LMD), pas "-SCI" (ancien système, en voie de disparition). Repli sur
         # "-NP" uniquement si aucun défaut n'existe pour cette famille précise.
         suffixe_defaut = "-LMD" if prefixe_unique == "D-DOC" else "-A"
+        # Indice explicite dans l'intitulé : "professionnalisant/professionnel" -> variante
+        # professionnelle ; "recherche" -> académique (déjà le défaut).
+        if prefixe_unique and re.search(r"\bprofessionnalis|\bprofessionnel", t):
+            suffixe_defaut = "-P"
         defaut_candidat = (
             next((m for m in meilleurs if m.code == f"{prefixe_unique}{suffixe_defaut}"), None)
             if prefixe_unique else None

@@ -193,11 +193,11 @@ const RegisterCandidat = () => {
   };
 
   return (
-    <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center p-4`}>
-      <div className={`max-w-5xl w-full ${tw.authCardShell} overflow-hidden flex flex-col md:flex-row`}>
+    <div className={`min-h-screen ${tw.authPageBg} flex items-center justify-center p-3 sm:p-4 overflow-x-hidden`}>
+      <div className={`max-w-5xl w-full ${tw.authCardShell} overflow-hidden flex flex-col lg:flex-row min-w-0`}>
 
         {/* COLONNE GAUCHE */}
-        <div className={`order-2 md:order-1 md:w-5/12 ${tw.bannerGradientPrimary} p-10 ${tw.textOnDark} flex flex-col justify-between`}>
+        <div className={`order-2 lg:order-1 lg:w-5/12 min-w-0 ${tw.bannerGradientPrimary} p-6 sm:p-10 ${tw.textOnDark} flex flex-col justify-between`}>
           <div>
             <h2 className="text-2xl font-bold mb-3 leading-tight">
               Propulsez votre <span className={tw.textPrimaryOnDark}>carrière</span>
@@ -230,7 +230,7 @@ const RegisterCandidat = () => {
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="order-1 md:order-2 md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
+        <div className="order-1 lg:order-2 lg:w-7/12 min-w-0 p-5 sm:p-8 lg:p-10 flex flex-col justify-center">
 
           {/* STEPPER */}
           <div className="flex items-center gap-2 mb-6">
@@ -277,7 +277,7 @@ const RegisterCandidat = () => {
                   </div>
                   <div>
                     <label className={`${tw.authLabel} mb-1.5`}>Téléphone *</label>
-                    <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required placeholder="0555..." value={formData.telephone} onChange={handleChange}
+                    <input type="tel" name="telephone" aria-invalid={!!fieldErrors.telephone} aria-describedby={fieldErrors.telephone ? "err-telephone" : undefined} required value={formData.telephone} onChange={handleChange}
                       className={tw.authInput} />
 <FieldError id="err-telephone" message={fieldErrors.telephone} />
                   </div>

@@ -9,6 +9,7 @@ import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
+import { nomCandidature } from "../../utils/candidatureNom";
 const SCORES = [
   { value: "tous", label: "Toutes les notes" },
   { value: "16", label: "≥ 16/20" },
@@ -85,7 +86,7 @@ const EvaluationsPage = () => {
       liste = liste.filter((c) => {
         const nom = c.est_rapide
           ? `${c.prenom_rapide || ""} ${c.nom_rapide || ""}`
-          : `${c.candidat?.first_name || ""} ${c.candidat?.last_name || ""}`;
+          : nomCandidature(c);
         return nom.toLowerCase().includes(q) || (c.offre_titre || "").toLowerCase().includes(q);
       });
     }

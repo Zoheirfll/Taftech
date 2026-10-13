@@ -31,9 +31,10 @@ COMPTEURS_ATTENDUS = {
     'TypeDiplome': 37,
     'DomaineFormation': 58,
     'FiliereFormation': 64,
-    # 967 lignes au classeur, dont 45 doublons consolidés (jobs/referentiel_fusions.py, 27/09/2026)
-    'SpecialiteFormation': 922,
-    'SpecialiteFormation (doublons fusionnés)': 45,
+    # 967 lignes au classeur, dont 46 doublons consolidés (jobs/referentiel_fusions.py : 45 le
+    # 27/09/2026, + « Langue anglaise » le 12/10/2026)
+    'SpecialiteFormation': 921,
+    'SpecialiteFormation (doublons fusionnés)': 46,
     'DiplomeSpecialite': 839,
     'DiplomeSpecialite (doublons couple ignorés)': 82,
     'AliasDiplome': 101,
@@ -79,7 +80,7 @@ class Command(BaseCommand):
         import_cmd.style = self.style
 
         self.stdout.write("Import en --dry-run pour vérification des compteurs (rien n'est écrit en base)...\n")
-        import_cmd.handle(dry_run=True, diplomes=options['diplomes'], metiers=options['metiers'])
+        import_cmd.handle(dry_run=True, diplomes=options['diplomes'], metiers=options['metiers'], sans_consolidation=False)
         compteurs = import_cmd.compteurs
 
         anomalies = []

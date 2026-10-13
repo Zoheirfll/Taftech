@@ -91,11 +91,11 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
     await waitFor(() => screen.getByText(/Ajouter une question/i));
     fireEvent.click(screen.getByText(/Ajouter une question/i));
 
-    fireEvent.change(screen.getByPlaceholderText(/L'inscription est-elle gratuite/i), { target: { value: "Nouvelle question ?" } });
+    fireEvent.change(document.querySelector('input[maxlength="300"]'), { target: { value: "Nouvelle question ?" } });
     const reponseInput = screen.getByText(/Réponse \*/i).closest("div").querySelector("textarea");
     fireEvent.change(reponseInput, { target: { value: "Réponse." } });
 
-    const form = screen.getByPlaceholderText(/L'inscription est-elle gratuite/i).closest("form");
+    const form = document.querySelector('input[maxlength="300"]').closest("form");
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -154,7 +154,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
     await waitFor(() => screen.getByText(/Ajouter une question/i));
     fireEvent.click(screen.getByText(/Ajouter une question/i));
 
-    const form = screen.getByPlaceholderText(/L'inscription est-elle gratuite/i).closest("form");
+    const form = document.querySelector('input[maxlength="300"]').closest("form");
     fireEvent.submit(form);
 
     await waitFor(() => {

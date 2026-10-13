@@ -53,14 +53,28 @@ class AdminMetierSerializer(serializers.ModelSerializer):
         read_only_fields = ('code', 'granularite')
 
 
+def _domaine_avec_famille(domaine):
+    """« Droit et sciences politiques — Enseignement supérieur » : l'admin voit toujours la famille
+    (supérieur / formation professionnelle / thèmes TafTech) d'un domaine, jamais mélangées
+    sans indication (point 8, 12/10/2026)."""
+    if domaine is None:
+        return None
+    from ..referentiel_utils import FAMILLES_FORMATION, famille_formation
+    return f"{domaine.libelle} — {FAMILLES_FORMATION[famille_formation(domaine.systeme)]}"
+
+
 class AdminSpecialiteFormationSerializer(serializers.ModelSerializer):
     domaine_libelle = serializers.CharField(source='domaine.libelle', read_only=True)
+    domaine_complet = serializers.SerializerMethodField()
     filiere_libelle = serializers.CharField(source='filiere.libelle', read_only=True, default=None)
 
     class Meta:
         model = SpecialiteFormation
-        fields = ('id', 'code', 'libelle', 'domaine_libelle', 'filiere_libelle', 'nature', 'selectionnable')
+        fields = ('id', 'code', 'libelle', 'domaine_libelle', 'domaine_complet', 'filiere_libelle', 'nature', 'selectionnable')
         read_only_fields = ('code', 'nature')
+
+    def get_domaine_complet(self, obj):
+        return _domaine_avec_famille(obj.domaine)
 
 
 class AdminTypeDiplomeSerializer(serializers.ModelSerializer):
@@ -97,8 +111,14 @@ class AdminRelationSpecialiteSerializer(serializers.ModelSerializer):
     AdminRelationSimilaireSerializer (métiers), pour le référentiel Diplômes."""
     specialite_depart_libelle = serializers.CharField(source='specialite_depart.libelle', read_only=True)
     specialite_arrivee_libelle = serializers.CharField(source='specialite_arrivee.libelle', read_only=True)
-    specialite_depart_domaine = serializers.CharField(source='specialite_depart.domaine.libelle', read_only=True, default=None)
-    specialite_arrivee_domaine = serializers.CharField(source='specialite_arrivee.domaine.libelle', read_only=True, default=None)
+    specialite_depart_domaine = serializers.SerializerMethodField()
+    specialite_arrivee_domaine = serializers.SerializerMethodField()
+
+    def get_specialite_depart_domaine(self, obj):
+        return _domaine_avec_famille(obj.specialite_depart.domaine)
+
+    def get_specialite_arrivee_domaine(self, obj):
+        return _domaine_avec_famille(obj.specialite_arrivee.domaine)
 
     class Meta:
         model = RelationSpecialite

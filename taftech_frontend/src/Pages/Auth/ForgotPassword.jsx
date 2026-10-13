@@ -73,7 +73,6 @@ const ForgotPassword = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="votre@email.dz"
                   className={tw.authInput}
                 />
               </div>

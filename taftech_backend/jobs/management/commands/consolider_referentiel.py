@@ -14,7 +14,7 @@ from django.db import transaction
 
 from jobs.management.commands.import_referentiel_v2 import DEFAULT_METIERS_FILE
 from jobs.referentiel_fusions import (
-    _Journal, appliquer_fusions_specialites, appliquer_operations_groupes, calculer_instantane,
+    _Journal, appliquer_fusions_specialites, appliquer_operations_groupes, appliquer_redirections_metiers, calculer_instantane,
     ecrire_instantane, CHEMIN_INSTANTANE,
 )
 
@@ -51,6 +51,8 @@ class Command(BaseCommand):
             with transaction.atomic():
                 self.stdout.write("== Secteurs / domaines ==")
                 appliquer_operations_groupes(log)
+                self.stdout.write("== Redirections de métiers ==")
+                appliquer_redirections_metiers(log)
                 self.stdout.write("== Spécialités ==")
                 appliquer_fusions_specialites(log)
 

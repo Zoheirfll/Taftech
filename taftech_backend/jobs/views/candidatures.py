@@ -91,6 +91,8 @@ class PostulerAPIView(APIView):
                         "metier_libelle": exp.metier.libelle if exp.metier else None,
                         "date_debut": str(exp.date_debut),
                         "date_fin": str(exp.date_fin) if exp.date_fin else None,
+                        "date_debut_precision": exp.date_debut_precision,
+                        "date_fin_precision": exp.date_fin_precision,
                         "description": exp.description,
                     }
                     for exp in profil.experiences_detail.all()
@@ -104,6 +106,8 @@ class PostulerAPIView(APIView):
                         "etablissement": f.etablissement,
                         "date_debut": str(f.date_debut) if f.date_debut else None,
                         "date_fin": str(f.date_fin) if f.date_fin else None,
+                        "date_debut_precision": f.date_debut_precision,
+                        "date_fin_precision": f.date_fin_precision,
                         "description": f.description,
                     }
                     for f in profil.formations_detail.all()
@@ -577,6 +581,8 @@ class Top5CandidatsAPIView(APIView):
         is_admin = request.user.is_superuser or request.user.role == 'ADMIN'
         if not (is_membre or is_admin):
             return Response({"error": "Non autorisé."}, status=status.HTTP_403_FORBIDDEN)
+        if is_membre and not is_admin and not entreprise.est_approuvee:
+            return Response({"error": "Entreprise non validée.", "code": "ENTREPRISE_NON_VALIDEE"}, status=status.HTTP_403_FORBIDDEN)
         shortlist = offre.candidatures.filter(
             est_rapide=False,
             score_matching__isnull=False

@@ -190,7 +190,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     const btnsAjouter = screen.getAllByRole("button", { name: /Ajouter/i });
     fireEvent.click(btnsAjouter[1]);
 
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Développeur Backend/i), {
+    fireEvent.change(document.querySelector('form input[required]'), {
       target: { value: "Ingénieur" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Nom de l'entreprise/i), {

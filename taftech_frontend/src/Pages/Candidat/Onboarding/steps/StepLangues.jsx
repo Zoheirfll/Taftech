@@ -41,7 +41,6 @@ export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, se
         <input
           value={nouvelleLangue}
           onChange={(e) => setNouvelleLangue(e.target.value)}
-          placeholder="Ex: Anglais"
           className={`${tw.authInput} flex-1`}
         />
         <div className="w-40 shrink-0">

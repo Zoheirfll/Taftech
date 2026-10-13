@@ -80,6 +80,10 @@ class CandidatDocumentsPartagesAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        from ..paliers_utils import reponse_entreprise_non_validee
+        refus = reponse_entreprise_non_validee(entreprise)
+        if refus:
+            return refus
         from ..models import PartageDocument
         partages = PartageDocument.objects.filter(
             entreprise=entreprise, document__profil__user_id=candidat_id
@@ -104,6 +108,10 @@ class CandidatDocumentPartageFichierAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Accès réservé aux recruteurs."}, status=403)
+        from ..paliers_utils import reponse_entreprise_non_validee
+        refus = reponse_entreprise_non_validee(entreprise)
+        if refus:
+            return refus
         from ..models import PartageDocument
         partage = PartageDocument.objects.filter(
             entreprise=entreprise, document_id=doc_id, document__profil__user_id=candidat_id

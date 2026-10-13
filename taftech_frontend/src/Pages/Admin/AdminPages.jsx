@@ -136,7 +136,6 @@ const AdminPages = () => {
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })}
               disabled={slugVerrouille}
-              placeholder="ex : partenaires"
             />
             <p className={`text-xs ${tw.textMuted} mt-1`}>
               {slugVerrouille

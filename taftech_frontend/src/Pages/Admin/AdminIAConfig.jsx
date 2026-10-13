@@ -436,7 +436,6 @@ const QuotaOverridesPanel = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); verifierCompte(); } }}
-            placeholder="compte@exemple.com"
           />
         </div>
         <button type="button" onClick={verifierCompte} disabled={checking} className={`px-4 py-2.5 ${tw.buttonSecondary} rounded-lg text-sm font-semibold disabled:opacity-60`}>

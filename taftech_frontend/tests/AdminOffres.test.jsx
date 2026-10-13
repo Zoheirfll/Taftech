@@ -108,7 +108,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     // Saisie du motif
     fireEvent.change(
-      screen.getByPlaceholderText(/Ex: Le titre n'est pas clair/i),
+      document.querySelector('textarea'),
       {
         target: { value: "Salaire manquant" },
       },

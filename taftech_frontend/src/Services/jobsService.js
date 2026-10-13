@@ -118,13 +118,13 @@ const offresPubliquesService = {
   // Suggestions compétences/spécialités pour un métier (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur choisit ce qu'il ajoute réellement.
   getMetierSuggestions: async (metierId) => {
-    if (!metierId) return { competences: [], specialites: [], avertissement: "" };
+    if (!metierId) return { competences: [], specialites: [], diplomes: [], avertissement: "" };
     try {
       const response = await api.get(`jobs/referentiel/metiers/${metierId}/suggestions/`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_METIER_SUGGESTIONS_API", err);
-      return { competences: [], specialites: [], avertissement: "" };
+      return { competences: [], specialites: [], diplomes: [], avertissement: "" };
     }
   },
 
@@ -143,7 +143,11 @@ const offresPubliquesService = {
       const response = await api.get(`jobs/dashboard/candidats-recommandes/?page=${page}&masquer_decides=${masquerDecides}`);
       return response.data;
     } catch (err) {
-      reportError("ECHEC_GET_CANDIDATS_RECOMMANDES", err);
+      // 403 PALIER_INSUFFISANT = blocage normal (palier < Pro), géré par la page (écran
+      // « palier requis ») — pas une erreur système à journaliser.
+      if (!(err.response?.status === 403 && err.response?.data?.code === "PALIER_INSUFFISANT")) {
+        reportError("ECHEC_GET_CANDIDATS_RECOMMANDES", err);
+      }
       throw err;
     }
   },

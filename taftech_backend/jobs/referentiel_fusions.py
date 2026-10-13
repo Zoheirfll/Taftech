@@ -223,6 +223,39 @@ def appliquer_operations_groupes(log, operations=GROUPES_OPERATIONS):
             raise ValueError(f"Opération inconnue : {op}")
 
 
+# (code du métier à rattacher, code du métier canonique). Le métier source garde son libellé
+# et ses appellations (le recruteur peut continuer à afficher « Talent Acquisition
+# Specialist ») mais il est résolu en interne vers le métier de référence : matching,
+# recherche et statistiques raisonnent sur le métier canonique (point 7 des corrections
+# finales client, 12/10/2026). N'ajouter ici que des synonymes réels, validés un à un.
+METIERS_REDIRECTIONS = [
+    ('TAF-000167', 'TAF-000165'),  # Talent Acquisition Specialist -> Chargé de Recrutement
+]
+
+
+def appliquer_redirections_metiers(log):
+    """Idempotent. Relie chaque métier source à la RACINE canonique de la cible, sans jamais
+    créer de chaîne ni de cycle (les métiers qui redirigeaient vers la source suivent)."""
+    from .models import Metier
+
+    for code_source, code_cible in METIERS_REDIRECTIONS:
+        source = Metier.objects.filter(code=code_source).first()
+        cible = Metier.objects.filter(code=code_cible).first()
+        if source is None or cible is None:
+            log(f"  [ignoré] redirection {code_source} -> {code_cible} : métier introuvable")
+            continue
+        racine = cible.metier_canonique or cible
+        if racine.pk == source.pk:
+            raise ValueError(f"Redirection {code_source} -> {code_cible} créerait un cycle.")
+        if source.metier_canonique_id == racine.pk:
+            log(f"  [déjà fait] redirection {code_source} -> {racine.code}")
+            continue
+        log(f"  redirection : {source.libelle!r} ({code_source}) -> {racine.libelle!r} ({racine.code})")
+        Metier.objects.filter(metier_canonique=source).update(metier_canonique=racine)
+        source.metier_canonique = racine
+        source.save(update_fields=['metier_canonique'])
+
+
 # ---------------------------------------------------------------------------
 # 2. SPÉCIALITÉS DE FORMATION
 # ---------------------------------------------------------------------------
@@ -282,6 +315,9 @@ SPECIALITES_FUSIONS = [
     ('FP-HTR1807', 'FP-HRT0703'),  # (Hôtellerie -) Restauration / Option : Cuisine traditionnelle (BTS/CAP)
     ('FP-CML1205', 'FP-CML0710'),  # Dessin (d'étude) en construction métallique (BT/CMP)
     ('SP-AE184B7C3425', 'SP-8C93893C2E81'),  # Droit privé(DD) -> Droit privé
+    # Point 8 (12/10/2026) : doublon du même système (supérieur), uniquement dû à la casse — la
+    # fiche supprimée était rangée dans « Ancien système — classement non précisé », sans couple.
+    ('SP-77EE321B8946', 'SP-3073C6A20F50'),  # Langue anglaise -> Langue Anglaise (Lettres et langues étrangères)
 ]
 _FUSIONS_SPE = dict(SPECIALITES_FUSIONS)
 
@@ -295,7 +331,109 @@ SPECIALITES_LIBELLES = {
     'SP-15AFA53F84F4': 'Sciences du langage',
     'SP-D8F0C941E370': 'Énergies renouvelables en mécanique',
     'FP-HRT0703': 'Hôtellerie - Restauration / Option : Cuisine traditionnelle',
+    # Point 8 : variantes de casse/accents d'un même libellé (le supérieur et la formation
+    # professionnelle gardent chacun leur fiche : ce sont deux systèmes différents).
+    'SP-3073C6A20F50': 'Langue anglaise',
+    'SP-3361448E1C3A': 'Commerce international',
+    'SP-674C50A67A98': 'Géomètre topographe',
+    'SP-1953B80D2EE9': 'Géotechnique',
+    'SP-C08BD9BC052D': 'Gestion des ressources humaines',
+    'FP-AGR1210': 'Protection des végétaux',
+    'FP-ELE0703': 'Électricité bâtiment',
+    'SP-05E8BB442E70': 'Électromécanique',
+    'FP-ELE0705': 'Électromécanique',
+    'FP-ELE1202': 'Électrotechnique',
+    'SP-69BEA051D3DC': 'Électrotechnique',
 }
+
+# Mots de liaison écrits avec une majuscule dans les libellés du classeur (« Chimie Des
+# Materiaux ») : abaissés par `normaliser_casse_libelle`. Seuls ces mots sont touchés — jamais
+# les noms propres (« Maghreb »), ni les sigles, ni les accents (non restituables sans source).
+_MOTS_LIAISON = {'des', 'de', 'du', 'la', 'le', 'les', 'et', 'en', 'aux', 'au', 'pour', 'sur', 'dans', 'ou'}
+
+
+def normaliser_casse_libelle(libelle):
+    """Libellé avec première lettre en majuscule et mots de liaison en minuscule. Idempotent."""
+    mots = libelle.split(' ')
+    for i, mot in enumerate(mots):
+        if i == 0:
+            mots[i] = mot[:1].upper() + mot[1:]
+        elif mot.lower() in _MOTS_LIAISON:
+            mots[i] = mot.lower()
+        elif "'" in mot and mot.split("'", 1)[0].lower() in {'d', 'l'}:
+            mots[i] = mot[0].lower() + mot[1:]
+    return ' '.join(mots)
+
+
+_RE_MOT = re.compile(r"[^\W\d_]+")
+
+
+def _sans_diacritiques(texte):
+    return ''.join(c for c in unicodedata.normalize('NFKD', texte) if not unicodedata.combining(c))
+
+
+def construire_dictionnaires_libelles(libelles):
+    """Apprend du référentiel lui-même (aucun dictionnaire externe) :
+    - `accents` : mot sans accent -> forme accentuée, SEULEMENT si une seule forme accentuée est
+      attestée dans le corpus (« materiaux » -> « matériaux ») ;
+    - `minuscules` : mots attestés en minuscule en milieu de libellé (« humaines »), qui permettent
+      d'abaisser les « Title Case » sans toucher aux noms propres (« Maghreb » n'est jamais
+      attesté en minuscule)."""
+    formes, nb_sans_accent, minuscules = {}, {}, set()
+    for libelle in libelles:
+        for m in _RE_MOT.finditer(libelle or ''):
+            mot = m.group(0).lower()
+            if m.group(0) != mot and m.group(0) != m.group(0).capitalize():
+                continue  # sigle ou casse mixte : ignoré
+            if m.start() > 0 and m.group(0) == mot:
+                minuscules.add(mot)
+            sans = _sans_diacritiques(mot)
+            if len(mot) < 5:
+                continue
+            if sans == mot:
+                nb_sans_accent[sans] = nb_sans_accent.get(sans, 0) + 1
+            else:
+                formes.setdefault(sans, {})
+                formes[sans][mot] = formes[sans].get(mot, 0) + 1
+    # Une forme accentuée n'est retenue que si elle est unique ET plus fréquente que la forme sans
+    # accent : « exploitation » (correct, très fréquent) ne devient jamais « éxploitation » à cause
+    # d'une coquille isolée du corpus, alors que « reseaux » devient « réseaux ».
+    accents = {
+        sans: next(iter(v))
+        for sans, v in formes.items()
+        if len(v) == 1 and sum(v.values()) > nb_sans_accent.get(sans, 0)
+    }
+    return accents, minuscules
+
+
+def harmoniser_libelle(libelle, accents, minuscules):
+    """Accents restitués (si attestés), mots de liaison puis mots courants en minuscule,
+    première lettre en majuscule. Idempotent. Les sigles (tout en majuscules) sont conservés."""
+    def corriger_accent(m):
+        mot = m.group(0)
+        if (len(mot) >= 5 and mot == _sans_diacritiques(mot)
+                and not (len(mot) > 1 and mot.isupper())):
+            forme = accents.get(mot.lower())
+            if forme:
+                return forme.capitalize() if mot[0].isupper() else forme
+        return mot
+
+    libelle = _RE_MOT.sub(corriger_accent, libelle)
+
+    # Casse « Title Case » : on abaisse les mots courants seulement pour un libellé simple (sans
+    # « / : – - ( »), et seulement si TOUS ses mots capitalisés sont des mots courants attestés
+    # en minuscule — jamais de demi-correction (« matière Condensee »), jamais un nom propre.
+    if not re.search(r"[/:–\-(]", libelle):
+        majuscules = [m for m in _RE_MOT.finditer(libelle)
+                      if m.start() > 0 and len(m.group(0)) > 3
+                      and m.group(0)[0].isupper() and m.group(0)[1:].islower()]
+        if majuscules and all(m.group(0).lower() in minuscules for m in majuscules):
+            libelle = _RE_MOT.sub(
+                lambda m: m.group(0).lower() if m in majuscules or any(m.start() == x.start() for x in majuscules)
+                else m.group(0),
+                libelle,
+            )
+    return normaliser_casse_libelle(libelle)
 
 
 def code_specialite_canonique(code):
@@ -384,6 +522,27 @@ def appliquer_fusions_specialites(log):
         if s and s.libelle != libelle:
             s.libelle = libelle
             s.save(update_fields=['libelle'])
+    # Accents et casse harmonisés (les libellés explicites ci-dessus priment) à partir de mots
+    # attestés ailleurs dans le référentiel (spécialités, filières, métiers, appellations).
+    from .models import Appellation, FiliereFormation, Metier
+    corpus = list(SpecialiteFormation.objects.values_list('libelle', flat=True))
+    corpus += list(FiliereFormation.objects.values_list('libelle', flat=True))
+    corpus += list(Metier.objects.values_list('libelle', flat=True))
+    corpus += list(Appellation.objects.values_list('libelle', flat=True))
+    accents, minuscules = construire_dictionnaires_libelles(corpus)
+    corriges = 0
+    for modele in (SpecialiteFormation, FiliereFormation):
+        queryset = modele.objects.all()
+        if modele is SpecialiteFormation:
+            queryset = queryset.exclude(code__in=SPECIALITES_LIBELLES)
+        for objet in queryset:
+            propre = harmoniser_libelle(objet.libelle, accents, minuscules)
+            if propre != objet.libelle:
+                objet.libelle = propre
+                objet.save(update_fields=['libelle'])
+                corriges += 1
+    if corriges:
+        log(f"  accents et casse des libellés harmonisés : {corriges} élément(s)")
 
 
 # ---------------------------------------------------------------------------
@@ -508,4 +667,5 @@ def rejouer_consolidation(log):
     """Appelé à la fin de import_referentiel_v2 (même transaction)."""
     with transaction.atomic():
         rejouer_instantane(log)
+        appliquer_redirections_metiers(log)
         appliquer_fusions_specialites(log)

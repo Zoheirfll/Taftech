@@ -50,7 +50,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
 
   // Le formulaire utilise maintenant 6 inputs OTP individuels (un chiffre chacun)
   const fillForm = (email = "test@taftech.dz", code = "123456", mdp = "newpass123", confirm = "newpass123") => {
-    fireEvent.change(screen.getByPlaceholderText("votre@email.dz"), { target: { value: email } });
+    fireEvent.change(document.querySelector('input[type="email"]'), { target: { value: email } });
     // Remplir les 6 cases OTP individuellement
     const otpInputs = document.querySelectorAll('input[maxLength="1"]');
     code.split("").forEach((digit, i) => {
@@ -72,7 +72,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     );
 
     expect(screen.getByText("Nouveau mot de passe")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("votre@email.dz")).toBeInTheDocument();
+    expect(document.querySelector('input[type="email"]')).toBeInTheDocument();
     // 6 inputs OTP individuels (maxLength="1")
     expect(document.querySelectorAll('input[maxLength="1"]').length).toBe(6);
     expect(screen.getByPlaceholderText("Minimum 8 caractères")).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByPlaceholderText("votre@email.dz")).toHaveValue("prefill@taftech.dz");
+    expect(document.querySelector('input[type="email"]')).toHaveValue("prefill@taftech.dz");
   });
 
   it("🟢 HP3 : Réinitialisation réussie → état succès + redirection", async () => {

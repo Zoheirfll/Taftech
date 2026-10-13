@@ -3,6 +3,8 @@ import { Trash2, Pencil, Check } from "lucide-react";
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
 import { FormationReferentielSelect } from "../../../../Components/FormationReferentielSelect";
+import { formatDatePrecise } from "../../../../utils/cvDates";
+import DatePrecisionInput from "../../../../Components/DatePrecisionInput";
 
 export const StepFormations = ({ pendingFormations, setPendingFormations, formationsMode, setFormationsMode, saveFormationsStep, skipStep, profil, saving }) => {
   const [editingIndex, setEditingIndex] = useState(null);
@@ -13,7 +15,7 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
   };
 
   const updateField = (idx, field, value) => {
-    setPendingFormations((list) => list.map((f, i) => (i === idx ? { ...f, [field]: value } : f)));
+    setPendingFormations((list) => list.map((f, i) => (i === idx ? { ...f, [field]: value, ...(field === "date_debut" || field === "date_fin" ? { [`${field}_precision`]: "JOUR" } : {}) } : f)));
   };
 
   const updateFields = (idx, patch) => {
@@ -76,16 +78,18 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                 className={tw.authInput}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <input
-                  type="date"
+                <DatePrecisionInput
+                  ariaLabel="Début de la formation"
                   value={f.date_debut || ""}
-                  onChange={(e) => updateField(idx, "date_debut", e.target.value)}
+                  precision={f.date_debut_precision || "JOUR"}
+                  onChange={(v, p) => updateFields(idx, { date_debut: v, date_debut_precision: p })}
                   className={tw.authInput}
                 />
-                <input
-                  type="date"
+                <DatePrecisionInput
+                  ariaLabel="Fin de la formation"
                   value={f.date_fin || ""}
-                  onChange={(e) => updateField(idx, "date_fin", e.target.value)}
+                  precision={f.date_fin_precision || "JOUR"}
+                  onChange={(v, p) => updateFields(idx, { date_fin: v, date_fin_precision: p })}
                   className={tw.authInput}
                 />
               </div>
@@ -118,7 +122,7 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                   </p>
                 )}
                 {(f.date_debut || f.date_fin) && (
-                  <p className={`text-xs ${tw.textMuted} mt-0.5`}>{f.date_debut || "?"} — {f.date_fin || "présent"}</p>
+                  <p className={`text-xs ${tw.textMuted} mt-0.5`}>{f.date_debut ? `${formatDatePrecise(f.date_debut, f.date_debut_precision)} — ` : ""}{f.date_fin ? formatDatePrecise(f.date_fin, f.date_fin_precision) : "présent"}</p>
                 )}
                 {f.description && <p className={`text-xs ${tw.textMuted} mt-1 whitespace-pre-line`}>{f.description}</p>}
               </div>

@@ -97,6 +97,9 @@ class EquipeActionLogIntegrationTests(APITestCase):
 
     def test_creer_offre_cree_log(self):
         """POST /creer-offre crée un EquipeActionLog CREER_OFFRE."""
+        from jobs.models import Palier, AbonnementEntreprise
+        # setUp crée déjà une offre (comptée dans la limite du palier Gratuit) : palier avec place libre.
+        AbonnementEntreprise.objects.create(entreprise=self.ent, palier=Palier.objects.get(nom="BUSINESS"))
         self.client.force_authenticate(user=self.rh)
         self.client.post(
             reverse('creer-offre'),

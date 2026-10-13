@@ -45,6 +45,12 @@ export const convertDateRaw = (dateStr) => {
   // avec point optionnel) suivi de l'année. Un mois non reconnu (ex: abréviation
   // inhabituelle) ne doit jamais retomber silencieusement sur "01" (janvier) : dans ce
   // cas on ignore le mot et on ne garde que l'année, via le repli plus bas.
+  // Date complète « 12/03/2023 » : jour conservé (précision JOUR, voir precisionDateRaw).
+  const matchComplete = lower.match(/\b(0?[1-9]|[12]\d|3[01])[/.\-](0?[1-9]|1[0-2])[/.\-](\d{4})\b/);
+  if (matchComplete) {
+    return `${matchComplete[3]}-${matchComplete[2].padStart(2, "0")}-${matchComplete[1].padStart(2, "0")}`;
+  }
+
   const matchMoisAnnee = lower.match(/([a-zà-ÿ]+)\.?\s+(\d{4})/);
   if (matchMoisAnnee && MOIS[matchMoisAnnee[1]]) {
     return `${matchMoisAnnee[2]}-${MOIS[matchMoisAnnee[1]]}-01`;
@@ -89,4 +95,35 @@ export const estDateOuverte = (dateStr) => {
 export const convertDateFin = (dateFinRaw, dateDebutRaw) => {
   if (estDateOuverte(dateFinRaw)) return null;
   return convertDateRaw(dateFinRaw) || convertDateRaw(dateDebutRaw);
+};
+
+// Précision réellement présente dans la date brute du CV : "JOUR" (12/03/2023),
+// "MOIS" (mars 2023, 03/2023) ou "ANNEE" (2023 seule). Le jour/mois manquant dans la date
+// ISO renvoyée par convertDateRaw est une valeur technique de repli — c'est cette
+// précision qui dit ce qui est réellement connu (ne jamais afficher « 01/01/2023 »).
+export const precisionDateRaw = (dateStr) => {
+  if (!dateStr || estDateOuverte(dateStr)) return "JOUR";
+  const lower = dateStr.toLowerCase().trim();
+  if (/\b(0?[1-9]|[12]\d|3[01])[/.\-](0?[1-9]|1[0-2])[/.\-]\d{4}\b/.test(lower)) return "JOUR";
+  const mm = lower.match(/([a-zà-ÿ]+)\.?\s+\d{4}/);
+  if ((mm && MOIS[mm[1]]) || /\b(0?[1-9]|1[0-2])[/.\-]\d{4}\b/.test(lower) || /\b\d{4}[/.\-](0?[1-9]|1[0-2])\b/.test(lower)) return "MOIS";
+  return /\d{4}/.test(lower) ? "ANNEE" : "JOUR";
+};
+
+// Précision de la date de fin (même repli sur la date de début que convertDateFin).
+export const precisionDateFin = (dateFinRaw, dateDebutRaw) => {
+  if (estDateOuverte(dateFinRaw)) return "JOUR";
+  return convertDateRaw(dateFinRaw) ? precisionDateRaw(dateFinRaw) : precisionDateRaw(dateDebutRaw);
+};
+
+const MOIS_FR_LONG = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+// Affiche une date ISO selon sa précision : "2023", "mars 2023" ou "12/03/2023".
+export const formatDatePrecise = (iso, precision = "JOUR") => {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return String(iso);
+  if (precision === "ANNEE") return m[1];
+  if (precision === "MOIS") return `${MOIS_FR_LONG[Number(m[2]) - 1]} ${m[1]}`;
+  return `${m[3]}/${m[2]}/${m[1]}`;
 };

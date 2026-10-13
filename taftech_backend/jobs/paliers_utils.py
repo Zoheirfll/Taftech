@@ -46,3 +46,18 @@ def quota_cv_atteint(entreprise):
         entreprise=entreprise, date_telechargement__gte=debut_mois,
     ).count()
     return nb_ce_mois >= limite
+
+
+def reponse_entreprise_non_validee(entreprise):
+    """403 ENTREPRISE_NON_VALIDEE si l'entreprise n'a pas été validée par TafTech, sinon None.
+    Garde-fou serveur commun à tout accès aux données personnelles de candidats (CV,
+    coordonnées, candidatures) : une entreprise non validée n'y accède jamais, même avec un
+    abonnement actif ou une candidature déjà reçue."""
+    if entreprise is not None and getattr(entreprise, 'est_approuvee', False):
+        return None
+    from rest_framework.response import Response
+    return Response(
+        {"error": "Votre entreprise doit être validée par TafTech pour accéder aux données des candidats.",
+         "code": "ENTREPRISE_NON_VALIDEE"},
+        status=403,
+    )

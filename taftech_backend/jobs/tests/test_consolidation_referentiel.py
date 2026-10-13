@@ -48,7 +48,7 @@ class ImportReproduitConsolidationTest(TestCase):
         self.assertFalse(GroupeMetier.objects.filter(parent__isnull=True).exclude(type_groupe="secteur_source").exists())
         self.assertFalse(Metier.objects.filter(groupe_principal__isnull=True).exists())
         self.assertFalse(SpecialiteFormation.objects.filter(code__in=[d for d, _ in SPECIALITES_FUSIONS]).exists())
-        self.assertEqual(SpecialiteFormation.objects.count(), 922)
+        self.assertEqual(SpecialiteFormation.objects.count(), 921)
         for m in Metier.objects.filter(metier_canonique__isnull=False).select_related("metier_canonique"):
             self.assertIn(m.metier_canonique.metier_canonique_id, (None, m.metier_canonique_id), m.code)
 

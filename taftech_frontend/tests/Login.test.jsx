@@ -91,10 +91,10 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
     );
 
     // Remplissage du formulaire
-    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "test@taftech.dz" },
     });
-    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+    fireEvent.change(document.querySelector('input[type="password"]'), {
       target: { value: "password123" },
     });
 
@@ -141,10 +141,10 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "membre@corp.dz" },
     });
-    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+    fireEvent.change(document.querySelector('input[type="password"]'), {
       target: { value: "password123" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
@@ -165,10 +165,10 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("votre@email.com"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "wrong@taftech.dz" },
     });
-    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+    fireEvent.change(document.querySelector('input[type="password"]'), {
       target: { value: "wrongpass" },
     });
 

@@ -427,7 +427,6 @@ const MonEquipe = () => {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
-                  placeholder="collaborateur@entreprise.dz"
                   autoFocus
                 />
               </div>

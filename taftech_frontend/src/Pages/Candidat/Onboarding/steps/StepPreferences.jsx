@@ -23,7 +23,6 @@ export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipSt
           <label htmlFor="onb-salaire" className={`${tw.authLabel} mb-1.5`}>Salaire mensuel attendu</label>
           <input
             id="onb-salaire"
-            placeholder="Ex: 80 000 DA"
             className={tw.authInput}
             value={prefsForm.salaire_souhaite || ""}
             onChange={set("salaire_souhaite")}

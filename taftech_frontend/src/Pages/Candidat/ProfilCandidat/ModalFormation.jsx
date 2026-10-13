@@ -1,0 +1,177 @@
+// Modale d'ajout / modification d'une formation.
+import { useSubmitLock } from "../../../utils/useSubmitLock";
+import Select from "react-select";
+import { selectStyles, tw } from "../../../theme";
+import { FormationReferentielSelect } from "../../../Components/FormationReferentielSelect";
+import DatePrecisionInput from "../../../Components/DatePrecisionInput";
+
+const STATUT_FORMATION_OPTIONS = [
+  { value: "OBTENU", label: "Obtenu" },
+  { value: "EN_COURS", label: "En cours" },
+  { value: "INTERROMPU", label: "Interrompu" },
+];
+
+export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, showFormForm, setShowFormForm, newForm, setNewForm, editingFormId, setEditingFormId, profil, handleAddFormation, handleUpdateFormation }) => {
+  const [submitBusy, lockSubmit] = useSubmitLock();
+  return (
+    <>
+      {showFormForm && (
+        <div className={modalClass}>
+          <div className={modalInnerClass}>
+            <h3 className={tw.modalHeading}>
+              {editingFormId
+                ? "Modifier la formation"
+                : "Ajouter une formation"}
+            </h3>
+            <form
+              onSubmit={lockSubmit(editingFormId ? handleUpdateFormation : handleAddFormation)}
+              className="space-y-4"
+            >
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
+                <p className="text-xs text-slate-600">
+                  Type de diplôme et spécialité — choisissez dans le référentiel national pour un
+                  score de correspondance fiable sur les offres.
+                </p>
+                <FormationReferentielSelect
+                  diplomeId={newForm.diplome_ref}
+                  specialiteId={newForm.specialite_ref}
+                  onChangeDiplome={(id, label) =>
+                    setNewForm((p) => ({ ...p, diplome_ref: id, ...(id && label ? { diplome: label } : {}) }))
+                  }
+                  onChangeSpecialite={(id, label) =>
+                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { description: label } : {}) }))
+                  }
+                  autreTexte={newForm.description}
+                  onChangeAutreTexte={(texte) => setNewForm({ ...newForm, description: texte })}
+                  diplomeAutreTexte={newForm.diplome}
+                  onChangeDiplomeAutreTexte={(texte) => setNewForm({ ...newForm, diplome: texte })}
+                  onConfirmerSuggestion={(diplomeRef, _diplomeLabel, specialiteRef) =>
+                    setNewForm((p) => ({
+                      ...p,
+                      diplome_ref: diplomeRef || p.diplome_ref,
+                      specialite_ref: specialiteRef || p.specialite_ref,
+                    }))
+                  }
+                  required
+                />
+                <div>
+                  <label className={tw.formLabel}>Statut de la formation</label>
+                  <Select
+                    options={STATUT_FORMATION_OPTIONS}
+                    value={STATUT_FORMATION_OPTIONS.find((o) => o.value === newForm.statut) || STATUT_FORMATION_OPTIONS[0]}
+                    onChange={(opt) => setNewForm({ ...newForm, statut: opt?.value || "OBTENU" })}
+                    styles={selectStyles}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={tw.formLabel}>
+                  Établissement *
+                </label>
+                <input
+                  required
+                  placeholder="Université, École ou Institut"
+                  className={inputClass}
+                  value={newForm.etablissement}
+                  onChange={(e) =>
+                    setNewForm({ ...newForm, etablissement: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={tw.formLabel}>
+                    Début (optionnel)
+                  </label>
+                  <DatePrecisionInput
+                    ariaLabel="Début de la formation"
+                    className={inputClass}
+                    value={newForm.date_debut}
+                    precision={newForm.date_debut_precision || "JOUR"}
+                    onChange={(v, p) => setNewForm({ ...newForm, date_debut: v, date_debut_precision: p })}
+                  />
+                </div>
+                <div>
+                  <label className={tw.formLabel}>
+                    {newForm.statut === "EN_COURS" ? "Fin prévue" : "Fin (obtention)"}
+                  </label>
+                  {newForm.statut === "EN_COURS" ? (
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={newForm.date_fin_prevue || ""}
+                      onChange={(e) => setNewForm({ ...newForm, date_fin_prevue: e.target.value })}
+                    />
+                  ) : (
+                    <DatePrecisionInput
+                      ariaLabel="Fin (obtention)"
+                      className={inputClass}
+                      value={newForm.date_fin || ""}
+                      precision={newForm.date_fin_precision || "JOUR"}
+                      onChange={(v, p) => setNewForm({ ...newForm, date_fin: v, date_fin_precision: p })}
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={tw.formLabel}>Pays de la formation</label>
+                  <input
+                    maxLength={2}
+                    className={inputClass}
+                    value={newForm.pays_formation ?? "DZ"}
+                    onChange={(e) =>
+                      setNewForm({ ...newForm, pays_formation: e.target.value.toUpperCase() })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={tw.formLabel}>Référence justificatif (optionnel)</label>
+                  <input
+                    className={inputClass}
+                    value={newForm.document_reference ?? ""}
+                    onChange={(e) =>
+                      setNewForm({ ...newForm, document_reference: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={!!newForm.est_principale}
+                  onChange={(e) =>
+                    setNewForm({ ...newForm, est_principale: e.target.checked })
+                  }
+                />
+                Formation principale (mise en avant sur mon profil)
+              </label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFormForm(false);
+                    setEditingFormId(null);
+                    setNewForm({
+                      diplome: "",
+                      etablissement: "",
+                      date_debut: "",
+                      date_fin: "",
+                      description: "",
+                    });
+                  }}
+                  className={btnCancel}
+                >
+                  Annuler
+                </button>
+                <button type="submit" disabled={submitBusy} className={btnPrimary}>
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

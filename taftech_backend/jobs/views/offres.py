@@ -200,6 +200,24 @@ def _texte_depuis_competences(competences_requises):
     return "\n".join(lignes)
 
 
+def _limite_offres_atteinte(entreprise, exclure_offre_id=None):
+    """Retourne la limite du palier si l'entreprise l'a déjà atteinte, sinon None.
+
+    Compte les offres APPROUVEES **et EN_ATTENTE** non clôturées : sans les offres en attente, on
+    pouvait en déposer un nombre illimité pendant la modération puis dépasser la limite dès leur
+    approbation. `exclure_offre_id` évite de compter l'offre qu'on est en train de resoumettre."""
+    from ..paliers_utils import limite_offres_actives
+    limite = limite_offres_actives(entreprise)
+    if limite is None:
+        return None
+    offres = OffreEmploi.objects.filter(
+        entreprise=entreprise, statut_moderation__in=['APPROUVEE', 'EN_ATTENTE'], est_cloturee=False,
+    )
+    if exclure_offre_id is not None:
+        offres = offres.exclude(pk=exclure_offre_id)
+    return limite if offres.count() >= limite else None
+
+
 class JobCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -210,17 +228,12 @@ class JobCreateAPIView(APIView):
             return Response({"error": "Votre entreprise doit être validée par TafTech avant de publier."}, status=status.HTTP_403_FORBIDDEN)
         if get_membre_role(request.user, entreprise) not in _ROLES_ACTION:
             return Response({"error": "Accès refusé."}, status=403)
-        from ..paliers_utils import limite_offres_actives
-        limite = limite_offres_actives(entreprise)
+        limite = _limite_offres_atteinte(entreprise)
         if limite is not None:
-            nb_actives = OffreEmploi.objects.filter(
-                entreprise=entreprise, statut_moderation='APPROUVEE', est_cloturee=False
-            ).count()
-            if nb_actives >= limite:
-                return Response(
-                    {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier. Passez à un palier supérieur pour publier plus d'offres.", "code": "LIMITE_OFFRES_ATTEINTE"},
-                    status=403,
-                )
+            return Response(
+                {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier. Passez à un palier supérieur pour publier plus d'offres.", "code": "LIMITE_OFFRES_ATTEINTE"},
+                status=403,
+            )
         serializer = OffreEmploiCreateDTO(data=request.data)
         if serializer.is_valid():
             offre = serializer.save(entreprise=entreprise)
@@ -263,6 +276,15 @@ class UpdateOffreRecruteurAPIView(APIView):
         # date_expiration seule → autorisé même si APPROUVEE
         if offre.statut_moderation == "APPROUVEE" and set(request.data.keys()) - {"date_expiration"}:
             return Response({"error": "Impossible de modifier une offre déjà publiée."}, status=400)
+        # Une offre REJETEE n'est pas comptée dans la limite ; la corriger la remet EN_ATTENTE
+        # (donc comptée) : on revérifie ici, sinon le refus puis la resoumission contournent la limite.
+        if offre.statut_moderation == "REJETEE" and not offre.est_cloturee:
+            limite = _limite_offres_atteinte(entreprise, exclure_offre_id=offre.id)
+            if limite is not None:
+                return Response(
+                    {"error": f"Limite d'offres actives atteinte ({limite}) pour votre palier : impossible de soumettre à nouveau cette offre.", "code": "LIMITE_OFFRES_ATTEINTE"},
+                    status=403,
+                )
         serializer = OffreEmploiCreateDTO(offre, data=request.data, partial=True)
         if serializer.is_valid():
             if offre.statut_moderation == "APPROUVEE":
@@ -405,25 +427,42 @@ class NomenclatureFormationAPIView(APIView):
 
     def get(self, request):
         from django.core.cache import cache
-        cached = cache.get('jobs_nomenclature_formation')
+        cached = cache.get('jobs_nomenclature_formation_v2')
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..models import TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation, DiplomeSpecialite
+        from ..models import Scolarite
+        from ..referentiel_utils import famille_formation, FAMILLES_FORMATION, FAMILLES_PAR_NIVEAU_ETUDES
+        # Point 8 : chaque type de diplôme, domaine et spécialité porte sa `famille` (supérieur /
+        # formation professionnelle / thèmes TafTech) pour que l'interface ne les mélange jamais
+        # dans une même liste. Le domaine « non répertorié » (D-AUTRE) est géré par le flux
+        # « Autre, préciser », pas proposé comme un domaine.
+        domaines = list(DomaineFormation.objects.filter(actif=True).exclude(code='D-AUTRE').order_by('libelle'))
+        famille_par_domaine = {d.id: famille_formation(d.systeme) for d in domaines}
         data = {
+            "familles": [{"code": code, "libelle": libelle} for code, libelle in FAMILLES_FORMATION.items()],
+            # 1ʳᵉ étape de la cascade : niveau d'études -> familles de diplômes proposées.
+            "niveaux_etudes": [
+                {"id": s.id, "code": s.code, "libelle": s.libelle, "usage": s.usage,
+                 "familles": FAMILLES_PAR_NIVEAU_ETUDES.get(s.code, [])}
+                for s in Scolarite.objects.order_by('id')
+            ],
             "types_diplomes": [
-                {"id": d.id, "code": d.code, "libelle": d.libelle, "systeme": d.systeme}
+                {"id": d.id, "code": d.code, "libelle": d.libelle, "systeme": d.systeme,
+                 "famille": famille_formation(d.systeme)}
                 for d in TypeDiplome.objects.filter(selectionnable=True).order_by('systeme', 'libelle')
             ],
             "domaines": [
-                {"id": d.id, "libelle": d.libelle}
-                for d in DomaineFormation.objects.filter(actif=True).order_by('libelle')
+                {"id": d.id, "libelle": d.libelle, "famille": famille_par_domaine[d.id]}
+                for d in domaines
             ],
             "filieres": [
                 {"id": f.id, "libelle": f.libelle, "domaine_id": f.domaine_id}
                 for f in FiliereFormation.objects.filter(actif=True).order_by('libelle')
             ],
             "specialites": [
-                {"id": s.id, "code": s.code, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id}
+                {"id": s.id, "code": s.code, "libelle": s.libelle, "domaine_id": s.domaine_id, "filiere_id": s.filiere_id,
+                 "famille": famille_par_domaine.get(s.domaine_id, 'autre')}
                 for s in SpecialiteFormation.objects.filter(selectionnable=True).order_by('libelle')
             ],
             # Couples attestés — le frontend les met en avant dans la liste des spécialités
@@ -433,7 +472,7 @@ class NomenclatureFormationAPIView(APIView):
                 for ds in DiplomeSpecialite.objects.filter(selectionnable=True)
             ],
         }
-        cache.set('jobs_nomenclature_formation', data, timeout=3600)
+        cache.set('jobs_nomenclature_formation_v2', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -497,8 +536,16 @@ class MetierAutocompleteAPIView(APIView):
     def get(self, request):
         from ..models import Appellation
         from ..referentiel_utils import normaliser_recherche, corriger_mots_flous, q_mots_cle_recherche
-        search = normaliser_recherche(request.query_params.get('search'))
-        if not search:
+        from ..referentiel_utils import developper_abreviations
+        search_brut = normaliser_recherche(request.query_params.get('search'))
+        # « gestionnaire rh » doit trouver « … ressources humaines » ; l'espace final (mot
+        # terminé) est conservé car il change le traitement du dernier mot (préfixe ou entier).
+        search = developper_abreviations(search_brut) + (' ' if search_brut.endswith(' ') else '')
+        # Un sigle qui existe tel quel comme appellation (« DAF ») n'est jamais développé.
+        if search.strip() != search_brut.strip() and Appellation.objects.filter(
+                cle_recherche=search_brut.strip(), actif=True).exists():
+            search = search_brut
+        if not search.strip():
             return Response([])
         try:
             limit = min(max(int(request.query_params.get('limit', 20)), 1), 100)
@@ -775,14 +822,63 @@ class MetierSuggestionsAPIView(APIView):
 
         liens_formation = list(
             MetierFormation.objects.filter(metier=metier, specialite__selectionnable=True)
-            .select_related('specialite').order_by('specialite__libelle')[:15]
+            .select_related('specialite', 'specialite__domaine').order_by('specialite__libelle')[:15]
         )
+        from ..referentiel_utils import FAMILLES_FORMATION, famille_formation
         specialites = [
-            {"id": lien.specialite_id, "libelle": lien.specialite.libelle}
+            {"id": lien.specialite_id, "libelle": lien.specialite.libelle,
+             # Point 8 : la suggestion indique sa famille (supérieur / formation professionnelle…)
+             # pour que le recruteur ne les confonde jamais.
+             "famille_libelle": FAMILLES_FORMATION[famille_formation(lien.specialite.domaine.systeme)]}
             for lien in liens_formation
         ]
         # Texte d'avertissement du client (`precision`, identique sur toutes les lignes
         # importées) — jamais montré jusqu'ici malgré son importation en Phase 1.
         avertissement = next((lien.precision for lien in liens_formation if lien.precision), "")
 
-        return Response({"competences": competences, "specialites": specialites, "avertissement": avertissement})
+        # Statistiques d'usage (candidats + offres du même métier, voir suggestions_stats.py) :
+        # servent à annoter et TRIER, jamais à retirer une suggestion du référentiel. Les
+        # éléments très utilisés mais absents du référentiel sont ajoutés (plafonnés).
+        from ..suggestions_stats import MAX_PAR_CATEGORIE, calculer_stats_metier, score_tri
+        stats = calculer_stats_metier(metier)
+
+        def enrichir(items, cat, cle_item, extra_label):
+            index = stats[cat]
+            vus = set()
+            for it in items:
+                cle = cle_item(it)
+                vus.add(cle)
+                s = index.get(cle) or {}
+                it['pct_candidats'] = s.get('pct_candidats')
+                it['nb_offres'] = s.get('nb_offres')
+            # Éléments fréquents hors référentiel (au plus MAX_PAR_CATEGORIE, déjà triés).
+            frequents = sorted(
+                (s for k, s in index.items() if k not in vus and (s.get('pct_candidats') or s.get('nb_offres'))),
+                key=score_tri, reverse=True,
+            )[:MAX_PAR_CATEGORIE]
+            for s in frequents:
+                items.append({
+                    'id': s['id'], extra_label: s['label'],
+                    'pct_candidats': s['pct_candidats'], 'nb_offres': s['nb_offres'],
+                })
+            # sorted() est stable : sans statistique, l'ordre alphabétique d'origine est conservé.
+            items.sort(key=score_tri, reverse=True)
+            return items
+
+        competences = enrichir(competences, 'competences', lambda i: i['label'].strip().lower(), 'label')
+        specialites = enrichir(specialites, 'specialites', lambda i: str(i['id']), 'libelle')
+        diplomes = enrichir([], 'diplomes', lambda i: str(i['id']), 'libelle')
+        from ..models import TypeDiplome
+        codes = dict(TypeDiplome.objects.filter(pk__in=[d['id'] for d in diplomes]).values_list('pk', 'code'))
+        for d in diplomes:
+            from ..suggestions_stats import _famille
+            fam = _famille(codes.get(d['id'], ''))
+            d['famille'] = fam
+            d['pct_famille'] = stats['familles'].get(fam)
+
+        return Response({
+            "competences": competences, "specialites": specialites, "diplomes": diplomes,
+            "avertissement": avertissement,
+            "nb_candidats": stats['nb_candidats'], "nb_offres": stats['nb_offres'],
+            "elargi": stats['elargi'],
+        })

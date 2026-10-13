@@ -47,7 +47,7 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
     );
 
     expect(screen.getByText("Mot de passe oublié")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("votre@email.dz")).toBeInTheDocument();
+    expect(document.querySelector('input[type="email"]')).toBeInTheDocument();
     expect(screen.getByText("Envoyer le code")).toBeInTheDocument();
     expect(screen.getByText(/Retour à la connexion/i)).toBeInTheDocument();
   });
@@ -61,7 +61,7 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("votre@email.dz"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "test@taftech.dz" },
     });
     fireEvent.click(screen.getByText("Envoyer le code"));
@@ -84,7 +84,7 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("votre@email.dz"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "test@taftech.dz" },
     });
 
@@ -122,7 +122,7 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("votre@email.dz"), {
+    fireEvent.change(document.querySelector('input[type="email"]'), {
       target: { value: "test@taftech.dz" },
     });
     fireEvent.click(screen.getByText("Envoyer le code"));

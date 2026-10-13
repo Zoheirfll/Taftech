@@ -1,3 +1,5 @@
+import SuggestionsDiplomes from "../../Components/SuggestionsDiplomes";
+import { libelleUsage } from "../../utils/suggestionStats";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Select from "react-select";
@@ -8,6 +10,7 @@ import { reportError } from "../../utils/errorReporter";
 import { confirmToast } from "../../utils/confirmToast";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
+import { grouperParFamille, aplatirGroupes } from "../../utils/familleFormation";
 import InfoBanner from "../../Components/InfoBanner";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X, Pencil } from "lucide-react";
@@ -50,13 +53,16 @@ const OffresListPage = () => {
   const [draftDiplomeId, setDraftDiplomeId] = useState("");
   const [draftSpecialiteId, setDraftSpecialiteId] = useState("");
   const [nomenclatureFormation, setNomenclatureFormation] = useState(null);
-  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], avertissement: "" });
+  const [suggestionsPourMetier, setSuggestionsPourMetier] = useState({ competences: [], specialites: [], diplomes: [], avertissement: "" });
 
   // Entrées génériques "Autre X — préciser" masquées — ne comparent rien côté candidat dans
   // une liste d'exigences de matching (voir même décision dans CreateJob.jsx).
   const RE_AUTRE_PRECISER = /autre.*préciser/i;
   const typesDiplomesFiltres = (nomenclatureFormation?.types_diplomes || []).filter((d) => !RE_AUTRE_PRECISER.test(d.libelle));
   const specialitesFiltrees = (nomenclatureFormation?.specialites || []).filter((s) => !RE_AUTRE_PRECISER.test(s.libelle));
+  // Point 8 : listes présentées par famille (supérieur / formation professionnelle / thèmes).
+  const diplomesGroupes = grouperParFamille(typesDiplomesFiltres, nomenclatureFormation?.familles, (d) => ({ value: d.id, label: d.libelle }));
+  const specialitesGroupes = grouperParFamille(specialitesFiltrees, nomenclatureFormation?.familles, (s) => ({ value: s.id, label: s.libelle }));
 
   // Exigences impératives (S12) — même builder que CreateJob.jsx, manquant jusqu'ici
   // sur le formulaire de modification (même gap que compétences/diplômes ci-dessus).
@@ -90,7 +96,7 @@ const OffresListPage = () => {
 
   useEffect(() => {
     if (!modifierForm.metier) {
-      setSuggestionsPourMetier({ competences: [], specialites: [], avertissement: "" });
+      setSuggestionsPourMetier({ competences: [], specialites: [], diplomes: [], avertissement: "" });
       return;
     }
     jobsService.getMetierSuggestions(modifierForm.metier).then(setSuggestionsPourMetier);
@@ -708,8 +714,8 @@ const OffresListPage = () => {
                   <p className="text-xs font-semibold text-slate-700 mb-1.5">Diplômes acceptés</p>
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
                     <Select
-                      options={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle }))}
-                      value={typesDiplomesFiltres.map((d) => ({ value: d.id, label: d.libelle })).find((o) => String(o.value) === String(draftDiplomeId)) || null}
+                      options={diplomesGroupes}
+                      value={aplatirGroupes(diplomesGroupes).find((o) => String(o.value) === String(draftDiplomeId)) || null}
                       onChange={(opt) => setDraftDiplomeId(opt ? opt.value : "")}
                       styles={selectStylesTeal}
                       isClearable
@@ -736,14 +742,20 @@ const OffresListPage = () => {
                       ))}
                     </div>
                   )}
+                  <SuggestionsDiplomes
+                    diplomes={suggestionsPourMetier.diplomes}
+                    dejaAjoutes={diplomesRequis}
+                    elargi={suggestionsPourMetier.elargi}
+                    onAjouter={(d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }]))}
+                  />
                 </div>
 
                 <div>
                   <p className="text-xs font-semibold text-slate-700 mb-1.5">Spécialités acceptées (optionnel — vide = toute spécialité)</p>
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
                     <Select
-                      options={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle }))}
-                      value={specialitesFiltrees.map((s) => ({ value: s.id, label: s.libelle })).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
+                      options={specialitesGroupes}
+                      value={aplatirGroupes(specialitesGroupes).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
                       onChange={(opt) => setDraftSpecialiteId(opt ? opt.value : "")}
                       styles={selectStylesTeal}
                       isClearable
@@ -786,6 +798,8 @@ const OffresListPage = () => {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
                           >
                             + {s.libelle}
+                        {s.famille_libelle && <span className="text-[10px] text-slate-500">({s.famille_libelle})</span>}
+                        {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                           </button>
                         ))}
                     </div>
@@ -810,7 +824,6 @@ const OffresListPage = () => {
                       type="text"
                       value={draftExigenceLabel}
                       onChange={(e) => setDraftExigenceLabel(e.target.value)}
-                      placeholder="Ex: Permis B"
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
                     />
                   </div>
@@ -820,7 +833,6 @@ const OffresListPage = () => {
                       type="text"
                       value={draftExigenceDescription}
                       onChange={(e) => setDraftExigenceDescription(e.target.value)}
-                      placeholder="Ex: Bulletin n°3 du casier judiciaire"
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
                     />
                   </div>
@@ -941,6 +953,7 @@ const OffresListPage = () => {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
                           >
                             + {s.label}
+                          {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
                           </button>
                         ))}
                     </div>

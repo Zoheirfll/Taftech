@@ -69,7 +69,7 @@ describe("🛡️ AdminComptes — comptes administrateurs", () => {
     await waitFor(() => expect(screen.getByText("modo@taftech.dz")).toBeInTheDocument());
 
     fireEvent.click(screen.getByText("Nouvel admin"));
-    fireEvent.change(screen.getByPlaceholderText("admin@taftech.dz"), { target: { value: "new@taftech.dz" } });
+    fireEvent.change(document.querySelector('input[type="email"]'), { target: { value: "new@taftech.dz" } });
     fireEvent.change(screen.getByPlaceholderText("8 caractères minimum"), { target: { value: "court" } });
     fireEvent.click(screen.getByText("Créer le compte"));
 

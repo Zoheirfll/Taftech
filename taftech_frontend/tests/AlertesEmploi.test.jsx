@@ -91,7 +91,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
 
     fireEvent.click(screen.getByText(/Créer une alerte/i));
 
-    const input = screen.getByPlaceholderText(/Ex: Développeur React/i);
+    const input = document.querySelector('form input[type="text"]');
     fireEvent.change(input, { target: { value: "Designer" } });
 
     fireEvent.click(screen.getByText("Enregistrer"));
@@ -181,7 +181,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     await waitFor(() => screen.getByText("Créer une alerte"));
 
     fireEvent.click(screen.getByText("Créer une alerte"));
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Développeur React/i), {
+    fireEvent.change(document.querySelector('form input[type="text"]'), {
       target: { value: "   " },
     });
     fireEvent.click(screen.getByText("Enregistrer"));
@@ -201,7 +201,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     await waitFor(() => screen.getByText("Créer une alerte"));
 
     fireEvent.click(screen.getByText("Créer une alerte"));
-    fireEvent.change(screen.getByPlaceholderText(/Ex: Développeur React/i), {
+    fireEvent.change(document.querySelector('form input[type="text"]'), {
       target: { value: "Admin" },
     });
     fireEvent.click(screen.getByText("Enregistrer"));
@@ -212,7 +212,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
         expect.anything(),
       );
       expect(
-        screen.getByPlaceholderText(/Ex: Développeur React/i),
+        document.querySelector('form input[type="text"]'),
       ).toBeInTheDocument();
     });
   });

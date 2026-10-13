@@ -218,7 +218,7 @@ const AdminFaq = () => {
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Question *</label>
-                <input required maxLength={300} className={inputClass} placeholder="Ex: L'inscription est-elle gratuite ?" value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
+                <input required maxLength={300} className={inputClass} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Réponse *</label>

@@ -264,7 +264,6 @@ const AdminComptes = () => {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
-                  placeholder="admin@taftech.dz"
                 />
               </div>
 
@@ -275,7 +274,6 @@ const AdminComptes = () => {
                   value={form.telephone}
                   onChange={(e) => setForm({ ...form, telephone: e.target.value })}
                   className={`w-full px-3 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`}
-                  placeholder="0550 000 000"
                 />
               </div>
 

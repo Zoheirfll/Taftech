@@ -152,7 +152,6 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
             <input
               required
               className={inputClass + (errors.titre ? ` ${tw.inputErrorRing}` : "")}
-              placeholder="Ex: Questionnaire Développeur React"
               value={form.titre}
               onChange={(e) => {
                 setForm({ ...form, titre: e.target.value });

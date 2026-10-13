@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertDateRaw } from "../src/utils/cvDates";
+import { convertDateRaw, precisionDateRaw, precisionDateFin, formatDatePrecise } from "../src/utils/cvDates";
 
 describe("convertDateRaw", () => {
   it("convertit 'Mois Année' en date ISO", () => {
@@ -40,5 +40,29 @@ describe("convertDateRaw", () => {
     // "xyz 2023" : mot non reconnu comme mois -> on garde seulement l'année,
     // jamais un mois de janvier deviné à tort.
     expect(convertDateRaw("xyz 2023")).toBe("2023-01-01");
+  });
+});
+
+describe("précision des dates extraites du CV", () => {
+  it("année seule : précision ANNEE, affichée sans 01/01", () => {
+    expect(precisionDateRaw("2023")).toBe("ANNEE");
+    expect(formatDatePrecise(convertDateRaw("2023"), "ANNEE")).toBe("2023");
+  });
+
+  it("mois/année : précision MOIS", () => {
+    expect(precisionDateRaw("Mars 2023")).toBe("MOIS");
+    expect(precisionDateRaw("03/2023")).toBe("MOIS");
+    expect(formatDatePrecise(convertDateRaw("Mars 2023"), "MOIS")).toBe("mars 2023");
+  });
+
+  it("date complète : précision JOUR et jour conservé", () => {
+    expect(convertDateRaw("12/03/2023")).toBe("2023-03-12");
+    expect(precisionDateRaw("12/03/2023")).toBe("JOUR");
+    expect(formatDatePrecise("2023-03-12", "JOUR")).toBe("12/03/2023");
+  });
+
+  it("fin absente : reprend la précision du début ; poste en cours = JOUR", () => {
+    expect(precisionDateFin("", "2021")).toBe("ANNEE");
+    expect(precisionDateFin("Présent", "2021")).toBe("JOUR");
   });
 });

@@ -144,7 +144,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await screen.findByText(/Vérifiez votre email/i);
 
-    const otpInput = screen.getByPlaceholderText("______");
+    const otpInput = document.querySelector('input[maxlength="6"]');
     fireEvent.change(otpInput, { target: { value: "123456" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));
@@ -171,7 +171,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
     );
 
     await screen.findByText(/Vérifiez votre email/i);
-    fireEvent.change(screen.getByPlaceholderText("______"), {
+    fireEvent.change(document.querySelector('input[maxlength="6"]'), {
       target: { value: "111111" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));
@@ -198,7 +198,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
     );
 
     await screen.findByText(/Vérifiez votre email/i);
-    const otpInput = screen.getByPlaceholderText("______");
+    const otpInput = document.querySelector('input[maxlength="6"]');
 
     fireEvent.change(otpInput, { target: { value: "A1B2C3" } });
 
@@ -316,7 +316,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
     );
 
     await screen.findByText(/Vérifiez votre email/i);
-    fireEvent.change(screen.getByPlaceholderText("______"), {
+    fireEvent.change(document.querySelector('input[maxlength="6"]'), {
       target: { value: "000000" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Valider mon email/i }));

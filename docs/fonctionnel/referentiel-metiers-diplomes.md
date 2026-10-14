@@ -7,6 +7,14 @@
 
 ---
 
+## 🆕 SESSION 14/10/2026 — Point 23 : métiers proposés par les utilisateurs, à valider ou rejeter
+
+Un candidat ou un recruteur qui ne trouve pas son métier le **propose** (lien « Je ne trouve pas mon métier » sur `MetierAutocomplete proposable`, jamais sur les filtres ni côté admin). Modèle `PropositionMetier` (cycle Suggéré → Validé | Rejeté, Rejeté → Validé en réexamen), logique dans `jobs/propositions_metier.py`, API `referentiel/metiers/proposer/` et `admin/propositions-metiers/` (liste, `/<id>/valider/`, `/<id>/rejeter/`), page admin « Métiers suggérés ». **Aucun effet avant décision** : pas de métier ni d'appellation créés, aucun score modifié.
+
+Validation au choix de l'admin : **Rattacher** (l'intitulé devient une `Appellation` d'un métier existant, `type_alias='proposition'`, code `TAF-AP-<id>`) ou **Créer un nouveau métier** (`Metier` code `TAF-PM-<id>`, groupe domaine ou sous-domaine, sans compétences ni formations suggérées). Rejet avec motif obligatoire, notification du proposant, audit `STATUT_METIER`. Détail, garde-fous et limites : [CORRECTIONS_CLIENT_TEMP.md](../archives/CORRECTIONS_CLIENT_TEMP.md) point 23, `SECURITY.md` §27. Toute fusion ou équivalence de métiers reste réservée à `referentiel_fusions.py`.
+
+---
+
 ## 🆕 SESSION 12/10/2026 — Corrections finales client (points 1 à 6, tous prioritaires)
 
 Branche `feature/qualite-ia-stats-recruteur`, rien commité. Détail sécurité du point 6 : `SECURITY.md` §21.
@@ -41,6 +49,12 @@ Branche `feature/qualite-ia-stats-recruteur`, rien commité. Détail sécurité 
      **Résiduel** : des libellés universitaires dont la forme accentuée n'existe nulle part dans le référentiel (« Modeles ») restent sans accent.
    - **Synchronisation de tous les écrans** : formulaire de formation (profil candidat, assistant d'inscription), profil (diplôme le plus élevé), assistant (`StepInfos`, `<optgroup>`), filtre de diplôme de la liste d'offres publique (`JobsList`), création et modification d'offre (diplômes/spécialités acceptés + suggestions par métier avec famille), admin du référentiel (type de diplôme groupé, domaine affiché avec sa famille via `domaine_complet`), API de suggestions par métier (`famille_libelle`). **Parser CV** : la spécialité est toujours cherchée dans les couples attestés du type de diplôme résolu, donc de la même famille (un BTS ne reçoit jamais une spécialité universitaire) — aucune modification nécessaire. **Recruteur** : l'affichage des diplômes/spécialités exigés (`diplomes_requis_detail`, `specialites_requises_detail`) lit les libellés harmonisés.
    - Tests : `jobs/tests/test_nomenclature_formation_familles.py`, `tests/familleFormation.test.js`.
+9. **Nettoyage de l'interface liée aux diplômes** (retour client, 13/10/2026).
+   - **Mentions techniques retirées** de tout texte visible : « Niveau d'études (référentiel v2) » (assistant), « choisissez dans le référentiel national » (formulaire de formation et assistant), « hors référentiel » (libellés « Autre diplôme / Autre domaine / Autre spécialité »), « métier du référentiel » (création d'offre → « métier de référence »). Les noms « Référentiel TAFTECH » des compétences sont conservés (demandés par le client au point 4).
+   - **Doublon supprimé** : l'assistant d'inscription (`StepInfos.jsx`) affichait à la fois l'ancienne liste générique « Diplôme » (Master 2, Ingéniorat, Bac+5…) et le diplôme structuré. Il n'en reste qu'un, intitulé « Diplôme » (type de diplôme structuré, groupé par famille). La valeur texte historique (`infosForm.diplome`, préremplie par le parser) reste conservée en arrière-plan, non affichée. Dans le profil, le champ structuré s'appelle « Diplôme le plus élevé » (le mot « Niveau d'études » est réservé à la 1ʳᵉ étape de la cascade de formation).
+   - **Recruteur synchronisé** : le filtre « Diplôme » de la CVthèque utilise désormais les types de diplôme structurés groupés par famille (`PanneauFiltres.jsx`) et le paramètre `diplome_ref` (`CVThequeView` : profil **ou** formation du candidat ; l'ancien paramètre `diplome` reste accepté). Sans cela, les candidats qui ne renseignent plus que le diplôme structuré n'étaient plus trouvés. La carte candidat et le détail des formations affichent d'abord le diplôme structuré. Le formulaire de candidature spontanée (visiteur sans compte, `EntreprisePublic.jsx`) garde sa liste simple : un seul champ, pas de doublon.
+   - **« Autre, préciser »** : le champ libre n'apparaît que lorsque l'utilisateur choisit réellement « Autre » ; une formation déjà enregistrée comme « Autre diplôme » se rouvre en mode « Autre » (avant, elle se rouvrait avec une liste vide).
+   - Tests : `jobs/tests/test_cvtheque_filtre_diplome_structure.py`, `tests/OnboardingWizard.test.jsx` et `tests/CVTheque.test.jsx` mis à jour.
 
 **Tests** : `test_cv_parser_competences.py`, `test_api_candidats_recommandes.py` (11), `test_entreprise_non_validee_acces_candidats.py` (8), `tests/cvDates.test.js`. Suite backend complète non relancée à ce stade.
 **Pièges** : le hook GateGuard refuse la première écriture de chaque fichier tant que des faits ne sont pas énoncés ; ne pas modifier les fichiers par script (sed/python) — préférer les outils d'édition pour que les changements soient visibles dans l'éditeur. Fichier temporaire récapitulatif : `CORRECTIONS_CLIENT_TEMP.md` (à supprimer).

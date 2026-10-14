@@ -123,13 +123,22 @@ def _synchroniser_competences_offre(offre, items):
     offre.competences_requises.all().delete()
     if not items:
         return
+    from ..referentiel_utils import construire_index_competences, resoudre_competence_ref
+    index_competences = construire_index_competences()
     vues = set()
     a_creer = []
     for item in items:
         if not isinstance(item, dict):
             continue
         label = str(item.get('label', '')).strip()[:100]
-        if not label or label.lower() in vues:
+        if not label:
+            continue
+        # Point 10 : la compétence est normalisée sur le référentiel commun au candidat (libellé
+        # canonique + lien) ; un synonyme (« Project Management ») devient « Gestion de projet ».
+        ref = resoudre_competence_ref(label, index_competences)
+        if ref:
+            label = ref.label[:100]
+        if label.lower() in vues:
             continue
         vues.add(label.lower())
         type_exigence = item.get('type_exigence') or 'OBLIGATOIRE'
@@ -138,7 +147,8 @@ def _synchroniser_competences_offre(offre, items):
         niveau_requis = item.get('niveau_requis') or None
         if niveau_requis not in _NIVEAUX_VALIDES:
             niveau_requis = None
-        a_creer.append(CompetenceOffre(offre=offre, label=label, type_exigence=type_exigence, niveau_requis=niveau_requis))
+        a_creer.append(CompetenceOffre(
+            offre=offre, label=label, competence_ref=ref, type_exigence=type_exigence, niveau_requis=niveau_requis))
     if a_creer:
         CompetenceOffre.objects.bulk_create(a_creer)
 
@@ -178,8 +188,12 @@ def _synchroniser_exigences_offre(offre, items):
         vues.add(label.lower())
         description = str(item.get('description', '') or '')[:2000]
         justificatif_requis = bool(item.get('justificatif_requis'))
+        categorie = item.get('categorie')
+        if categorie not in dict(ExigenceImperative.CATEGORIE_CHOICES):
+            categorie = 'AUTRE'
         a_creer.append(ExigenceImperative(
             offre=offre, label=label, description=description, justificatif_requis=justificatif_requis,
+            categorie=categorie,
         ))
     if a_creer:
         ExigenceImperative.objects.bulk_create(a_creer)

@@ -132,7 +132,7 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={tw.formLabel}>
-                    Niveau d'études
+                    Diplôme le plus élevé
                   </label>
                   <Select
                     options={grouperParFamille(typesDiplomes, null, (d) => ({ value: d.id, label: d.libelle }))}
@@ -161,6 +161,7 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                     Métier
                   </label>
                   <MetierAutocomplete
+                    proposable
                     value={editInfo.metier_libelle || ""}
                     onSelect={(item) => setEditInfo({ ...editInfo, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
                   />
@@ -185,7 +186,7 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   <option value="SURSITAIRE">Sursitaire</option>
                   <option value="INAPTE">Inapte</option>
                   <option value="INCORPORE">Incorporé</option>
-                  <option value="NON_CONCERNE">Non concerné (Femme)</option>
+                  <option value="NON_CONCERNE">Non concerné</option>
                 </select>
               </div>
               <div className="flex gap-6 py-2">

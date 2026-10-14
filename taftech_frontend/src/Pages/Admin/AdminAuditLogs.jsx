@@ -16,7 +16,11 @@ const ACTION_LABELS = {
   SUPPRIMER_OFFRE: { label: "Supprimer offre", color: tw.auditActionDanger },
   ACTIVER_ABONNEMENT: { label: "Activer abonnement", color: tw.auditActionSuccess },
   MODIFIER_PRIX_PALIER: { label: "Modifier prix palier", color: tw.auditActionWarning },
+  STATUT_COMPETENCE: { label: "Statut compétence", color: tw.auditActionWarning },
   SUPPRIMER_ADMIN: { label: "Supprimer compte admin", color: tw.auditActionDanger },
+  MODIFIER_PROMPT_IA: { label: "Modifier prompt IA", color: tw.auditActionWarning },
+  MODIFIER_CONFIG_IA: { label: "Modifier config IA", color: tw.auditActionWarning },
+  MODIFIER_INFOS_SOCIETE: { label: "Modifier infos société", color: tw.auditActionWarning },
   AUTRE: { label: "Autre", color: tw.auditActionNeutral },
 };
 

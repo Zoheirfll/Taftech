@@ -9,7 +9,7 @@ const HAS_EXISTING_INFOS = (p) =>
   !!(p?.telephone || p?.wilaya || p?.commune || p?.diplome || p?.metier || p?.sexe || p?.bio || p?.linkedin || p?.github);
 
 const SERVICE_MILITAIRE_OPTIONS = [
-  { value: "NON_CONCERNE", label: "Non concerné (Femme)" },
+  { value: "NON_CONCERNE", label: "Non concerné" },
   { value: "DEGAGE", label: "Dégagé" },
   { value: "SURSITAIRE", label: "Sursitaire" },
   { value: "INAPTE", label: "Inapte" },
@@ -92,15 +92,11 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
           <label htmlFor="onb-adresse" className={`${tw.authLabel} mb-1.5`}>Adresse (rue, quartier)</label>
           <input id="onb-adresse" className={tw.authInput} value={infosForm.adresse || ""} onChange={set("adresse")} />
         </div>
+        {/* Un seul champ « Diplôme » : le diplôme structuré. L'ancienne liste générique (Master 2,
+            Ingéniorat, Bac+5…) représentait la même information et n'est plus affichée ; la valeur
+            préremplie par l'analyse du CV (`infosForm.diplome`) reste conservée en arrière-plan. */}
         <div>
-          <label htmlFor="onb-diplome" className={`${tw.authLabel} mb-1.5`}>Diplôme</label>
-          <select id="onb-diplome" className={tw.authInput} value={infosForm.diplome || ""} onChange={set("diplome")}>
-            <option value="">Sélectionnez…</option>
-            {(constants.diplomes || []).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="onb-diplome-ref" className={`${tw.authLabel} mb-1.5`}>Niveau d'études (référentiel v2)</label>
+          <label htmlFor="onb-diplome-ref" className={`${tw.authLabel} mb-1.5`}>Diplôme</label>
           <select
             id="onb-diplome-ref"
             className={tw.authInput}
@@ -125,6 +121,7 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
         <div>
           <label className={`${tw.authLabel} mb-1.5`}>Métier</label>
           <MetierAutocomplete
+            proposable
             value={infosForm.metier_libelle || ""}
             onSelect={(item) => setInfosForm((prev) => ({ ...prev, metier: item.metier_id, metier_libelle: item.appellation_libelle }))}
           />

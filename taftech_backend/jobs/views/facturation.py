@@ -9,6 +9,7 @@ import io
 
 from .equipe import get_entreprise_for_user
 from ..models import PaiementAbonnement, MentionsLegalesEntreprise
+from ..informations_societe import ligne_pied_de_page
 
 NOM_PALIERS = {"STARTER": "Starter", "PRO": "Pro", "BUSINESS": "Business", "ENTERPRISE": "Enterprise"}
 
@@ -240,7 +241,7 @@ class FacturePDFAPIView(APIView):
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#e2e8f0")))
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph(
-            "TAFTECH — Plateforme de recrutement intelligente en Algérie | taftech963@gmail.com | Oran, Algérie",
+            ligne_pied_de_page(),
             s_footer,
         ))
 
@@ -251,25 +252,5 @@ class FacturePDFAPIView(APIView):
         return response
 
 
-class MentionsLegalesAdminAPIView(APIView):
-    """Singleton — mentions légales TafTech affichées sur les factures, éditables par l'admin."""
-    permission_classes = [IsAdminUser]
-
-    def get(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        m = MentionsLegalesEntreprise.get_solo()
-        return Response({
-            'raison_sociale': m.raison_sociale, 'registre_commerce': m.registre_commerce,
-            'nif': m.nif, 'adresse': m.adresse, 'tva': m.tva,
-        })
-
-    def put(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        m = MentionsLegalesEntreprise.get_solo()
-        for field in ('raison_sociale', 'registre_commerce', 'nif', 'adresse', 'tva'):
-            if field in request.data:
-                setattr(m, field, request.data[field])
-        m.save()
-        return Response({'message': 'Mentions légales mises à jour.'})
+# L'édition admin des mentions légales (raison sociale, RC, NIF, adresse, TVA, coordonnées,
+# réseaux sociaux) est dans views/informations_societe.py (validation, cache, audit).

@@ -215,7 +215,8 @@ const MesDocuments = () => {
         </h2>
         <InfoBanner storageKey="mes_documents_cv" title="Visibilité">
           Ce CV est celui utilisé pour vos candidatures. Il est visible par les recruteurs
-          <strong> selon vos paramètres de confidentialité</strong> (déblocage via la CVthèque).
+          <strong> selon vos paramètres de confidentialité</strong> (déblocage via la CVthèque, tant que votre profil reste visible).
+          Vos documents privés ci-dessous ne sont, eux, jamais visibles automatiquement.
         </InfoBanner>
         <div className={`${tw.card} p-5 mt-3 flex flex-col sm:flex-row sm:items-center gap-3`}>
           {profil?.cv_pdf ? (
@@ -258,18 +259,18 @@ const MesDocuments = () => {
         {profil && (
           <div className={`${tw.card} p-4 mt-3 flex items-center justify-between gap-3`}>
             <div>
-              <p className={`text-sm font-semibold ${tw.textStrong}`}>Déblocage par les recruteurs <Link to="/confidentialite-recruteurs" className="ml-1 text-xs font-normal text-indigo-700 underline">Ce que voient les recruteurs</Link></p>
+              <p className={`text-sm font-semibold ${tw.textStrong}`}>Visibilité de mon profil dans la CVthèque <Link to="/confidentialite-recruteurs" className="ml-1 text-xs font-normal text-indigo-700 underline">Ce que voient les recruteurs</Link></p>
               <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
                 {profil.visible_cvtheque
-                  ? "Un recruteur peut débloquer vos coordonnées/CV via un crédit CVthèque."
-                  : "Aucun recruteur ne peut débloquer vos coordonnées/CV pour l'instant."}
+                  ? "Votre profil est visible dans la CVthèque : un recruteur peut débloquer vos coordonnées et votre CV via un crédit. Vous pouvez le masquer à tout moment."
+                  : "Votre profil est masqué : il n'apparaît plus dans la CVthèque et aucun recruteur, même un recruteur qui l'avait déjà débloqué, ne voit vos coordonnées, votre CV ni vos documents partagés. Vos candidatures déjà envoyées restent visibles par les entreprises concernées."}
               </p>
             </div>
             <button
               type="button"
               disabled={togglingVisibilite}
               onClick={handleToggleVisibilite}
-              aria-label="Activer ou désactiver le déblocage CVthèque"
+              aria-label="Afficher ou masquer mon profil dans la CVthèque"
               className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${
                 profil.visible_cvtheque ? tw.bgPrimarySolid : "bg-slate-300"
               }`}

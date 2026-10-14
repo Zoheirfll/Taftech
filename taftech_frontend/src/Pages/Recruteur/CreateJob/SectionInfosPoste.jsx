@@ -69,9 +69,10 @@ const SectionInfosPoste = ({ job }) => {
             ) : (
               <div id="field-metier" className="mt-2">
                 <p className={`text-xs mb-1 ${tw.textWarning || "text-amber-700"}`}>
-                  Rattachez ce poste à un métier du référentiel — obligatoire pour le matching (25% du score).
+                  Rattachez ce poste à un métier de référence — obligatoire pour le matching (25% du score).
                 </p>
                 <MetierAutocomplete
+                  proposable
                   value=""
                   onSelect={(item) => {
                     setFormData((p) => ({ ...p, metier: item.metier_id, metier_libelle: item.metier_libelle }));

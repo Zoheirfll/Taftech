@@ -668,4 +668,10 @@ def rejouer_consolidation(log):
     with transaction.atomic():
         rejouer_instantane(log)
         appliquer_redirections_metiers(log)
+        # Compétences d'offres et de candidats rattachées au référentiel (point 10) : l'import
+        # peut ajouter des compétences/synonymes auxquels des saisies existantes correspondent.
+        from .referentiel_utils import rattacher_competences_orphelines
+        liens = rattacher_competences_orphelines()
+        if liens:
+            log(f"  compétences rattachées au référentiel : {liens}")
         appliquer_fusions_specialites(log)

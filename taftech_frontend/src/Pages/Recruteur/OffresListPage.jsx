@@ -11,6 +11,8 @@ import { confirmToast } from "../../utils/confirmToast";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
 import { grouperParFamille, aplatirGroupes } from "../../utils/familleFormation";
+import { rapprocherDuReferentiel } from "../../utils/competencesReferentiel";
+import { CATEGORIES_EXIGENCE, CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../utils/exigencesCategories";
 import InfoBanner from "../../Components/InfoBanner";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X, Pencil } from "lucide-react";
@@ -70,6 +72,7 @@ const OffresListPage = () => {
   const [draftExigenceLabel, setDraftExigenceLabel] = useState("");
   const [draftExigenceDescription, setDraftExigenceDescription] = useState("");
   const [draftExigenceJustificatif, setDraftExigenceJustificatif] = useState(false);
+  const [draftExigenceCategorie, setDraftExigenceCategorie] = useState(CATEGORIE_EXIGENCE_PAR_DEFAUT);
 
   const ajouterExigence = () => {
     const label = draftExigenceLabel.trim();
@@ -80,10 +83,12 @@ const OffresListPage = () => {
     }
     setExigencesImperatives((prev) => [...prev, {
       label, description: draftExigenceDescription.trim(), justificatif_requis: draftExigenceJustificatif,
+      categorie: draftExigenceCategorie,
     }]);
     setDraftExigenceLabel("");
     setDraftExigenceDescription("");
     setDraftExigenceJustificatif(false);
+    setDraftExigenceCategorie(CATEGORIE_EXIGENCE_PAR_DEFAUT);
   };
 
   const retirerExigence = (label) => {
@@ -141,6 +146,7 @@ const OffresListPage = () => {
     setCompetencesRequises(
       (offre.competences_requises || []).map((c) => ({
         label: c.label, type_exigence: c.type_exigence, niveau_requis: c.niveau_requis,
+        dans_referentiel: !!c.competence_ref,
       })),
     );
     setDiplomesRequis((offre.diplomes_requis_detail || []).map((d) => ({ id: d.id, libelle: d.libelle })));
@@ -150,11 +156,13 @@ const OffresListPage = () => {
     setExigencesImperatives(
       (offre.exigences_imperatives || []).map((e) => ({
         label: e.label, description: e.description || "", justificatif_requis: !!e.justificatif_requis,
+        categorie: e.categorie || CATEGORIE_EXIGENCE_PAR_DEFAUT,
       })),
     );
     setDraftExigenceLabel("");
     setDraftExigenceDescription("");
     setDraftExigenceJustificatif(false);
+    setDraftExigenceCategorie(CATEGORIE_EXIGENCE_PAR_DEFAUT);
     setShowModifierModal(true);
   };
 
@@ -218,14 +226,20 @@ const OffresListPage = () => {
     }
   };
 
-  const ajouterCompetenceRequise = (label) => {
-    const trimmed = (label || "").trim();
-    if (!trimmed) return;
+  const ajouterCompetenceRequise = async (label) => {
+    const saisie = (label || "").trim();
+    if (!saisie) return;
+    // Point 10 : rapprochement avec le référentiel commun au candidat (libellé ou synonyme exact).
+    const canonique = await rapprocherDuReferentiel(saisie);
+    const trimmed = canonique || saisie;
     if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
       toast.error("Cette compétence est déjà ajoutée.");
       return;
     }
-    setCompetencesRequises((prev) => [...prev, { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null }]);
+    setCompetencesRequises((prev) => [
+      ...prev,
+      { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null, dans_referentiel: !!canonique },
+    ]);
     setShowCompSuggestions(false);
   };
 
@@ -686,6 +700,7 @@ const OffresListPage = () => {
                 <div>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Métier</label>
                   <MetierAutocomplete
+                    proposable
                     value={modifierForm.metier_libelle}
                     onSelect={(item) => setModifierForm({ ...modifierForm, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
                   />
@@ -817,7 +832,7 @@ const OffresListPage = () => {
                 <p className="text-xs text-slate-600 mb-3">
                   Permis, habilitation, droit d'exercice, certification... — distinct du diplôme, jamais utilisé pour calculer le score de matching. Le candidat déclare s'il y répond au moment de postuler, vous vérifiez ensuite.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto_auto] gap-2 items-end">
                   <div>
                     <label className="text-xs font-medium text-slate-600 block mb-1">Exigence</label>
                     <input
@@ -835,6 +850,16 @@ const OffresListPage = () => {
                       onChange={(e) => setDraftExigenceDescription(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm"
                     />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Catégorie</label>
+                    <select
+                      value={draftExigenceCategorie}
+                      onChange={(e) => setDraftExigenceCategorie(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white"
+                    >
+                      {CATEGORIES_EXIGENCE.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
                   </div>
                   <label className="flex items-center gap-2 text-xs text-slate-700 h-fit pb-2.5 whitespace-nowrap">
                     <input
@@ -857,7 +882,9 @@ const OffresListPage = () => {
                   <div className="flex flex-wrap gap-2 mt-3">
                     {exigencesImperatives.map((e) => (
                       <span key={e.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
-                        {e.label}{e.justificatif_requis ? " 📎" : ""}
+                        {e.label}
+                        {e.categorie && e.categorie !== "AUTRE" ? ` · ${CATEGORIES_EXIGENCE.find((c) => c.value === e.categorie)?.label}` : ""}
+                        {e.justificatif_requis ? " 📎" : ""}
                         <button type="button" onClick={() => retirerExigence(e.label)} className="hover:text-red-600">
                           <X size={12} />
                         </button>
@@ -882,6 +909,14 @@ const OffresListPage = () => {
                         · {c.type_exigence === "OBLIGATOIRE" ? "Obligatoire" : "Souhaitée"}
                         {c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
                       </span>
+                      {c.dans_referentiel === false && (
+                        <span
+                          className="text-[10px] font-semibold text-amber-700"
+                          title="Cette compétence ne figure pas dans la liste TAFTECH : elle ne sera comparée aux candidats que sur son texte exact. Choisissez de préférence une compétence proposée."
+                        >
+                          hors liste
+                        </span>
+                      )}
                       <button type="button" onClick={() => retirerCompetenceRequise(c.label)} className="hover:opacity-70">
                         <X size={11} />
                       </button>

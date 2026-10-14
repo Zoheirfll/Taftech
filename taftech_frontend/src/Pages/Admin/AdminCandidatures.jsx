@@ -99,7 +99,7 @@ const AdminCandidatures = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "candidatures_taftech.csv");
+      link.setAttribute("download", "candidatures_taftech.xlsx");
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -132,7 +132,7 @@ const AdminCandidatures = () => {
             onClick={handleExport}
             className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors ${tw.focusRing}`}
           >
-            <Download size={15} /> Exporter CSV
+            <Download size={15} /> Exporter Excel
           </button>
         }
       />

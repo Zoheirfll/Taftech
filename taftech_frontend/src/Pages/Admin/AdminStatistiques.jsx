@@ -74,6 +74,13 @@ const AdminStatistiques = () => {
   const [loadingMarche, setLoadingMarche] = useState(false);
   const [erreurMarche, setErreurMarche] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [filtreSecteur, setFiltreSecteur] = useState("");
+
+  // Filtre « secteur » : s'applique aux blocs Top domaines et Top métiers (10 lignes max).
+  const secteursFiltrables = (marche?.top_secteurs || []).filter((s) => s.secteur_id != null);
+  const dansSecteur = (x) => !filtreSecteur || String(x.secteur_id) === filtreSecteur;
+  const domainesAffiches = (marche?.top_domaines || []).filter(dansSecteur).slice(0, 10);
+  const metiersAffiches = (marche?.top_metiers || []).filter(dansSecteur).slice(0, 10);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -486,7 +493,7 @@ const AdminStatistiques = () => {
                       {marche.top_secteurs.map((s, i) => {
                         const pct = pourcent(s.nb_offres, marche.top_secteurs[0].nb_offres);
                         return (
-                          <div key={s.metier_id}>
+                          <div key={s.secteur_id ?? s.libelle}>
                             <div className="flex justify-between items-center mb-1">
                               <span className={`text-xs font-medium ${tw.textMuted700}`}>
                                 {i + 1}. {s.libelle}
@@ -497,6 +504,99 @@ const AdminStatistiques = () => {
                                 </span>
                                 <span className={`text-xs font-bold ${tw.textPrimary}`}>
                                   {s.nb_offres} offres
+                                </span>
+                              </div>
+                            </div>
+                            <div className={tw.progressTrack}>
+                              <div
+                                className={tw.progressBarSuccess}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* TOP DOMAINES + filtre par secteur (s'applique aussi à Top métiers) */}
+                {marche.top_domaines?.length > 0 && (
+                  <div className={`${tw.card} overflow-hidden`}>
+                    <div className={`px-5 py-4 border-b ${tw.borderSubtle} flex items-center gap-2 flex-wrap`}>
+                      <Briefcase size={16} className={tw.textPrimary} />
+                      <h2 className={`text-sm font-bold ${tw.textStrong}`}>
+                        Top domaines
+                      </h2>
+                      <select
+                        aria-label="Filtrer par secteur"
+                        value={filtreSecteur}
+                        onChange={(e) => setFiltreSecteur(e.target.value)}
+                        className={`ml-auto text-xs ${tw.input}`}
+                      >
+                        <option value="">Tous les secteurs</option>
+                        {secteursFiltrables.map((s) => (
+                          <option key={s.secteur_id} value={String(s.secteur_id)}>{s.libelle}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {domainesAffiches.length === 0 && (
+                        <p className={`text-xs ${tw.textMuted}`}>Aucun domaine pour ce secteur.</p>
+                      )}
+                      {domainesAffiches.map((d, i) => {
+                        const pct = pourcent(d.nb_offres, domainesAffiches[0].nb_offres);
+                        return (
+                          <div key={d.domaine_id}>
+                            <div className="flex justify-between items-center mb-1 gap-2">
+                              <span className={`text-xs font-medium ${tw.textMuted700} min-w-0`}>
+                                {i + 1}. {d.libelle}
+                                <span className={`block text-[11px] font-normal ${tw.textMuted} truncate`}>{d.secteur}</span>
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-xs ${tw.textMuted} flex items-center gap-1`}>
+                                  <Users size={10} /> {d.nb_candidats}
+                                </span>
+                                <span className={`text-xs font-bold ${tw.textPrimary}`}>{d.nb_offres} offres</span>
+                              </div>
+                            </div>
+                            <div className={tw.progressTrack}>
+                              <div className={tw.progressBarSuccess} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* TOP MÉTIERS (niveau fin, distinct des secteurs) */}
+                {metiersAffiches.length > 0 && (
+                  <div className={`${tw.card} overflow-hidden`}>
+                    <div className={`px-5 py-4 border-b ${tw.borderSubtle} flex items-center gap-2`}>
+                      <Briefcase size={16} className={tw.textPrimary} />
+                      <h2 className={`text-sm font-bold ${tw.textStrong}`}>
+                        Top métiers
+                      </h2>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {metiersAffiches.map((m, i) => {
+                        const pct = pourcent(m.nb_offres, metiersAffiches[0].nb_offres);
+                        return (
+                          <div key={m.metier_id}>
+                            <div className="flex justify-between items-center mb-1 gap-2">
+                              <span className={`text-xs font-medium ${tw.textMuted700} min-w-0`}>
+                                {i + 1}. {m.libelle}
+                                <span className={`block text-[11px] font-normal ${tw.textMuted} truncate`}>
+                                  {[m.secteur, m.domaine].filter(Boolean).join(" › ")}
+                                </span>
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-xs ${tw.textMuted} flex items-center gap-1`}>
+                                  <Users size={10} /> {m.nb_candidats}
+                                </span>
+                                <span className={`text-xs font-bold ${tw.textPrimary}`}>
+                                  {m.nb_offres} offres
                                 </span>
                               </div>
                             </div>

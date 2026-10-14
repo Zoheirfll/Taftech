@@ -6,7 +6,7 @@ from .questionnaires import QuestionnaireSerializer
 class CompetenceOffreSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetenceOffre
-        fields = ('id', 'label', 'type_exigence', 'niveau_requis')
+        fields = ('id', 'label', 'competence_ref', 'type_exigence', 'niveau_requis')
 
 
 def _secteur_libelle_pour_offre(obj):
@@ -38,7 +38,7 @@ class ExigenceImperativeSerializer(serializers.ModelSerializer):
     score de matching."""
     class Meta:
         model = ExigenceImperative
-        fields = ('id', 'label', 'description', 'justificatif_requis')
+        fields = ('id', 'label', 'description', 'justificatif_requis', 'categorie')
 
 
 class OffreEmploiSerializer(serializers.ModelSerializer):

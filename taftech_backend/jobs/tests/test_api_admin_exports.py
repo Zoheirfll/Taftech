@@ -37,7 +37,29 @@ class AdminAndExportsTests(APITestCase):
         self.client.force_authenticate(user=self.admin)
         response_success = self.client.get(url)
         self.assertEqual(response_success.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_success['Content-Type'], 'text/csv; charset=utf-8-sig')
+        self.assertEqual(
+            response_success['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    def test_exports_admin_xlsx_neutralisent_les_formules(self):
+        """ Un texte saisi par un utilisateur (« =HYPERLINK(...) ») ne doit jamais devenir une formule Excel """
+        from io import BytesIO
+        from openpyxl import load_workbook
+        piege = '=HYPERLINK("http://evil.test","clic")'
+        self.cand.last_name = piege
+        self.cand.save()
+        self.client.force_authenticate(user=self.admin)
+
+        for nom_route in ('export-candidatures', 'export-entreprises', 'export-offres', 'export-utilisateurs'):
+            with self.subTest(route=nom_route):
+                response = self.client.get(reverse(nom_route))
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                ws = load_workbook(BytesIO(response.content)).active
+                cellules = [c for row in ws.iter_rows() for c in row]
+                self.assertTrue(all(c.data_type != 'f' for c in cellules), "formule Excel détectée")
+                if nom_route == 'export-utilisateurs':
+                    self.assertIn(piege, [c.value for c in cellules])
 
     def test_generation_bulletin_pdf_success(self):
         """ US-PDF-01: Le recruteur télécharge le PDF du candidat retenu """

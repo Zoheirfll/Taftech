@@ -25,6 +25,7 @@ vi.mock("../src/Services/jobsService", () => ({
     getDashboard: vi.fn(),
     deverrouillerCandidat: vi.fn(),
     getDocumentsPartages: vi.fn().mockResolvedValue([]),
+    getNomenclatureFormation: vi.fn().mockResolvedValue({ types_diplomes: [], familles: [] }),
     getNomenclature: vi.fn().mockResolvedValue({
       secteurs: [{ code: "L", libelle: "Support à l'entreprise" }],
       domaines: [{ id: 1, code: "L18", libelle: "Systèmes d'information", secteur_code: "L" }],
@@ -415,5 +416,57 @@ describe("🔍 UI & Logique - Composant <CVTheque />", () => {
     fireEvent.click(screen.getByText(/Débloquer ce profil/i));
     fireEvent.click(await screen.findByText("Confirmer"));
     await waitFor(() => expect(jobsService.deverrouillerCandidat).toHaveBeenCalledWith(1));
+  });
+
+  // --- 🔒 Correction client n°19 : permis/véhicule/passeport/situation militaire liés à l'offre ---
+
+  const ouvrirFiltres = async () => {
+    await waitFor(() => screen.getByRole("button", { name: /Filtres/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Filtres/i }));
+  };
+
+  it("🔒 Sans offre déclarant l'exigence : pas de filtre permis/véhicule/passeport, texte explicatif", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue({ ...mockResults, filtres_exigence_autorises: [] });
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
+    await ouvrirFiltres();
+
+    expect(screen.queryByText("Permis de conduire")).toBeNull();
+    expect(screen.queryByText("Véhicule personnel")).toBeNull();
+    expect(screen.queryByText("Passeport valide")).toBeNull();
+    expect(screen.getByText(/ne sont filtrables que pour une offre qui déclare l'exigence/i)).toBeInTheDocument();
+  });
+
+  it("🔒 Choisir une offre dans le panneau envoie offre_filtres_id, sans classement (offre_id)", async () => {
+    jobsService.getDashboard.mockResolvedValue({
+      offres: [{ id: 5, titre: "Chauffeur", est_active: true, est_cloturee: false, statut_moderation: "APPROUVEE" }],
+    });
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue({ ...mockResults, filtres_exigence_autorises: [] });
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
+    await ouvrirFiltres();
+
+    await selectEvent.select(await screen.findByText(/Offre concernée/i), "Chauffeur");
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    await waitFor(() => {
+      const dernierAppel = jobsService.searchCVtheque.mock.calls.at(-1)[0];
+      expect(dernierAppel.offre_filtres_id).toBe("5");
+      expect(dernierAppel.offre_id).toBeUndefined();
+    });
+  });
+
+  it("🔒 Offre déclarant permis et véhicule : seules ces pastilles apparaissent", async () => {
+    jobsService.getConstants.mockResolvedValue(mockConstants);
+    jobsService.searchCVtheque.mockResolvedValue({ ...mockResults, filtres_exigence_autorises: ["permis", "vehicule"] });
+    render(<MemoryRouter><CVTheque /></MemoryRouter>);
+    await ouvrirFiltres();
+
+    expect(await screen.findByText("Permis de conduire")).toBeInTheDocument();
+    expect(screen.getByText("Véhicule personnel")).toBeInTheDocument();
+    expect(screen.queryByText("Passeport valide")).toBeNull();
+    expect(screen.queryByText(/ne sont filtrables que pour une offre/i)).toBeNull();
   });
 });

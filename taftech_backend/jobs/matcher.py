@@ -258,13 +258,23 @@ def _niveaux_candidat_par_label(profil):
     if competences_detail is not None:
         for c in competences_detail.all():
             niveaux[normaliser(c.label)] = c.niveau
+            # Point 10 : même référentiel que l'offre — comparaison par identifiant, donc
+            # « Project Management » et « Gestion de projet » sont la même compétence.
+            ref_id = getattr(c, 'competence_ref_id', None)
+            if ref_id:
+                cle = ('ref', ref_id)
+                if _NIVEAU_POINTS.get(c.niveau, 0) >= _NIVEAU_POINTS.get(niveaux.get(cle), 0):
+                    niveaux[cle] = c.niveau
     return niveaux
 
 
-def _trouver_competence_candidat(profil, label_norm, niveaux_par_label):
-    """Cherche `label_norm` (déjà normalisé) parmi les compétences structurées pré-chargées du
-    candidat, puis dans le texte libre en filet de sécurité. Retourne (trouve, niveau_ou_None,
-    niveau_fiable) — niveau_fiable=False si le match vient du texte libre (niveau inconnu)."""
+def _trouver_competence_candidat(profil, label_norm, niveaux_par_label, competence_ref_id=None):
+    """Cherche la compétence requise parmi les compétences structurées pré-chargées du candidat :
+    d'abord par identifiant du référentiel commun (`competence_ref_id`), puis par `label_norm`
+    (déjà normalisé), puis dans le texte libre en filet de sécurité. Retourne (trouve,
+    niveau_ou_None, niveau_fiable) — niveau_fiable=False si le match vient du texte libre."""
+    if competence_ref_id and ('ref', competence_ref_id) in niveaux_par_label:
+        return True, niveaux_par_label[('ref', competence_ref_id)], True
     if label_norm in niveaux_par_label:
         return True, niveaux_par_label[label_norm], True
     if profil.competences:
@@ -292,7 +302,8 @@ def competences_score_structure(profil, competences_requises):
         poids = 2.0 if comp.type_exigence == 'OBLIGATOIRE' else 1.0
         poids_total += poids
         label_norm = normaliser(comp.label)
-        trouve, niveau_candidat, niveau_fiable = _trouver_competence_candidat(profil, label_norm, niveaux_par_label)
+        trouve, niveau_candidat, niveau_fiable = _trouver_competence_candidat(
+            profil, label_norm, niveaux_par_label, getattr(comp, 'competence_ref_id', None))
         if not trouve:
             manquantes.append(comp)
             continue

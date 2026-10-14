@@ -210,13 +210,17 @@ const AbonnementsPage = () => {
       <div>
         <h1 className="text-xl font-bold text-slate-900">Abonnements & tarifs</h1>
         <p className="text-sm text-slate-600 mt-1">Choisissez la formule qui correspond le mieux à vos besoins de recrutement.</p>
+        <p className="text-xs text-slate-600 mt-1">
+          La formule Gratuite est permanente (ce n'est pas une offre de lancement) : 1 offre active, sans limite de durée.
+          Le nombre d'offres actives, les crédits CVthèque et les fonctionnalités des formules payantes sont ceux indiqués ci-dessous.
+        </p>
       </div>
 
       {!entrepriseApprouvee && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
           <Clock size={20} className="text-amber-700 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-900">
-            Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.
+            Votre entreprise est en cours de validation. Vous pourrez activer votre formule après validation de votre compte.
           </p>
         </div>
       )}
@@ -264,7 +268,7 @@ const AbonnementsPage = () => {
         <div className={`${tw.card} p-6`}>
           <h2 className={`text-lg font-bold ${tw.textStrong} mb-1`}>Crédits CVthèque</h2>
           <p className={`text-sm ${tw.textMuted} mb-4`}>
-            Chaque crédit débloque coordonnées + CV d'un candidat pour votre équipe, sous réserve que le profil reste actif et accessible conformément à ses paramètres de confidentialité.
+            Chaque crédit débloque coordonnées + CV d'un candidat pour votre équipe, tant que le candidat laisse son profil actif et visible : il peut à tout moment le masquer ou supprimer son compte, l'accès cesse alors.
           </p>
           <div className="flex flex-wrap gap-3 mb-5">
             <div className={`px-4 py-2 rounded-lg ${tw.bgPrimarySoft}`}>

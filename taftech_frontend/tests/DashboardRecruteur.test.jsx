@@ -44,6 +44,7 @@ vi.mock("../src/Services/jobsService", () => ({
     telechargerRapportDashboard: vi.fn().mockResolvedValue(null),
     toggleFavoriCV: vi.fn().mockResolvedValue({ is_favori: true }),
     inviterCandidatCVTheque: vi.fn().mockResolvedValue({}),
+    getInformationsSociete: vi.fn().mockResolvedValue({}),
   },
 }));
 

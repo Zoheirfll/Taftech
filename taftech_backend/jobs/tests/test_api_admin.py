@@ -95,22 +95,23 @@ class ApiAdminTest(APITestCase):
         self.assertFalse(self.user_rh.is_active)
 
     # =======================================================
-    # TESTS DES EXPORTS CSV
+    # TESTS DES EXPORTS EXCEL (.xlsx — plus aucun CSV sur la plateforme)
     # =======================================================
-    def test_admin_export_utilisateurs_csv(self):
-        """ Happy Path : L'admin télécharge la base de données CSV """
+    def test_admin_export_utilisateurs_excel(self):
+        """ Happy Path : L'admin télécharge la base utilisateurs au format Excel """
         url = reverse('export-utilisateurs')
         self.client.force_authenticate(user=self.user_admin)
-        
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # CORRECTION ICI : On précise le charset exact attendu pour la compatibilité Excel
-        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8-sig')
-        # Vérifie que le fichier s'appelle bien "utilisateurs.csv" (ou contient 'attachment')
-        self.assertIn('attachment', response['Content-Disposition'])
 
-    def test_recruteur_export_csv_interdit(self):
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('utilisateurs_taftech.xlsx', response['Content-Disposition'])
+
+    def test_recruteur_export_excel_interdit(self):
         """ Edge Case : Blocage de fuite de données """
         url = reverse('export-utilisateurs')
         self.client.force_authenticate(user=self.user_rh) # Un simple recruteur

@@ -1,0 +1,34 @@
+[
+  {
+    "id": 11,
+    "categorie": "PREMIUM",
+    "ordre": 0,
+    "actif": true,
+    "question": "Que se passe-t-il à l'expiration de mon abonnement ?",
+    "reponse": "Votre accès aux fonctionnalités Premium (CVthèque, analyse IA) est suspendu. Vos données et offres restent intactes. Les membres de votre équipe ne peuvent plus se connecter jusqu'au renouvellement."
+  },
+  {
+    "id": 12,
+    "categorie": "PREMIUM",
+    "ordre": 1,
+    "actif": true,
+    "question": "Puis-je prolonger mon abonnement avant qu'il expire ?",
+    "reponse": "Oui. La durée s'ajoute à la fin de votre abonnement actuel — vous ne perdez aucun jour."
+  },
+  {
+    "id": 13,
+    "categorie": "PREMIUM",
+    "ordre": 2,
+    "actif": true,
+    "question": "Le paiement est-il sécurisé ?",
+    "reponse": "Oui. Le paiement est traité par Chargily Pay, plateforme de paiement algérienne. TAFTECH ne stocke aucune information bancaire."
+  },
+  {
+    "id": 14,
+    "categorie": "PREMIUM",
+    "ordre": 3,
+    "actif": true,
+    "question": "Quand mon accès Premium est-il activé ?",
+    "reponse": "L'activation est automatique après confirmation du paiement, en quelques secondes via le système webhook de Chargily."
+  }
+]

@@ -240,7 +240,7 @@ const AdminOffres = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "offres_taftech.csv");
+      link.setAttribute("download", "offres_taftech.xlsx");
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -277,7 +277,7 @@ const AdminOffres = () => {
             onClick={handleExport}
             className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
           >
-            <Download size={15} /> Exporter CSV
+            <Download size={15} /> Exporter Excel
           </button>
         }
       />
@@ -736,6 +736,11 @@ const AdminOffres = () => {
                             {q.requis && <span className={`text-xs ${tw.textErrorMuted} font-medium`}>Obligatoire</span>}
                             {q.disqualifiant && <span className={`text-xs ${tw.textOrangeStrong} font-medium`}>⚠ Disqualifiant</span>}
                           </div>
+                          {q.disqualifiant && (
+                            <p className={`text-xs ${tw.textMuted700} mt-1`}>
+                              Justification : {q.justification_disqualifiant || "non renseignée (question antérieure à la règle)"}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}

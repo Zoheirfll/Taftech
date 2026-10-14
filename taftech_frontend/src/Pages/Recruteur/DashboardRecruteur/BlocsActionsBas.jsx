@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { LifeBuoy, Mail } from "lucide-react";
 import { tw } from "../../../theme";
+import { useInformationsSociete } from "../../../utils/informationsSociete";
 
 export const BlocsActionsBas = ({
   recherches,
@@ -13,7 +14,9 @@ export const BlocsActionsBas = ({
   setTitreIA,
   palierActif,
   handleGenererOffreIA,
-}) => (
+}) => {
+  const { whatsapp } = useInformationsSociete();
+  return (
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
     <div className={`${tw.cardColors} rounded-2xl p-5`}>
       <div className="flex items-center justify-between mb-3">
@@ -81,10 +84,17 @@ export const BlocsActionsBas = ({
         <Link to="/contact?portail=recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
           <LifeBuoy size={13} className={tw.textTeal} /> Centre d'aide
         </Link>
-        <a href="https://wa.me/213770123440" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
-          <Mail size={13} className={tw.textTeal} /> Contacter un conseiller
-        </a>
+        {whatsapp ? (
+          <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+            <Mail size={13} className={tw.textTeal} /> Contacter un conseiller
+          </a>
+        ) : (
+          <Link to="/contact?portail=recruteur" className={`flex items-center gap-2 text-xs font-medium ${tw.textMuted700} hover:${tw.textTeal}`}>
+            <Mail size={13} className={tw.textTeal} /> Contacter un conseiller
+          </Link>
+        )}
       </div>
     </div>
   </div>
-);
+  );
+};

@@ -3,11 +3,12 @@ import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Mail, Phone, MapPin, Clock, ChevronDown } from "lucide-react";
+import { Clock, ChevronDown } from "lucide-react";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
+import { useInformationsSociete, contactsDepuis } from "../../utils/informationsSociete";
 
 const MOTIFS = [
   "Recherche d'emploi",
@@ -24,6 +25,8 @@ const ContactezNous = () => {
   const portalRecruteur =
     searchParams.get("portail") === "recruteur" || role === "RECRUTEUR" || authService.getEstMembreEquipe();
 
+  const infosSociete = useInformationsSociete();
+  const coordonnees = contactsDepuis(infosSociete);
   const [form, setForm] = useState({ nom: "", email: "", entreprise: "", motif: "", objet: "", message: "" });
   const [accepte, setAccepte] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,20 +156,26 @@ const ContactezNous = () => {
 
         {/* SIDEBAR */}
         <div className="w-full lg:w-80 shrink-0 space-y-4">
-          <div className={`${tw.cardColors} rounded-2xl p-5 space-y-3`}>
-            <p className={`text-xs font-semibold uppercase tracking-wider ${tw.textMuted}`}>Coordonnées</p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Mail size={15} className={`${accentText} shrink-0`} /> <a href="mailto:taftech963@gmail.com" className="hover:underline">taftech963@gmail.com</a></p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><Phone size={15} className={`${accentText} shrink-0`} /> <a href="tel:+213770123440" className="hover:underline">0770 123 440</a></p>
-            <p className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}><MapPin size={15} className={`${accentText} shrink-0`} /> Oran, Algérie</p>
-          </div>
+          {coordonnees.length > 0 && (
+            <div className={`${tw.cardColors} rounded-2xl p-5 space-y-3`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${tw.textMuted}`}>Coordonnées</p>
+              {coordonnees.map(({ label, value, href, icon: Icon }) => (
+                <p key={label} className={`flex items-center gap-2 text-sm ${tw.textMuted700}`}>
+                  <Icon size={15} className={`${accentText} shrink-0`} />
+                  {href ? <a href={href} className="hover:underline">{value}</a> : value}
+                </p>
+              ))}
+            </div>
+          )}
 
-          <div className={`${tw.cardColors} rounded-2xl p-5`}>
-            <p className={`flex items-center gap-2 text-sm font-bold ${tw.textStrong} mb-2`}>
-              <Clock size={16} className={accentText} /> Horaires d'ouverture
-            </p>
-            <p className={`text-sm ${tw.textMuted700}`}>Dimanche - Jeudi : 08h00 - 17h00</p>
-            <p className={`text-sm ${tw.textMuted700}`}>Vendredi - Samedi : Fermé</p>
-          </div>
+          {infosSociete.horaires && (
+            <div className={`${tw.cardColors} rounded-2xl p-5`}>
+              <p className={`flex items-center gap-2 text-sm font-bold ${tw.textStrong} mb-2`}>
+                <Clock size={16} className={accentText} /> Horaires d'ouverture
+              </p>
+              <p className={`text-sm ${tw.textMuted700}`}>{infosSociete.horaires}</p>
+            </div>
+          )}
 
           <div className={`${tw.cardColors} rounded-2xl p-5`}>
             <p className={`text-sm font-bold ${tw.textStrong} mb-3`}>Questions fréquentes</p>

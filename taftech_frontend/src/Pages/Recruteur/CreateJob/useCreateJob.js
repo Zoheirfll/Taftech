@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { jobsService } from "../../../Services/jobsService";
+import { rapprocherDuReferentiel } from "../../../utils/competencesReferentiel";
 import { iaService } from "../../../Services/iaService";
 import { recruteurService } from "../../../Services/recruteurService";
 import communesAlgerie from "../../../data/communes.json";
 import { reportError } from "../../../utils/errorReporter";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { grouperParFamille } from "../../../utils/familleFormation";
+import { CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../../utils/exigencesCategories";
 
 // Les entrées génériques "Autre X — préciser" du référentiel sont masquées ici : dans une
 // liste d'exigences utilisée pour le matching, elles ne comparent rien côté candidat (bruit
@@ -84,6 +86,7 @@ export function useCreateJob() {
   const [draftExigenceLabel, setDraftExigenceLabel] = useState("");
   const [draftExigenceDescription, setDraftExigenceDescription] = useState("");
   const [draftExigenceJustificatif, setDraftExigenceJustificatif] = useState(false);
+  const [draftExigenceCategorie, setDraftExigenceCategorie] = useState(CATEGORIE_EXIGENCE_PAR_DEFAUT);
 
   const ajouterExigence = () => {
     const label = draftExigenceLabel.trim();
@@ -94,10 +97,12 @@ export function useCreateJob() {
     }
     setExigencesImperatives((prev) => [...prev, {
       label, description: draftExigenceDescription.trim(), justificatif_requis: draftExigenceJustificatif,
+      categorie: draftExigenceCategorie,
     }]);
     setDraftExigenceLabel("");
     setDraftExigenceDescription("");
     setDraftExigenceJustificatif(false);
+    setDraftExigenceCategorie(CATEGORIE_EXIGENCE_PAR_DEFAUT);
   };
 
   const retirerExigence = (label) => {
@@ -160,14 +165,21 @@ export function useCreateJob() {
     }
   };
 
-  const ajouterCompetenceRequise = (label) => {
-    const trimmed = (label || "").trim();
-    if (!trimmed) return;
+  const ajouterCompetenceRequise = async (label) => {
+    const saisie = (label || "").trim();
+    if (!saisie) return;
+    // Point 10 : la compétence est rapprochée du référentiel commun au candidat (libellé ou
+    // synonyme exact → libellé canonique). Hors référentiel, elle est signalée par un badge.
+    const canonique = await rapprocherDuReferentiel(saisie);
+    const trimmed = canonique || saisie;
     if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
       toast.error("Cette compétence est déjà ajoutée.");
       return;
     }
-    setCompetencesRequises((prev) => [...prev, { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null }]);
+    setCompetencesRequises((prev) => [
+      ...prev,
+      { label: trimmed, type_exigence: compType, niveau_requis: compNiveau || null, dans_referentiel: !!canonique },
+    ]);
     setShowCompSuggestions(false);
   };
 
@@ -331,7 +343,8 @@ export function useCreateJob() {
     diplomesRequis, specialitesRequises, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
     diplomesGroupes, specialitesGroupes, suggestionsPourMetier,
     exigencesImperatives, draftExigenceLabel, setDraftExigenceLabel, draftExigenceDescription, setDraftExigenceDescription,
-    draftExigenceJustificatif, setDraftExigenceJustificatif, ajouterExigence, retirerExigence,
+    draftExigenceJustificatif, setDraftExigenceJustificatif, draftExigenceCategorie, setDraftExigenceCategorie,
+    ajouterExigence, retirerExigence,
     ajouterDiplomeRequis, retirerDiplomeRequis, ajouterDiplomeSuggere, ajouterSpecialiteRequise, retirerSpecialiteRequise, ajouterSpecialiteSuggeree,
     handleCompInputChange, ajouterCompetenceRequise, retirerCompetenceRequise,
     handleTitreChange, handleChange, handleSelectChange, getCommunesOptions, handleGenererIA, handleSubmit, iaReady,

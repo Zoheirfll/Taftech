@@ -16,6 +16,7 @@ import {
   Receipt,
   HelpCircle,
   Tags,
+  Lightbulb,
   Newspaper,
   GalleryHorizontal,
   FileEdit,
@@ -85,7 +86,8 @@ const NAV_GROUPS = [
     dot: "bg-violet-500",
     items: [
       { to: "/admin-taftech/referentiel-v2", icon: GraduationCap, label: "Métiers & diplômes", badgeKey: "formations_a_verifier" },
-      { to: "/admin-taftech/competences", icon: Tags, label: "Compétences" },
+      { to: "/admin-taftech/competences", icon: Tags, label: "Compétences", badgeKey: "competences_a_valider" },
+      { to: "/admin-taftech/metiers-suggeres", icon: Lightbulb, label: "Métiers suggérés", badgeKey: "metiers_a_valider" },
     ],
   },
   {

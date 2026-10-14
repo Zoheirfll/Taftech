@@ -7,6 +7,7 @@ from django.utils import timezone
 import os
 import io
 from ..models import Candidature
+from ..informations_societe import ligne_pied_de_page
 
 
 class GenererBulletinPDFAPIView(APIView):
@@ -243,7 +244,7 @@ class GenererBulletinPDFAPIView(APIView):
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#e2e8f0")))
         story.append(Spacer(1, 2*mm))
         story.append(Paragraph(
-            "TAFTECH — Plateforme de recrutement intelligente en Algérie | taftech963@gmail.com | Oran, Algérie",
+            ligne_pied_de_page(),
             s_footer
         ))
 

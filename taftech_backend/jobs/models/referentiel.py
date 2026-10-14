@@ -369,11 +369,74 @@ class CompetenceReferentiel(models.Model):
         verbose_name="Synonymes / traductions",
         help_text="Intitulés équivalents séparés par des virgules (ex: Project Management, Gestion des projets) — utilisés pour normaliser les compétences extraites d'un CV vers ce libellé.",
     )
-    actif = models.BooleanField(default=True, verbose_name="Suggérée")
+    actif = models.BooleanField(
+        default=True, verbose_name="Officielle et proposée",
+        help_text="Dérivé du statut : vrai uniquement pour une compétence VALIDÉE. Les consommateurs "
+                  "(autocomplete, parser CV, IA de génération, suggestions par métier) filtrent sur ce champ, "
+                  "donc une simple suggestion n'y apparaît jamais.",
+    )
     source_id = models.CharField(max_length=20, blank=True, default='', verbose_name="Provenance (Source.code)")
+
+    # Cycle de vie (point 11, 13/10/2026) : SUGGÉRÉE -> VALIDÉE | REJETÉE ; VALIDÉE <-> DÉSACTIVÉE ;
+    # REJETÉE -> VALIDÉE (réexamen). Une compétence proposée automatiquement naît SUGGÉRÉE et ne
+    # devient officielle (VALIDÉE) que par une décision explicite de l'admin.
+    STATUT_SUGGEREE = 'SUGGEREE'
+    STATUT_VALIDEE = 'VALIDEE'
+    STATUT_REJETEE = 'REJETEE'
+    STATUT_DESACTIVEE = 'DESACTIVEE'
+    STATUT_CHOICES = [
+        (STATUT_SUGGEREE, 'Suggérée (en attente de validation)'),
+        (STATUT_VALIDEE, 'Validée (officielle)'),
+        (STATUT_REJETEE, 'Rejetée'),
+        (STATUT_DESACTIVEE, 'Désactivée'),
+    ]
+    TRANSITIONS = {
+        STATUT_SUGGEREE: {STATUT_VALIDEE, STATUT_REJETEE},
+        STATUT_VALIDEE: {STATUT_DESACTIVEE},
+        STATUT_DESACTIVEE: {STATUT_VALIDEE},
+        STATUT_REJETEE: {STATUT_VALIDEE},
+    }
+    # Statuts qui servent encore à normaliser (rattacher) une saisie : une compétence désactivée
+    # n'est plus proposée mais reste connue, pour ne pas casser les liens et les scores existants.
+    STATUTS_RECONNUS = (STATUT_VALIDEE, STATUT_DESACTIVEE)
+
+    ORIGINE_CHOICES = [
+        ('ADMIN', "Créée par l'administrateur"),
+        ('IMPORT', 'Importée du référentiel v2'),
+        ('PROPOSITION_AUTO', 'Proposée automatiquement (saisies fréquentes hors référentiel)'),
+    ]
+    statut = models.CharField(max_length=12, choices=STATUT_CHOICES, default=STATUT_VALIDEE, db_index=True)
+    origine = models.CharField(max_length=20, choices=ORIGINE_CHOICES, default='ADMIN')
+    date_statut = models.DateTimeField(null=True, blank=True, verbose_name="Dernier changement de statut")
+    traite_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='+', verbose_name="Décision prise par",
+    )
 
     class Meta:
         ordering = ['label']
 
     def __str__(self):
         return self.label
+
+    def save(self, *args, **kwargs):
+        # Compatibilité : l'ancien booléen « actif=False » (créé par le code ou l'admin) signifie
+        # « désactivée » ; ensuite `actif` suit toujours le statut.
+        if self.statut == self.STATUT_VALIDEE and not self.actif:
+            self.statut = self.STATUT_DESACTIVEE
+        self.actif = self.statut == self.STATUT_VALIDEE
+        champs = kwargs.get('update_fields')
+        if champs is not None and 'statut' in champs and 'actif' not in champs:
+            kwargs['update_fields'] = list(champs) + ['actif']
+        super().save(*args, **kwargs)
+
+    def changer_statut(self, nouveau, utilisateur=None):
+        """Applique une transition autorisée (sinon ValueError) et trace qui/quand."""
+        from django.utils import timezone
+        if nouveau not in self.TRANSITIONS.get(self.statut, set()):
+            raise ValueError(f"Transition interdite : {self.statut} -> {nouveau}.")
+        self.statut = nouveau
+        self.actif = nouveau == self.STATUT_VALIDEE  # avant save() : la règle de compatibilité lit `actif`
+        self.date_statut = timezone.now()
+        self.traite_par = utilisateur
+        self.save(update_fields=['statut', 'actif', 'date_statut', 'traite_par'])

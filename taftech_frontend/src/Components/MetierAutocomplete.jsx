@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { jobsService } from "../Services/jobsService";
 import { tw } from "../theme";
+import ProposerMetierModal from "./ProposerMetierModal";
 
 /**
  * Recherche libre de métier (référentiel v2 client) — cherche sur les appellations de
@@ -12,11 +13,15 @@ import { tw } from "../theme";
  *  - value: libellé actuellement affiché dans le champ (ex: metier_libelle déjà connu)
  *  - onSelect({ metier_id, metier_libelle, appellation_libelle }): appelé au choix d'une suggestion
  *  - placeholder
+ *  - proposable: affiche « Je ne trouve pas mon métier » (proposition à l'équipe, validée ou
+ *    rejetée par l'admin). Réservé aux écrans où un candidat ou un recruteur choisit SON métier :
+ *    jamais sur les filtres de recherche ni côté admin.
  */
-export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "" }) => {
+export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "", proposable = false }) => {
   const [texte, setTexte] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
   const [ouvert, setOuvert] = useState(false);
+  const [propositionOuverte, setPropositionOuverte] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => setTexte(value), [value]);
@@ -68,6 +73,22 @@ export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "" }) =
             </li>
           ))}
         </ul>
+      )}
+      {proposable && texte.trim().length >= 3 && (
+        <button
+          type="button"
+          onClick={() => setPropositionOuverte(true)}
+          className="mt-1.5 text-xs font-medium text-teal-700 hover:underline"
+        >
+          Je ne trouve pas mon métier
+        </button>
+      )}
+      {proposable && (
+        <ProposerMetierModal
+          open={propositionOuverte}
+          libelleInitial={texte.trim()}
+          onClose={() => setPropositionOuverte(false)}
+        />
       )}
     </div>
   );

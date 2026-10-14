@@ -20,8 +20,6 @@ const CATEGORIES = [
   { value: "RECRUTEUR", label: "Recruteur (landing)", couleur: "bg-teal-50 text-teal-700" },
   { value: "PALIERS", label: "Abonnements (tarifs recruteur)", couleur: "bg-amber-50 text-amber-800" },
 ];
-// Ancienne catégorie conservée en base mais affichée nulle part — signalée comme telle.
-const CATEGORIE_OBSOLETE = { value: "PREMIUM", label: "Premium (obsolète, non affichée)", couleur: "bg-slate-100 text-slate-600" };
 
 const ITEM_VIDE = { categorie: "GENERAL", question: "", reponse: "", ordre: 0, actif: true };
 
@@ -53,8 +51,7 @@ const AdminFaq = () => {
     fetchItems();
   }, []);
 
-  const aDesObsoletes = items.some((i) => i.categorie === CATEGORIE_OBSOLETE.value);
-  const categoriesFiltre = aDesObsoletes ? [...CATEGORIES, CATEGORIE_OBSOLETE] : CATEGORIES;
+  const categoriesFiltre = CATEGORIES;
 
   const itemsAffiches = (filtreCategorie === "TOUTES" ? items : items.filter((i) => i.categorie === filtreCategorie))
     .slice()
@@ -110,7 +107,7 @@ const AdminFaq = () => {
     });
   };
 
-  const infoCategorie = (v) => [...CATEGORIES, CATEGORIE_OBSOLETE].find((c) => c.value === v) || { label: v, couleur: tw.badgeNeutral };
+  const infoCategorie = (v) => CATEGORIES.find((c) => c.value === v) || { label: v, couleur: tw.badgeNeutral };
   const nbParCategorie = (v) => items.filter((i) => i.categorie === v).length;
 
   return (
@@ -211,9 +208,6 @@ const AdminFaq = () => {
                 <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Catégorie *</label>
                 <select required className={inputClass} value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })}>
                   {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  {form.categorie === CATEGORIE_OBSOLETE.value && (
-                    <option value={CATEGORIE_OBSOLETE.value}>{CATEGORIE_OBSOLETE.label}</option>
-                  )}
                 </select>
               </div>
               <div>

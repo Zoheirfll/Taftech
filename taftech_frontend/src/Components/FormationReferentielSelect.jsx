@@ -188,7 +188,15 @@ export const FormationReferentielSelect = ({
     niveauDeduit.current = true;
     const niveau = niveauPourType(nomenclature.niveaux_etudes, nomenclature.types_diplomes, diplomeId);
     if (niveau) setNiveauId(String(niveau.id));
-  }, [nomenclature, diplomeId]);
+    // Formation déjà enregistrée comme « Autre diplôme » : on rouvre en mode « Autre », donc
+    // avec le champ libre (jamais affiché tant que l'utilisateur n'a pas réellement choisi Autre).
+    const typeAutre = nomenclature.types_diplomes.find((t) => t.code === "D-AUTRE");
+    if (permettreAutre && typeAutre && String(typeAutre.id) === String(diplomeId)) {
+      setDiplomeAutre(true);
+      setDomaineAutre(true);
+      setSpecialiteAutre(true);
+    }
+  }, [nomenclature, diplomeId, permettreAutre]);
 
   const niveauChoisi = useMemo(
     () => nomenclature?.niveaux_etudes?.find((n) => String(n.id) === String(niveauId)) || null,
@@ -342,7 +350,7 @@ export const FormationReferentielSelect = ({
         {diplomeAutre ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-              <span className="text-slate-700">Autre (type de diplôme hors référentiel)</span>
+              <span className="text-slate-700">Autre diplôme</span>
               <button
                 type="button"
                 onClick={() => {
@@ -419,7 +427,7 @@ export const FormationReferentielSelect = ({
         </div>
         {domaineAutre ? (
           <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-            <span className="text-slate-700">Autre (domaine hors référentiel)</span>
+            <span className="text-slate-700">Autre domaine</span>
             <button
               type="button"
               onClick={() => {
@@ -477,7 +485,7 @@ export const FormationReferentielSelect = ({
           {specialiteAutre ? (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-                <span className="text-slate-700">Autre (spécialité hors référentiel)</span>
+                <span className="text-slate-700">Autre spécialité</span>
                 <button
                   type="button"
                   onClick={() => setSpecialiteAutre(false)}

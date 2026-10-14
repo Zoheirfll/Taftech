@@ -5,21 +5,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Avg, Count
-from django.http import HttpResponse
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
-import csv
 import re
 import datetime
 from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
     ProfilEntreprise, AuditLog, DemandeActivationPremium, Metier, GroupeMetier,
-    Article, FaqItem, CompetenceReferentiel, BanniereAccueil,
+    Article, FaqItem, CompetenceReferentiel, BanniereAccueil, PropositionMetier,
     Palier, AbonnementEntreprise, FormationCandidat,
 )
 from ..constants import WILAYAS_CHOICES
 from ..permissions import IsAdminRole
+from .export_xlsx import reponse_xlsx
+from ..referentiel_utils import secteur_et_domaine_par_metier
 import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
@@ -229,7 +229,11 @@ class AdminStatsAPIView(APIView):
             "nb_articles_publies": Article.objects.filter(statut='PUBLIE').count(),
             "nb_articles_brouillons": Article.objects.filter(statut='BROUILLON').count(),
             "nb_faq_actives": FaqItem.objects.filter(actif=True).count(),
-            "nb_competences_referentiel": CompetenceReferentiel.objects.count(),
+            # Seules les compétences officielles (validées) comptent ; les propositions attendent
+            # une décision de l'admin (badge de la barre latérale).
+            "nb_competences_referentiel": CompetenceReferentiel.objects.filter(statut=CompetenceReferentiel.STATUT_VALIDEE).count(),
+            "competences_a_valider": CompetenceReferentiel.objects.filter(statut=CompetenceReferentiel.STATUT_SUGGEREE).count(),
+            "metiers_a_valider": PropositionMetier.objects.filter(statut=PropositionMetier.STATUT_SUGGEREE).count(),
             "nb_bannieres_actives": BanniereAccueil.objects.filter(actif=True).count(),
             "formations_a_verifier": FormationCandidat.objects.filter(statut_validation='A_PRECISER').count(),
         }
@@ -451,22 +455,21 @@ class AdminCandidaturesListAPIView(APIView):
         return paginator.get_paginated_response(data)
 
 
-class ExportCandidaturesCSVAPIView(APIView):
+class ExportAdminCandidaturesExcelAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="candidatures_taftech.csv"'
-        writer = csv.writer(response, delimiter=';')
-        writer.writerow(['ID', 'Date', 'Candidat', 'Email / Tel', 'Offre', 'Entreprise', 'Statut', 'Score IA (%)', 'Note Entretien (/20)'])
-        for cand in Candidature.objects.all().order_by('-date_postulation'):
+        colonnes = ['ID', 'Date', 'Candidat', 'Email / Tel', 'Offre', 'Entreprise', 'Statut', 'Score IA (%)', 'Note Entretien (/20)']
+        lignes = []
+        queryset = Candidature.objects.select_related('candidat', 'offre__entreprise').order_by('-date_postulation')
+        for cand in queryset:
             if cand.candidat:
                 nom = f"{cand.candidat.last_name} {cand.candidat.first_name}"
                 contact = cand.candidat.email
             else:
                 nom = f"{cand.nom_rapide} {cand.prenom_rapide} (Rapide)"
                 contact = cand.email_rapide
-            writer.writerow([
+            lignes.append([
                 cand.id,
                 cand.date_postulation.strftime("%d/%m/%Y"),
                 nom, contact,
@@ -476,40 +479,36 @@ class ExportCandidaturesCSVAPIView(APIView):
                 cand.score_matching if cand.score_matching is not None else "N/A",
                 cand.note_globale if cand.note_globale is not None else "Non évalué"
             ])
-        return response
+        return reponse_xlsx("candidatures_taftech", "Candidatures", colonnes, lignes)
 
 
-class ExportEntreprisesCSVAPIView(APIView):
+class ExportEntreprisesExcelAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="entreprises_taftech.csv"'
-        writer = csv.writer(response, delimiter=';')
-        writer.writerow(['ID', 'Nom', 'Secteur', 'Wilaya', 'Approuvée', 'Email', 'Téléphone'])
+        colonnes = ['ID', 'Nom', 'Secteur', 'Wilaya', 'Approuvée', 'Email', 'Téléphone']
         from ..referentiel_utils import libelle_secteur_entreprise
-        for ent in ProfilEntreprise.objects.all().order_by('-id'):
-            writer.writerow([
+        lignes = [
+            [
                 ent.id, ent.nom_entreprise,
                 libelle_secteur_entreprise(ent.secteur_activite),
                 ent.wilaya_siege,
                 'Oui' if ent.est_approuvee else 'Non',
                 ent.user.email,
                 ent.user.telephone if hasattr(ent.user, 'telephone') else ""
-            ])
-        return response
+            ]
+            for ent in ProfilEntreprise.objects.select_related('user').order_by('-id')
+        ]
+        return reponse_xlsx("entreprises_taftech", "Entreprises", colonnes, lignes)
 
 
-class ExportOffresCSVAPIView(APIView):
+class ExportOffresExcelAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="offres_taftech.csv"'
-        writer = csv.writer(response, delimiter=';')
-        writer.writerow(['ID', 'Titre', 'Entreprise', 'Wilaya', 'Contrat', 'Statut', 'Clôturée', 'Date'])
-        for offre in OffreEmploi.objects.all().order_by('-date_publication'):
-            writer.writerow([
+        colonnes = ['ID', 'Titre', 'Entreprise', 'Wilaya', 'Contrat', 'Statut', 'Clôturée', 'Date']
+        lignes = [
+            [
                 offre.id, offre.titre,
                 offre.entreprise.nom_entreprise,
                 offre.wilaya,
@@ -517,26 +516,27 @@ class ExportOffresCSVAPIView(APIView):
                 offre.get_statut_moderation_display(),
                 'Oui' if offre.est_cloturee else 'Non',
                 offre.date_publication.strftime("%d/%m/%Y")
-            ])
-        return response
+            ]
+            for offre in OffreEmploi.objects.select_related('entreprise').order_by('-date_publication')
+        ]
+        return reponse_xlsx("offres_taftech", "Offres", colonnes, lignes)
 
 
-class ExportUtilisateursCSVAPIView(APIView):
+class ExportUtilisateursExcelAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="utilisateurs_taftech.csv"'
-        writer = csv.writer(response, delimiter=';')
-        writer.writerow(['ID', 'Email', 'Nom', 'Prénom', 'Rôle', 'Actif', 'Date Inscription'])
-        for u in User.objects.all().order_by('-date_joined'):
-            writer.writerow([
+        colonnes = ['ID', 'Email', 'Nom', 'Prénom', 'Rôle', 'Actif', 'Date Inscription']
+        lignes = [
+            [
                 u.id, u.email, u.last_name, u.first_name,
                 getattr(u, 'role', 'CANDIDAT'),
                 'Oui' if u.is_active else 'Non',
                 u.date_joined.strftime("%d/%m/%Y") if u.date_joined else ""
-            ])
-        return response
+            ]
+            for u in User.objects.order_by('-date_joined')
+        ]
+        return reponse_xlsx("utilisateurs_taftech", "Utilisateurs", colonnes, lignes)
 
 
 class AdminMarcheAPIView(APIView):
@@ -578,17 +578,28 @@ class AdminMarcheAPIView(APIView):
             .values('offre__metier_id').annotate(n=Count('id'))
         }
 
-        tous_secteurs = set(list(salaires_offres.keys()) + list(nb_offres_par_secteur.keys()) + list(nb_candidatures_par_secteur.keys()))
-        libelles_domaines = dict(
-            Metier.objects.filter(id__in=tous_secteurs).values_list('id', 'libelle')
-        )
+        # Les agrégats ci-dessus sont PAR MÉTIER (clé = metier_id). Un « secteur » est le niveau
+        # racine du référentiel (secteur → domaine → sous-domaine → métier) : on regroupe donc les
+        # métiers sous leur secteur avant d'afficher, sinon « Data Analyst » ou « Maintenance
+        # électrique » apparaissent à tort comme des secteurs.
+        tous_metiers = set(list(salaires_offres.keys()) + list(nb_offres_par_secteur.keys()) + list(nb_candidatures_par_secteur.keys()))
+        hierarchie = secteur_et_domaine_par_metier(tous_metiers)
+        SANS_SECTEUR = (None, 'Non classé')
+        par_secteur = {}
+        for metier_id in tous_metiers:
+            cle = (hierarchie.get(metier_id) or {}).get('secteur') or SANS_SECTEUR
+            agg = par_secteur.setdefault(cle, {'salaires': [], 'nb_offres': 0, 'nb_candidatures': 0})
+            agg['salaires'].extend(salaires_offres.get(metier_id, []))
+            agg['nb_offres'] += nb_offres_par_secteur.get(metier_id, 0)
+            agg['nb_candidatures'] += nb_candidatures_par_secteur.get(metier_id, 0)
+
         tension_par_secteur = []
-        for secteur in tous_secteurs:
-            ol = salaires_offres.get(secteur, [])
-            nb_offres = nb_offres_par_secteur.get(secteur, 0)
-            nb_candidatures = nb_candidatures_par_secteur.get(secteur, 0)
+        for (secteur_id, secteur_libelle), agg in par_secteur.items():
+            ol = agg['salaires']
+            nb_offres = agg['nb_offres']
+            nb_candidatures = agg['nb_candidatures']
             tension_par_secteur.append({
-                'secteur': libelles_domaines.get(secteur, secteur),
+                'secteur': secteur_libelle,
                 'moy_salaire_offres': int(sum(ol) / len(ol)) if ol else None,
                 'nb_offres': nb_offres,
                 'nb_candidatures': nb_candidatures,
@@ -603,19 +614,48 @@ class AdminMarcheAPIView(APIView):
             OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
             .values('wilaya').annotate(nb_offres=Count('id')).order_by('-nb_offres')[:10]
         )
-        top_secteurs = list(
-            OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
-            .exclude(metier_id__isnull=True)
-            .values('metier_id').annotate(nb_offres=Count('id')).order_by('-nb_offres')[:10]
-        )
-        libelles_top_secteurs = dict(
-            Metier.objects.filter(id__in=[s['metier_id'] for s in top_secteurs]).values_list('id', 'libelle')
-        )
-        for s in top_secteurs:
-            # Candidatures réellement déposées sur des offres de ce métier — remplace l'ancien
-            # `ProfilCandidat.secteur_souhaite` (préférence déclarée, très rarement renseignée).
-            s['nb_candidats'] = nb_candidatures_par_secteur.get(s['metier_id'], 0)
-            s['libelle'] = libelles_top_secteurs.get(s['metier_id'], s['metier_id'])
+        # Top secteurs = vrais secteurs (racine du référentiel) ; candidatures réellement déposées
+        # sur des offres du secteur — remplace l'ancien `ProfilCandidat.secteur_souhaite`
+        # (préférence déclarée, très rarement renseignée).
+        top_secteurs = sorted(
+            (
+                {'secteur_id': secteur_id, 'libelle': secteur_libelle,
+                 'nb_offres': agg['nb_offres'], 'nb_candidats': agg['nb_candidatures']}
+                for (secteur_id, secteur_libelle), agg in par_secteur.items() if agg['nb_offres'] > 0
+            ),
+            key=lambda x: x['nb_offres'], reverse=True,
+        )[:10]
+
+        # Top métiers : le détail fin (ex. Data Analyst, Maintenance électrique), présenté à part
+        # avec son domaine et son secteur pour ne plus être confondu avec un secteur.
+        libelles_metiers = dict(Metier.objects.filter(id__in=nb_offres_par_secteur.keys()).values_list('id', 'libelle'))
+        # Jusqu'à 30 métiers / 15 domaines : l'écran filtre par secteur et n'en montre que 10.
+        top_metiers = []
+        par_domaine = {}
+        for metier_id, nb in sorted(nb_offres_par_secteur.items(), key=lambda kv: kv[1], reverse=True):
+            h = hierarchie.get(metier_id) or {}
+            secteur_id, secteur_libelle = h.get('secteur') or SANS_SECTEUR
+            domaine_id, domaine_libelle = h.get('domaine') or (None, None)
+            nb_cand = nb_candidatures_par_secteur.get(metier_id, 0)
+            if len(top_metiers) < 30:
+                top_metiers.append({
+                    'metier_id': metier_id,
+                    'libelle': libelles_metiers.get(metier_id, str(metier_id)),
+                    'domaine': domaine_libelle,
+                    'secteur': secteur_libelle,
+                    'secteur_id': secteur_id,
+                    'domaine_id': domaine_id,
+                    'nb_offres': nb,
+                    'nb_candidats': nb_cand,
+                })
+            if domaine_id is not None:
+                d = par_domaine.setdefault(domaine_id, {
+                    'domaine_id': domaine_id, 'libelle': domaine_libelle, 'secteur': secteur_libelle,
+                    'secteur_id': secteur_id, 'nb_offres': 0, 'nb_candidats': 0,
+                })
+                d['nb_offres'] += nb
+                d['nb_candidats'] += nb_cand
+        top_domaines = sorted(par_domaine.values(), key=lambda x: x['nb_offres'], reverse=True)[:15]
 
         matching_moyen = Candidature.objects.filter(
             score_matching__isnull=False
@@ -625,6 +665,8 @@ class AdminMarcheAPIView(APIView):
             'tension_par_secteur': tension_par_secteur[:8],
             'top_wilayas': top_wilayas,
             'top_secteurs': top_secteurs,
+            'top_domaines': top_domaines,
+            'top_metiers': top_metiers,
             'matching_moyen': round(float(matching_moyen), 1) if matching_moyen else None,
         })
 

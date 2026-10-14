@@ -16,7 +16,9 @@
 | Problèmes connus reportés (à trancher avec l'utilisateur) | [docs/problemes-a-traiter.md](docs/problemes-a-traiter.md) |
 | Historique par chantier (sessions datées) | [docs/fonctionnel/](docs/fonctionnel/) (index ci-dessous) |
 
-**Dernière session : 12/10/2026** — (1) corrections finales client (points 1 à 8) → [referentiel-metiers-diplomes.md](docs/fonctionnel/referentiel-metiers-diplomes.md), en tête de fichier ; (2) **réorganisation** : CLAUDE.md découpé en `docs/`, 9 fichiers de plus de 1000 lignes découpés en packages/dossiers ([carte-du-code.md](docs/architecture/carte-du-code.md)), racine nettoyée.
+**Dernière session : 14/10/2026** — points 19 à 23 des corrections finales : 19 données personnelles hors du score + filtres CVthèque liés à l'offre, 20 questions disqualifiantes justifiées, 21 informations société en source unique (admin), 22 nettoyage FAQ obsolète, 23 métiers suggérés à valider ou rejeter (SECURITY.md §25 à §27, détail et décisions dans [CORRECTIONS_CLIENT_TEMP.md](docs/archives/CORRECTIONS_CLIENT_TEMP.md)).
+
+**Session précédente : 12-13/10/2026** — (1) corrections finales client (points 1 à 18 ; 18 config IA : prompts réservés au Super Admin (`is_superuser`), audit `MODIFIER_PROMPT_IA`/`MODIFIER_CONFIG_IA`, alerte de plafond global → SECURITY.md §24 ; 17 délivrabilité email : expéditeur/SMTP pilotés par l'environnement, procédure SPF/DKIM/DMARC dans [delivrabilite-emails.md](docs/exploitation/delivrabilite-emails.md), à exécuter après installation sur le domaine définitif ; 16 plus aucun CSV : tous les exports en `.xlsx` via `views/export_xlsx.py`, formules Excel neutralisées → SECURITY.md §23 ; 13 formules gratuit/payant + FAQ migration 0132, 14 souscription avant validation, 15 statistiques marché par vrai secteur + Top domaines/métiers : détail dans [CORRECTIONS_CLIENT_TEMP.md](docs/archives/CORRECTIONS_CLIENT_TEMP.md) ; point 12 CVthèque/confidentialité → [portail-recruteur.md](docs/fonctionnel/portail-recruteur.md) et SECURITY.md §22) : points 1 à 9 → [referentiel-metiers-diplomes.md](docs/fonctionnel/referentiel-metiers-diplomes.md) (en tête de fichier), point 10 (compétences d'offre/candidat sur le même référentiel) → [matching.md](docs/fonctionnel/matching.md), point 11 (cycle Suggérée → Validée → Rejetée/Désactivée) → [cms-contenu.md](docs/fonctionnel/cms-contenu.md) ; suivi : [CORRECTIONS_CLIENT_TEMP.md](docs/archives/CORRECTIONS_CLIENT_TEMP.md) ; (2) **réorganisation** : CLAUDE.md découpé en `docs/`, 9 fichiers de plus de 1000 lignes découpés en packages/dossiers ([carte-du-code.md](docs/architecture/carte-du-code.md)), racine nettoyée.
 
 ## Index de la documentation par chantier
 
@@ -38,10 +40,13 @@
 - Toute vue qui liste des ressources sensibles applique le scoping de périmètre (entreprise du recruteur via `get_entreprise_for_user()`, candidat via `request.user`).
 - Une exigence de permission/palier se vérifie par un test d'intégration sur une vraie route métier, pas sur le défaut global.
 - Données candidat masquées avant déblocage CVthèque (`ProfilCandidatDTO._peut_voir_coordonnees`) : tout nouveau champ identifiant doit suivre ce garde.
+- Un déblocage CVthèque n'est **jamais** un accès permanent : tout accès recruteur à des données candidat fondé sur un déblocage ou un partage doit passer par `credits_utils.profil_accessible_aux_recruteurs` (compte actif ET profil visible). Ne jamais écrire « à vie » dans l'interface. Les documents privés ne sont exposés que par `PartageDocument` explicite.
 - Pas de `window.confirm`/`prompt` : `confirmToast` ; pas de couleur en dur : tokens `tw.*` de `theme.js`.
 - Soft-delete par défaut ; toute suppression en masse : liste validée, sauvegarde, normalisation de chemin.
 - Référentiel : toute fusion/équivalence passe par `referentiel_fusions.py` puis `consolider_referentiel`, jamais en shell.
 - Pas de placeholder « exemple » dans les formulaires ; libellé visible suffisant.
+- Coordonnées et informations de la société : **jamais en dur**. Source unique `MentionsLegalesEntreprise` (Admin → Mentions légales et coordonnées), lue via `utils/informationsSociete.js` (front) et `informations_societe.ligne_pied_de_page` (PDF). Un champ vide n'est pas affiché. Aucune « validation institutionnelle » (ANPDP, agrément…) sans justificatif détenu.
+- Données personnelles (sexe, âge, service militaire, permis, véhicule, passeport) : jamais dans le score ; filtres CVthèque correspondants seulement via une exigence d'offre de même catégorie ; questions disqualifiantes : justification obligatoire, critères protégés refusés (`questionnaire_validation.py`).
 
 ## Règles d'organisation du code (impératives)
 

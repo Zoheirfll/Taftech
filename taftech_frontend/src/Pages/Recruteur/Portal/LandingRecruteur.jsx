@@ -37,8 +37,8 @@ const FEATURES = [
   },
   {
     icon: Shield,
-    title: "Conforme Loi 18-07",
-    desc: "100% conforme à la loi 18-07 relative à la protection des données à caractère personnel.",
+    title: "Données personnelles protégées",
+    desc: "Le traitement des données personnelles est encadré par la loi 18-07 relative à la protection des données à caractère personnel.",
   },
 ];
 
@@ -50,7 +50,7 @@ const STEPS = [
 ];
 
 const AVANTAGES = [
-  "Publication d'offres : 1 gratuite, jusqu'à illimité selon votre formule",
+  "Formule Gratuite : 1 offre active, sans limite de durée — davantage d'offres avec Starter, Pro ou Business",
   "Score de matching sur chaque candidat",
   "CVthèque nationale accessible dès la formule Starter",
   "Questionnaires de présélection",
@@ -105,7 +105,7 @@ const LandingRecruteur = () => {
               </Link>
             </div>
             <div className="flex flex-wrap gap-4">
-              {["Compte gratuit disponible", "Sans engagement", "Conforme à la loi 18-07"].map((item) => (
+              {["Création de compte gratuite", "Sans engagement", "Conforme à la loi 18-07"].map((item) => (
                 <div key={item} className={`flex items-center gap-1.5 text-sm ${tw.bodyTextGrand}`}>
                   <CheckCircle size={14} className={tw.iconMuted} />
                   {item}
@@ -227,7 +227,7 @@ const LandingRecruteur = () => {
               Pourquoi choisir TAFTECH ?
             </h2>
             <p className="text-slate-700 text-base leading-relaxed mb-8">
-              La plateforme de recrutement algérienne qui combine intelligence artificielle, expertise RH et accompagnement humain.
+              La plateforme de recrutement qui combine intelligence artificielle, expertise RH et accompagnement humain.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {AVANTAGES.map((item) => (

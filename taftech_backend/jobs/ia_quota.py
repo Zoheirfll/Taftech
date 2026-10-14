@@ -7,10 +7,18 @@ dashboard, par compte, avec compteur visible et repli manuel).
 Convention du projet reconduite ici (déjà utilisée par quota_cv_atteint) : jamais de compteur
 stocké à incrémenter/reset — toujours recompter les lignes UtilisationIA de la période en cours.
 """
+import logging
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.mail import send_mail
+from django.db import transaction
 from django.utils import timezone
 
 from .models import AIConfig, QuotaIAOverride, UtilisationIA
+
+logger = logging.getLogger(__name__)
 
 # Fonctions gérées côté Palier recruteur (le reste est géré côté AIConfig candidat, flat).
 FONCTIONS_RECRUTEUR = {'GENERATION_OFFRE', 'ANALYSE_RECRUTEUR'}
@@ -90,6 +98,11 @@ def _utilisateurs_du_quota(user, fonction):
     return list(ids)
 
 
+def appels_ia_du_mois():
+    """Appels IA du mois en cours, tous comptes et toutes fonctions confondus (base du plafond global)."""
+    return UtilisationIA.objects.filter(date_heure__gte=_debut_mois()).count()
+
+
 def _compter(user, fonction, depuis):
     return UtilisationIA.objects.filter(
         user_id__in=_utilisateurs_du_quota(user, fonction), fonction=fonction, date_heure__gte=depuis,
@@ -101,7 +114,7 @@ def verifier_quota_ia(user, fonction):
     (None = illimité) ; si ok=False, ajoute 'error', 'code', 'renouvellement_le'."""
     config = AIConfig.get_solo()
     if config.budget_ia_appels_mois_max is not None:
-        total_mois = UtilisationIA.objects.filter(date_heure__gte=_debut_mois()).count()
+        total_mois = appels_ia_du_mois()
         if total_mois >= config.budget_ia_appels_mois_max:
             return False, {
                 'error': "Service IA temporairement saturé (budget mensuel atteint). Réessayez plus tard ou poursuivez manuellement.",
@@ -150,6 +163,79 @@ def consommer_quota_ia(user, fonction):
     """Log l'appel — à appeler dès que la demande est acceptée, avant l'appel IA réel (compte
     même un appel qui échouera côté Groq, sur demande explicite du client)."""
     UtilisationIA.objects.create(user=user, fonction=fonction)
+    try:
+        verifier_alertes_budget_ia()
+    except Exception:
+        # Une panne d'alerte ne doit jamais bloquer la fonctionnalité IA de l'utilisateur.
+        logger.exception("Vérification des alertes de budget IA en échec")
+
+
+def verifier_alertes_budget_ia():
+    """Alerte les Super Admins quand le plafond global mensuel approche (seuil `budget_ia_alerte_pct`)
+    puis quand il est épuisé. Sans plafond défini, rien à surveiller."""
+    config = AIConfig.get_solo()
+    plafond = config.budget_ia_appels_mois_max
+    if not plafond:
+        return
+    total = appels_ia_du_mois()
+    if total >= plafond:
+        niveau = 'EPUISE'
+    elif total * 100 >= plafond * config.budget_ia_alerte_pct:
+        niveau = 'ALERTE'
+    else:
+        return
+    _notifier_budget_une_fois(niveau, total, plafond, config.budget_ia_alerte_pct)
+
+
+def _notifier_budget_une_fois(niveau, total, plafond, pct):
+    """Une alerte par mois et par niveau : la clé est enregistrée en base sous verrou de ligne
+    (deux appels simultanés n'envoient pas deux emails), l'email part après le commit."""
+    cle = f"{_debut_mois():%Y-%m}:{niveau}"
+    mois = cle.split(':')[0]
+    with transaction.atomic():
+        config = AIConfig.objects.select_for_update().get(pk=1)
+        deja = config.budget_ia_alertes_envoyees or []
+        if cle in deja:
+            return
+        config.budget_ia_alertes_envoyees = [k for k in deja if k.startswith(mois)] + [cle]
+        config.save(update_fields=['budget_ia_alertes_envoyees'])
+        transaction.on_commit(lambda: _envoyer_alerte_budget(niveau, total, plafond, pct))
+
+
+def _destinataires_alerte_budget():
+    emails = list(
+        get_user_model().objects.filter(is_superuser=True, is_active=True).exclude(email='').values_list('email', flat=True)
+    )
+    return emails or ([settings.EMAIL_HOST_USER] if settings.EMAIL_HOST_USER else [])
+
+
+def _envoyer_alerte_budget(niveau, total, plafond, pct):
+    destinataires = _destinataires_alerte_budget()
+    if not destinataires:
+        logger.warning("Alerte budget IA (%s) non envoyée : aucun destinataire.", niveau)
+        return
+    if niveau == 'EPUISE':
+        sujet = "[TafTech] Budget IA épuisé : fonctionnalités IA suspendues"
+        situation = (
+            f"Le plafond mensuel global de {plafond} appels IA est atteint ({total} appels ce mois-ci). "
+            "Toutes les fonctionnalités IA sont temporairement indisponibles pour tous les comptes "
+            "jusqu'au début du mois prochain, ou jusqu'à relèvement du plafond."
+        )
+    else:
+        sujet = f"[TafTech] Budget IA : {pct} % du plafond mensuel atteint"
+        situation = (
+            f"{total} appels IA sur un plafond mensuel global de {plafond} (seuil d'alerte : {pct} %). "
+            "Au plafond, toutes les fonctionnalités IA seront suspendues pour tous les comptes."
+        )
+    corps = (
+        f"{situation}\n\n"
+        "Si cette consommation est inhabituelle, consultez le journal d'audit et les quotas par compte "
+        "(Administration > Configuration IA) avant de relever le plafond.\n\nTafTech"
+    )
+    try:
+        send_mail(sujet, corps, settings.DEFAULT_FROM_EMAIL, destinataires, fail_silently=False)
+    except Exception:
+        logger.exception("Envoi de l'alerte budget IA (%s) en échec", niveau)
 
 
 def acquerir_verrou_ia(user, fonction, ttl=30):

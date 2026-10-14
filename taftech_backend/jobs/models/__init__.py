@@ -9,5 +9,6 @@ from .equipe import (AuditLog, MembreEquipe, InvitationEquipe, EquipeActionLog)
 from .abonnements import (DemandeActivationPremium, Palier, AbonnementEntreprise, MentionsLegalesEntreprise, PaiementAbonnement, TelechargementCV, CreditPack, AccesCandidatDebloque, PaiementCreditPack, ICONES_CHOICES)
 from .ia import (AIConfig, UtilisationIA, ParsingCV, CorrectionParsing, QuotaIAOverride)
 from .cms import (PageStatique, SiteAnnonce, BanniereAccueil, ArticleCategorie, Article, FaqItem)
+from .proposition_metier import PropositionMetier
 from .rendezvous import (ConfigRendezVous, DisponibiliteRecurrente, JourBloque, RendezVous)
 from .cvtheque import (InvitationCVTheque, RechercheSauvegardee)

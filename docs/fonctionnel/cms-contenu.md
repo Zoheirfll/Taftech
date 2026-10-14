@@ -7,6 +7,26 @@
 
 ---
 
+## 🆕 SESSION 13/10/2026 — Point 11 des corrections finales : cycle de vie des compétences du référentiel (admin)
+
+**Constat** : le référentiel n'avait qu'un booléen (« Suggérée » = visible, « Masquée »), sans file de validation ; aucune compétence n'était proposée automatiquement, donc rien à valider. Ajout d'un cycle clair, **sans qu'aucune proposition ne devienne officielle d'elle-même**.
+
+**Cycle** (`CompetenceReferentiel.statut`, migration `0131`) : **Suggérée** → **Validée** (officielle) | **Rejetée** ; **Validée** ↔ **Désactivée** ; **Rejetée** → Validée (réexamen). Jamais de retour à « Suggérée ». Transitions contrôlées par `TRANSITIONS` / `changer_statut()` (qui trace qui et quand : `date_statut`, `traite_par`).
+- **`actif` suit le statut** (vrai uniquement si Validée) : tous les consommateurs existants (autocomplete public, parser CV, IA de génération d'offre, suggestions par métier) filtrent déjà sur `actif=True`, donc une suggestion n'y apparaît jamais, sans autre modification. Compatibilité : l'ancien `actif=False` à la création signifie « Désactivée ».
+- **Rattachement** (`construire_index_competences`) : seules les compétences Validées et Désactivées (encore connues, pour ne pas casser les scores existants) normalisent une saisie ; Suggérée et Rejetée ne rattachent rien.
+- **`origine`** : Admin / Import / Proposition automatique (affichée dans la page).
+
+**Propositions automatiques** (`referentiel_utils.proposer_competences_frequentes`) : une compétence saisie hors référentiel par au moins **3** candidats/offres distincts devient une **Suggérée** (`origine=PROPOSITION_AUTO`). Garde-fous : jamais re-proposée si elle existe déjà (libellé ou synonyme, **y compris Rejetée**) ; les règles anti-bruit du parser (chiffres, phrases, dates…) s'appliquent ; idempotent ; mode simulation. Déclenchée à la demande par l'admin (bouton « Détecter les propositions »), jamais à l'écriture d'une saisie (pas de pollution du référentiel).
+
+**API admin** : `GET admin/competences/?statut=` (+ `compteurs` par statut, usage `nb_candidats`/`nb_offres`, `transitions_possibles`) ; `PATCH admin/competences/<id>/statut/` (seul chemin de changement de statut, transition interdite → 400, **journal d'audit** `STATUT_COMPETENCE`) ; `POST admin/competences/proposer/` ; création par l'admin = Validée d'emblée ; la modification libre (`PUT`) ne peut plus écrire statut/actif. Valider rattache aussitôt les saisies existantes (`rattacher_competences_orphelines`). Serializer admin distinct du serializer public (les statuts et l'usage ne sont jamais exposés publiquement).
+
+**Interface** (`AdminCompetences.jsx`) : onglets Toutes / Suggérées / Validées / Rejetées / Désactivées avec compteurs, badge de statut, actions selon les transitions autorisées (Valider, Rejeter, Désactiver, Réactiver), usage réel, bouton « Détecter les propositions ». Tableau de bord : « Compétences » ne compte que les officielles ; **badge** dans la barre latérale pour les propositions à valider (`competences_a_valider`).
+
+**Limites** : la détection est manuelle (pas de tâche planifiée) ; le seuil (3) est fixe côté interface (paramètre `seuil` ≥ 2 accepté par l'API) ; une compétence Suggérée n'est pas encore montrée à l'utilisateur avec un libellé « en attente » (elle n'apparaît simplement pas).
+**Tests** : `jobs/tests/test_competences_cycle_vie.py` (21), `tests/AdminCompetences.test.jsx` (12) ; suites voisines vertes.
+
+---
+
 ## 🆕 SESSION 20/08/2026 — CMS "Prix / Abonnements / Avantages Premium" (autonomie éditoriale)
 
 **Contexte** : l'employeur veut gérer sans intervention technique — prix, abonnements, avantages, FAQ, secteurs, métiers, compétences, articles, bannières, pages du site, plus un futur contrôle des paramètres IA. Chantier découpé en sous-projets indépendants (brainstormé via skill dédié, spec dans `docs/conception/specs/2026-08-20-premium-plans-cms-design.md`) — celui-ci couvre le premier : **Prix / Abonnements / Avantages Premium**. Les sous-projets FAQ/Secteurs-Métiers-Compétences/Articles/Bannières/Pages/Contrôle IA restent à faire, chacun sera brainstormé séparément le moment venu.

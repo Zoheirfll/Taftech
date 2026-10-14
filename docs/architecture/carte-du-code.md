@@ -55,6 +55,7 @@ Attention aux tests qui font `@patch` : pour simuler l'appel Groq dans `parse_wi
 |---|---|
 | `recruteur_dashboard.py` | KPIs, activité récente, recherches sauvegardées |
 | `recruteur_exports.py` | Rapport PDF, exports Excel |
+| `export_xlsx.py` | Helper commun des exports Excel (`reponse_xlsx`, `neutraliser_formules`) — plus aucun export CSV |
 | `recruteur_entreprise.py` | Profil entreprise, photos, paramètres |
 | `recruteur_cvtheque.py` | CVthèque, candidats recommandés, statistiques, invitations, favoris |
 | `recruteur_spontanees.py` | Candidatures spontanées |

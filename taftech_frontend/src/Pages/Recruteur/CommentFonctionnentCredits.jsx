@@ -11,7 +11,7 @@ const CommentFonctionnentCredits = () => (
   >
     <Bloc icon={Unlock} titre="1 crédit = 1 candidat débloqué">
       <p>Un crédit donne accès au nom complet, à l'email, au téléphone, à l'adresse, au salaire souhaité, aux employeurs et au CV du candidat.</p>
-      <p>Tant que le profil reste actif et accessible selon les paramètres de confidentialité du candidat, il reste débloqué. Le consulter à nouveau ne coûte rien.</p>
+      <p>Le déblocage n'est pas un accès permanent : il vaut tant que le candidat laisse son profil actif et visible. Pendant ce temps, le consulter à nouveau ne coûte rien. Vous n'avez pas accès à ses documents privés, sauf s'il les partage lui-même avec votre entreprise.</p>
     </Bloc>
     <Bloc icon={Users} titre="Partagés par toute l'équipe">
       <p>Les crédits appartiennent à l'entreprise, pas à un membre. Un profil débloqué par un collègue est débloqué pour tous : pas de double dépense.</p>
@@ -25,7 +25,7 @@ const CommentFonctionnentCredits = () => (
     </Bloc>
     <Bloc icon={ShieldAlert} titre="Quand un déblocage est impossible">
       <p>Sans formule active, ou tant que votre entreprise n'est pas validée par TafTech, aucun déblocage n'est possible.</p>
-      <p>Un candidat peut refuser les déblocages depuis ses paramètres. Son profil reste visible mais ne peut pas être débloqué, et <strong>aucun crédit n'est consommé</strong>.</p>
+      <p>Le candidat garde la maîtrise de son profil : il peut le masquer ou supprimer son compte. Un profil masqué disparaît de la CVthèque et ne peut pas être débloqué, <strong>sans qu'aucun crédit ne soit consommé</strong>. Pour une entreprise qui l'avait déjà débloqué, l'accès aux coordonnées, au CV et aux documents partagés est suspendu tant que le profil est masqué, puis rétabli sans nouvelle dépense s'il est réaffiché. Si le candidat supprime son compte, l'accès cesse définitivement.</p>
     </Bloc>
     <Bloc icon={Coins} titre="Pas besoin de crédit pour vos candidatures">
       <p>Les candidats qui postulent à vos offres sont visibles en entier dans la gestion de l'offre, sans dépenser de crédit.</p>

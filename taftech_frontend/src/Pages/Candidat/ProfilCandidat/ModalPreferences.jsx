@@ -23,6 +23,7 @@ export const ModalPreferences = ({ inputClass, modalClass, modalInnerClass, btnP
                   Métier souhaité
                 </label>
                 <MetierAutocomplete
+                  proposable
                   value={editPref.metier_souhaite_libelle || ""}
                   onSelect={(item) => setEditPref({ ...editPref, metier_souhaite: item.metier_id, metier_souhaite_libelle: item.appellation_libelle })}
                 />

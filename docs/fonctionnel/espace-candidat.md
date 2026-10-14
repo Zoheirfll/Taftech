@@ -7,6 +7,8 @@
 
 ---
 
+> ⚠️ **Mise à jour 13/10/2026 (point 12)** : le comportement du réglage de visibilité décrit dans la section du 03/09 ci-dessous (« le profil reste toujours visible/recherchable, seul le déblocage est bloqué ; les déblocages déjà acquis restent valides ») est **remplacé**. Désormais : profil masqué → il disparaît de la CVthèque et l'accès est suspendu pour tous les recruteurs, y compris ceux qui l'avaient débloqué (rendu sans nouvelle dépense si le candidat réaffiche) ; compte supprimé → tout accès cesse. Le réglage s'appelle « Visibilité de mon profil dans la CVthèque ». Voir `SECURITY.md` §22 et `portail-recruteur.md`.
+
 ## 🆕 SESSION 03/09/2026 — Retours revue croisée : score Formation, refonte Mes documents, visibilité CVthèque, partage de documents
 
 **Contexte** : l'utilisateur a transmis, capture par capture, les retours d'une relecture croisée (Samira TABTI) du produit consignés dans un document Word. Traités un par un, avec clarification à chaque fois avant implémentation.

@@ -117,6 +117,16 @@ def _score_ou_zero(result):
     return round(total) if total is not None else 0
 
 
+# Correction client n°19 : permis, véhicule, passeport et situation militaire ne se filtrent que
+# pour une offre qui déclare l'exigence correspondante (critère professionnel précis).
+FILTRES_PAR_CATEGORIE_EXIGENCE = {
+    'PERMIS_CONDUIRE': 'permis',
+    'VEHICULE': 'vehicule',
+    'PASSEPORT': 'passeport',
+    'SERVICE_NATIONAL': 'service_militaire',
+}
+
+
 class CVThequeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -153,7 +163,41 @@ class CVThequeView(APIView):
         inscrit_recent = request.GET.get('inscrit_recent', '') == 'true'
         favoris_only = request.GET.get('favoris', '') == 'true'
         tri = request.GET.get('tri', 'recents')
-        candidats = ProfilCandidat.objects.select_related('user').prefetch_related('experiences_detail').filter(user__is_active=True, user__role='CANDIDAT')
+        offre_id = request.GET.get('offre_id', '')
+        offre_match = None
+        if offre_id.isdigit():
+            try:
+                offre_match = OffreEmploi.objects.get(pk=int(offre_id), entreprise=entreprise_user)
+            except OffreEmploi.DoesNotExist:
+                pass
+        # L'offre qui autorise les filtres est distincte de celle qui classe par compatibilité
+        # (palier Pro+) : `offre_filtres_id` d'abord, sinon `offre_id`. Même contrôle d'appartenance.
+        offre_filtres = offre_match
+        offre_filtres_id = request.GET.get('offre_filtres_id', '')
+        if offre_filtres_id:
+            offre_filtres = None
+            if offre_filtres_id.isdigit():
+                try:
+                    offre_filtres = OffreEmploi.objects.get(pk=int(offre_filtres_id), entreprise=entreprise_user)
+                except OffreEmploi.DoesNotExist:
+                    pass
+        categories_offre = set(
+            offre_filtres.exigences_imperatives.values_list('categorie', flat=True)
+        ) if offre_filtres else set()
+        filtres_exigence_autorises = sorted(
+            FILTRES_PAR_CATEGORIE_EXIGENCE[c] for c in categories_offre if c in FILTRES_PAR_CATEGORIE_EXIGENCE
+        )
+        # Filtre non justifié par l'offre : ignoré côté serveur, même si l'appelant l'envoie.
+        permis = permis and 'permis' in filtres_exigence_autorises
+        vehicule = vehicule and 'vehicule' in filtres_exigence_autorises
+        passeport = passeport and 'passeport' in filtres_exigence_autorises
+        if 'service_militaire' not in filtres_exigence_autorises:
+            service_militaire = ''
+        # Point 12 : un profil supprimé (compte désactivé) ou rendu non visible par le candidat
+        # n'apparaît jamais dans la CVthèque, y compris pour une entreprise qui l'avait débloqué
+        # (le déblocage n'est pas un accès « à vie » : il suit les choix du candidat).
+        candidats = ProfilCandidat.objects.select_related('user').prefetch_related('experiences_detail').filter(
+            user__is_active=True, user__role='CANDIDAT', visible_cvtheque=True)
         if favoris_only:
             ids_favoris = ProfilCandidatFavori.objects.filter(recruteur=request.user).values_list('candidat_id', flat=True)
             candidats = candidats.filter(user__id__in=ids_favoris)
@@ -243,6 +287,15 @@ class CVThequeView(APIView):
             candidats = candidats.filter(wilaya=wilaya)
         if diplome:
             candidats = candidats.filter(diplome=diplome)
+        # Filtre sur le type de diplôme structuré (point 9, 12/10/2026) : le profil et les
+        # formations du candidat ne renseignent plus que `diplome_ref` — le filtre historique
+        # sur le champ texte `diplome` ne trouvait plus ces candidats.
+        diplome_ref = request.GET.get('diplome_ref', '')
+        if diplome_ref.isdigit():
+            from django.db.models import Q as _Q
+            candidats = candidats.filter(
+                _Q(diplome_ref_id=int(diplome_ref)) | _Q(formations_detail__diplome_ref_id=int(diplome_ref))
+            ).distinct()
         if specialite and specialite.isdigit():
             # MIGRATION (R04) : élargit aux anciens codes redirigés vers ce métier (et
             # réciproquement) — sans ça, un futur réimport ajoutant une redirection ferait
@@ -297,14 +350,6 @@ class CVThequeView(APIView):
                 ).filter(duree_totale__gte=datetime.timedelta(days=min_days))
             except ValueError:
                 pass
-        offre_id = request.GET.get('offre_id', '')
-        offre_match = None
-        if offre_id:
-            try:
-                offre_match = OffreEmploi.objects.get(pk=offre_id, entreprise=entreprise_user)
-            except OffreEmploi.DoesNotExist:
-                pass
-
         if offre_match:
             # Tri par score matching — on évalue tous les candidats filtrés
             candidats_list = list(candidats.select_related('user').prefetch_related('experiences_detail'))
@@ -364,6 +409,7 @@ class CVThequeView(APIView):
                 'results': results,
                 'credits_disponibles': credits_disponibles(entreprise_user),
                 'recherche_avancee': _recherche_avancee_ok,
+                'filtres_exigence_autorises': filtres_exigence_autorises,
             })
 
         # R07 : quand une recherche libre est active, la priorité de pertinence
@@ -403,6 +449,7 @@ class CVThequeView(APIView):
         response = paginator.get_paginated_response(results)
         response.data['credits_disponibles'] = credits_disponibles(entreprise_user)
         response.data['recherche_avancee'] = _recherche_avancee_ok
+        response.data['filtres_exigence_autorises'] = filtres_exigence_autorises
         return response
 
 

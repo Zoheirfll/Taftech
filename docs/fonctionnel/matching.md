@@ -7,6 +7,29 @@
 
 ---
 
+## 🔒 Règle permanente (point 19, 14/10/2026) — pas de donnée personnelle dans le score
+
+Le score de compatibilité ne dépend que de région, diplôme, spécialité, expérience et compétences. **Sexe, âge/date de naissance, service militaire, permis, véhicule, passeport** ne doivent jamais y entrer. Un critère légal ou professionnel précis passe par les exigences impératives de l'offre (`ExigenceImperative`, filtre manuel, hors score). Les filtres CVthèque permis/véhicule/passeport/situation militaire ne s'activent que pour une offre qui déclare la `categorie` correspondante (`FILTRES_PAR_CATEGORIE_EXIGENCE` dans `recruteur_cvtheque.py`, appliqué côté serveur). Verrouillé par `jobs/tests/test_matching_donnees_personnelles.py` : ne pas contourner ce test, en discuter avec l'utilisateur d'abord. Détail : [CORRECTIONS_CLIENT_TEMP.md](../archives/CORRECTIONS_CLIENT_TEMP.md) point 19.
+
+---
+
+## 🆕 SESSION 13/10/2026 — Point 10 des corrections finales : compétences d'offre et de candidat sur le même référentiel
+
+**Constat** : la structure (compétence normalisée + Obligatoire/Souhaitée + niveau éventuel) existait, mais le score comparait des **textes** : `CompetenceOffre` n'avait aucun lien vers le référentiel, et `CompetenceCandidat.competence_ref` n'était résolu que par libellé exact (pas par synonyme). « Project Management » côté candidat et « Gestion de projet » côté offre n'étaient donc pas la même compétence pour le score.
+
+**Réalisé** (structure conservée telle quelle) :
+- **Résolveur unique** `referentiel_utils.construire_index_competences` / `resoudre_competence_ref` : libellé OU synonyme exact (accents, casse, ponctuation ignorés), jamais approximatif ; un libellé canonique l'emporte sur le synonyme d'une autre compétence.
+- **`CompetenceOffre.competence_ref`** (FK nullable `CompetenceReferentiel`, migration `0130` + rattachement des données existantes, offres et candidats). `_synchroniser_competences_offre` normalise : un synonyme devient le libellé canonique, les doublons après normalisation sont fusionnés, une compétence hors référentiel est conservée sans lien. Exposé en lecture (`competence_ref`) par `CompetenceOffreSerializer`.
+- **Côté candidat** : les deux points de création (`_synchroniser_competences_depuis_texte`, `CompetenceCandidatAPIView.post`) utilisent le même résolveur ; le parser CV rapprochait déjà du référentiel (point 4).
+- **Matching** (`matcher.competences_score_structure`) : comparaison par **identifiant de référentiel** d'abord, puis par libellé (compétence hors référentiel), puis texte libre ; le niveau requis est comparé sur la même clé (meilleur niveau si le candidat a plusieurs entrées).
+- **Synchronisation continue** : `rattacher_competences_orphelines()` (idempotent) est appelée quand l'admin ajoute/modifie une compétence ou un synonyme (`CompetencesAdminAPIView`) et en fin d'import du référentiel (`rejouer_consolidation`) ; les saisies existantes se rattachent donc sans intervention.
+- **Interface recruteur** (création et modification d'offre) : chaque ajout est rapproché du référentiel (`utils/competencesReferentiel.js`, libellé canonique) ; une compétence hors référentiel porte un badge « hors liste » avec explication. Les suggestions par métier et l'IA de génération puisent déjà dans le référentiel.
+
+**Limites** : une compétence hors référentiel n'est comparée que sur son texte exact ; les anciennes données rattachées par la migration ne couvrent que les correspondances exactes (libellé/synonyme) ; l'admin doit enrichir les synonymes du référentiel pour élargir les rapprochements.
+**Tests** : `jobs/tests/test_competences_referentiel_commun.py` (11) ; suites voisines (compétences, matcher, parser, CMS, import) vertes.
+
+---
+
 ## 🆕 SESSION 27/09/2026 — Page explicative du matching (recruteur) + tooltips mis à jour
 
 Nouvelle page `Pages/Recruteur/CommentFonctionneMatching.jsx` (route `/comment-fonctionne-matching`, sous `RecruteurLayout`, lien sidebar « Comprendre le matching » groupe Analyse, lien « Comment est calculé le score ? » à côté de « Pourquoi ce score ? » dans `DetailCandidature.jsx`). Contenu statique, **doit rester aligné sur `jobs/matcher.py`/`matching_params.py`** : formule à poids actifs, 5 critères (région binaire, diplôme, spécialité 1.0/0.70/fuzzy, expérience continue mois pertinents, compétences Obligatoire×2), barème métiers (1.0/0.85/0.70/fuzzy/0.45), donnée manquante ≠ incompatible, seuil 80 %. Tooltips obsolètes « spécialité (25pts)… » (ancien barème fixe) corrigés dans `MesCandidatures.jsx`, `JobDetail.jsx`, `GestionOffre/index.jsx`, `AdminCandidatures.jsx`, `AdminStatistiques.jsx`. Aucun endpoint backend.

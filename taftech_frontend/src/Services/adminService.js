@@ -537,12 +537,66 @@ export const adminService = {
   },
 
   // Compétences (référentiel admin)
-  getAdminCompetences: async (search = "", page = 1) => {
+  getAdminCompetences: async (search = "", page = 1, statut = "") => {
     try {
-      const response = await api.get(`jobs/admin/competences/?search=${q(search)}&page=${page}`);
+      const response = await api.get(`jobs/admin/competences/?search=${q(search)}&page=${page}&statut=${q(statut)}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
+      throw err;
+    }
+  },
+
+  // Métiers proposés par les utilisateurs : liste par statut, validation (rattacher / créer), rejet.
+  getPropositionsMetier: async (statut = "", avecGroupes = false) => {
+    try {
+      const response = await api.get(`jobs/admin/propositions-metiers/?statut=${q(statut)}${avecGroupes ? "&groupes=1" : ""}`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_PROPOSITIONS_METIER", err);
+      throw err;
+    }
+  },
+
+  validerPropositionMetier: async (id, corps) => {
+    try {
+      const response = await api.post(`jobs/admin/propositions-metiers/${id}/valider/`, corps);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_VALIDER_PROPOSITION_METIER", err);
+      throw err;
+    }
+  },
+
+  rejeterPropositionMetier: async (id, motif) => {
+    try {
+      const response = await api.post(`jobs/admin/propositions-metiers/${id}/rejeter/`, { motif });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_REJETER_PROPOSITION_METIER", err);
+      throw err;
+    }
+  },
+
+  // Cycle de vie (Suggérée -> Validée -> Rejetée/Désactivée) : seul chemin de changement de statut.
+  changerStatutCompetence: async (id, statut) => {
+    try {
+      const response = await api.patch(`jobs/admin/competences/${id}/statut/`, { statut });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_STATUT_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  // Détecte les compétences saisies hors référentiel par plusieurs utilisateurs et les enregistre
+  // comme SUGGÉRÉES (jamais officielles) — `simuler: true` pour un aperçu sans écriture.
+  proposerCompetences: async (options = {}) => {
+    try {
+      const response = await api.post("jobs/admin/competences/proposer/", options);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_PROPOSER_COMPETENCES", err);
       throw err;
     }
   },

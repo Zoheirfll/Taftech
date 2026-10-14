@@ -85,7 +85,7 @@ export const CarteCandidat = ({
             <div className={`flex flex-wrap items-center gap-2 mt-1.5 text-xs ${tw.textMuted700}`}>
               {candidat.wilaya && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.wilaya.split(" - ")[1] || candidat.wilaya}</span>}
               {candidat.adresse && <span className="flex items-center gap-0.5"><MapPin size={10} />{candidat.adresse}</span>}
-              {candidat.diplome && <span className="flex items-center gap-0.5"><GraduationCap size={10} />{constants.diplomes.find(d => d.value === candidat.diplome)?.label || candidat.diplome}</span>}
+              {(candidat.diplome_ref_libelle || candidat.diplome) && <span className="flex items-center gap-0.5"><GraduationCap size={10} />{candidat.diplome_ref_libelle || constants.diplomes.find(d => d.value === candidat.diplome)?.label || candidat.diplome}</span>}
               {candidat.niveau_experience && <span className="flex items-center gap-0.5"><Briefcase size={10} />{candidat.niveau_experience}</span>}
             </div>
 

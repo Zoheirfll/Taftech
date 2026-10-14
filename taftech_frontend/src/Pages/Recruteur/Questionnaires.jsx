@@ -8,6 +8,7 @@ import { Plus, Trash2, Pencil, X, GripVertical, ClipboardList, AlertTriangle } f
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import { JUSTIFICATION_MAX, justificationManquante } from "../../utils/questionDisqualifiante";
 
 const TYPE_OPTIONS = [
   { value: "COURT", label: "Réponse courte" },
@@ -22,6 +23,7 @@ const questionVide = () => ({
   type_question: "CHOIX_UNIQUE",
   requis: false,
   disqualifiant: false,
+  justification_disqualifiant: "",
   choix: [{ texte: "" }, { texte: "" }],
 });
 
@@ -65,6 +67,7 @@ const Questionnaires = () => {
         type_question: qq.type_question,
         requis: qq.requis,
         disqualifiant: qq.disqualifiant,
+        justification_disqualifiant: qq.justification_disqualifiant || "",
         choix: qq.choix.length > 0 ? qq.choix : [{ texte: "" }, { texte: "" }],
       })),
     });
@@ -75,10 +78,17 @@ const Questionnaires = () => {
     e.preventDefault();
     const newErrors = {};
     if (!form.titre.trim()) newErrors.titre = true;
-    form.questions.forEach((q, i) => { if (!q.texte.trim()) newErrors[`q_${i}`] = true; });
+    form.questions.forEach((q, i) => {
+      if (!q.texte.trim()) newErrors[`q_${i}`] = true;
+      if (justificationManquante(q)) newErrors[`j_${i}`] = true;
+    });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Veuillez remplir tous les champs obligatoires.");
+      toast.error(
+        Object.keys(newErrors).some((k) => k.startsWith("j_"))
+          ? "Une question disqualifiante doit être justifiée par une exigence professionnelle."
+          : "Veuillez remplir tous les champs obligatoires.",
+      );
       return;
     }
     setErrors({});
@@ -199,7 +209,7 @@ const Questionnaires = () => {
         <InfoBanner storageKey="questionnaires" title="Comment fonctionnent les questionnaires ?" color="teal">
           Créez un questionnaire, ajoutez des questions (texte court, long, numérique, choix unique/multiple).
           Associez-le à une offre lors de la création — les candidats devront y répondre avant de postuler.
-          Marquez une question comme <strong>disqualifiante</strong> pour éliminer automatiquement les candidats qui ne remplissent pas ce critère.
+          Marquez une question comme <strong>disqualifiante</strong> pour éliminer automatiquement les candidats qui ne remplissent pas ce critère. Une question disqualifiante doit porter sur une exigence professionnelle objective et être justifiée.
         </InfoBanner>
       </div>
 
@@ -428,6 +438,25 @@ const Questionnaires = () => {
                         Disqualifiant
                       </label>
                     </div>
+
+                    {q.disqualifiant && (
+                      <div className="space-y-1">
+                        <textarea
+                          rows={2}
+                          maxLength={JUSTIFICATION_MAX}
+                          className={inputClass + (errors[`j_${i}`] ? ` ${tw.inputErrorRing}` : "")}
+                          placeholder="Exigence professionnelle justifiant l'élimination *"
+                          value={q.justification_disqualifiant}
+                          onChange={(e) => {
+                            updateQuestion(i, "justification_disqualifiant", e.target.value);
+                            setErrors((p) => ({ ...p, [`j_${i}`]: false }));
+                          }}
+                        />
+                        <p className={`text-[10px] ${errors[`j_${i}`] ? tw.textErrorMuted : tw.textMuted}`}>
+                          Réservé aux exigences professionnelles objectives (permis, habilitation, droit d'exercice, certification…). Une question sur l'âge, le sexe, la situation familiale, la religion ou la santé sera refusée. Cette justification est visible des candidats et de la modération.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
 

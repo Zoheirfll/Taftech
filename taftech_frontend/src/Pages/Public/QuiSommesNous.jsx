@@ -29,7 +29,7 @@ const QuiSommesNous = () => {
         </h1>
         <p className={`text-base font-semibold ${tw.textPrimary}`}>TafTech</p>
         <p className={`text-sm ${tw.textMuted700} mt-1`}>
-          Plateforme de recrutement algérienne propulsée par l'intelligence artificielle
+          La plateforme de recrutement qui combine intelligence artificielle, expertise RH et accompagnement humain.
         </p>
       </div>
 

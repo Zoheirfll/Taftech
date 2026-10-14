@@ -130,7 +130,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     });
   });
 
-  it("🟢 HP4 : Exportation CSV réussie", async () => {
+  it("🟢 HP4 : Exportation Excel réussie", async () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
     jobsService.exportUtilisateurs.mockResolvedValue(new Blob(["data"]));
 

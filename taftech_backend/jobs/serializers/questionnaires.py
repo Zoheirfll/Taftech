@@ -13,7 +13,7 @@ class QuestionQuestionnaireSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QuestionQuestionnaire
-        fields = ['id', 'texte', 'type_question', 'requis', 'disqualifiant', 'ordre', 'choix']
+        fields = ['id', 'texte', 'type_question', 'requis', 'disqualifiant', 'justification_disqualifiant', 'ordre', 'choix']
 
 
 class QuestionnaireSerializer(serializers.ModelSerializer):

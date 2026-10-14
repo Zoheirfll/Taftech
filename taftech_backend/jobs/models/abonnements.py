@@ -1,7 +1,9 @@
 """Abonnements recruteur : paliers, paiements, crédits CVthèque et déblocages."""
 from django.db import models
 from django.conf import settings
-from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator, RegexValidator
 from django.utils.text import slugify
 from ..validators import validate_document_mime, validate_image_mime, validate_file_size, validate_document_or_image_mime
 from ..constants import (
@@ -125,20 +127,61 @@ class AbonnementEntreprise(models.Model):
         return f"{self.entreprise.nom_entreprise} — {self.palier.get_nom_display()}"
 
 
+CACHE_MENTIONS_LEGALES = 'jobs_mentions_legales_entreprise'
+
+def valider_url_http(valeur):
+    """Liens de réseaux sociaux : http(s) uniquement (jamais javascript:, data:, ftp:...), ils sont
+    rendus en <a href> dans les pieds de page. Fonction et non instance de `URLValidator` : DRF écarte
+    ces instances des validateurs d'un URLField et applique le sien, qui accepte ftp:."""
+    if not str(valeur).lower().startswith(('http://', 'https://')):
+        raise ValidationError("Le lien doit commencer par http:// ou https://.")
+
+
+_TELEPHONE = RegexValidator(r'^[0-9+().\s-]{6,30}$', "Numéro invalide (chiffres, espaces, +, -, parenthèses).")
+_WHATSAPP = RegexValidator(r'^\d{8,15}$', "Format international sans « + » ni espaces, ex. 213XXXXXXXXX.")
+
+
 class MentionsLegalesEntreprise(models.Model):
-    """Mentions légales TafTech affichées sur les factures — singleton (`get_solo()`, même
-    pattern que AIConfig/ConfigRendezVous). Placeholders vides au départ, complétables par
-    l'admin sans déploiement (même logique que les CGU provisoires, mais directement éditable)."""
+    """Coordonnées et informations légales de la société — singleton (`get_solo()`, même
+    pattern que AIConfig/ConfigRendezVous), éditable par l'admin sans déploiement. Source unique
+    (correction client n°21) : factures, bulletins, exports, pieds de page, page Contact et page
+    Mentions légales. Tout champ vide est omis à l'affichage : aucune fausse valeur de test."""
     raison_sociale = models.CharField(max_length=200, blank=True, default="TafTech")
+    forme_juridique = models.CharField(max_length=80, blank=True, default='')
+    capital_social = models.CharField(max_length=60, blank=True, default='')
     registre_commerce = models.CharField(max_length=50, blank=True)
     nif = models.CharField(max_length=50, blank=True, verbose_name="NIF")
-    adresse = models.CharField(max_length=255, blank=True)
+    nis = models.CharField(max_length=50, blank=True, default='')
     tva = models.CharField(max_length=50, blank=True, verbose_name="N° TVA (le cas échéant)")
+    representant_legal = models.CharField(max_length=150, blank=True, default='')
+    directeur_publication = models.CharField(max_length=150, blank=True, default='')
+    hebergeur = models.CharField(max_length=255, blank=True, default='', verbose_name="Hébergeur du site")
+
+    adresse = models.CharField(max_length=255, blank=True)
+    telephone = models.CharField(max_length=30, blank=True, default='', validators=[_TELEPHONE])
+    whatsapp = models.CharField(max_length=20, blank=True, default='', validators=[_WHATSAPP])
+    email_contact = models.EmailField(blank=True, default='')
+    horaires = models.CharField(max_length=300, blank=True, default='')
+
+    facebook_url = models.URLField(max_length=300, blank=True, default='', validators=[valider_url_http])
+    instagram_url = models.URLField(max_length=300, blank=True, default='', validators=[valider_url_http])
+    linkedin_url = models.URLField(max_length=300, blank=True, default='', validators=[valider_url_http])
+
+    date_modification = models.DateTimeField(auto_now=True)
 
     @classmethod
     def get_solo(cls):
+        cached = cache.get(CACHE_MENTIONS_LEGALES)
+        if cached is not None:
+            return cached
         obj, _ = cls.objects.get_or_create(pk=1)
+        cache.set(CACHE_MENTIONS_LEGALES, obj, timeout=300)
         return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+        cache.delete(CACHE_MENTIONS_LEGALES)
 
     def __str__(self):
         return "Mentions légales TafTech"
@@ -202,8 +245,10 @@ class CreditPack(models.Model):
 
 
 class AccesCandidatDebloque(models.Model):
-    """Déblocage permanent d'un candidat CVthèque par une entreprise — 1 crédit dépensé donne
-    un accès à vie aux coordonnées + CV de ce candidat, partagé par toute l'équipe. `source`
+    """Déblocage d'un candidat CVthèque par une entreprise — 1 crédit dépensé donne accès aux
+    coordonnées + CV de ce candidat, partagé par toute l'équipe, tant que le candidat laisse son
+    profil actif et visible : s'il le masque ou supprime son compte, l'accès cesse (la ligne
+    n'est pas supprimée par un masquage ; l'accès revient s'il réactive la visibilité). `source`
     indique quel pool (quota mensuel du palier ou pack acheté) a été consommé — sert au calcul
     du quota mensuel restant dans jobs/credits_utils.py. Jamais dupliqué (unique_together) :
     redébloquer un candidat déjà débloqué ne consomme rien (idempotent, voir credits_utils)."""

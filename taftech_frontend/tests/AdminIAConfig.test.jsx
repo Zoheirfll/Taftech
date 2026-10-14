@@ -114,6 +114,105 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     });
   });
 
+  it("🔒 Prompts réservés au Super Admin : verrouillés et jamais renvoyés pour un admin simple", async () => {
+    jobsService.getAIConfig.mockResolvedValue({ ...mockConfig, prompts_accessibles: false, appels_ia_mois: 7 });
+    jobsService.updateAIConfig.mockResolvedValue({ ...mockConfig, prompts_accessibles: false });
+
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("Parser CV"));
+    expect(screen.queryByText("Prompt IA")).toBeNull();
+    expect(screen.getAllByText(/modifiable uniquement par le Super Admin/).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
+    await waitFor(() => expect(jobsService.updateAIConfig).toHaveBeenCalled());
+    const envoye = jobsService.updateAIConfig.mock.calls[0][0];
+    expect(envoye).not.toHaveProperty("prompts_accessibles");
+    expect(envoye).not.toHaveProperty("appels_ia_mois");
+    expect(Object.keys(envoye).filter((k) => k.endsWith("_prompt"))).toEqual([]);
+  });
+
+  it("🔒 Admin simple : plafond et seuil verrouillés et jamais renvoyés au serveur", async () => {
+    jobsService.getAIConfig.mockResolvedValue({
+      ...mockConfig, prompts_accessibles: false, budget_modifiable: false,
+      budget_ia_appels_mois_max: 100, budget_ia_alerte_pct: 80, appels_ia_mois: 10,
+    });
+    jobsService.updateAIConfig.mockResolvedValue(mockConfig);
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("Parser CV"));
+    expect(screen.getByDisplayValue("100")).toBeDisabled();
+    expect(screen.getByDisplayValue("80")).toBeDisabled();
+    expect(screen.getByText(/Plafond et seuil d'alerte : modifiables uniquement par le Super Admin/)).toBeTruthy();
+
+    fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
+    await waitFor(() => expect(jobsService.updateAIConfig).toHaveBeenCalled());
+    const envoye = jobsService.updateAIConfig.mock.calls[0][0];
+    expect(envoye).not.toHaveProperty("budget_modifiable");
+    expect(envoye).not.toHaveProperty("budget_ia_appels_mois_max");
+    expect(envoye).not.toHaveProperty("budget_ia_alerte_pct");
+  });
+
+  it("🟢 Super Admin : plafond et seuil modifiables", async () => {
+    jobsService.getAIConfig.mockResolvedValue({
+      ...mockConfig, prompts_accessibles: true, budget_modifiable: true,
+      budget_ia_appels_mois_max: 100, budget_ia_alerte_pct: 80, appels_ia_mois: 10,
+    });
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText("Parser CV"));
+    expect(screen.getByDisplayValue("100")).not.toBeDisabled();
+    expect(screen.getByDisplayValue("80")).not.toBeDisabled();
+  });
+
+  it("🟢 Super Admin : les boutons Prompt IA restent disponibles", async () => {
+    jobsService.getAIConfig.mockResolvedValue({ ...mockConfig, prompts_accessibles: true });
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText("Parser CV"));
+    expect(screen.getAllByText("Prompt IA").length).toBe(5);
+  });
+
+  it("⚠️ Plafond global : avertissement sans plafond, jauge avec plafond", async () => {
+    jobsService.getAIConfig.mockResolvedValue({ ...mockConfig, appels_ia_mois: 40, budget_ia_appels_mois_max: null, budget_ia_alerte_pct: 80 });
+    const { unmount } = render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText(/Aucun plafond défini/));
+    unmount();
+
+    jobsService.getAIConfig.mockResolvedValue({ ...mockConfig, appels_ia_mois: 40, budget_ia_appels_mois_max: 100, budget_ia_alerte_pct: 80 });
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+    await waitFor(() => screen.getByText(/40 \/ 100 appels IA ce mois-ci \(40 %\)/));
+    expect(screen.queryByText(/Aucun plafond défini/)).toBeNull();
+  });
+
   it("🟢 HP4 : Changer le modèle Groq met à jour le champ", async () => {
     jobsService.updateAIConfig.mockResolvedValue(mockConfig);
 

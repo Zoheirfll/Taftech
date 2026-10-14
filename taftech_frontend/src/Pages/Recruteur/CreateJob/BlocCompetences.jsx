@@ -30,6 +30,14 @@ const BlocCompetences = ({ job }) => {
               · {c.type_exigence === "OBLIGATOIRE" ? "Obligatoire" : "Souhaitée"}
               {c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
             </span>
+            {c.dans_referentiel === false && (
+              <span
+                className="text-[10px] font-semibold text-amber-700"
+                title="Cette compétence ne figure pas dans la liste TAFTECH : elle ne sera comparée aux candidats que sur son texte exact. Choisissez de préférence une compétence proposée."
+              >
+                hors liste
+              </span>
+            )}
             <button type="button" onClick={() => retirerCompetenceRequise(c.label)} className="hover:opacity-70">
               <X size={11} />
             </button>

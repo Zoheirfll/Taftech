@@ -291,6 +291,47 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     });
   });
 
+  it("🔴 EC3b : Question disqualifiante sans justification bloque la création", async () => {
+    jobsService.getQuestionnaires.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Questionnaires />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText(/Nouveau questionnaire/i));
+    fireEvent.click(screen.getByText(/Nouveau questionnaire/i));
+
+    const titreInput = document.querySelector('form input[required]');
+    fireEvent.change(titreInput, { target: { value: "Mon Questionnaire" } });
+    fireEvent.change(screen.getByPlaceholderText(/Texte de la question/i), { target: { value: "Permis B ?" } });
+
+    // La justification n'apparaît qu'une fois « Disqualifiant » coché.
+    expect(screen.queryByPlaceholderText(/Exigence professionnelle justifiant/i)).toBeNull();
+    fireEvent.click(screen.getByLabelText(/Disqualifiant/i));
+    expect(screen.getByPlaceholderText(/Exigence professionnelle justifiant/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Créer le questionnaire/i));
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Une question disqualifiante doit être justifiée par une exigence professionnelle.",
+      );
+    });
+    expect(jobsService.createQuestionnaire).not.toHaveBeenCalled();
+
+    // Avec une justification suffisante, la création part avec le champ.
+    jobsService.createQuestionnaire.mockResolvedValue({ id: 9, titre: "Mon Questionnaire", questions: [] });
+    fireEvent.change(screen.getByPlaceholderText(/Exigence professionnelle justifiant/i), {
+      target: { value: "Le poste impose la conduite d'un véhicule." },
+    });
+    fireEvent.click(screen.getByText(/Créer le questionnaire/i));
+    await waitFor(() => expect(jobsService.createQuestionnaire).toHaveBeenCalled());
+    const envoye = jobsService.createQuestionnaire.mock.calls[0][0];
+    expect(envoye.questions[0].disqualifiant).toBe(true);
+    expect(envoye.questions[0].justification_disqualifiant).toBe("Le poste impose la conduite d'un véhicule.");
+  });
+
   it("🔴 EC4 : Erreur suppression déclenche reportError", async () => {
     jobsService.getQuestionnaires.mockResolvedValue(mockQuestionnaires);
     jobsService.deleteQuestionnaire.mockRejectedValue(

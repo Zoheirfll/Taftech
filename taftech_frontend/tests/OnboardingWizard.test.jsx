@@ -137,8 +137,8 @@ describe("OnboardingWizard", () => {
     const file = new File(["contenu"], "cv.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
 
-    await screen.findByLabelText(/Niveau d'études/i);
-    expect(screen.getByLabelText(/Niveau d'études/i)).toHaveValue("5");
+    await screen.findByLabelText("Diplôme");
+    expect(screen.getByLabelText("Diplôme")).toHaveValue("5");
 
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
 

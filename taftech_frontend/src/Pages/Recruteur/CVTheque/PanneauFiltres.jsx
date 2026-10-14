@@ -1,6 +1,8 @@
 // Panneau de filtres avancés de la CVthèque (listes, champs libres, filtres rapides en pastilles).
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { jobsService } from "../../../Services/jobsService";
+import { grouperParFamille, aplatirGroupes } from "../../../utils/familleFormation";
 import Select from "react-select";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { selectStylesTeal, tw } from "../../../theme";
@@ -28,9 +30,31 @@ export const PanneauFiltres = ({
   setSpecialiteLibelle,
   setCurrentPage,
   rechercheAvancee,
+  filtresExigence = [],
+  offresActives = [],
+  offreFiltresId = "",
+  setOffreFiltresId = () => {},
   filtresActifs,
   onReset,
 }) => {
+  // Types de diplôme structurés, groupés par famille (point 9) — remplacent l'ancienne liste
+  // générique (Master 2, Ingéniorat, Bac+5…) qui doublonnait le diplôme structuré du candidat.
+  const [groupesDiplomes, setGroupesDiplomes] = useState([]);
+  useEffect(() => {
+    let actif = true;
+    jobsService
+      .getNomenclatureFormation()
+      .then((nf) => {
+        if (!actif) return;
+        const types = (nf.types_diplomes || []).filter((t) => t.code !== "D-AUTRE");
+        setGroupesDiplomes(grouperParFamille(types, nf.familles, (t) => ({ value: String(t.id), label: t.libelle })));
+      })
+      .catch(() => {});
+    return () => {
+      actif = false;
+    };
+  }, []);
+
   const {
     wilaya, diplome, experience, mobilite, disponibilite, langues,
     competencesFiltre, permis, vehicule, passeport, serviceMilitaire,
@@ -69,11 +93,11 @@ export const PanneauFiltres = ({
           />
         </div>
         <Select
-          options={constants.diplomes}
+          options={groupesDiplomes}
           placeholder="Diplôme"
           isClearable
           value={
-            constants.diplomes.find((d) => d.value === diplome) || null
+            aplatirGroupes(groupesDiplomes).find((d) => d.value === String(diplome)) || null
           }
           onChange={(val) => {
             setDiplome(val ? val.value : "");
@@ -152,25 +176,42 @@ export const PanneauFiltres = ({
           }}
           styles={selectStylesTeal}
         />
+        {filtresExigence.includes("service_militaire") && (
+          <Select
+            options={constants.services_militaires || []}
+            placeholder={rechercheAvancee ? "Situation militaire" : "Situation militaire (palier Business+)"}
+            isClearable
+            isDisabled={!rechercheAvancee}
+            value={(constants.services_militaires || []).find((s) => s.value === serviceMilitaire) || null}
+            onChange={(val) => {
+              setServiceMilitaire(val ? val.value : "");
+              setCurrentPage(1);
+            }}
+            styles={selectStylesTeal}
+          />
+        )}
+      </div>
+      {!rechercheAvancee && (
+        <p className={`text-xs ${tw.textMuted} -mt-2 mb-4`}>
+          🔒 Filtres langues/compétences/expérience/situation militaire réservés au palier Business ou supérieur.{" "}
+          <Link to="/recruteurs/abonnements" className="text-teal-700 font-semibold hover:underline">Voir les paliers</Link>
+        </p>
+      )}
+
+      {/* Permis, véhicule, passeport, situation militaire : uniquement pour une offre qui déclare l'exigence */}
+      <div className="mb-4 max-w-md">
         <Select
-          options={constants.services_militaires || []}
-          placeholder={rechercheAvancee ? "Service militaire" : "Service militaire (palier Business+)"}
+          options={offresActives}
+          placeholder="Offre concernée (pour filtrer permis, véhicule, passeport, situation militaire)"
           isClearable
-          isDisabled={!rechercheAvancee}
-          value={(constants.services_militaires || []).find((s) => s.value === serviceMilitaire) || null}
+          value={offresActives.find((o) => o.value === offreFiltresId) || null}
           onChange={(val) => {
-            setServiceMilitaire(val ? val.value : "");
+            setOffreFiltresId(val ? val.value : "");
             setCurrentPage(1);
           }}
           styles={selectStylesTeal}
         />
       </div>
-      {!rechercheAvancee && (
-        <p className={`text-xs ${tw.textMuted} -mt-2 mb-4`}>
-          🔒 Filtres langues/compétences/expérience/service militaire réservés au palier Business ou supérieur.{" "}
-          <Link to="/recruteurs/abonnements" className="text-teal-700 font-semibold hover:underline">Voir les paliers</Link>
-        </p>
-      )}
 
       {/* Filtres rapides en checkboxes */}
       <div className={`flex flex-wrap gap-2 items-center pt-3 border-t ${tw.borderSubtle}`}>
@@ -187,15 +228,27 @@ export const PanneauFiltres = ({
           <Sparkles size={12} />
           Inscrits récemment
         </ChipFiltre>
-        <ChipFiltre actif={permis} onToggle={() => setPermis(!permis)}>
-          Permis de conduire
-        </ChipFiltre>
-        <ChipFiltre actif={vehicule} onToggle={() => setVehicule(!vehicule)}>
-          Véhicule personnel
-        </ChipFiltre>
-        <ChipFiltre actif={passeport} onToggle={() => setPasseport(!passeport)}>
-          Passeport valide
-        </ChipFiltre>
+        {filtresExigence.includes("permis") && (
+          <ChipFiltre actif={permis} onToggle={() => setPermis(!permis)}>
+            Permis de conduire
+          </ChipFiltre>
+        )}
+        {filtresExigence.includes("vehicule") && (
+          <ChipFiltre actif={vehicule} onToggle={() => setVehicule(!vehicule)}>
+            Véhicule personnel
+          </ChipFiltre>
+        )}
+        {filtresExigence.includes("passeport") && (
+          <ChipFiltre actif={passeport} onToggle={() => setPasseport(!passeport)}>
+            Passeport valide
+          </ChipFiltre>
+        )}
+
+        {filtresExigence.length === 0 && (
+          <p className={`basis-full text-[11px] ${tw.textMuted}`}>
+            Permis, véhicule, passeport et situation militaire ne sont filtrables que pour une offre qui déclare l'exigence correspondante : choisissez cette offre ci-dessus.
+          </p>
+        )}
 
         {filtresActifs > 0 && (
           <button

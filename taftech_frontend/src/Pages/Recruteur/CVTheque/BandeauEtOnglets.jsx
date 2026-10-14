@@ -59,7 +59,7 @@ export const OngletsCVTheque = ({ activeTab, setActiveTab, setCurrentPage }) => 
         Filtrez par wilaya, diplôme, spécialité ou expérience. Cliquez sur un profil pour voir le détail, télécharger le CV et lancer une analyse IA.
         Ajoutez des candidats à vos <strong>favoris ⭐</strong> pour les retrouver facilement dans l'onglet "Favoris".
         Utilisez <strong>"Comparer avec une offre"</strong> pour classer automatiquement les candidats par score de compatibilité avec une de vos offres.
-        Débloquez un profil (1 crédit) pour accéder à ses coordonnées et à son CV pour votre équipe, sous réserve que le profil reste actif et accessible conformément aux paramètres de confidentialité du candidat.
+        Débloquez un profil (1 crédit) pour accéder à ses coordonnées et à son CV pour votre équipe, tant que le candidat laisse son profil actif et visible : il peut à tout moment le masquer ou supprimer son compte, l'accès cesse alors.
         L'accès à la CVthèque implique votre engagement à traiter les données des candidats <strong>uniquement dans le cadre du recrutement</strong>, conformément à la loi n° 18-07.
       </InfoBanner>
     </div>

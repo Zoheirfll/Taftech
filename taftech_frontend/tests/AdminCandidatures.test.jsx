@@ -107,7 +107,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
 
     render(<AdminCandidatures />);
 
-    const exportBtn = screen.getByText(/Exporter CSV/i);
+    const exportBtn = screen.getByText(/Exporter Excel/i);
     fireEvent.click(exportBtn);
 
     await waitFor(() => {

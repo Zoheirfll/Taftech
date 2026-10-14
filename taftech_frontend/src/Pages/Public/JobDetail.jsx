@@ -314,7 +314,12 @@ const JobDetail = () => {
               ))}
             </div>
           )}
-          {q.disqualifiant && <p className={`text-[10px] ${tw.textErrorMuted} mt-1`}>⚠️ Une mauvaise réponse peut disqualifier.</p>}
+          {q.disqualifiant && (
+            <p className={`text-[10px] ${tw.textErrorMuted} mt-1`}>
+              ⚠️ Une mauvaise réponse peut disqualifier.
+              {q.justification_disqualifiant ? ` Exigence : ${q.justification_disqualifiant}` : ""}
+            </p>
+          )}
         </div>
       ))}
       <button onClick={onNext} className={`w-full py-2.5 ${tw.bgPrimarySolid} text-sm font-semibold rounded-lg transition-colors`}>

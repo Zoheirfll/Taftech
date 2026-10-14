@@ -64,12 +64,18 @@ export const useCVTheque = () => {
   // CVThequeView n'expose plus is_premium.
   const [accesCoordonnees, setAccesCoordonnees] = useState(false);
   const [rechercheAvancee, setRechercheAvancee] = useState(true);
+  // Filtres permis/véhicule/passeport/service militaire autorisés par l'offre sélectionnée
+  // (renvoyés par le serveur : correction client n°19, critère professionnel de l'offre requis).
+  const [filtresExigence, setFiltresExigence] = useState([]);
   const [consentGiven, setConsentGiven] = useState(null); // null = chargement, false = à demander, true = ok
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
 
   // Matching IA par offre
   const [offreId, setOffreId] = useState("");
+  // Offre qui autorise les filtres permis/véhicule/passeport/situation militaire (sans classement,
+  // donc utilisable à tous les paliers) ; à défaut, l'offre du matching IA s'applique.
+  const [offreFiltresId, setOffreFiltresId] = useState("");
   const [offresActives, setOffresActives] = useState([]);
   const [showMatchingPanel, setShowMatchingPanel] = useState(false);
 
@@ -192,6 +198,7 @@ export const useCVTheque = () => {
         favoris: activeTab === "favoris",
         tri,
         ...(offreId ? { offre_id: offreId } : {}),
+        ...(offreFiltresId ? { offre_filtres_id: offreFiltresId } : {}),
       };
       const data = await jobsService.searchCVtheque(filtres, currentPage);
       setCandidats(data.results || []);
@@ -199,6 +206,7 @@ export const useCVTheque = () => {
       setTotalPages(Math.ceil((data.count || 0) / 10));
       if (data.credits_disponibles !== undefined) setCreditsDisponibles(data.credits_disponibles);
       if (data.recherche_avancee !== undefined) setRechercheAvancee(data.recherche_avancee);
+      setFiltresExigence(data.filtres_exigence_autorises || []);
 
       // Auto-sélection du premier candidat sur desktop
       if (data.results && data.results.length > 0) {
@@ -210,6 +218,7 @@ export const useCVTheque = () => {
       if (error.error) toast.error(error.error);
       reportError("ECHEC_RECHERCHE_CVTHEQUE", error);
       setCandidats([]);
+      setFiltresExigence([]);
     } finally {
       setLoading(false);
     }
@@ -235,6 +244,7 @@ export const useCVTheque = () => {
     activeTab,
     currentPage,
     offreId,
+    offreFiltresId,
   ]);
 
   useEffect(() => {
@@ -244,6 +254,15 @@ export const useCVTheque = () => {
     }, 400);
     return () => clearTimeout(delayDebounce);
   }, [chargerCandidats, consentGiven]);
+
+  // Un filtre qui n'est plus autorisé (offre changée ou retirée) est remis à zéro : il ne doit
+  // ni rester coché à l'écran, ni compter parmi les filtres actifs.
+  useEffect(() => {
+    if (!filtresExigence.includes("permis")) setPermis(false);
+    if (!filtresExigence.includes("vehicule")) setVehicule(false);
+    if (!filtresExigence.includes("passeport")) setPasseport(false);
+    if (!filtresExigence.includes("service_militaire")) setServiceMilitaire("");
+  }, [filtresExigence]);
 
   const handleReset = () => {
     setSearch("");
@@ -265,6 +284,7 @@ export const useCVTheque = () => {
     setInscritRecent(false);
     setTri("recents");
     setOffreId("");
+    setOffreFiltresId("");
     setCurrentPage(1);
   };
 
@@ -280,7 +300,7 @@ export const useCVTheque = () => {
   };
 
   const handleDeverrouillerCandidat = (candidat) => {
-    confirmToast("Débloquer ce profil (1 crédit) ? Coordonnées et CV seront accessibles pour votre équipe, sous réserve que le profil reste actif et accessible conformément aux paramètres de confidentialité du candidat.", async () => {
+    confirmToast("Débloquer ce profil (1 crédit) ? Coordonnées et CV seront accessibles pour votre équipe tant que le candidat laisse son profil actif et visible : il peut à tout moment le masquer ou supprimer son compte, l'accès cesse alors.", async () => {
       setDebloquageEnCours(candidat.user_id);
       try {
         const result = await jobsService.deverrouillerCandidat(candidat.user_id);
@@ -386,9 +406,9 @@ export const useCVTheque = () => {
   return {
     // données
     candidats, loading, constants, offresActives, documentsPartages,
-    creditsDisponibles, accesCoordonnees, rechercheAvancee,
+    creditsDisponibles, accesCoordonnees, rechercheAvancee, filtresExigence,
     // filtres (valeurs et setters regroupés pour le panneau de filtres)
-    search, setSearch, tri, setTri, offreId, setOffreId,
+    search, setSearch, tri, setTri, offreId, setOffreId, offreFiltresId, setOffreFiltresId,
     specialiteLibelle, setSpecialiteLibelle,
     filtres: {
       wilaya, specialite, diplome, experience, mobilite, disponibilite, langues,

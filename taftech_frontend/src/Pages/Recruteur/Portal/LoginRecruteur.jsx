@@ -6,7 +6,7 @@ import { reportError } from "../../../utils/errorReporter";
 import { Eye, EyeOff, CheckCircle, LogIn } from "lucide-react";
 
 const AVANTAGES = [
-  "Publiez une offre gratuitement pour commencer",
+  "Formule Gratuite : 1 offre active, sans limite de durée",
   "Score IA sur chaque candidat",
   "CVthèque accessible dès la formule Starter",
   "Formules évolutives selon vos besoins",

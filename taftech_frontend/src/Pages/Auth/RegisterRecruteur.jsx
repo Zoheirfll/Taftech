@@ -20,7 +20,7 @@ const LEFT_CONTENT = {
   1: {
     title: "Créez votre espace employeur",
     desc: "Rejoignez TAFTECH pour accéder aux meilleurs talents d'Algérie. Votre compte sera actif après vérification de vos documents.",
-    items: ["Publiez votre première offre gratuitement", "Score IA sur chaque candidature", "Formules Starter à Enterprise pour aller plus loin", "Conforme à la loi 18-07"],
+    items: ["Formule Gratuite : 1 offre active, sans limite de durée", "Score IA sur chaque candidature", "Formules Starter à Enterprise pour aller plus loin", "Conforme à la loi 18-07"],
   },
   2: {
     title: "Vérification de votre email",

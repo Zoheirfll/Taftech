@@ -108,7 +108,7 @@ const AdminCreditPacks = () => {
         subtitle="Crédits achetables par les recruteurs quand leur quota mensuel est épuisé."
         aideKey="credit-packs"
         aide={[
-          "1 crédit = débloquer les coordonnées et le CV d'un candidat, définitivement, pour toute l'équipe de l'entreprise.",
+          "1 crédit = débloquer les coordonnées et le CV d'un candidat pour toute l'équipe de l'entreprise, tant que le candidat laisse son profil actif et visible (il peut le masquer ou supprimer son compte).",
           "Les crédits achetés n'expirent jamais ; ils sont utilisés après le quota mensuel inclus dans le palier.",
           "Le prix par crédit aide à rendre les gros packs plus avantageux que les petits.",
           "Paiement par Chargily : le montant facturé est exactement le prix indiqué ici.",

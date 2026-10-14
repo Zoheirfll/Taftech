@@ -61,6 +61,11 @@ const FONCTION_PAR_KEY = {
   conseils_dashboard: "CONSEILS_DASHBOARD",
 };
 
+// Calculés / informatifs côté serveur : ne jamais les renvoyer dans le PUT.
+const CHAMPS_LECTURE_SEULE = ["prompts_accessibles", "budget_modifiable", "appels_ia_mois"];
+// Plafond et seuil : réservés au Super Admin (le serveur répond 403 si un admin simple les envoie).
+const CHAMPS_BUDGET = ["budget_ia_appels_mois_max", "budget_ia_alerte_pct"];
+
 const AdminIAConfig = () => {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +108,9 @@ const AdminIAConfig = () => {
   const enregistrer = async () => {
     setSaving(true);
     try {
-      const updated = await jobsService.updateAIConfig(config);
+      const exclus = config.budget_modifiable === false ? [...CHAMPS_LECTURE_SEULE, ...CHAMPS_BUDGET] : CHAMPS_LECTURE_SEULE;
+      const payload = Object.fromEntries(Object.entries(config).filter(([cle]) => !exclus.includes(cle)));
+      const updated = await jobsService.updateAIConfig(payload);
       setConfig(updated);
       toast.success("Configuration IA mise à jour !");
     } catch (err) {
@@ -238,9 +245,38 @@ const AdminIAConfig = () => {
             min="0"
             className={`${inputClass} max-w-[220px]`}
             placeholder="Illimité"
+            disabled={config.budget_modifiable === false}
             value={config.budget_ia_appels_mois_max ?? ""}
             onChange={(e) => setConfig({ ...config, budget_ia_appels_mois_max: e.target.value === "" ? null : Number(e.target.value) })}
           />
+          {config.budget_modifiable === false && (
+            <p className={`text-xs ${tw.textMuted}`}>Plafond et seuil d'alerte : modifiables uniquement par le Super Admin.</p>
+          )}
+          {config.appels_ia_mois !== undefined && (
+            <p className={`text-xs font-semibold ${tw.textStrong}`}>
+              {config.budget_ia_appels_mois_max
+                ? `${config.appels_ia_mois} / ${config.budget_ia_appels_mois_max} appels IA ce mois-ci (${Math.round((config.appels_ia_mois / config.budget_ia_appels_mois_max) * 100)} %)`
+                : `${config.appels_ia_mois} appels IA ce mois-ci`}
+            </p>
+          )}
+          {!config.budget_ia_appels_mois_max && (
+            <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Aucun plafond défini : la consommation IA n'est pas bornée. Définissez un plafond avant la mise en production.
+            </p>
+          )}
+          <div className="pt-2">
+            <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>Seuil d'alerte (% du plafond)</label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              disabled={config.budget_modifiable === false}
+              className={`${inputClass} max-w-[140px]`}
+              value={config.budget_ia_alerte_pct ?? ""}
+              onChange={(e) => setConfig({ ...config, budget_ia_alerte_pct: e.target.value === "" ? "" : Number(e.target.value) })}
+            />
+            <p className={`text-[10px] ${tw.textMuted} mt-1`}>Un email est envoyé aux Super Admins une fois par mois à ce seuil, puis quand le plafond est épuisé.</p>
+          </div>
         </div>
 
         <div className={`${tw.card} rounded-2xl p-5 space-y-4`}>
@@ -301,16 +337,20 @@ const AdminIAConfig = () => {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => setOpenPrompt(openPrompt === f.key ? null : f.key)}
-                className={`flex items-center gap-1.5 text-xs font-semibold ${tw.textPrimary} hover:underline`}
-              >
-                {openPrompt === f.key ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                Prompt IA
-              </button>
+              {config.prompts_accessibles === false ? (
+                <p className={`text-xs ${tw.textMuted}`}>Prompt IA : modifiable uniquement par le Super Admin.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setOpenPrompt(openPrompt === f.key ? null : f.key)}
+                  className={`flex items-center gap-1.5 text-xs font-semibold ${tw.textPrimary} hover:underline`}
+                >
+                  {openPrompt === f.key ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  Prompt IA
+                </button>
+              )}
 
-              {openPrompt === f.key && (
+              {config.prompts_accessibles !== false && openPrompt === f.key && (
                 <div className="mt-2">
                   {f.tokens.length > 0 && (
                     <p className={`text-[10px] ${tw.textMuted} mb-1.5`}>

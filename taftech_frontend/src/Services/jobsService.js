@@ -115,6 +115,17 @@ const offresPubliquesService = {
     }
   },
 
+  // Un candidat ou un recruteur propose un métier absent de la liste (l'admin décide ensuite).
+  proposerMetier: async (libelle, contexte = "") => {
+    try {
+      const response = await api.post("jobs/referentiel/metiers/proposer/", { libelle, contexte });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_PROPOSER_METIER", err);
+      throw err;
+    }
+  },
+
   // Suggestions compétences/spécialités pour un métier (référentiel v2, MetierCompetence/
   // MetierFormation) — purement informatif, le recruteur choisit ce qu'il ajoute réellement.
   getMetierSuggestions: async (metierId) => {
@@ -264,7 +275,7 @@ const offresPubliquesService = {
     }
   },
 
-  // FAQ actives d'une catégorie ("GENERAL"/"RECRUTEUR"/"PREMIUM") — quasi-statique, cache par catégorie.
+  // FAQ actives d'une catégorie ("GENERAL"/"RECRUTEUR"/"PALIERS") — quasi-statique, cache par catégorie.
   getFaq: async (categorie) => {
     if (!_faqCacheParCategorie[categorie]) {
       _faqCacheParCategorie[categorie] = api
@@ -361,6 +372,17 @@ const offresPubliquesService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_PAGES_LIBRES", err);
+      throw err;
+    }
+  },
+
+  // Coordonnées et informations légales de la société (pieds de page, Contact, Mentions légales).
+  getInformationsSociete: async () => {
+    try {
+      const response = await api.get("jobs/informations-societe/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_INFORMATIONS_SOCIETE", err);
       throw err;
     }
   },

@@ -105,6 +105,7 @@ import LoginRecruteur from "./Pages/Recruteur/Portal/LoginRecruteur";
 // Pages lazy — chargées à la demande
 const Entreprises        = lazy(() => import("./Pages/Public/Entreprises"));
 const ContactezNous = lazy(() => import("./Pages/Public/ContactezNous"));
+const MentionsLegales = lazy(() => import("./Pages/Public/MentionsLegales"));
 const PageStatiqueGenerique = lazy(() => import("./Pages/Public/PageStatiqueGenerique"));
 const NotFound = lazy(() => import("./Pages/Public/NotFound"));
 const QuiSommesNous = lazy(() => import("./Pages/Public/QuiSommesNous"));
@@ -174,6 +175,7 @@ const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminReferentielV2 = lazy(() => import("./Pages/Admin/AdminReferentielV2"));
 const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
+const AdminMetiersSuggeres = lazy(() => import("./Pages/Admin/AdminMetiersSuggeres"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
@@ -284,6 +286,7 @@ function AppContent() {
             <Route path="/confidentialite" element={<PageStatiqueGenerique slugFixe="confidentialite" />} />
             <Route path="/contact" element={<ContactezNous />} />
             <Route path="/cgu" element={<PageStatiqueGenerique slugFixe="cgu" />} />
+            <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
             <Route path="/pages/:slug" element={<PageStatiqueGenerique />} />
             <Route path="/regions" element={<OffresParRegion />} />
@@ -375,6 +378,7 @@ function AppContent() {
               <Route path="/admin-taftech/credit-packs" element={<Navigate to="/admin-taftech/abonnements-ia?tab=credits" replace />} />
               <Route path="/admin-taftech/ia-config" element={<Navigate to="/admin-taftech/abonnements-ia?tab=ia" replace />} />
               <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
+              <Route path="/admin-taftech/metiers-suggeres" element={<AdminMetiersSuggeres />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />

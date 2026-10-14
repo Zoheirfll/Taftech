@@ -37,7 +37,7 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
             <div key={idx} className={`${tw.card} p-4 space-y-2.5`}>
               <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
                 <p className="text-xs text-slate-600">
-                  Type de diplôme et spécialité — choisissez dans le référentiel national pour un
+                  Choisissez votre diplôme et votre spécialité dans les listes pour obtenir un
                   score de correspondance fiable sur les offres.
                 </p>
                 <FormationReferentielSelect

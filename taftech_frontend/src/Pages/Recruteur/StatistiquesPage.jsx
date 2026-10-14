@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
@@ -341,19 +342,16 @@ const StatistiquesPage = () => {
 
   const offresActives = offres.filter((o) => o.est_active && !o.est_cloturee).length;
 
-  const exporterCsv = () => {
-    const lignes = [
-      ["Offre", "Statut offre", "Candidatures", "Entretiens", "Recrutements", "Taux de conversion (%)", "Score moyen (%)"],
-      ...tableOffres.map((r) => [r.titre, r.actif ? "Active" : "Clôturée", r.total, r.entretiens, r.retenus, r.taux, r.scoreMoyen ?? ""]),
-    ];
-    const csv = lignes.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "statistiques-recrutement.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // Vrai classeur .xlsx généré côté serveur : l'ancien CSV à la main (séparateur « ; » + BOM)
+  // s'ouvrait avec toutes les données dans une seule colonne sur smartphone.
+  const exporterExcel = async () => {
+    const colonnes = ["Offre", "Statut offre", "Candidatures", "Entretiens", "Recrutements", "Taux de conversion (%)", "Score moyen (%)"];
+    const lignes = tableOffres.map((r) => [r.titre, r.actif ? "Active" : "Clôturée", r.total, r.entretiens, r.retenus, r.taux, r.scoreMoyen ?? ""]);
+    try {
+      await jobsService.exporterGraphiqueExcel("statistiques-recrutement", colonnes, lignes);
+    } catch {
+      toast.error("Erreur lors de l'export Excel.");
+    }
   };
 
   const choisirPeriode = (key) => {
@@ -392,8 +390,8 @@ const StatistiquesPage = () => {
           </div>
         </div>
         <div className="flex gap-2 print:hidden">
-          <button onClick={exporterCsv} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            <Download size={14} /> Exporter (CSV)
+          <button onClick={exporterExcel} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            <Download size={14} /> Exporter (Excel)
           </button>
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-700 text-white rounded-lg text-xs font-semibold hover:bg-teal-800">
             <Printer size={14} /> Imprimer / PDF

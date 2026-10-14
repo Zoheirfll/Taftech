@@ -64,7 +64,7 @@ const SectionFormations = ({ candidat }) => (
             className={`pl-4 border-l-2 ${tw.borderTeal100}`}
           >
             <p className={`text-sm font-semibold ${tw.textStrong}`}>
-              {form.diplome || "Diplôme non précisé"}
+              {form.diplome_ref_libelle || form.diplome || "Diplôme non précisé"}
             </p>
             {(form.diplome_ref_libelle || form.specialite_ref_libelle) && (
               <p className="flex flex-wrap items-center gap-1 mt-1">

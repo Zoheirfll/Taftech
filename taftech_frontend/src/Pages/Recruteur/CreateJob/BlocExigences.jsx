@@ -2,11 +2,13 @@
 import { ShieldCheck, Paperclip, X } from "lucide-react";
 import { tw } from "../../../theme";
 import { inputClass } from "./formUi";
+import { CATEGORIES_EXIGENCE } from "../../../utils/exigencesCategories";
 
 const BlocExigences = ({ job }) => {
   const {
     draftExigenceLabel, setDraftExigenceLabel, draftExigenceDescription, setDraftExigenceDescription,
-    draftExigenceJustificatif, setDraftExigenceJustificatif, ajouterExigence, retirerExigence, exigencesImperatives,
+    draftExigenceJustificatif, setDraftExigenceJustificatif, draftExigenceCategorie, setDraftExigenceCategorie,
+    ajouterExigence, retirerExigence, exigencesImperatives,
   } = job;
 
   return (
@@ -39,6 +41,19 @@ const BlocExigences = ({ job }) => {
             className={inputClass}
           />
         </div>
+        <div className="sm:col-span-2">
+          <label className={tw.formLabel}>Catégorie</label>
+          <select
+            value={draftExigenceCategorie}
+            onChange={(e) => setDraftExigenceCategorie(e.target.value)}
+            className={inputClass}
+          >
+            {CATEGORIES_EXIGENCE.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Permis, véhicule, passeport et situation militaire ne peuvent servir de filtre dans la CVthèque que si votre offre les déclare ici comme exigence.
+          </p>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
         <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700 cursor-pointer hover:border-slate-300 transition-colors">
@@ -65,6 +80,9 @@ const BlocExigences = ({ job }) => {
           {exigencesImperatives.map((e) => (
             <span key={e.label} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
               {e.label}
+              {e.categorie && e.categorie !== "AUTRE" && (
+                <span className="opacity-70">· {CATEGORIES_EXIGENCE.find((c) => c.value === e.categorie)?.label}</span>
+              )}
               {e.justificatif_requis && <Paperclip size={11} className="opacity-70" />}
               <button type="button" onClick={() => retirerExigence(e.label)} className="hover:text-red-600">
                 <X size={12} />

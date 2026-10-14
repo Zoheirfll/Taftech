@@ -4,7 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X, Search, Tags } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw, Sparkles } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -13,31 +13,72 @@ import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
-const ITEM_VIDE = { label: "", synonymes: "", actif: true };
+const ITEM_VIDE = { label: "", synonymes: "" };
+
+// Cycle de vie d'une compétence du référentiel (point 11) :
+// Suggérée -> Validée | Rejetée ; Validée <-> Désactivée ; Rejetée -> Validée (réexamen).
+// Seule une compétence « Validée » est officielle (autocomplete, parser CV, IA, matching).
+const STATUTS = {
+  SUGGEREE: { libelle: "Suggérée", classe: "bg-amber-50 text-amber-700" },
+  VALIDEE: { libelle: "Validée", classe: `${tw.bgSuccessSoft} ${tw.textSuccess}` },
+  REJETEE: { libelle: "Rejetée", classe: tw.badgeErrorLight },
+  DESACTIVEE: { libelle: "Désactivée", classe: "bg-slate-100 text-slate-600" },
+};
+const ONGLETS = [
+  { code: "", libelle: "Toutes" },
+  { code: "SUGGEREE", libelle: "Suggérées" },
+  { code: "VALIDEE", libelle: "Validées" },
+  { code: "REJETEE", libelle: "Rejetées" },
+  { code: "DESACTIVEE", libelle: "Désactivées" },
+];
+const TRANSITIONS = {
+  SUGGEREE: ["VALIDEE", "REJETEE"],
+  VALIDEE: ["DESACTIVEE"],
+  DESACTIVEE: ["VALIDEE"],
+  REJETEE: ["VALIDEE"],
+};
+const ORIGINES = { PROPOSITION_AUTO: "Proposition automatique", IMPORT: "Import du référentiel", ADMIN: "Ajoutée par l'admin" };
+
+const statutDe = (item) => item.statut || (item.actif ? "VALIDEE" : "DESACTIVEE");
+
+// Libellé et icône de l'action menant à `cible` depuis le statut actuel.
+const actionVers = (courant, cible) => {
+  if (cible === "VALIDEE") {
+    if (courant === "SUGGEREE") return { libelle: "Valider", Icone: Check, classe: "hover:text-emerald-700 hover:bg-emerald-50" };
+    if (courant === "REJETEE") return { libelle: "Valider (réexamen)", Icone: Check, classe: "hover:text-emerald-700 hover:bg-emerald-50" };
+    return { libelle: "Réactiver", Icone: RotateCcw, classe: "hover:text-emerald-700 hover:bg-emerald-50" };
+  }
+  if (cible === "REJETEE") return { libelle: "Rejeter", Icone: Ban, classe: "hover:text-red-600 hover:bg-red-50" };
+  return { libelle: "Désactiver", Icone: PowerOff, classe: "hover:text-slate-800 hover:bg-slate-100" };
+};
 
 const AdminCompetences = () => {
   const [submitBusy, lockSubmit] = useSubmitLock();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statutFiltre, setStatutFiltre] = useState("");
+  const [compteurs, setCompteurs] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
+  const [detection, setDetection] = useState(false);
   // Minuteur de recherche local au composant (avant : variable globale window._competenceSearchTimer).
   const searchTimer = useRef(null);
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
-  const fetchItems = async (s = "", p = 1) => {
+  const fetchItems = async (s = "", p = 1, statut = statutFiltre) => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminCompetences(s, p);
+      const data = await jobsService.getAdminCompetences(s, p, statut);
       setItems(data.results || []);
       setTotalPages(data.total_pages || 1);
       setTotalCount(data.count || 0);
+      setCompteurs(data.compteurs || {});
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
       toast.error(apiErrMsg(err, "Erreur de chargement."));
@@ -64,6 +105,12 @@ const AdminCompetences = () => {
     fetchItems(search, p);
   };
 
+  const choisirOnglet = (code) => {
+    setStatutFiltre(code);
+    setPage(1);
+    fetchItems(search, 1, code);
+  };
+
   const handleOpenCreate = () => {
     setEditingId(null);
     setForm(ITEM_VIDE);
@@ -72,7 +119,7 @@ const AdminCompetences = () => {
 
   const handleOpenEdit = (item) => {
     setEditingId(item.id);
-    setForm({ label: item.label, synonymes: item.synonymes || "", actif: item.actif });
+    setForm({ label: item.label, synonymes: item.synonymes || "" });
     setShowModal(true);
   };
 
@@ -98,11 +145,47 @@ const AdminCompetences = () => {
     }
   };
 
+  const changerStatut = async (item, cible) => {
+    const { libelle } = actionVers(statutDe(item), cible);
+    try {
+      const maj = await jobsService.changerStatutCompetence(item.id, cible);
+      toast.success(
+        cible === "VALIDEE" && maj?.liens_crees
+          ? `« ${item.label} » est maintenant officielle — ${maj.liens_crees} saisie(s) existante(s) rattachée(s).`
+          : `« ${item.label} » : ${libelle.toLowerCase()} effectué.`,
+      );
+      fetchItems(search, page);
+    } catch (err) {
+      reportError("ECHEC_STATUT_COMPETENCE", err);
+      toast.error(apiErrMsg(err, "Changement de statut impossible."));
+    }
+  };
+
+  const detecterPropositions = async () => {
+    setDetection(true);
+    try {
+      const res = await jobsService.proposerCompetences({});
+      if (res.nb > 0) {
+        toast.success(`${res.nb} compétence(s) proposée(s), en attente de votre validation.`);
+        setStatutFiltre("SUGGEREE");
+        setPage(1);
+        fetchItems(search, 1, "SUGGEREE");
+      } else {
+        toast.success(`Aucune nouvelle proposition (seuil : ${res.seuil} saisies distinctes hors référentiel).`);
+      }
+    } catch (err) {
+      reportError("ECHEC_PROPOSER_COMPETENCES", err);
+      toast.error(apiErrMsg(err, "Détection impossible."));
+    } finally {
+      setDetection(false);
+    }
+  };
+
   const handleDelete = (id) => {
     // CASCADE côté modèle : supprimer une compétence retire aussi ses liens avec les métiers du
     // référentiel (suggestions "compétences pour ce métier" des recruteurs).
     confirmToast(
-      "Supprimer cette compétence ? Ses liens avec les métiers du référentiel seront aussi supprimés. Pour seulement la retirer des suggestions, décochez plutôt « Suggérée ».",
+      "Supprimer cette compétence ? Ses liens avec les métiers du référentiel seront aussi supprimés. Pour seulement la retirer des suggestions, utilisez plutôt « Désactiver » (ou « Rejeter » pour une proposition).",
       async () => {
         try {
           await jobsService.deleteCompetence(id);
@@ -123,23 +206,53 @@ const AdminCompetences = () => {
         icon={Tags}
         color="violet"
         title="Référentiel compétences"
-        subtitle="Suggestions proposées aux candidats et recruteurs quand ils saisissent une compétence."
+        subtitle="Compétences officielles proposées aux candidats et recruteurs, et propositions en attente de validation."
         aideKey="competences"
         aide={[
-          "Le champ « Compétences » reste libre pour les utilisateurs : ce référentiel sert à proposer des suggestions et à normaliser les saisies.",
+          "Cycle de vie : Suggérée → Validée (officielle) ou Rejetée ; une compétence Validée peut être Désactivée puis réactivée.",
+          "Une compétence proposée automatiquement reste « Suggérée » : elle n'apparaît ni dans les suggestions, ni dans le parser de CV, ni dans la génération d'offre, ni dans le score, tant que vous ne l'avez pas validée.",
+          "Valider une compétence rattache aussitôt les saisies existantes (candidats, offres) qui portent ce libellé ou l'un de ses synonymes.",
+          "« Détecter les propositions » repère les compétences saisies hors référentiel par au moins 3 candidats ou offres différents. Les compétences rejetées ne sont jamais re-proposées.",
           "Synonymes : une compétence extraite d'un CV sous l'un de ces intitulés (ex. « Project Management ») est automatiquement ramenée au libellé principal.",
-          "« Masquée » retire la compétence des suggestions sans rien supprimer. C'est l'option à privilégier.",
-          "La génération d'offre par IA ne choisit ses compétences que dans ce référentiel (compétences suggérées uniquement).",
+          "« Désactivée » retire la compétence des suggestions sans rien supprimer ni casser les scores existants. C'est l'option à privilégier plutôt que la suppression.",
         ]}
         actions={
-          <button
-            onClick={handleOpenCreate}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
-          >
-            <Plus size={16} /> Ajouter une compétence
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={detecterPropositions}
+              disabled={detection}
+              className={`flex items-center gap-2 px-4 py-2 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-semibold rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors disabled:opacity-50 ${tw.focusRing}`}
+            >
+              <Sparkles size={16} /> {detection ? "Détection..." : "Détecter les propositions"}
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
+            >
+              <Plus size={16} /> Ajouter une compétence
+            </button>
+          </div>
         }
       />
+
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par statut">
+        {ONGLETS.map((onglet) => {
+          const actif = statutFiltre === onglet.code;
+          const nombre = onglet.code ? compteurs[onglet.code] : undefined;
+          return (
+            <button
+              key={onglet.code || "toutes"}
+              role="tab"
+              aria-selected={actif}
+              onClick={() => choisirOnglet(onglet.code)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${tw.focusRing} ${actif ? `${tw.bgPrimarySolidHover} text-white` : `${tw.surfaceSubtle} ${tw.textMuted} ${tw.hoverSurfaceSubtleStrong}`}`}
+            >
+              {onglet.libelle}
+              {nombre !== undefined && <span className="ml-1.5 opacity-80">({nombre})</span>}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="relative">
         <Search size={15} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
@@ -155,46 +268,75 @@ const AdminCompetences = () => {
 
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[500px]">
+          <table className="w-full text-left min-w-190">
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
                 <th className="px-5 py-3">Compétence</th>
                 <th className="px-5 py-3">Synonymes</th>
+                <th className="px-5 py-3">Usage</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <SkeletonTableRows columns={4} />
+                <SkeletonTableRows columns={5} />
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan="4">
+                  <td colSpan="5">
                     <AdminVide icon={Tags} titre="Aucune compétence trouvée." texte={search ? "Essayez un autre mot-clé." : undefined} />
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
-                    <td className="px-5 py-3"><p className={`text-sm font-medium ${tw.textStrong}`}>{item.label}</p></td>
-                    <td className="px-5 py-3">
-                      <p className={`text-xs ${tw.textMuted} max-w-xs truncate`} title={item.synonymes || ""}>
-                        {item.synonymes || "—"}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${item.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight}`}>
-                        {item.actif ? "Suggérée" : "Masquée"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                items.map((item) => {
+                  const statut = statutDe(item);
+                  const transitions = item.transitions_possibles || TRANSITIONS[statut] || [];
+                  return (
+                    <tr key={item.id} className={tw.rowHover}>
+                      <td className="px-5 py-3">
+                        <p className={`text-sm font-medium ${tw.textStrong}`}>{item.label}</p>
+                        {item.origine && item.origine !== "ADMIN" && (
+                          <p className={`text-[11px] ${tw.textMuted}`}>{ORIGINES[item.origine] || item.origine}</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className={`text-xs ${tw.textMuted} max-w-xs truncate`} title={item.synonymes || ""}>
+                          {item.synonymes || "—"}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className={`text-xs ${tw.textMuted}`}>
+                          {item.nb_candidats !== undefined ? `${item.nb_candidats} candidat(s) · ${item.nb_offres} offre(s)` : "—"}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${STATUTS[statut].classe}`}>
+                          {STATUTS[statut].libelle}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {transitions.map((cible) => {
+                            const { libelle, Icone, classe } = actionVers(statut, cible);
+                            return (
+                              <button
+                                key={cible}
+                                onClick={() => changerStatut(item, cible)}
+                                aria-label={`${libelle} ${item.label}`}
+                                title={libelle}
+                                className={`p-2 ${tw.textMuted} ${classe} rounded-lg transition-colors ${tw.focusRing}`}
+                              >
+                                <Icone size={14} />
+                              </button>
+                            );
+                          })}
+                          <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
+                          <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -226,10 +368,11 @@ const AdminCompetences = () => {
                   Séparés par des virgules. Une compétence extraite d'un CV portant l'un de ces intitulés (ou très proche) sera automatiquement remplacée par "{form.label || "ce libellé"}".
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="competence_actif" className={`${tw.accentPrimary} w-4 h-4`} checked={form.actif} onChange={(e) => setForm({ ...form, actif: e.target.checked })} />
-                <label htmlFor="competence_actif" className={`text-sm font-medium ${tw.textMuted700} cursor-pointer`}>Suggérée (visible dans l'autocomplete)</label>
-              </div>
+              {!editingId && (
+                <p className={`text-[11px] ${tw.textMuted}`}>
+                  Une compétence ajoutée ici est officielle d'emblée (statut « Validée »). Le statut d'une compétence existante se change avec les boutons de la liste.
+                </p>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={fermerModal} className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}>Annuler</button>
                 <button type="submit" disabled={submitBusy} className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}>{editingId ? "Mettre à jour" : "Ajouter"}</button>

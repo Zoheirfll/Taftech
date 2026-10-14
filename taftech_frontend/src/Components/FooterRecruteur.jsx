@@ -2,30 +2,22 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logoTafTech from "../assets/logo-taftech.png";
 import { tw } from "../theme";
-import { Mail, MapPin, Phone } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
-
-const RESEAUX_SOCIAUX = [
-  { name: "Facebook", href: "https://www.facebook.com/Taftechemploi" },
-  { name: "Instagram", href: "https://www.instagram.com/taftechemploi" },
-  { name: "LinkedIn", href: "https://www.linkedin.com/company/oranemploi/" },
-  { name: "WhatsApp", href: "https://wa.me/213770123440" },
-];
+import { useInformationsSociete, contactsDepuis, reseauxDepuis } from "../utils/informationsSociete";
 
 const LIENS_LEGAUX = [
+  { name: "Mentions légales", to: "/mentions-legales?portail=recruteur" },
   { name: "Confidentialité", to: "/confidentialite?portail=recruteur" },
   { name: "CGU", to: "/cgu?portail=recruteur" },
 ];
 
-const CONTACTS = [
-  { label: "E-mail", value: "taftech963@gmail.com", href: "mailto:taftech963@gmail.com", icon: Mail },
-  { label: "Adresse", value: "Oran, Algérie", href: null, icon: MapPin },
-  { label: "Téléphone", value: "0770 123 440", href: "tel:+213770123440", icon: Phone },
-];
-
 const FooterRecruteur = () => {
   const [pagesLibres, setPagesLibres] = useState([]);
+  // Coordonnées et réseaux : source unique (admin), un champ vide n'est pas affiché.
+  const infos = useInformationsSociete();
+  const contacts = contactsDepuis(infos);
+  const reseaux = reseauxDepuis(infos);
 
   useEffect(() => {
     jobsService.getPagesLibres().then(setPagesLibres).catch((err) => {
@@ -48,17 +40,18 @@ const FooterRecruteur = () => {
               </span>
             </Link>
             <p className={tw.footerBrandTextTeal}>
-              La plateforme de recrutement qui combine intelligence artificielle, expertise RH et accompagnement humain. Conforme à la loi 18-07.
+              La plateforme de recrutement qui combine intelligence artificielle, expertise RH et accompagnement humain.
             </p>
           </div>
 
           {/* Contact */}
+          {contacts.length > 0 && (
           <div>
             <h4 className={tw.footerHeadingTeal}>
               Contact
             </h4>
             <div className="flex flex-col gap-2.5">
-              {CONTACTS.map(({ label, value, href, icon: Icon }) => {
+              {contacts.map(({ label, value, href, icon: Icon }) => {
                 const Tag = href ? "a" : "div";
                 return (
                   <Tag key={label} {...(href ? { href } : {})} className="flex items-center gap-2">
@@ -71,14 +64,16 @@ const FooterRecruteur = () => {
               })}
             </div>
           </div>
+          )}
 
           {/* Réseaux sociaux */}
+          {reseaux.length > 0 && (
           <div>
             <h4 className={tw.footerHeadingTeal}>
               Réseaux sociaux
             </h4>
             <ul className="space-y-2">
-              {RESEAUX_SOCIAUX.map((r) => (
+              {reseaux.map((r) => (
                 <li key={r.name}>
                   <a href={r.href} target="_blank" rel="noopener noreferrer" className={tw.footerLinkTeal}>
                     {r.name}
@@ -87,6 +82,7 @@ const FooterRecruteur = () => {
               ))}
             </ul>
           </div>
+          )}
 
           {/* Légal */}
           <div>

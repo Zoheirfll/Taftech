@@ -351,7 +351,8 @@ export const recruteurService = {
       search: filters.search || "",
       wilaya: filters.wilaya || "",
       specialite: filters.specialite || "",
-      diplome: filters.diplome || "",
+      // La valeur du filtre est l'identifiant d'un type de diplôme structuré (point 9).
+      diplome_ref: filters.diplome || "",
       experience: filters.experience || "",
       mobilite: filters.mobilite || "",
       disponibilite: filters.disponibilite || "",
@@ -369,6 +370,8 @@ export const recruteurService = {
       tri: filters.tri || "recents",
       page: page,
       ...(filters.offre_id ? { offre_id: filters.offre_id } : {}),
+      // Offre qui autorise les filtres permis/véhicule/passeport/situation militaire, sans classement.
+      ...(filters.offre_filtres_id ? { offre_filtres_id: filters.offre_filtres_id } : {}),
     }).toString();
     try {
       const response = await api.get(`jobs/employeur/cvtheque/?${queryParams}`);

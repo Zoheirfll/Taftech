@@ -5,6 +5,7 @@ import { apiErrMsg } from "../utils/apiErrMsg";
 import toast from "react-hot-toast";
 import { Plus, X, GripVertical } from "lucide-react";
 import { tw } from "../theme";
+import { JUSTIFICATION_MAX, justificationManquante } from "../utils/questionDisqualifiante";
 
 const TYPE_OPTIONS = [
   { value: "COURT", label: "Réponse courte" },
@@ -19,6 +20,7 @@ const questionVide = () => ({
   type_question: "CHOIX_UNIQUE",
   requis: false,
   disqualifiant: false,
+  justification_disqualifiant: "",
   choix: [{ texte: "" }, { texte: "" }],
 });
 
@@ -53,6 +55,7 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
             type_question: hasChoixType && choixIA.length < 2 ? "COURT" : type,
             requis: false,
             disqualifiant: false,
+            justification_disqualifiant: "",
             choix,
           };
         }),
@@ -110,10 +113,15 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
     if (!form.titre.trim()) newErrors.titre = true;
     form.questions.forEach((q, i) => {
       if (!q.texte.trim()) newErrors[`q_${i}`] = true;
+      if (justificationManquante(q)) newErrors[`j_${i}`] = true;
     });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Veuillez remplir tous les champs obligatoires.");
+      toast.error(
+        Object.keys(newErrors).some((k) => k.startsWith("j_"))
+          ? "Une question disqualifiante doit être justifiée par une exigence professionnelle."
+          : "Veuillez remplir tous les champs obligatoires.",
+      );
       return;
     }
     setErrors({});
@@ -257,6 +265,25 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
                     Disqualifiant
                   </label>
                 </div>
+
+                {q.disqualifiant && (
+                  <div className="space-y-1">
+                    <textarea
+                      rows={2}
+                      maxLength={JUSTIFICATION_MAX}
+                      className={inputClass + (errors[`j_${i}`] ? ` ${tw.inputErrorRing}` : "")}
+                      placeholder="Exigence professionnelle justifiant l'élimination *"
+                      value={q.justification_disqualifiant}
+                      onChange={(e) => {
+                        updateQuestion(i, "justification_disqualifiant", e.target.value);
+                        setErrors((p) => ({ ...p, [`j_${i}`]: false }));
+                      }}
+                    />
+                    <p className={`text-[10px] ${errors[`j_${i}`] ? tw.textErrorMuted : tw.textMuted}`}>
+                      Réservé aux exigences professionnelles objectives (permis, habilitation, droit d'exercice, certification…). Une question sur l'âge, le sexe, la situation familiale, la religion ou la santé sera refusée. Cette justification est visible des candidats et de la modération.
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
 

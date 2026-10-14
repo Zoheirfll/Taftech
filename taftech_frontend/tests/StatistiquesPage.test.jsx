@@ -10,6 +10,7 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getDashboard: vi.fn(),
     getStatistiquesAvancees: vi.fn(),
+    exporterGraphiqueExcel: vi.fn(),
   },
 }));
 vi.mock("../src/utils/errorReporter", () => ({ reportError: vi.fn() }));
@@ -78,6 +79,20 @@ describe("StatistiquesPage", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText(/palier Business ou supérieur/)).toBeInTheDocument());
     expect(screen.queryByTestId("histo")).toBeNull();
+  });
+
+  it("exporte le tableau des offres en Excel (.xlsx) et non en CSV", async () => {
+    jobsService.exporterGraphiqueExcel.mockResolvedValue();
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Candidatures")[0]).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /CSV/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Exporter \(Excel\)/ }));
+    await waitFor(() => expect(jobsService.exporterGraphiqueExcel).toHaveBeenCalledTimes(1));
+    const [titre, colonnes, lignes] = jobsService.exporterGraphiqueExcel.mock.calls[0];
+    expect(titre).toBe("statistiques-recrutement");
+    expect(colonnes[0]).toBe("Offre");
+    // Chiffres bruts (pas de chaînes) pour que les cellules Excel restent numériques.
+    expect(lignes[0].slice(0, 5)).toEqual(["Data analyst", "Active", 2, 1, 1]);
   });
 
   it("affiche un état d'erreur si le chargement échoue", async () => {

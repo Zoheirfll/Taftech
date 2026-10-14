@@ -59,6 +59,10 @@ const CVTheque = () => {
           setSpecialiteLibelle={cv.setSpecialiteLibelle}
           setCurrentPage={cv.setCurrentPage}
           rechercheAvancee={cv.rechercheAvancee}
+          filtresExigence={cv.filtresExigence}
+          offresActives={cv.offresActives}
+          offreFiltresId={cv.offreFiltresId}
+          setOffreFiltresId={cv.setOffreFiltresId}
           filtresActifs={cv.filtresActifs}
           onReset={cv.handleReset}
         />

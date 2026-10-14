@@ -7,6 +7,18 @@
 
 ---
 
+## 🆕 SESSION 13/10/2026 — Point 12 des corrections finales : CVthèque / confidentialité (déblocage ≠ accès « à vie »)
+
+Détail et analyse de sécurité : `SECURITY.md` §22. Décision validée : profil masqué → **accès suspendu** (rendu sans nouvelle dépense si le candidat réaffiche), **disparition de la liste** ; compte supprimé → **tout accès cesse**.
+- **Garde commune** `credits_utils.profil_accessible_aux_recruteurs` (compte actif ET `visible_cvtheque`) : liste CVthèque (requête de base, favoris compris), téléchargement CV/photo par déblocage, documents partagés (liste + fichier), déblocage (compte supprimé = 404, profil masqué = 403 `PROFIL_NON_VISIBLE`). Une candidature envoyée reste une relation voulue par le candidat (accès au CV tant que le compte est actif, même profil masqué).
+- **Faille corrigée** : le téléchargement du CV et des documents partagés ne vérifiait ni le compte actif ni la visibilité — un recruteur ayant débloqué un profil gardait l'accès après suppression du compte (soft-delete `is_active=False`).
+- **CV de recrutement vs documents privés** : le CV du profil est visible après déblocage/candidature ; les documents privés (`DocumentCandidat`) ne sont jamais exposés automatiquement, uniquement via `PartageDocument` explicite (inopérant tant que le profil est masqué).
+- **Textes** : « à vie » / « définitivement » retirés (packs admin, bandeaux CVthèque et abonnements, confirmation de déblocage, `CommentFonctionnentCredits`, `ConfidentialiteRecruteurs`) ; réglage candidat renommé « Visibilité de mon profil dans la CVthèque » (`MesDocuments.jsx`). Règle à garder : **ne jamais promettre dans l'interface un accès permanent à des données candidat**.
+- **Non modifié** : aucun remboursement de crédit annoncé ni implémenté (décision commerciale à prendre séparément).
+**Tests** : `jobs/tests/test_cvtheque_profil_masque_supprime.py` (10).
+
+---
+
 ## 🆕 SESSION 29/09/2026 (suite) — Refonte de la page Statistiques recruteur (inspirée de SOMIZ)
 
 **Demande** : la page `/statistiques` (recruteur) était trop pauvre (4 KPI, 1 courbe, barres). Inspirée de `SOMIZ/frontend/src/pages/Statistiques.jsx` (KPI + variation + sparkline, filtres de période, donuts/histogramme recharts, export, impression).

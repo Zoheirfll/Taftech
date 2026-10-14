@@ -27,7 +27,7 @@ class DemanderActivationPremiumAPIView(APIView):
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
         if not entreprise.est_approuvee:
             return Response(
-                {'error': 'Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
+                {'error': 'Votre entreprise est en cours de validation. Vous pourrez activer votre formule après validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
                 status=403,
             )
         moyen = request.data.get('moyen_paiement', 'CIB')
@@ -56,7 +56,7 @@ class ChargilyCheckoutPalierAPIView(APIView):
             return Response({'error': 'Réservé au propriétaire.'}, status=403)
         if not entreprise.est_approuvee:
             return Response(
-                {'error': 'Votre entreprise est en cours de validation. Vous pourrez choisir votre formule dès validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
+                {'error': 'Votre entreprise est en cours de validation. Vous pourrez activer votre formule après validation de votre compte.', 'code': 'ENTREPRISE_NON_VALIDEE'},
                 status=403,
             )
 

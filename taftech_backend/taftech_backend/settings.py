@@ -187,17 +187,22 @@ CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()
 # EMAIL
 # ──────────────────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+# Serveur SMTP, identifiants et expéditeur pilotés par l'environnement : passer du compte
+# Gmail de dev à l'adresse professionnelle du domaine définitif (ou à un service d'envoi)
+# ne demande aucune modification de code — voir docs/exploitation/delivrabilite-emails.md.
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-# Nom d'expéditeur affiché — un "From" avec juste une adresse Gmail nue est un signal
-# spam classique pour les filtres des autres fournisseurs (Outlook, Yahoo...). Ne résout
-# pas le vrai problème de fond (voir checklist déploiement : SPF/DKIM/DMARC sur un domaine
-# taftech.dz, pas un compte Gmail grand public) mais c'est la seule amélioration possible
-# sans accès DNS.
-DEFAULT_FROM_EMAIL = f'TafTech <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'TafTech <noreply@taftech.dz>'
+# Adresse d'expédition unique de la plateforme (tous les emails passent par
+# DEFAULT_FROM_EMAIL). En production elle doit être sur le domaine qui porte SPF/DKIM/DMARC
+# (ex. « TafTech <contact@taftech.dz> ») : un « From » Gmail envoyé hors Gmail est un signal
+# spam classique (Outlook, Yahoo...). Le repli ci-dessous ne vaut que pour le développement.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or (
+    f'TafTech <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'TafTech <noreply@taftech.dz>'
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ──────────────────────────────────────────────
 # EXTERNAL APIS

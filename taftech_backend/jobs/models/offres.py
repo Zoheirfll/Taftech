@@ -102,8 +102,20 @@ class ExigenceImperative(models.Model):
     diplôme (S12 : "Droits d'exercice, permis et certifications restent des champs avec
     justificatifs, distincts du diplôme"). Ne participe jamais au score de matching — c'est un
     filtre d'éligibilité à vérifier manuellement, pas un critère noté."""
+    # Catégorie : seule une exigence déclarée par l'offre autorise le filtre CVthèque correspondant
+    # (permis, véhicule, passeport, service national) — correction client n°19 : ces données
+    # personnelles ne se filtrent que si l'offre les justifie par un critère professionnel précis.
+    CATEGORIE_CHOICES = [
+        ('AUTRE', 'Autre'),
+        ('PERMIS_CONDUIRE', 'Permis de conduire'),
+        ('VEHICULE', 'Véhicule personnel'),
+        ('PASSEPORT', 'Passeport valide'),
+        ('SERVICE_NATIONAL', 'Situation militaire'),
+    ]
+
     offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='exigences_imperatives')
     label = models.CharField(max_length=150, verbose_name="Exigence (ex: Permis B, Habilitation électrique)")
+    categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES, default='AUTRE')
     description = models.TextField(blank=True, default='')
     justificatif_requis = models.BooleanField(
         default=False,
@@ -139,6 +151,13 @@ class CompetenceOffre(models.Model):
 
     offre = models.ForeignKey(OffreEmploi, on_delete=models.CASCADE, related_name='competences_requises')
     label = models.CharField(max_length=100, verbose_name="Compétence")
+    # Même référentiel que CompetenceCandidat.competence_ref : le matching compare les
+    # identifiants du référentiel (« Project Management » = « Gestion de projet »), le libellé
+    # texte ne sert plus que de repli pour une compétence hors référentiel.
+    competence_ref = models.ForeignKey(
+        'CompetenceReferentiel', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='competences_offres', verbose_name="Compétence normalisée (référentiel)",
+    )
     type_exigence = models.CharField(max_length=15, choices=TYPE_EXIGENCE_CHOICES, default='OBLIGATOIRE')
     niveau_requis = models.CharField(max_length=20, choices=NIVEAU_CHOICES, blank=True, null=True)
 

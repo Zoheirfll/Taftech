@@ -22,6 +22,11 @@ class AuditLog(models.Model):
         ('ACTIVER_ABONNEMENT', 'Activer un abonnement (palier)'),
         ('MODIFIER_PRIX_PALIER', "Modifier le prix d'un palier"),
         ('SUPPRIMER_ADMIN', 'Supprimer un compte administrateur'),
+        ('STATUT_COMPETENCE', "Changer le statut d'une compétence du référentiel"),
+        ('MODIFIER_PROMPT_IA', "Modifier un prompt IA"),
+        ('MODIFIER_CONFIG_IA', "Modifier la configuration IA (modèle, quotas, plafond)"),
+        ('MODIFIER_INFOS_SOCIETE', "Modifier les informations société (coordonnées, mentions légales)"),
+        ('STATUT_METIER', "Valider ou rejeter un métier proposé"),
         ('AUTRE', 'Autre'),
     ]
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

@@ -8,8 +8,10 @@ from django.conf import settings
 from django.utils import timezone
 import datetime
 from ..models import OffreEmploi, Candidature
+from ..informations_societe import ligne_pied_de_page
 from .equipe import get_entreprise_for_user
 from ..throttles import WriteActionThrottle
+from .export_xlsx import neutraliser_formules, reponse_xlsx
 from .recruteur_dashboard import _calculer_kpis_periode
 
 
@@ -145,7 +147,7 @@ class RapportDashboardPDFAPIView(APIView):
         story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph(
-            "TAFTECH — Plateforme de recrutement intelligente en Algérie | taftech963@gmail.com | Oran, Algérie",
+            ligne_pied_de_page(),
             s_footer,
         ))
 
@@ -206,6 +208,7 @@ def _construire_classeur_candidatures(candidatures, inclure_offre=False):
             cand.commentaire_evaluation or '',
         ]
         ws.append(ligne)
+    neutraliser_formules(ws)
 
     for col_cells in ws.columns:
         longueur = max((len(str(c.value)) for c in col_cells if c.value is not None), default=10)
@@ -269,6 +272,10 @@ class ExportCandidaturesExcelAPIView(APIView):
         return response
 
 
+EXPORT_GRAPHIQUE_MAX_LIGNES = 20000  # très au-dessus d'un vrai graphique ; borne seulement l'abus
+EXPORT_GRAPHIQUE_MAX_COLONNES = 50
+
+
 class ExportGraphiqueExcelAPIView(APIView):
     """Export .xlsx générique pour les graphiques du dashboard/statistiques recruteur
     (MiniAreaChart) — remplace l'ancien export CSV fait à la main côté client, qui
@@ -288,31 +295,11 @@ class ExportGraphiqueExcelAPIView(APIView):
         if not isinstance(colonnes, list) or not colonnes or not isinstance(lignes, list):
             return Response({"error": "Format invalide : 'colonnes' (liste) et 'lignes' (liste de listes) requis."}, status=400)
 
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment
-        from django.http import HttpResponse
+        if len(lignes) > EXPORT_GRAPHIQUE_MAX_LIGNES or len(colonnes) > EXPORT_GRAPHIQUE_MAX_COLONNES:
+            return Response(
+                {"error": f"Export trop volumineux (maximum {EXPORT_GRAPHIQUE_MAX_LIGNES} lignes et {EXPORT_GRAPHIQUE_MAX_COLONNES} colonnes)."},
+                status=400,
+            )
 
-        wb = Workbook()
-        ws = wb.active
-        ws.title = titre[:31] or "Export"  # limite Excel : 31 caractères max pour un nom d'onglet
-
-        ws.append([str(c) for c in colonnes])
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(vertical="center")
-
-        for ligne in lignes:
-            if not isinstance(ligne, list):
-                continue
-            ws.append([v if isinstance(v, (int, float, str)) or v is None else str(v) for v in ligne])
-
-        for col_cells in ws.columns:
-            longueur = max((len(str(c.value)) for c in col_cells if c.value is not None), default=10)
-            ws.column_dimensions[col_cells[0].column_letter].width = min(longueur + 2, 50)
-        ws.freeze_panes = "A2"
-
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         nom_fichier = "".join(c if c.isalnum() or c in "-_ " else "_" for c in titre)[:60] or "export"
-        response['Content-Disposition'] = f'attachment; filename="{nom_fichier}.xlsx"'
-        wb.save(response)
-        return response
+        return reponse_xlsx(nom_fichier, titre, colonnes, lignes)

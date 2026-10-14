@@ -5,6 +5,16 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import Questionnaire, QuestionQuestionnaire, ReponseChoix
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..serializers import QuestionnaireSerializer
+from ..questionnaire_validation import erreurs_questions_disqualifiantes
+
+
+def _refus_questions_disqualifiantes(questions):
+    """Réponse 400 si une question disqualifiante n'est pas justifiée ou vise un critère protégé
+    (correction client n°20) ; None si tout est valide. Appelé AVANT toute écriture."""
+    erreurs = erreurs_questions_disqualifiantes(questions)
+    if not erreurs:
+        return None
+    return Response({'error': ' '.join(erreurs), 'erreurs': erreurs}, status=400)
 
 
 
@@ -32,6 +42,9 @@ class QuestionnaireListCreateAPIView(APIView):
         if get_membre_role(request.user, entreprise) not in ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR'):
             return Response({'error': 'Accès refusé.'}, status=403)
         data = request.data
+        refus = _refus_questions_disqualifiantes(data.get('questions', []))
+        if refus:
+            return refus
         questionnaire = Questionnaire.objects.create(recruteur=owner, titre=data.get('titre', 'Sans titre'))
         for i, q in enumerate(data.get('questions', [])):
             question = QuestionQuestionnaire.objects.create(
@@ -39,7 +52,10 @@ class QuestionnaireListCreateAPIView(APIView):
                 texte=q.get('texte', ''),
                 type_question=q.get('type_question', 'COURT'),
                 requis=q.get('requis', False),
-                disqualifiant=q.get('disqualifiant', False),
+                disqualifiant=bool(q.get('disqualifiant', False)),
+                justification_disqualifiant=(
+                    str(q.get('justification_disqualifiant') or '').strip() if q.get('disqualifiant') else ''
+                ),
                 ordre=i,
             )
             for choix in q.get('choix', []):
@@ -73,6 +89,9 @@ class QuestionnaireDetailAPIView(APIView):
             questionnaire = Questionnaire.objects.get(pk=pk, recruteur=owner)
         except Questionnaire.DoesNotExist:
             return Response({'error': 'Introuvable.'}, status=404)
+        refus = _refus_questions_disqualifiantes(request.data.get('questions', []))
+        if refus:
+            return refus
         questionnaire.titre = request.data.get('titre', questionnaire.titre)
         questionnaire.save()
         questionnaire.questions.all().delete()
@@ -82,7 +101,10 @@ class QuestionnaireDetailAPIView(APIView):
                 texte=q.get('texte', ''),
                 type_question=q.get('type_question', 'COURT'),
                 requis=q.get('requis', False),
-                disqualifiant=q.get('disqualifiant', False),
+                disqualifiant=bool(q.get('disqualifiant', False)),
+                justification_disqualifiant=(
+                    str(q.get('justification_disqualifiant') or '').strip() if q.get('disqualifiant') else ''
+                ),
                 ordre=i,
             )
             for choix in q.get('choix', []):

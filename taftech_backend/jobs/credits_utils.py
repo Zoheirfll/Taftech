@@ -1,8 +1,11 @@
 """Helpers de gestion des crédits CVthèque — voir
 docs/superpowers/specs/2026-08-29-credits-cvtheque-design.md.
 
-1 crédit débloque coordonnées + CV d'un candidat, à vie, partagé par toute l'équipe de
-l'entreprise. Deux pools consommés dans l'ordre : le quota mensuel du palier
+1 crédit débloque coordonnées + CV d'un candidat, partagé par toute l'équipe de l'entreprise,
+TANT QUE le profil reste actif et visible (point 12, 13/10/2026) : le candidat peut supprimer
+son compte ou masquer son profil, et l'accès cesse alors (il revient, sans nouvelle dépense,
+si le candidat réactive la visibilité — la ligne `AccesCandidatDebloque` n'est jamais supprimée
+par un masquage). Deux pools consommés dans l'ordre : le quota mensuel du palier
 (Palier.credits_mois, recompté chaque mois — même principe que quota_cv_atteint avant lui,
 jamais un compteur stocké à décrémenter), puis le pool de crédits achetés
 (AbonnementEntreprise.credits_achetes_restants, jamais reset, décrémenté à l'usage)."""
@@ -11,6 +14,13 @@ from django.db.models import F
 from django.utils import timezone
 
 from .paliers_utils import get_palier_actif
+
+
+def profil_accessible_aux_recruteurs(profil):
+    """Vrai si le candidat laisse son profil accessible : compte actif (non supprimé) ET profil
+    visible. Garde commune à tout accès recruteur fondé sur un déblocage ou un partage — le
+    candidat reste maître de son profil, un crédit dépensé n'en fait pas un accès permanent."""
+    return bool(profil.user.is_active and profil.visible_cvtheque)
 
 
 class CreditsEpuisesError(Exception):

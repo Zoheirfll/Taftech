@@ -31,7 +31,7 @@ class ProfilCandidat(models.Model):
     ]
 
     SERVICE_MILITAIRE_CHOICES = [
-        ('NON_CONCERNE', 'Non concerné (Femme)'),
+        ('NON_CONCERNE', 'Non concerné'),
         ('DEGAGE', 'Dégagé'),
         ('SURSITAIRE', 'Sursitaire'),
         ('INAPTE', 'Inapte'),

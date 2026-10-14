@@ -185,8 +185,11 @@ def _synchroniser_competences_depuis_texte(profil):
     profil.refresh_from_db(fields=['competences'])
     labels_texte = {l.strip() for l in (profil.competences or '').split(',') if l.strip()}
     labels_existants = set(profil.competences_detail.values_list('label', flat=True))
+    from ..referentiel_utils import construire_index_competences, resoudre_competence_ref
+    index_competences = construire_index_competences()
     for label in labels_texte - labels_existants:
-        ref = CompetenceReferentiel.objects.filter(label__iexact=label).first()
+        # Même résolveur que l'offre (libellé OU synonyme) : le score est comparable (point 10).
+        ref = resoudre_competence_ref(label, index_competences)
         CompetenceCandidat.objects.create(profil=profil, label=label, niveau='DEBUTANT', competence_ref=ref)
     profil.competences_detail.exclude(label__in=labels_texte).delete()
 
@@ -441,14 +444,21 @@ class CandidatFichierPriveAPIView(APIView):
 
     def _acces_autorise(self, user, profil):
         """Le candidat lui-même, un admin, un recruteur ayant reçu une vraie candidature de ce
-        candidat, ou un recruteur ayant débloqué ce profil via un crédit CVthèque
-        (AccesCandidatDebloque, acquis à vie — voir jobs/credits_utils.py)."""
+        candidat (relation voulue par le candidat lui-même), ou un recruteur ayant débloqué ce
+        profil via un crédit CVthèque — ce dernier accès cesse si le candidat masque son profil et
+        tout accès recruteur cesse si le compte est supprimé (point 12 ; voir jobs/credits_utils.py)."""
         if user.id == profil.user_id or user.role == 'ADMIN':
             return True
         entreprise = get_entreprise_for_user(user)
         if not entreprise or not entreprise.est_approuvee:
             return False
+        if not profil.user.is_active:
+            return False  # profil supprimé : plus aucun accès recruteur, même via une candidature passée
         if Candidature.objects.filter(candidat_id=profil.user_id, offre__entreprise=entreprise).exists():
             return True
+        from ..credits_utils import profil_accessible_aux_recruteurs
         from ..models import AccesCandidatDebloque
-        return AccesCandidatDebloque.objects.filter(entreprise=entreprise, candidat=profil.user).exists()
+        return (
+            profil_accessible_aux_recruteurs(profil)
+            and AccesCandidatDebloque.objects.filter(entreprise=entreprise, candidat=profil.user).exists()
+        )

@@ -45,7 +45,7 @@ class DeverrouillerCandidatAPIView(APIView):
             )
 
         try:
-            candidat = User.objects.get(id=candidat_id, role='CANDIDAT')
+            candidat = User.objects.get(id=candidat_id, role='CANDIDAT', is_active=True)  # compte supprimé = introuvable
         except User.DoesNotExist:
             return Response({"error": "Candidat introuvable."}, status=404)
 
@@ -85,8 +85,10 @@ class CandidatDocumentsPartagesAPIView(APIView):
         if refus:
             return refus
         from ..models import PartageDocument
+        # Point 12 : un partage n'ouvre rien tant que le profil est masqué ou le compte supprimé.
         partages = PartageDocument.objects.filter(
-            entreprise=entreprise, document__profil__user_id=candidat_id
+            entreprise=entreprise, document__profil__user_id=candidat_id,
+            document__profil__user__is_active=True, document__profil__visible_cvtheque=True,
         ).select_related('document', 'document__type_document')
         return Response([
             {
@@ -114,7 +116,8 @@ class CandidatDocumentPartageFichierAPIView(APIView):
             return refus
         from ..models import PartageDocument
         partage = PartageDocument.objects.filter(
-            entreprise=entreprise, document_id=doc_id, document__profil__user_id=candidat_id
+            entreprise=entreprise, document_id=doc_id, document__profil__user_id=candidat_id,
+            document__profil__user__is_active=True, document__profil__visible_cvtheque=True,
         ).select_related('document').first()
         if not partage:
             return Response({"error": "Accès refusé."}, status=403)

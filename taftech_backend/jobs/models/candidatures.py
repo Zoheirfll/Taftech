@@ -191,6 +191,9 @@ class QuestionQuestionnaire(models.Model):
     type_question = models.CharField(max_length=20, choices=TYPE_CHOICES, default='COURT')
     requis = models.BooleanField(default=False)
     disqualifiant = models.BooleanField(default=False)
+    # Correction client n°20 : une question disqualifiante ne peut porter que sur une exigence
+    # professionnelle objective ; le recruteur la justifie (visible de la modération et du candidat).
+    justification_disqualifiant = models.CharField(max_length=500, blank=True, default='')
     ordre = models.PositiveIntegerField(default=0)
 
     class Meta:

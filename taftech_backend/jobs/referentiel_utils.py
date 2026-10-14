@@ -201,6 +201,31 @@ def _dedupliquer_secteurs(secteurs):
     ]
 
 
+def secteur_et_domaine_par_metier(metier_ids):
+    """Remonte la hiérarchie du référentiel pour chaque métier : métier → [sous-domaine →]
+    domaine → secteur (`GroupeMetier.parent`). Retourne
+    `{metier_id: {"secteur": (id, libellé nettoyé) | None, "domaine": (id, libellé) | None}}`.
+    Sert aux statistiques marché : un « secteur » n'est jamais un métier (Data Analyst,
+    Maintenance électrique…), c'est le niveau racine `secteur_source`. Les groupes sont chargés
+    en une requête (≈800 lignes) puis remontés en mémoire — pas de requête par métier."""
+    from .models import GroupeMetier, Metier
+    groupes = {g.id: g for g in GroupeMetier.objects.only('id', 'parent_id', 'type_groupe', 'libelle')}
+    resultat = {}
+    for metier_id, groupe_id in Metier.objects.filter(id__in=metier_ids).values_list('id', 'groupe_principal_id'):
+        secteur = domaine = None
+        g, garde_fou = groupes.get(groupe_id), 0
+        while g is not None and garde_fou < 10:
+            if g.type_groupe == 'domaine_source' and domaine is None:
+                domaine = (g.id, g.libelle)
+            if g.type_groupe == 'secteur_source':
+                secteur = (g.id, _nettoyer_libelle_secteur_nsec(g.libelle))
+                break
+            g = groupes.get(g.parent_id)
+            garde_fou += 1
+        resultat[metier_id] = {"secteur": secteur, "domaine": domaine}
+    return resultat
+
+
 def secteurs_entreprise():
     """Liste des secteurs sélectionnables pour `ProfilEntreprise.secteur_activite` — même
     source que la navigation publique "Offres par secteur" (`NomenclatureAPIView.secteurs`,
@@ -299,6 +324,105 @@ def famille_formation(systeme):
     if systeme == 'theme_taftech':
         return 'theme'
     return 'autre'
+
+
+def construire_index_competences():
+    """Index {libellé ou synonyme normalisé -> CompetenceReferentiel}, commun à l'offre et au
+    candidat (point 10, 12/10/2026) : « Project Management » et « Gestion de projet » mènent à la
+    MÊME compétence, ce qui rend le score réellement comparable. Un libellé canonique l'emporte
+    toujours sur un synonyme d'une autre compétence. À construire une fois puis réutiliser."""
+    from .models import CompetenceReferentiel
+
+    # Point 11 : seules les compétences officielles (validées, ou désactivées mais encore connues)
+    # servent à normaliser une saisie — une simple suggestion ou une rejetée ne rattache rien.
+    refs = list(CompetenceReferentiel.objects.filter(
+        statut__in=CompetenceReferentiel.STATUTS_RECONNUS).order_by('id'))
+    index = {}
+    for ref in refs:
+        index.setdefault(normaliser_recherche(ref.label), ref)
+    for ref in refs:
+        for synonyme in re.split(r"[,;|]", ref.synonymes or ""):
+            cle = normaliser_recherche(synonyme)
+            if cle:
+                index.setdefault(cle, ref)
+    return index
+
+
+def resoudre_competence_ref(label, index=None):
+    """CompetenceReferentiel correspondant à `label` (libellé ou synonyme, accents/casse ignorés),
+    ou None — jamais de rapprochement approximatif. `index` : résultat de
+    `construire_index_competences()` pour éviter une requête par compétence."""
+    cle = normaliser_recherche(label or "")
+    if not cle:
+        return None
+    return (index if index is not None else construire_index_competences()).get(cle)
+
+
+SEUIL_PROPOSITION_COMPETENCE = 3  # nombre minimal de candidats + offres distincts pour proposer
+
+
+def proposer_competences_frequentes(seuil=SEUIL_PROPOSITION_COMPETENCE, simuler=False):
+    """Détecte les compétences saisies hors référentiel par au moins `seuil` candidats/offres
+    distincts et les enregistre comme SUGGÉRÉES (jamais validées automatiquement : elles
+    attendent une décision de l'admin, point 11). Ne propose pas : un sigle ou un libellé déjà
+    présent dans le référentiel quel que soit son statut (une compétence rejetée n'est pas
+    re-proposée), ni ce que les règles anti-bruit du parser refusent (chiffres, phrases…).
+    Retourne la liste [{label, nb_candidats, nb_offres}] des propositions créées (ou simulées)."""
+    from collections import Counter, defaultdict
+    from .cv_parser.competences import _est_competence_valide
+    from .models import CompetenceCandidat, CompetenceOffre, CompetenceReferentiel
+
+    connus = set()
+    for ref in CompetenceReferentiel.objects.all():
+        connus.add(normaliser_recherche(ref.label))
+        for synonyme in re.split(r"[,;|]", ref.synonymes or ""):
+            if normaliser_recherche(synonyme):
+                connus.add(normaliser_recherche(synonyme))
+
+    candidats_par_cle, offres_par_cle = defaultdict(set), defaultdict(set)
+    graphies = defaultdict(Counter)
+    for profil_id, label in CompetenceCandidat.objects.filter(competence_ref__isnull=True).values_list('profil_id', 'label'):
+        cle = normaliser_recherche(label)
+        candidats_par_cle[cle].add(profil_id)
+        graphies[cle][label.strip()] += 1
+    for offre_id, label in CompetenceOffre.objects.filter(competence_ref__isnull=True).values_list('offre_id', 'label'):
+        cle = normaliser_recherche(label)
+        offres_par_cle[cle].add(offre_id)
+        graphies[cle][label.strip()] += 1
+
+    propositions = []
+    for cle, comptes in graphies.items():
+        if not cle or cle in connus:
+            continue
+        nb_cand, nb_off = len(candidats_par_cle[cle]), len(offres_par_cle[cle])
+        if nb_cand + nb_off < seuil:
+            continue
+        label = comptes.most_common(1)[0][0][:100]
+        if not _est_competence_valide(label) or CompetenceReferentiel.objects.filter(label__iexact=label).exists():
+            continue
+        propositions.append({'label': label, 'nb_candidats': nb_cand, 'nb_offres': nb_off})
+        if not simuler:
+            CompetenceReferentiel.objects.create(
+                label=label, statut=CompetenceReferentiel.STATUT_SUGGEREE, origine='PROPOSITION_AUTO')
+    return propositions
+
+
+def rattacher_competences_orphelines():
+    """Rattache au référentiel les compétences d'offres et de candidats encore sans lien (libellé
+    ou synonyme exact). À appeler quand le référentiel change (compétence ou synonyme ajouté par
+    l'admin, import) pour que le score reste comparable. Idempotent ; retourne le nombre de liens
+    posés."""
+    from .models import CompetenceCandidat, CompetenceOffre
+
+    index = construire_index_competences()
+    total = 0
+    for modele in (CompetenceOffre, CompetenceCandidat):
+        for ligne in modele.objects.filter(competence_ref__isnull=True).only('id', 'label'):
+            ref = resoudre_competence_ref(ligne.label, index)
+            if ref:
+                modele.objects.filter(pk=ligne.pk).update(competence_ref=ref)
+                total += 1
+    return total
 
 
 _ABREVIATIONS = {

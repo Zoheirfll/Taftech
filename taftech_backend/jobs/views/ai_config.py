@@ -1,33 +1,106 @@
+import hashlib
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
 from ..models import AIConfig, QuotaIAOverride, UtilisationIA
+from ..permissions import IsAdminRole
 from ..serializers import AIConfigSerializer, QuotaIAOverrideSerializer
+from ..serializers.ai_config import CHAMPS_BUDGET, CHAMPS_PROMPT
+from .admin import _audit
 
 User = get_user_model()
+
+# Champs de configuration tracés dans le journal d'audit (tout sauf les prompts, tracés à part,
+# et les champs calculés/automatiques).
+CHAMPS_CONFIG_AUDIT = tuple(
+    f for f in AIConfigSerializer.Meta.fields
+    if f not in CHAMPS_PROMPT and f not in ('id', 'appels_ia_mois', 'date_modification')
+)
+DETAIL_AUDIT_MAX = 255  # AuditLog.detail est un CharField(255)
+
+
+def _empreinte(texte):
+    return hashlib.sha256((texte or '').encode('utf-8')).hexdigest()[:8]
+
+
+def _detail_prompts(avant, config):
+    """Résumé d'audit des prompts modifiés : nom de la fonction, longueur avant→après et empreinte
+    courte du nouveau texte. Jamais le texte lui-même (le journal est lisible par tous les admins)."""
+    morceaux = []
+    for champ in CHAMPS_PROMPT:
+        nouveau = getattr(config, champ) or ''
+        if (avant[champ] or '') != nouveau:
+            nom = champ[:-len('_prompt')]
+            morceaux.append(f"{nom} {len(avant[champ] or '')}→{len(nouveau)} car. #{_empreinte(nouveau)}")
+    return "; ".join(morceaux)
+
+
+def _detail_config(avant, config):
+    return "; ".join(
+        f"{champ}: {avant[champ]}→{getattr(config, champ)}"
+        for champ in CHAMPS_CONFIG_AUDIT if avant[champ] != getattr(config, champ)
+    )
+
+
+def _donnees_visibles(donnees, utilisateur):
+    """Les prompts ne sont exposés qu'au Super Admin ; `prompts_accessibles` permet à l'interface
+    d'adapter l'écran sans connaître le statut de l'utilisateur."""
+    visibles = dict(donnees)
+    est_super = bool(utilisateur.is_superuser)
+    if not est_super:
+        for champ in CHAMPS_PROMPT:
+            visibles.pop(champ, None)
+    visibles['prompts_accessibles'] = est_super
+    visibles['budget_modifiable'] = est_super
+    return visibles
 
 
 class AIConfigAdminAPIView(APIView):
     """Configuration IA (singleton) — GET retourne la config actuelle (créée avec les valeurs par
     défaut au premier accès), PUT la met à jour. Pas de POST/DELETE : une seule ligne existe
-    toujours, gérée via `AIConfig.get_solo()`."""
-    permission_classes = [IsAdminUser]
+    toujours, gérée via `AIConfig.get_solo()`.
+
+    Les prompts (lecture et écriture) sont réservés au Super Admin (`is_superuser`) ; toute
+    modification de prompt ou de configuration est tracée dans le journal d'audit."""
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
-        return Response(AIConfigSerializer(AIConfig.get_solo()).data)
+        return Response(_donnees_visibles(AIConfigSerializer(AIConfig.get_solo()).data, request.user))
 
     def put(self, request):
-        if request.user.role != 'ADMIN':
-            return Response({'error': 'Accès refusé.'}, status=403)
+        if not request.user.is_superuser and any(champ in request.data for champ in CHAMPS_PROMPT):
+            return Response(
+                {'error': "La modification des prompts IA est réservée au Super Admin.", 'code': 'PROMPTS_RESERVES_SUPER_ADMIN'},
+                status=403,
+            )
+        if not request.user.is_superuser and any(champ in request.data for champ in CHAMPS_BUDGET):
+            return Response(
+                {'error': "La modification du plafond global et du seuil d'alerte est réservée au Super Admin.", 'code': 'BUDGET_RESERVE_SUPER_ADMIN'},
+                status=403,
+            )
         config = AIConfig.get_solo()
+        avant = {champ: getattr(config, champ) for champ in CHAMPS_PROMPT + CHAMPS_CONFIG_AUDIT}
         serializer = AIConfigSerializer(config, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        serializer.save()
+
+        # Plafond ou seuil modifié : les alertes du mois sont ré-armées (sinon un plafond relevé puis
+        # de nouveau atteint dans le même mois ne préviendrait personne).
+        if (avant['budget_ia_appels_mois_max'] != config.budget_ia_appels_mois_max
+                or avant['budget_ia_alerte_pct'] != config.budget_ia_alerte_pct):
+            config.budget_ia_alertes_envoyees = []
+            config.save(update_fields=['budget_ia_alertes_envoyees'])
+
+        detail_prompts = _detail_prompts(avant, config)
+        if detail_prompts:
+            _audit(request, 'MODIFIER_PROMPT_IA', detail_prompts[:DETAIL_AUDIT_MAX])
+        detail_config = _detail_config(avant, config)
+        if detail_config:
+            _audit(request, 'MODIFIER_CONFIG_IA', detail_config[:DETAIL_AUDIT_MAX])
+        return Response(_donnees_visibles(AIConfigSerializer(config).data, request.user))
 
 
 class QuotaIAOverridesAPIView(APIView):

@@ -122,7 +122,7 @@ class Command(BaseCommand):
                     msg = EmailMultiAlternatives(
                         f"[TafTech] {titre_notif}",
                         texte,
-                        settings.EMAIL_HOST_USER,
+                        settings.DEFAULT_FROM_EMAIL,
                         [candidat.email],
                     )
                     msg.attach_alternative(html_body, 'text/html')

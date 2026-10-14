@@ -103,6 +103,14 @@ class AIConfig(models.Model):
         verbose_name="Plafond global — appels IA/mois tous comptes confondus (vide = illimité)",
         help_text="Kill-switch de sécurité budgétaire : au-delà, toute fonctionnalité IA est temporairement indisponible pour tout le monde, quel que soit le quota individuel restant.",
     )
+    budget_ia_alerte_pct = models.PositiveSmallIntegerField(
+        default=80, validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name="Seuil d'alerte (% du plafond global)",
+        help_text="Un email est envoyé aux Super Admins une fois par mois quand ce pourcentage du plafond est atteint, puis quand il est épuisé.",
+    )
+    # Clés « AAAA-MM:ALERTE » / « AAAA-MM:EPUISE » déjà notifiées : une alerte n'est envoyée qu'une
+    # fois par mois et par niveau (les clés des mois passés sont purgées à chaque envoi).
+    budget_ia_alertes_envoyees = models.JSONField(default=list, blank=True)
 
     date_modification = models.DateTimeField(auto_now=True)
 

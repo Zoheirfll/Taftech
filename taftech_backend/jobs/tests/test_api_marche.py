@@ -148,9 +148,55 @@ class AdminMarcheAPITestCase(TestCase):
         response = self.client.get("/api/jobs/admin/marche/")
         secteurs = response.data["top_secteurs"]
         self.assertGreater(len(secteurs), 0)
-        # IT a 2 offres, FINANCE a 1
-        self.assertEqual(secteurs[0]["libelle"], "IT")
-        self.assertEqual(secteurs[0]["nb_offres"], 2)
+        # Les 2 métiers (IT, FINANCE) appartiennent au même secteur : un seul secteur, 3 offres.
+        self.assertEqual(len(secteurs), 1)
+        self.assertEqual(secteurs[0]["libelle"], "Secteur Test")
+        self.assertEqual(secteurs[0]["nb_offres"], 3)
+
+    def test_HP4b_un_metier_n_apparait_jamais_comme_secteur(self):
+        """Point 15 client : « Data Analyst », « Maintenance électrique »… sont des métiers,
+        pas des secteurs. Ils figurent dans top_metiers, avec leur secteur et leur domaine."""
+        self.client.force_authenticate(user=self.admin)
+        data = self.client.get("/api/jobs/admin/marche/").data
+        libelles_secteurs = {s["libelle"] for s in data["top_secteurs"]} | {s["secteur"] for s in data["tension_par_secteur"]}
+        self.assertNotIn("IT", libelles_secteurs)
+        self.assertNotIn("FINANCE", libelles_secteurs)
+        metiers = {m["libelle"]: m for m in data["top_metiers"]}
+        self.assertEqual(metiers["IT"]["nb_offres"], 2)
+        self.assertEqual(metiers["IT"]["secteur"], "Secteur Test")
+        self.assertEqual(metiers["IT"]["domaine"], "Domaine IT")
+        self.assertEqual(metiers["FINANCE"]["domaine"], "Domaine Finance")
+
+    def test_HP4d_top_domaines_agreges_avec_leur_secteur(self):
+        """Top domaines : offres cumulées par domaine, avec l'identifiant du secteur parent
+        (utilisé par le filtre « secteur » de l'écran)."""
+        self.client.force_authenticate(user=self.admin)
+        data = self.client.get("/api/jobs/admin/marche/").data
+        domaines = {d["libelle"]: d for d in data["top_domaines"]}
+        self.assertEqual(domaines["Domaine IT"]["nb_offres"], 2)
+        self.assertEqual(domaines["Domaine Finance"]["nb_offres"], 1)
+        self.assertEqual(domaines["Domaine IT"]["secteur"], "Secteur Test")
+        self.assertEqual(domaines["Domaine IT"]["secteur_id"], data["top_secteurs"][0]["secteur_id"])
+        self.assertTrue(all(m["secteur_id"] == data["top_secteurs"][0]["secteur_id"] for m in data["top_metiers"]))
+
+    def test_HP4c_metier_sous_sous_domaine_remonte_au_secteur(self):
+        """Un métier rattaché à un sous-domaine est compté dans le secteur racine, et son domaine
+        est le domaine intermédiaire (secteur → domaine → sous-domaine → métier)."""
+        secteur = GroupeMetier.objects.get(code="TST-SECT")
+        domaine = GroupeMetier.objects.get(code="TST-DOM-IT")
+        sous = GroupeMetier.objects.create(code="TST-SDOM", libelle="Sous-domaine IT", type_groupe="sous_domaine_source", parent=domaine)
+        metier = Metier.objects.create(code="TST-M-SOUS", libelle="Data Analyst", groupe_principal=sous)
+        OffreEmploi.objects.create(
+            entreprise=self.entreprise, titre="Data", wilaya="31 - Oran", metier=metier, type_contrat="CDI",
+            experience_requise="DEBUTANT", statut_moderation="APPROUVEE", est_active=True,
+        )
+        self.client.force_authenticate(user=self.admin)
+        data = self.client.get("/api/jobs/admin/marche/").data
+        self.assertEqual(data["top_secteurs"][0]["libelle"], secteur.libelle)
+        self.assertEqual(data["top_secteurs"][0]["nb_offres"], 4)
+        data_analyst = next(m for m in data["top_metiers"] if m["libelle"] == "Data Analyst")
+        self.assertEqual(data_analyst["secteur"], "Secteur Test")
+        self.assertEqual(data_analyst["domaine"], "Domaine IT")
 
     def test_HP5_matching_moyen_calcule(self):
         """HP5 : Le matching moyen est correctement calculé."""
@@ -168,12 +214,10 @@ class AdminMarcheAPITestCase(TestCase):
         response = self.client.get("/api/jobs/admin/marche/")
         tension = response.data["tension_par_secteur"]
         self.assertGreater(len(tension), 0)
-        it_data = next(
-            (s for s in tension if s["secteur"] == self.metier_it.libelle), None
-        )
-        self.assertIsNotNone(it_data)
-        # Moyenne offres IT : (80000 + 90000) / 2 = 85000
-        self.assertEqual(it_data["moy_salaire_offres"], 85000)
+        secteur_data = next((s for s in tension if s["secteur"] == "Secteur Test"), None)
+        self.assertIsNotNone(secteur_data)
+        # Moyenne des 3 offres du secteur : (80000 + 90000 + 60000) / 3 = 76666
+        self.assertEqual(secteur_data["moy_salaire_offres"], 76666)
 
     # ==============================================
     # EDGE CASES

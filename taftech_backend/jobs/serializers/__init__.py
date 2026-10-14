@@ -35,11 +35,12 @@ from .divers import (
 )
 from .entreprise import EntrepriseDashboardDetailSerializer
 from .dashboard import OffreDashboardDTO
-from .premium import FaqItemSerializer, CompetenceReferentielSerializer
+from .premium import FaqItemSerializer, CompetenceReferentielSerializer, CompetenceReferentielAdminSerializer
 from .paliers import PalierSerializer
 from .credits import CreditPackSerializer
 from .articles import ArticleCategorieSerializer, ArticleListSerializer, ArticleDetailSerializer
 from .banners import SiteAnnonceSerializer, BanniereAccueilSerializer
 from .pages import PageStatiqueSerializer
+from .societe import InformationsSocieteSerializer
 from .ai_config import AIConfigSerializer
 from .ia_quota_admin import QuotaIAOverrideSerializer

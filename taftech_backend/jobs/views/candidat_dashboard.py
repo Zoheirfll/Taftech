@@ -186,7 +186,9 @@ class CompetenceCandidatAPIView(APIView):
             return Response({"error": "Le nom de la compétence est requis."}, status=400)
         if niveau not in dict(CompetenceCandidat.NIVEAU_CHOICES):
             niveau = 'DEBUTANT'
-        ref = CompetenceReferentiel.objects.filter(label__iexact=label).first()
+        # Même résolveur que l'offre (libellé OU synonyme) : le score est comparable (point 10).
+        from ..referentiel_utils import resoudre_competence_ref
+        ref = resoudre_competence_ref(label)
         comp, created = CompetenceCandidat.objects.update_or_create(
             profil=profil, label=label, defaults={'niveau': niveau, 'competence_ref': ref}
         )

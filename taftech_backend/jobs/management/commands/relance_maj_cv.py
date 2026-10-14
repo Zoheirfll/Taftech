@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
             if not dry_run:
                 try:
-                    msg = EmailMultiAlternatives(sujet, message, settings.EMAIL_HOST_USER, [candidat.email])
+                    msg = EmailMultiAlternatives(sujet, message, settings.DEFAULT_FROM_EMAIL, [candidat.email])
                     msg.attach_alternative(html_body, 'text/html')
                     msg.send(fail_silently=False)
                     emails_envoyes += 1

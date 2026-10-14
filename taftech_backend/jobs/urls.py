@@ -43,8 +43,8 @@ from .views import (
     AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView,
     AdminStatsAPIView, AdminSeoStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
-    ExportCandidaturesCSVAPIView, ExportEntreprisesCSVAPIView,
-    ExportOffresCSVAPIView, ExportUtilisateursCSVAPIView,
+    ExportAdminCandidaturesExcelAPIView, ExportEntreprisesExcelAPIView,
+    ExportOffresExcelAPIView, ExportUtilisateursExcelAPIView,
     AdminMarcheAPIView, AdminAuditLogAPIView, AdminDemandesPremiumAPIView,
     AdminCompteAdminsAPIView,
 
@@ -63,13 +63,14 @@ from .views import (
 
     # Paliers d'abonnement
     PaliersPublicAPIView, PaliersAdminAPIView,
-    FacturesListAPIView, FacturePDFAPIView, MentionsLegalesAdminAPIView,
+    FacturesListAPIView, FacturePDFAPIView,
 
     # FAQ
     FaqPublicAPIView, FaqAdminAPIView,
 
     # Compétences
     CompetencesAutocompleteAPIView, CompetencesAdminAPIView,
+    CompetenceStatutAdminAPIView, CompetencePropositionsAdminAPIView,
 
     # Articles / Blog
     ArticleListPublicAPIView, ArticleDetailPublicAPIView, ArticleCategoriesPublicAPIView,
@@ -84,6 +85,9 @@ from .views import (
 
     # Config IA
     AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView,
+    InformationsSocietePublicAPIView, InformationsSocieteAdminAPIView,
+    ProposerMetierAPIView, AdminPropositionsMetierAPIView,
+    AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,
 
     # Nouveau tableau de bord candidat (specs/important-features)
     ScoreProfilAPIView, MetiersAccessiblesAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
@@ -105,6 +109,10 @@ urlpatterns = [
     path('referentiel/suggerer-diplome/', SuggererDiplomeAPIView.as_view(), name='api-suggerer-diplome'),
     path('referentiel/recherche-universelle/', RechercheUniverselleAPIView.as_view(), name='api-recherche-universelle'),
     path('referentiel/metiers/', MetierAutocompleteAPIView.as_view(), name='api-metiers-autocomplete'),
+    path('referentiel/metiers/proposer/', ProposerMetierAPIView.as_view(), name='proposer-metier'),
+    path('admin/propositions-metiers/', AdminPropositionsMetierAPIView.as_view(), name='admin-propositions-metiers'),
+    path('admin/propositions-metiers/<int:pk>/valider/', AdminValiderPropositionMetierAPIView.as_view(), name='admin-proposition-metier-valider'),
+    path('admin/propositions-metiers/<int:pk>/rejeter/', AdminRejeterPropositionMetierAPIView.as_view(), name='admin-proposition-metier-rejeter'),
     path('referentiel/metiers/<int:metier_id>/suggestions/', MetierSuggestionsAPIView.as_view(), name='api-metier-suggestions'),
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
@@ -204,10 +212,10 @@ urlpatterns = [
     path('equipe/<int:membre_id>/', EquipeAPIView.as_view(), name='equipe-membre'),
     path('equipe/invitation/<str:token>/', AccepterInvitationAPIView.as_view(), name='equipe-accepter'),
     path('equipe/audit/', EquipeAuditLogAPIView.as_view(), name='equipe-audit'),
-    path('admin/export/candidatures/', ExportCandidaturesCSVAPIView.as_view(), name='export-candidatures'),
-    path('admin/export/entreprises/', ExportEntreprisesCSVAPIView.as_view(), name='export-entreprises'),
-    path('admin/export/offres/', ExportOffresCSVAPIView.as_view(), name='export-offres'),
-    path('admin/export/utilisateurs/', ExportUtilisateursCSVAPIView.as_view(), name='export-utilisateurs'),
+    path('admin/export/candidatures/', ExportAdminCandidaturesExcelAPIView.as_view(), name='export-candidatures'),
+    path('admin/export/entreprises/', ExportEntreprisesExcelAPIView.as_view(), name='export-entreprises'),
+    path('admin/export/offres/', ExportOffresExcelAPIView.as_view(), name='export-offres'),
+    path('admin/export/utilisateurs/', ExportUtilisateursExcelAPIView.as_view(), name='export-utilisateurs'),
     path('admin/referentiel-v2/metiers/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metiers'),
     path('admin/referentiel-v2/metiers/<int:pk>/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metier-detail'),
     path('admin/referentiel-v2/specialites/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialites'),
@@ -230,10 +238,12 @@ urlpatterns = [
     path('admin/credit-packs/<int:pk>/', CreditPackAdminAPIView.as_view(), name='admin-credit-pack-detail'),
     path('factures/', FacturesListAPIView.as_view(), name='factures-list'),
     path('factures/<int:paiement_id>/pdf/', FacturePDFAPIView.as_view(), name='facture-pdf'),
-    path('admin/mentions-legales/', MentionsLegalesAdminAPIView.as_view(), name='admin-mentions-legales'),
+    path('admin/mentions-legales/', InformationsSocieteAdminAPIView.as_view(), name='admin-mentions-legales'),
     path('admin/faq/', FaqAdminAPIView.as_view(), name='admin-faq'),
     path('admin/faq/<int:pk>/', FaqAdminAPIView.as_view(), name='admin-faq-detail'),
     path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),
+    path('admin/competences/proposer/', CompetencePropositionsAdminAPIView.as_view(), name='admin-competences-proposer'),
+    path('admin/competences/<int:pk>/statut/', CompetenceStatutAdminAPIView.as_view(), name='admin-competence-statut'),
     path('admin/competences/', CompetencesAdminAPIView.as_view(), name='admin-competences'),
     path('admin/competences/<int:pk>/', CompetencesAdminAPIView.as_view(), name='admin-competence-detail'),
     path('competences/', CompetencesAutocompleteAPIView.as_view(), name='competences-autocomplete'),
@@ -255,6 +265,7 @@ urlpatterns = [
     path('pages/', PageStatiqueListePublicAPIView.as_view(), name='pages-statiques-liste'),
     path('pages/<slug:slug>/', PageStatiquePublicAPIView.as_view(), name='page-statique-public'),
     path('admin/ai-config/', AIConfigAdminAPIView.as_view(), name='admin-ai-config'),
+    path('informations-societe/', InformationsSocietePublicAPIView.as_view(), name='informations-societe'),
     path('admin/quota-ia/overrides/', QuotaIAOverridesAPIView.as_view(), name='admin-quota-ia-overrides'),
     path('admin/quota-ia/overrides/<int:pk>/', QuotaIAOverridesAPIView.as_view(), name='admin-quota-ia-override-detail'),
     path('admin/quota-ia/usage/', QuotaIAUsageAPIView.as_view(), name='admin-quota-ia-usage'),

@@ -156,7 +156,6 @@ class FaqItem(models.Model):
     CATEGORIE_CHOICES = [
         ('GENERAL', 'Général (page Contact)'),
         ('RECRUTEUR', 'Recruteur (landing)'),
-        ('PREMIUM', 'Premium'),
         ('PALIERS', 'Paliers (page Abonnements)'),
     ]
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES, verbose_name="Catégorie")

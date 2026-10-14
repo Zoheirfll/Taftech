@@ -87,10 +87,10 @@ from .admin import (
     AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView,
     AdminCandidaturesListAPIView,
-    ExportCandidaturesCSVAPIView,
-    ExportEntreprisesCSVAPIView,
-    ExportOffresCSVAPIView,
-    ExportUtilisateursCSVAPIView,
+    ExportAdminCandidaturesExcelAPIView,
+    ExportEntreprisesExcelAPIView,
+    ExportOffresExcelAPIView,
+    ExportUtilisateursExcelAPIView,
     AdminMarcheAPIView,
     AdminAuditLogAPIView,
     AdminDemandesPremiumAPIView,
@@ -116,6 +116,8 @@ from .premium_admin import (
     FaqAdminAPIView,
     CompetencesAutocompleteAPIView,
     CompetencesAdminAPIView,
+    CompetenceStatutAdminAPIView,
+    CompetencePropositionsAdminAPIView,
 )
 from .paliers_admin import (
     PaliersPublicAPIView,
@@ -132,7 +134,6 @@ from .credits import (
 from .facturation import (
     FacturesListAPIView,
     FacturePDFAPIView,
-    MentionsLegalesAdminAPIView,
 )
 from .articles import (
     ArticleListPublicAPIView,
@@ -154,6 +155,11 @@ from .pages import (
     PageStatiqueListePublicAPIView,
 )
 from .ai_config import AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView
+from .informations_societe import InformationsSocietePublicAPIView, InformationsSocieteAdminAPIView
+from .propositions_metier import (
+    ProposerMetierAPIView, AdminPropositionsMetierAPIView,
+    AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,
+)
 from .candidat_dashboard import (
     ScoreProfilAPIView,
     MetiersAccessiblesAPIView,

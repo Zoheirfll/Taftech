@@ -58,7 +58,7 @@ class FaqAPITest(CMSTestBase):
         FaqItem.objects.all().delete()  # vide le contenu seedé par la migration 0064
         self.admin = make_admin()
         FaqItem.objects.create(categorie="GENERAL", question="Q1 ?", reponse="R1", actif=True)
-        FaqItem.objects.create(categorie="PREMIUM", question="Q2 ?", reponse="R2", actif=True)
+        FaqItem.objects.create(categorie="PALIERS", question="Q2 ?", reponse="R2", actif=True)
         FaqItem.objects.create(categorie="GENERAL", question="Q3 masquée ?", reponse="R3", actif=False)
 
     def test_public_filtre_par_categorie(self):

@@ -16,7 +16,7 @@ CV → extraction texte (serveur TafTech) → détection PII → pseudonymisatio
 
 ## 2. Décisions déjà prises (17/10/2026)
 
-1. Détection : **spaCy + Presidio** en local (option la plus complète). Nouvelle dépendance majeure, validée par l'utilisateur.
+1. Détection : **spaCy** en local (noms et lieux) + motifs maison (voir §5, Presidio écarté). Nouvelle dépendance majeure (spaCy et son modèle français), validée par l'utilisateur.
 2. Parser de CV : **texte nettoyé** (pas d'alternative possible, la structure n'existe pas avant l'analyse). Autres fonctions : **champs structurés** sans champ identifiant, passant par le même module.
 3. **Module central unique** par lequel passent tous les appels IA contenant des données candidat.
 4. **Le masquage est obligatoire et non désactivable** (précisé le 17/10/2026). La case « Masquer mes informations personnelles avant l'analyse IA » est affichée cochée et verrouillée : elle informe, elle ne donne pas le choix. Le bouton « Voir les données transmises » est obligatoire.
@@ -49,12 +49,17 @@ Nom/prénom · téléphone · e-mail · adresse · date de naissance · NIN / nu
 
 Nouveau package `jobs/confidentialite_ia/` (un dossier = un sujet) :
 
-- `detection.py` : analyseur Presidio + recognizers personnalisés, chargé une seule fois (modèle spaCy en mémoire).
-- `pseudonymisation.py` : `nettoyer_texte(texte) -> ResultatNettoyage(texte_nettoye, entites_masquees)`, déterministe (même entrée = même sortie, indispensable pour que l'aperçu corresponde à l'envoi).
-- `champs_structures.py` : liste blanche des champs autorisés par fonction (jamais de liste noire).
-- `garde.py` : `preparer_pour_ia(...)`, point d'entrée unique appelé par toutes les vues IA.
+- `patterns.py` : motifs regex des données personnelles algériennes (source unique).
+- `ner.py` : reconnaissance de noms et lieux par spaCy (`fr_core_news_md`), chargée une seule fois ; **échec fermé** si le modèle manque.
+- `pseudonymisation.py` : `nettoyer_texte(texte) -> ResultatNettoyage(texte, categories)`, déterministe (même entrée = même sortie, indispensable pour que l'aperçu corresponde à l'envoi).
+- `coordonnees.py` : extraction locale (e-mail, téléphone, liens, nom, date de naissance, wilaya) pour remplir le profil sans que l'IA voie ces valeurs.
+- `champs_structures.py` : jeton `CANDIDAT_xxx`, pseudonymes d'employeurs, lignes d'expériences/formations, nettoyage des intitulés.
+- `filet.py` : `verifier_absence_pii`, dernier garde-fou appelé par `call_ai`.
+- `construction.py` : textes envoyés par l'analyse carrière et les conseils, partagés avec l'aperçu.
 
-Règle d'architecture : un test échoue si une vue appelle `call_ai` avec des données candidat sans passer par `garde.py`.
+**Changement de conception (17/10/2026, lecture du code)** : Presidio est écarté au profit de **spaCy direct + motifs regex maison**. Raisons : le filet de sécurité et les tests ne doivent dépendre d'aucun modèle ; l'API de Presidio pour le français n'a pas pu être vérifiée ici ; une dépendance de moins à maintenir. Aucune perte fonctionnelle (Presidio n'aurait fourni que le cadre des reconnaisseurs). À valider par l'utilisateur.
+
+Règle d'architecture : un test échoue si un nouvel appelant de `call_ai` apparaît hors de la liste blanche (§10), et `call_ai(..., donnees_candidat=texte)` refuse tout texte contenant encore un e-mail, un téléphone, une URL personnelle ou un NIN.
 
 ## 6. Écueils prévisibles
 
@@ -101,7 +106,7 @@ Même principe pour Analyse carrière et Conseils personnalisés : bouton « Voi
 
 ## 11. Plan par phases (chaque phase cite les exigences R1 à R17 de §12 qu'elle couvre)
 
-0. **Hors code, immédiat** : révoquer/regénérer la clé Groq (présente dans l'historique git) et activer le ZDR dans la console Groq.
+0. **Hors code, immédiat** : révoquer/regénérer la clé Groq (présente dans l'historique git) et activer le ZDR dans la console Groq. **Fait le 17/10/2026** : clé remplacée et ancienne clé supprimée, « Inference APIs ZDR » activé, capture et réponse envoyées à l'employeur (R8 et R16 traités côté compte).
 1. Module `confidentialite_ia` + tests (détection, jetons, déterminisme).
 2. Analyse recruteur : jeton `CANDIDAT_xxx` à la place du nom ; analyse carrière : secteur à la place de l'employeur ; liste blanche et effectifs par statut pour les conseils ; nettoyage des intitulés envoyés à la classification des métiers (`domaine_agent.py`) et des diplômes/spécialités (`referentiel_utils.py`).
 3. Parser de CV : nettoyage + extraction locale des champs personnels + mesure de qualité.

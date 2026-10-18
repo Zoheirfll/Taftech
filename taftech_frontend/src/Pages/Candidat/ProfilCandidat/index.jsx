@@ -17,6 +17,7 @@ import SectionExperiences from "./SectionExperiences";
 import SectionFormations from "./SectionFormations";
 import SidebarCompletion from "./SidebarCompletion";
 import SidebarStats from "./SidebarStats";
+import { dureeExperienceMois } from "../../../utils/cvDates";
 import SidebarCompetences from "./SidebarCompetences";
 import SidebarLangues from "./SidebarLangues";
 
@@ -118,25 +119,13 @@ const ProfilCandidat = () => {
   // depuis les données réelles déjà chargées (aucun nouvel appel réseau).
   const stats = useMemo(() => {
     const experiences = profil?.experiences_detail || [];
-    const dates = experiences
-      .map((e) => e.date_debut)
-      .filter(Boolean)
-      .map((d) => new Date(d))
-      .filter((d) => !Number.isNaN(d.getTime()));
-    let anneesExperience = null;
-    if (dates.length > 0) {
-      const earliest = new Date(Math.min(...dates.map((d) => d.getTime())));
-      const now = new Date();
-      let years = now.getFullYear() - earliest.getFullYear();
-      if (now.getMonth() < earliest.getMonth()) years -= 1;
-      anneesExperience = Math.max(years, 0);
-    }
+    const experienceMois = dureeExperienceMois(experiences);
     const entreprises = new Set(
       experiences.map((e) => (e.entreprise || "").trim().toLowerCase()).filter(Boolean),
     );
     const nbFormations = profil?.formations_detail?.length || 0;
     const nbLangues = (profil?.langues || "").split(",").filter((l) => l).length;
-    return { anneesExperience, nbEntreprises: entreprises.size, nbFormations, nbLangues };
+    return { experienceMois, nbEntreprises: entreprises.size, nbFormations, nbLangues };
   }, [profil]);
 
   // Raccourci direct pour chaque badge "manquant" — évite le détour habituel

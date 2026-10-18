@@ -290,7 +290,7 @@ const AdminStatistiques = () => {
           {/* PREMIUM */}
           {stats.premium_expirant_bientot > 0 && (
             <Link
-              to="/admin-taftech/demandes-premium"
+              to="/admin-taftech/entreprises?abonnement_expire_sous=7"
               className={`flex items-center gap-3 p-4 ${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl hover:border-amber-400 transition-colors`}
             >
               <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">

@@ -294,6 +294,12 @@ class AIConfigAPITest(CMSTestBase):
     def setUp(self):
         super().setUp()
         self.admin = make_admin()
+        # Température, effort de raisonnement et max_tokens sont réservés au Super Admin :
+        # leur validation (400) ne se teste donc qu'avec un compte `is_superuser`.
+        self.super_admin = User.objects.create_user(
+            username="super_cms", email="super_cms@test.dz", password="pwd",
+            role="ADMIN", is_staff=True, is_superuser=True,
+        )
 
     def test_get_solo_cree_singleton(self):
         self.assertEqual(AIConfig.objects.count(), 0)
@@ -333,14 +339,28 @@ class AIConfigAPITest(CMSTestBase):
         self.assertFalse(AIConfig.get_solo().parser_cv_actif)
 
     def test_temperature_hors_bornes_rejetee(self):
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.super_admin)
         response = self.client.put(reverse("admin-ai-config"), {"temperature": 5.0})
         self.assertEqual(response.status_code, 400)
 
     def test_max_tokens_trop_bas_rejete(self):
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.super_admin)
         response = self.client.put(reverse("admin-ai-config"), {"parser_cv_max_tokens": 10})
         self.assertEqual(response.status_code, 400)
+
+    def test_max_tokens_trop_haut_rejete_meme_pour_le_super_admin(self):
+        self.client.force_authenticate(user=self.super_admin)
+        for champ in ("parser_cv_max_tokens", "analyse_carriere_max_tokens", "analyse_recruteur_max_tokens",
+                      "generation_offre_max_tokens", "conseils_dashboard_max_tokens"):
+            response = self.client.put(reverse("admin-ai-config"), {champ: 16001})
+            self.assertEqual(response.status_code, 400, champ)
+        self.assertEqual(AIConfig.get_solo().parser_cv_max_tokens, 7000)
+
+    def test_max_tokens_a_la_borne_haute_accepte(self):
+        self.client.force_authenticate(user=self.super_admin)
+        response = self.client.put(reverse("admin-ai-config"), {"parser_cv_max_tokens": 16000})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(AIConfig.get_solo().parser_cv_max_tokens, 16000)
 
     def test_non_admin_refuse(self):
         candidat = make_candidat()
@@ -349,7 +369,7 @@ class AIConfigAPITest(CMSTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_reasoning_effort_invalide_rejete(self):
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.super_admin)
         response = self.client.put(reverse("admin-ai-config"), {"reasoning_effort": "extreme"})
         self.assertEqual(response.status_code, 400)
 

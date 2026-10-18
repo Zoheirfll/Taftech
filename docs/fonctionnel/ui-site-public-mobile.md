@@ -7,6 +7,72 @@
 
 ---
 
+## 🆕 SESSION 18/10/2026 (fin) — Checklist qualité : validation point par point
+
+Méthode : build de production servi en local, Playwright (iPhone 13, Pixel 5), plus lecture du code. Limite : émulation, pas de vrai téléphone ; temps de chargement mesurés sans réseau mobile.
+
+| Point | État | Preuve / remarque |
+|---|---|---|
+| Bouton qui attend le serveur | ✅ | `useSubmitLock` sur 10 formulaires (27/09) ; erreurs et succès restent en toast |
+| Squelettes de chargement | ✅ | Présents sur offres, entreprises, secteurs, régions, accueil, blog, article, offre (le constat « simple cercle » du premier rapport était **inexact**) ; fond global `PageLoader` (App.jsx) passé de cercle à squelette de page ; 24 écrans admin |
+| Écran vide / état vide | ✅ | « Aucune offre trouvée » vérifié en navigateur (`/offres?search=…`, le paramètre est `search`, pas `q`) |
+| Animation au toucher | ✅ | règle globale `index.css` (`button:active`) |
+| Hors ligne | ✅ (prudent) | `public/sw.js` + `hors-ligne.html` + `manifest.webmanifest` + icônes carrées 192/512 + `OfflineBanner` ; vérifié : service worker actif, réseau coupé → page « Vous êtes hors ligne ». **Les pages ne sont volontairement pas lisibles hors ligne** (pas de cache de pages : versions périmées, données privées) |
+| Scroll horizontal / débordement mobile | ✅ | 0 sur 12 pages × 2 appareils |
+| Meta description, titres par page, favicon, Open Graph, sitemap, `alt` | ✅ | voir la section SEO ci-dessous |
+| Images compressées | ✅ | logo (122 / 190 Ko) + **toute image envoyée** : `jobs/image_utils.py` (1600 px, recompression, EXIF supprimé), 8 tests |
+| E-mail et téléphone cliquables | ✅ | `mailto:`, `tel:`, `wa.me` sur Contact et pied de page |
+| Liens cassés | ✅ | 131 liens internes de 15 pages publiques testés : 0 cassé ; 3 liens externes (WhatsApp, Facebook, LinkedIn) non testés |
+| Menu mobile, barre du bas, CTA au-dessus de la ligne de flottaison, CTA collant | ✅ | accueil : « S'inscrire » et « Rechercher » visibles ; offre : « Postuler » visible et collant |
+| Texte de remplissage | ✅ | aucun (« Lorem », TODO, e-mails d'exemple) dans `src` |
+| Messages d'erreur et de succès | ✅ | toasts + messages sous les champs |
+| États d'erreur de formulaire | ✅ 21 formulaires (tous ceux des candidats et recruteurs) ; formulaires admin hors périmètre. **Suite du jour** : `ModalCV` (format PDF/DOC/DOCX et 5 Mo vérifiés), `ModalLiens` (adresses https), `ModalPreferences` (salaire en chiffres), `ModalFormation` (diplôme et établissement), carte mot de passe d'`OngletMonProfil`, candidature rapide et questions obligatoires de `JobDetail`. **Correction** : j'avais écrit que `ModalFormation` dépendait de la validation native pour ses listes de diplôme et de spécialité ; c'était faux (l'astérisque de `FormationReferentielSelect` n'est qu'un affichage), seul « Établissement » avait `required`. **Déjà équipés** : `ProposerEntreeModal` / `ProposerMetierModal` (message d'erreur sous les champs, bouton désactivé sous 3 caractères), `CreateQuestionnaireModal` / `Questionnaires` (champs en rouge). **Sans objet** : la recherche du tableau de bord candidat (aucun champ obligatoire). Détail des 15 premiers : | `useErreursChamps` + `FieldError` : inscription candidat et recruteur, réinitialisation et changement de mot de passe, contact, mentions légales admin (avant), **connexion candidat, connexion recruteur, mot de passe oublié ×2, alertes emploi, compétences, fenêtres Informations et Expérience du profil, candidature spontanée** (aujourd'hui). **Seuls non couverts** : les formulaires de l'administration (paliers, FAQ, bannières, compétences, etc., utilisés uniquement par l'admin ; hors mentions légales). Limites connues : la carte « informations personnelles » d'`OngletMonProfil` n'a aucune règle vérifiable côté écran (aucun champ obligatoire côté serveur), et les erreurs renvoyées par le serveur lors du changement de mot de passe restent affichées en toast. Aides : `utils/useErreursChamps.js`, `utils/validations.js` (`erreurFichier`, `erreurLien`, `FICHIER_CV`). |
+| Page 404 | ✅ | client + vrai code 404 pour offres/entreprises/articles inconnus (si nginx configuré) |
+| Page de remerciement | ✅ | `/merci` (`Pages/Public/Merci.jsx`), appelée après le formulaire de contact ; la candidature à une offre mène volontairement à « Mes candidatures » (déjà une confirmation) ; `noindex`, bloquée dans robots.txt |
+| Confidentialité, CGU, mentions légales | ✅ | pages présentes ; **à faire relire par un juriste** et à compléter par la mention de la mesure d'audience |
+| Bannière cookies | ✅ (information) | `Components/CookieBanner.jsx` : le site ne dépose que des cookies nécessaires, donc information et non consentement ; texte vérifié contre les faits (carte Google après clic, Google seulement sur connexion/inscription) ; au-dessus de la barre du bas, mémorisée |
+| Analytics | ⚠️ code prêt, inactif | `Components/Analytics.jsx` (Plausible ou Umami, sans cookie, `https`, jamais sur l'admin) ; **activation = votre choix d'outil** + 3 variables `VITE_ANALYTICS_*` |
+| Vraie adresse de contact | ⚠️ à vous | téléphone, WhatsApp, Facebook, LinkedIn réels ; e-mail = Gmail (préférer une adresse au nom de domaine) ; adresse postale à saisir dans Admin → Mentions légales |
+| Test sur appareil réel | ❌ à vous | émulation seulement |
+
+**Découvertes pendant la validation**
+- La page entreprise intégrait une **carte Google chargée dès l'ouverture** et `main.jsx` chargeait le script Google sur **toutes** les pages : corrigé (`CarteSurDemande`, `GoogleAuthProvider`), sinon la mention « seulement des cookies nécessaires » aurait été fausse. Vérifié : aucune requête Google sur `/offres`.
+- Les entrées internes des listes déroulantes (`react-select`) restaient à 14,9 px malgré la règle des 16 px (style en ligne `font: inherit`) : règle dédiée en `!important` (`input[aria-autocomplete="list"]`). Vérifié : 0 champ sous 16 px sur 6 pages.
+- Le décalage de mise en page de la page entreprise est confirmé corrigé : 0 sur 3 essais × 2 appareils (0,33 avant) ; blog 0,09 (< 0,1) ; plus aucun lien du pied de page sous 24 px.
+- `jobs/seo_views.py` : le sitemap annonçait encore les offres expirées alors que leur page est en `noindex` ; règle unique `offres_indexables()`, utilisée aussi par la page SEO admin.
+
+**Tests ajoutés aujourd'hui** : `Merci.test.jsx` (8), `Analytics.test.jsx` (6), `CookiesEtCarte.test.jsx` (7), `serviceWorker.test.js` (10), `ErreursChamps.test.jsx` (11), `SeoCanonicalJobPosting.test.jsx` (19), `AdminSeo.test.jsx` (9), `ForgotPassword.test.jsx` et `AlertesEmploi.test.jsx` adaptés ; backend : `test_images_optimisees.py` (8), `test_seo_pages.py` (20).
+
+---
+
+
+## 🆕 SESSION 18/10/2026 — Audit mobile / performances / SEO et corrections
+
+**Demande** (liste collée par l'utilisateur) : vérifier smartphone Android/iPhone, performances, sitemap, robots.txt, canonical, données structurées JobPosting, indexabilité Google / Search Console. Puis : « fixez tout ».
+
+**Méthode de l'audit** : build de production servi en local (`vite preview`), Playwright (Python) en émulation iPhone 13 et Pixel 5 sur 11 pages (accueil, offres, entreprises, blog, contact, une offre, une entreprise, un article, une 404…). Mesures : débordement horizontal, balises SEO rendues, CLS/LCP, cibles tactiles, taille de police des champs. Limites : `localhost` sans réseau mobile (temps indicatifs), pas de vrais téléphones, pas d'accès à la Search Console (site non en ligne).
+
+**Constats positifs** : aucun débordement horizontal ; viewport déclaré ; un seul `<h1>` par page ; titres et descriptions distincts par page ; `alt` sur toutes les images ; JS principal 103 Ko gzip ; sitemap valide (124 URLs sans doublon) ; page introuvable en `noindex`.
+
+**Corrigé**
+1. **Canonical + `og:url`** : `Components/Seo.jsx` les pose par défaut (URL courante sans paramètres, slash final, comme le sitemap) ; `canonical` explicite possible ; absent avec `noindex`. `RouteTitle.jsx` le pose pour `/entreprises`, `/qui-sommes-nous`, `/contact`, `/recruteurs` (pages sans `<Seo>`). Image de partage rendue **absolue** (les robots de partage ne résolvent pas `/logo.png`).
+2. **JobPosting** : `utils/jobPosting.js` (`construireJobPosting`, `offreIndexable`, `urlCanoniqueOffre`), branché dans `JobDetail.jsx` via `<Seo canonical noindex jsonLd>`. Offre clôturée, désactivée ou expirée → `noindex`, pas de JobPosting. **Pas de `baseSalary`** : `salaire_propose` est un texte libre, l'unité (mois ? année ?) est inconnue, on n'invente pas un montant. Même contenu côté serveur (`jobs/seo_pages.py`) ; **même id `seo-jsonld`** des deux côtés : le client remplace le JSON-LD du serveur, jamais de doublon.
+3. **Aperçus de partage et vrais 404** : `jobs/seo_pages.py` (routes dans `taftech_backend/urls.py`) sert `index.html` avec les balises propres à l'offre / l'entreprise / l'article, renvoie **404** + `noindex` pour un objet inconnu ou non public, **301** vers l'URL officielle pour une mauvaise URL (dont l'ancienne `/jobs/<id>`). **Actif en production seulement si nginx relaie ces URLs** : consigne et vérifications dans [../exploitation/deploiement.md](../exploitation/deploiement.md) ; en développement Vite sert `index.html` et ce module n'intervient pas. Variable `FRONTEND_INDEX_PATH` (settings).
+4. **Zoom automatique iPhone** : règle unique dans `index.css`, sous 768 px, `font-size: 16px` pour champs de texte, listes et zones de saisie (cases, radios, curseurs, couleurs, fichiers exclus). Volontairement **hors `@layer`** pour l'emporter sur `text-sm` sans toucher chaque composant. Les champs mesuraient 14,9 px.
+5. **Cibles tactiles** : `py-1` sur les quatre tokens de liens de pied de page de `theme.js` (`footerLinkAmber`, `footerLinkAmberBlock`, `footerLinkTeal`, `footerLinkTealBlock`) : 21 px → environ 29 px (minimum WCAG 2.2 : 24 px). D'autres liens ou boutons restent sous 24 px (de 9 à 17 par page mesurée) : à traiter page par page si besoin, non traité ici.
+6. **Décalage de mise en page de la page entreprise** (CLS 0,33 au premier passage, non reproduit au second) : hypothèse retenue, le bloc de chargement de 16 rem de haut est remplacé par la page entière et pousse le pied de page vers le bas ; `EntreprisePublic.jsx` : chargement en `min-h-screen`. **À reconfirmer par une nouvelle mesure** (non refaite).
+7. **robots.txt** : liste `PREFIXES_INTERDITS` (`jobs/seo_views.py`), chaque entrée correspond à une route protégée de `App.jsx` ; `/offres`, `/recruteurs` (landing), `/jobs/<offre>` (ancienne URL qui doit rester explorable pour que le canonical joue) restent ouverts. **Piège** : `/statistiques` est une page recruteur (sous `RecruteurRoute`), pas une page publique.
+8. **Sitemap** : ajout de `/entreprises`, `/mentions-legales`, `/cgu`, `/confidentialite`. Test de cohérence : l'URL canonique d'une offre est identique à celle du sitemap.
+
+**À faire par vous (rien n'est faisable côté code)** : règle nginx ; `SITE_URL` et `FRONTEND_INDEX_PATH` en prod ; vérification du domaine dans la Search Console et envoi du sitemap ; Rich Results Test ; PageSpeed Insights en mobile.
+
+**Non fait / décisions à prendre** : pré-rendu complet de toutes les pages (service tiers ou rendu serveur général) écarté pour l'instant (choix lourd) ; une URL inventée hors des quatre familles (`/n-importe-quoi`) répond encore 200 avec une page « introuvable » en `noindex` posée par le navigateur.
+
+**Tests** : `jobs/tests/test_seo_pages.py` (14 : balises, JobPosting, types de contrat, échappement hostile, 301/404, entreprise, article, 503, robots, sitemap), `tests/SeoCanonicalJobPosting.test.jsx` (19). **Non relancés après ces corrections** : la suite frontend complète et le build (à faire avant tout commit).
+
+---
+
+
 ## 🆕 SESSION 03/10/2026 — Placeholders « exemple » retirés + menu mobile candidat réorganisé
 
 - **Placeholders** : 65 placeholders « exemple » retirés (« Ex : … », `votre@email…`, `https://…`, `0555…`, `DZ`, `••••`, `____`, gabarits « Bonjour {prenom} », puces d'exemple de CreateJob, « (ex: Anglais) »), car ils donnaient un air « généré par IA ». Conservés : placeholders fonctionnels (« Rechercher… », « Sélectionnez… », « Illimité », « Tapez une compétence puis Entrée… », consignes comme « 8 caractères minimum »). Les tests qui ciblaient ces placeholders utilisent désormais des sélecteurs structurels (`input[type="email"]`, `input[maxlength="6"]`, `input[name="titre"]`…). **Règle : ne plus ajouter de placeholder d'exemple ; le libellé visible suffit.**

@@ -74,13 +74,13 @@ export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "", pro
           ))}
         </ul>
       )}
-      {proposable && texte.trim().length >= 3 && (
+      {proposable && (
         <button
           type="button"
           onClick={() => setPropositionOuverte(true)}
           className="mt-1.5 text-xs font-medium text-teal-700 hover:underline"
         >
-          Je ne trouve pas mon métier
+          Autre, préciser
         </button>
       )}
       {proposable && (

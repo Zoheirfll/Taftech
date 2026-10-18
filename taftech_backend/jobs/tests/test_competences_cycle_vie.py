@@ -87,9 +87,10 @@ class PropositionsAutomatiquesTest(TestCase):
         c = C.objects.get(label="Prompt engineering")
         self.assertEqual((c.statut, c.origine, c.actif), (C.STATUT_SUGGEREE, "PROPOSITION_AUTO", False))
 
-    def test_sous_le_seuil_rien_n_est_propose(self):
-        self._saisies("Rare", 2)
-        self.assertEqual(proposer_competences_frequentes(), [])
+    def test_une_saisie_de_candidat_suffit_le_seuil_ne_vaut_que_pour_les_offres(self):
+        self._saisies("Rare", 1)
+        CompetenceOffre.objects.create(offre=self.offre, label="Seulement en offre")
+        self.assertEqual([p["label"] for p in proposer_competences_frequentes()], ["Rare"])
 
     def test_le_bruit_est_ecarte(self):
         self._saisies("500", 3)
@@ -119,6 +120,53 @@ class PropositionsAutomatiquesTest(TestCase):
         self.assertEqual(propositions[0]["nb_offres"], 1)
 
 
+class SuggestionDirecteCandidatTest(APITestCase):
+    """15/10/2026 : une compétence ajoutée par un candidat hors référentiel devient tout de suite une
+    suggestion visible de l'admin (sans effet officiel avant sa décision)."""
+
+    def setUp(self):
+        C.objects.all().delete()
+        self.user = User.objects.create_user(username="cand_sug", email="cand_sug@test.dz", password="pwd", role="CANDIDAT")
+        ProfilCandidat.objects.create(user=self.user)
+        self.client.force_authenticate(user=self.user)
+
+    def _ajouter(self, label):
+        return self.client.post("/api/jobs/mes-competences/", {"label": label, "niveau": "DEBUTANT"}, format="json")
+
+    def test_premiere_saisie_cree_une_suggestion_non_officielle(self):
+        from jobs.models import DemandeAjout
+        self.assertIn(self._ajouter("Prompt engineering").status_code, (200, 201))
+        self.assertFalse(C.objects.exists())  # rien d'officiel avant la décision de l'admin
+        demande = DemandeAjout.objects.get(type="COMPETENCE")
+        self.assertEqual((demande.libelle, demande.statut), ("Prompt engineering", "A_EXAMINER"))
+        self.assertIsNone(CompetenceCandidat.objects.get(label="Prompt engineering").competence_ref_id)
+
+    def test_la_demande_est_visible_de_l_admin(self):
+        self._ajouter("Prompt engineering")
+        self.client.force_authenticate(user=_admin("adm_sug"))
+        r = self.client.get("/api/jobs/admin/demandes-ajout/?type=COMPETENCE&statut=A_EXAMINER")
+        self.assertEqual([d["libelle"] for d in r.data["results"]], ["Prompt engineering"])
+
+    def test_pas_de_doublon_autre_casse_ou_accents(self):
+        from jobs.models import DemandeAjout
+        self._ajouter("Prompt engineering")
+        self._ajouter("PROMPT Engineering")
+        self.assertEqual(DemandeAjout.objects.filter(type="COMPETENCE").count(), 1)
+
+    def test_ne_cree_rien_pour_une_officielle_un_synonyme_ou_une_rejetee(self):
+        C.objects.create(label="Gestion de projet", synonymes="Project Management")
+        C.objects.create(label="Rejetée", statut=C.STATUT_REJETEE)
+        for label in ("Gestion de projet", "Project Management", "Rejetée"):
+            self._ajouter(label)
+        self.assertEqual(C.objects.count(), 2)
+        self.assertEqual(C.objects.get(label="Rejetée").statut, C.STATUT_REJETEE)
+
+    def test_le_bruit_est_ecarte(self):
+        self._ajouter("500")
+        self._ajouter("J'ai piloté le recrutement de toute l'équipe commerciale")
+        self.assertFalse(C.objects.exists())
+
+
 class ApiAdminCycleVieTest(APITestCase):
     def setUp(self):
         C.objects.all().delete()
@@ -131,12 +179,11 @@ class ApiAdminCycleVieTest(APITestCase):
 
     def test_liste_filtree_par_statut_avec_compteurs(self):
         C.objects.create(label="Excel")
-        r = self.client.get("/api/jobs/admin/competences/?statut=SUGGEREE")
+        r = self.client.get("/api/jobs/admin/competences/")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual([c["label"] for c in r.data["results"]], ["Prompt engineering"])
-        self.assertEqual(r.data["compteurs"]["SUGGEREE"], 1)
+        # les anciennes suggestions ne sont plus dans la liste : elles passent par les demandes
+        self.assertEqual([c["label"] for c in r.data["results"]], ["Excel"])
         self.assertEqual(r.data["compteurs"]["VALIDEE"], 1)
-        self.assertEqual(r.data["results"][0]["transitions_possibles"], ["REJETEE", "VALIDEE"])
 
     def test_valider_rend_officielle_rattache_les_saisies_et_journalise(self):
         u = User.objects.create_user(username="cand_val", email="cand_val@test.dz", password="pwd", role="CANDIDAT")

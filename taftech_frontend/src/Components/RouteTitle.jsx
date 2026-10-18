@@ -1,5 +1,10 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { poserCanonical, retirerCanonical, urlCanonique } from "./Seo";
+
+// Pages publiques sans <Seo> : elles reçoivent leur canonical ici (les autres pages publiques le
+// posent via <Seo>, les pages privées n'en ont pas).
+const PAGES_PUBLIQUES_SANS_SEO = ["/entreprises", "/qui-sommes-nous", "/contact", "/recruteurs"];
 
 // Titre d'onglet par défaut pour les pages qui n'utilisent pas <Seo> (pages privées,
 // auth, portail recruteur). Placé AVANT <Routes> : les <Seo> des pages publiques
@@ -8,6 +13,7 @@ const TITRES = [
   ["/entreprises", "Entreprises"],
   ["/qui-sommes-nous", "Qui sommes-nous"],
   ["/contact", "Contactez-nous"],
+  ["/merci", "Merci"],
   ["/login", "Connexion"],
   ["/register", "Inscription candidat"],
   ["/recruteurs/connexion", "Connexion recruteur"],
@@ -54,6 +60,8 @@ const RouteTitle = () => {
   useEffect(() => {
     const trouve = TITRES.find(([p]) => pathname === p || pathname.startsWith(p + "/"));
     document.title = trouve ? `${trouve[1]} | TafTech` : "TafTech — Recrutement en ligne en Algérie";
+    if (PAGES_PUBLIQUES_SANS_SEO.includes(pathname.replace(/\/+$/, ""))) poserCanonical(urlCanonique(pathname));
+    else retirerCanonical();
   }, [pathname]);
   return null;
 };

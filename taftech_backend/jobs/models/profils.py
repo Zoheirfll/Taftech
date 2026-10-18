@@ -289,6 +289,17 @@ class FormationCandidat(models.Model):
     )
     date_refus = models.DateTimeField(null=True, blank=True, verbose_name="Date du refus")
 
+    # Demandes d'ajout au référentiel liées à cette formation (« Autre, préciser » : diplôme ou
+    # spécialité absent de la liste). Posées à l'enregistrement, résolues par la décision de l'admin.
+    demande_diplome = models.ForeignKey(
+        'DemandeAjout', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='formations_diplome', verbose_name="Demande d'ajout du type de diplôme",
+    )
+    demande_specialite = models.ForeignKey(
+        'DemandeAjout', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='formations_specialite', verbose_name="Demande d'ajout de la spécialité",
+    )
+
     class Meta:
         ordering = ['-date_fin']
 

@@ -65,6 +65,17 @@ const AdminSeo = () => {
         </div>
       )}
 
+      {(data?.alertes || []).map((alerte) => (
+        <div
+          key={alerte.code}
+          role="alert"
+          className={`${tw.bgWarningSoft} border ${tw.borderWarning} rounded-xl px-5 py-4 flex items-start gap-3`}
+        >
+          <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+          <p className={`text-sm ${tw.textWarning900}`}>{alerte.message}</p>
+        </div>
+      ))}
+
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px]">
@@ -100,6 +111,18 @@ const AdminSeo = () => {
                   </td>
                 </tr>
               ))}
+              {data && (
+                <tr className="border-b border-slate-100 last:border-0">
+                  <td className="px-5 py-3 text-sm font-semibold text-slate-900">Pages fixes</td>
+                  <td className={`px-5 py-3 text-sm ${tw.textMuted}`}>
+                    Accueil, offres, entreprises, blog, contact, pages légales…
+                  </td>
+                  <td className="px-5 py-3 text-sm text-right text-slate-700 font-semibold">{data.pages_statiques}</td>
+                  <td className="px-5 py-3 text-right">
+                    <CheckCircle2 size={18} className="text-emerald-600 inline-block" />
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -126,6 +149,60 @@ const AdminSeo = () => {
           <span className="text-slate-600">
             <span className="font-semibold text-slate-900">{data.total_urls_sitemap}</span> URLs au total dans le sitemap
           </span>
+        </div>
+      )}
+
+      {data?.job_posting && (
+        <div className={`${tw.card} px-5 py-4 space-y-3`}>
+          <h2 className={`text-sm font-bold ${tw.textStrong}`}>Google Emploi (données JobPosting)</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ["Offres éligibles", data.job_posting.eligibles, "Offres actives, approuvées et non expirées : chacune porte sa fiche JobPosting."],
+              ["Clôturées", data.job_posting.exclues_cloturees, "Exclues : une offre clôturée n'est plus proposée par Google."],
+              ["Expirées", data.job_posting.exclues_expirees, "Exclues : date de fin dépassée (la tâche de nuit les clôture ensuite)."],
+              ["Désactivées", data.job_posting.exclues_inactives, "Exclues : masquées par le recruteur ou l'admin."],
+            ].map(([libelle, valeur, aide]) => (
+              <div key={libelle} className={`${tw.surfaceMuted} rounded-lg p-3`} title={aide}>
+                <p className={`text-[11px] font-semibold ${tw.textMuted} uppercase tracking-wider`}>{libelle}</p>
+                <p className={`text-xl font-bold ${tw.textStrong} tabular-nums mt-0.5`}>{valeur}</p>
+              </div>
+            ))}
+          </div>
+          {data.job_posting.sans_date_fin > 0 && (
+            <p className={`text-xs ${tw.textMuted}`}>
+              {data.job_posting.sans_date_fin} offre(s) éligible(s) sans date de fin : Google recommande d'en indiquer une
+              (« valid through »), sinon l'offre peut rester affichée après son recrutement.
+            </p>
+          )}
+        </div>
+      )}
+
+      {data && (
+        <div className={`${tw.card} px-5 py-4 space-y-2`}>
+          <p className="flex items-center gap-2 text-sm">
+            {data.rendu_serveur_pret ? (
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+            )}
+            <span className={`font-semibold ${tw.textStrong}`}>Aperçus de partage et vrais 404 :</span>
+            <span className={tw.textMuted}>{data.rendu_serveur_pret ? "prêts (index.html trouvé)" : "indisponibles (index.html introuvable, vérifiez FRONTEND_INDEX_PATH)"}</span>
+          </p>
+          <p className={`text-xs ${tw.textMuted}`}>
+            En production, nginx doit envoyer les pages d'offre, d'entreprise et d'article à Django pour que Facebook, WhatsApp et Google
+            voient leurs balises (voir docs/exploitation/deploiement.md).
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1 text-sm">
+            {[
+              ["Google Search Console", "https://search.google.com/search-console"],
+              ["Test des résultats enrichis", "https://search.google.com/test/rich-results"],
+              ["PageSpeed Insights", "https://pagespeed.web.dev/"],
+            ].map(([libelle, lien]) => (
+              <a key={lien} href={lien} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-indigo-600 font-semibold hover:underline">
+                <ExternalLink size={14} /> {libelle}
+              </a>
+            ))}
+          </div>
         </div>
       )}
 

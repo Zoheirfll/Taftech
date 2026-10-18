@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import { tw } from "../../theme";
 import Seo from "../../Components/Seo";
+import { construireJobPosting, offreIndexable, urlCanoniqueOffre } from "../../utils/jobPosting";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
+import { erreurFichier, FICHIER_CV } from "../../utils/validations";
 
 const EXPERIENCE_LABELS = {
   DEBUTANT: "Débutant",
@@ -164,6 +168,7 @@ const JobDetail = () => {
   const [matchingScore, setMatchingScore] = useState(null);
   const [reponses, setReponses] = useState({});
   const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
+  const { erreurs, exiger, definir, depuisReponse, effacer, attributs } = useErreursChamps();
 
   useEffect(() => {
     const fetchJobAndRecommendation = async () => {
@@ -226,12 +231,31 @@ const JobDetail = () => {
     const { name, value, files } = e.target;
     if (name === "cv_rapide") setFastForm({ ...fastForm, cv_rapide: files[0] });
     else setFastForm({ ...fastForm, [name]: value });
+    effacer(name);
   };
 
   const handlePostulerRapide = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!fastForm.cv_rapide) { toast.error("Veuillez joindre votre CV en format PDF ou Word."); return; }
+    const manque = exiger(
+      { ...fastForm, cv_rapide: fastForm.cv_rapide ? "joint" : "" },
+      {
+        nom_rapide: "Le nom est obligatoire.",
+        prenom_rapide: "Le prénom est obligatoire.",
+        email_rapide: "L'adresse e-mail est obligatoire.",
+        telephone_rapide: "Le numéro de téléphone est obligatoire.",
+        cv_rapide: "Veuillez joindre votre CV (PDF ou Word).",
+      },
+    );
+    if (manque) return;
+    const trouvees = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fastForm.email_rapide)) trouvees.email_rapide = "Adresse e-mail invalide.";
+    const problemeCv = erreurFichier(fastForm.cv_rapide, FICHIER_CV);
+    if (problemeCv) trouvees.cv_rapide = problemeCv;
+    if (Object.keys(trouvees).length) {
+      definir(trouvees);
+      return;
+    }
     setIsSubmitting(true);
     const toastId = toast.loading("Envoi de votre candidature...");
     const formData = new FormData();
@@ -244,6 +268,7 @@ const JobDetail = () => {
       toast.success("Candidature envoyée !", { id: toastId });
     } catch (err) {
       setPostulerStatus("error");
+      depuisReponse(err);
       toast.error(err.response?.data?.error || "Erreur lors de l'envoi.", { id: toastId });
       reportError("ECHEC_POSTULER_RAPIDE", err);
     } finally {
@@ -257,22 +282,31 @@ const JobDetail = () => {
     return tw.scoreLow;
   };
 
-  const handleReponseChange = (questionId, value) => setReponses({ ...reponses, [questionId]: value });
+  const handleReponseChange = (questionId, value) => {
+    setReponses({ ...reponses, [questionId]: value });
+    effacer(`q_${questionId}`);
+  };
 
   const handleReponseChoixMultiple = (questionId, value) => {
     const current = reponses[questionId] ? reponses[questionId].split(",").filter(Boolean) : [];
     const exists = current.includes(value);
     const updated = exists ? current.filter((v) => v !== value) : [...current, value];
     setReponses({ ...reponses, [questionId]: updated.join(",") });
+    effacer(`q_${questionId}`);
   };
 
   const validateQuestionnaire = () => {
     const questionsRequises = job.questionnaire?.questions?.filter((q) => q.requis) || [];
+    const manquantes = {};
     for (const q of questionsRequises) {
       if (!reponses[q.id] || reponses[q.id].toString().trim() === "") {
-        toast.error(`La question "${q.texte}" est obligatoire.`);
-        return false;
+        manquantes[`q_${q.id}`] = "Cette question est obligatoire.";
       }
+    }
+    definir(manquantes);
+    if (Object.keys(manquantes).length) {
+      toast.error("Répondez aux questions obligatoires (*).");
+      return false;
     }
     return true;
   };
@@ -314,6 +348,7 @@ const JobDetail = () => {
               ))}
             </div>
           )}
+          <FieldError id={`err-q_${q.id}`} message={erreurs[`q_${q.id}`]} />
           {q.disqualifiant && (
             <p className={`text-[10px] ${tw.textErrorMuted} mt-1`}>
               ⚠️ Une mauvaise réponse peut disqualifier.
@@ -443,34 +478,39 @@ const JobDetail = () => {
                 <XCircle size={16} />
               </button>
             </div>
-            <form onSubmit={handlePostulerRapide} className="space-y-3">
+            <form onSubmit={handlePostulerRapide} noValidate className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>Nom *</label>
-                  <input type="text" name="nom_rapide" required onChange={handleFastFormChange} className={inputClass} />
+                  <input type="text" name="nom_rapide" required {...attributs("nom_rapide")} onChange={handleFastFormChange} className={inputClass} />
+                  <FieldError id="err-nom_rapide" message={erreurs.nom_rapide} />
                 </div>
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>Prénom *</label>
-                  <input type="text" name="prenom_rapide" required onChange={handleFastFormChange} className={inputClass} />
+                  <input type="text" name="prenom_rapide" required {...attributs("prenom_rapide")} onChange={handleFastFormChange} className={inputClass} />
+                  <FieldError id="err-prenom_rapide" message={erreurs.prenom_rapide} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>Email *</label>
-                  <input type="email" name="email_rapide" required onChange={handleFastFormChange} className={inputClass} />
+                  <input type="email" name="email_rapide" required {...attributs("email_rapide")} onChange={handleFastFormChange} className={inputClass} />
+                  <FieldError id="err-email_rapide" message={erreurs.email_rapide} />
                 </div>
                 <div>
                   <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>Téléphone *</label>
-                  <input type="tel" name="telephone_rapide" required onChange={handleFastFormChange} className={inputClass} />
+                  <input type="tel" name="telephone_rapide" required {...attributs("telephone_rapide")} onChange={handleFastFormChange} className={inputClass} />
+                  <FieldError id="err-telephone_rapide" message={erreurs.telephone_rapide} />
                 </div>
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>CV (PDF, DOC) *</label>
                 <div className={`border-2 border-dashed ${tw.borderBase} rounded-lg p-5 text-center relative cursor-pointer ${tw.borderHoverPrimary400} transition-colors`}>
-                  <input type="file" name="cv_rapide" accept=".pdf,.doc,.docx" required onChange={handleFastFormChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <input type="file" name="cv_rapide" accept=".pdf,.doc,.docx" required {...attributs("cv_rapide")} onChange={handleFastFormChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <FileText size={24} className={`${tw.textSubtle} mx-auto mb-2`} />
                   <p className={`text-sm font-medium ${tw.textMuted}`}>{fastForm.cv_rapide ? fastForm.cv_rapide.name : "Cliquez ou glissez votre CV"}</p>
                 </div>
+                <FieldError id="err-cv_rapide" message={erreurs.cv_rapide} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1 block`}>Lettre de motivation (optionnelle)</label>
@@ -512,6 +552,9 @@ const JobDetail = () => {
             : `Offre d'emploi ${job.titre} chez ${job.entreprise?.nom_entreprise || "TafTech"}${job.wilaya ? ` — ${job.wilaya.split(" - ")[1] || job.wilaya}` : ""}.`
         }
         image={getMediaUrl(job.entreprise?.logo_url)}
+        canonical={urlCanoniqueOffre(job)}
+        noindex={!offreIndexable(job)}
+        jsonLd={offreIndexable(job) ? construireJobPosting(job) : undefined}
       />
 
       {/* BANDEAU ENTREPRISE */}
@@ -569,12 +612,6 @@ const JobDetail = () => {
                   <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
                     <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Postes</p>
                     <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><Users size={12} className={tw.iconPrimary500} />{job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""}</p>
-                  </div>
-                )}
-                {job.metier_libelle && (
-                  <div className={`${tw.bgPrimarySoft} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textPrimaryLight} uppercase tracking-wider mb-1`}>Métier</p>
-                    <p className={`text-sm font-semibold ${tw.textPrimaryStrong}`}>{job.metier_libelle}</p>
                   </div>
                 )}
                 {job.salaire_propose && (

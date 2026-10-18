@@ -2,9 +2,12 @@
 import { useSubmitLock } from "../../../utils/useSubmitLock";
 import { tw } from "../../../theme";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 export const ModalPreferences = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, showPrefForm, setShowPrefForm, editPref, setEditPref, handleUpdateGeneric }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, definir, effacer, attributs } = useErreursChamps();
   return (
     <>
       {showPrefForm && (
@@ -14,8 +17,17 @@ export const ModalPreferences = ({ inputClass, modalClass, modalInnerClass, btnP
               Préférences de recrutement
             </h3>
             <form
-              onSubmit={lockSubmit((e) =>
-                handleUpdateGeneric(e, editPref, setShowPrefForm))}
+              noValidate
+              onSubmit={lockSubmit((e) => {
+                const salaire = String(editPref.salaire_souhaite ?? "").trim();
+                if (salaire && !/\d/.test(salaire)) {
+                  e.preventDefault();
+                  definir({ salaire_souhaite: "Indiquez un montant en chiffres." });
+                  return;
+                }
+                definir({});
+                return handleUpdateGeneric(e, editPref, setShowPrefForm);
+              })}
               className="space-y-4"
             >
               <div>
@@ -34,14 +46,17 @@ export const ModalPreferences = ({ inputClass, modalClass, modalInnerClass, btnP
                 </label>
                 <input
                   className={inputClass}
+                  {...attributs("salaire_souhaite")}
                   value={editPref.salaire_souhaite}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEditPref({
                       ...editPref,
                       salaire_souhaite: e.target.value,
-                    })
-                  }
+                    });
+                    effacer("salaire_souhaite");
+                  }}
                 />
+                <FieldError id="err-salaire_souhaite" message={erreurs.salaire_souhaite} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

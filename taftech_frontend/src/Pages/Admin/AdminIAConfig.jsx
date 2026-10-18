@@ -55,16 +55,20 @@ const FEATURES = [
   },
 ];
 
-const FONCTION_PAR_KEY = {
-  parser_cv: "PARSER_CV",
-  analyse_carriere: "SUGGESTIONS_METIER",
-  conseils_dashboard: "CONSEILS_DASHBOARD",
-};
-
 // Calculés / informatifs côté serveur : ne jamais les renvoyer dans le PUT.
-const CHAMPS_LECTURE_SEULE = ["prompts_accessibles", "budget_modifiable", "appels_ia_mois"];
+const CHAMPS_LECTURE_SEULE = ["prompts_accessibles", "budget_modifiable", "modele_modifiable", "appels_ia_mois"];
 // Plafond et seuil : réservés au Super Admin (le serveur répond 403 si un admin simple les envoie).
 const CHAMPS_BUDGET = ["budget_ia_appels_mois_max", "budget_ia_alerte_pct"];
+// Bornes de max_tokens : miroir de MAX_TOKENS_MIN / MAX_TOKENS_MAX dans jobs/models/ia.py (le serveur
+// refuse en 400 toute valeur hors bornes ; ici on prévient avant l'envoi).
+const MAX_TOKENS_MIN = 100;
+const MAX_TOKENS_MAX = 16000;
+// Fournisseur, modèles, température, effort de raisonnement et max_tokens : même règle (ils changent
+// le coût, le comportement et le destinataire des données).
+const CHAMPS_MODELE = [
+  "provider", "groq_model", "ollama_model", "temperature", "reasoning_effort",
+  ...FEATURES.map((f) => `${f.key}_max_tokens`),
+];
 
 const AdminIAConfig = () => {
   const [config, setConfig] = useState(null);
@@ -108,7 +112,11 @@ const AdminIAConfig = () => {
   const enregistrer = async () => {
     setSaving(true);
     try {
-      const exclus = config.budget_modifiable === false ? [...CHAMPS_LECTURE_SEULE, ...CHAMPS_BUDGET] : CHAMPS_LECTURE_SEULE;
+      const exclus = [
+        ...CHAMPS_LECTURE_SEULE,
+        ...(config.budget_modifiable === false ? CHAMPS_BUDGET : []),
+        ...(config.modele_modifiable === false ? CHAMPS_MODELE : []),
+      ];
       const payload = Object.fromEntries(Object.entries(config).filter(([cle]) => !exclus.includes(cle)));
       const updated = await jobsService.updateAIConfig(payload);
       setConfig(updated);
@@ -131,10 +139,10 @@ const AdminIAConfig = () => {
     }
     const tokensTropBas = FEATURES.filter((f) => {
       const v = config[`${f.key}_max_tokens`];
-      return v !== undefined && v !== null && !(Number(v) >= 100);
+      return v !== undefined && v !== null && !(Number(v) >= MAX_TOKENS_MIN && Number(v) <= MAX_TOKENS_MAX);
     });
     if (tokensTropBas.length > 0) {
-      toast.error(`max_tokens doit être d'au moins 100 — ${tokensTropBas.map((f) => f.label).join(", ")}.`);
+      toast.error(`max_tokens doit être compris entre ${MAX_TOKENS_MIN} et ${MAX_TOKENS_MAX} — ${tokensTropBas.map((f) => f.label).join(", ")}.`);
       return;
     }
     const problemes = getTokensManquants();
@@ -208,27 +216,30 @@ const AdminIAConfig = () => {
           <p className={`text-sm font-bold ${tw.textStrong}`}>Fournisseur & modèle</p>
           <div>
             <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Fournisseur</label>
-            <select className={inputClass} value={config.provider} onChange={(e) => setConfig({ ...config, provider: e.target.value })}>
+            <select className={inputClass} disabled={config.modele_modifiable === false} value={config.provider} onChange={(e) => setConfig({ ...config, provider: e.target.value })}>
               <option value="GROQ">Groq (cloud)</option>
               <option value="OLLAMA">Ollama (local, post-déploiement — pas encore actif)</option>
             </select>
           </div>
           <div>
             <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Modèle Groq</label>
-            <input className={inputClass} value={config.groq_model} onChange={(e) => setConfig({ ...config, groq_model: e.target.value })} />
+            <input className={inputClass} disabled={config.modele_modifiable === false} value={config.groq_model} onChange={(e) => setConfig({ ...config, groq_model: e.target.value })} />
           </div>
           <div>
             <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Modèle Ollama (local)</label>
-            <input className={inputClass} value={config.ollama_model} onChange={(e) => setConfig({ ...config, ollama_model: e.target.value })} />
+            <input className={inputClass} disabled={config.modele_modifiable === false} value={config.ollama_model} onChange={(e) => setConfig({ ...config, ollama_model: e.target.value })} />
           </div>
+          {config.modele_modifiable === false && (
+            <p className={`text-xs ${tw.textMuted}`}>Fournisseur, modèles, température, effort de raisonnement et max_tokens : modifiables uniquement par le Super Admin.</p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Température (0 = précis, 2 = créatif)</label>
-              <input type="number" step="0.1" min="0" max="2" className={inputClass} value={config.temperature ?? ""} onChange={(e) => setConfig({ ...config, temperature: e.target.value === "" ? "" : parseFloat(e.target.value) })} />
+              <input type="number" step="0.1" min="0" max="2" className={inputClass} disabled={config.modele_modifiable === false} value={config.temperature ?? ""} onChange={(e) => setConfig({ ...config, temperature: e.target.value === "" ? "" : parseFloat(e.target.value) })} />
             </div>
             <div>
               <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Effort de raisonnement</label>
-              <select className={inputClass} value={config.reasoning_effort} onChange={(e) => setConfig({ ...config, reasoning_effort: e.target.value })}>
+              <select className={inputClass} disabled={config.modele_modifiable === false} value={config.reasoning_effort} onChange={(e) => setConfig({ ...config, reasoning_effort: e.target.value })}>
                 <option value="low">Low (rapide)</option>
                 <option value="medium">Medium</option>
                 <option value="high">High (lent, plus précis)</option>
@@ -286,7 +297,7 @@ const AdminIAConfig = () => {
               <div className="flex items-center justify-between gap-3 mb-1">
                 <p className={`text-sm font-semibold ${tw.textStrong}`}>{f.label}</p>
                 {/* Interrupteur explicite (avant : case à cocher nue, sans libellé ni état lisible) */}
-                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                <label className="relative inline-flex items-center gap-2 cursor-pointer shrink-0">
                   <span className={`text-[11px] font-semibold ${config[`${f.key}_actif`] ? "text-emerald-700" : "text-red-600"}`}>
                     {config[`${f.key}_actif`] ? "Activée" : "Désactivée"}
                   </span>
@@ -306,8 +317,10 @@ const AdminIAConfig = () => {
                 <label className={`text-[10px] font-medium ${tw.textMuted} mb-1 block`}>max_tokens</label>
                 <input
                   type="number"
-                  min="100"
+                  min={MAX_TOKENS_MIN}
+                  max={MAX_TOKENS_MAX}
                   className={`${inputClass} max-w-[140px]`}
+                  disabled={config.modele_modifiable === false}
                   value={config[`${f.key}_max_tokens`] ?? ""}
                   onChange={(e) => setConfig({ ...config, [`${f.key}_max_tokens`]: Number(e.target.value) })}
                 />

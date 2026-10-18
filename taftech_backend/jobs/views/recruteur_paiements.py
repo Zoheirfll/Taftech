@@ -92,6 +92,11 @@ class ChargilyCheckoutPalierAPIView(APIView):
             },
         }
 
+        # URL du webhook envoyée à CHAQUE paiement (réglage d'environnement) : l'activation du palier
+        # ne dépend plus de l'URL configurée dans le tableau de bord Chargily.
+        if settings.CHARGILY_WEBHOOK_URL:
+            payload["webhook_endpoint"] = settings.CHARGILY_WEBHOOK_URL
+
         try:
             resp = http_requests.post(
                 "https://pay.chargily.net/test/api/v2/checkouts",
@@ -127,12 +132,30 @@ class MonAbonnementAPIView(APIView):
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=404)
         abonnement = getattr(entreprise, 'abonnement', None)
+        # Droit lu sur le palier réellement ACTIF (expiration comprise), pas sur l'abonnement
+        # brut : le menu recruteur s'en sert pour afficher un cadenas, au lieu de coder
+        # « Pro et plus » en dur alors que l'admin règle les droits palier par palier.
+        from ..paliers_utils import get_palier_actif
+        palier_actif = get_palier_actif(entreprise)
+        # Même règle que la création d'offre (offres approuvées ET en attente, non clôturées) :
+        # le menu et la page « Publier une offre » préviennent AVANT que le recruteur remplisse
+        # tout le formulaire pour se voir refuser la publication.
+        from .offres import _limite_offres_atteinte
+        from ..paliers_utils import limite_offres_actives
+        droits = {
+            "acces_ia_recommandes": bool(palier_actif and palier_actif.acces_ia_recommandes),
+            "acces_equipe": bool(palier_actif and palier_actif.acces_equipe),
+            "acces_cvtheque": palier_actif is not None,  # la CVthèque exige un palier actif
+            "peut_publier_offre": _limite_offres_atteinte(entreprise) is None,
+            "limite_offres": limite_offres_actives(entreprise),  # None = illimité
+        }
         if not abonnement:
-            return Response({"palier": None})
+            return Response({"palier": None, **droits})
         return Response({
             "palier": abonnement.palier.nom,
             "date_expiration": abonnement.date_expiration.strftime('%d/%m/%Y') if abonnement.date_expiration else None,
             "renouvellement_auto": abonnement.renouvellement_auto,
+            **droits,
         })
 
     def patch(self, request):

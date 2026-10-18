@@ -359,7 +359,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     });
   });
 
-  it("🔴 MDP2 : Mots de passe ne correspondent pas → toast erreur sans appel API", async () => {
+  it("🔴 MDP2 : Mots de passe ne correspondent pas → message sous le champ sans appel API", async () => {
     api.get.mockResolvedValue({ data: { est_compte_google: false } });
 
     render(<MemoryRouter><ParametresRecruteur /></MemoryRouter>);
@@ -374,12 +374,13 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     fireEvent.click(screen.getByRole("button", { name: /Modifier/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Les mots de passe ne correspondent pas.");
+      // Le message s'affiche sous le champ de confirmation (plus dans un toast).
+      expect(screen.getByText("Les mots de passe ne correspondent pas.")).toBeInTheDocument();
       expect(api.post).not.toHaveBeenCalled();
     });
   });
 
-  it("🔴 MDP3 : Nouveau MDP trop court → toast erreur sans appel API", async () => {
+  it("🔴 MDP3 : Nouveau MDP trop court → message sous le champ sans appel API", async () => {
     api.get.mockResolvedValue({ data: { est_compte_google: false } });
 
     render(<MemoryRouter><ParametresRecruteur /></MemoryRouter>);
@@ -394,7 +395,8 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     fireEvent.click(screen.getByRole("button", { name: /Modifier/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("8 caractères minimum.");
+      // Le message s'affiche sous le champ « nouveau mot de passe » (plus dans un toast).
+      expect(screen.getByText("8 caractères minimum.")).toBeInTheDocument();
       expect(api.post).not.toHaveBeenCalled();
     });
   });

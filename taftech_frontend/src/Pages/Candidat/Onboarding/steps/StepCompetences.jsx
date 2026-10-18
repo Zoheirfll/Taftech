@@ -86,7 +86,7 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
       {pendingCompetences.length > 0 && (
         <p className={`text-xs ${tw.textMuted} mb-4`}>
           Vérifiez les compétences détectées : modifiez-les, supprimez celles qui ne vous correspondent pas
-          {nbAVerifier > 0 ? `. ${nbAVerifier} ne figure${nbAVerifier > 1 ? "nt" : ""} pas dans le référentiel TAFTECH (à vérifier).` : "."}
+          {nbAVerifier > 0 ? `. ${nbAVerifier} ne figure${nbAVerifier > 1 ? "nt" : ""} pas dans le référentiel TAFTECH (en attente de validation).` : "."}
         </p>
       )}
       <div className="flex flex-col gap-2 mb-4">
@@ -115,7 +115,7 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700" title="Absente du référentiel TAFTECH : vérifiez l'intitulé">
-                <AlertCircle size={12} /> À vérifier
+                <AlertCircle size={12} /> En attente de validation
               </span>
             )}
             <select

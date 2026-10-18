@@ -20,7 +20,8 @@ import {
   BadgeCheck,
   Languages,
 } from "lucide-react";
-import { formatDatePrecise } from "../../utils/cvDates";
+import { formatDatePrecise, formatAge } from "../../utils/cvDates";
+import { nomWilaya } from "../../utils/wilaya";
 
 const STATUT_FORMATION = {
   OBTENU: { label: "Obtenu", className: "bg-emerald-50 text-emerald-700" },
@@ -466,7 +467,7 @@ const ReviewCandidature = () => {
                 {profil.wilaya && (
                   <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <MapPin size={11} />
-                    {profil.wilaya}
+                    {nomWilaya(profil.wilaya)}
                     {profil.commune ? ` · ${profil.commune}` : ""}
                   </span>
                 )}
@@ -476,10 +477,10 @@ const ReviewCandidature = () => {
                     {profil.adresse}
                   </span>
                 )}
-                {profil.date_naissance && (
+                {formatAge(profil.date_naissance) && (
                   <span className="inline-flex items-center gap-1 text-xs text-slate-700">
                     <Calendar size={11} />
-                    Né(e) le {new Date(profil.date_naissance).toLocaleDateString("fr-FR")}
+                    {formatAge(profil.date_naissance)}
                   </span>
                 )}
                 {(profil.diplome_ref_libelle || profil.niveau_scolaire_ref_libelle || profil.diplome) && (
@@ -622,6 +623,11 @@ const ReviewCandidature = () => {
                       <p className="text-xs text-slate-600 mt-0.5">
                         {formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — {exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "Aujourd'hui"}
                       </p>
+                      {exp.description && (
+                        <p className="text-xs text-slate-700 mt-1.5 leading-relaxed whitespace-pre-line">
+                          {exp.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

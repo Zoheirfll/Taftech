@@ -14,12 +14,15 @@ from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
     ProfilEntreprise, AuditLog, DemandeActivationPremium, Metier, GroupeMetier,
     Article, FaqItem, CompetenceReferentiel, BanniereAccueil, PropositionMetier,
-    Palier, AbonnementEntreprise, FormationCandidat,
+    Palier, AbonnementEntreprise, FormationCandidat, DemandeAjout,
 )
 from ..constants import WILAYAS_CHOICES
 from ..permissions import IsAdminRole
 from .export_xlsx import reponse_xlsx
 from ..referentiel_utils import secteur_et_domaine_par_metier
+from ..seo_views import (
+    STATIC_PATHS, alertes_configuration, offres_indexables, rendu_serveur_pret, stats_job_posting,
+)
 import django.utils.timezone as timezone
 from ..serializers import (
     OffreEmploiSerializer, OffreDashboardDTO,
@@ -136,6 +139,16 @@ class AdminEntreprisesListAPIView(APIView):
         if field not in self.ORDERING_FIELDS:
             ordering = '-id'
         entreprises = ProfilEntreprise.objects.all().order_by(ordering)
+        # Lien de la bannière « abonnements qui expirent » du tableau de bord : abonnements encore
+        # actifs dont la date d'expiration tombe dans les N prochains jours (même règle que
+        # `premium_expirant_bientot` de AdminStatsAPIView).
+        expire_sous = request.query_params.get('abonnement_expire_sous', '')
+        if expire_sous.isdigit() and 0 < int(expire_sous) <= 365:
+            maintenant = timezone.now()
+            entreprises = entreprises.filter(
+                abonnement__date_expiration__gte=maintenant,
+                abonnement__date_expiration__lte=maintenant + datetime.timedelta(days=int(expire_sous)),
+            )
         if search:
             entreprises = entreprises.filter(
                 Q(nom_entreprise__icontains=search) | Q(registre_commerce__icontains=search)
@@ -214,7 +227,13 @@ class AdminStatsAPIView(APIView):
             elif a.palier.prix_mensuel_da:
                 revenu_premium_estime += a.palier.prix_mensuel_da
 
+        nb_a_examiner = dict(
+            DemandeAjout.objects.filter(statut=DemandeAjout.STATUT_A_EXAMINER)
+            .values_list('type').annotate(n=Count('id')).order_by('type')
+        )
         stats = {
+            # Statut réel du compte connecté : la barre latérale affiche « Super Admin » ou « Administrateur ».
+            "est_super_admin": bool(request.user.is_superuser),
             "total_offres": OffreEmploi.objects.count(),
             "offres_attente": OffreEmploi.objects.filter(statut_moderation='EN_ATTENTE').count(),
             "total_entreprises": ProfilEntreprise.objects.count(),
@@ -236,6 +255,10 @@ class AdminStatsAPIView(APIView):
             "metiers_a_valider": PropositionMetier.objects.filter(statut=PropositionMetier.STATUT_SUGGEREE).count(),
             "nb_bannieres_actives": BanniereAccueil.objects.filter(actif=True).count(),
             "formations_a_verifier": FormationCandidat.objects.filter(statut_validation='A_PRECISER').count(),
+            # Demandes d'ajout au référentiel à examiner, par type (badges des pages Formations et Spécialités).
+            "demandes_a_examiner": {
+                type_demande: nb_a_examiner.get(type_demande, 0) for type_demande, _ in DemandeAjout.TYPE_CHOICES
+            },
         }
         return Response(stats, status=status.HTTP_200_OK)
 
@@ -249,12 +272,12 @@ class AdminSeoStatsAPIView(APIView):
     def get(self, request):
         base = settings.SITE_URL.rstrip('/')
 
-        offre = OffreEmploi.objects.select_related('entreprise', 'metier', 'metier__groupe_principal', 'metier__groupe_principal__parent').filter(
-            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        ).only('titre', 'metier_id', 'code_public', 'entreprise__slug').first()
-        nb_offres = OffreEmploi.objects.filter(
-            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        ).count()
+        # Même définition que le sitemap (`seo_views.offres_indexables`) : active, approuvée, non
+        # clôturée et non expirée.
+        offre = offres_indexables().select_related(
+            'entreprise', 'metier', 'metier__groupe_principal', 'metier__groupe_principal__parent'
+        ).only('titre', 'metier_id', 'code_public', 'entreprise__slug').order_by('-date_publication').first()
+        nb_offres = offres_indexables().count()
         exemple_offre = None
         if offre:
             from django.utils.text import slugify
@@ -319,7 +342,11 @@ class AdminSeoStatsAPIView(APIView):
             "pages": pages,
             "sitemap_url": f"{base}/sitemap.xml",
             "robots_url": f"{base}/robots.txt",
-            "total_urls_sitemap": sum(p["nb_pages_indexables"] for p in pages) + 8,  # +8 = STATIC_PATHS
+            "pages_statiques": len(STATIC_PATHS),
+            "total_urls_sitemap": sum(p["nb_pages_indexables"] for p in pages) + len(STATIC_PATHS),
+            "job_posting": stats_job_posting(),
+            "rendu_serveur_pret": rendu_serveur_pret(),
+            "alertes": alertes_configuration(),
         }, status=status.HTTP_200_OK)
 
 

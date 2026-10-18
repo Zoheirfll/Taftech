@@ -3,6 +3,8 @@ import React from "react";
 import { Upload, Save, Lock, User } from "lucide-react";
 import { authService } from "../../../Services/authService";
 import { tw } from "../../../theme";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 const CarteInformationsPersonnelles = ({
   role,
@@ -131,7 +133,23 @@ const CarteInformationsPersonnelles = ({
   </div>
 );
 
-const CarteMotDePasse = ({ estCompteGoogle, pwdForm, setPwdForm, pwdLoading, onSubmit }) => (
+const CarteMotDePasse = ({ estCompteGoogle, pwdForm, setPwdForm, pwdLoading, onSubmit }) => {
+  const { erreurs, definir, effacer, attributs } = useErreursChamps();
+  // Contrôles faits avant l'envoi, avec un message sous le champ concerné.
+  const soumettre = (e) => {
+    const trouvees = {};
+    if (!estCompteGoogle && !pwdForm.old) trouvees.old = "Saisissez votre mot de passe actuel.";
+    if (pwdForm.new.length < 8) trouvees.new = "8 caractères minimum.";
+    if (pwdForm.new !== pwdForm.confirm) trouvees.confirm = "Les mots de passe ne correspondent pas.";
+    if (Object.keys(trouvees).length) {
+      e.preventDefault();
+      definir(trouvees);
+      return;
+    }
+    definir({});
+    return onSubmit(e);
+  };
+  return (
   <div className={`${tw.card} rounded-2xl overflow-hidden`}>
     <div className={`px-6 py-4 border-b ${tw.borderSubtle} flex items-center gap-2`}>
       <Lock size={16} className={tw.textMuted} />
@@ -147,31 +165,46 @@ const CarteMotDePasse = ({ estCompteGoogle, pwdForm, setPwdForm, pwdLoading, onS
       </div>
     </div>
     <div className="p-6">
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form onSubmit={soumettre} noValidate className="space-y-3">
         <div className={`grid gap-3 ${estCompteGoogle ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
           {!estCompteGoogle && (
+            <div>
+              <input
+                type="password"
+                placeholder="Mot de passe actuel"
+                aria-label="Mot de passe actuel"
+                {...attributs("old")}
+                value={pwdForm.old}
+                onChange={(e) => { setPwdForm({ ...pwdForm, old: e.target.value }); effacer("old"); }}
+                className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
+              />
+              <FieldError id="err-old" message={erreurs.old} />
+            </div>
+          )}
+          <div>
             <input
               type="password"
-              placeholder="Mot de passe actuel"
-              value={pwdForm.old}
-              onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
+              placeholder="Nouveau mot de passe (8 car. min)"
+              aria-label="Nouveau mot de passe"
+              {...attributs("new")}
+              value={pwdForm.new}
+              onChange={(e) => { setPwdForm({ ...pwdForm, new: e.target.value }); effacer("new"); }}
               className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
             />
-          )}
-          <input
-            type="password"
-            placeholder="Nouveau mot de passe (8 car. min)"
-            value={pwdForm.new}
-            onChange={(e) => setPwdForm({ ...pwdForm, new: e.target.value })}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
-          />
-          <input
-            type="password"
-            placeholder="Confirmer le mot de passe"
-            value={pwdForm.confirm}
-            onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
-          />
+            <FieldError id="err-new" message={erreurs.new} />
+          </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Confirmer le mot de passe"
+              aria-label="Confirmer le mot de passe"
+              {...attributs("confirm")}
+              value={pwdForm.confirm}
+              onChange={(e) => { setPwdForm({ ...pwdForm, confirm: e.target.value }); effacer("confirm"); }}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm ${tw.inputTeal}`}
+            />
+            <FieldError id="err-confirm" message={erreurs.confirm} />
+          </div>
         </div>
         <div className="flex justify-end">
           <button
@@ -185,7 +218,8 @@ const CarteMotDePasse = ({ estCompteGoogle, pwdForm, setPwdForm, pwdLoading, onS
       </form>
     </div>
   </div>
-);
+  );
+};
 
 export const OngletMonProfil = ({ p }) => (
   <>

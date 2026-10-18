@@ -2,6 +2,9 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import RouteTitle from "./Components/RouteTitle";
+import Analytics from "./Components/Analytics";
+import CookieBanner from "./Components/CookieBanner";
+import { tw } from "./theme";
 import OfflineBanner from "./Components/OfflineBanner";
 import { ConfirmModalHost } from "./utils/confirmToast";
 import SiteAnnonceBar from "./Components/SiteAnnonceBar";
@@ -93,6 +96,8 @@ import BottomNavRecruteur from "./Components/BottomNavRecruteur";
 // Layouts — chargés immédiatement (enveloppes de routes)
 import CandidatLayout from "./Pages/Candidat/CandidatLayout";
 import RecruteurLayout from "./Pages/Recruteur/RecruteurLayout";
+import EntrepriseValideeGuard from "./Pages/Recruteur/EntrepriseValideeGuard";
+import PalierRequisGuard from "./Pages/Recruteur/PalierRequisGuard";
 const AdminLayout = lazy(() => import("./Pages/Admin/AdminLayout"));
 
 // Pages Publiques — visibles sans connexion, on garde quelques-unes immédiates
@@ -169,13 +174,14 @@ const PrendreRendezVous = lazy(() => import("./Pages/Candidat/PrendreRendezVous"
 const AdminEntreprises  = lazy(() => import("./Pages/Admin/AdminEntreprises"));
 const AdminOffres       = lazy(() => import("./Pages/Admin/AdminOffres"));
 const AdminStatistiques = lazy(() => import("./Pages/Admin/AdminStatistiques"));
+const AdminStatsPeriode = lazy(() => import("./Pages/Admin/AdminStatsPeriode"));
+const Merci = lazy(() => import("./Pages/Public/Merci"));
 const AdminUsers        = lazy(() => import("./Pages/Admin/AdminUsers"));
 const AdminBroadcast    = lazy(() => import("./Pages/admin/AdminBroadcast"));
 const Blog              = lazy(() => import("./Pages/Public/Blog"));
 const ArticleDetail     = lazy(() => import("./Pages/Public/ArticleDetail"));
 const AdminReferentielV2 = lazy(() => import("./Pages/Admin/AdminReferentielV2"));
 const AdminMentionsLegales = lazy(() => import("./Pages/Admin/AdminMentionsLegales"));
-const AdminMetiersSuggeres = lazy(() => import("./Pages/Admin/AdminMetiersSuggeres"));
 const AdminFaq          = lazy(() => import("./Pages/Admin/AdminFaq"));
 const AdminCompetences  = lazy(() => import("./Pages/Admin/AdminCompetences"));
 const AdminArticles     = lazy(() => import("./Pages/Admin/AdminArticles"));
@@ -201,9 +207,17 @@ if (import.meta.env.MODE === "production") {
   console.debug = noop;
 }
 
+// Fond de chargement global pendant le chargement différé d'une page : squelette de page (titre,
+// texte, cartes) plutôt qu'un cercle seul, pour que l'écran ne « saute » pas à l'arrivée du contenu.
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-[60vh]">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+  <div role="status" aria-label="Chargement de la page" className="max-w-6xl mx-auto px-4 md:px-6 py-8 min-h-[60vh] animate-pulse space-y-6">
+    <div className={`h-8 w-1/3 ${tw.surfaceSubtle} rounded-lg`} />
+    <div className={`h-4 w-2/3 ${tw.surfaceSubtle} rounded`} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={`h-40 ${tw.surfaceSubtle} rounded-2xl`} />
+      ))}
+    </div>
   </div>
 );
 
@@ -262,6 +276,8 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       <RouteTitle />
+      <Analytics />
+      <CookieBanner />
       <OfflineBanner />
       <Toaster
         position="top-center"
@@ -274,7 +290,8 @@ function AppContent() {
       <ConfirmModalHost />
 
       {!isAdminPath && <SiteAnnonceBar />}
-      {recruteurPortal ? <NavbarRecruteur /> : <Navbar />}
+      {/* Le panel admin a sa propre barre latérale (avec déconnexion) : ni barre ni pied de page publics. */}
+      {!isAdminPath && (recruteurPortal ? <NavbarRecruteur /> : <Navbar />)}
 
       <main className={`grow ${showAnyBottomNav ? "pb-16 md:pb-0" : ""}`}>
         <Suspense fallback={<PageLoader />}>
@@ -285,6 +302,7 @@ function AppContent() {
             <Route path="/entreprises" element={<Entreprises />} />
             <Route path="/confidentialite" element={<PageStatiqueGenerique slugFixe="confidentialite" />} />
             <Route path="/contact" element={<ContactezNous />} />
+            <Route path="/merci" element={<Merci />} />
             <Route path="/cgu" element={<PageStatiqueGenerique slugFixe="cgu" />} />
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
@@ -316,16 +334,16 @@ function AppContent() {
             <Route path="/recruteurs/inscription" element={<GuestRoute portal="recruteur"><RegisterRecruteur /></GuestRoute>} />
 
             {/* ESPACE RECRUTEUR CONNECTÉ */}
-            <Route element={<RecruteurRoute><RecruteurLayout /></RecruteurRoute>}>
-              <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><CreateJob /></RoleGuard>} />
+            <Route element={<RecruteurRoute><EntrepriseValideeGuard><RecruteurLayout /></EntrepriseValideeGuard></RecruteurRoute>}>
+              <Route path="/creer-offre" element={<RoleGuard minRole="UTILISATEUR"><PalierRequisGuard droit="peut_publier_offre" titre="Publier une offre" message="Vous avez atteint la limite d'offres actives de votre palier. Passez à un palier supérieur pour en publier davantage."><CreateJob /></PalierRequisGuard></RoleGuard>} />
               <Route path="/dashboard" element={<DashboardRecruteur />} />
               <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
-              <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><CVTheque /></RoleGuard>} />
+              <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><PalierRequisGuard droit="acces_cvtheque" titre="CVthèque" message="Cette fonctionnalité nécessite un abonnement actif."><CVTheque /></PalierRequisGuard></RoleGuard>} />
               <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
               <Route path="/notifications" element={<NotificationsRecruteur />} />
               <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
               <Route path="/parametres" element={<ParametresRecruteur />} />
-              <Route path="/mon-equipe" element={<MonEquipe />} />
+              <Route path="/mon-equipe" element={<PalierRequisGuard droit="acces_equipe" titre="Mon équipe" message="La gestion d'équipe nécessite le palier Business ou supérieur."><MonEquipe /></PalierRequisGuard>} />
               <Route path="/recruteurs/abonnements" element={<AbonnementsPage />} />
               <Route path="/offres-emploi" element={<OffresListPage />} />
               <Route path="/candidatures" element={<CandidaturesListPage />} />
@@ -365,11 +383,16 @@ function AppContent() {
               <Route path="entreprises" element={<AdminEntreprises />} />
               <Route path="offres" element={<AdminOffres />} />
               <Route path="dashboard" element={<AdminStatistiques />} />
+              <Route path="statistiques" element={<AdminStatsPeriode />} />
               <Route path="utilisateurs" element={<AdminUsers />} />
               <Route path="broadcast" element={<AdminBroadcast />} />
               <Route path="candidatures" element={<AdminCandidatures />} />
               <Route path="demandes-premium" element={<AdminDemandesPremium />} />
-              <Route path="/admin-taftech/referentiel-v2" element={<AdminReferentielV2 />} />
+              <Route path="/admin-taftech/referentiel-v2" element={<Navigate to="/admin-taftech/referentiel-metiers" replace />} />
+              <Route path="/admin-taftech/referentiel-metiers" element={<AdminReferentielV2 key="metiers" groupe="metiers" />} />
+              <Route path="/admin-taftech/referentiel-formations" element={<AdminReferentielV2 key="formations" groupe="formations" />} />
+              <Route path="/admin-taftech/referentiel-specialites" element={<AdminReferentielV2 key="specialites" groupe="specialites" />} />
+              <Route path="/admin-taftech/referentiel-similarites" element={<Navigate to="/admin-taftech/referentiel-metiers" replace />} />
               <Route path="/admin-taftech/abonnements-ia" element={<AdminAbonnementsIA />} />
               <Route path="/admin-taftech/qualite-ia" element={<AdminQualiteIA />} />
               {/* Anciennes URLs (3 pages séparées, fusionnées en onglets) — redirigées pour ne
@@ -378,7 +401,7 @@ function AppContent() {
               <Route path="/admin-taftech/credit-packs" element={<Navigate to="/admin-taftech/abonnements-ia?tab=credits" replace />} />
               <Route path="/admin-taftech/ia-config" element={<Navigate to="/admin-taftech/abonnements-ia?tab=ia" replace />} />
               <Route path="/admin-taftech/mentions-legales" element={<AdminMentionsLegales />} />
-              <Route path="/admin-taftech/metiers-suggeres" element={<AdminMetiersSuggeres />} />
+              <Route path="/admin-taftech/metiers-suggeres" element={<AdminReferentielV2 key="metiers-suggeres" groupe="metiers" ongletInitial="demandes-metiers" />} />
               <Route path="/admin-taftech/faq" element={<AdminFaq />} />
               <Route path="/admin-taftech/competences" element={<AdminCompetences />} />
               <Route path="/admin-taftech/articles" element={<AdminArticles />} />
@@ -396,7 +419,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      {recruteurPortal ? <FooterRecruteur /> : <Footer />}
+      {!isAdminPath && (recruteurPortal ? <FooterRecruteur /> : <Footer />)}
       {showBottomNavCandidat && <BottomNavCandidat />}
       {showBottomNavGuest && <BottomNavGuest />}
       {showBottomNavRecruteur && <BottomNavRecruteur />}

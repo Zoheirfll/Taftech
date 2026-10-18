@@ -1,9 +1,13 @@
 // Modale d'édition du CV (titre professionnel et fichier).
 import { useSubmitLock } from "../../../utils/useSubmitLock";
 import { tw } from "../../../theme";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
+import { erreurFichier, FICHIER_CV } from "../../../utils/validations";
 
 export const ModalCV = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, showCVForm, setShowCVForm, editCV, setEditCV, titreSuggestions, showTitreSuggestions, setShowTitreSuggestions, handleUpdateCV, handleTitreProChange }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, definir, effacer, attributs } = useErreursChamps();
   return (
     <>
       {showCVForm && (
@@ -12,7 +16,20 @@ export const ModalCV = ({ inputClass, modalClass, modalInnerClass, btnPrimary, b
             <h3 className={tw.modalHeading}>
               Mettre à jour mon CV
             </h3>
-            <form onSubmit={lockSubmit(handleUpdateCV)} className="space-y-4">
+            <form
+              noValidate
+              onSubmit={lockSubmit((e) => {
+                const probleme = erreurFichier(editCV.file, FICHIER_CV);
+                if (probleme) {
+                  e.preventDefault();
+                  definir({ file: probleme });
+                  return;
+                }
+                definir({});
+                return handleUpdateCV(e);
+              })}
+              className="space-y-4"
+            >
               <div>
                 <label className={tw.formLabel}>
                   Titre professionnel
@@ -57,9 +74,11 @@ export const ModalCV = ({ inputClass, modalClass, modalInnerClass, btnPrimary, b
                   type="file"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   accept=".pdf"
-                  onChange={(e) =>
-                    setEditCV({ ...editCV, file: e.target.files[0] })
-                  }
+                  {...attributs("file")}
+                  onChange={(e) => {
+                    setEditCV({ ...editCV, file: e.target.files[0] });
+                    effacer("file");
+                  }}
                 />
                 <p className={`text-sm font-medium transition-colors ${tw.dropzoneNeutralText}`}>
                   {editCV.file
@@ -67,6 +86,7 @@ export const ModalCV = ({ inputClass, modalClass, modalInnerClass, btnPrimary, b
                     : "Cliquez ou glissez un PDF ici"}
                 </p>
               </div>
+              <FieldError id="err-file" message={erreurs.file} />
               <div className="flex gap-3">
                 <button
                   type="button"

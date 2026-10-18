@@ -10,11 +10,12 @@ import { reportError } from "../../utils/errorReporter";
 import { confirmToast } from "../../utils/confirmToast";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
-import { grouperParFamille, aplatirGroupes } from "../../utils/familleFormation";
+import { grouperParFamille } from "../../utils/familleFormation";
 import { rapprocherDuReferentiel } from "../../utils/competencesReferentiel";
 import { CATEGORIES_EXIGENCE, CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../utils/exigencesCategories";
 import InfoBanner from "../../Components/InfoBanner";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
+import BlocFormationRequise from "./CreateJob/BlocFormationRequise";
 import { Search, Plus, Building2, ChevronRight, MapPin, AlertTriangle, Trash2, X, Pencil } from "lucide-react";
 
 const GRID = "minmax(0,1fr) 88px 72px 80px 52px 60px 64px 52px 60px 148px";
@@ -717,113 +718,15 @@ const OffresListPage = () => {
                 </div>
               </div>
 
-              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
-                <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-slate-700">
-                  Formation requise (optionnel)
-                </p>
-                <p className="text-xs text-slate-600 mb-3">
-                  Le diplôme et la spécialité ci-dessous sont deux critères indépendants (jamais un couple imposé) : laisser "Spécialités acceptées" vide accepte toute spécialité pour les diplômes choisis. Cette liste alimente aussi le filtre "Diplôme" de la recherche publique d'offres.
-                </p>
-
-                <div className="mb-4">
-                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Diplômes acceptés</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
-                    <Select
-                      options={diplomesGroupes}
-                      value={aplatirGroupes(diplomesGroupes).find((o) => String(o.value) === String(draftDiplomeId)) || null}
-                      onChange={(opt) => setDraftDiplomeId(opt ? opt.value : "")}
-                      styles={selectStylesTeal}
-                      isClearable
-                      placeholder="Sélectionner un type de diplôme..."
-                    />
-                    <button
-                      type="button"
-                      onClick={ajouterDiplomeRequis}
-                      disabled={!draftDiplomeId}
-                      className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
-                    >
-                      Ajouter
-                    </button>
-                  </div>
-                  {diplomesRequis.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {diplomesRequis.map((d) => (
-                        <span key={d.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
-                          {d.libelle}
-                          <button type="button" onClick={() => retirerDiplomeRequis(d.id)} className="hover:text-red-600">
-                            <X size={12} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <SuggestionsDiplomes
-                    diplomes={suggestionsPourMetier.diplomes}
-                    dejaAjoutes={diplomesRequis}
-                    elargi={suggestionsPourMetier.elargi}
-                    onAjouter={(d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }]))}
-                  />
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Spécialités acceptées (optionnel — vide = toute spécialité)</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
-                    <Select
-                      options={specialitesGroupes}
-                      value={aplatirGroupes(specialitesGroupes).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
-                      onChange={(opt) => setDraftSpecialiteId(opt ? opt.value : "")}
-                      styles={selectStylesTeal}
-                      isClearable
-                      placeholder="Sélectionner une spécialité..."
-                    />
-                    <button
-                      type="button"
-                      onClick={ajouterSpecialiteRequise}
-                      disabled={!draftSpecialiteId}
-                      className="h-fit px-4 py-2.5 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
-                    >
-                      Ajouter
-                    </button>
-                  </div>
-                  {specialitesRequises.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {specialitesRequises.map((s) => (
-                        <span key={s.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
-                          {s.libelle}
-                          <button type="button" onClick={() => retirerSpecialiteRequise(s.id)} className="hover:text-red-600">
-                            <X size={12} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {suggestionsPourMetier.specialites.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-[11px] font-medium text-slate-500 mb-1.5">Suggéré pour ce métier — cliquez pour ajouter la spécialité :</p>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestionsPourMetier.specialites
-                        .filter((s) => !specialitesRequises.some((sp) => String(sp.id) === String(s.id)))
-                        .map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => ajouterSpecialiteSuggeree(s)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 text-slate-600"
-                          >
-                            + {s.libelle}
-                        {s.famille_libelle && <span className="text-[10px] text-slate-500">({s.famille_libelle})</span>}
-                        {libelleUsage(s) && <span className="text-[10px] font-semibold text-indigo-600">{libelleUsage(s)}</span>}
-                          </button>
-                        ))}
-                    </div>
-                    {suggestionsPourMetier.avertissement && (
-                      <p className="text-[11px] text-slate-500 italic mt-2">{suggestionsPourMetier.avertissement}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+              {/* Même bloc que la création d'offre (liens « Je ne trouve pas… » inclus). */}
+              <BlocFormationRequise
+                job={{
+                  diplomesGroupes, specialitesGroupes, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
+                  diplomesRequis, specialitesRequises, ajouterDiplomeRequis, retirerDiplomeRequis, ajouterSpecialiteRequise,
+                  retirerSpecialiteRequise, ajouterSpecialiteSuggeree, suggestionsPourMetier,
+                  ajouterDiplomeSuggere: (d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }])),
+                }}
+              />
 
               <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/60">
                 <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-slate-700">

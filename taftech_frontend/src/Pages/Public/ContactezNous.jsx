@@ -1,7 +1,7 @@
 import FieldError from "../../Components/FieldError";
 import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Clock, ChevronDown } from "lucide-react";
 import { authService } from "../../Services/authService";
@@ -21,6 +21,7 @@ const MOTIFS = [
 
 const ContactezNous = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const role = authService.getUserRole();
   const portalRecruteur =
     searchParams.get("portail") === "recruteur" || role === "RECRUTEUR" || authService.getEstMembreEquipe();
@@ -63,9 +64,9 @@ const ContactezNous = () => {
     setIsSubmitting(true);
     try {
       await authService.envoyerContact(form);
-      toast.success("Votre message a bien été envoyé !");
       setForm({ nom: "", email: "", entreprise: "", motif: "", objet: "", message: "" });
       setAccepte(false);
+      navigate(`/merci?type=contact${portalRecruteur ? "&portail=recruteur" : ""}`);
     } catch (err) {
       const msg = err.response?.data?.error;
       if (msg === "Adresse e-mail invalide.") setFieldErrors({ email: msg });

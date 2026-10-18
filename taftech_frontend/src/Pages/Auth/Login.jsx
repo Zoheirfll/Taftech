@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
+import GoogleAuthProvider from "../../Components/GoogleAuthProvider";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
 import { authService } from "../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
@@ -19,12 +22,18 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const { erreurs, exiger, definir, effacer, attributs } = useErreursChamps();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get("next");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (exiger(credentials, { username: "Saisissez votre adresse e-mail.", password: "Saisissez votre mot de passe." })) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentials.username)) {
+      definir({ username: "Adresse e-mail invalide." });
+      return;
+    }
     setLoading(true);
     const toastId = toast.loading("Connexion en cours...");
     try {
@@ -41,7 +50,9 @@ const Login = () => {
         navigate("/register");
         return;
       }
-      toast.error(apiErrMsg(err, "Email ou mot de passe incorrect."), { id: toastId });
+      const message = apiErrMsg(err, "Email ou mot de passe incorrect.");
+      toast.error(message, { id: toastId });
+      definir({ password: message });
       reportError("ECHEC_CONNEXION", err);
     } finally {
       setLoading(false);
@@ -102,16 +113,18 @@ const Login = () => {
             Retrouvez vos candidatures, gérez votre profil et suivez vos opportunités professionnelles en toute simplicité.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label className={`${tw.authLabel} mb-1.5`}>Email</label>
               <input
                 type="email"
                 required
+                {...attributs("username")}
                 value={credentials.username}
-                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                onChange={(e) => { setCredentials({ ...credentials, username: e.target.value }); effacer("username"); }}
                 className={tw.authInput}
               />
+              <FieldError id="err-username" message={erreurs.username} />
             </div>
             <div>
               <label className={`${tw.authLabel} mb-1.5`}>Mot de passe</label>
@@ -119,8 +132,9 @@ const Login = () => {
                 <input
                   type={showPass ? "text" : "password"}
                   required
+                  {...attributs("password")}
                   value={credentials.password}
-                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  onChange={(e) => { setCredentials({ ...credentials, password: e.target.value }); effacer("password"); }}
                   className={`${tw.authInput} pr-10`}
                 />
                 <button
@@ -131,6 +145,7 @@ const Login = () => {
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <FieldError id="err-password" message={erreurs.password} />
             </div>
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -166,15 +181,17 @@ const Login = () => {
           </div>
 
           <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => toast.error("Échec de la connexion Google.")}
-              text="signin_with"
-              shape="rectangular"
-              theme="outline"
-              size="large"
-              width="360"
-            />
+            <GoogleAuthProvider>
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error("Échec de la connexion Google.")}
+                text="signin_with"
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                width="360"
+              />
+            </GoogleAuthProvider>
           </div>
 
           <p className={`${tw.bodyText} text-center mt-6`}>

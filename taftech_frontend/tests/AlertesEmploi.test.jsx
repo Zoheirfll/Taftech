@@ -187,9 +187,9 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
     fireEvent.click(screen.getByText("Enregistrer"));
 
     expect(jobsService.createAlerte).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith(
-      "Les mots-clés sont obligatoires.",
-    );
+    // Le message s'affiche sous le champ, qui passe en erreur.
+    expect(screen.getByText("Les mots-clés sont obligatoires.")).toBeInTheDocument();
+    expect(document.querySelector('form input[type="text"]')).toHaveAttribute("aria-invalid", "true");
   });
 
   it("🔴 EC3 : Crash création -> modale reste ouverte, reportError", async () => {

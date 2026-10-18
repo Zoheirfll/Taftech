@@ -189,7 +189,7 @@ const Navbar = () => {
                 Vous recrutez ? <span className="font-semibold text-teal-700 hover:underline">Espace recruteur</span>
               </Link>
               <Link to="/login" className={`${tw.navLink} whitespace-nowrap`}>
-                <LogIn size={14} /> Connexion
+                <LogIn size={14} /> Se connecter
               </Link>
               <Link to="/register" className={`${tw.bgPrimary} px-4 py-1.5 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200 whitespace-nowrap`}>
                 S'inscrire
@@ -299,7 +299,7 @@ const Navbar = () => {
             <>
               <div className={`${tw.borderSubtle} border-t pt-2 mt-2`} />
               <Link to="/login" onClick={closeMobile} className={mobileLinkClass("/login", true)}>
-                <LogIn size={16} className="shrink-0" /> Connexion
+                <LogIn size={16} className="shrink-0" /> Se connecter
               </Link>
               <Link to="/register" onClick={closeMobile} className={mobileLinkClass("/register")}>
                 <User size={16} className="shrink-0" /> S'inscrire

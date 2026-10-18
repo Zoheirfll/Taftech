@@ -201,6 +201,13 @@ def _dedupliquer_secteurs(secteurs):
     ]
 
 
+def trier_secteurs(secteurs):
+    """Ordre alphabétique (sans accent ni casse) sur le libellé déjà nettoyé : « Énergie »
+    se range à E. Appliqué à toute liste de secteurs proposée à l'utilisateur, pour qu'elle
+    soit identique partout (inscription, paramètres entreprise, pages publiques)."""
+    return sorted(secteurs, key=lambda s: normaliser_recherche(s['libelle']))
+
+
 def secteur_et_domaine_par_metier(metier_ids):
     """Remonte la hiérarchie du référentiel pour chaque métier : métier → [sous-domaine →]
     domaine → secteur (`GroupeMetier.parent`). Retourne
@@ -242,7 +249,7 @@ def secteurs_entreprise():
         {"code": s.code_source or s.code, "libelle": _nettoyer_libelle_secteur_nsec(s.libelle)}
         for s in GroupeMetier.objects.filter(type_groupe='secteur_source').order_by('libelle')
     ]
-    secteurs = _dedupliquer_secteurs(secteurs)
+    secteurs = trier_secteurs(_dedupliquer_secteurs(secteurs))
     cache.set('jobs_secteurs_entreprise', secteurs, timeout=3600)
     return secteurs
 
@@ -306,6 +313,13 @@ FAMILLES_PAR_NIVEAU_ETUDES = {
     'SC-AUTRE': ['superieur', 'formation_professionnelle', 'scolaire', 'certification', 'autre'],
 }
 
+# Types de diplôme exclus d'un niveau malgré sa famille : la famille « enseignement moyen et
+# secondaire » réunit BEM, BEF et Baccalauréat, mais un élève de collège (SC-MOY) n'a pas le
+# baccalauréat. Le niveau secondaire (SC-SEC) garde les trois (un lycéen a déjà son BEM).
+TYPES_EXCLUS_PAR_NIVEAU_ETUDES = {
+    'SC-MOY': ['D-BAC'],
+}
+
 
 def famille_formation(systeme):
     """Regroupe les `systeme` du référentiel en familles qui ne doivent jamais être mélangées dans
@@ -358,7 +372,46 @@ def resoudre_competence_ref(label, index=None):
     return (index if index is not None else construire_index_competences()).get(cle)
 
 
-SEUIL_PROPOSITION_COMPETENCE = 3  # nombre minimal de candidats + offres distincts pour proposer
+SEUIL_PROPOSITION_COMPETENCE = 3  # nombre minimal d'offres distinctes pour proposer (un candidat suffit)
+
+
+def cles_competences_connues():
+    """Clés normalisées (libellés + synonymes) de TOUTES les compétences du référentiel, quel que
+    soit leur statut : une suggestion, une rejetée ou une désactivée ne sont jamais re-proposées."""
+    from .models import CompetenceReferentiel
+
+    connues = set()
+    for ref in CompetenceReferentiel.objects.all():
+        connues.add(normaliser_recherche(ref.label))
+        for synonyme in re.split(r"[,;|]", ref.synonymes or ""):
+            if normaliser_recherche(synonyme):
+                connues.add(normaliser_recherche(synonyme))
+    return connues
+
+
+def suggerer_competence(label, connues=None):
+    """Enregistre `label` comme compétence SUGGÉRÉE dès la première saisie d'un candidat hors
+    référentiel (15/10/2026) : l'admin la voit dans « Compétences > Suggérées » et décide. Aucun
+    effet avant sa décision (ni score, ni parser, ni suggestions : seules les VALIDÉES servent).
+    Ne crée rien si le libellé ou un synonyme existe déjà (quel que soit le statut) ou si les règles
+    anti-bruit du parser le refusent (chiffres, phrases…). `connues` : résultat de
+    `cles_competences_connues()` à réutiliser pour plusieurs libellés (mis à jour ici).
+    Retourne la compétence créée, sinon None."""
+    from .cv_parser.competences import _est_competence_valide
+    from .models import CompetenceReferentiel
+
+    label = (label or "").strip()[:100]
+    cle = normaliser_recherche(label)
+    if connues is None:
+        connues = cles_competences_connues()
+    if not cle or cle in connues or not _est_competence_valide(label):
+        return None
+    competence, creee = CompetenceReferentiel.objects.get_or_create(
+        label=label,
+        defaults={'statut': CompetenceReferentiel.STATUT_SUGGEREE, 'origine': 'PROPOSITION_AUTO'},
+    )
+    connues.add(cle)
+    return competence if creee else None
 
 
 def proposer_competences_frequentes(seuil=SEUIL_PROPOSITION_COMPETENCE, simuler=False):
@@ -372,12 +425,7 @@ def proposer_competences_frequentes(seuil=SEUIL_PROPOSITION_COMPETENCE, simuler=
     from .cv_parser.competences import _est_competence_valide
     from .models import CompetenceCandidat, CompetenceOffre, CompetenceReferentiel
 
-    connus = set()
-    for ref in CompetenceReferentiel.objects.all():
-        connus.add(normaliser_recherche(ref.label))
-        for synonyme in re.split(r"[,;|]", ref.synonymes or ""):
-            if normaliser_recherche(synonyme):
-                connus.add(normaliser_recherche(synonyme))
+    connus = cles_competences_connues()
 
     candidats_par_cle, offres_par_cle = defaultdict(set), defaultdict(set)
     graphies = defaultdict(Counter)
@@ -395,7 +443,8 @@ def proposer_competences_frequentes(seuil=SEUIL_PROPOSITION_COMPETENCE, simuler=
         if not cle or cle in connus:
             continue
         nb_cand, nb_off = len(candidats_par_cle[cle]), len(offres_par_cle[cle])
-        if nb_cand + nb_off < seuil:
+        # Une saisie de candidat suffit (15/10/2026) ; le seuil ne s'applique qu'aux offres seules.
+        if nb_cand < 1 and nb_cand + nb_off < seuil:
             continue
         label = comptes.most_common(1)[0][0][:100]
         if not _est_competence_valide(label) or CompetenceReferentiel.objects.filter(label__iexact=label).exists():
@@ -501,6 +550,21 @@ def _mots_singularises(texte):
     return {_singulariser(m) for m in re.findall(r"\w+", normaliser_recherche(texte))}
 
 
+def _specialite_par_alias_exact(type_diplome, texte):
+    """Spécialité dont un alias (ex. ajouté lorsqu'une demande d'ajout est rattachée) correspond EXACTEMENT
+    au texte (accents et casse ignorés), à condition que le couple diplôme + spécialité soit attesté
+    (jamais hors référentiel, F06). Sinon None."""
+    from .models import AliasSpecialite, DiplomeSpecialite
+
+    cle = normaliser_recherche(texte)
+    if not cle:
+        return None
+    for alias in AliasSpecialite.objects.filter(cle_recherche=cle).select_related('specialite').order_by('id'):
+        if DiplomeSpecialite.objects.filter(diplome=type_diplome, specialite=alias.specialite, selectionnable=True).exists():
+            return alias.specialite
+    return None
+
+
 def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     """Spécialité la plus proche parmi les couples `DiplomeSpecialite` attestés pour ce
     diplôme (jamais hors référentiel, F06) — factorisé pour être réutilisé par la
@@ -524,6 +588,11 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     complet déclaré par le candidat) est fourni, l'IA tranche entre CES candidats
     précis uniquement — jamais un choix hors de cette liste restreinte."""
     from .models import DiplomeSpecialite
+
+    if texte:
+        exacte = _specialite_par_alias_exact(type_diplome, texte)
+        if exacte is not None:
+            return exacte
 
     def _candidats(queryset):
         trouves = []

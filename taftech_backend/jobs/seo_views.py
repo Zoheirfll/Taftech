@@ -1,8 +1,12 @@
 """Vues SEO servies à la racine du domaine (sitemap.xml, robots.txt) — pas sous /api/,
 montées directement dans taftech_backend/urls.py. Le proxy Vite (vite.config.js) relaie
 ces deux chemins vers Django en dev ; en prod, nginx doit faire de même (voir CLAUDE.md)."""
+from pathlib import Path
+
+from django.db.models import Q
 from django.http import HttpResponse
 from django.conf import settings
+from django.utils import timezone
 from django.utils.text import slugify
 from django.views import View
 from .models import OffreEmploi, ProfilEntreprise, GroupeMetier, Metier, Article
@@ -17,7 +21,78 @@ STATIC_PATHS = [
     ("/contact", "0.4", "monthly"),
     ("/recruteurs", "0.6", "monthly"),
     ("/blog", "0.6", "weekly"),
+    ("/entreprises", "0.6", "weekly"),
+    ("/mentions-legales", "0.3", "yearly"),
+    ("/cgu", "0.3", "yearly"),
+    ("/confidentialite", "0.3", "yearly"),
 ]
+
+# Pages réservées aux comptes connectés ou aux écrans d'authentification : inutiles dans un
+# moteur de recherche. Chaque préfixe correspond à une route protégée de App.jsx (RecruteurRoute,
+# CandidatRoute, GuestRoute). `/offres`, `/recruteurs` (landing) et `/jobs/<offre>` (ancienne URL
+# d'offre, qui doit rester explorable pour que son canonical soit pris en compte) restent ouverts.
+PREFIXES_INTERDITS = [
+    "/dashboard", "/parametres", "/profil", "/mes-candidatures", "/boite-reception",
+    "/admin-taftech", "/cvtheque", "/candidatures-spontanees", "/questionnaires", "/creer-offre",
+    "/recruteurs/connexion", "/recruteurs/inscription", "/recruteurs/mot-de-passe-oublie",
+    "/recruteurs/abonnements", "/recruteurs/premium",
+    "/login", "/register", "/forgot-password", "/reset-password", "/onboarding", "/invitation",
+    "/inbox", "/alertes", "/notifications", "/mes-competences", "/mes-documents",
+    "/offres-sauvegardees", "/suggestions-carriere", "/rendez-vous", "/comprendre-mes-scores",
+    "/mon-equipe", "/offres-emploi", "/candidatures", "/recrutements", "/candidats-recommandes",
+    "/statistiques", "/comment-fonctionne-matching", "/comment-fonctionnent-credits",
+    "/evaluations", "/activite", "/entretiens", "/facturation",
+    "/jobs/*/postuler", "/merci",
+]
+
+
+def offres_indexables():
+    """Offres que Google peut indexer : actives, approuvées, non clôturées et non expirées. Même
+    règle que le noindex de la page d'offre (`seo_pages._offre_indexable`) : le sitemap ne doit
+    jamais annoncer une page qui demande à ne pas être indexée."""
+    aujourdhui = timezone.localdate()
+    return OffreEmploi.objects.filter(
+        est_active=True, statut_moderation='APPROUVEE', est_cloturee=False,
+    ).filter(Q(date_expiration__isnull=True) | Q(date_expiration__gte=aujourdhui))
+
+
+def stats_job_posting():
+    """Couverture des données structurées JobPosting (Google Emploi) pour la page admin SEO."""
+    aujourdhui = timezone.localdate()
+    approuvees = OffreEmploi.objects.filter(statut_moderation='APPROUVEE')
+    eligibles = offres_indexables()
+    return {
+        "eligibles": eligibles.count(),
+        "sans_date_fin": eligibles.filter(date_expiration__isnull=True).count(),
+        "exclues_cloturees": approuvees.filter(est_cloturee=True).count(),
+        "exclues_expirees": approuvees.filter(est_cloturee=False, date_expiration__lt=aujourdhui).count(),
+        "exclues_inactives": approuvees.filter(est_cloturee=False, est_active=False).exclude(
+            date_expiration__lt=aujourdhui).count(),
+    }
+
+
+def alertes_configuration():
+    """Réglages qui rendraient le SEO faux en production (sitemap, canonical et JobPosting
+    fabriqués depuis `SITE_URL`)."""
+    base = settings.SITE_URL.rstrip('/')
+    if any(hote in base for hote in ('localhost', '127.0.0.1', '0.0.0.0')):
+        return [{
+            "code": "SITE_URL_LOCAL",
+            "message": "SITE_URL pointe vers une adresse locale : le sitemap, les canonicals et les "
+                       "données JobPosting publieraient de fausses adresses. Définissez SITE_URL avec le "
+                       "vrai domaine (https://…) avant la mise en ligne.",
+        }]
+    if not base.startswith('https://'):
+        return [{
+            "code": "SITE_URL_HTTP",
+            "message": "SITE_URL n'est pas en https : Google préfère les adresses sécurisées.",
+        }]
+    return []
+
+
+def rendu_serveur_pret():
+    """Le rendu serveur des balises (aperçus de partage, vrais 404) lit `index.html` du build."""
+    return Path(settings.FRONTEND_INDEX_PATH).is_file()
 
 
 class SitemapXMLView(View):
@@ -38,9 +113,9 @@ class SitemapXMLView(View):
             racine = groupe.parent if groupe and groupe.parent else groupe
             secteur_libelle_par_metier[m.id] = racine.libelle if racine else None
 
-        offres = OffreEmploi.objects.select_related('entreprise').filter(
-            est_active=True, statut_moderation='APPROUVEE', est_cloturee=False
-        ).only('id', 'titre', 'metier_id', 'code_public', 'date_publication', 'entreprise__slug')
+        offres = offres_indexables().select_related('entreprise').only(
+            'id', 'titre', 'metier_id', 'code_public', 'date_publication', 'entreprise__slug'
+        )
         for o in offres:
             lastmod = f"<lastmod>{o.date_publication.date().isoformat()}</lastmod>" if o.date_publication else ""
             entreprise_slug = o.entreprise.slug
@@ -97,22 +172,7 @@ class SitemapXMLView(View):
 class RobotsTxtView(View):
     def get(self, request):
         base = settings.SITE_URL.rstrip('/')
-        lines = [
-            "User-agent: *",
-            "Allow: /",
-            "Disallow: /dashboard",
-            "Disallow: /parametres",
-            "Disallow: /profil",
-            "Disallow: /mes-candidatures",
-            "Disallow: /boite-reception",
-            "Disallow: /admin-taftech",
-            "Disallow: /cvtheque",
-            "Disallow: /candidatures-spontanees",
-            "Disallow: /questionnaires",
-            "Disallow: /creer-offre",
-            "Disallow: /recruteurs/connexion",
-            "Disallow: /recruteurs/inscription",
-            "",
-            f"Sitemap: {base}/sitemap.xml",
-        ]
+        lines = ["User-agent: *", "Allow: /"]
+        lines += [f"Disallow: {prefixe}" for prefixe in PREFIXES_INTERDITS]
+        lines += ["", f"Sitemap: {base}/sitemap.xml"]
         return HttpResponse("\n".join(lines), content_type="text/plain")

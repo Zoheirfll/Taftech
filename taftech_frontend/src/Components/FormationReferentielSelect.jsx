@@ -3,7 +3,7 @@ import Select from "react-select";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { selectStyles } from "../theme";
-import { grouperParFamille, aplatirGroupes, familleDuDiplome, typesPourNiveau, niveauPourType } from "../utils/familleFormation";
+import { grouperParFamille, aplatirGroupes, familleDuDiplome, typesPourNiveau, typeAutoriseParNiveau, niveauPourType } from "../utils/familleFormation";
 
 const inputClass =
   "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
@@ -81,6 +81,9 @@ export const FormationReferentielSelect = ({
   const [suggestionSpec, setSuggestionSpec] = useState(null);
   const [suggestionSpecIgnoree, setSuggestionSpecIgnoree] = useState(false);
   const [suggestionSpecChargement, setSuggestionSpecChargement] = useState(false);
+  // Recherche directe d'une spécialité : libellés des diplômes possibles quand il y en a plusieurs
+  // (le candidat choisit alors le sien) — vide quand le diplôme est déduit ou indéterminable.
+  const [diplomesPossibles, setDiplomesPossibles] = useState([]);
 
   useEffect(() => {
     jobsService
@@ -195,8 +198,13 @@ export const FormationReferentielSelect = ({
       setDiplomeAutre(true);
       setDomaineAutre(true);
       setSpecialiteAutre(true);
+    } else if (permettreAutre && !specialiteId && autreTexte.trim()) {
+      // Vrai diplôme dont la spécialité a été saisie en « Autre » : on rouvre le champ avec ce texte
+      // (sinon le formulaire d'édition l'affiche vide, comme si rien n'avait été renseigné).
+      setDomaineAutre(true);
+      setSpecialiteAutre(true);
     }
-  }, [nomenclature, diplomeId, permettreAutre]);
+  }, [nomenclature, diplomeId, permettreAutre, specialiteId, autreTexte]);
 
   const niveauChoisi = useMemo(
     () => nomenclature?.niveaux_etudes?.find((n) => String(n.id) === String(niveauId)) || null,
@@ -280,6 +288,74 @@ export const FormationReferentielSelect = ({
     }));
   }, [nomenclature, domaineId, domaineAutre, filiereId, couplesAttestesIds]);
 
+  // Le texte « Autre spécialité » correspond déjà à une entrée du référentiel (même libellé, sans accent
+  // ni casse) : le serveur n'en fera pas une demande, on invite donc à la choisir dans la liste.
+  const specialiteExistante = useMemo(() => {
+    const cle = (texte) => (texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const saisie = cle(autreTexte);
+    if (saisie.length < 3 || !nomenclature) return null;
+    return nomenclature.specialites.find((s) => cle(s.libelle) === saisie) || null;
+  }, [autreTexte, nomenclature]);
+
+  // Recherche directe d'une spécialité (retour client 17/10/2026) : « Chimie » n'est pas rangée dans le
+  // même domaine par toutes les universités, donc la retrouver en partant du domaine échoue. On
+  // cherche dans TOUTES les spécialités (domaine affiché à côté) et le reste suit quand c'est possible.
+  const specialiteDirecteOptions = useMemo(() => {
+    if (!nomenclature) return [];
+    const libelleDomaine = new Map(nomenclature.domaines.map((d) => [d.id, d.libelle]));
+    return nomenclature.specialites
+      .filter((s) => s.code !== "SP-AUTRE")
+      .map((s) => ({
+        value: s.id,
+        label: `${s.libelle} — ${libelleDomaine.get(s.domaine_id) || ""}`.replace(/ — $/, ""),
+        specialite: s,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [nomenclature]);
+
+  const choisirSpecialiteDirecte = (opt) => {
+    if (!opt) return;
+    const spec = opt.specialite;
+    setDomaineAutre(false);
+    setSpecialiteAutre(false);
+    setDomaineId(String(spec.domaine_id));
+    setFiliereId(spec.filiere_id ? String(spec.filiere_id) : "");
+    if (onChangeAutreTexte) onChangeAutreTexte("");
+    onChangeSpecialite(spec.id, spec.libelle);
+
+    // Diplômes attestés pour cette spécialité : un seul => choisi ; plusieurs => le candidat choisit ;
+    // aucun => le diplôme reste libre. Un diplôme déjà choisi et compatible est conservé.
+    const idsAttestes = [
+      ...new Set(
+        nomenclature.diplome_specialite
+          .filter((c) => String(c.specialite_id) === String(spec.id))
+          .map((c) => String(c.diplome_id)),
+      ),
+    ];
+    const types = idsAttestes
+      .map((id) => nomenclature.types_diplomes.find((t) => String(t.id) === id))
+      .filter(Boolean);
+    const diplomeActuel = diplomeAutre ? "" : String(diplomeId || "");
+    const dejaCompatible = diplomeActuel && (types.length === 0 || idsAttestes.includes(diplomeActuel));
+    let diplomeFinal = diplomeActuel;
+    if (diplomeAutre) setDiplomeAutre(false);
+    if (!dejaCompatible) {
+      if (types.length === 1) {
+        diplomeFinal = String(types[0].id);
+        onChangeDiplome(types[0].id, types[0].libelle);
+      } else {
+        diplomeFinal = "";
+        if (diplomeId || diplomeAutre) onChangeDiplome("");
+      }
+    }
+    setDiplomesPossibles(types.length > 1 && !dejaCompatible ? types.map((t) => t.libelle) : []);
+    // Le niveau d'études se déduit du diplôme (sinon il reste tel quel).
+    if (diplomeFinal) {
+      const niveau = niveauPourType(nomenclature.niveaux_etudes, nomenclature.types_diplomes, diplomeFinal);
+      if (niveau) setNiveauId(String(niveau.id));
+    }
+  };
+
   const activerDomaineAutre = () => {
     setDomaineAutre(true);
     setDomaineId("");
@@ -296,6 +372,33 @@ export const FormationReferentielSelect = ({
 
   return (
     <div className="space-y-3">
+      {specialiteDirecteOptions.length > 0 && (
+        <div>
+          <label htmlFor="specialite-directe" className="block text-sm font-medium text-slate-700 mb-1.5">
+            Rechercher directement votre spécialité
+          </label>
+          <Select
+            inputId="specialite-directe"
+            aria-label="Rechercher directement votre spécialité"
+            options={specialiteDirecteOptions}
+            value={null}
+            onChange={choisirSpecialiteDirecte}
+            styles={selectStyles}
+            placeholder="Ex. Chimie, Informatique, Droit des affaires..."
+            noOptionsMessage={() => "Aucune spécialité trouvée"}
+          />
+          <p className="mt-1.5 text-xs text-slate-500">
+            Vous connaissez votre spécialité ? Cherchez-la ici, tous domaines confondus : le domaine, la
+            filière et le diplôme se remplissent tout seuls quand c'est possible.
+          </p>
+          {diplomesPossibles.length > 0 && (
+            <p className="mt-1.5 text-xs text-amber-700">
+              Cette spécialité existe pour plusieurs diplômes ({diplomesPossibles.join(", ")}) : choisissez le
+              vôtre ci-dessous.
+            </p>
+          )}
+        </div>
+      )}
       {niveauOptions.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Niveau d'études</label>
@@ -307,7 +410,7 @@ export const FormationReferentielSelect = ({
               setNiveauId(opt ? String(opt.value) : "");
               // Un diplôme qui n'appartient plus au niveau choisi est retiré, avec ce qui en dépend.
               const typeActuel = nomenclature.types_diplomes.find((t) => String(t.id) === String(diplomeId));
-              if (niveau && typeActuel && !diplomeAutre && !niveau.familles.includes(typeActuel.famille)) {
+              if (niveau && typeActuel && !diplomeAutre && !typeAutoriseParNiveau(niveau, typeActuel)) {
                 onChangeDiplome("");
                 setDomaineId("");
                 setFiliereId("");
@@ -387,10 +490,16 @@ export const FormationReferentielSelect = ({
                 </div>
               </div>
             )}
+            {diplomeAutreTexte.trim().length > 0 && diplomeAutreTexte.trim().length < 3 && (
+              <p className="text-xs text-amber-700">
+                Au moins 3 caractères sont nécessaires pour que votre type de diplôme soit transmis à l'équipe ;
+                écrivez-le en toutes lettres.
+              </p>
+            )}
             {!suggestion && !suggestionChargement && diplomeAutreTexte.trim().length >= 3 && (
               <p className="text-xs text-slate-500">
-                Aucune correspondance sûre trouvée — votre diplôme sera enregistré tel quel et
-                marqué "à vérifier" (il ne sera jamais compté comme incompatible entre-temps).
+                Ce type de diplôme n'est pas dans la liste : il sera transmis à l'équipe pour validation.
+                En attendant, il est enregistré tel quel et jamais compté comme incompatible.
               </p>
             )}
           </div>
@@ -407,6 +516,7 @@ export const FormationReferentielSelect = ({
                 setFiliereId("");
                 onChangeSpecialite("");
               }
+              setDiplomesPossibles([]);
               if (opt) onChangeDiplome(opt.value, opt.label);
               else onChangeDiplome("");
             }}
@@ -488,7 +598,11 @@ export const FormationReferentielSelect = ({
                 <span className="text-slate-700">Autre spécialité</span>
                 <button
                   type="button"
-                  onClick={() => setSpecialiteAutre(false)}
+                  onClick={() => {
+                    setSpecialiteAutre(false);
+                    // Le texte « Autre spécialité » ne doit pas rester dans le formulaire (il créerait une demande d'ajout).
+                    if (onChangeAutreTexte) onChangeAutreTexte("");
+                  }}
                   className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
                 >
                   ↩ revenir à la liste
@@ -505,8 +619,8 @@ export const FormationReferentielSelect = ({
               {diplomeAutre ? (
                 <p className="text-xs text-slate-500">
                   Le type de diplôme n'est pas encore reconnu — la spécialité ne peut pas être
-                  suggérée automatiquement tant qu'il n'est pas résolu. Votre saisie sera
-                  conservée telle quelle et vérifiée manuellement.
+                  suggérée automatiquement tant qu'il n'est pas résolu. Votre saisie est
+                  enregistrée telle quelle, et l'équipe la validera avec votre type de diplôme.
                 </p>
               ) : suggestionSpec && !suggestionSpecIgnoree ? (
                 <div className="flex flex-col gap-2 px-4 py-3 bg-teal-50 border border-teal-200 rounded-lg text-sm">
@@ -522,11 +636,21 @@ export const FormationReferentielSelect = ({
                     </button>
                   </div>
                 </div>
+              ) : autreTexte.trim().length > 0 && autreTexte.trim().length < 3 ? (
+                <p className="text-xs text-amber-700">
+                  Au moins 3 caractères sont nécessaires pour que votre spécialité soit transmise à l'équipe ;
+                  écrivez-la en toutes lettres.
+                </p>
+              ) : specialiteExistante ? (
+                <p className="text-xs text-amber-700">
+                  « {specialiteExistante.libelle} » existe déjà dans la liste : cliquez sur « revenir à la liste »
+                  puis choisissez-la dans le domaine concerné. Saisie ici, elle ne sera pas transmise à l'équipe.
+                </p>
               ) : (
                 !suggestionSpecChargement && autreTexte.trim().length >= 3 && (
                   <p className="text-xs text-slate-500">
-                    Aucune correspondance sûre trouvée pour ce diplôme précis — votre spécialité
-                    sera enregistrée telle quelle, sans jamais être comptée comme incompatible.
+                    Cette spécialité n'est pas dans la liste : elle sera transmise à l'équipe pour validation.
+                    En attendant, elle est enregistrée telle quelle et jamais comptée comme incompatible.
                   </p>
                 )
               )}

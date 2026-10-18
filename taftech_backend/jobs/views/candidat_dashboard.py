@@ -187,11 +187,14 @@ class CompetenceCandidatAPIView(APIView):
         if niveau not in dict(CompetenceCandidat.NIVEAU_CHOICES):
             niveau = 'DEBUTANT'
         # Même résolveur que l'offre (libellé OU synonyme) : le score est comparable (point 10).
+        from ..demandes_ajout import demander_competence_saisie
         from ..referentiel_utils import resoudre_competence_ref
         ref = resoudre_competence_ref(label)
         comp, created = CompetenceCandidat.objects.update_or_create(
             profil=profil, label=label, defaults={'niveau': niveau, 'competence_ref': ref}
         )
+        if ref is None:
+            demander_competence_saisie(request.user, label)  # hors référentiel : demande implicite visible de l'admin
         _resynchroniser_competences_texte(profil)
         return Response(
             {'id': comp.id, 'label': comp.label, 'niveau': comp.niveau, 'niveau_libelle': comp.get_niveau_display(), 'source': comp.source},

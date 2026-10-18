@@ -6,6 +6,9 @@ import Select from "react-select";
 import { selectStyles } from "../../theme";
 import { reportError } from "../../utils/errorReporter";
 import Seo from "../../Components/Seo";
+import CarteSurDemande from "../../Components/CarteSurDemande";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
 import { jobUrl } from "../../utils/slugify";
 import {
   MapPin,
@@ -43,6 +46,7 @@ const EntreprisePublic = () => {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("apropos");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { erreurs, exiger, definir, depuisReponse, effacer, attributs } = useErreursChamps();
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [] });
   const [form, setForm] = useState({
     nom: "", prenom: "", email: "", telephone: "",
@@ -70,7 +74,20 @@ const EntreprisePublic = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.cv) return toast.error("Veuillez joindre votre CV.");
+    const manque = exiger(
+      { ...form, cv: form.cv ? "joint" : "" },
+      {
+        nom: "Le nom est obligatoire.",
+        prenom: "Le prénom est obligatoire.",
+        email: "L'adresse e-mail est obligatoire.",
+        cv: "Veuillez joindre votre CV.",
+      },
+    );
+    if (manque) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      definir({ email: "Adresse e-mail invalide." });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const formData = new FormData();
@@ -79,7 +96,9 @@ const EntreprisePublic = () => {
       toast.success("Candidature spontanée envoyée !");
       setShowModal(false);
       setForm({ nom: "", prenom: "", email: "", telephone: "", lettre_motivation: "", cv: null });
+      definir({});
     } catch (err) {
+      depuisReponse(err);
       toast.error(err.response?.data?.error || "Erreur lors de l'envoi.");
     } finally {
       setIsSubmitting(false);
@@ -88,7 +107,7 @@ const EntreprisePublic = () => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
       </div>
     );
@@ -390,14 +409,7 @@ const EntreprisePublic = () => {
               <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mt-4">
                 <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Localisation</p>
                 <div className="rounded-lg overflow-hidden border border-slate-200">
-                  <iframe
-                    title="Localisation de l'entreprise"
-                    width="100%"
-                    height="220"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(lieuRecherche)}&z=12&output=embed`}
-                  />
+                  <CarteSurDemande lieu={lieuRecherche} />
                 </div>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lieuRecherche)}`}
@@ -426,21 +438,24 @@ const EntreprisePublic = () => {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-700 mb-1.5 block">Nom *</label>
-                  <input required className={inputClass} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+                  <input required {...attributs("nom")} className={inputClass} value={form.nom} onChange={(e) => { setForm({ ...form, nom: e.target.value }); effacer("nom"); }} />
+                  <FieldError id="err-nom" message={erreurs.nom} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-700 mb-1.5 block">Prénom *</label>
-                  <input required className={inputClass} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} />
+                  <input required {...attributs("prenom")} className={inputClass} value={form.prenom} onChange={(e) => { setForm({ ...form, prenom: e.target.value }); effacer("prenom"); }} />
+                  <FieldError id="err-prenom" message={erreurs.prenom} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-700 mb-1.5 block">Email *</label>
-                  <input required type="email" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <input required type="email" {...attributs("email")} className={inputClass} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); effacer("email"); }} />
+                  <FieldError id="err-email" message={erreurs.email} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-700 mb-1.5 block">Téléphone</label>
@@ -464,12 +479,13 @@ const EntreprisePublic = () => {
               <div>
                 <label className="text-xs font-medium text-slate-700 mb-1.5 block">CV (PDF, DOC) *</label>
                 <div className="border-2 border-dashed border-slate-200 rounded-lg p-5 text-center relative cursor-pointer hover:border-indigo-400 transition-colors group">
-                  <input type="file" accept=".pdf,.doc,.docx" required onChange={(e) => setForm({ ...form, cv: e.target.files[0] })} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <input type="file" accept=".pdf,.doc,.docx" required {...attributs("cv")} onChange={(e) => { setForm({ ...form, cv: e.target.files[0] }); effacer("cv"); }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <FileText size={22} className="text-slate-300 mx-auto mb-1.5" />
                   <p className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
                     {form.cv ? form.cv.name : "Cliquez ou glissez votre CV"}
                   </p>
                 </div>
+                <FieldError id="err-cv" message={erreurs.cv} />
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-700 mb-1.5 block">Lettre de motivation (optionnelle)</label>

@@ -79,7 +79,11 @@ export const tw = {
 
   // INPUTS
   input:
-    "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-colors",
+    "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-colors",
+  // Champ verrouillé par le palier d'abonnement : lisible (texte slate-600 sur fond gris), jamais
+  // dilué par une opacité — l'utilisateur doit pouvoir lire ce que le palier supérieur débloque.
+  inputLocked:
+    "w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600 placeholder-slate-600 cursor-not-allowed",
   inputSearch:
     "w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100",
 
@@ -231,8 +235,8 @@ export const tw = {
   // === FOOTER (candidat — fond indigo-950) ===
   footerShell: "bg-slate-950 border-t border-slate-800",
   footerBrandText: "text-indigo-300 text-sm leading-relaxed",
-  footerLinkAmber: "text-indigo-300 hover:text-white text-sm font-medium transition-colors",
-  footerLinkAmberBlock: "hover:text-white transition-colors block",
+  footerLinkAmber: "text-indigo-300 hover:text-white text-sm font-medium transition-colors inline-block py-1",
+  footerLinkAmberBlock: "hover:text-white transition-colors block py-1",
   footerHeading: "text-white font-semibold text-xs uppercase tracking-wider mb-2.5 border-l-2 border-indigo-400 pl-3",
   footerCopyright: "text-xs text-indigo-400",
   footerCopyrightLink: "text-xs text-indigo-400 hover:text-white transition-colors",
@@ -240,8 +244,8 @@ export const tw = {
   // === FOOTER RECRUTEUR (fond slate-900 / accent teal) ===
   footerShellTeal: "bg-slate-950 border-t border-slate-800",
   footerBrandTextTeal: "text-slate-300 text-sm leading-relaxed",
-  footerLinkTeal: "text-slate-300 hover:text-teal-400 text-sm font-medium transition-colors",
-  footerLinkTealBlock: "hover:text-teal-400 transition-colors block",
+  footerLinkTeal: "text-slate-300 hover:text-teal-400 text-sm font-medium transition-colors inline-block py-1",
+  footerLinkTealBlock: "hover:text-teal-400 transition-colors block py-1",
   footerHeadingTeal: "text-white font-semibold text-xs uppercase tracking-wider mb-2.5 border-l-2 border-teal-500 pl-3",
   footerCopyrightTeal: "text-xs text-slate-400",
   footerCopyrightLinkTeal: "text-xs text-slate-400 hover:text-teal-400 transition-colors",
@@ -633,7 +637,7 @@ export const tw = {
   // === ATOMES COMPLÉMENTAIRES (Pages Public — Entreprises/Home/JobsList/JobDetail/Régions/Secteurs) ===
   borderHoverSlate300: "hover:border-slate-300",
   groupHoverTextPrimaryStrong: "group-hover:text-indigo-700",
-  placeholderMuted: "placeholder-slate-400",
+  placeholderMuted: "placeholder-slate-500",
   borderPrimary200: "border-indigo-200",
   bgPrimaryLightSolid: "bg-indigo-500 text-white hover:bg-indigo-400 border border-indigo-400",
   ctaGhostHoverPrimary: "hover:bg-indigo-600 hover:text-white hover:border-indigo-600",
@@ -880,7 +884,7 @@ export const selectStyles = {
   }),
   placeholder: (base) => ({
     ...base,
-    color: colors.neutral[400],
+    color: colors.neutral[500],
     fontSize: "0.875rem",
   }),
   singleValue: (base) => ({
@@ -913,7 +917,9 @@ export const selectStylesTeal = {
   ...selectStyles,
   control: (base, state) => ({
     ...base,
-    backgroundColor: "#fff",
+    // Désactivé (ex. filtre réservé à un palier supérieur) : fond gris + texte foncé lisible,
+    // au lieu du gris très clair par défaut de react-select.
+    backgroundColor: state.isDisabled ? colors.neutral[100] : "#fff",
     borderColor: state.isFocused ? tealScale[500] : colors.neutral[200],
     borderWidth: "1px",
     boxShadow: state.isFocused ? `0 0 0 3px ${tealScale[100]}` : "none",
@@ -921,7 +927,16 @@ export const selectStylesTeal = {
     padding: "2px",
     fontSize: "0.875rem",
     minHeight: "42px",
-    "&:hover": { borderColor: tealScale[500] },
+    "&:hover": { borderColor: state.isDisabled ? colors.neutral[200] : tealScale[500] },
+  }),
+  placeholder: (base, state) => ({
+    ...base,
+    color: state.isDisabled ? colors.neutral[600] : colors.neutral[500],
+    fontSize: "0.875rem",
+  }),
+  dropdownIndicator: (base, state) => ({
+    ...base,
+    color: state.isDisabled ? colors.neutral[600] : base.color,
   }),
   option: (base, state) => ({
     ...base,

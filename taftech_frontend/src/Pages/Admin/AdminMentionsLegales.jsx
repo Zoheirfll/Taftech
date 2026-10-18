@@ -16,17 +16,17 @@ const GROUPES = [
   {
     titre: "Société",
     champs: [
-      { key: "raison_sociale", label: "Raison sociale", requis: true },
+      { key: "raison_sociale", label: "Raison sociale" },
       { key: "forme_juridique", label: "Forme juridique" },
       { key: "capital_social", label: "Capital social" },
-      { key: "registre_commerce", label: "Registre de commerce (RC)", requis: true },
-      { key: "nif", label: "NIF", requis: true, placeholder: "Numéro d'identification fiscale" },
+      { key: "registre_commerce", label: "Registre de commerce (RC)" },
+      { key: "nif", label: "NIF", placeholder: "Numéro d'identification fiscale" },
       { key: "nis", label: "NIS", placeholder: "Numéro d'identification statistique" },
       { key: "tva", label: "N° TVA (le cas échéant)", placeholder: "Laisser vide si non assujetti" },
       { key: "representant_legal", label: "Représentant légal" },
       { key: "directeur_publication", label: "Directeur de la publication" },
       { key: "hebergeur", label: "Hébergeur du site", placeholder: "Nom et adresse de l'hébergeur" },
-      { key: "adresse", label: "Adresse du siège", requis: true, placeholder: "Adresse complète, wilaya" },
+      { key: "adresse", label: "Adresse du siège", placeholder: "Adresse complète, wilaya" },
     ],
   },
   {

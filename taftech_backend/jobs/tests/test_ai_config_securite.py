@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from jobs.ia_quota import consommer_quota_ia, verifier_quota_ia
-from jobs.models import AIConfig, AuditLog, UtilisationIA
+from jobs.models import AIConfig, AuditLog, QuotaIAOverride, UtilisationIA
 
 User = get_user_model()
 
@@ -67,10 +67,41 @@ class AccesPromptsTests(ConfigIATestBase):
 
     def test_admin_simple_peut_modifier_la_config_sans_prompt(self):
         self.client.force_authenticate(user=self.admin)
-        response = self.client.put(self.url, {'groq_model': 'autre-modele'}, format='json')
+        response = self.client.put(self.url, {'parser_cv_limite_jour': 7}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn('parser_cv_prompt', response.data)
+        self.assertEqual(AIConfig.objects.get(pk=1).parser_cv_limite_jour, 7)
+
+    def test_admin_simple_ne_peut_pas_changer_fournisseur_ni_modele(self):
+        avant = AIConfig.objects.get(pk=1)
+        valeurs_avant = (
+            avant.provider, avant.groq_model, avant.ollama_model,
+            avant.temperature, avant.reasoning_effort, avant.parser_cv_max_tokens,
+        )
+        self.client.force_authenticate(user=self.admin)
+        for payload in (
+            {'provider': 'OLLAMA'}, {'groq_model': 'autre-modele'}, {'ollama_model': 'autre'},
+            {'temperature': 1.5}, {'reasoning_effort': 'high'}, {'parser_cv_max_tokens': 9000},
+        ):
+            response = self.client.put(self.url, payload, format='json')
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(response.data['code'], 'MODELE_RESERVE_SUPER_ADMIN')
+        apres = AIConfig.objects.get(pk=1)
+        self.assertEqual(
+            (apres.provider, apres.groq_model, apres.ollama_model,
+             apres.temperature, apres.reasoning_effort, apres.parser_cv_max_tokens),
+            valeurs_avant,
+        )
+        self.assertFalse(AuditLog.objects.filter(action='MODIFIER_CONFIG_IA').exists())
+        self.assertFalse(self.client.get(self.url).data['modele_modifiable'])
+
+    def test_super_admin_peut_changer_le_modele(self):
+        self.client.force_authenticate(user=self.super_admin)
+        response = self.client.put(self.url, {'groq_model': 'autre-modele'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['modele_modifiable'])
         self.assertEqual(AIConfig.objects.get(pk=1).groq_model, 'autre-modele')
+        self.assertTrue(AuditLog.objects.filter(action='MODIFIER_CONFIG_IA').exists())
 
     def test_admin_simple_ne_peut_pas_modifier_le_plafond_ni_le_seuil(self):
         self.client.force_authenticate(user=self.admin)
@@ -121,6 +152,33 @@ class AuditConfigIATests(ConfigIATestBase):
         self.assertNotIn('secret', log.detail.lower())
         self.assertNotIn(SECRET, log.detail)
         self.assertFalse(AuditLog.objects.filter(action='MODIFIER_CONFIG_IA').exists())
+
+    def test_creation_et_suppression_de_quota_personnalise_sont_journalisees(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            reverse('admin-quota-ia-overrides'),
+            {'user': self.recruteur.id, 'fonction': 'PARSER_CV', 'limite_jour': None, 'limite_mois': 5},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        creation = AuditLog.objects.get(action='MODIFIER_CONFIG_IA')
+        self.assertEqual(creation.admin, self.admin)
+        for morceau in ('Quota personnalisé défini', self.recruteur.email, 'PARSER_CV', '∞/jour', '5/mois'):
+            self.assertIn(morceau, creation.detail)
+
+        override = QuotaIAOverride.objects.get(user=self.recruteur)
+        response = self.client.delete(reverse('admin-quota-ia-override-detail', args=[override.pk]))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        details = list(AuditLog.objects.filter(action='MODIFIER_CONFIG_IA').order_by('id').values_list('detail', flat=True))
+        self.assertEqual(len(details), 2)
+        self.assertIn('Quota personnalisé supprimé', details[1])
+        self.assertIn(self.recruteur.email, details[1])
+
+    def test_suppression_d_un_quota_inexistant_ne_cree_aucun_log(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.delete(reverse('admin-quota-ia-override-detail', args=[999999]))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(AuditLog.objects.count(), 0)
 
     def test_prompt_inchange_ne_cree_aucun_log(self):
         self.client.force_authenticate(user=self.super_admin)

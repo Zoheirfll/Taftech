@@ -118,6 +118,65 @@ export const precisionDateFin = (dateFinRaw, dateDebutRaw) => {
 
 const MOIS_FR_LONG = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
+const MOIS_MOYEN_JOURS = 30.4375;
+const JOUR_MS = 86400000;
+
+const dateUtc = (iso) => {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+};
+
+// Durée d'expérience en mois — même règle que le serveur (matcher._annees_experience) :
+// périodes qui se chevauchent fusionnées, poste sans date de fin = jusqu'à aujourd'hui,
+// année de fin seule = 31/12 de cette année (sans dépasser aujourd'hui).
+export const dureeExperienceMois = (experiences, aujourdhui = new Date()) => {
+  const finJour = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
+  const periodes = (experiences || [])
+    .map((e) => {
+      const debut = dateUtc(e.date_debut);
+      if (debut === null) return null;
+      let fin = dateUtc(e.date_fin);
+      if (fin !== null && e.date_fin_precision === "ANNEE") {
+        fin = Math.min(Date.UTC(new Date(fin).getUTCFullYear(), 11, 31), finJour);
+      }
+      return [debut, fin ?? finJour];
+    })
+    .filter((p) => p && p[1] > p[0])
+    .sort((a, b) => a[0] - b[0]);
+  const fusion = [];
+  for (const [debut, fin] of periodes) {
+    const dernier = fusion[fusion.length - 1];
+    if (dernier && debut <= dernier[1]) dernier[1] = Math.max(dernier[1], fin);
+    else fusion.push([debut, fin]);
+  }
+  const jours = fusion.reduce((somme, [d, f]) => somme + (f - d) / JOUR_MS, 0);
+  return Math.round(jours / MOIS_MOYEN_JOURS);
+};
+
+// 27 → "2 ans 3 mois", 12 → "1 an", 8 → "8 mois", 0 → "0".
+export const formatDureeMois = (mois) => {
+  if (!mois || mois <= 0) return "0";
+  const ans = Math.floor(mois / 12);
+  const reste = mois % 12;
+  return [ans ? `${ans} an${ans > 1 ? "s" : ""}` : "", reste ? `${reste} mois` : ""].filter(Boolean).join(" ");
+};
+
+// Âge en années révolues depuis une date de naissance ISO ; null si absente ou invalide.
+export const calculerAge = (iso, aujourdhui = new Date()) => {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  let age = aujourdhui.getFullYear() - Number(m[1]);
+  const ecartMois = aujourdhui.getMonth() + 1 - Number(m[2]);
+  if (ecartMois < 0 || (ecartMois === 0 && aujourdhui.getDate() < Number(m[3]))) age -= 1;
+  return age >= 0 ? age : null;
+};
+
+// "24 ans" (chaîne vide si la date de naissance est absente ou invalide).
+export const formatAge = (iso, aujourdhui) => {
+  const age = calculerAge(iso, aujourdhui);
+  return age === null ? "" : `${age} an${age > 1 ? "s" : ""}`;
+};
+
 // Affiche une date ISO selon sa précision : "2023", "mars 2023" ou "12/03/2023".
 export const formatDatePrecise = (iso, precision = "JOUR") => {
   if (!iso) return "";

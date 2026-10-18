@@ -10,6 +10,13 @@ from ..constants import (
 )
 
 
+# Longueur maximale de réponse acceptée par fonction IA : le plafond global compte des appels, pas des
+# tokens, donc la dépense maximale est plafond × max_tokens ; sans borne haute, une erreur de saisie
+# (ou un abus) ferait exploser cette estimation. Le plus grand défaut est 7000 (Parser CV).
+MAX_TOKENS_MIN = 100
+MAX_TOKENS_MAX = 16000
+
+
 class AIConfig(models.Model):
     """Configuration IA du site — singleton (une seule ligne, `AIConfig.get_solo()`). Permet à
     l'admin de couper une fonctionnalité IA en panne (ex: Groq a déjà changé de modèle sans
@@ -36,21 +43,21 @@ class AIConfig(models.Model):
     )
 
     parser_cv_actif = models.BooleanField(default=True, verbose_name="Parser CV actif")
-    parser_cv_max_tokens = models.PositiveIntegerField(default=7000, validators=[MinValueValidator(100)])
+    parser_cv_max_tokens = models.PositiveIntegerField(default=7000, validators=[MinValueValidator(MAX_TOKENS_MIN), MaxValueValidator(MAX_TOKENS_MAX)])
     parser_cv_prompt = models.TextField(
         blank=True, verbose_name="Prompt Parser CV",
         help_text="Variables obligatoires : {cv_text} et {domaines_list}. Si vide, le prompt par défaut du code est utilisé.",
     )
 
     analyse_carriere_actif = models.BooleanField(default=True, verbose_name="Analyse carrière candidat active")
-    analyse_carriere_max_tokens = models.PositiveIntegerField(default=1200, validators=[MinValueValidator(100)])
+    analyse_carriere_max_tokens = models.PositiveIntegerField(default=1200, validators=[MinValueValidator(MAX_TOKENS_MIN), MaxValueValidator(MAX_TOKENS_MAX)])
     analyse_carriere_prompt = models.TextField(
         blank=True, verbose_name="Prompt Analyse carrière",
         help_text="Instructions système (aucune variable à interpoler — le profil du candidat est envoyé séparément). Si vide, le prompt par défaut du code est utilisé.",
     )
 
     analyse_recruteur_actif = models.BooleanField(default=True, verbose_name="Analyse IA recruteur active")
-    analyse_recruteur_max_tokens = models.PositiveIntegerField(default=400, validators=[MinValueValidator(100)])
+    analyse_recruteur_max_tokens = models.PositiveIntegerField(default=400, validators=[MinValueValidator(MAX_TOKENS_MIN), MaxValueValidator(MAX_TOKENS_MAX)])
     analyse_recruteur_prompt = models.TextField(
         blank=True, verbose_name="Prompt Analyse recruteur",
         help_text=(
@@ -61,7 +68,7 @@ class AIConfig(models.Model):
     )
 
     generation_offre_actif = models.BooleanField(default=True, verbose_name="Génération d'offre IA active")
-    generation_offre_max_tokens = models.PositiveIntegerField(default=1900, validators=[MinValueValidator(100)])
+    generation_offre_max_tokens = models.PositiveIntegerField(default=1900, validators=[MinValueValidator(MAX_TOKENS_MIN), MaxValueValidator(MAX_TOKENS_MAX)])
     generation_offre_prompt = models.TextField(
         blank=True, verbose_name="Prompt Génération d'offre",
         help_text=(
@@ -71,7 +78,7 @@ class AIConfig(models.Model):
     )
 
     conseils_dashboard_actif = models.BooleanField(default=True, verbose_name="Conseils personnalisés (tableau de bord) actifs")
-    conseils_dashboard_max_tokens = models.PositiveIntegerField(default=600, validators=[MinValueValidator(100)])
+    conseils_dashboard_max_tokens = models.PositiveIntegerField(default=600, validators=[MinValueValidator(MAX_TOKENS_MIN), MaxValueValidator(MAX_TOKENS_MAX)])
     conseils_dashboard_prompt = models.TextField(
         blank=True, verbose_name="Prompt Conseils personnalisés",
         help_text="Instructions système (le profil/score/activité du candidat sont envoyés séparément). Si vide, le prompt par défaut du code est utilisé.",

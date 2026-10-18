@@ -21,6 +21,7 @@ import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import { tw } from "../../../theme";
+import { nomWilaya } from "../../../utils/wilaya";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { jobsService } from "../../../Services/jobsService";
 
@@ -177,7 +178,7 @@ const GestionOffre = () => {
               {formatText(offre.type_contrat)}
             </span>
             <span className={`px-2.5 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
-              {offre.wilaya}
+              {nomWilaya(offre.wilaya)}
             </span>
             {showJobDetails ? (
               <ChevronUp size={16} className={tw.textMuted} />
@@ -191,7 +192,7 @@ const GestionOffre = () => {
             {/* Critères — bande horizontale */}
             <div className={`px-6 py-4 ${tw.surfaceMuted} border-b ${tw.borderSubtle} flex flex-wrap gap-x-8 gap-y-3`}>
               {[
-                { label: "Localisation", value: `${offre.wilaya}${offre.commune ? ` · ${offre.commune}` : ""}` },
+                { label: "Localisation", value: `${nomWilaya(offre.wilaya)}${offre.commune ? ` · ${offre.commune}` : ""}` },
                 { label: "Métier", value: offre.metier_libelle || "Non précisé" },
                 {
                   label: "Diplôme requis",

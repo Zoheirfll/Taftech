@@ -4,6 +4,9 @@ import { authService } from "../Services/authService";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { mediaUrl } from "../utils/mediaUrl";
+import { useStatutEntreprise, STATUT_ENTREPRISE } from "../utils/useStatutEntreprise";
+import { useDroitsPalier, estVerrouille } from "../utils/useDroitsPalier";
+import CadenasPalier from "./CadenasPalier";
 import logoTafTech from "../assets/logo-taftech.png";
 import { tw } from "../theme";
 import {
@@ -31,16 +34,16 @@ const MOBILE_MENU_GROUPS = [
     items: [
       { to: "/offres-emploi", label: "Offres d'emploi", icon: FileText, minRole: "INVITE" },
       { to: "/candidatures", label: "Candidatures", icon: UserCheck, minRole: "INVITE" },
-      { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR" },
+      { to: "/creer-offre", label: "Publier une offre", icon: Briefcase, minRole: "UTILISATEUR", palierRequis: "peut_publier_offre" },
       { to: "/questionnaires", label: "Questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
     ],
   },
   {
     label: "Candidats",
     items: [
-      { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR" },
+      { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR", palierRequis: "acces_cvtheque" },
       { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
-      { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE" },
+      { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE", palierRequis: "acces_ia_recommandes" },
       { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
       { to: "/evaluations", label: "Évaluations", icon: ClipboardCheck, minRole: "INVITE" },
       { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },
@@ -53,7 +56,7 @@ const MOBILE_MENU_GROUPS = [
   {
     label: "Compte",
     items: [
-      { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE" },
+      { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE", palierRequis: "acces_equipe" },
       { to: "/facturation", label: "Facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
       { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
     ],
@@ -79,6 +82,11 @@ const NavbarRecruteur = () => {
   const [palierNom, setPalierNom] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
+  // Entreprise en attente de validation : ni lien ni appel de données, seulement la déconnexion.
+  const { statut } = useStatutEntreprise();
+  const enAttente = statut === STATUT_ENTREPRISE.EN_ATTENTE;
+  // Un cadenas s'affiche quand un droit du palier vaut explicitement `false` (rien tant qu'inconnu).
+  const droitsPalier = useDroitsPalier(isLogged && estRecruteurOuMembre && statut === STATUT_ENTREPRISE.OK);
 
   const isActive = (path) =>
     path === "/recruteurs" ? location.pathname === "/recruteurs" : location.pathname.startsWith(path);
@@ -96,7 +104,7 @@ const NavbarRecruteur = () => {
     } ${isActive(path) ? tw.navLinkMobileActiveTeal : tw.navLinkMobileInactiveTeal}`;
 
   useEffect(() => {
-    if (isLogged && estRecruteurOuMembre) {
+    if (isLogged && estRecruteurOuMembre && statut === STATUT_ENTREPRISE.OK) {
       const load = async () => {
         try {
           const dash = await jobsService.getDashboard();
@@ -123,7 +131,7 @@ const NavbarRecruteur = () => {
       };
       loadNotifications();
     }
-  }, [isLogged, role, location.pathname]);
+  }, [isLogged, role, location.pathname, statut]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -180,7 +188,7 @@ const NavbarRecruteur = () => {
           )}
 
           {/* LIENS CONNECTÉ */}
-          {isLogged && estRecruteurOuMembre && (
+          {isLogged && estRecruteurOuMembre && !enAttente && (
             <div className="hidden lg:flex items-center gap-1">
               <Link to="/dashboard" className={navLinkClass("/dashboard")}>
                 <LayoutDashboard size={14} /> Tableau de bord
@@ -188,11 +196,13 @@ const NavbarRecruteur = () => {
               {authService.peutFaire("UTILISATEUR") && (
                 <Link to="/creer-offre" className={navLinkClass("/creer-offre")}>
                   <Briefcase size={14} /> Publier une offre
+                  {estVerrouille(droitsPalier, "peut_publier_offre") && <CadenasPalier size={12} />}
                 </Link>
               )}
               {authService.peutFaire("UTILISATEUR") && (
                 <Link to="/cvtheque" className={navLinkClass("/cvtheque")}>
                   <Search size={14} /> CVthèque
+                  {estVerrouille(droitsPalier, "acces_cvtheque") && <CadenasPalier size={12} />}
                 </Link>
               )}
             </div>
@@ -215,7 +225,7 @@ const NavbarRecruteur = () => {
             </>
           )}
 
-          {isLogged && estRecruteurOuMembre && (
+          {isLogged && estRecruteurOuMembre && !enAttente && (
             <Link to="/notifications" className={tw.iconButton} title="Boîte de réception">
               <Mail size={20} />
               {unreadCount > 0 && (
@@ -266,7 +276,7 @@ const NavbarRecruteur = () => {
                       : []),
                     { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
                   ]
-                    .filter(({ minRole }) => authService.peutFaire(minRole))
+                    .filter(({ minRole }) => !enAttente && authService.peutFaire(minRole))
                     .map(({ to, icon, label, accent }) => {
                       const ItemIcon = icon;
                       return (
@@ -344,7 +354,7 @@ const NavbarRecruteur = () => {
 
           {isLogged && estRecruteurOuMembre && (
             <>
-              {MOBILE_MENU_GROUPS.map((group) => {
+              {(enAttente ? [] : MOBILE_MENU_GROUPS).map((group) => {
                 const items = group.items.filter(({ minRole }) => authService.peutFaire(minRole));
                 if (items.length === 0) return null;
                 return (
@@ -352,19 +362,20 @@ const NavbarRecruteur = () => {
                     <p className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       {group.label}
                     </p>
-                    {items.map(({ to, label, icon }) => {
+                    {items.map(({ to, label, icon, palierRequis }) => {
                       const ItemIcon = icon;
                       const dup = DUP_BOTTOM_NAV.includes(to);
                       return (
                         <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
                           <ItemIcon size={16} className="shrink-0" /> {label}
+                          {estVerrouille(droitsPalier, palierRequis) && <CadenasPalier className="ml-auto" />}
                         </Link>
                       );
                     })}
                   </div>
                 );
               })}
-              {authService.peutFaire("PROPRIETAIRE") && (
+              {authService.peutFaire("PROPRIETAIRE") && !enAttente && (
                 <Link
                   to="/recruteurs/abonnements"
                   onClick={() => setIsMobileOpen(false)}

@@ -113,16 +113,21 @@ class CompetencesAdminAPIView(APIView):
             return Response({'error': 'Accès refusé.'}, status=403)
         search = request.query_params.get('search', '').strip()
         statut = request.query_params.get('statut', '').strip()
-        qs = CompetenceReferentiel.objects.select_related('traite_par').order_by('label')
+        # Liste officielle seulement (actives ou masquées) : les suggestions et les rejets sont des demandes d'ajout
+        # (onglet « Demandes », `DemandeAjout` de type COMPETENCE) depuis l'étape 3 des demandes d'ajout.
+        qs = (
+            CompetenceReferentiel.objects.filter(statut__in=CompetenceReferentiel.STATUTS_RECONNUS)
+            .select_related('traite_par').order_by('label')
+        )
         if search:
             qs = qs.filter(label__icontains=search)
-        if statut in dict(CompetenceReferentiel.STATUT_CHOICES):
+        if statut in CompetenceReferentiel.STATUTS_RECONNUS:
             qs = qs.filter(statut=statut)
         page = int(request.query_params.get('page', 1))
         paginator = Paginator(qs, 30)
         page_obj = paginator.get_page(page)
-        compteurs = {code: 0 for code, _ in CompetenceReferentiel.STATUT_CHOICES}
-        for ligne in CompetenceReferentiel.objects.values('statut').annotate(n=Count('id')):
+        compteurs = {code: 0 for code in CompetenceReferentiel.STATUTS_RECONNUS}
+        for ligne in CompetenceReferentiel.objects.filter(statut__in=CompetenceReferentiel.STATUTS_RECONNUS).values('statut').annotate(n=Count('id')):
             compteurs[ligne['statut']] = ligne['n']
         return Response({
             'results': CompetenceReferentielAdminSerializer(page_obj.object_list, many=True).data,

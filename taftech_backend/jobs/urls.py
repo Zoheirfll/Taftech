@@ -39,13 +39,14 @@ from .views import (
     PublicStatsAPIView, StatsGeoAPIView, EntrepriseDetailAPIView, EntrepriseListAPIView,
 
     # Admin
-    AdminOffresListAPIView, AdminOffreModerateAPIView,
+    AdminOffresListAPIView, AdminOffreModerateAPIView, AdminOffreCorrigerAPIView,
     AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView,
     AdminStatsAPIView, AdminSeoStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
     ExportAdminCandidaturesExcelAPIView, ExportEntreprisesExcelAPIView,
     ExportOffresExcelAPIView, ExportUtilisateursExcelAPIView,
     AdminMarcheAPIView, AdminAuditLogAPIView, AdminDemandesPremiumAPIView,
+    AdminStatistiquesAPIView, AdminStatistiquesExportAPIView,
     AdminCompteAdminsAPIView,
 
     # IA
@@ -88,6 +89,8 @@ from .views import (
     InformationsSocietePublicAPIView, InformationsSocieteAdminAPIView,
     ProposerMetierAPIView, AdminPropositionsMetierAPIView,
     AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,
+    CreerDemandeAjoutAPIView, AdminDemandesAjoutAPIView, AdminDemandeProchesAPIView, AdminDemandeParentsAPIView,
+    AdminDemandeAccepterAPIView, AdminDemandeRattacherAPIView, AdminDemandeRefuserAPIView,
 
     # Nouveau tableau de bord candidat (specs/important-features)
     ScoreProfilAPIView, MetiersAccessiblesAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
@@ -113,6 +116,13 @@ urlpatterns = [
     path('admin/propositions-metiers/', AdminPropositionsMetierAPIView.as_view(), name='admin-propositions-metiers'),
     path('admin/propositions-metiers/<int:pk>/valider/', AdminValiderPropositionMetierAPIView.as_view(), name='admin-proposition-metier-valider'),
     path('admin/propositions-metiers/<int:pk>/rejeter/', AdminRejeterPropositionMetierAPIView.as_view(), name='admin-proposition-metier-rejeter'),
+    path('demandes-ajout/', CreerDemandeAjoutAPIView.as_view(), name='demande-ajout-creer'),
+    path('admin/demandes-ajout/', AdminDemandesAjoutAPIView.as_view(), name='admin-demandes-ajout'),
+    path('admin/demandes-ajout/parents/', AdminDemandeParentsAPIView.as_view(), name='admin-demandes-ajout-parents'),
+    path('admin/demandes-ajout/<int:pk>/proches/', AdminDemandeProchesAPIView.as_view(), name='admin-demande-ajout-proches'),
+    path('admin/demandes-ajout/<int:pk>/accepter/', AdminDemandeAccepterAPIView.as_view(), name='admin-demande-ajout-accepter'),
+    path('admin/demandes-ajout/<int:pk>/rattacher/', AdminDemandeRattacherAPIView.as_view(), name='admin-demande-ajout-rattacher'),
+    path('admin/demandes-ajout/<int:pk>/refuser/', AdminDemandeRefuserAPIView.as_view(), name='admin-demande-ajout-refuser'),
     path('referentiel/metiers/<int:metier_id>/suggestions/', MetierSuggestionsAPIView.as_view(), name='api-metier-suggestions'),
     path('dashboard/offres/<int:offre_id>/cloturer/', CloturerOffreAPIView.as_view(), name='cloturer-offre'),
     path('dashboard/offres/<int:offre_id>/modifier/', UpdateOffreRecruteurAPIView.as_view(), name='modifier-offre'),
@@ -186,6 +196,7 @@ urlpatterns = [
     # Admin
     path('admin/offres/', AdminOffresListAPIView.as_view(), name='admin-offres'),
     path('admin/offres/<int:offre_id>/moderer/', AdminOffreModerateAPIView.as_view(), name='admin-offre-moderer'),
+    path('admin/offres/<int:offre_id>/corriger/', AdminOffreCorrigerAPIView.as_view(), name='admin-offre-corriger'),
     path('admin/entreprises/', AdminEntreprisesListAPIView.as_view(), name='admin-entreprises'),
     path('admin/entreprises/<int:entreprise_id>/moderer/', AdminEntrepriseModerateAPIView.as_view(), name='admin-entreprise-moderer'),
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
@@ -195,6 +206,8 @@ urlpatterns = [
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast'),
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures'),
     path('admin/marche/', AdminMarcheAPIView.as_view(), name='admin-marche'),
+    path('admin/stats-periode/', AdminStatistiquesAPIView.as_view(), name='admin-stats-periode'),
+    path('admin/stats-periode/export/', AdminStatistiquesExportAPIView.as_view(), name='admin-stats-periode-export'),
     path('admin/audit-logs/', AdminAuditLogAPIView.as_view(), name='admin-audit-logs'),
     path('admin/demandes-premium/', AdminDemandesPremiumAPIView.as_view(), name='admin-demandes-premium'),
     path('admin/demandes-premium/<int:demande_id>/activer/', AdminDemandesPremiumAPIView.as_view(), name='admin-activer-premium'),
@@ -217,8 +230,7 @@ urlpatterns = [
     path('admin/export/offres/', ExportOffresExcelAPIView.as_view(), name='export-offres'),
     path('admin/export/utilisateurs/', ExportUtilisateursExcelAPIView.as_view(), name='export-utilisateurs'),
     path('admin/referentiel-v2/metiers/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metiers'),
-    path('admin/referentiel-v2/metiers/<int:pk>/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metier-detail'),
-    path('admin/referentiel-v2/specialites/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialites'),
+    path('admin/referentiel-v2/metiers/<int:pk>/', AdminReferentielMetiersAPIView.as_view(), name='admin-referentiel-metier-detail'),    path('admin/referentiel-v2/specialites/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialites'),
     path('admin/referentiel-v2/specialites/<int:pk>/', AdminReferentielSpecialitesAPIView.as_view(), name='admin-referentiel-specialite-detail'),
     path('admin/referentiel-v2/diplomes/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplomes'),
     path('admin/referentiel-v2/diplomes/<int:pk>/', AdminReferentielDiplomesAPIView.as_view(), name='admin-referentiel-diplome-detail'),

@@ -9,15 +9,13 @@ import { confirmToast } from "../../utils/confirmToast";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { CheckCircle2 } from "lucide-react";
 import ReactSelect from "react-select";
-import { selectStyles } from "../../theme";
-import { grouperParFamille } from "../../utils/familleFormation";
-import { jobsService } from "../../Services/jobsService";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import AdminPagination from "../../Components/AdminPagination";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Briefcase, BookOpen } from "lucide-react";
+import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
 
 /**
  * Panel admin du référentiel v2 (métiers/spécialités/diplômes importés depuis les
@@ -34,8 +32,51 @@ const ONGLETS = [
   { key: "diplomes", label: "Types de diplôme", secondaryKey: "systeme", secondaryLabel: "Système" },
   { key: "relations", label: "Métiers similaires" },
   { key: "relations-specialites", label: "Spécialités similaires" },
-  { key: "formations-a-verifier", label: "Formations à vérifier" },
+  { key: "demandes-diplomes", label: "Demandes" },
+  { key: "demandes-specialites", label: "Demandes" },
+  { key: "demandes-metiers", label: "Demandes" },
 ];
+
+// Quatre entrées de menu (15/10/2026) : Métiers, Formations, Spécialités, Compétences. Chaque groupe
+// réunit ce qui se rapporte au même sujet (liste, similarités, propositions à traiter).
+const GROUPES = {
+  metiers: {
+    onglets: ["metiers", "relations", "demandes-metiers"],
+    icon: Briefcase,
+    titre: "Métiers",
+    sousTitre: "Métiers du référentiel, rapprochements entre métiers substituables et métiers proposés par les utilisateurs.",
+    aideKey: "referentiel-metiers",
+    aide: [
+      "Métiers : cliquez sur le badge « Actif » pour masquer un métier des listes de choix. Les profils et offres qui l'utilisent déjà ne sont pas modifiés. Le crayon corrige un libellé ; le code reste identique (il sert aux réimports du classeur client).",
+      "Métiers similaires : rapprochez manuellement deux métiers substituables classés à des endroits différents. Ils comptent alors 70 % de compatibilité dans le matching.",
+      "Demandes : métiers proposés par les candidats et les recruteurs (« Je ne trouve pas mon métier »). Une demande n'a aucun effet tant que vous n'avez pas décidé : rattachez-la à un métier existant (elle devient une appellation), ajoutez-la comme nouveau métier dans un groupe, ou refusez avec un motif envoyé au demandeur.",
+      "Toute fusion de doublons passe par la commande « consolider_referentiel », jamais par ce panel.",
+    ],
+  },
+  formations: {
+    onglets: ["diplomes", "demandes-diplomes"],
+    icon: GraduationCap,
+    titre: "Formations",
+    sousTitre: "Types de diplôme du référentiel et demandes d'ajout de types de diplôme absents de la liste.",
+    aideKey: "referentiel-formations",
+    aide: [
+      "Types de diplôme : cliquez sur le badge « Actif » pour masquer une entrée des listes de choix. Les profils et offres qui l'utilisent déjà ne sont pas modifiés. Le crayon corrige un libellé ; le code reste identique.",
+      "Demandes : types de diplôme absents de la liste, signalés par les candidats (« Autre, préciser ») ou par les recruteurs. Rattachez la demande à un type existant (elle devient une autre écriture), ajoutez-la au référentiel, ou refusez avec un motif envoyé au demandeur. Les formations concernées sont mises à jour automatiquement.",
+    ],
+  },
+  specialites: {
+    onglets: ["specialites", "relations-specialites", "demandes-specialites"],
+    icon: BookOpen,
+    titre: "Spécialités",
+    sousTitre: "Spécialités de formation du référentiel et rapprochements entre spécialités substituables.",
+    aideKey: "referentiel-specialites",
+    aide: [
+      "Spécialités : cliquez sur le badge « Actif » pour masquer une entrée des listes de choix. Les profils et offres qui l'utilisent déjà ne sont pas modifiés. Le crayon corrige un libellé ; le code reste identique.",
+      "Spécialités similaires : rapprochez manuellement deux spécialités substituables classées à des endroits différents. Elles comptent alors 70 % de compatibilité dans le matching.",
+      "Demandes : spécialités absentes de la liste, signalées par les candidats (« Autre, préciser ») ou par les recruteurs. Rattachez la demande à une spécialité existante, ajoutez-la au référentiel (domaine obligatoire, diplômes concernés facultatifs), ou refusez avec un motif envoyé au demandeur.",
+    ],
+  },
+};
 
 const FETCHERS = {
   metiers: adminService.getAdminReferentielMetiers,
@@ -49,8 +90,10 @@ const UPDATERS = {
   diplomes: adminService.updateAdminReferentielDiplome,
 };
 
-const AdminReferentielV2 = () => {
-  const [onglet, setOnglet] = useState("metiers");
+const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
+  const def = GROUPES[groupe];
+  const onglets = ONGLETS.filter((o) => def.onglets.includes(o.key));
+  const [onglet, setOnglet] = useState(ongletInitial || def.onglets[0]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -59,15 +102,27 @@ const AdminReferentielV2 = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [editing, setEditing] = useState(null);
   const [editLibelle, setEditLibelle] = useState("");
-  const [formationsAVerifierCount, setFormationsAVerifierCount] = useState(0);
+  const [demandesAExaminer, setDemandesAExaminer] = useState({});
 
   const config = ONGLETS.find((o) => o.key === onglet);
+  // Onglets qui affichent un badge « à traiter ».
+  const nbATraiter = {
+    "demandes-diplomes": demandesAExaminer.DIPLOME || 0,
+    "demandes-specialites": demandesAExaminer.SPECIALITE || 0,
+    "demandes-metiers": demandesAExaminer.METIER || 0,
+  };
 
-  useEffect(() => {
+  const chargerCompteurs = () =>
     adminService
       .getAdminStats()
-      .then((data) => setFormationsAVerifierCount(data.formations_a_verifier || 0))
+      .then((data) => {
+        setDemandesAExaminer(data.demandes_a_examiner || {});
+      })
       .catch((err) => reportError("ECHEC_GET_ADMIN_STATS_REFERENTIEL_V2", err));
+
+  useEffect(() => {
+    chargerCompteurs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchItems = async (s = "", p = 1, tab = onglet) => {
@@ -88,7 +143,7 @@ const AdminReferentielV2 = () => {
   useEffect(() => {
     setSearch("");
     setPage(1);
-    if (!["relations", "relations-specialites", "formations-a-verifier"].includes(onglet)) fetchItems("", 1, onglet);
+    if (!["relations", "relations-specialites", "demandes-diplomes", "demandes-specialites", "demandes-metiers"].includes(onglet)) fetchItems("", 1, onglet);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onglet]);
 
@@ -144,22 +199,17 @@ const AdminReferentielV2 = () => {
   return (
     <div className="space-y-5">
       <AdminPageHeader
-        icon={GraduationCap}
+        icon={def.icon}
         color="violet"
-        title="Référentiel métiers & diplômes"
-        subtitle="Contenu importé depuis les classeurs client — masquez une entrée ou corrigez son libellé, sans créer ni supprimer d'identifiant."
-        aideKey="referentiel-v2"
-        aide={[
-          "Métiers / Spécialités / Types de diplôme : cliquez sur le badge « Actif » pour masquer une entrée des listes de choix. Les profils et offres qui l'utilisent déjà ne sont pas modifiés.",
-          "Le crayon corrige un libellé (faute, formulation). Le code reste identique : il sert aux réimports du classeur client.",
-          "Métiers / Spécialités similaires : rapprochez manuellement deux entrées substituables classées à des endroits différents du référentiel. Elles comptent alors 70 % de compatibilité dans le matching.",
-          "Formations à vérifier : diplômes saisis en « Autre » par les candidats. Attribuez un type de diplôme (et une spécialité si possible) pour qu'ils comptent dans le matching, ou refusez avec un motif.",
-          "Toute consolidation de fond (fusion de secteurs, doublons) passe par la commande « consolider_referentiel », jamais par ce panel.",
-        ]}
+        title={def.titre}
+        subtitle={def.sousTitre}
+        aideKey={def.aideKey}
+        aide={def.aide}
       />
 
+      {onglets.length > 1 && (
       <div className="flex gap-1 border-b border-slate-200 overflow-x-auto" role="tablist" aria-label="Sections du référentiel">
-        {ONGLETS.map((o) => (
+        {onglets.map((o) => (
           <button
             key={o.key}
             role="tab"
@@ -170,21 +220,26 @@ const AdminReferentielV2 = () => {
             }`}
           >
             {o.label}
-            {o.key === "formations-a-verifier" && formationsAVerifierCount > 0 && (
+            {nbATraiter[o.key] > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                {formationsAVerifierCount}
+                {nbATraiter[o.key]}
               </span>
             )}
           </button>
         ))}
       </div>
+      )}
 
       {onglet === "relations" ? (
         <RelationsSimilairesPanel />
       ) : onglet === "relations-specialites" ? (
         <RelationsSpecialitesPanel />
-      ) : onglet === "formations-a-verifier" ? (
-        <FormationsAVerifierPanel onTraitee={() => setFormationsAVerifierCount((c) => Math.max(0, c - 1))} />
+      ) : onglet === "demandes-metiers" ? (
+        <DemandesAjoutPanel type="METIER" onChange={chargerCompteurs} />
+      ) : onglet === "demandes-diplomes" ? (
+        <DemandesAjoutPanel type="DIPLOME" onChange={chargerCompteurs} />
+      ) : onglet === "demandes-specialites" ? (
+        <DemandesAjoutPanel type="SPECIALITE" onChange={chargerCompteurs} />
       ) : (
         <>
       <div className="relative max-w-sm">
@@ -733,256 +788,6 @@ const RelationsSpecialitesPanel = () => {
         </div>
         <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={(p) => { setPage(p); fetchItems(search, p); }} disabled={loading} />
       </div>
-    </div>
-  );
-};
-
-const FormationsAVerifierPanel = ({ onTraitee }) => {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  // Sélection en cours par ligne (id formation -> {diplomeId, specialiteId}) — les deux
-  // champs sont volontairement DÉCOUPLÉS ici (contrairement à la cascade candidat
-  // Type→Domaine→Filière→Spécialité) : l'admin doit pouvoir chercher/attribuer une
-  // spécialité même quand le type de diplôme déclaré n'existe dans aucun référentiel
-  // (ex: "Formation d'auto-école" — le type n'existe pas, mais "Automobile" peut très
-  // bien matcher une vraie spécialité existante, indépendamment du type).
-  const [selections, setSelections] = useState({});
-  const [saving, setSaving] = useState(null);
-  const [typesDiplomes, setTypesDiplomes] = useState([]);
-  // Refus avec motif (retour client) : id de la formation dont le bandeau "Refuser" est
-  // ouvert (une seule à la fois) + le texte de motif tapé par ligne, transmis au candidat
-  // dans sa notification pour qu'il sache comment corriger sa formation.
-  const [refusOuvertPour, setRefusOuvertPour] = useState(null);
-  const [motifs, setMotifs] = useState({});
-
-  useEffect(() => {
-    jobsService
-      .getNomenclatureFormation()
-      .then((data) => setTypesDiplomes(data.types_diplomes || []))
-      .catch((err) => reportError("ECHEC_CHARGEMENT_TYPES_DIPLOMES_ADMIN", err));
-  }, []);
-
-  const fetchItems = async (s = "", p = 1) => {
-    setLoading(true);
-    try {
-      const data = await adminService.getAdminFormationsAVerifier(s, p);
-      setItems(data.results || []);
-      setTotalPages(data.total_pages || 1);
-      setTotalCount(data.count || 0);
-    } catch (err) {
-      reportError("ECHEC_GET_FORMATIONS_A_VERIFIER", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchItems("", 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleSearch = (e) => {
-    const val = e.target.value;
-    setSearch(val);
-    setPage(1);
-    clearTimeout(window._formationsAVerifierSearchTimer);
-    window._formationsAVerifierSearchTimer = setTimeout(() => fetchItems(val, 1), 400);
-  };
-
-  const setSelection = (id, patch) => {
-    setSelections((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
-  };
-
-  // Une formation "à vérifier" peut déjà avoir un Type de diplôme résolu (seule la
-  // Spécialité manquait) — pré-remplir depuis l'item évite de forcer l'admin à re-choisir
-  // un diplôme déjà correct juste pour pouvoir valider la spécialité.
-  const selectionPour = (item) => ({
-    diplomeId: selections[item.id]?.diplomeId ?? (item.diplome_ref || ""),
-    specialiteId: selections[item.id]?.specialiteId ?? (item.specialite_ref || ""),
-    specialiteLibelle: selections[item.id]?.specialiteLibelle ?? (item.specialite_ref_libelle || ""),
-  });
-
-  // Retire une formation traitée ; si la page devient vide alors qu'il en reste ailleurs,
-  // recharge la 1re page (avant : page blanche "Aucune formation" malgré des éléments restants).
-  const retirerDeLaListe = (id) => {
-    const restants = items.filter((i) => i.id !== id);
-    setItems(restants);
-    setTotalCount((c) => Math.max(0, c - 1));
-    if (restants.length === 0 && totalCount > 1) {
-      setPage(1);
-      fetchItems(search, 1);
-    }
-  };
-
-  const handleValider = async (item) => {
-    const sel = selectionPour(item);
-    if (!sel.diplomeId) {
-      toast.error("Choisissez au moins un type de diplôme avant de valider.");
-      return;
-    }
-    setSaving(item.id);
-    try {
-      await adminService.validerFormationAVerifier(item.id, {
-        diplome_ref: sel.diplomeId,
-        specialite_ref: sel.specialiteId || null,
-      });
-      toast.success("Formation validée — elle sort de la liste d'attente.");
-      retirerDeLaListe(item.id);
-      if (onTraitee) onTraitee();
-    } catch (err) {
-      reportError("ECHEC_VALIDER_FORMATION_A_VERIFIER", err);
-      toast.error(apiErrMsg(err, "Impossible de valider — ce couple diplôme/spécialité n'existe peut-être pas dans le référentiel."));
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  const handleConfirmerRefus = async (item) => {
-    setSaving(item.id);
-    try {
-      await adminService.refuserFormationAVerifier(item.id, motifs[item.id] || "");
-      toast.success("Formation refusée et retirée du profil du candidat.");
-      retirerDeLaListe(item.id);
-      setRefusOuvertPour(null);
-      if (onTraitee) onTraitee();
-    } catch (err) {
-      reportError("ECHEC_REFUSER_FORMATION_A_VERIFIER", err);
-      toast.error(apiErrMsg(err, "Erreur lors du refus."));
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className={`${tw.card} p-4 bg-amber-50 border-amber-200`}>
-        <p className="text-sm text-amber-800">
-          Formations déclarées via "Autre, préciser" sans correspondance référentiel fiable
-          (ni par recherche automatique, ni par confirmation candidat). Le matching les traite
-          comme des critères non-évaluables (score provisoire), jamais comme une
-          incompatibilité — attribuez un type de diplôme réel (et une spécialité si pertinent)
-          pour les débloquer.
-        </p>
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          value={search}
-          onChange={handleSearch}
-          placeholder="Rechercher par intitulé déclaré..."
-          className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-        />
-      </div>
-
-      {loading ? (
-        <p className={`py-12 text-center text-sm ${tw.textPrimary} animate-pulse font-medium`}>Chargement...</p>
-      ) : items.length === 0 ? (
-        <p className={`py-12 text-center text-sm ${tw.textMuted} italic`}>Aucune formation en attente de vérification.</p>
-      ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className={`${tw.card} p-4 space-y-3`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{item.diplome}</p>
-                  <p className="text-xs text-slate-500">
-                    {item.candidat_nom} — {item.candidat_email}
-                    {item.etablissement && ` · ${item.etablissement}`}
-                  </p>
-                  {item.description && <p className="text-xs text-slate-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
-                </div>
-              </div>
-              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">Type de diplôme</label>
-                  <ReactSelect
-                    options={grouperParFamille(typesDiplomes, null, (d) => ({ value: d.id, label: d.libelle }))}
-                    value={
-                      typesDiplomes
-                        .map((d) => ({ value: d.id, label: d.libelle }))
-                        .find((o) => String(o.value) === String(selectionPour(item).diplomeId)) || null
-                    }
-                    onChange={(opt) => setSelection(item.id, { diplomeId: opt ? opt.value : "" })}
-                    styles={selectStyles}
-                    placeholder="Rechercher un type de diplôme..."
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">
-                    Spécialité <span className="text-slate-400">(recherche indépendante — tout le référentiel)</span>
-                  </label>
-                  <SpecialiteAutocomplete
-                    value={selectionPour(item).specialiteLibelle || ""}
-                    onSelect={(spec) => setSelection(item.id, { specialiteId: spec.id, specialiteLibelle: spec.libelle })}
-                  />
-                </div>
-              </div>
-              {refusOuvertPour === item.id ? (
-                <div className="border border-red-200 bg-red-50 rounded-lg p-3 space-y-2">
-                  <label className="text-xs font-medium text-red-700 block">
-                    Motif du refus (transmis au candidat dans sa notification, optionnel)
-                  </label>
-                  <textarea
-                    value={motifs[item.id] || ""}
-                    onChange={(e) => setMotifs((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-white border border-red-200 rounded-lg text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRefusOuvertPour(null)}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 rounded-lg"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleConfirmerRefus(item)}
-                      disabled={saving === item.id}
-                      className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-60"
-                    >
-                      {saving === item.id ? "Refus..." : "Confirmer le refus"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRefusOuvertPour(item.id)}
-                    disabled={saving === item.id}
-                    className="inline-flex items-center gap-2 px-4 py-2 hover:bg-red-50 text-red-600 text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
-                  >
-                    <Trash2 size={15} /> Refuser (supprimer)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleValider(item)}
-                    disabled={saving === item.id}
-                    className={`inline-flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-60`}
-                  >
-                    <CheckCircle2 size={15} /> {saving === item.id ? "Validation..." : "Valider cette correspondance"}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className={`${tw.card} overflow-hidden`}>
-          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={(p) => { setPage(p); fetchItems(search, p); }} disabled={loading} />
-        </div>
-      )}
     </div>
   );
 };

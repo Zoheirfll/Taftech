@@ -215,6 +215,11 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 # En production : utiliser les clés "live" (préfixe live_sk_...)
 CHARGILY_API_KEY = os.getenv('CHARGILY_API_KEY', '')
 CHARGILY_SECRET_KEY = os.getenv('CHARGILY_SECRET_KEY', '')
+# URL publique (https) du webhook de paiement, envoyée à Chargily à CHAQUE création de paiement :
+# l'activation d'un palier ne dépend plus de l'URL réglée dans le tableau de bord Chargily (qui
+# change avec un tunnel ngrok). Vide = Chargily utilise l'URL de son tableau de bord.
+# Dev : https://<domaine ngrok>/api/jobs/premium/chargily/webhook/ — production : le domaine définitif.
+CHARGILY_WEBHOOK_URL = os.getenv('CHARGILY_WEBHOOK_URL', '')
 
 # En dev, ces clés peuvent être vides sans risque (email/paiement/IA juste
 # indisponibles) — mais en prod (DEBUG=False), une clé vide casse silencieusement
@@ -239,6 +244,13 @@ if not DEBUG:
 
 # URL publique du frontend (utilisée dans les emails)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:5173')
+
+# `index.html` construit du frontend (`npm run build`) : sert de gabarit à `jobs/seo_pages.py`, qui
+# y injecte les balises SEO par page (titre, canonical, JobPosting) pour les robots. À pointer vers
+# le `index.html` réellement servi par nginx en production.
+FRONTEND_INDEX_PATH = os.getenv(
+    'FRONTEND_INDEX_PATH', str(BASE_DIR.parent / 'taftech_frontend' / 'dist' / 'index.html')
+)
 
 # ──────────────────────────────────────────────
 # FILES

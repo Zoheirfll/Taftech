@@ -1,0 +1,102 @@
+[
+  {
+    "id": 22,
+    "diplome": "Master’s Degree in Human Resources & Communication",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 23,
+    "diplome": "Bachelor’s Degree in International Trade & Business",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 24,
+    "diplome": "English Language Certificate",
+    "description": "- Level 9/12",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 25,
+    "diplome": "Training in Labor Law & Workers Representation",
+    "description": "- Laws 90-02 & 90-14\n- Union rights\n- Collective bargaining",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 26,
+    "diplome": "Advanced Excel Certificate",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 100,
+    "diplome": "Master Professionnalisant en Ressources Humaines et Communication",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 101,
+    "diplome": "Formation en Management de proximité",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 102,
+    "diplome": "Licence en Commerce et Affaires Internationales",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 103,
+    "diplome": "Formation : Représentation des travailleurs & législation du travail algérienne",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "DECLARE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  },
+  {
+    "id": 155,
+    "diplome": "i nformatique pour debutants -enligne",
+    "description": "",
+    "diplome_ref_id": null,
+    "specialite_ref_id": null,
+    "statut_validation": "REFUSEE",
+    "demande_diplome_id": null,
+    "demande_specialite_id": null
+  }
+]

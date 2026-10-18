@@ -8,12 +8,16 @@ import { Bell, Trash2, Plus, X, ChevronDown, ChevronUp, MapPin } from "lucide-re
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { nomWilaya } from "../../utils/wilaya";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
 const AlertesEmploi = () => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, exiger, depuisReponse, definir, effacer, attributs } = useErreursChamps();
   const [alertes, setAlertes] = useState([]);
   const [wilayas, setWilayas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +50,7 @@ const AlertesEmploi = () => {
 
   const handleCreateAlerte = async (e) => {
     e.preventDefault();
-    if (!newAlerte.mots_cles.trim())
-      return toast.error("Les mots-clés sont obligatoires.");
+    if (exiger(newAlerte, { mots_cles: "Les mots-clés sont obligatoires." })) return;
     const payload = { ...newAlerte };
     if (!payload.wilaya) delete payload.wilaya;
     try {
@@ -56,8 +59,10 @@ const AlertesEmploi = () => {
       toast.success("Alerte créée !");
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
+      definir({});
     } catch (error) {
       reportError("ECHEC_CREATION_ALERTE", error);
+      depuisReponse(error);
       toast.error(apiErrMsg(error, "Impossible de créer l'alerte."));
     }
   };
@@ -224,7 +229,7 @@ const AlertesEmploi = () => {
                               <p className={`text-[10px] ${tw.textMuted700} truncate`}>{o.entreprise}</p>
                             </div>
                             <span className={`text-[10px] ${tw.textMuted700} flex items-center gap-1 shrink-0`}>
-                              <MapPin size={10} /> {o.wilaya}
+                              <MapPin size={10} /> {nomWilaya(o.wilaya)}
                             </span>
                           </Link>
                         ))}
@@ -253,7 +258,7 @@ const AlertesEmploi = () => {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={lockSubmit(handleCreateAlerte)} className="p-6 space-y-4">
+            <form onSubmit={lockSubmit(handleCreateAlerte)} noValidate className="p-6 space-y-4">
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
                   Mots-clés *
@@ -262,11 +267,14 @@ const AlertesEmploi = () => {
                   type="text"
                   className={INPUT_CLASS}
                   value={newAlerte.mots_cles}
-                  onChange={(e) =>
-                    setNewAlerte({ ...newAlerte, mots_cles: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewAlerte({ ...newAlerte, mots_cles: e.target.value });
+                    effacer("mots_cles");
+                  }}
                   required
+                  {...attributs("mots_cles")}
                 />
+                <FieldError id="err-mots_cles" message={erreurs.mots_cles} />
               </div>
               <div>
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>

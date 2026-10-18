@@ -20,6 +20,8 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getAdminOffres: vi.fn(),
     moderateOffre: vi.fn(),
+    corrigerOffre: vi.fn(),
+    getConstants: vi.fn(),
     exportOffres: vi.fn(),
   },
 }));
@@ -128,7 +130,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
   it("🟢 Happy Path 4 : Correction d'une offre", async () => {
     jobsService.getAdminOffres.mockResolvedValue(mockData);
-    jobsService.moderateOffre.mockResolvedValue({});
+    jobsService.corrigerOffre.mockResolvedValue({});
+    jobsService.getConstants.mockResolvedValue({ wilayas: [], experiences: [], contrats: [] });
 
     render(<AdminOffres />);
 
@@ -141,17 +144,23 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
       target: { value: "Développeur React Senior" },
     });
 
-    fireEvent.click(screen.getByText("Sauvegarder"));
+    fireEvent.click(screen.getByRole("button", { name: /Enregistrer \(1 changement\)/ }));
 
     await waitFor(() => {
-      expect(jobsService.moderateOffre).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          titre: "Développeur React Senior",
-        }),
-      );
-      expect(toast.success).toHaveBeenCalledWith("Offre corrigée !");
+      // Seuls les champs modifiés partent, jamais le statut de modération.
+      expect(jobsService.corrigerOffre).toHaveBeenCalledWith(1, { titre: "Développeur React Senior" });
+      expect(toast.success).toHaveBeenCalledWith("Offre corrigée — le recruteur a été prévenu par e-mail.");
     });
+  });
+
+  it("🔒 Le bouton Corriger n'existe que pour une offre en attente", async () => {
+    jobsService.getAdminOffres.mockResolvedValue({
+      results: [{ ...mockData.results[0], statut_moderation: "APPROUVEE" }],
+      count: 1, total_pages: 1,
+    });
+    render(<AdminOffres />);
+    await waitFor(() => screen.getByText("Développeur React"));
+    expect(screen.queryByTitle("Corriger")).toBeNull();
   });
 
   it("🟢 Happy Path 5 : Exportation Excel réussie", async () => {

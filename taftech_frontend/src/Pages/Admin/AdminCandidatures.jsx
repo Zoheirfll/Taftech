@@ -10,6 +10,7 @@ import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { TooltipIcon } from "../../Components/Tooltip";
 import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
+import { criteresNonDemandes } from "../../utils/criteresMatching";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import { AdminVide } from "../../Components/AdminEtat";
 import AdminPagination from "../../Components/AdminPagination";
@@ -378,7 +379,7 @@ const AdminCandidatures = () => {
                       </p>
                     )}
                     {CRITERES_SCORE.map(({ key, label, max }) => {
-                      const nonDemande = (DM.criteres_non_demandes || []).includes(key);
+                      const nonDemande = criteresNonDemandes(DM, CRITERES_SCORE.map((c) => c.key)).includes(key);
                       const val = scores[key] || 0;
                       const pct = Math.min(100, (val / max) * 100);
                       return (

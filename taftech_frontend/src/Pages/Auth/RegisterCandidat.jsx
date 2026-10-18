@@ -3,6 +3,7 @@ import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
+import GoogleAuthProvider from "../../Components/GoogleAuthProvider";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
@@ -351,6 +352,7 @@ const RegisterCandidat = () => {
               </div>
 
               <div className="flex justify-center">
+                <GoogleAuthProvider>
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     const toastId = toast.loading("Inscription Google...");
@@ -374,6 +376,7 @@ const RegisterCandidat = () => {
                   onError={() => toast.error("Échec de l'inscription Google.")}
                   text="signup_with" shape="rectangular" theme="outline" size="large" width="360"
                 />
+                </GoogleAuthProvider>
               </div>
 
               <p className={`${tw.bodyText} text-center mt-6`}>

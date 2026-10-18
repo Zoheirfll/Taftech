@@ -12,6 +12,7 @@ import * as reporter from "../src/utils/errorReporter";
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getCandidaturesSpontanees: vi.fn(),
+    getMonAbonnement: vi.fn(),
   },
 }));
 
@@ -38,6 +39,7 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getCandidaturesSpontanees.mockResolvedValue([]);
+    jobsService.getMonAbonnement.mockResolvedValue({ acces_ia_recommandes: true });
   });
 
   afterEach(() => {
@@ -109,5 +111,38 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
     const lienCVtheque = screen.getByText("CVthèque").closest("a");
     expect(lienCVtheque.className).toMatch(/bg-teal-700/);
+  });
+
+  it("🟡 EC2 : un cadenas signale « Candidats recommandés » quand le palier ne l'inclut pas", async () => {
+    jobsService.getMonAbonnement.mockResolvedValue({ palier: "STARTER", acces_ia_recommandes: false });
+    renderLayout();
+    const cadenas = await screen.findByTitle("Palier supérieur requis");
+    expect(cadenas.closest("a")).toHaveAttribute("href", "/candidats-recommandes");
+    // L'entrée reste visible et cliquable : l'écran « palier requis » de la page explique le blocage.
+    expect(screen.getByText("Candidats recommandés")).toBeInTheDocument();
+  });
+
+  it("🟡 EC3 : cadenas sur CVthèque (aucun palier actif) et sur Mon équipe (droit équipe absent)", async () => {
+    authService.peutFaire.mockImplementation(() => true); // EC1 a masqué « Mon équipe » : on remet l'état
+    jobsService.getMonAbonnement.mockResolvedValue({
+      palier: null, acces_cvtheque: false, acces_equipe: false, acces_ia_recommandes: false, peut_publier_offre: false,
+    });
+    renderLayout();
+    await waitFor(() => expect(screen.getAllByTitle("Palier supérieur requis")).toHaveLength(4));
+    const liens = screen.getAllByTitle("Palier supérieur requis").map((c) => c.closest("a").getAttribute("href"));
+    expect(liens.sort()).toEqual(["/candidats-recommandes", "/creer-offre", "/cvtheque", "/mon-equipe"]);
+  });
+
+  it("🟡 EC4 : un droit inconnu (réponse partielle) ne verrouille rien", async () => {
+    jobsService.getMonAbonnement.mockResolvedValue({ palier: "PRO" });
+    renderLayout();
+    await waitFor(() => expect(jobsService.getMonAbonnement).toHaveBeenCalled());
+    expect(screen.queryByTitle("Palier supérieur requis")).not.toBeInTheDocument();
+  });
+
+  it("🟢 HP9 : aucun cadenas quand le palier inclut les candidats recommandés", async () => {
+    renderLayout();
+    await waitFor(() => expect(jobsService.getMonAbonnement).toHaveBeenCalled());
+    expect(screen.queryByTitle("Palier supérieur requis")).not.toBeInTheDocument();
   });
 });

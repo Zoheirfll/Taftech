@@ -3,9 +3,12 @@ import { useSubmitLock } from "../../../utils/useSubmitLock";
 import { tw } from "../../../theme";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
 import DatePrecisionInput from "../../../Components/DatePrecisionInput";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, showExpForm, setShowExpForm, newExp, setNewExp, editingExpId, setEditingExpId, expTitreSuggestions, showExpTitreSuggestions, setShowExpTitreSuggestions, handleExpTitreChange, handleAddExperience, handleUpdateExperience }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, exiger, effacer, attributs } = useErreursChamps();
   return (
     <>
       {showExpForm && (
@@ -17,7 +20,19 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                 : "Ajouter une expérience"}
             </h3>
             <form
-              onSubmit={lockSubmit(editingExpId ? handleUpdateExperience : handleAddExperience)}
+              noValidate
+              onSubmit={lockSubmit((e) => {
+                const manque = exiger(newExp, {
+                  titre_poste: "Le titre du poste est obligatoire.",
+                  entreprise: "Le nom de l'entreprise est obligatoire.",
+                  date_debut: "La date de début est obligatoire.",
+                });
+                if (manque) {
+                  e.preventDefault();
+                  return;
+                }
+                return (editingExpId ? handleUpdateExperience : handleAddExperience)(e);
+              })}
               className="space-y-4"
             >
               <div>
@@ -27,9 +42,10 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                 <div className="relative">
                   <input
                     required
+                    {...attributs("titre_poste")}
                     className={inputClass}
                     value={newExp.titre_poste}
-                    onChange={(e) => handleExpTitreChange(e.target.value)}
+                    onChange={(e) => { handleExpTitreChange(e.target.value); effacer("titre_poste"); }}
                     onBlur={() => setTimeout(() => setShowExpTitreSuggestions(false), 150)}
                     autoComplete="off"
                   />
@@ -50,6 +66,7 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                     </ul>
                   )}
                 </div>
+                <FieldError id="err-titre_poste" message={erreurs.titre_poste} />
               </div>
               <div>
                 <label className={tw.formLabel}>
@@ -58,18 +75,22 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                 <input
                   required
                   placeholder="Nom de l'entreprise"
+                  {...attributs("entreprise")}
                   className={inputClass}
                   value={newExp.entreprise}
-                  onChange={(e) =>
-                    setNewExp({ ...newExp, entreprise: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewExp({ ...newExp, entreprise: e.target.value });
+                    effacer("entreprise");
+                  }}
                 />
+                <FieldError id="err-entreprise" message={erreurs.entreprise} />
               </div>
               <div>
                 <label className={tw.formLabel}>
                   Métier
                 </label>
                 <MetierAutocomplete
+                  proposable
                   value={newExp.metier_libelle || ""}
                   onSelect={(item) => setNewExp({ ...newExp, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
                 />
@@ -85,8 +106,9 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                     className={inputClass}
                     value={newExp.date_debut}
                     precision={newExp.date_debut_precision || "JOUR"}
-                    onChange={(v, p) => setNewExp({ ...newExp, date_debut: v, date_debut_precision: p })}
+                    onChange={(v, p) => { setNewExp({ ...newExp, date_debut: v, date_debut_precision: p }); effacer("date_debut"); }}
                   />
+                  <FieldError id="err-date_debut" message={erreurs.date_debut} />
                 </div>
                 <div>
                   <label className={tw.formLabel}>

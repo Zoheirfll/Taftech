@@ -117,7 +117,8 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
       expect(screen.getByText(/TechCorp/i)).toBeInTheDocument();
       expect(screen.getByText(/Meriem Belamri/i)).toBeInTheDocument();
       expect(screen.getByText("Ingénieur IT")).toBeInTheDocument();
-      expect(screen.getByText(/31 - Oran/i)).toBeInTheDocument();
+      expect(screen.getByText("Oran · Bir El Djir")).toBeInTheDocument();
+      expect(screen.queryByText(/31 - Oran/i)).not.toBeInTheDocument();
       expect(screen.getByText(/cv_meriem.pdf/i)).toBeInTheDocument();
       expect(screen.getByText("React")).toBeInTheDocument();
       expect(screen.getByText("Node.js")).toBeInTheDocument();

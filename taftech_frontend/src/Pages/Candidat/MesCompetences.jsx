@@ -7,6 +7,8 @@ import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -31,6 +33,7 @@ const MesCompetences = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [nouvelle, setNouvelle] = useState({ label: "", niveau: "INTERMEDIAIRE" });
   const [editingId, setEditingId] = useState(null);
+  const { erreurs, exiger, depuisReponse, definir, effacer, attributs } = useErreursChamps();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +52,7 @@ const MesCompetences = () => {
 
   const handleSearchChange = async (value) => {
     setNouvelle((prev) => ({ ...prev, label: value }));
+    effacer("label");
     if (value.trim().length < 2) return setSuggestions([]);
     try {
       const results = await jobsService.searchCompetences(value);
@@ -60,7 +64,7 @@ const MesCompetences = () => {
 
   const handleAjouter = async (e) => {
     e.preventDefault();
-    if (!nouvelle.label.trim()) return toast.error("Le nom de la compétence est obligatoire.");
+    if (exiger(nouvelle, { label: "Le nom de la compétence est obligatoire." })) return;
     try {
       // Le backend fait un update_or_create sur (profil, label) — soumettre le même
       // libellé qu'une compétence existante met à jour son niveau en place au lieu d'en
@@ -74,6 +78,7 @@ const MesCompetences = () => {
       closeModal();
     } catch (error) {
       reportError("ECHEC_AJOUT_COMPETENCE_UI", error);
+      depuisReponse(error);
       toast.error(apiErrMsg(error, "Impossible d'enregistrer cette compétence."));
     }
   };
@@ -83,6 +88,7 @@ const MesCompetences = () => {
     setEditingId(null);
     setNouvelle({ label: "", niveau: "INTERMEDIAIRE" });
     setSuggestions([]);
+    definir({});
   };
 
   const openEdit = (c) => {
@@ -187,7 +193,7 @@ const MesCompetences = () => {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleAjouter} className="p-6 space-y-4">
+            <form onSubmit={handleAjouter} noValidate className="p-6 space-y-4">
               <div className="relative">
                 <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Compétence *</label>
                 <input
@@ -198,7 +204,9 @@ const MesCompetences = () => {
                   autoComplete="off"
                   disabled={!!editingId}
                   required
+                  {...attributs("label")}
                 />
+                <FieldError id="err-label" message={erreurs.label} />
                 {suggestions.length > 0 && (
                   <div className={`absolute z-10 mt-1 w-full rounded-xl ${tw.surface} border ${tw.borderBase} shadow-lg overflow-hidden`}>
                     {suggestions.map((s) => (

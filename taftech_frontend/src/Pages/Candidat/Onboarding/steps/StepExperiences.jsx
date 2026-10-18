@@ -66,6 +66,7 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
                 />
               </div>
               <MetierAutocomplete
+                proposable
                 value={exp.metier_libelle || ""}
                 onSelect={(item) => setPendingExperiences((list) => list.map((e, i) => (i === idx ? { ...e, metier: item.metier_id, metier_libelle: item.appellation_libelle } : e)))}
               />

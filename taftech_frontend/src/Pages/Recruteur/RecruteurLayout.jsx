@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
+import { useDroitsPalier, estVerrouille } from "../../utils/useDroitsPalier";
+import CadenasPalier from "../../Components/CadenasPalier";
 import { tw } from "../../theme";
 import {
   LayoutDashboard,
@@ -33,6 +35,8 @@ const RecruteurLayout = () => {
   const [messagesNonLus, setMessagesNonLus] = useState(0);
   const [notifsNonLues, setNotifsNonLues] = useState(0);
   const [searchValue, setSearchValue] = useState("");
+  // Un cadenas s'affiche quand un droit du palier vaut explicitement `false` (rien tant qu'inconnu).
+  const droitsPalier = useDroitsPalier();
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -94,7 +98,7 @@ const RecruteurLayout = () => {
         items: [
           { name: "Offres d'emploi", path: "/offres-emploi", icon: FileText, minRole: "INVITE" },
           { name: "Candidatures", path: "/candidatures", icon: UserCheck, minRole: "INVITE" },
-          { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR" },
+          { name: "Publier une offre", path: "/creer-offre", icon: Briefcase, minRole: "UTILISATEUR", palierRequis: "peut_publier_offre" },
           { name: "Questionnaires", path: "/questionnaires", icon: ClipboardList, minRole: "UTILISATEUR" },
         ],
       },
@@ -106,6 +110,7 @@ const RecruteurLayout = () => {
             path: "/cvtheque",
             icon: Search,
             minRole: "UTILISATEUR",
+            palierRequis: "acces_cvtheque",
           },
           {
             name: "Candidatures spontanées",
@@ -114,7 +119,7 @@ const RecruteurLayout = () => {
             minRole: "INVITE",
             badge: messagesNonLus > 0 ? messagesNonLus : null,
           },
-          { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE" },
+          { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE", palierRequis: "acces_ia_recommandes" },
           { name: "Entretiens", path: "/entretiens", icon: CalendarClock, minRole: "INVITE" },
           { name: "Évaluations", path: "/evaluations", icon: ClipboardCheck, minRole: "INVITE" },
           { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
@@ -131,7 +136,7 @@ const RecruteurLayout = () => {
       {
         label: "Compte",
         items: [
-          { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE" },
+          { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE", palierRequis: "acces_equipe" },
           { name: "Abonnements & tarifs", path: "/recruteurs/abonnements", icon: CreditCard, minRole: "PROPRIETAIRE" },
           { name: "Facturation", path: "/facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
           { name: "Paramètres entreprise", path: "/parametres", icon: Settings, minRole: "INVITE" },
@@ -219,6 +224,7 @@ const RecruteurLayout = () => {
                           />
                           <span className="text-sm font-semibold">{item.name}</span>
                         </div>
+                        {estVerrouille(droitsPalier, item.palierRequis) && <CadenasPalier />}
                         {item.badge != null && (
                           <span
                             className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${

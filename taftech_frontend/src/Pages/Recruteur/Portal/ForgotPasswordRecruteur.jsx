@@ -5,22 +5,31 @@ import toast from "react-hot-toast";
 import { reportError } from "../../../utils/errorReporter";
 import { Mail, ArrowLeft, CheckCircle, Send } from "lucide-react";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 const ForgotPasswordRecruteur = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const { erreurs, exiger, definir, effacer, attributs } = useErreursChamps();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return toast.error("Veuillez entrer votre email.");
+    if (exiger({ email }, { email: "Saisissez votre adresse e-mail professionnelle." })) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      definir({ email: "Adresse e-mail invalide." });
+      return;
+    }
     setLoading(true);
     try {
       await authService.forgotPassword(email);
       setSent(true);
     } catch (err) {
       reportError("ECHEC_FORGOT_PASSWORD_RECRUTEUR", err);
-      toast.error(apiErrMsg(err, "Une erreur est survenue."));
+      const message = apiErrMsg(err, "Une erreur est survenue.");
+      definir({ email: message });
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -97,7 +106,7 @@ const ForgotPasswordRecruteur = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
                 <div>
                   <label className="text-sm font-semibold text-slate-600 mb-2 block">
                     Email professionnel
@@ -105,10 +114,12 @@ const ForgotPasswordRecruteur = () => {
                   <input
                     type="email"
                     required
+                    {...attributs("email")}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); effacer("email"); }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-colors"
                   />
+                  <FieldError id="err-email" message={erreurs.email} />
                 </div>
                 <button
                   type="submit"

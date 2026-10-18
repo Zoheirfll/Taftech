@@ -40,6 +40,7 @@ vi.mock("react-hot-toast", () => ({
 // GoogleLogin exige un GoogleOAuthProvider ancêtre (fourni au niveau main.jsx dans la
 // vraie appli) — hors de portée de ce test, qui ne couvre que le flux email/OTP.
 vi.mock("@react-oauth/google", () => ({
+  GoogleOAuthProvider: ({ children }) => <>{children}</>,
   GoogleLogin: () => <div data-testid="google-login-mock" />,
 }));
 

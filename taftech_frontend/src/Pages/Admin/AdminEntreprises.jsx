@@ -6,6 +6,7 @@ import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Search, Download, X, Building2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { nomWilaya } from "../../utils/wilaya";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
@@ -26,11 +27,16 @@ const AdminEntreprises = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [ordering, setOrdering] = useState("-id");
+  // Filtre venu du tableau de bord (« abonnements qui expirent sous N jours »), lu une fois dans l'URL.
+  const [expireSous, setExpireSous] = useState(() => {
+    const n = Number(new URLSearchParams(window.location.search).get("abonnement_expire_sous"));
+    return Number.isInteger(n) && n > 0 ? n : null;
+  });
 
   const chargerEntreprises = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminEntreprises(currentPage, searchTerm, ordering);
+      const data = await jobsService.getAdminEntreprises(currentPage, searchTerm, ordering, expireSous);
       setEntreprises(data.results || []);
       setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
       setTotalCount(data.count || 0);
@@ -41,7 +47,7 @@ const AdminEntreprises = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, ordering]);
+  }, [currentPage, searchTerm, ordering, expireSous]);
 
   const handleSort = (field) => {
     setOrdering((prev) => (prev === field ? `-${field}` : prev === `-${field}` ? field : `-${field}`));
@@ -169,6 +175,20 @@ const AdminEntreprises = () => {
               aria-label="Rechercher une entreprise"
             />
           </div>
+          {expireSous && (
+            <button
+              type="button"
+              onClick={() => {
+                setExpireSous(null);
+                setCurrentPage(1);
+                window.history.replaceState(null, "", window.location.pathname);
+              }}
+              className={`ml-3 inline-flex items-center gap-1.5 px-3 py-2 ${tw.bgWarningSoft} ${tw.textWarning} border ${tw.borderWarning} text-xs font-semibold rounded-full ${tw.focusRing}`}
+              aria-label="Retirer le filtre sur les abonnements qui expirent"
+            >
+              Abonnements expirant sous {expireSous} jours <X size={12} />
+            </button>
+          )}
       </div>
 
       {selectedIds.length > 0 && (
@@ -265,6 +285,11 @@ const AdminEntreprises = () => {
                     ) : (
                       <span className={`px-2.5 py-1 ${tw.surfaceMuted} ${tw.textMuted} border ${tw.borderBase} text-[10px] font-semibold rounded-full`}>Gratuit</span>
                     )}
+                    {ent.palier_actif && ent.abonnement_expire_at && (
+                      <p className={`mt-1 text-[11px] ${tw.textMuted}`}>
+                        Expire le {new Date(ent.abonnement_expire_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    )}
                   </td>
                   <td className="px-5 py-4 text-right">
                    <div className="flex items-center justify-end gap-2 flex-wrap">
@@ -314,7 +339,7 @@ const AdminEntreprises = () => {
                 <div>
                   <h2 className={`text-lg font-bold ${tw.textStrong}`}>{selectedEntreprise.nom_entreprise}</h2>
                   <p className={`text-sm ${tw.textPrimary} mt-0.5`}>
-                    📍 {selectedEntreprise.wilaya_siege}
+                    📍 {nomWilaya(selectedEntreprise.wilaya_siege)}
                     {selectedEntreprise.commune_siege ? ` · ${selectedEntreprise.commune_siege}` : ""}
                   </p>
                   {selectedEntreprise.adresse_complete && (

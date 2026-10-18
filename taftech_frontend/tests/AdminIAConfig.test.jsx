@@ -139,6 +139,59 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     expect(Object.keys(envoye).filter((k) => k.endsWith("_prompt"))).toEqual([]);
   });
 
+  it("🔒 Fournisseur, modèles, température, effort et max_tokens : désactivés et jamais renvoyés pour un admin simple", async () => {
+    const configAdminSimple = { ...mockConfig, prompts_accessibles: false, modele_modifiable: false };
+    jobsService.getAIConfig.mockResolvedValue(configAdminSimple);
+    jobsService.updateAIConfig.mockResolvedValue(configAdminSimple);
+
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("Parser CV"));
+    expect(screen.getByDisplayValue("openai/gpt-oss-20b")).toBeDisabled();
+    expect(screen.getByDisplayValue("mistral")).toBeDisabled();
+    expect(screen.getByDisplayValue("0.7")).toBeDisabled();
+    expect(screen.getByDisplayValue("6000")).toBeDisabled();
+    expect(screen.getByText(/modifiables uniquement par le Super Admin/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Enregistrer"));
+    await waitFor(() => screen.getByText("Confirmer"));
+    fireEvent.click(screen.getByText("Confirmer"));
+    await waitFor(() => expect(jobsService.updateAIConfig).toHaveBeenCalled());
+    const envoye = jobsService.updateAIConfig.mock.calls[0][0];
+    [
+      "modele_modifiable", "provider", "groq_model", "ollama_model", "temperature", "reasoning_effort",
+      "parser_cv_max_tokens", "analyse_carriere_max_tokens", "analyse_recruteur_max_tokens", "generation_offre_max_tokens",
+    ].forEach((cle) => expect(envoye).not.toHaveProperty(cle));
+    // Les réglages restés ouverts à l'admin simple (interrupteurs) sont bien envoyés.
+    expect(envoye).toHaveProperty("parser_cv_actif", true);
+  });
+
+  it("🔴 max_tokens au-dessus de la borne haute : champ invalide (bornes min/max natives), aucun envoi", async () => {
+    jobsService.getAIConfig.mockResolvedValue({ ...mockConfig, parser_cv_max_tokens: 20000 });
+
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+        <ConfirmModalHost />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText("Parser CV"));
+    const champ = screen.getByDisplayValue("20000");
+    expect(champ).toHaveAttribute("max", "16000");
+    expect(champ).toHaveAttribute("min", "100");
+    fireEvent.click(screen.getByText("Enregistrer"));
+    // Le navigateur bloque la soumission d'un champ hors bornes : ni confirmation ni appel serveur.
+    expect(champ).toBeInvalid();
+    expect(screen.queryByText("Confirmer")).toBeNull();
+    expect(jobsService.updateAIConfig).not.toHaveBeenCalled();
+  });
+
   it("🔒 Admin simple : plafond et seuil verrouillés et jamais renvoyés au serveur", async () => {
     jobsService.getAIConfig.mockResolvedValue({
       ...mockConfig, prompts_accessibles: false, budget_modifiable: false,

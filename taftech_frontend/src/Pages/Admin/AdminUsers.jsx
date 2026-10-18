@@ -13,7 +13,8 @@ import AdminPageHeader from "../../Components/AdminPageHeader";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
-import { formatDatePrecise } from "../../utils/cvDates";
+import { formatDatePrecise, formatAge } from "../../utils/cvDates";
+import { nomWilaya } from "../../utils/wilaya";
 
 // Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
 const ROLE_BADGES = {
@@ -375,7 +376,7 @@ const AdminUsers = () => {
                   Adresse : {selectedUser.profil_candidat?.adresse || "N/A"}
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
-                  Né(e) le : {formatDate(selectedUser.date_naissance)}
+                  Âge : {formatAge(selectedUser.date_naissance) || "N/A"}
                 </p>
                 <span
                   className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? tw.scoreHigh : "bg-red-50 text-red-600"}`}
@@ -412,7 +413,7 @@ const AdminUsers = () => {
                         {selectedUser.profil_candidat.diplome || "N/A"}
                       </p>
                       <p className="text-xs text-indigo-600 mt-0.5">
-                        📍 {selectedUser.profil_candidat.wilaya || "N/A"}
+                        📍 {nomWilaya(selectedUser.profil_candidat.wilaya) || "N/A"}
                         {selectedUser.profil_candidat.commune
                           ? ` · ${selectedUser.profil_candidat.commune}`
                           : ""}

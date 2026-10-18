@@ -260,12 +260,42 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
 
     fireEvent.submit(container.querySelector("form"));
 
+    // Chaque champ obligatoire manquant affiche son message sous lui, y compris le CV.
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez joindre votre CV en format PDF ou Word.",
-      );
+      expect(screen.getByText("Veuillez joindre votre CV (PDF ou Word).")).toBeInTheDocument();
+      expect(screen.getByText("Le nom est obligatoire.")).toBeInTheDocument();
+      expect(screen.getByText("L'adresse e-mail est obligatoire.")).toBeInTheDocument();
       expect(jobsService.postulerRapide).not.toHaveBeenCalled();
     });
+  });
+
+  it("🔴 EC3b : Postulation Express refuse un CV trop lourd ou d'un mauvais format", async () => {
+    jobsService.getJobById.mockResolvedValue(mockJobData);
+    const { container } = render(
+      <MemoryRouter>
+        <JobDetail />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => screen.getByText(/Prêt à postuler/i));
+    fireEvent.click(screen.getByText(/Postulation rapide \(sans compte\)/i));
+    const remplir = (nom, valeur) =>
+      fireEvent.change(container.querySelector(`[name="${nom}"]`), { target: { name: nom, value: valeur } });
+    remplir("nom_rapide", "Amine");
+    remplir("prenom_rapide", "Benali");
+    remplir("email_rapide", "amine@test.dz");
+    remplir("telephone_rapide", "0555000000");
+    const lourd = new File(["x"], "cv.pdf", { type: "application/pdf" });
+    Object.defineProperty(lourd, "size", { value: 6 * 1024 * 1024 });
+    fireEvent.change(container.querySelector('[name="cv_rapide"]'), { target: { files: [lourd] } });
+    fireEvent.submit(container.querySelector("form"));
+
+    expect(await screen.findByText("Fichier trop volumineux (5 Mo maximum).")).toBeInTheDocument();
+
+    fireEvent.change(container.querySelector('[name="cv_rapide"]'), { target: { files: [new File(["x"], "cv.exe")] } });
+    fireEvent.submit(container.querySelector("form"));
+    expect(await screen.findByText(/Format non accepté/)).toBeInTheDocument();
+    expect(jobsService.postulerRapide).not.toHaveBeenCalled();
   });
 
   it("🔴 EC4 : Affichage du bouton de soumission pendant l'envoi (Anti-Spam)", async () => {

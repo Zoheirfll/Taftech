@@ -2,6 +2,7 @@
 import { Pencil, Camera, User, Phone, Mail, Check, Minus, Award, Briefcase } from "lucide-react";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
+import { formatDureeMois } from "../../../utils/cvDates";
 import { SECTION_CLASS, SECTION_TITLE, EDIT_BTN } from "./profilUi";
 
 const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInputRef, handlePhotoChange, setShowInfoForm }) => (
@@ -60,9 +61,9 @@ const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInp
                       <Award size={10} /> {formatText(profil.niveau_experience)}
                     </span>
                   )}
-                  {stats.anneesExperience !== null && stats.anneesExperience > 0 && (
+                  {stats.experienceMois > 0 && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-teal-50 text-teal-700">
-                      <Briefcase size={10} /> {stats.anneesExperience} an{stats.anneesExperience > 1 ? "s" : ""} d'expérience
+                      <Briefcase size={10} /> {formatDureeMois(stats.experienceMois)} d'expérience
                     </span>
                   )}
                 </div>

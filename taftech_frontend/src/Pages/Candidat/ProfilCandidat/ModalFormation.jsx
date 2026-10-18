@@ -4,6 +4,8 @@ import Select from "react-select";
 import { selectStyles, tw } from "../../../theme";
 import { FormationReferentielSelect } from "../../../Components/FormationReferentielSelect";
 import DatePrecisionInput from "../../../Components/DatePrecisionInput";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 const STATUT_FORMATION_OPTIONS = [
   { value: "OBTENU", label: "Obtenu" },
@@ -13,6 +15,7 @@ const STATUT_FORMATION_OPTIONS = [
 
 export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, showFormForm, setShowFormForm, newForm, setNewForm, editingFormId, setEditingFormId, profil, handleAddFormation, handleUpdateFormation }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, exiger, effacer, attributs } = useErreursChamps();
   return (
     <>
       {showFormForm && (
@@ -24,7 +27,21 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                 : "Ajouter une formation"}
             </h3>
             <form
-              onSubmit={lockSubmit(editingFormId ? handleUpdateFormation : handleAddFormation)}
+              noValidate
+              onSubmit={lockSubmit((e) => {
+                const manque = exiger(
+                  { diplome: newForm.diplome_ref || newForm.diplome, etablissement: newForm.etablissement },
+                  {
+                    diplome: "Choisissez votre diplôme dans la liste, ou précisez-le.",
+                    etablissement: "L'établissement est obligatoire.",
+                  },
+                );
+                if (manque) {
+                  e.preventDefault();
+                  return;
+                }
+                return (editingFormId ? handleUpdateFormation : handleAddFormation)(e);
+              })}
               className="space-y-4"
             >
               <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60 space-y-3">
@@ -35,16 +52,20 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                 <FormationReferentielSelect
                   diplomeId={newForm.diplome_ref}
                   specialiteId={newForm.specialite_ref}
-                  onChangeDiplome={(id, label) =>
-                    setNewForm((p) => ({ ...p, diplome_ref: id, ...(id && label ? { diplome: label } : {}) }))
-                  }
+                  onChangeDiplome={(id, label) => {
+                    setNewForm((p) => ({ ...p, diplome_ref: id, ...(id && label ? { diplome: label } : {}) }));
+                    effacer("diplome");
+                  }}
                   onChangeSpecialite={(id, label) =>
-                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { description: label } : {}) }))
+                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { description: label, specialite_autre: "" } : {}) }))
                   }
                   autreTexte={newForm.description}
-                  onChangeAutreTexte={(texte) => setNewForm({ ...newForm, description: texte })}
+                  onChangeAutreTexte={(texte) => setNewForm((p) => ({ ...p, description: texte, specialite_autre: texte }))}
                   diplomeAutreTexte={newForm.diplome}
-                  onChangeDiplomeAutreTexte={(texte) => setNewForm({ ...newForm, diplome: texte })}
+                  onChangeDiplomeAutreTexte={(texte) => {
+                    setNewForm({ ...newForm, diplome: texte });
+                    effacer("diplome");
+                  }}
                   onConfirmerSuggestion={(diplomeRef, _diplomeLabel, specialiteRef) =>
                     setNewForm((p) => ({
                       ...p,
@@ -54,6 +75,7 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                   }
                   required
                 />
+                <FieldError id="err-diplome" message={erreurs.diplome} />
                 <div>
                   <label className={tw.formLabel}>Statut de la formation</label>
                   <Select
@@ -71,12 +93,15 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                 <input
                   required
                   placeholder="Université, École ou Institut"
+                  {...attributs("etablissement")}
                   className={inputClass}
                   value={newForm.etablissement}
-                  onChange={(e) =>
-                    setNewForm({ ...newForm, etablissement: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewForm({ ...newForm, etablissement: e.target.value });
+                    effacer("etablissement");
+                  }}
                 />
+                <FieldError id="err-etablissement" message={erreurs.etablissement} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

@@ -345,7 +345,7 @@ const CandidatDashboard = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Rechercher un emploi, une entreprise, un mot-clé..."
-            className="flex-1 min-w-0 bg-transparent px-2 py-2.5 text-sm placeholder-slate-400 focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent px-2 py-2.5 text-sm placeholder-slate-500 focus:outline-none"
           />
         </div>
         <select

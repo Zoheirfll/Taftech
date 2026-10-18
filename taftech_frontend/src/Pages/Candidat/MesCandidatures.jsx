@@ -18,6 +18,7 @@ import { TooltipIcon } from "../../Components/Tooltip";
 import CandidatureTimeline from "../../Components/CandidatureTimeline";
 import MatchingRadarChart from "../../Components/MatchingRadarChart";
 import { tw } from "../../theme";
+import { criteresNonDemandes } from "../../utils/criteresMatching";
 
 const getBadgeStyle = (statut) => {
   const styles = {
@@ -71,7 +72,7 @@ const AnalyseIA = ({ cand }) => {
   const ecarts = DM?.highlights?.ecarts || [];
   const completude = DM?.completude;
   const criteresManquants = DM?.criteres_manquants || [];
-  const criteresNonDemandes = DM?.criteres_non_demandes || [];
+  const nonDemandes = criteresNonDemandes(DM, CRITERES.map((c) => c.key));
   return (
     <div className={`mt-4 border-t ${tw.borderSubtle} pt-4`}>
       <div className="flex items-center gap-2 mb-1">
@@ -93,7 +94,7 @@ const AnalyseIA = ({ cand }) => {
         </div>
         <div className="w-full sm:w-1/2 space-y-3">
           {CRITERES.map((c) => {
-            const nonDemande = criteresNonDemandes.includes(c.key);
+            const nonDemande = nonDemandes.includes(c.key);
             const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
             const bar =
               pct >= 80

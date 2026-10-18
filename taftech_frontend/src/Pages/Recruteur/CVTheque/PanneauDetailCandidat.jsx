@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { tw } from "../../../theme";
+import { nomWilaya } from "../../../utils/wilaya";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { getStatutActivite } from "./cvthequeUtils";
 import { SectionsProfilCandidat } from "./SectionsProfilCandidat";
@@ -80,7 +81,7 @@ const EnTeteDetail = ({ candidat, onToggleFavori }) => {
             {candidat.wilaya && (
               <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md ${tw.tagSlateSoft700}`}>
                 <MapPin size={12} />
-                {candidat.wilaya}
+                {nomWilaya(candidat.wilaya)}
                 {candidat.commune &&
                   ` · ${candidat.commune}`}
               </span>

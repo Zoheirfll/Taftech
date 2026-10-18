@@ -109,8 +109,37 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
     // On soumet le formulaire directement pour contourner la validation HTML5
     fireEvent.submit(container.querySelector("form"));
 
-    expect(toast.error).toHaveBeenCalledWith("Veuillez entrer votre email.");
+    // Le message s'affiche sous le champ (et non plus dans une notification éphémère).
+    expect(screen.getByRole("alert")).toHaveTextContent("Saisissez votre adresse e-mail.");
+    expect(container.querySelector('input[type="email"]')).toHaveAttribute("aria-invalid", "true");
     expect(authService.forgotPassword).not.toHaveBeenCalled();
+  });
+
+  it("🔴 EC1b : Une adresse mal formée est refusée sous le champ, sans appel serveur", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ForgotPassword />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(container.querySelector('input[type="email"]'), { target: { value: "pas-un-email" } });
+    fireEvent.submit(container.querySelector("form"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Adresse e-mail invalide.");
+    expect(authService.forgotPassword).not.toHaveBeenCalled();
+  });
+
+  it("🟢 EC1c : Le message disparaît dès que l'utilisateur corrige le champ", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ForgotPassword />
+      </MemoryRouter>,
+    );
+
+    fireEvent.submit(container.querySelector("form"));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    fireEvent.change(container.querySelector('input[type="email"]'), { target: { value: "a" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("🔴 EC2 : Crash API déclenche Télémétrie et toast", async () => {

@@ -24,6 +24,17 @@ export const adminService = {
     }
   },
 
+  // Correction par l'admin d'une offre « En attente » (champs modifiés seulement) : audit + e-mail au recruteur.
+  corrigerOffre: async (offreId, data) => {
+    try {
+      const response = await api.patch(`jobs/admin/offres/${offreId}/corriger/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_CORRIGER_OFFRE_API", err);
+      throw err;
+    }
+  },
+
   moderateOffre: async (offreId, data) => {
     try {
       const response = await api.patch(
@@ -38,10 +49,11 @@ export const adminService = {
   },
 
   // Entreprises
-  getAdminEntreprises: async (page = 1, search = "", ordering = "") => {
+  getAdminEntreprises: async (page = 1, search = "", ordering = "", abonnementExpireSous = null) => {
     try {
+      const filtreExpiration = abonnementExpireSous ? `&abonnement_expire_sous=${q(abonnementExpireSous)}` : "";
       const response = await api.get(
-        `jobs/admin/entreprises/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&ordering=${q(ordering)}`,
+        `jobs/admin/entreprises/?page=${page}&page_size=${ADMIN_PAGE_SIZE}&search=${q(search)}&ordering=${q(ordering)}${filtreExpiration}`,
       );
       return response.data;
     } catch (err) {
@@ -194,6 +206,32 @@ export const adminService = {
     }
   },
 
+  // Statistiques par période (page « Statistiques ») — dates AAAA-MM-JJ.
+  getAdminStatsPeriode: async (debut, fin, entrepriseId = null) => {
+    try {
+      const response = await api.get("jobs/admin/stats-periode/", {
+        params: { date_debut: debut, date_fin: fin, ...(entrepriseId ? { entreprise_id: entrepriseId } : {}) },
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_STATS_PERIODE", err);
+      throw err;
+    }
+  },
+
+  exportAdminStatsPeriode: async (debut, fin, entrepriseId = null) => {
+    try {
+      const response = await api.get("jobs/admin/stats-periode/export/", {
+        params: { date_debut: debut, date_fin: fin, ...(entrepriseId ? { entreprise_id: entrepriseId } : {}) },
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_EXPORT_ADMIN_STATS_PERIODE", err);
+      throw err;
+    }
+  },
+
 
   // Référentiel v2 (métiers/spécialités/diplômes importés) — pas de create/delete,
   // uniquement libellé + selectionnable/actif (voir jobs/views/referentiel_admin.py).
@@ -306,30 +344,61 @@ export const adminService = {
     }
   },
 
-  getAdminFormationsAVerifier: async (search = "", page = 1) => {
+  // Demandes d'ajout au référentiel (types de diplôme et spécialités) : liste, entrées proches, choix du
+  // formulaire « Accepter », puis les trois décisions.
+  getDemandesAjout: async ({ type = "", statut = "", search = "", page = 1 } = {}) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/formations-a-verifier/?search=${q(search)}&page=${page}`);
+      const response = await api.get(
+        `jobs/admin/demandes-ajout/?type=${q(type)}&statut=${q(statut)}&search=${q(search)}&page=${page}`,
+      );
       return response.data;
     } catch (err) {
-      reportError("ECHEC_GET_ADMIN_FORMATIONS_A_VERIFIER", err);
+      reportError("ECHEC_GET_DEMANDES_AJOUT", err);
       throw err;
     }
   },
-  validerFormationAVerifier: async (id, data) => {
+  getDemandeProches: async (id, recherche = "") => {
     try {
-      const response = await api.patch(`jobs/admin/referentiel-v2/formations-a-verifier/${id}/`, data);
+      const response = await api.get(`jobs/admin/demandes-ajout/${id}/proches/?q=${q(recherche)}`);
       return response.data;
     } catch (err) {
-      reportError("ECHEC_VALIDER_FORMATION_A_VERIFIER", err);
+      reportError("ECHEC_GET_DEMANDE_PROCHES", err);
       throw err;
     }
   },
-  refuserFormationAVerifier: async (id, motif = "") => {
+  getDemandesParents: async (type) => {
     try {
-      const response = await api.delete(`jobs/admin/referentiel-v2/formations-a-verifier/${id}/`, { data: { motif } });
+      const response = await api.get(`jobs/admin/demandes-ajout/parents/?type=${q(type)}`);
       return response.data;
     } catch (err) {
-      reportError("ECHEC_REFUSER_FORMATION_A_VERIFIER", err);
+      reportError("ECHEC_GET_DEMANDES_PARENTS", err);
+      throw err;
+    }
+  },
+  accepterDemande: async (id, data) => {
+    try {
+      const response = await api.post(`jobs/admin/demandes-ajout/${id}/accepter/`, data);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_ACCEPTER_DEMANDE_AJOUT", err);
+      throw err;
+    }
+  },
+  rattacherDemande: async (id, entreeId) => {
+    try {
+      const response = await api.post(`jobs/admin/demandes-ajout/${id}/rattacher/`, { entree_id: entreeId });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_RATTACHER_DEMANDE_AJOUT", err);
+      throw err;
+    }
+  },
+  refuserDemande: async (id, motif) => {
+    try {
+      const response = await api.post(`jobs/admin/demandes-ajout/${id}/refuser/`, { motif });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_REFUSER_DEMANDE_AJOUT", err);
       throw err;
     }
   },
@@ -547,37 +616,6 @@ export const adminService = {
     }
   },
 
-  // Métiers proposés par les utilisateurs : liste par statut, validation (rattacher / créer), rejet.
-  getPropositionsMetier: async (statut = "", avecGroupes = false) => {
-    try {
-      const response = await api.get(`jobs/admin/propositions-metiers/?statut=${q(statut)}${avecGroupes ? "&groupes=1" : ""}`);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_GET_PROPOSITIONS_METIER", err);
-      throw err;
-    }
-  },
-
-  validerPropositionMetier: async (id, corps) => {
-    try {
-      const response = await api.post(`jobs/admin/propositions-metiers/${id}/valider/`, corps);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_VALIDER_PROPOSITION_METIER", err);
-      throw err;
-    }
-  },
-
-  rejeterPropositionMetier: async (id, motif) => {
-    try {
-      const response = await api.post(`jobs/admin/propositions-metiers/${id}/rejeter/`, { motif });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_REJETER_PROPOSITION_METIER", err);
-      throw err;
-    }
-  },
-
   // Cycle de vie (Suggérée -> Validée -> Rejetée/Désactivée) : seul chemin de changement de statut.
   changerStatutCompetence: async (id, statut) => {
     try {
@@ -585,18 +623,6 @@ export const adminService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_STATUT_COMPETENCE", err);
-      throw err;
-    }
-  },
-
-  // Détecte les compétences saisies hors référentiel par plusieurs utilisateurs et les enregistre
-  // comme SUGGÉRÉES (jamais officielles) — `simuler: true` pour un aperçu sans écriture.
-  proposerCompetences: async (options = {}) => {
-    try {
-      const response = await api.post("jobs/admin/competences/proposer/", options);
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_PROPOSER_COMPETENCES", err);
       throw err;
     }
   },

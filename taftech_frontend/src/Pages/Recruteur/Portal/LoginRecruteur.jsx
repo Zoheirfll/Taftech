@@ -4,6 +4,8 @@ import { authService } from "../../../Services/authService";
 import toast from "react-hot-toast";
 import { reportError } from "../../../utils/errorReporter";
 import { Eye, EyeOff, CheckCircle, LogIn } from "lucide-react";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 const AVANTAGES = [
   "Formule Gratuite : 1 offre active, sans limite de durée",
@@ -17,10 +19,16 @@ const LoginRecruteur = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const { erreurs, exiger, definir, effacer, attributs } = useErreursChamps();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (exiger(credentials, { username: "Saisissez votre adresse e-mail professionnelle.", password: "Saisissez votre mot de passe." })) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentials.username)) {
+      definir({ username: "Adresse e-mail invalide." });
+      return;
+    }
     setLoading(true);
     const toastId = toast.loading("Connexion en cours...");
     try {
@@ -46,6 +54,7 @@ const LoginRecruteur = () => {
         toast.error(errData.detail, { id: toastId, duration: 6000 });
       } else {
         toast.error("Email ou mot de passe incorrect.", { id: toastId });
+        definir({ password: "Email ou mot de passe incorrect." });
         reportError("ECHEC_CONNEXION_RECRUTEUR", err);
       }
     } finally {
@@ -85,7 +94,7 @@ const LoginRecruteur = () => {
             <p className="text-sm text-slate-700 mt-1">Accédez à votre espace employeur TAFTECH</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             <div>
               <label className="text-sm font-semibold text-slate-600 mb-2 block">
                 Email professionnel
@@ -93,10 +102,12 @@ const LoginRecruteur = () => {
               <input
                 type="email"
                 required
+                {...attributs("username")}
                 value={credentials.username}
-                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                onChange={(e) => { setCredentials({ ...credentials, username: e.target.value }); effacer("username"); }}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-colors"
               />
+              <FieldError id="err-username" message={erreurs.username} />
             </div>
 
             <div>
@@ -105,8 +116,9 @@ const LoginRecruteur = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  {...attributs("password")}
                   value={credentials.password}
-                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  onChange={(e) => { setCredentials({ ...credentials, password: e.target.value }); effacer("password"); }}
                   className="w-full px-4 py-2.5 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-colors"
                 />
                 <button
@@ -117,6 +129,7 @@ const LoginRecruteur = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <FieldError id="err-password" message={erreurs.password} />
             </div>
 
             <div className="flex items-center justify-between">

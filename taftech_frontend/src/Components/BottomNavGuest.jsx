@@ -7,7 +7,7 @@ const ITEMS = [
   { to: "/offres", label: "Offres", icon: Search },
   { to: "/secteurs", label: "Secteurs", icon: Briefcase },
   { to: "/entreprises", label: "Entreprises", icon: Building2 },
-  { to: "/login", label: "Connexion", icon: LogIn },
+  { to: "/login", label: "Se connecter", icon: LogIn },
 ];
 
 // Bottom nav mobile — visiteur non connecté côté candidat (mêmes 5 destinations que

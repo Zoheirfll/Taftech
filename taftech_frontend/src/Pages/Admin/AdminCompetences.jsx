@@ -4,7 +4,9 @@ import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw } from "lucide-react";
+import { adminService } from "../../Services/adminService";
+import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -24,12 +26,11 @@ const STATUTS = {
   REJETEE: { libelle: "Rejetée", classe: tw.badgeErrorLight },
   DESACTIVEE: { libelle: "Désactivée", classe: "bg-slate-100 text-slate-600" },
 };
+// La liste ne montre que les compétences officielles : les suggestions et les rejets sont des demandes d'ajout.
 const ONGLETS = [
   { code: "", libelle: "Toutes" },
-  { code: "SUGGEREE", libelle: "Suggérées" },
-  { code: "VALIDEE", libelle: "Validées" },
-  { code: "REJETEE", libelle: "Rejetées" },
-  { code: "DESACTIVEE", libelle: "Désactivées" },
+  { code: "VALIDEE", libelle: "Actives" },
+  { code: "DESACTIVEE", libelle: "Masquées" },
 ];
 const TRANSITIONS = {
   SUGGEREE: ["VALIDEE", "REJETEE"],
@@ -65,7 +66,8 @@ const AdminCompetences = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
-  const [detection, setDetection] = useState(false);
+  const [onglet, setOnglet] = useState("liste");
+  const [nbDemandes, setNbDemandes] = useState(0);
   // Minuteur de recherche local au composant (avant : variable globale window._competenceSearchTimer).
   const searchTimer = useRef(null);
 
@@ -87,8 +89,15 @@ const AdminCompetences = () => {
     }
   };
 
+  const chargerNbDemandes = () =>
+    adminService
+      .getAdminStats()
+      .then((data) => setNbDemandes(data.demandes_a_examiner?.COMPETENCE || 0))
+      .catch((err) => reportError("ECHEC_GET_ADMIN_STATS_COMPETENCES", err));
+
   useEffect(() => {
     fetchItems();
+    chargerNbDemandes();
     return () => clearTimeout(searchTimer.current);
   }, []);
 
@@ -161,26 +170,6 @@ const AdminCompetences = () => {
     }
   };
 
-  const detecterPropositions = async () => {
-    setDetection(true);
-    try {
-      const res = await jobsService.proposerCompetences({});
-      if (res.nb > 0) {
-        toast.success(`${res.nb} compétence(s) proposée(s), en attente de votre validation.`);
-        setStatutFiltre("SUGGEREE");
-        setPage(1);
-        fetchItems(search, 1, "SUGGEREE");
-      } else {
-        toast.success(`Aucune nouvelle proposition (seuil : ${res.seuil} saisies distinctes hors référentiel).`);
-      }
-    } catch (err) {
-      reportError("ECHEC_PROPOSER_COMPETENCES", err);
-      toast.error(apiErrMsg(err, "Détection impossible."));
-    } finally {
-      setDetection(false);
-    }
-  };
-
   const handleDelete = (id) => {
     // CASCADE côté modèle : supprimer une compétence retire aussi ses liens avec les métiers du
     // référentiel (suggestions "compétences pour ce métier" des recruteurs).
@@ -206,35 +195,52 @@ const AdminCompetences = () => {
         icon={Tags}
         color="violet"
         title="Référentiel compétences"
-        subtitle="Compétences officielles proposées aux candidats et recruteurs, et propositions en attente de validation."
+        subtitle="Compétences officielles proposées aux candidats et recruteurs, et demandes d'ajout en attente de décision."
         aideKey="competences"
         aide={[
-          "Cycle de vie : Suggérée → Validée (officielle) ou Rejetée ; une compétence Validée peut être Désactivée puis réactivée.",
-          "Une compétence proposée automatiquement reste « Suggérée » : elle n'apparaît ni dans les suggestions, ni dans le parser de CV, ni dans la génération d'offre, ni dans le score, tant que vous ne l'avez pas validée.",
-          "Valider une compétence rattache aussitôt les saisies existantes (candidats, offres) qui portent ce libellé ou l'un de ses synonymes.",
-          "« Détecter les propositions » repère les compétences saisies hors référentiel par au moins 3 candidats ou offres différents. Les compétences rejetées ne sont jamais re-proposées.",
+          "Liste : les compétences officielles. « Masquée » retire la compétence des suggestions sans rien supprimer ni casser les scores existants ; c'est l'option à privilégier plutôt que la suppression.",
+          "Demandes : une compétence saisie hors référentiel (profil, « Mes compétences », offre) arrive ici automatiquement, dès la première saisie. Elle n'a aucun effet (ni suggestions, ni parser de CV, ni score) tant que vous n'avez pas décidé.",
+          "Accepter ajoute la compétence au référentiel ; Rattacher en fait un synonyme d'une compétence existante ; Refuser exige un motif et la compétence n'est plus re-proposée. Dans tous les cas, les saisies existantes sont rattachées si besoin.",
           "Synonymes : une compétence extraite d'un CV sous l'un de ces intitulés (ex. « Project Management ») est automatiquement ramenée au libellé principal.",
-          "« Désactivée » retire la compétence des suggestions sans rien supprimer ni casser les scores existants. C'est l'option à privilégier plutôt que la suppression.",
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={detecterPropositions}
-              disabled={detection}
-              className={`flex items-center gap-2 px-4 py-2 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-semibold rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors disabled:opacity-50 ${tw.focusRing}`}
-            >
-              <Sparkles size={16} /> {detection ? "Détection..." : "Détecter les propositions"}
-            </button>
+          onglet === "liste" ? (
             <button
               onClick={handleOpenCreate}
               className={`flex items-center gap-2 px-4 py-2 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
             >
               <Plus size={16} /> Ajouter une compétence
             </button>
-          </div>
+          ) : null
         }
       />
 
+      <div className="flex gap-1 border-b border-slate-200" role="tablist" aria-label="Sections des compétences">
+        {[{ cle: "liste", libelle: "Liste" }, { cle: "demandes", libelle: "Demandes" }].map((o) => (
+          <button
+            key={o.cle}
+            type="button"
+            role="tab"
+            aria-selected={onglet === o.cle}
+            onClick={() => setOnglet(o.cle)}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+              onglet === o.cle ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {o.libelle}
+            {o.cle === "demandes" && nbDemandes > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                {nbDemandes}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {onglet === "demandes" ? (
+        <DemandesAjoutPanel type="COMPETENCE" onChange={() => { chargerNbDemandes(); fetchItems(search, page); }} />
+      ) : (
+      <>
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par statut">
         {ONGLETS.map((onglet) => {
           const actif = statutFiltre === onglet.code;
@@ -343,6 +349,9 @@ const AdminCompetences = () => {
         </div>
         <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={handlePage} disabled={loading} />
       </div>
+
+      </>
+      )}
 
       {showModal && (
         <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>

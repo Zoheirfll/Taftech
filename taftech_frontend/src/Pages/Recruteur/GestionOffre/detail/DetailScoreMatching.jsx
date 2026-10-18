@@ -2,6 +2,7 @@
 import { HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { tw } from "../../../../theme";
+import { criteresNonDemandes } from "../../../../utils/criteresMatching";
 
 const CRITERES_LABELS = {
   specialite: "Spécialité", diplome: "Diplôme", experience: "Expérience",
@@ -20,6 +21,7 @@ export const DetailScoreMatching = ({ detailsMatching }) => {
   const DM = detailsMatching;
   const scores = DM.scores || DM;
   const explics = DM.explications || {};
+  const nonDemandes = criteresNonDemandes(DM, CRITERES_BARRES.map((c) => c.key));
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 -mb-1">
@@ -36,7 +38,7 @@ export const DetailScoreMatching = ({ detailsMatching }) => {
         </p>
       )}
       {CRITERES_BARRES.map(({ key, label, max }) => {
-        const nonDemande = (DM.criteres_non_demandes || []).includes(key);
+        const nonDemande = nonDemandes.includes(key);
         const val = scores[key] || 0;
         const pct = (val / max) * 100;
         const color =

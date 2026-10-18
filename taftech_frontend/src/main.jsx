@@ -1,15 +1,15 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import App from './App.jsx'
+import { enregistrerServiceWorker } from './utils/registerServiceWorker'
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-
+// Le fournisseur « Continuer avec Google » n'enveloppe plus toute l'application : il charge un
+// script de Google dès qu'il est monté, voir Components/GoogleAuthProvider.jsx.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <App />
-    </GoogleOAuthProvider>
+    <App />
   </StrictMode>,
 )
+
+enregistrerServiceWorker()

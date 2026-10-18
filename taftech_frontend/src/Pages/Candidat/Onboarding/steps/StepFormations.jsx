@@ -54,11 +54,11 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                     updateFields(idx, {
                       specialite_ref: id,
                       specialite_ref_libelle: label || "",
-                      ...(id && label ? { description: label } : {}),
+                      ...(id && label ? { description: label, specialite_autre: "" } : {}),
                     });
                   }}
                   autreTexte={f.description}
-                  onChangeAutreTexte={(texte) => updateField(idx, "description", texte)}
+                  onChangeAutreTexte={(texte) => updateFields(idx, { description: texte, specialite_autre: texte })}
                   diplomeAutreTexte={f.diplome}
                   onChangeDiplomeAutreTexte={(texte) => updateField(idx, "diplome", texte)}
                   onConfirmerSuggestion={(diplomeRef, diplomeLabel, specialiteRef, specialiteLabel) =>

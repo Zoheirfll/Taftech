@@ -34,8 +34,6 @@ const LEFT_CONTENT = {
   },
 };
 
-const REDIRECT_DELAY = 5;
-
 const RegisterRecruteur = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -43,7 +41,6 @@ const RegisterRecruteur = () => {
   const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [secondes, setSecondes] = useState(REDIRECT_DELAY);
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [] });
   const [secteursEntreprise, setSecteursEntreprise] = useState([]);
   const [formData, setFormData] = useState({
@@ -75,18 +72,6 @@ const RegisterRecruteur = () => {
       .then((n) => setSecteursEntreprise((n.secteurs || []).map((s) => ({ value: s.code, label: s.libelle }))))
       .catch((err) => reportError("ECHEC_CHARGEMENT_SECTEURS_ENTREPRISE", err));
   }, []);
-
-  // Compte à rebours étape 3
-  useEffect(() => {
-    if (step !== 3) return;
-    const interval = setInterval(() => {
-      setSecondes((s) => {
-        if (s <= 1) { clearInterval(interval); navigate("/recruteurs/connexion"); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [step, navigate]);
 
   const [fieldErrors, setFieldErrors] = useState({});
   const handleChange = (e) => {
@@ -428,10 +413,6 @@ const RegisterRecruteur = () => {
                   Vous pourrez publier vos offres dès que votre compte sera approuvé <span className={`font-semibold ${tw.textTeal}`}>(sous 24-48h)</span>.
                 </p>
               </div>
-              <p className={`text-xs ${tw.textMuted}`}>
-                Redirection automatique dans{" "}
-                <span className={`font-bold ${tw.textTeal}`}>{secondes}s</span>…
-              </p>
               <button
                 onClick={() => navigate("/recruteurs/connexion")}
                 className={`w-full flex items-center justify-center gap-2 ${tw.bgTealSolid} font-semibold py-2.5 rounded-xl transition-colors text-sm`}

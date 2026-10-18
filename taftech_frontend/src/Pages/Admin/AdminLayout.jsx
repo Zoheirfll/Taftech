@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
+  BarChart3,
   Building2,
   Briefcase,
   FileText,
@@ -16,7 +17,6 @@ import {
   Receipt,
   HelpCircle,
   Tags,
-  Lightbulb,
   Newspaper,
   GalleryHorizontal,
   FileEdit,
@@ -24,12 +24,18 @@ import {
   FolderLock,
   TrendingUp,
   GraduationCap,
+  BookOpen,
   Gauge,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { adminService } from "../../Services/adminService";
+import { authService } from "../../Services/authService";
+
+// Lit un compteur du tableau de bord, y compris imbriqué : "demandes_a_examiner.DIPLOME".
+const valeurCompteur = (stats, cle) => cle.split(".").reduce((valeur, morceau) => valeur?.[morceau], stats);
 
 const NavBadge = ({ count }) =>
   count > 0 ? (
@@ -45,7 +51,10 @@ const NAV_GROUPS = [
   {
     label: "Principal",
     dot: "bg-indigo-500",
-    items: [{ to: "/admin-taftech/dashboard", icon: LayoutDashboard, label: "Vue d'ensemble" }],
+    items: [
+      { to: "/admin-taftech/dashboard", icon: LayoutDashboard, label: "Vue d'ensemble" },
+      { to: "/admin-taftech/statistiques", icon: BarChart3, label: "Statistiques" },
+    ],
   },
   {
     // Valider/refuser du contenu créé par les comptes (entreprises, offres) + suivi.
@@ -85,9 +94,10 @@ const NAV_GROUPS = [
     label: "Référentiels",
     dot: "bg-violet-500",
     items: [
-      { to: "/admin-taftech/referentiel-v2", icon: GraduationCap, label: "Métiers & diplômes", badgeKey: "formations_a_verifier" },
-      { to: "/admin-taftech/competences", icon: Tags, label: "Compétences", badgeKey: "competences_a_valider" },
-      { to: "/admin-taftech/metiers-suggeres", icon: Lightbulb, label: "Métiers suggérés", badgeKey: "metiers_a_valider" },
+      { to: "/admin-taftech/referentiel-metiers", icon: Briefcase, label: "Métiers", badgeKey: "demandes_a_examiner.METIER" },
+      { to: "/admin-taftech/referentiel-formations", icon: GraduationCap, label: "Formations", badgeKey: "demandes_a_examiner.DIPLOME" },
+      { to: "/admin-taftech/referentiel-specialites", icon: BookOpen, label: "Spécialités", badgeKey: "demandes_a_examiner.SPECIALITE" },
+      { to: "/admin-taftech/competences", icon: Tags, label: "Compétences", badgeKey: "demandes_a_examiner.COMPETENCE" },
     ],
   },
   {
@@ -158,7 +168,10 @@ const AdminLayout = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-base font-bold tracking-widest ${tw.textPrimary}`}>TAFTECH</p>
-          <p className={`text-[11px] ${tw.textMuted} font-medium`}>Super Admin</p>
+          {/* Statut réel du compte (renvoyé par l'API) : un admin simple ne s'affiche plus « Super Admin ». */}
+          <p className={`text-[11px] ${tw.textMuted} font-medium`}>
+            {stats ? (stats.est_super_admin ? "Super Admin" : "Administrateur") : " "}
+          </p>
         </div>
         <button
           type="button"
@@ -184,7 +197,7 @@ const AdminLayout = () => {
                       {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-indigo-600" />}
                       <Icon size={16} className="shrink-0" />
                       <span className="truncate">{label}</span>
-                      {badgeKey && <NavBadge count={stats?.[badgeKey]} />}
+                      {badgeKey && <NavBadge count={valeurCompteur(stats, badgeKey)} />}
                     </>
                   )}
                 </NavLink>
@@ -193,13 +206,21 @@ const AdminLayout = () => {
           </div>
         ))}
       </nav>
-      <div className={`p-4 border-t ${tw.borderSubtle}`}>
+      <div className={`p-4 border-t ${tw.borderSubtle} space-y-2`}>
         <Link
           to="/"
           className={`flex items-center gap-2 ${tw.textMuted} text-sm font-medium hover:text-slate-900 transition-colors`}
         >
           <ArrowLeft size={14} /> Quitter l'admin
         </Link>
+        {/* Sans barre publique sur l'admin, la déconnexion doit être accessible ici. */}
+        <button
+          type="button"
+          onClick={() => authService.logout("/login")}
+          className={`${tw.dropdownItemDanger} rounded-lg`}
+        >
+          <LogOut size={16} className="shrink-0" /> Déconnexion
+        </button>
       </div>
     </>
   );

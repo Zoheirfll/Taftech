@@ -4,9 +4,12 @@ import Select from "react-select";
 import { selectStyles, tw } from "../../../theme";
 import { grouperParFamille } from "../../../utils/familleFormation";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
+import FieldError from "../../../Components/FieldError";
+import { useErreursChamps } from "../../../utils/useErreursChamps";
 
 export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary, btnCancel, constants, typesDiplomes, showInfoForm, setShowInfoForm, editInfo, setEditInfo, handleUpdateGeneric, getCommunesOptions }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
+  const { erreurs, exiger, effacer, attributs } = useErreursChamps();
   const communesOptions = getCommunesOptions(editInfo.wilaya);
   return (
     <>
@@ -17,8 +20,19 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
               Informations personnelles
             </h3>
             <form
-              onSubmit={lockSubmit((e) =>
-                handleUpdateGeneric(e, editInfo, setShowInfoForm))}
+              noValidate
+              onSubmit={lockSubmit((e) => {
+                const manque = exiger(editInfo, {
+                  first_name: "Le prénom est obligatoire.",
+                  last_name: "Le nom est obligatoire.",
+                  telephone: "Le numéro de téléphone est obligatoire.",
+                });
+                if (manque) {
+                  e.preventDefault();
+                  return;
+                }
+                return handleUpdateGeneric(e, editInfo, setShowInfoForm);
+              })}
               className="space-y-4"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -28,12 +42,15 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   </label>
                   <input
                     required
+                    {...attributs("first_name")}
                     className={inputClass}
                     value={editInfo.first_name}
-                    onChange={(e) =>
-                      setEditInfo({ ...editInfo, first_name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setEditInfo({ ...editInfo, first_name: e.target.value });
+                      effacer("first_name");
+                    }}
                   />
+                  <FieldError id="err-first_name" message={erreurs.first_name} />
                 </div>
                 <div>
                   <label className={tw.formLabel}>
@@ -41,12 +58,15 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   </label>
                   <input
                     required
+                    {...attributs("last_name")}
                     className={inputClass}
                     value={editInfo.last_name}
-                    onChange={(e) =>
-                      setEditInfo({ ...editInfo, last_name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setEditInfo({ ...editInfo, last_name: e.target.value });
+                      effacer("last_name");
+                    }}
                   />
+                  <FieldError id="err-last_name" message={erreurs.last_name} />
                 </div>
               </div>
               <div>
@@ -56,12 +76,15 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                 <input
                   required
                   type="tel"
+                  {...attributs("telephone")}
                   className={inputClass}
                   value={editInfo.telephone}
-                  onChange={(e) =>
-                    setEditInfo({ ...editInfo, telephone: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setEditInfo({ ...editInfo, telephone: e.target.value });
+                    effacer("telephone");
+                  }}
                 />
+                <FieldError id="err-telephone" message={erreurs.telephone} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

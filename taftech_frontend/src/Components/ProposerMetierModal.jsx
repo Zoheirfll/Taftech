@@ -37,7 +37,7 @@ const ProposerMetierModal = ({ open, libelleInitial = "", onClose }) => {
   const envoyer = async () => {
     setErreur("");
     try {
-      const reponse = await jobsService.proposerMetier(libelle.trim(), contexte.trim());
+      const reponse = await jobsService.creerDemandeAjout("METIER", libelle.trim(), contexte.trim());
       toast.success(reponse.message || "Votre proposition a été envoyée.");
       fermer();
     } catch (err) {

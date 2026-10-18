@@ -1,12 +1,16 @@
 // Bloc "Formation requise" : diplômes acceptés et spécialités acceptées (deux listes indépendantes) + suggestions du métier.
+import { useState } from "react";
 import Select from "react-select";
 import { GraduationCap, X } from "lucide-react";
 import { selectStylesTeal, tw } from "../../../theme";
 import { aplatirGroupes } from "../../../utils/familleFormation";
 import { libelleUsage } from "../../../utils/suggestionStats";
 import SuggestionsDiplomes from "../../../Components/SuggestionsDiplomes";
+import ProposerEntreeModal from "../../../Components/ProposerEntreeModal";
 
 const BlocFormationRequise = ({ job }) => {
+  // Type de demande d'ajout en cours (« DIPLOME » ou « SPECIALITE »), null quand la fenêtre est fermée.
+  const [demandeEnCours, setDemandeEnCours] = useState(null);
   const {
     diplomesGroupes, specialitesGroupes, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
     diplomesRequis, specialitesRequises, ajouterDiplomeRequis, retirerDiplomeRequis, ajouterDiplomeSuggere,
@@ -45,6 +49,13 @@ const BlocFormationRequise = ({ job }) => {
             Ajouter
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => setDemandeEnCours("DIPLOME")}
+          className="mt-1.5 text-xs font-medium text-teal-700 hover:underline"
+        >
+          Autre, préciser
+        </button>
         {diplomesRequis.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {diplomesRequis.map((d) => (
@@ -85,6 +96,13 @@ const BlocFormationRequise = ({ job }) => {
             Ajouter
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => setDemandeEnCours("SPECIALITE")}
+          className="mt-1.5 text-xs font-medium text-teal-700 hover:underline"
+        >
+          Autre, préciser
+        </button>
         {specialitesRequises.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {specialitesRequises.map((s) => (
@@ -125,6 +143,12 @@ const BlocFormationRequise = ({ job }) => {
           )}
         </div>
       )}
+
+      <ProposerEntreeModal
+        open={demandeEnCours !== null}
+        type={demandeEnCours || "DIPLOME"}
+        onClose={() => setDemandeEnCours(null)}
+      />
     </div>
   );
 };

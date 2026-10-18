@@ -4,6 +4,7 @@ import {
   aplatirGroupes,
   familleDuDiplome,
   typesPourNiveau,
+  typeAutoriseParNiveau,
   niveauPourType,
 } from "../src/utils/familleFormation";
 
@@ -18,7 +19,7 @@ const niveaux = [
   { id: 10, code: "SC-SUP", familles: ["superieur", "autre"] },
   { id: 11, code: "SC-FP", familles: ["formation_professionnelle", "certification"] },
   { id: 12, code: "SC-SEC", familles: ["scolaire"] },
-  { id: 13, code: "SC-MOY", familles: ["scolaire"] },
+  { id: 13, code: "SC-MOY", familles: ["scolaire"], types_exclus: ["D-BAC"] },
   { id: 14, code: "SC-SANS", familles: [] },
 ];
 
@@ -46,6 +47,15 @@ describe("familleFormation", () => {
     expect(typesPourNiveau(types, niveaux[1]).map((t) => t.id)).toEqual([2, 5]);
     expect(typesPourNiveau(types, niveaux[4])).toEqual([]);
     expect(typesPourNiveau(types, null)).toHaveLength(5);
+  });
+
+  it("n'offre pas le baccalauréat au niveau moyen / collège, mais le garde au secondaire", () => {
+    expect(typesPourNiveau(types, niveaux[3]).map((t) => t.code)).toEqual(["D-BEM"]);
+    expect(typesPourNiveau(types, niveaux[2]).map((t) => t.code)).toEqual(["D-BAC", "D-BEM"]);
+    expect(typeAutoriseParNiveau(niveaux[3], types[2])).toBe(false);
+    expect(typeAutoriseParNiveau(niveaux[3], types[3])).toBe(true);
+    // Un niveau sans `types_exclus` (ancienne réponse du serveur) ne change rien.
+    expect(typeAutoriseParNiveau({ familles: ["scolaire"] }, types[2])).toBe(true);
   });
 
   it("déduit le niveau d'études d'un type déjà choisi", () => {

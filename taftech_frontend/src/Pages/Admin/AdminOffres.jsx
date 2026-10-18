@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { nomWilaya } from "../../utils/wilaya";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
@@ -25,6 +26,7 @@ import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 import { Briefcase } from "lucide-react";
+import CorrectionOffreModal from "./offres/CorrectionOffreModal";
 
 // Libellés lisibles des statuts de candidature (avant : code brut "EN_COURS" → "EN COURS").
 const STATUT_CAND_LABELS = {
@@ -165,7 +167,6 @@ const AdminOffres = () => {
   };
 
   const [rejetEnCours, setRejetEnCours] = useState(false);
-  const [editionEnCours, setEditionEnCours] = useState(false);
 
   const fermerDetail = useCallback(() => setSelectedOffre(null), []);
   const fermerEdition = useCallback(() => setEditingOffre(null), []);
@@ -174,7 +175,6 @@ const AdminOffres = () => {
     setMotifRejet("");
   }, []);
   useEchapPourFermer(!!selectedOffre, fermerDetail);
-  useEchapPourFermer(!!editingOffre, fermerEdition);
   useEchapPourFermer(!!rejectingOffre, fermerRejet);
 
   const handleApprouver = (id) => {
@@ -210,26 +210,6 @@ const AdminOffres = () => {
       reportError("ECHEC_REJET_OFFRE", err);
     } finally {
       setRejetEnCours(false);
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingOffre.titre?.trim()) return toast.error("Le titre ne peut pas être vide.");
-    setEditionEnCours(true);
-    try {
-      await jobsService.moderateOffre(editingOffre.id, {
-        titre: editingOffre.titre.trim(),
-        description: editingOffre.description || "",
-      });
-      setEditingOffre(null);
-      chargerOffres();
-      toast.success("Offre corrigée !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la modification."));
-      reportError("ECHEC_MODIFICATION_OFFRE", err);
-    } finally {
-      setEditionEnCours(false);
     }
   };
 
@@ -412,7 +392,7 @@ const AdminOffres = () => {
                     )}
                     {(offre.wilaya || offre.commune) && (
                       <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                        📍 {offre.wilaya}{offre.commune ? ` · ${offre.commune}` : ""}
+                        📍 {nomWilaya(offre.wilaya)}{offre.commune ? ` · ${offre.commune}` : ""}
                       </p>
                     )}
                     {offre.motif_rejet && (
@@ -455,14 +435,16 @@ const AdminOffres = () => {
                       >
                         <Eye size={14} />
                       </button>
-                      <button
-                        onClick={() => setEditingOffre(offre)}
-                        className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
-                        title="Corriger"
-                        aria-label="Corriger l'offre"
-                      >
-                        <Pencil size={14} />
-                      </button>
+                      {offre.statut_moderation === "EN_ATTENTE" && !offre.est_cloturee && (
+                        <button
+                          onClick={() => setEditingOffre(offre)}
+                          className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
+                          title="Corriger"
+                          aria-label="Corriger l'offre"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
                       {offre.statut_moderation !== "APPROUVEE" &&
                         !offre.est_cloturee && (
                           <button
@@ -530,7 +512,7 @@ const AdminOffres = () => {
                 <div className="flex flex-wrap gap-2 mt-3">
                   {selectedOffre.wilaya && (
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
-                      📍 {selectedOffre.wilaya}{selectedOffre.commune ? ` · ${selectedOffre.commune}` : ""}
+                      📍 {nomWilaya(selectedOffre.wilaya)}{selectedOffre.commune ? ` · ${selectedOffre.commune}` : ""}
                     </span>
                   )}
                   {selectedOffre.nombre_postes > 1 && (
@@ -811,66 +793,16 @@ const AdminOffres = () => {
         </div>
       )}
 
-      {/* MODAL ÉDITION */}
+      {/* MODAL CORRECTION (offre en attente) */}
       {editingOffre && (
-        <div className={modalClass} onClick={(e) => e.target === e.currentTarget && fermerEdition()}>
-          <div role="dialog" aria-modal="true" aria-label="Corriger l'offre" className={`${tw.surface} rounded-2xl p-7 max-w-xl w-full shadow-2xl`}>
-            <h2 className={`text-lg font-bold ${tw.textStrong} mb-1`}>
-              Corriger l'offre
-            </h2>
-            <p className={`text-xs ${tw.textMuted700} mb-5`}>
-              Correction directe par l'administration (faute, formulation interdite). L'offre garde son statut actuel.
-            </p>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Titre
-                </label>
-                <input
-                  type="text"
-                  value={editingOffre.titre || ""}
-                  required
-                  className={inputClass}
-                  onChange={(e) =>
-                    setEditingOffre({ ...editingOffre, titre: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>
-                  Description
-                </label>
-                <textarea
-                  rows="8"
-                  value={editingOffre.description || ""}
-                  className={inputClass + " resize-none"}
-                  onChange={(e) =>
-                    setEditingOffre({
-                      ...editingOffre,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingOffre(null)}
-                  className={`flex-1 py-2.5 ${tw.surfaceSubtle} ${tw.textMuted} text-sm font-medium rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors`}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={editionEnCours}
-                  className={`flex-1 py-2.5 ${tw.bgPrimarySolidHover} text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50`}
-                >
-                  {editionEnCours ? "Enregistrement..." : "Sauvegarder"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CorrectionOffreModal
+          offre={editingOffre}
+          onClose={fermerEdition}
+          onSaved={() => {
+            setEditingOffre(null);
+            chargerOffres();
+          }}
+        />
       )}
 
       {/* MODAL REJET */}

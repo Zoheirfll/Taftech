@@ -65,6 +65,11 @@ export const ProfilCandidatDetails = ({ candidatData, formatText }) => (
                 <Calendar size={10} />
                 {formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — {exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "Aujourd'hui"}
               </p>
+              {exp.description && (
+                <p className={`text-xs mt-2 leading-relaxed whitespace-pre-line ${tw.textMuted}`}>
+                  {exp.description}
+                </p>
+              )}
             </div>
           ))}
         </div>

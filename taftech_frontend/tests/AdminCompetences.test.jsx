@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import AdminCompetences from "../src/Pages/Admin/AdminCompetences";
 import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
+import { adminService } from "../src/Services/adminService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
@@ -23,8 +24,11 @@ vi.mock("../src/Services/jobsService", () => ({
     updateCompetence: vi.fn(),
     deleteCompetence: vi.fn(),
     changerStatutCompetence: vi.fn(),
-    proposerCompetences: vi.fn(),
   },
+}));
+
+vi.mock("../src/Services/adminService", () => ({
+  adminService: { getAdminStats: vi.fn(), getDemandesAjout: vi.fn() },
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -46,6 +50,8 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
   beforeEach(() => {
     vi.spyOn(reporter, "reportError").mockImplementation(() => {});
     jobsService.getAdminCompetences.mockResolvedValue(mockPage(mockItems));
+    adminService.getAdminStats.mockResolvedValue({});
+    adminService.getDemandesAjout.mockResolvedValue({ results: [], count: 0, total_pages: 1, compteurs: {} });
   });
 
   afterEach(() => {
@@ -79,56 +85,61 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     });
   });
 
-  it("🟢 HP6 : Une proposition « Suggérée » se valide et affiche son usage", async () => {
+  it("🟢 HP6 : Une compétence masquée se réactive et affiche son usage", async () => {
     jobsService.getAdminCompetences.mockResolvedValue({
       results: [{
-        id: 7, label: "Prompt engineering", actif: false, statut: "SUGGEREE", origine: "PROPOSITION_AUTO",
-        nb_candidats: 4, nb_offres: 1, transitions_possibles: ["REJETEE", "VALIDEE"],
+        id: 7, label: "Prompt engineering", actif: false, statut: "DESACTIVEE", origine: "IMPORT",
+        nb_candidats: 4, nb_offres: 1, transitions_possibles: ["VALIDEE"],
       }],
-      count: 1, total_pages: 1, compteurs: { SUGGEREE: 1, VALIDEE: 5, REJETEE: 0, DESACTIVEE: 0 },
+      count: 1, total_pages: 1, compteurs: { VALIDEE: 5, DESACTIVEE: 1 },
     });
     jobsService.changerStatutCompetence.mockResolvedValue({ id: 7, statut: "VALIDEE", liens_crees: 3 });
     render(<MemoryRouter><AdminCompetences /></MemoryRouter>);
 
     expect(await screen.findByText("4 candidat(s) · 1 offre(s)")).toBeInTheDocument();
-    expect(screen.getByText("Proposition automatique")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Suggérées\s*\(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Actives\s*\(5\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Masquées\s*\(1\)/ })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /Suggérées|Rejetées/ })).toBeNull();
 
-    fireEvent.click(screen.getByLabelText("Valider Prompt engineering"));
+    fireEvent.click(screen.getByLabelText("Réactiver Prompt engineering"));
     await waitFor(() => {
       expect(jobsService.changerStatutCompetence).toHaveBeenCalledWith(7, "VALIDEE");
       expect(toast.success).toHaveBeenCalledWith("« Prompt engineering » est maintenant officielle — 3 saisie(s) existante(s) rattachée(s).");
     });
   });
 
-  it("🟢 HP7 : Rejeter une proposition", async () => {
+  it("🟢 HP7 : Masquer une compétence active", async () => {
     jobsService.getAdminCompetences.mockResolvedValue({
-      results: [{ id: 8, label: "Bruit", actif: false, statut: "SUGGEREE", transitions_possibles: ["REJETEE", "VALIDEE"] }],
+      results: [{ id: 8, label: "Bruit", actif: true, statut: "VALIDEE", transitions_possibles: ["DESACTIVEE"] }],
       count: 1, total_pages: 1, compteurs: {},
     });
-    jobsService.changerStatutCompetence.mockResolvedValue({ id: 8, statut: "REJETEE" });
+    jobsService.changerStatutCompetence.mockResolvedValue({ id: 8, statut: "DESACTIVEE" });
     render(<MemoryRouter><AdminCompetences /></MemoryRouter>);
-    fireEvent.click(await screen.findByLabelText("Rejeter Bruit"));
-    await waitFor(() => expect(jobsService.changerStatutCompetence).toHaveBeenCalledWith(8, "REJETEE"));
+    fireEvent.click(await screen.findByLabelText("Désactiver Bruit"));
+    await waitFor(() => expect(jobsService.changerStatutCompetence).toHaveBeenCalledWith(8, "DESACTIVEE"));
   });
 
-  it("🟢 HP8 : L'onglet filtre par statut côté serveur", async () => {
+  it("🟢 HP8 : La pastille filtre par statut côté serveur", async () => {
     render(<MemoryRouter><AdminCompetences /></MemoryRouter>);
     await waitFor(() => screen.getByText("Gestion de projet"));
-    fireEvent.click(screen.getByRole("tab", { name: /^Rejetées/ }));
-    await waitFor(() => expect(jobsService.getAdminCompetences).toHaveBeenLastCalledWith("", 1, "REJETEE"));
+    fireEvent.click(screen.getByRole("tab", { name: /^Masquées/ }));
+    await waitFor(() => expect(jobsService.getAdminCompetences).toHaveBeenLastCalledWith("", 1, "DESACTIVEE"));
   });
 
-  it("🟢 HP9 : La détection crée des propositions et bascule sur l'onglet Suggérées", async () => {
-    jobsService.proposerCompetences.mockResolvedValue({ nb: 2, seuil: 3, propositions: [] });
+  it("🟢 HP9 : L'onglet Demandes charge les demandes de compétences, avec leur badge ; plus de bouton « Détecter »", async () => {
+    adminService.getAdminStats.mockResolvedValue({ demandes_a_examiner: { COMPETENCE: 3 } });
     render(<MemoryRouter><AdminCompetences /></MemoryRouter>);
     await waitFor(() => screen.getByText("Gestion de projet"));
-    fireEvent.click(screen.getByText(/Détecter les propositions/i));
-    await waitFor(() => {
-      expect(jobsService.proposerCompetences).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("2 compétence(s) proposée(s), en attente de votre validation.");
-      expect(jobsService.getAdminCompetences).toHaveBeenLastCalledWith("", 1, "SUGGEREE");
-    });
+    expect(screen.queryByText(/Détecter les propositions/i)).toBeNull();
+    const onglet = screen.getByRole("tab", { name: /Demandes/ });
+    await waitFor(() => expect(onglet).toHaveTextContent("3"));
+
+    fireEvent.click(onglet);
+    await waitFor(() =>
+      expect(adminService.getDemandesAjout).toHaveBeenCalledWith(expect.objectContaining({ type: "COMPETENCE", statut: "A_EXAMINER" })),
+    );
+    expect(await screen.findByText("Aucune demande de compétence.")).toBeInTheDocument();
+    expect(screen.queryByText("Gestion de projet")).toBeNull();
   });
 
   it("🟢 HP3 : Recherche déclenche fetchItems avec debounce", async () => {

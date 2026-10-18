@@ -45,9 +45,16 @@ export const familleDuDiplome = (typesDiplomes, diplomeId) => {
   return type && FAMILLES_AVEC_DOMAINES.includes(type.famille) ? type.famille : "";
 };
 
+/**
+ * Un type de diplôme appartient-il à un niveau d'études ? Par sa famille, sauf les types que le niveau
+ * exclut explicitement (`types_exclus` : pas de baccalauréat au niveau « moyen / collège »).
+ */
+export const typeAutoriseParNiveau = (niveau, type) =>
+  (niveau.familles || []).includes(type.famille) && !(niveau.types_exclus || []).includes(type.code);
+
 /** Types de diplôme proposés pour un niveau d'études (étape 1 de la cascade). Sans niveau : tous. */
 export const typesPourNiveau = (typesDiplomes, niveau) =>
-  niveau ? (typesDiplomes || []).filter((t) => (niveau.familles || []).includes(t.famille)) : typesDiplomes || [];
+  niveau ? (typesDiplomes || []).filter((t) => typeAutoriseParNiveau(niveau, t)) : typesDiplomes || [];
 
 /**
  * Niveau d'études correspondant à un type de diplôme déjà choisi (édition d'une formation) :

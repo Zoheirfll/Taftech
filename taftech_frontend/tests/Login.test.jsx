@@ -49,6 +49,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 vi.mock("@react-oauth/google", () => ({
+  GoogleOAuthProvider: ({ children }) => <>{children}</>,
   GoogleLogin: ({ onSuccess, onError }) => (
     <button onClick={() => onSuccess({ credential: "fake-token" })}>
       Connexion Google (mock)

@@ -1,5 +1,7 @@
 // En-tête du détail d'une candidature : photo, identité, tags, menu de changement de statut, chronologie, entretien et bulletin.
 import React from "react";
+import { formatAge } from "../../../../utils/cvDates";
+import { nomWilaya } from "../../../../utils/wilaya";
 import {
   Zap,
   MapPin,
@@ -74,7 +76,7 @@ export const EnteteCandidature = ({
             {candidatData?.wilaya && (
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                 <MapPin size={11} />
-                {candidatData.wilaya}
+                {nomWilaya(candidatData.wilaya)}
               </span>
             )}
             {candidatData?.adresse && (
@@ -95,10 +97,10 @@ export const EnteteCandidature = ({
                 {candidatData.metier}
               </span>
             )}
-            {candidatData?.date_naissance && (
+            {formatAge(candidatData?.date_naissance) && (
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${tw.tagSlateSoft} text-xs rounded-md`}>
                 <Calendar size={11} />
-                Né(e) le {new Date(candidatData.date_naissance).toLocaleDateString("fr-FR")}
+                {formatAge(candidatData.date_naissance)}
               </span>
             )}
           </div>

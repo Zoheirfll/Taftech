@@ -6,22 +6,31 @@ import { reportError } from "../../utils/errorReporter";
 import { Mail, ArrowLeft } from "lucide-react";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import FieldError from "../../Components/FieldError";
+import { useErreursChamps } from "../../utils/useErreursChamps";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const { erreurs, exiger, definir, effacer, attributs } = useErreursChamps();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return toast.error("Veuillez entrer votre email.");
+    if (exiger({ email }, { email: "Saisissez votre adresse e-mail." })) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      definir({ email: "Adresse e-mail invalide." });
+      return;
+    }
     setLoading(true);
     try {
       await authService.forgotPassword(email);
       setSent(true);
     } catch (err) {
       reportError("ECHEC_FORGOT_PASSWORD", err);
-      toast.error(apiErrMsg(err, "Une erreur est survenue."));
+      const message = apiErrMsg(err, "Une erreur est survenue.");
+      definir({ email: message });
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -63,7 +72,7 @@ const ForgotPassword = () => {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
                 <label className={`${tw.authLabel} mb-1.5`}>
                   Adresse email *
@@ -71,10 +80,12 @@ const ForgotPassword = () => {
                 <input
                   type="email"
                   required
+                  {...attributs("email")}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); effacer("email"); }}
                   className={tw.authInput}
                 />
+                <FieldError id="err-email" message={erreurs.email} />
               </div>
               <button
                 type="submit"

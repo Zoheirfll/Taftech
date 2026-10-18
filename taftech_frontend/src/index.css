@@ -92,3 +92,20 @@ html.portal-recruteur::-webkit-scrollbar-thumb:hover {
 @layer base {
   [aria-invalid="true"] { border-color: #dc2626 !important; box-shadow: 0 0 0 2px #fee2e2 !important; }
 }
+
+/* iPhone (Safari) : tout champ dont la police est inférieure à 16 px fait zoomer la page au focus.
+   Règle unique, volontairement HORS `@layer` : elle l'emporte sur les classes `text-sm` des
+   composants sans les modifier un par un. Cases à cocher, boutons radio, curseurs, couleurs et
+   fichiers sont exclus (pas de saisie de texte). */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  /* Listes déroulantes (react-select) : leur champ de saisie reçoit `font: inherit` en style en
+     ligne (14,9 px ici), que seul `!important` peut dépasser. Sans cela, iPhone zoome au focus. */
+  input[aria-autocomplete="list"] {
+    font-size: 16px !important;
+  }
+}

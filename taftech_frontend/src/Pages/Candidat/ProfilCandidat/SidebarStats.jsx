@@ -1,6 +1,7 @@
 // Colonne latérale : statistiques "En bref" calculées depuis les données du profil.
 import { Briefcase, GraduationCap, Building2, Languages as LanguagesIcon } from "lucide-react";
 import { tw } from "../../../theme";
+import { formatDureeMois } from "../../../utils/cvDates";
 import { SIDEBAR_SECTION_CLASS, SIDEBAR_TITLE } from "./profilUi";
 
 const SidebarStats = ({ stats }) => (
@@ -13,9 +14,9 @@ const SidebarStats = ({ stats }) => (
                 </span>
                 <div className="min-w-0">
                   <p className={`text-sm font-bold ${tw.textStrong}`}>
-                    {stats.anneesExperience ?? 0}
+                    {formatDureeMois(stats.experienceMois)}
                   </p>
-                  <p className={`text-[10px] ${tw.textMuted} truncate`}>Ans d'exp.</p>
+                  <p className={`text-[10px] ${tw.textMuted} truncate`}>Expérience</p>
                 </div>
               </div>
               <div className={`flex items-center gap-2.5 p-2.5 rounded-xl ${tw.prefCardSoft}`}>

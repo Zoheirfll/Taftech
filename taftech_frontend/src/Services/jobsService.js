@@ -115,13 +115,14 @@ const offresPubliquesService = {
     }
   },
 
-  // Un candidat ou un recruteur propose un métier absent de la liste (l'admin décide ensuite).
-  proposerMetier: async (libelle, contexte = "") => {
+  // Demande d'ajout d'un type de diplôme ou d'une spécialité absent de la liste (candidat ou recruteur) :
+  // l'admin décide ensuite de l'accepter, de la rattacher à une entrée existante ou de la refuser.
+  creerDemandeAjout: async (type, libelle, contexte = "") => {
     try {
-      const response = await api.post("jobs/referentiel/metiers/proposer/", { libelle, contexte });
+      const response = await api.post("jobs/demandes-ajout/", { type, libelle, contexte });
       return response.data;
     } catch (err) {
-      reportError("ECHEC_PROPOSER_METIER", err);
+      reportError("ECHEC_CREER_DEMANDE_AJOUT", err);
       throw err;
     }
   },

@@ -150,7 +150,7 @@ export const PanneauFiltres = ({
           placeholder={rechercheAvancee ? "Langue" : "Langue (palier Business+)"}
           disabled={!rechercheAvancee}
           title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
-          className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={rechercheAvancee ? tw.input : tw.inputLocked}
         />
         <input
           type="text"
@@ -159,7 +159,7 @@ export const PanneauFiltres = ({
           placeholder={rechercheAvancee ? "Compétence" : "Compétence (palier Business+)"}
           disabled={!rechercheAvancee}
           title={!rechercheAvancee ? "Filtre réservé au palier Business ou supérieur" : undefined}
-          className={`${tw.input} ${!rechercheAvancee ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={rechercheAvancee ? tw.input : tw.inputLocked}
         />
       </div>
 

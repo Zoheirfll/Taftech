@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
-import { ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import EcranPalierRequis from "../../Components/EcranPalierRequis";
 
 import { nomCandidature } from "../../utils/candidatureNom";
 const CRITERES_MATCHING = {
@@ -58,14 +59,10 @@ const CandidatsRecommandesPage = () => {
 
   if (!acces) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
-        <Lock size={32} className="mx-auto text-slate-400" />
-        <h1 className="text-lg font-bold text-slate-900">Candidats recommandés (IA)</h1>
-        <p className="text-sm text-slate-600">Cette fonctionnalité nécessite le palier Pro ou supérieur.</p>
-        <Link to="/recruteurs/abonnements" className="inline-block mt-2 px-4 py-2.5 bg-teal-700 text-white text-sm font-semibold rounded-lg hover:bg-teal-800 transition-colors">
-          Voir les paliers
-        </Link>
-      </div>
+      <EcranPalierRequis
+        titre="Candidats recommandés (IA)"
+        message="Cette fonctionnalité nécessite le palier Pro ou supérieur."
+      />
     );
   }
 

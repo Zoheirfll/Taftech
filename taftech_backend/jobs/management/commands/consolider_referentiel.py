@@ -15,7 +15,7 @@ from django.db import transaction
 from jobs.management.commands.import_referentiel_v2 import DEFAULT_METIERS_FILE
 from jobs.referentiel_fusions import (
     _Journal, appliquer_fusions_specialites, appliquer_operations_groupes, appliquer_redirections_metiers, calculer_instantane,
-    ecrire_instantane, CHEMIN_INSTANTANE,
+    ecrire_instantane, supprimer_doublons_metiers, CHEMIN_INSTANTANE,
 )
 
 
@@ -53,6 +53,8 @@ class Command(BaseCommand):
                 appliquer_operations_groupes(log)
                 self.stdout.write("== Redirections de métiers ==")
                 appliquer_redirections_metiers(log)
+                self.stdout.write("== Doublons de métiers ==")
+                nb_doublons = supprimer_doublons_metiers(log, sauvegarder=not options['dry_run'])
                 self.stdout.write("== Spécialités ==")
                 appliquer_fusions_specialites(log)
 
@@ -73,7 +75,7 @@ class Command(BaseCommand):
                 refs_apres = (FormationCandidat.objects.exclude(specialite_ref=None).count(),
                               OffreEmploi.specialites_requises.through.objects.count(),
                               Metier.objects.count())
-                if refs_apres[0] != refs_avant[0] or refs_apres[2] != refs_avant[2] or refs_apres[1] > refs_avant[1]:
+                if refs_apres[0] != refs_avant[0] or refs_apres[2] != refs_avant[2] - nb_doublons or refs_apres[1] > refs_avant[1]:
                     anomalies.append(f"références modifiées {refs_avant} -> {refs_apres}")
                 if anomalies:
                     raise CommandError("Contrôles d'intégrité en échec, tout est annulé : " + " ; ".join(anomalies))

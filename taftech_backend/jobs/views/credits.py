@@ -162,6 +162,10 @@ class CreditPackCheckoutAPIView(APIView):
             "failure_url": f"{settings.SITE_URL}/recruteurs/abonnements?paid=0",
             "metadata": {"pack_id": str(pack.id), "entreprise_id": str(entreprise.id), "user_id": str(request.user.id)},
         }
+        # URL du webhook envoyée à CHAQUE paiement (réglage d'environnement) : le crédit du pack
+        # ne dépend plus de l'URL configurée dans le tableau de bord Chargily.
+        if settings.CHARGILY_WEBHOOK_URL:
+            payload["webhook_endpoint"] = settings.CHARGILY_WEBHOOK_URL
         response = http_requests.post(
             "https://pay.chargily.net/test/api/v2/checkouts",
             json=payload,

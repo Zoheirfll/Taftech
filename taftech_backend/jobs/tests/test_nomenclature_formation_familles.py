@@ -107,3 +107,13 @@ class NomenclatureFormationFamillesTests(TestCase):
         niveaux = {n["code"]: n["familles"] for n in data["niveaux_etudes"]}
         self.assertEqual(niveaux["SC-SUP"], FAMILLES_PAR_NIVEAU_ETUDES["SC-SUP"])
         self.assertEqual(niveaux["SC-SANS"], [])
+
+    def test_le_college_n_offre_pas_le_baccalaureat(self):
+        Scolarite.objects.all().delete()
+        Scolarite.objects.create(code="SC-MOY", libelle="Niveau moyen / collège")
+        Scolarite.objects.create(code="SC-SEC", libelle="Niveau secondaire")
+        cache.clear()
+        data = APIClient().get("/api/jobs/referentiel/nomenclature-formation/").data
+        exclus = {n["code"]: n["types_exclus"] for n in data["niveaux_etudes"]}
+        self.assertEqual(exclus["SC-MOY"], ["D-BAC"])
+        self.assertEqual(exclus["SC-SEC"], [])

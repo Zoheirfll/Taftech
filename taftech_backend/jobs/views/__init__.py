@@ -156,9 +156,15 @@ from .pages import (
 )
 from .ai_config import AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView
 from .informations_societe import InformationsSocietePublicAPIView, InformationsSocieteAdminAPIView
+from .offres_correction_admin import AdminOffreCorrigerAPIView
+from .admin_statistiques import AdminStatistiquesAPIView, AdminStatistiquesExportAPIView
 from .propositions_metier import (
     ProposerMetierAPIView, AdminPropositionsMetierAPIView,
     AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,
+)
+from .demandes_ajout import (
+    CreerDemandeAjoutAPIView, AdminDemandesAjoutAPIView, AdminDemandeProchesAPIView, AdminDemandeParentsAPIView,
+    AdminDemandeAccepterAPIView, AdminDemandeRattacherAPIView, AdminDemandeRefuserAPIView,
 )
 from .candidat_dashboard import (
     ScoreProfilAPIView,

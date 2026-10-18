@@ -85,7 +85,7 @@ class CandidatRegistrationAPIView(APIView):
                 user.code_verification_created_at = timezone.now()
                 user.save()
 
-                sujet = "Bienvenue sur TafTech ! Votre code de vérification"
+                sujet = "Votre code de vérification TafTech"
                 ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': False, 'annee': timezone.now().year}
                 html_body = render_to_string('emails/verification_code.html', ctx)
                 texte = f"Bonjour {user.first_name},\n\nVotre code de vérification est : {code}\n\nÀ très vite !"
@@ -188,7 +188,7 @@ class RenvoyerCodeVerificationAPIView(APIView):
         user.code_verification_created_at = timezone.now()
         user.save(update_fields=['code_verification', 'code_verification_created_at'])
 
-        sujet = "TafTech — Votre nouveau code de vérification"
+        sujet = "Votre nouveau code de vérification TafTech"
         ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': user.role == 'RECRUTEUR', 'annee': timezone.now().year}
         html_body = render_to_string('emails/verification_code.html', ctx)
         texte = f"Bonjour {user.first_name},\n\nVotre nouveau code de vérification est : {code}\n\nIl est valable 10 minutes."
@@ -221,7 +221,7 @@ class RecruteurRegisterAPIView(APIView):
             user.code_verification_created_at = timezone.now()
             user.save()
 
-            sujet = "Bienvenue sur TafTech ! Vérifiez votre compte Entreprise"
+            sujet = "Votre code de vérification TafTech"
             ctx = {'prenom': user.first_name, 'code': code, 'est_recruteur': True, 'annee': timezone.now().year}
             html_body = render_to_string('emails/verification_code.html', ctx)
             texte = (
@@ -614,6 +614,9 @@ class MeAPIView(APIView):
 
     def get(self, request):
         user = request.user
+        # Statut de validation de l'entreprise (None hors recruteur) : l'écran d'attente du
+        # portail recruteur s'en sert pour savoir s'il doit s'afficher.
+        entreprise = getattr(user, 'profil_entreprise', None) if user.role == 'RECRUTEUR' else None
         return Response({
             'email': user.email,
             'first_name': user.first_name,
@@ -621,6 +624,8 @@ class MeAPIView(APIView):
             'role': user.role,
             'est_compte_google': getattr(user, 'est_compte_google', False),
             'consentement_cvtheque': user.consentement_cvtheque,
+            'entreprise_approuvee': entreprise.est_approuvee if entreprise else None,
+            'nom_entreprise': entreprise.nom_entreprise if entreprise else None,
         })
 
 

@@ -151,6 +151,11 @@ def _synchroniser_competences_offre(offre, items):
             offre=offre, label=label, competence_ref=ref, type_exigence=type_exigence, niveau_requis=niveau_requis))
     if a_creer:
         CompetenceOffre.objects.bulk_create(a_creer)
+        # Compétence hors référentiel saisie dans l'offre : demande d'ajout implicite visible de l'admin.
+        from ..demandes_ajout import demander_competence_saisie
+        for competence in a_creer:
+            if competence.competence_ref is None:
+                demander_competence_saisie(offre.entreprise.user, competence.label)
 
 
 def _synchroniser_diplomes_requis_offre(offre, diplome_ids, specialite_ids):
@@ -271,7 +276,11 @@ class JobCreateAPIView(APIView):
                     message=f"Nouvelle offre en attente de validation : « {offre.titre} » — {entreprise.nom_entreprise}",
                     lien='/admin-taftech/offres',
                 )
-            return Response(OffreEmploiSerializer(offre).data, status=status.HTTP_201_CREATED)
+            # Réponse au recruteur qui vient de créer l'offre : il voit son métier de référence.
+            return Response(
+                OffreEmploiSerializer(offre, context={'inclure_metier_reference': True}).data,
+                status=status.HTTP_201_CREATED,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -377,9 +386,13 @@ class ConstantsAPIView(APIView):
             return Response(cached, status=status.HTTP_200_OK)
         from ..constants import WILAYAS_CHOICES, SECTEURS_CHOICES, DIPLOMES_CHOICES, NIVEAUX_EXPERIENCE, TYPES_CONTRAT
         from ..models import ProfilCandidat
+        from ..referentiel_utils import normaliser_recherche
         data = {
             "wilayas": [{"value": item[0], "label": item[1]} for item in WILAYAS_CHOICES],
-            "secteurs": [{"value": item[0], "label": item[1]} for item in SECTEURS_CHOICES],
+            "secteurs": sorted(
+                ({"value": item[0], "label": item[1]} for item in SECTEURS_CHOICES),
+                key=lambda s: normaliser_recherche(s["label"]),
+            ),
             "diplomes": [{"value": item[0], "label": item[1]} for item in DIPLOMES_CHOICES],
             "experiences": [{"value": item[0], "label": item[1]} for item in NIVEAUX_EXPERIENCE],
             "contrats": [{"value": item[0], "label": item[1]} for item in TYPES_CONTRAT],
@@ -405,15 +418,15 @@ class NomenclatureAPIView(APIView):
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..models import GroupeMetier, Metier
-        from ..referentiel_utils import _nettoyer_libelle_secteur_nsec, _dedupliquer_secteurs
+        from ..referentiel_utils import _nettoyer_libelle_secteur_nsec, _dedupliquer_secteurs, trier_secteurs
         secteurs = GroupeMetier.objects.filter(type_groupe='secteur_source')
         domaines = GroupeMetier.objects.filter(type_groupe='domaine_source').select_related('parent')
         # `code_source` (ex: "A", "A11") est le code court d'origine, sans tiret —
         # `code` (groupe_id, ex: "NSEC-A") est un identifiant interne non adapté aux URLs.
-        secteurs_data = _dedupliquer_secteurs([
+        secteurs_data = trier_secteurs(_dedupliquer_secteurs([
             {"id": s.id, "code": s.code_source or s.code, "libelle": _nettoyer_libelle_secteur_nsec(s.libelle)}
             for s in secteurs
-        ])
+        ]))
         data = {
             "secteurs": secteurs_data,
             "domaines": [
@@ -441,12 +454,14 @@ class NomenclatureFormationAPIView(APIView):
 
     def get(self, request):
         from django.core.cache import cache
-        cached = cache.get('jobs_nomenclature_formation_v2')
+        cached = cache.get('jobs_nomenclature_formation_v3')
         if cached:
             return Response(cached, status=status.HTTP_200_OK)
         from ..models import TypeDiplome, DomaineFormation, FiliereFormation, SpecialiteFormation, DiplomeSpecialite
         from ..models import Scolarite
-        from ..referentiel_utils import famille_formation, FAMILLES_FORMATION, FAMILLES_PAR_NIVEAU_ETUDES
+        from ..referentiel_utils import (
+            famille_formation, FAMILLES_FORMATION, FAMILLES_PAR_NIVEAU_ETUDES, TYPES_EXCLUS_PAR_NIVEAU_ETUDES,
+        )
         # Point 8 : chaque type de diplôme, domaine et spécialité porte sa `famille` (supérieur /
         # formation professionnelle / thèmes TafTech) pour que l'interface ne les mélange jamais
         # dans une même liste. Le domaine « non répertorié » (D-AUTRE) est géré par le flux
@@ -458,7 +473,9 @@ class NomenclatureFormationAPIView(APIView):
             # 1ʳᵉ étape de la cascade : niveau d'études -> familles de diplômes proposées.
             "niveaux_etudes": [
                 {"id": s.id, "code": s.code, "libelle": s.libelle, "usage": s.usage,
-                 "familles": FAMILLES_PAR_NIVEAU_ETUDES.get(s.code, [])}
+                 "familles": FAMILLES_PAR_NIVEAU_ETUDES.get(s.code, []),
+                 # Types de diplôme exclus malgré la famille (ex. pas de baccalauréat au collège).
+                 "types_exclus": TYPES_EXCLUS_PAR_NIVEAU_ETUDES.get(s.code, [])}
                 for s in Scolarite.objects.order_by('id')
             ],
             "types_diplomes": [
@@ -486,7 +503,7 @@ class NomenclatureFormationAPIView(APIView):
                 for ds in DiplomeSpecialite.objects.filter(selectionnable=True)
             ],
         }
-        cache.set('jobs_nomenclature_formation_v2', data, timeout=3600)
+        cache.set('jobs_nomenclature_formation_v3', data, timeout=3600)
         return Response(data, status=status.HTTP_200_OK)
 
 

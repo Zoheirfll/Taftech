@@ -15,6 +15,7 @@ class AuditLog(models.Model):
     ACTIONS = [
         ('APPROUVER_OFFRE', 'Approuver offre'),
         ('REFUSER_OFFRE', 'Refuser offre'),
+        ('CORRIGER_OFFRE', 'Corriger une offre en attente'),
         ('APPROUVER_ENTREPRISE', 'Approuver entreprise'),
         ('REFUSER_ENTREPRISE', 'Refuser entreprise'),
         ('SUPPRIMER_USER', 'Supprimer utilisateur'),
@@ -27,6 +28,7 @@ class AuditLog(models.Model):
         ('MODIFIER_CONFIG_IA', "Modifier la configuration IA (modèle, quotas, plafond)"),
         ('MODIFIER_INFOS_SOCIETE', "Modifier les informations société (coordonnées, mentions légales)"),
         ('STATUT_METIER', "Valider ou rejeter un métier proposé"),
+        ('DECISION_DEMANDE_AJOUT', "Décider d'une demande d'ajout au référentiel"),
         ('AUTRE', 'Autre'),
     ]
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')

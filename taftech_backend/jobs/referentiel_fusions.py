@@ -37,6 +37,9 @@ import unicodedata
 from django.db import transaction
 
 CHEMIN_INSTANTANE = os.path.join(os.path.dirname(__file__), 'data', 'referentiel_hierarchie_cible.json')
+# Liste validée des doublons de métiers à supprimer (distincte de l'instantané, que
+# `consolider_referentiel` réécrit à chaque exécution).
+CHEMIN_DOUBLONS_METIERS = os.path.join(os.path.dirname(__file__), 'data', 'metiers_doublons_supprimes.json')
 
 
 def _norm(s):
@@ -254,6 +257,96 @@ def appliquer_redirections_metiers(log):
         Metier.objects.filter(metier_canonique=source).update(metier_canonique=racine)
         source.metier_canonique = racine
         source.save(update_fields=['metier_canonique'])
+
+
+def _references_hors_relations(metier):
+    """Nombre de lignes (candidats, offres, appellations, autres métiers…) qui dépendent encore de
+    `metier`, hors `RelationMetier` (relations d'équivalence du classeur : supprimées avec lui)."""
+    from .models import Metier, RelationMetier
+
+    total = 0
+    for rel in Metier._meta.related_objects:
+        modele = rel.related_model
+        if modele is RelationMetier:
+            continue
+        lignes = modele.objects.filter(**{rel.field.name: metier})
+        if modele is Metier:
+            lignes = lignes.exclude(pk=metier.pk)  # un métier actif peut pointer vers lui-même
+        total += lignes.count()
+    return total
+
+
+def _sauvegarder_doublons(metiers, log):
+    """Écrit, avant toute suppression, un JSON des métiers et de leurs relations (de quoi les recréer)."""
+    from datetime import datetime
+
+    from django.conf import settings
+    from django.db.models import Q
+
+    from .models import RelationMetier
+
+    def ligne(objet):
+        return {champ.attname: getattr(objet, champ.attname) for champ in objet._meta.concrete_fields}
+
+    ids = [m.pk for m in metiers]
+    relations = RelationMetier.objects.filter(Q(metier_depart_id__in=ids) | Q(metier_arrivee_id__in=ids))
+    dossier = os.path.join(str(settings.BASE_DIR), 'backups')
+    os.makedirs(dossier, exist_ok=True)
+    chemin = os.path.join(dossier, f"doublons_metiers_{datetime.now():%Y%m%d_%H%M%S}.json")
+    with open(chemin, 'w', encoding='utf-8') as f:
+        json.dump(
+            {'metiers': [ligne(m) for m in metiers], 'relations': [ligne(r) for r in relations]},
+            f, ensure_ascii=False, indent=1, default=str,
+        )
+    log(f"  sauvegarde écrite : {chemin}")
+
+
+def supprimer_doublons_metiers(log, sauvegarder=True, chemin=CHEMIN_DOUBLONS_METIERS):
+    """Supprime les doublons de métiers listés dans `data/metiers_doublons_supprimes.json` (copies
+    masquées, redirigées vers l'exemplaire conservé, validées par l'utilisateur le 17/10/2026).
+
+    Garde-fous : un métier de la liste n'est supprimé que si son remplaçant existe ET porte le même
+    intitulé (un vrai doublon, pas un métier devenu distinct dans un classeur client modifié) ET si
+    plus rien ne le référence ailleurs (candidat, offre, appellation, autre métier…) ; sinon il est
+    ignoré et signalé, jamais supprimé de force. On ne s'appuie PAS sur son état « masqué/redirigé » :
+    un import neuf du classeur le recrée tel quel, avant tout rejeu. Une sauvegarde JSON (métiers +
+    relations) est écrite avant la suppression. Idempotente. L'import du classeur client recrée ces
+    métiers : cette fonction est donc rejouée après chaque import (`rejouer_consolidation`).
+    Retourne le nombre de métiers supprimés."""
+    from .models import Metier
+
+    if not os.path.exists(chemin):
+        log("  aucune liste de doublons de métiers — rien à supprimer.")
+        return 0
+    with open(chemin, encoding='utf-8') as f:
+        attendus = {entree['code']: entree for entree in json.load(f)['metiers']}
+
+    presents = {m.code: m for m in Metier.objects.filter(code__in=attendus)}
+    remplacants = {m.code: m for m in Metier.objects.filter(code__in={e['remplace_par'] for e in attendus.values()})}
+    a_supprimer = []
+    for code, infos in attendus.items():
+        metier = presents.get(code)
+        if metier is None:
+            continue
+        remplacant = remplacants.get(infos['remplace_par'])
+        if remplacant is None or remplacant.pk == metier.pk or remplacant.libelle.strip().lower() != metier.libelle.strip().lower():
+            log(f"  [ignoré] doublon {code} {metier.libelle!r} : le remplaçant {infos['remplace_par']} est absent ou n'a pas le même intitulé")
+            continue
+        reste = _references_hors_relations(metier)
+        if reste:
+            log(f"  [ignoré] doublon {code} {metier.libelle!r} : encore {reste} référence(s), à rattacher d'abord")
+            continue
+        a_supprimer.append((metier, remplacant))
+
+    if not a_supprimer:
+        log("  [déjà fait] aucun doublon de métier à supprimer.")
+        return 0
+    if sauvegarder:
+        _sauvegarder_doublons([m for m, _ in a_supprimer], log)
+    for metier, remplacant in a_supprimer:
+        log(f"  doublon supprimé : {metier.libelle!r} ({metier.code}) -> conservé {remplacant.libelle!r} ({remplacant.code})")
+    Metier.objects.filter(pk__in=[m.pk for m, _ in a_supprimer]).delete()
+    return len(a_supprimer)
 
 
 # ---------------------------------------------------------------------------
@@ -666,6 +759,11 @@ def rejouer_instantane(log, chemin=CHEMIN_INSTANTANE):
 def rejouer_consolidation(log):
     """Appelé à la fin de import_referentiel_v2 (même transaction)."""
     with transaction.atomic():
+        # L'import recrée les doublons de métiers du classeur client : on les supprime de nouveau
+        # (aucune sauvegarde ici : ils sont recréés à l'identique à chaque import). AVANT le rejeu
+        # de l'instantané : leurs groupes deviennent alors vides, et le rejeu ne supprime jamais un
+        # groupe qui contient encore un métier.
+        supprimer_doublons_metiers(log, sauvegarder=False)
         rejouer_instantane(log)
         appliquer_redirections_metiers(log)
         # Compétences d'offres et de candidats rattachées au référentiel (point 10) : l'import

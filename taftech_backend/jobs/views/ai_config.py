@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from ..models import AIConfig, QuotaIAOverride, UtilisationIA
 from ..permissions import IsAdminRole
 from ..serializers import AIConfigSerializer, QuotaIAOverrideSerializer
-from ..serializers.ai_config import CHAMPS_BUDGET, CHAMPS_PROMPT
+from ..serializers.ai_config import CHAMPS_BUDGET, CHAMPS_MODELE, CHAMPS_PROMPT
 from .admin import _audit
 
 User = get_user_model()
@@ -44,6 +44,13 @@ def _detail_config(avant, config):
     )
 
 
+def _detail_override(libelle, override):
+    """Résumé d'audit d'un quota personnalisé : compte, fonction et limites (∞ = illimité)."""
+    jour = '∞' if override.limite_jour is None else override.limite_jour
+    mois = '∞' if override.limite_mois is None else override.limite_mois
+    return f"{libelle} : {override.user.email} / {override.fonction} → {jour}/jour, {mois}/mois"[:DETAIL_AUDIT_MAX]
+
+
 def _donnees_visibles(donnees, utilisateur):
     """Les prompts ne sont exposés qu'au Super Admin ; `prompts_accessibles` permet à l'interface
     d'adapter l'écran sans connaître le statut de l'utilisateur."""
@@ -54,6 +61,7 @@ def _donnees_visibles(donnees, utilisateur):
             visibles.pop(champ, None)
     visibles['prompts_accessibles'] = est_super
     visibles['budget_modifiable'] = est_super
+    visibles['modele_modifiable'] = est_super
     return visibles
 
 
@@ -78,6 +86,11 @@ class AIConfigAdminAPIView(APIView):
         if not request.user.is_superuser and any(champ in request.data for champ in CHAMPS_BUDGET):
             return Response(
                 {'error': "La modification du plafond global et du seuil d'alerte est réservée au Super Admin.", 'code': 'BUDGET_RESERVE_SUPER_ADMIN'},
+                status=403,
+            )
+        if not request.user.is_superuser and any(champ in request.data for champ in CHAMPS_MODELE):
+            return Response(
+                {'error': "Le changement de fournisseur, de modèle, de température, d'effort de raisonnement ou de longueur maximale des réponses (max_tokens) est réservé au Super Admin.", 'code': 'MODELE_RESERVE_SUPER_ADMIN'},
                 status=403,
             )
         config = AIConfig.get_solo()
@@ -128,16 +141,21 @@ class QuotaIAOverridesAPIView(APIView):
                 user_id=serializer.validated_data['user'].id,
                 fonction=serializer.validated_data['fonction'],
             ).delete()
-            serializer.save()
+            override = serializer.save()
+            _audit(request, 'MODIFIER_CONFIG_IA', _detail_override("Quota personnalisé défini", override))
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
     def delete(self, request, pk):
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
-        deleted, _ = QuotaIAOverride.objects.filter(pk=pk).delete()
-        if not deleted:
+        try:
+            override = QuotaIAOverride.objects.select_related('user').get(pk=pk)
+        except QuotaIAOverride.DoesNotExist:
             return Response({'error': 'Introuvable.'}, status=404)
+        detail = _detail_override("Quota personnalisé supprimé", override)
+        override.delete()
+        _audit(request, 'MODIFIER_CONFIG_IA', detail)
         return Response(status=204)
 
 

@@ -32,10 +32,8 @@ def neutraliser_formules(ws):
                 cell.data_type = 's'
 
 
-def reponse_xlsx(nom_fichier, titre_onglet, colonnes, lignes):
-    """Construit la réponse HTTP d'un classeur à une feuille (en-têtes en gras, volet figé)."""
-    wb = Workbook()
-    ws = wb.active
+def _remplir_onglet(ws, titre_onglet, colonnes, lignes):
+    """Remplit une feuille : en-têtes en gras, formules neutralisées, largeurs, volet figé."""
     ws.title = (titre_onglet or "Export")[:LONGUEUR_MAX_ONGLET]
 
     ws.append([str(c) for c in colonnes])
@@ -54,7 +52,25 @@ def reponse_xlsx(nom_fichier, titre_onglet, colonnes, lignes):
         ws.column_dimensions[col_cells[0].column_letter].width = min(longueur + 2, LARGEUR_COLONNE_MAX)
     ws.freeze_panes = "A2"
 
+
+def _reponse_classeur(wb, nom_fichier):
     response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
     response['Content-Disposition'] = f'attachment; filename="{nom_fichier}.xlsx"'
     wb.save(response)
     return response
+
+
+def reponse_xlsx(nom_fichier, titre_onglet, colonnes, lignes):
+    """Construit la réponse HTTP d'un classeur à une feuille."""
+    wb = Workbook()
+    _remplir_onglet(wb.active, titre_onglet, colonnes, lignes)
+    return _reponse_classeur(wb, nom_fichier)
+
+
+def reponse_xlsx_multi(nom_fichier, onglets):
+    """Classeur à plusieurs feuilles ; `onglets` = [(titre, colonnes, lignes), ...]."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    for titre, colonnes, lignes in onglets:
+        _remplir_onglet(wb.create_sheet(), titre, colonnes, lignes)
+    return _reponse_classeur(wb, nom_fichier)

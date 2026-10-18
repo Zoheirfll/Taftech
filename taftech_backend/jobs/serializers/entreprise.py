@@ -16,7 +16,13 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
     intitule_poste = serializers.CharField(source='user.intitule_poste', read_only=True)
     photos = EntreprisePhotoSerializer(many=True, read_only=True)
     palier_actif = serializers.SerializerMethodField()
+    abonnement_expire_at = serializers.SerializerMethodField()
     secteur_activite_libelle = serializers.SerializerMethodField()
+
+    def get_abonnement_expire_at(self, obj):
+        # Relation inverse OneToOne : `getattr(..., None)` couvre l'absence d'abonnement.
+        abonnement = getattr(obj, 'abonnement', None)
+        return abonnement.date_expiration if abonnement else None
 
     def get_palier_actif(self, obj):
         from ..paliers_utils import get_palier_actif
@@ -34,5 +40,5 @@ class EntrepriseDashboardDetailSerializer(serializers.ModelSerializer):
             'wilaya_siege', 'commune_siege', 'adresse_complete', 'taille_entreprise', 'logo',
             'banniere', 'culture_entreprise', 'annee_creation', 'linkedin', 'site_web', 'photos',
             'description', 'est_approuvee', 'mise_en_avant_accueil', 'palier_actif',
-            'first_name', 'last_name', 'email', 'telephone', 'intitule_poste'
+            'abonnement_expire_at', 'first_name', 'last_name', 'email', 'telephone', 'intitule_poste'
         )

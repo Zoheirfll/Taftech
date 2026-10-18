@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from django.utils import timezone
@@ -21,6 +22,8 @@ from ..serializers import (
 )
 from .equipe import get_entreprise_for_user
 from ..throttles import FileUploadThrottle
+
+logger = logging.getLogger(__name__)
 
 
 class ProfilCandidatAPIView(APIView):
@@ -185,12 +188,16 @@ def _synchroniser_competences_depuis_texte(profil):
     profil.refresh_from_db(fields=['competences'])
     labels_texte = {l.strip() for l in (profil.competences or '').split(',') if l.strip()}
     labels_existants = set(profil.competences_detail.values_list('label', flat=True))
+    from ..demandes_ajout import demander_competence_saisie
     from ..referentiel_utils import construire_index_competences, resoudre_competence_ref
     index_competences = construire_index_competences()
     for label in labels_texte - labels_existants:
         # Même résolveur que l'offre (libellé OU synonyme) : le score est comparable (point 10).
         ref = resoudre_competence_ref(label, index_competences)
         CompetenceCandidat.objects.create(profil=profil, label=label, niveau='DEBUTANT', competence_ref=ref)
+        if ref is None:
+            # Hors référentiel : demande d'ajout implicite visible de l'admin (onglet « Demandes »).
+            demander_competence_saisie(profil.user, label)
     profil.competences_detail.exclude(label__in=labels_texte).delete()
 
 
@@ -235,6 +242,17 @@ class ExperienceDetailAPIView(APIView):
             return Response({"error": "Expérience introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
 
+def _synchroniser_demandes_formation(formation, request):
+    """Crée ou rejoint les demandes d'ajout au référentiel liées à la formation (« Autre, préciser » :
+    diplôme ou spécialité absent de la liste). Jamais bloquant : un échec est journalisé et la formation
+    reste enregistrée."""
+    try:
+        from ..demandes_ajout import synchroniser_depuis_formation
+        synchroniser_depuis_formation(formation, request.user, request.data.get('specialite_autre') or '')
+    except Exception:
+        logger.exception("Synchronisation des demandes d'ajout impossible pour la formation %s", formation.pk)
+
+
 class FormationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -244,7 +262,8 @@ class FormationAPIView(APIView):
         profil = request.user.profil_candidat
         serializer = FormationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(profil=profil)
+            formation = serializer.save(profil=profil)
+            _synchroniser_demandes_formation(formation, request)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -261,7 +280,8 @@ class FormationDetailAPIView(APIView):
             return Response({"error": "Formation introuvable."}, status=status.HTTP_404_NOT_FOUND)
         serializer = FormationSerializer(formation, data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            formation = serializer.save()
+            _synchroniser_demandes_formation(formation, request)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

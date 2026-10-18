@@ -77,6 +77,18 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     def get_secteur_libelle(self, obj):
         return _secteur_libelle_pour_offre(obj)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Règle client : le recruteur garde son intitulé public (`titre`), rattaché en interne à un
+        # métier de référence qui ne sert qu'au calcul (matching) et n'est montré qu'au recruteur et
+        # à l'admin. Sûr par défaut : retiré de toute réponse publique ou candidat, numéro compris
+        # (l'API publique des nomenclatures permet de retrouver le nom à partir du numéro), sauf si
+        # l'appelant le demande explicitement (`context={'inclure_metier_reference': True}`).
+        if not self.context.get('inclure_metier_reference'):
+            data.pop('metier', None)
+            data.pop('metier_libelle', None)
+        return data
+
 
 class OffreEmploiCreateDTO(serializers.ModelSerializer):
     class Meta:

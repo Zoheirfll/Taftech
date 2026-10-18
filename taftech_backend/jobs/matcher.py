@@ -366,6 +366,9 @@ def _annees_experience(exp):
             fin = datetime.datetime.strptime(fin, "%Y-%m-%d").date()
         except ValueError:
             fin = None
+    if fin and getattr(exp, "date_fin_precision", "JOUR") == "ANNEE":
+        # « 2023 » seul : l'expérience peut courir jusqu'à fin 2023 (31/12), sans dépasser aujourd'hui.
+        fin = min(datetime.date(fin.year, 12, 31), datetime.date.today())
     if not fin:
         fin = datetime.date.today()
     try:

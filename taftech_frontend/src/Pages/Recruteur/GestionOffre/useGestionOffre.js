@@ -365,8 +365,11 @@ export const useGestionOffre = () => {
   const handleAnalyseGroq = async () => {
     setLoadingGroq(true);
     try {
+      // « Relancer » (une analyse existe déjà) demande une nouvelle analyse : sans cela, le serveur
+      // renvoie le résultat stocké quand le profil n'a pas changé et le bouton semblerait inactif.
       const data = await jobsService.getAnalyseGroqRecruteur(
         selectedCandidature.id,
+        Boolean(analyseGroq),
       );
       setAnalyseGroq(data.analyse);
       patchAnalyseCandidature(selectedCandidature.id, data.analyse);

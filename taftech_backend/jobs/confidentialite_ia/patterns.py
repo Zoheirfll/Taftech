@@ -22,13 +22,18 @@ MOTIFS = (
     ("ADRESSE", re.compile(
         r"\b\d{1,4}\s*,?\s*(?:bis\s+)?(?:rue|avenue|boulevard|bd|cit[ée]|lotissement|lot|hai|chemin"
         r"|route|r[ée]sidence)\b[^\n]{3,80}", re.I)),
+    ("ADRESSE", re.compile(r"العنوان\s*:?[^\n]{3,100}")),
+    ("DATE_NAISSANCE", re.compile(
+        rf"(?:تاريخ\s+الميلاد|المولود(?:ة)?\s+في|ولد(?:ت)?\s+في)\s*:?\s*(?P<valeur>{_DATE})")),
     ("TELEPHONE", re.compile(
         r"(?<!\d)(?:(?:\+|00)213[\s.\-]?|0)"
         r"(?:[5-7](?:[\s.\-]?\d{2}){4}|[2-4]\d(?:[\s.\-]?\d{2}){3})(?!\d)")),
 )
 
-TITRE_REFERENCES = re.compile(r"^\s*(?:personnes?\s+de\s+)?r[ée]f[ée]rences?\s*:?\s*$", re.I)
+TITRE_REFERENCES = re.compile(
+    r"^\s*(?:personnes?\s+de\s+)?(?:r[ée]f[ée]rences?|المراجع|مراجع)\s*:?\s*$", re.I)
 TITRE_SECTION = re.compile(
     r"^\s*(?:exp[ée]riences?|formations?|comp[ée]tences?|langues?|loisirs?"
-    r"|centres?\s+d['’]int[ée]r[êe]ts?|projets?|certifications?|dipl[ôo]mes?)\b", re.I)
+    r"|centres?\s+d['’]int[ée]r[êe]ts?|projets?|certifications?|dipl[ôo]mes?"
+    r"|الخبرات|الخبرة|التكوين|المهارات|اللغات|الهوايات|المشاريع|الشهادات)\b", re.I)
 MAX_LIGNES_REFERENCES = 8

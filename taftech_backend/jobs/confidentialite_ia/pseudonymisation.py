@@ -88,11 +88,18 @@ def nettoyer_texte(texte, *, avec_ner=None, noms_connus=()) -> ResultatNettoyage
     texte = texte or ""
     if avec_ner is None:
         avec_ner = _ner_actif()
+    from .ner_arabe import SEUIL_ARABE, normaliser_chiffres, proportion_arabe
     texte, nb_references = retirer_section_references(texte)
-    detections = detecter_motifs(texte) + detecter_noms_connus(texte, noms_connus)
+    # Chiffres arabo-indiens → ASCII, même longueur : les positions détectées valent aussi
+    # pour le texte d'origine, sur lequel le remplacement s'applique.
+    normalise = normaliser_chiffres(texte)
+    detections = detecter_motifs(normalise) + detecter_noms_connus(texte, noms_connus)
     if avec_ner:
         from .ner import entites_ner
         detections += entites_ner(texte)
+        if proportion_arabe(texte) >= SEUIL_ARABE:
+            from .ner_arabe import entites_ner_arabe
+            detections += entites_ner_arabe(texte)
     retenues = fusionner(detections)
     categories = dict(Counter(d.categorie for d in retenues))
     if nb_references:

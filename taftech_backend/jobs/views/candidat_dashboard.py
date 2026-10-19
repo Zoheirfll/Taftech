@@ -125,7 +125,7 @@ class ConseilsPersonnalisesIAAPIView(APIView):
                 "genere_le": profil.conseils_dashboard_le.isoformat(),
             }, status=200)
         except Exception as e:
-            logger.error("Erreur Groq conseils personnalisés : %s", e)
+            logger.error("Erreur Groq conseils personnalisés : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({"error": "Service IA temporairement indisponible."}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'CONSEILS_DASHBOARD')

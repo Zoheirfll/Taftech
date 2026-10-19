@@ -338,7 +338,13 @@ class ParserCVAPIView(APIView):
             )
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Jamais le texte brut de l'exception dans la réponse : il peut venir du fournisseur IA
+            # (clé, organisation, extrait de la requête). Le type d'erreur suffit au diagnostic.
+            logger.error("Erreur parsing CV : %s", type(e).__name__)
+            return Response(
+                {"error": "Erreur lors de l'analyse du CV.", "code": "PARSING_ECHEC"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         finally:
             liberer_verrou_ia(request.user, 'PARSER_CV')
             if os.path.exists(tmp_file.name):
@@ -397,7 +403,7 @@ class AnalyseCarriereGroqAPIView(APIView):
                 'genere_le': profil.analyse_carriere_le.isoformat(),
             })
         except Exception as e:
-            logger.error("Erreur Groq carrière : %s", e)
+            logger.error("Erreur Groq carrière : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'SUGGESTIONS_METIER')
@@ -511,7 +517,7 @@ class AnalyseGroqRecruteurAPIView(APIView):
             candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le'])
             return Response({'analyse': analyse, 'quota_ia': quota_info})
         except Exception as e:
-            logger.error("Erreur Groq recruteur : %s", e)
+            logger.error("Erreur Groq recruteur : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'ANALYSE_RECRUTEUR')
@@ -596,7 +602,7 @@ class GenererOffreIAAPIView(APIView):
                     break
                 except Exception as e:
                     derniere_erreur = e
-                    logger.warning("GenererOffreIA tentative %s échouée : %s", tentative + 1, e)
+                    logger.warning("GenererOffreIA tentative %s échouée : %s", tentative + 1, type(e).__name__)
             if data is None:
                 raise derniere_erreur
             questions_brutes = data.get('questions_entretien', [])
@@ -667,7 +673,7 @@ class GenererOffreIAAPIView(APIView):
                 'quota_ia': quota_info,
             })
         except Exception as e:
-            logger.error("Erreur GenererOffreIA : %s", e)
+            logger.error("Erreur GenererOffreIA : %s", type(e).__name__)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'GENERATION_OFFRE')

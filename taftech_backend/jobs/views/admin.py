@@ -383,6 +383,21 @@ class AdminUsersListAPIView(APIView):
         return response
 
 
+class AdminDossierCandidatAPIView(APIView):
+    """Dossier complet d'un candidat (niveaux de compétences et de langues, candidatures, activité,
+    usage de l'IA) pour la fiche admin. Chargé à l'ouverture de la fiche : la liste des utilisateurs
+    reste légère. Lecture seule, réservé aux administrateurs ; 404 pour tout compte non candidat."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, user_id):
+        from ..admin_dossier_candidat import dossier_candidat
+        user = User.objects.filter(pk=user_id, role='CANDIDAT').exclude(is_superuser=True).first()
+        profil = getattr(user, 'profil_candidat', None) if user else None
+        if user is None or profil is None:
+            return Response({'error': 'Candidat introuvable.'}, status=404)
+        return Response(dossier_candidat(user, profil))
+
+
 class AdminUserModerateAPIView(APIView):
     permission_classes = [IsAdminRole]
 

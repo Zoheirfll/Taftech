@@ -15,6 +15,7 @@ import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 import { formatDatePrecise, formatAge } from "../../utils/cvDates";
 import { nomWilaya } from "../../utils/wilaya";
+import DossierCandidatAdmin from "./DossierCandidatAdmin";
 
 // Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
 const ROLE_BADGES = {
@@ -356,10 +357,10 @@ const AdminUsers = () => {
                   Contact & Compte
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium`}>
-                  📧 {selectedUser.email}
+                  E-mail : {selectedUser.email}
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
-                  📞 {selectedUser.telephone || "Non renseigné"}
+                  Téléphone : {selectedUser.telephone || "Non renseigné"}
                 </p>
                 <p className={`text-xs ${tw.textPrimary} font-semibold mt-1`}>
                   {ROLE_BADGES[selectedUser.role]?.label || selectedUser.role} · inscrit le {formatDate(selectedUser.date_joined)}
@@ -382,8 +383,8 @@ const AdminUsers = () => {
                   className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? tw.scoreHigh : "bg-red-50 text-red-600"}`}
                 >
                   {selectedUser.consentement_loi_18_07
-                    ? "✅ Loi 18-07 acceptée"
-                    : "❌ Loi 18-07 non acceptée"}
+                    ? "Loi 18-07 acceptée"
+                    : "Loi 18-07 non acceptée"}
                 </span>
               </div>
             </div>
@@ -413,7 +414,7 @@ const AdminUsers = () => {
                         {selectedUser.profil_candidat.diplome || "N/A"}
                       </p>
                       <p className="text-xs text-indigo-600 mt-0.5">
-                        📍 {nomWilaya(selectedUser.profil_candidat.wilaya) || "N/A"}
+                        {nomWilaya(selectedUser.profil_candidat.wilaya) || "N/A"}
                         {selectedUser.profil_candidat.commune
                           ? ` · ${selectedUser.profil_candidat.commune}`
                           : ""}
@@ -559,20 +560,27 @@ const AdminUsers = () => {
                     </div>
                   )}
 
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
-                    <div>
-                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
-                        Compétences
-                      </p>
-                      {renderTags(selectedUser.profil_candidat.competences)}
-                    </div>
-                    <div>
-                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
-                        Langues
-                      </p>
-                      {renderTags(selectedUser.profil_candidat.langues)}
-                    </div>
-                  </div>
+                  {/* Dossier détaillé chargé à l'ouverture de la fiche (niveaux, candidatures, activité,
+                      IA). Le bloc simple ci-dessous sert de repli pendant le chargement ou en cas d'échec. */}
+                  <DossierCandidatAdmin
+                    userId={selectedUser.id}
+                    repli={
+                      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
+                        <div>
+                          <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
+                            Compétences
+                          </p>
+                          {renderTags(selectedUser.profil_candidat.competences)}
+                        </div>
+                        <div>
+                          <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
+                            Langues
+                          </p>
+                          {renderTags(selectedUser.profil_candidat.langues)}
+                        </div>
+                      </div>
+                    }
+                  />
 
                   {selectedUser.profil_candidat.cv_pdf && (
                     <div className="text-center pt-2">
@@ -582,7 +590,7 @@ const AdminUsers = () => {
                         rel="noreferrer"
                         className={`inline-flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
                       >
-                        📄 Télécharger le CV PDF
+                        Télécharger le CV PDF
                       </a>
                     </div>
                   )}

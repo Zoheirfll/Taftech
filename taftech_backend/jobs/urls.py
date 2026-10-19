@@ -41,7 +41,7 @@ from .views import (
     # Admin
     AdminOffresListAPIView, AdminOffreModerateAPIView, AdminOffreCorrigerAPIView,
     AdminEntreprisesListAPIView, AdminEntrepriseModerateAPIView,
-    AdminStatsAPIView, AdminSeoStatsAPIView, AdminUsersListAPIView, AdminUserModerateAPIView,
+    AdminStatsAPIView, AdminSeoStatsAPIView, AdminUsersListAPIView, AdminDossierCandidatAPIView, AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView, AdminCandidaturesListAPIView,
     ExportAdminCandidaturesExcelAPIView, ExportEntreprisesExcelAPIView,
     ExportOffresExcelAPIView, ExportUtilisateursExcelAPIView,
@@ -203,6 +203,7 @@ urlpatterns = [
     path('admin/statistiques/', AdminStatsAPIView.as_view(), name='admin-stats'),
     path('admin/seo/', AdminSeoStatsAPIView.as_view(), name='admin-seo-stats'),
     path('admin/utilisateurs/', AdminUsersListAPIView.as_view(), name='admin-users'),
+    path('admin/utilisateurs/<int:user_id>/dossier/', AdminDossierCandidatAPIView.as_view(), name='admin-dossier-candidat'),
     path('admin/utilisateurs/<int:user_id>/moderer/', AdminUserModerateAPIView.as_view(), name='admin-user-moderer'),
     path('admin/broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='admin-broadcast'),
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures'),

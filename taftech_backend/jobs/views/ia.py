@@ -372,23 +372,10 @@ class AnalyseCarriereGroqAPIView(APIView):
         except Exception:
             return Response({'error': 'Profil introuvable.'}, status=404)
 
-        experiences = [
-            f"{e.titre_poste} chez {e.entreprise} ({_date_precise(e.date_debut, e.date_debut_precision)} - {_date_precise(e.date_fin, e.date_fin_precision) or 'présent'})"
-            for e in profil.experiences_detail.all()
-        ]
-        formations = [f"{f.diplome} à {f.etablissement}" for f in profil.formations_detail.all()]
-
-        metier_actuel = profil.metier.libelle if profil.metier else None
-        metier_souhaite = profil.metier_souhaite.libelle if profil.metier_souhaite else None
-        profil_text = f"""
-Titre : {profil.titre_professionnel or 'Non renseigné'}
-Diplôme : {profil.diplome or 'Non renseigné'}
-Métier : {metier_actuel or 'Non renseigné'}
-Compétences : {profil.competences or 'Non renseigné'}
-Expériences : {', '.join(experiences) if experiences else 'Aucune'}
-Formations : {', '.join(formations) if formations else 'Aucune'}
-Métier souhaité : {metier_souhaite or 'Non renseigné'}
-"""
+        # Texte construit par confidentialite_ia.construction : employeurs pseudonymisés, établissements
+        # retirés, coordonnées masquées — le même texte est montré au candidat par l'aperçu.
+        from ..confidentialite_ia.construction import texte_carriere
+        profil_text = texte_carriere(profil)
         if not acquerir_verrou_ia(request.user, 'SUGGESTIONS_METIER'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'SUGGESTIONS_METIER')
@@ -397,7 +384,7 @@ Métier souhaité : {metier_souhaite or 'Non renseigné'}
             analyse = _appel_groq([
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
-            ], max_tokens=ai_config.analyse_carriere_max_tokens)
+            ], max_tokens=ai_config.analyse_carriere_max_tokens, donnees_candidat=profil_text)
             profil.derniere_analyse_carriere = analyse
             profil.analyse_carriere_le = timezone.now()
             profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le'])

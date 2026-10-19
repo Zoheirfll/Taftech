@@ -92,29 +92,10 @@ class ConseilsPersonnalisesIAAPIView(APIView):
         except Exception:
             return Response({"error": "Profil introuvable."}, status=404)
 
-        score = calculer_score_profil(request.user)
-        candidatures = Candidature.objects.filter(candidat=request.user)
-        from ..models import AlerteEmploi
-        alertes = AlerteEmploi.objects.filter(candidat=request.user)
-
-        competences_faibles = [
-            f"{c.label} ({c.get_niveau_display()})"
-            for c in profil.competences_detail.exclude(niveau='CONFIRME')[:5]
-        ]
-        nb_nouvelles_offres_alertes = sum(
-            1 for a in alertes if a.derniere_consultation is None
-        )
-
-        donnees_text = f"""
-Score de profil global : {score['total']}/100
-Détail du score : {score['details']}
-Nombre de candidatures envoyées : {candidatures.count()}
-Statuts des candidatures : {list(candidatures.values_list('statut', flat=True))}
-Compétences non confirmées (niveau faible) : {', '.join(competences_faibles) if competences_faibles else 'Aucune'}
-Nombre d'alertes emploi configurées : {alertes.count()}
-Titre professionnel : {profil.titre_professionnel or 'Non renseigné'}
-Diplôme : {profil.diplome or 'Non renseigné'}
-"""
+        # Données strictement nécessaires (effectifs par statut, diplôme du référentiel) : le même
+        # texte est montré au candidat par l'aperçu des données transmises.
+        from ..confidentialite_ia.construction import texte_conseils
+        donnees_text = texte_conseils(request.user, profil)
         if not acquerir_verrou_ia(request.user, 'CONSEILS_DASHBOARD'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'CONSEILS_DASHBOARD')
@@ -129,6 +110,7 @@ Diplôme : {profil.diplome or 'Non renseigné'}
                 ],
                 max_tokens=ai_config.conseils_dashboard_max_tokens,
                 response_format={'type': 'json_object'},
+                donnees_candidat=donnees_text,
             )
             parsed = json.loads(content)
             conseils = parsed.get('conseils', [])

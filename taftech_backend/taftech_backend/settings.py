@@ -208,6 +208,9 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # EXTERNAL APIS
 # ──────────────────────────────────────────────
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+# Détection locale de noms/lieux (spaCy français, Stanza arabe) avant tout envoi à l'IA — voir
+# jobs/confidentialite_ia/. Ne peut pas être désactivé en production (garde plus bas).
+CONFIDENTIALITE_IA_NER_ACTIF = os.getenv('CONFIDENTIALITE_IA_NER_ACTIF', 'true').lower() != 'false'
 
 # Chargily Pay — paiement en ligne algérien (CIB + EDAHABIA)
 # Clés disponibles sur : https://pay.chargily.net/dashboard → Développeurs
@@ -240,6 +243,11 @@ if not DEBUG:
         raise ImproperlyConfigured(
             "Variables d'environnement manquantes en production : "
             + ", ".join(_MISSING_SECRETS)
+        )
+    if not CONFIDENTIALITE_IA_NER_ACTIF:
+        raise ImproperlyConfigured(
+            "CONFIDENTIALITE_IA_NER_ACTIF ne peut pas être désactivé en production "
+            "(les noms doivent être masqués avant tout envoi à l'IA)."
         )
 
 # URL publique du frontend (utilisée dans les emails)

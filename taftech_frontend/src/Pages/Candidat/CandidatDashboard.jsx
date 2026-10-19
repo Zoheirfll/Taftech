@@ -5,6 +5,7 @@ import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import { TooltipIcon } from "../../Components/Tooltip";
 import QuotaIABadge from "../../Components/QuotaIABadge";
+import { ApercuDonneesIA } from "../../Components/ApercuDonneesIA";
 import RadialGauge from "../../Components/RadialGauge";
 import { jobUrl } from "../../utils/slugify";
 import {
@@ -681,6 +682,9 @@ const CandidatDashboard = () => {
                   <Lightbulb size={12} /> {conseilsDemandes ? "Ré-analyser" : "Générer mes conseils"}
                 </button>
               )}
+            </div>
+            <div className="mb-3">
+              <ApercuDonneesIA fonction="CONSEILS_DASHBOARD" />
             </div>
             {(conseilsGenereLe || quotaConseils) && (
               <div className={`flex items-center gap-2 text-[10px] ${tw.textMuted700} mb-2`}>

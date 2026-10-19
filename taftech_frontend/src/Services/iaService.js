@@ -31,6 +31,24 @@ export const iaService = {
     }
   },
 
+  // Aperçu exact du texte qui sera transmis à l'IA (ne consomme aucun quota, n'appelle pas l'IA).
+  // `fichier` : CV choisi mais pas encore analysé ; omis, le backend lit le CV du profil.
+  getApercuDonneesIA: async (fonction, fichier = null) => {
+    try {
+      const formData = new FormData();
+      formData.append("fonction", fonction);
+      if (fichier) formData.append("cv", fichier);
+      const response = await api.post("jobs/ia/apercu-donnees/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_APERCU_DONNEES_IA", err);
+      throw err;
+    }
+  },
+
   // Corrections faites par le candidat sur les champs pré-remplis (améliore le parser, voir
   // jobs/views/qualite_ia.py). Best-effort : ne doit jamais bloquer l'enregistrement du profil.
   envoyerCorrectionsParsing: async (parsingId, corrections) => {

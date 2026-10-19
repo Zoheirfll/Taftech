@@ -4,6 +4,7 @@ import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
 import QuotaIABadge from "../../Components/QuotaIABadge";
+import { ApercuDonneesIA } from "../../Components/ApercuDonneesIA";
 import {
   Sparkles,
   TrendingUp,
@@ -254,6 +255,10 @@ const SuggestionsCarriere = () => {
               <Sparkles size={13} /> {analysedemandee && analyse ? "Ré-analyser" : "Analyser mon profil"}
             </button>
           )}
+        </div>
+
+        <div className={`px-5 py-3 border-b ${tw.borderSubtle}`}>
+          <ApercuDonneesIA fonction="ANALYSE_CARRIERE" />
         </div>
 
         {(analyseGenereLe || quotaAnalyse) && (

@@ -29,6 +29,7 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getConstants: vi.fn(),
     parserCV: vi.fn(),
+    getApercuDonneesIA: vi.fn(),
     ajouterCompetence: vi.fn(),
     supprimerCompetence: vi.fn(),
     searchCompetences: vi.fn(),
@@ -137,6 +138,12 @@ describe("OnboardingWizard", () => {
     const file = new File(["contenu"], "cv.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
 
+    // Le fichier choisi n'est plus analysé tout de suite : le candidat peut d'abord consulter les
+    // données transmises à l'IA, puis lance l'analyse.
+    const boutonAnalyser = await screen.findByRole("button", { name: /Analyser mon CV/i });
+    expect(jobsService.parserCV).not.toHaveBeenCalled();
+    fireEvent.click(boutonAnalyser);
+
     await screen.findByLabelText("Diplôme");
     expect(screen.getByLabelText("Diplôme")).toHaveValue("5");
 
@@ -172,6 +179,7 @@ describe("OnboardingWizard", () => {
     const input = document.querySelector('input[type="file"]');
     const file = new File(["contenu"], "cv.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Analyser mon CV/i }));
 
     // Etape 2 (Infos) puis étape 3 (Expériences) — on les passe pour atteindre Formations.
     await screen.findByRole("button", { name: /Continuer/i });

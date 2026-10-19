@@ -636,7 +636,11 @@ def _resoudre_specialite_via_ia(texte, candidates):
     jamais une spécialité hors de cette liste restreinte. Best-effort, comme le repli
     diplôme : toute erreur retombe silencieusement sur None."""
     from .ai_engine import call_ai
+    from .confidentialite_ia import nettoyer_intitule_formation
 
+    texte = nettoyer_intitule_formation(texte)  # sans nom d'établissement ni coordonnées
+    if not texte:
+        return None  # il ne reste que le nom de l'établissement : rien à classifier
     liste = "\n".join(f"{i}: {c.libelle}" for i, c in enumerate(candidates))
     prompt = (
         "Un candidat a déclaré cet intitulé de formation sur son CV : "
@@ -654,13 +658,15 @@ def _resoudre_specialite_via_ia(texte, candidates):
             max_tokens=300,
             temperature=0,
             response_format={"type": "json_object"},
+            donnees_candidat=texte,
         )
         data = json.loads(content)
         idx = data.get("index")
         if isinstance(idx, int) and 0 <= idx < len(candidates):
             return candidates[idx]
-    except Exception:
-        logger.warning("Départage IA spécialité échoué pour %r", texte, exc_info=True)
+    except Exception as exc:
+        # Jamais l'intitulé saisi dans les journaux : seulement le type d'erreur.
+        logger.warning("Départage IA spécialité échoué (%s)", type(exc).__name__)
     return None
 
 
@@ -674,7 +680,12 @@ def _resoudre_diplome_via_ia(texte):
     retombe silencieusement sur None — ce repli ne doit jamais faire échouer tout le
     parsing du CV."""
     from .ai_engine import call_ai
+    from .confidentialite_ia import nettoyer_intitule_formation
     from .models import TypeDiplome
+
+    texte = nettoyer_intitule_formation(texte)  # sans nom d'établissement ni coordonnées
+    if not texte:
+        return None  # il ne reste que le nom de l'établissement : rien à classifier
 
     # "D-AUTRE" (le placeholder générique "Autre diplôme — préciser") est exclu de la liste
     # proposée à l'IA — bug réel constaté : privée de tout candidat pertinent, l'IA se
@@ -710,13 +721,15 @@ def _resoudre_diplome_via_ia(texte):
             max_tokens=300,
             temperature=0,
             response_format={"type": "json_object"},
+            donnees_candidat=texte,
         )
         data = json.loads(content)
         idx = data.get("index")
         if isinstance(idx, int) and 0 <= idx < len(types):
             return types[idx]
-    except Exception:
-        logger.warning("Résolution diplôme via IA échouée pour %r", texte, exc_info=True)
+    except Exception as exc:
+        # Jamais l'intitulé saisi dans les journaux : seulement le type d'erreur.
+        logger.warning("Résolution diplôme via IA échouée (%s)", type(exc).__name__)
     return None
 
 

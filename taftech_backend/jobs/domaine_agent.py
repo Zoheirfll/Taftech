@@ -166,23 +166,27 @@ def classifier_metiers_experiences(experiences, titre_professionnel=None):
     if not experiences and not titre_professionnel:
         return {}
 
+    from .confidentialite_ia import nettoyer_champ  # même nettoyage que partout avant l'IA
+
     decalage = 1 if titre_professionnel else 0
     blocs = []
     candidats_par_index = {}
     if titre_professionnel:
         candidats = _candidats_pour_experience(titre_professionnel, "")
         candidats_par_index[0] = candidats
-        blocs.append(_bloc_experience(0, f"[PROFIL] {titre_professionnel}", "", candidats))
+        blocs.append(_bloc_experience(0, f"[PROFIL] {nettoyer_champ(titre_professionnel)}", "", candidats))
     for i, exp in enumerate(experiences):
         titre_poste = exp.get('titre_poste', '') if isinstance(exp, dict) else ''
         description = exp.get('description', '') if isinstance(exp, dict) else ''
-        candidats = _candidats_pour_experience(titre_poste, description)
+        candidats = _candidats_pour_experience(titre_poste, description)  # local : valeurs brutes
         candidats_par_index[i + decalage] = candidats
-        blocs.append(_bloc_experience(i + decalage, titre_poste, description, candidats))
+        # Ce qui part vers l'IA est nettoyé : e-mails, téléphones, liens, adresses masqués.
+        blocs.append(_bloc_experience(
+            i + decalage, nettoyer_champ(titre_poste), nettoyer_champ(description), candidats))
 
     prompt = PROMPT_CLASSIFICATION.replace("{experiences_bloc}", "\n\n".join(blocs))
 
-    content = _call_groq(prompt, max_tokens=2000)
+    content = _call_groq(prompt, max_tokens=2000, donnees_candidat="\n\n".join(blocs))
     infos = _extract_json_object(content)
     if not infos or not isinstance(infos.get('classifications'), list):
         logger.warning("Agent métier : réponse Groq invalide ou vide, fallback appelant.")

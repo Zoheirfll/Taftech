@@ -9,7 +9,9 @@
 
 ## 🆕 SESSION 19/10/2026 — Paragraphe à ajouter à la page « Confidentialité » (action de l'admin)
 
-La page `/confidentialite` est un **contenu éditable en base** (Admin → Pages du site), pas du code : il n'a donc pas été modifié automatiquement (c'est un texte juridique). Le consentement à l'inscription (`RegisterCandidat.jsx`, point 4) et l'aperçu des données IA mentionnent déjà le transfert. **À copier dans la page** (relu par un juriste avant publication) :
+La page `/confidentialite` est un **contenu éditable en base** (Admin → Pages du site), pas du code : chaque environnement a la sienne. Le consentement à l'inscription (`RegisterCandidat.jsx`, point 4) et l'aperçu des données IA mentionnent déjà le transfert.
+
+**Fait en développement (19/10/2026)** : la section « 6. Analyse par intelligence artificielle (facultative) » a été ajoutée, « Vos droits » devenant la section 7, avec la commande `python manage.py ajouter_paragraphe_ia_confidentialite` (idempotente, `--dry-run` pour prévisualiser, trace dans le journal d'audit ; code : `jobs/management/commands/ajouter_paragraphe_ia_confidentialite.py`). **En production** : lancer la même commande **après relecture juridique** du texte ci-dessous (ou le coller à la main dans Admin → Pages du site). Texte :
 
 > **Analyse par intelligence artificielle (facultative).** Pour analyser un CV, proposer des métiers ou des conseils, TafTech envoie à un prestataire d'intelligence artificielle situé hors d'Algérie (Groq, États-Unis) une version de vos données dans laquelle votre nom, vos coordonnées, votre adresse, votre date de naissance, vos pièces d'identité et vos liens personnels sont masqués. Le prestataire n'en conserve aucune copie (rétention zéro des données). Vous pouvez consulter le texte exact avant chaque envoi. Le calcul des correspondances avec les offres est réalisé par TafTech, sans prestataire d'IA externe. Ces fonctions sont facultatives.
 

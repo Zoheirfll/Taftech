@@ -5,6 +5,7 @@ import { reportError } from "../../utils/errorReporter";
 import InfoBanner from "../../Components/InfoBanner";
 import QuotaIABadge from "../../Components/QuotaIABadge";
 import { ApercuDonneesIA } from "../../Components/ApercuDonneesIA";
+import { bloqueLaFonctionIA } from "../../utils/erreursIA";
 import {
   Sparkles,
   TrendingUp,
@@ -134,7 +135,7 @@ const SuggestionsCarriere = () => {
       setAnalyse(
         err.response?.data?.error || "Service IA temporairement indisponible. Réessayez plus tard.",
       );
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaAnalyse({ ...err.response.data, disponible: false });
       }
     } finally {

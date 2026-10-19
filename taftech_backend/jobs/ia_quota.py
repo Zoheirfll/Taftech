@@ -150,6 +150,16 @@ def verifier_quota_ia(user, fonction):
     """Retourne (ok: bool, payload: dict). `payload` contient toujours quota_restant_jour/mois
     (None = illimité) ; si ok=False, ajoute 'error', 'code', 'renouvellement_le'."""
     config = AIConfig.get_solo()
+    # Fournisseur en pause (quota du plan Groq atteint) : on le dit tout de suite, sans verrou ni
+    # décompte. Le reste de la plateforme n'est pas concerné ; la lecture d'un résultat déjà stocké
+    # est traitée avant cette vérification par les vues.
+    from .ai_engine import fournisseur_sature
+    if config.provider == 'GROQ' and fournisseur_sature():
+        return False, {
+            'error': "L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement.",
+            'code': 'IA_FOURNISSEUR_SATURE',
+            'renouvellement_le': None,
+        }
     if config.budget_ia_appels_mois_max is not None:
         total_mois = appels_ia_du_mois()
         if total_mois >= config.budget_ia_appels_mois_max:
@@ -215,6 +225,16 @@ def consommer_quota_ia(user, fonction):
 def utilisation_courante():
     """Clé de la ligne UtilisationIA de la demande en cours, ou None hors contexte de quota."""
     return _utilisation_courante.get()
+
+
+def rembourser_quota_ia():
+    """Rembourse l'appel de la demande en cours : le fournisseur a refusé faute de quota (429), ce
+    n'est pas la faute de l'utilisateur. La ligne reste dans le journal (traçabilité) mais ne compte
+    plus dans aucun quota ni dans le plafond global. À appeler avant `liberer_verrou_ia`.
+    Les autres pannes (délai dépassé, JSON invalide) restent décomptées, comme demandé le 18/08."""
+    pk = _utilisation_courante.get()
+    if pk:
+        UtilisationIA.objects.filter(pk=pk).update(statut='REMBOURSE')
 
 
 def verifier_alertes_budget_ia():

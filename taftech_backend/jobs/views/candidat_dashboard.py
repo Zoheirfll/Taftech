@@ -17,7 +17,8 @@ from ..models import (
 )
 from ..profile_score import calculer_score_profil
 from ..metiers_matching import calculer_metiers_accessibles
-from .ia import GroqThrottle
+from .ia import GroqThrottle, reponse_fournisseur_sature
+from ..ai_engine import FournisseurIASature
 from ..throttles import FileUploadThrottle
 
 MAX_DOCUMENTS_CANDIDAT = 20
@@ -137,6 +138,8 @@ class ConseilsPersonnalisesIAAPIView(APIView):
                 "conseils": conseils, "quota_ia": quota_info,
                 "genere_le": profil.conseils_dashboard_le.isoformat(),
             }, status=200)
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
             logger.error("Erreur Groq conseils personnalisés : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({"error": "Service IA temporairement indisponible."}, status=503)

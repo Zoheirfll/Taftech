@@ -6,6 +6,7 @@ import { reportError } from "../../utils/errorReporter";
 import { TooltipIcon } from "../../Components/Tooltip";
 import QuotaIABadge from "../../Components/QuotaIABadge";
 import { ApercuDonneesIA } from "../../Components/ApercuDonneesIA";
+import { bloqueLaFonctionIA } from "../../utils/erreursIA";
 import RadialGauge from "../../Components/RadialGauge";
 import { jobUrl } from "../../utils/slugify";
 import {
@@ -242,7 +243,7 @@ const CandidatDashboard = () => {
     } catch (error) {
       reportError("ECHEC_CHARGEMENT_CONSEILS_IA", error);
       setConseilsErreur(error.response?.data?.error || "Service IA temporairement indisponible.");
-      if (error.response?.data?.quota_restant_jour !== undefined || error.response?.data?.code) {
+      if (bloqueLaFonctionIA(error.response?.data)) {
         setQuotaConseils({ ...error.response.data, disponible: false });
       }
     } finally {

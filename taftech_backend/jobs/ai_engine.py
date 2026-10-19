@@ -6,12 +6,41 @@ prod soit un changement de config admin, pas un futur chantier de refactor.
 """
 import os
 import logging
-from groq import Groq
+from django.core.cache import cache
+from groq import Groq, RateLimitError
 import ollama
 
 logger = logging.getLogger(__name__)
 
 _groq_client = None
+
+# Disjoncteur : quand Groq répond 429 (quota du plan atteint), on arrête d'appeler le fournisseur
+# pendant quelques instants au lieu de le marteler (ce qui ne ferait qu'aggraver la saturation du
+# plan gratuit). Le site continue de fonctionner : seules les fonctions IA sont indisponibles.
+CLE_SATURATION = 'ia_fournisseur_sature'
+DELAI_SATURATION_DEFAUT = 60
+DELAI_SATURATION_MIN = 30
+DELAI_SATURATION_MAX = 3600
+
+
+class FournisseurIASature(Exception):
+    """Le fournisseur IA a refusé l'appel faute de quota (HTTP 429), ou est en pause de précaution.
+    Distinct d'une panne : l'appel de l'utilisateur est remboursé (voir ia_quota.rembourser_quota_ia)."""
+
+
+def fournisseur_sature() -> bool:
+    return bool(cache.get(CLE_SATURATION))
+
+
+def _delai_attente(exc) -> int:
+    """Durée de pause : l'en-tête `retry-after` du fournisseur s'il existe, borné pour ne jamais
+    bloquer l'IA trop longtemps ni marteler un fournisseur saturé."""
+    try:
+        brut = exc.response.headers.get('retry-after')
+        delai = int(float(brut)) if brut is not None else DELAI_SATURATION_DEFAUT
+    except Exception:
+        delai = DELAI_SATURATION_DEFAUT
+    return max(DELAI_SATURATION_MIN, min(DELAI_SATURATION_MAX, delai))
 
 
 def _get_groq_client():
@@ -67,6 +96,8 @@ def call_ai(messages, max_tokens=500, temperature=None, response_format=None, ti
 
     if config.provider == 'OLLAMA':
         return _call_ollama(messages, config.ollama_model, max_tokens, temp)
+    if fournisseur_sature():
+        raise FournisseurIASature("Fournisseur IA en pause (quota atteint).")
     return _call_groq(messages, config.groq_model, config.reasoning_effort, max_tokens, temp, response_format, timeout)
 
 
@@ -84,7 +115,14 @@ def _call_groq(messages, model, reasoning_effort, max_tokens, temperature, respo
     )
     if response_format:
         kwargs['response_format'] = response_format
-    response = client.chat.completions.create(**kwargs)
+    try:
+        response = client.chat.completions.create(**kwargs)
+    except RateLimitError as exc:
+        delai = _delai_attente(exc)
+        cache.set(CLE_SATURATION, True, timeout=delai)
+        # Jamais le corps de la réponse d'erreur dans les journaux : seulement le fait et la durée.
+        logger.warning("Groq : quota atteint (429), appels IA suspendus %s s", delai)
+        raise FournisseurIASature("Quota du fournisseur IA atteint.") from exc
     usage = getattr(response, 'usage', None)
     _enregistrer_usage(
         model,

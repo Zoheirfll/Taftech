@@ -5,6 +5,7 @@ import { convertDateRaw, convertDateFin, precisionDateRaw, precisionDateFin } fr
 import { reportError } from "../../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 
 const CHAMPS_PROFIL = [
   { label: "Téléphone", test: (p) => !!p.telephone },
@@ -262,7 +263,7 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de l'analyse."));
       reportError("ECHEC_PARSER_CV_ONBOARDING", err);
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaParserCV({ ...err.response.data, disponible: false });
       }
     } finally {

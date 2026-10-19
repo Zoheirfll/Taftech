@@ -6,6 +6,7 @@ import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 import toast from "react-hot-toast";
 
 export const useGestionOffre = () => {
@@ -373,7 +374,7 @@ export const useGestionOffre = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."));
       reportError("ECHEC_ANALYSE_GROQ_RECRUTEUR", err);
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });
       }
     } finally {

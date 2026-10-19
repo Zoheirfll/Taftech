@@ -20,6 +20,7 @@ from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import PublicReadThrottle, FileUploadThrottle
+from ..ai_engine import FournisseurIASature, fournisseur_sature
 from ..confidentialite_ia import (
     jeton_candidat, lignes_experiences, lignes_formations, nettoyer_champ,
 )
@@ -293,6 +294,13 @@ class ParserCVAPIView(APIView):
             if result.get('success') is False:
                 # Échec du parsing : journalisé (scanné vs IA indisponible/limite de débit), réponse inchangée.
                 code = 'PDF_SCANNE' if 'scann' in str(result.get('error', '')).lower() else 'IA_INDISPONIBLE'
+                # parse_cv avale les erreurs du fournisseur : le drapeau de saturation dit si le
+                # refus vient du quota Groq (appel remboursé) plutôt que d'une vraie panne.
+                if code == 'IA_INDISPONIBLE' and fournisseur_sature():
+                    from ..ia_quota import rembourser_quota_ia
+                    rembourser_quota_ia()
+                    result['error'] = MESSAGE_FOURNISSEUR_SATURE
+                    code = 'IA_FOURNISSEUR_SATURE'
                 result['quota_ia'] = quota_info
                 result['parsing_id'] = _journaliser_parsing(request.user, {}, cv_name, debut_parsing, code_erreur=code)
                 return Response(result, status=status.HTTP_200_OK)
@@ -349,6 +357,18 @@ class ParserCVAPIView(APIView):
             liberer_verrou_ia(request.user, 'PARSER_CV')
             if os.path.exists(tmp_file.name):
                 os.unlink(tmp_file.name)
+
+
+MESSAGE_FOURNISSEUR_SATURE = "L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement."
+
+
+def reponse_fournisseur_sature():
+    """Réponse commune quand le fournisseur IA a refusé l'appel faute de quota (429) : l'appel de
+    l'utilisateur est remboursé (il ne compte dans aucun quota) et le reste du site continue de
+    fonctionner. À appeler dans le `except FournisseurIASature` d'une vue, avant `liberer_verrou_ia`."""
+    from ..ia_quota import rembourser_quota_ia
+    rembourser_quota_ia()
+    return Response({'error': MESSAGE_FOURNISSEUR_SATURE, 'code': 'IA_FOURNISSEUR_SATURE'}, status=503)
 
 
 def _appel_groq(messages, max_tokens=500, temperature=None, donnees_candidat=None):
@@ -417,6 +437,8 @@ class AnalyseCarriereGroqAPIView(APIView):
                 'analyse': analyse, 'quota_ia': quota_info,
                 'genere_le': profil.analyse_carriere_le.isoformat(),
             })
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
             logger.error("Erreur Groq carrière : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
@@ -547,6 +569,8 @@ class AnalyseGroqRecruteurAPIView(APIView):
             candidature.empreinte_analyse_ia = empreinte
             candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le', 'empreinte_analyse_ia'])
             return Response({'analyse': analyse, 'quota_ia': quota_info})
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
             logger.error("Erreur Groq recruteur : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
@@ -703,6 +727,8 @@ class GenererOffreIAAPIView(APIView):
                 'metier_resolu_libelle': metier_resolu.libelle if metier_resolu else None,
                 'quota_ia': quota_info,
             })
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
             logger.error("Erreur GenererOffreIA : %s", type(e).__name__)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)

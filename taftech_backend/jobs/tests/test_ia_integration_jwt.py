@@ -36,6 +36,27 @@ class IAIntegrationJWTTest(APITestCase):
         nom_cookie = settings.SIMPLE_JWT.get("AUTH_COOKIE", "accessToken")
         self.client.cookies[nom_cookie] = str(RefreshToken.for_user(user).access_token)
 
+    def test_fichier_invalide_ne_consomme_aucun_quota_et_ne_laisse_aucun_contexte(self):
+        """Les validations du fichier passent avant le décompte : une extension refusée ne coûte rien
+        et ne laisse aucun contexte de demande dans le thread (revue du 19/10/2026)."""
+        from jobs.ia_quota import _utilisation_courante
+        from jobs.models import UtilisationIA
+        self._connecter(self.candidat)
+        fichier = SimpleUploadedFile("cv.exe", b"MZ", content_type="application/octet-stream")
+        reponse = self.client.post(reverse("parser-cv"), {"cv": fichier}, format="multipart")
+        self.assertEqual(reponse.status_code, 400)
+        self.assertEqual(UtilisationIA.objects.count(), 0)
+        self.assertIsNone(_utilisation_courante.get())
+
+    def test_le_middleware_vide_le_contexte_ia_d_une_requete_precedente(self):
+        from jobs.confidentialite_ia.audit import COMPTEUR_ENTITES
+        from jobs.ia_quota import _utilisation_courante
+        _utilisation_courante.set(987654)  # contexte « oublié » par une requête précédente
+        COMPTEUR_ENTITES.set({"EMAIL": 1})
+        self.client.get(reverse("api-constants"))
+        self.assertIsNone(_utilisation_courante.get())
+        self.assertIsNone(COMPTEUR_ENTITES.get())
+
     def test_apercu_sans_cookie_refuse(self):
         reponse = self.client.post(reverse("ia-apercu-donnees"), {"fonction": "ANALYSE_CARRIERE"})
         self.assertIn(reponse.status_code, (401, 403))

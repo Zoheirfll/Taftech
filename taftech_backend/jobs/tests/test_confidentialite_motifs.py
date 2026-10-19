@@ -1,4 +1,6 @@
 """Détection par motifs des données personnelles (sans modèle spaCy : avec_ner=False)."""
+import time
+
 from django.test import SimpleTestCase
 
 from jobs.confidentialite_ia.pseudonymisation import nettoyer_texte
@@ -81,3 +83,61 @@ class MotifsDetectionTest(SimpleTestCase):
     def test_texte_vide(self):
         self.assertEqual(nettoyer("").texte, "")
         self.assertEqual(nettoyer(None).texte, "")
+
+
+class DurcissementRevueSecuriteTest(SimpleTestCase):
+    """Corrections de la revue de sécurité du 19/10/2026."""
+
+    def test_entrees_hostiles_restent_rapides(self):
+        """Un fichier téléversé ne doit pas pouvoir bloquer un worker (motifs à temps quadratique)."""
+        hostiles = [
+            "a" * 100000, "1" + " " * 50000, "x@" * 20000, "cni " + "A" * 50000,
+            "né" + " " * 50000 + "le", "adresse" + " " * 50000, "référence" + " " * 50000 + "x",
+            "1234 " * 20000, "né à " + "b" * 50000, "0550 " * 20000,
+        ]
+        for texte in hostiles:
+            with self.subTest(debut=texte[:14]):
+                debut = time.monotonic()
+                nettoyer(texte)
+                self.assertLess(time.monotonic() - debut, 3.0)
+
+    def test_texte_borne_avant_analyse(self):
+        from jobs.confidentialite_ia.pseudonymisation import LONGUEUR_MAX_ANALYSE
+        self.assertLessEqual(len(nettoyer("a" * (LONGUEUR_MAX_ANALYSE * 3)).texte), LONGUEUR_MAX_ANALYSE)
+
+    def test_naissance_avec_le_lieu(self):
+        r = nettoyer("Né à Oran, le 02/03/1995")
+        self.assertIn("[DATE_NAISSANCE]", r.texte)
+        self.assertNotIn("1995", r.texte)
+
+    def test_telephones_autres_ecritures(self):
+        for numero in ("0550 123 456", "(0550) 12 34 56", "+213 (0)550 12 34 56", "0550/12/34/56",
+                       "+33 6 12 34 56 78"):
+            with self.subTest(numero=numero):
+                r = nettoyer(f"Tél {numero}")
+                self.assertIn("[TÉLÉPHONE]", r.texte)
+                self.assertNotRegex(r.texte, r"\d")
+
+    def test_nin_avec_separateurs(self):
+        r = nettoyer("NIN 1234 5678 9012 3456 78")
+        self.assertIn("[NIN]", r.texte)
+        self.assertNotIn("3456", r.texte)
+
+    def test_liens_personnels_hors_linkedin_et_github(self):
+        for lien in ("facebook.com/john.doe", "t.me/johndoe", "mon-site.dz/cv/moi"):
+            with self.subTest(lien=lien):
+                r = nettoyer(f"Profil : {lien}")
+                self.assertIn("[URL]", r.texte)
+                self.assertNotIn("john", r.texte.lower().replace("[url]", ""))
+
+    def test_dates_et_annees_ne_sont_pas_prises_pour_un_telephone(self):
+        for texte in ("Expérience 2018 2019 2020 2021", "Du 01/03/2020 - 12/06/2021", "2018-2019-2020 et 2021",
+                      "Version 3.12.1 déployée en 2024"):
+            with self.subTest(texte=texte):
+                self.assertEqual(nettoyer(texte).texte, texte)
+
+    def test_la_fusion_etend_la_detection_en_cas_de_chevauchement(self):
+        from jobs.confidentialite_ia.modeles import Detection
+        from jobs.confidentialite_ia.pseudonymisation import fusionner
+        resultat = fusionner([Detection(0, 5, "NOM"), Detection(3, 10, "TELEPHONE")])
+        self.assertEqual(resultat, [Detection(0, 10, "NOM")])

@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'taftech_backend.middleware.SecurityHeadersMiddleware',
+    'taftech_backend.middleware.ReinitialiserContexteIAMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -134,6 +135,7 @@ REST_FRAMEWORK = {
         'file_upload': '20/hour',
         'cv_parser': '10/hour',
         'apercu_ia': '60/hour',
+        'nin_enregistrement': '10/day',
         'admin_upload': '100/hour',
     },
 }

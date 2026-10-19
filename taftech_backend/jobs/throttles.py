@@ -30,6 +30,14 @@ class WriteActionThrottle(_CypressAwareScopedThrottle):
     scope = 'write_action'
 
 
+class NINEnregistrementThrottle(_CypressAwareScopedThrottle):
+    """Scope 'nin_enregistrement' (10/jour par compte) — enregistrement du NIN. Plus strict que
+    `write_action` : un compte qui multiplie les essais sonde en réalité quels NIN existent déjà
+    (un NIN libre est accepté, un NIN pris est refusé), d'où une limite basse, sans gêner le candidat
+    qui se trompe de temps en temps."""
+    scope = 'nin_enregistrement'
+
+
 class EmailRateThrottle(SimpleRateThrottle):
     """Anti-spam par adresse email plutôt que par IP — un même email ne peut pas
     déclencher plus de `rate` écritures/jour même en changeant d'IP (contrairement à

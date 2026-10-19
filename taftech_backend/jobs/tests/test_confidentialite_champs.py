@@ -43,6 +43,15 @@ class FiletTest(SimpleTestCase):
         with self.assertRaises(FuiteDonneesPersonnelles):
             verifier_absence_pii("هاتف ٠٥٥٥ ١٢ ٣٤ ٥٦")
 
+    def test_refuse_les_formats_supplementaires(self):
+        """Écritures courantes non couvertes par la première version du filet (revue du 19/10/2026)."""
+        for texte in ("0550 123 456", "(0550) 12 34 56", "+213 (0)550 12 34 56", "0550/12/34/56",
+                      "+33 6 12 34 56 78", "1234 5678 9012 3456 78", "facebook.com/john.doe",
+                      "０５５０ １２ ３４ ５６"):
+            with self.subTest(texte=texte):
+                with self.assertRaises(FuiteDonneesPersonnelles):
+                    verifier_absence_pii(f"profil {texte}")
+
     def test_message_sans_contenu(self):
         with self.assertRaises(FuiteDonneesPersonnelles) as ctx:
             verifier_absence_pii("a@b.dz")

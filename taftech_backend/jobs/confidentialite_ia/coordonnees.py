@@ -5,7 +5,7 @@ import re
 from ..constants import WILAYAS_MAPPING
 from .ner_arabe import normaliser_chiffres
 from .patterns import MOTIFS
-from .pseudonymisation import _ner_actif
+from .pseudonymisation import LONGUEUR_MAX_ANALYSE, _ner_actif
 
 ZONE_ENTETE = 600
 ZONE_NOM = 400
@@ -41,7 +41,7 @@ def _nom_entete(texte: str):
 
 
 def extraire_coordonnees(texte, *, avec_ner=None) -> dict:
-    texte = texte or ""
+    texte = (texte or "")[:LONGUEUR_MAX_ANALYSE]  # même borne que le nettoyage (texte d'un fichier téléversé)
     if avec_ner is None:
         avec_ner = _ner_actif()
     normalise = normaliser_chiffres(texte)  # même longueur : chiffres arabes lus comme ASCII

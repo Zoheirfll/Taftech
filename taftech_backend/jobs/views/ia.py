@@ -252,10 +252,9 @@ class ParserCVAPIView(APIView):
         ok, quota_info = verifier_quota_ia(request.user, 'PARSER_CV')
         if not ok:
             return Response(quota_info, status=403)
-        if not acquerir_verrou_ia(request.user, 'PARSER_CV'):
-            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
-        consommer_quota_ia(request.user, 'PARSER_CV')
-
+        # Les validations du fichier passent AVANT le verrou et le décompte : un fichier invalide ne
+        # consomme aucun quota, ne pose aucun verrou et ne laisse aucun contexte de demande dans le
+        # thread (revue de sécurité du 19/10/2026 : ces retours anticipés sortaient du try/finally).
         cv_file = request.FILES.get('cv')
         if cv_file:
             if cv_file.size > 5 * 1024 * 1024:
@@ -274,6 +273,10 @@ class ParserCVAPIView(APIView):
         ext = os.path.splitext(cv_name)[1].lower()
         if ext not in ['.pdf', '.docx', '.doc']:
             return Response({"error": f"Format non supporté ({ext})."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not acquerir_verrou_ia(request.user, 'PARSER_CV'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'PARSER_CV')
 
         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
         try:

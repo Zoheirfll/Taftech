@@ -1,37 +1,58 @@
 """Motifs de détection des données personnelles (Algérie) — source unique pour le nettoyage
 (pseudonymisation.py), l'extraction locale (coordonnees.py) et le filet de sécurité (filet.py).
 Un groupe nommé `valeur` restreint le masquage à cette partie du match (ex. le numéro d'un
-passeport, pas le mot « passeport » qui renseigne un champ du profil)."""
+passeport, pas le mot « passeport » qui renseigne un champ du profil).
+
+Tous les quantificateurs sont BORNÉS : ces motifs s'exécutent sur le texte d'un fichier téléversé
+par n'importe quel candidat, et un quantificateur non borné (`+`, `*`) suivi d'un élément qui
+échoue donne un temps quadratique (revue de sécurité du 19/10/2026 : 40 000 caractères « a » =
+5 s sur l'ancien motif d'e-mail). Ne jamais réintroduire de `+` ou `*` sans borne."""
 import re
 
 _MOIS = r"(?:janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)"
-_DATE = rf"(?:\d{{1,2}}[/.\-]\d{{1,2}}[/.\-]\d{{2,4}}|\d{{1,2}}(?:er)?\s+{_MOIS}\s+\d{{4}})"
-_FIN_URL = r"[^\s<>\"')\]]+"
+_DATE = rf"(?:\d{{1,2}}[/.\-]\d{{1,2}}[/.\-]\d{{2,4}}|\d{{1,2}}(?:er)?\s{{1,3}}{_MOIS}\s{{1,3}}\d{{4}})"
+_FIN_URL = r"[^\s<>\"')\]]{1,200}"
+_SEP = r"[\s.\-]"
 
 MOTIFS = (
-    ("EMAIL", re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")),
+    ("EMAIL", re.compile(r"[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,24}")),
     ("URL", re.compile(
         rf"(?:https?://|www\.){_FIN_URL}|\b(?:linkedin|github)\.com/{_FIN_URL}", re.I)),
+    # Lien personnel sans « http » : plateforme ou site (facebook.com/…, t.me/…, mon-site.dz/…).
+    ("URL", re.compile(
+        r"\b[\w-]{1,63}(?:\.[\w-]{1,63}){0,4}\.(?:com|net|org|dz|io|me|co|fr|app|dev|info)/"
+        + _FIN_URL, re.I)),
     ("NIN", re.compile(r"(?<!\d)\d{18}(?!\d)")),
+    # NIN écrit avec des séparateurs (« 1234 5678 9012 3456 78 »).
+    ("NIN", re.compile(r"(?<!\d)(?:\d[\s.\-]?){17}\d(?!\d)")),
     ("DOCUMENT", re.compile(
-        r"\b(?:cni|carte\s+nationale(?:\s+d['’]identit[ée])?|carte\s+d['’]identit[ée]|passeport)\b"
-        r"[^\n\d]{0,25}?(?P<valeur>(?=[A-Z0-9]*\d)[A-Z0-9]{6,20})", re.I)),
+        r"\b(?:cni|carte\s{1,3}nationale(?:\s{1,3}d['’]identit[ée])?|carte\s{1,3}d['’]identit[ée]|passeport)\b"
+        r"[^\n\d]{0,25}?(?P<valeur>(?=[A-Z0-9]{0,19}\d)[A-Z0-9]{6,20})", re.I)),
     ("DATE_NAISSANCE", re.compile(
-        rf"(?:n[ée](?:\(e\)|e)?\s+le|date\s+de\s+naissance|naissance)\s*:?\s*(?P<valeur>{_DATE})", re.I)),
-    ("ADRESSE", re.compile(r"adresse\s*:?[^\n]{3,100}", re.I)),
+        rf"(?:n[ée](?:\(e\)|e)?\s{{1,3}}(?:à\s{{1,3}}[^\n,]{{1,40}},?\s{{1,3}})?le|date\s{{1,3}}de\s{{1,3}}naissance"
+        rf"|naissance)\s{{0,5}}:?\s{{0,5}}(?P<valeur>{_DATE})", re.I)),
+    ("ADRESSE", re.compile(r"adresse\s{0,5}:?[^\n]{3,100}", re.I)),
     ("ADRESSE", re.compile(
-        r"\b\d{1,4}\s*,?\s*(?:bis\s+)?(?:rue|avenue|boulevard|bd|cit[ée]|lotissement|lot|hai|chemin"
+        r"\b\d{1,4}\s{0,5},?\s{0,5}(?:bis\s{1,3})?(?:rue|avenue|boulevard|bd|cit[ée]|lotissement|lot|hai|chemin"
         r"|route|r[ée]sidence)\b[^\n]{3,80}", re.I)),
-    ("ADRESSE", re.compile(r"العنوان\s*:?[^\n]{3,100}")),
+    ("ADRESSE", re.compile(r"العنوان\s{0,5}:?[^\n]{3,100}")),
     ("DATE_NAISSANCE", re.compile(
-        rf"(?:تاريخ\s+الميلاد|المولود(?:ة)?\s+في|ولد(?:ت)?\s+في)\s*:?\s*(?P<valeur>{_DATE})")),
+        rf"(?:تاريخ\s{{1,3}}الميلاد|المولود(?:ة)?\s{{1,3}}في|ولد(?:ت)?\s{{1,3}}في)\s{{0,5}}:?\s{{0,5}}(?P<valeur>{_DATE})")),
+    # Téléphone algérien : 05/06/07 + 8 chiffres (mobile) ou 0X + 7 chiffres (fixe), indicatif +213/00213.
     ("TELEPHONE", re.compile(
         r"(?<!\d)(?:(?:\+|00)213[\s.\-]?|0)"
         r"(?:[5-7](?:[\s.\-]?\d{2}){4}|[2-4]\d(?:[\s.\-]?\d{2}){3})(?!\d)")),
+    # Autres écritures courantes : 0550 123 456 · (0550) 12 34 56 · +213 (0)550 12 34 56 ·
+    # 0550/12/34/56 · numéro étranger (+33 6 12 34 56 78). Aucune ne peut être une suite de dates.
+    ("TELEPHONE", re.compile(rf"(?<!\d)0[5-7]\d{{2}}{_SEP}\d{{3}}{_SEP}\d{{3}}(?!\d)")),
+    ("TELEPHONE", re.compile(rf"(?<!\d)\(0[2-7]\d{{1,2}}\){_SEP}?\d{{2}}(?:{_SEP}?\d{{2}}){{2,3}}(?!\d)")),
+    ("TELEPHONE", re.compile(rf"(?<!\d)(?:\+|00)213{_SEP}?\(0\){_SEP}?[5-7](?:{_SEP}?\d{{2}}){{4}}(?!\d)")),
+    ("TELEPHONE", re.compile(r"(?<!\d)0[5-7]\d{2}/\d{2}/\d{2}/\d{2}(?!\d)")),
+    ("TELEPHONE", re.compile(rf"(?<![\d+])\+(?!213)\d{{1,3}}{_SEP}?\d(?:{_SEP}?\d{{2}}){{4}}(?!\d)")),
 )
 
 TITRE_REFERENCES = re.compile(
-    r"^\s*(?:personnes?\s+de\s+)?(?:r[ée]f[ée]rences?|المراجع|مراجع)\s*:?\s*$", re.I)
+    r"^\s{0,20}(?:personnes?\s{1,3}de\s{1,3})?(?:r[ée]f[ée]rences?|المراجع|مراجع)\s{0,10}:?\s{0,10}$", re.I)
 TITRE_SECTION = re.compile(
     r"^\s*(?:exp[ée]riences?|formations?|comp[ée]tences?|langues?|loisirs?"
     r"|centres?\s+d['’]int[ée]r[êe]ts?|projets?|certifications?|dipl[ôo]mes?"

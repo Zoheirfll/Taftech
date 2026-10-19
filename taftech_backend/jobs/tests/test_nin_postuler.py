@@ -112,6 +112,24 @@ class NINPostulerTest(APITestCase):
         self.candidat.refresh_from_db()
         self.assertIsNone(self.candidat.nin)
 
+    def test_ecriture_unique_atomique_meme_avec_un_objet_utilisateur_perime(self):
+        """Deux requêtes simultanées du même compte : la seconde a chargé l'utilisateur AVANT que la
+        première n'enregistre. Elle ne doit pas écraser le NIN déjà posé (condition dans le SQL)."""
+        perime = User.objects.get(pk=self.candidat.pk)  # nin encore vide dans cet objet
+        User.objects.filter(pk=self.candidat.pk).update(nin=NIN)  # l'autre requête vient de l'écrire
+        self.assertIsNone(perime.nin)
+        self.client.force_authenticate(user=perime)
+        reponse = self.client.post(self.url_nin, {"nin": AUTRE_NIN})
+        self.assertEqual(reponse.status_code, 409)
+        self.candidat.refresh_from_db()
+        self.assertEqual(self.candidat.nin, NIN)
+
+    def test_limite_d_essais_dediee_contre_le_sondage_de_nin(self):
+        from django.conf import settings as reglages
+        from jobs.views.profils import EnregistrerNINAPIView
+        self.assertEqual(EnregistrerNINAPIView.throttle_classes[0].scope, "nin_enregistrement")
+        self.assertEqual(reglages.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["nin_enregistrement"], "10/day")
+
     def test_la_reponse_ne_renvoie_jamais_le_nin(self):
         self._connecter(self.candidat)
         reponse = self.client.post(self.url_nin, {"nin": NIN})

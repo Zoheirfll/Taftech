@@ -104,6 +104,16 @@ class CacheCarriereEtConseilsTest(APITestCase):
         self.assertEqual(mock_ia.call_count, 2)
 
 
+class EmpreinteVersionTest(APITestCase):
+    def test_durcir_les_regles_de_nettoyage_invalide_les_resultats_stockes(self):
+        from jobs.confidentialite_ia.empreinte import empreinte_ia
+        avant = empreinte_ia("prompt", "donnees")
+        with patch("jobs.confidentialite_ia.empreinte.VERSION_NETTOYAGE", "autre-version"):
+            apres = empreinte_ia("prompt", "donnees")
+        self.assertNotEqual(avant, apres)
+        self.assertEqual(avant, empreinte_ia("prompt", "donnees"))  # stable à version égale
+
+
 class CacheAnalyseRecruteurTest(APITestCase):
     def setUp(self):
         cache.clear()

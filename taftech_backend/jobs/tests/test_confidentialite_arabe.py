@@ -47,6 +47,23 @@ class ArabeMotifsTest(SimpleTestCase):
         self.assertEqual(proportion_arabe("Hello world"), 0.0)
         self.assertEqual(proportion_arabe(""), 0.0)
 
+    def test_chiffres_pleine_chasse_normalises(self):
+        r = nettoyer_texte("Tél : ０５５５ １２ ３４ ５６", avec_ner=False)
+        self.assertIn("[TÉLÉPHONE]", r.texte)
+
+    def test_nom_arabe_isole_dans_un_cv_francais_declenche_la_detection_arabe(self):
+        """Un en-tête arabe dans un CV surtout français reste sous 5 % des lettres, mais doit quand
+        même déclencher Stanza (sinon le nom partirait en clair)."""
+        from jobs.confidentialite_ia.ner_arabe import contient_arabe, proportion_arabe
+        cv = ("الاسم : محمد بن علي الجزائري\n" + "Ingénieur logiciel, développement d'applications web. " * 40)
+        self.assertLess(proportion_arabe(cv), 0.05)
+        self.assertTrue(contient_arabe(cv))
+        self.assertFalse(contient_arabe("Ingénieur logiciel " * 40))
+        with patch("jobs.confidentialite_ia.ner_arabe._charger_arabe", side_effect=ModeleNerIndisponible("x")), \
+                patch("jobs.confidentialite_ia.ner.entites_ner", return_value=[]):
+            with self.assertRaises(ModeleNerIndisponible):
+                nettoyer_texte(cv)
+
     def test_texte_francais_inchange_par_la_normalisation(self):
         self.assertEqual(nettoyer_texte("Développeur Python 2019", avec_ner=False).texte, "Développeur Python 2019")
 

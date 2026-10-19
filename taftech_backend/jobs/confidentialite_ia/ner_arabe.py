@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 
 SEUIL_ARABE = 0.05
 ZONE_ENTETE = 600
-_TABLE_CHIFFRES = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+# Chiffres arabo-indiens, persans et pleine chasse (０-９) → ASCII, un caractère pour un caractère
+# (les positions détectées restent valables pour le texte d'origine).
+_TABLE_CHIFFRES = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹０１２３４５６７８９", "0123456789" * 3)
+# Un nom arabe isolé (« الاسم : محمد … ») dans un CV surtout français doit aussi déclencher Stanza :
+# la proportion seule (5 %) ne suffit pas, d'où ce nombre minimal de lettres arabes.
+MIN_LETTRES_ARABES = 15
 _LETTRE_ARABE = re.compile(r"[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]")
 
 _pipeline = None
@@ -26,6 +31,15 @@ def proportion_arabe(texte: str) -> float:
     if not lettres:
         return 0.0
     return sum(1 for c in lettres if _LETTRE_ARABE.match(c)) / len(lettres)
+
+
+def contient_arabe(texte: str) -> bool:
+    """Vrai si le texte contient assez d'arabe pour exiger la détection de noms arabes : au moins
+    5 % des lettres, ou au moins 15 lettres arabes quelle que soit la proportion."""
+    nb_arabes = len(_LETTRE_ARABE.findall(texte))
+    if nb_arabes >= MIN_LETTRES_ARABES:
+        return True
+    return proportion_arabe(texte) >= SEUIL_ARABE
 
 
 def _charger_arabe():

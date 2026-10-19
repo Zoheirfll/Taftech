@@ -5,6 +5,11 @@ import hashlib
 
 SEPARATEUR = "\x1f"  # caractère de contrôle : ne peut pas se confondre avec le contenu d'un champ
 
+# À incrémenter chaque fois que les règles de nettoyage (patterns, employeurs, établissements…)
+# sont durcies : un résultat produit avec d'anciennes règles n'est alors plus resservi tel quel.
+VERSION_NETTOYAGE = "2026-10-19-2"
+
 
 def empreinte_ia(*morceaux) -> str:
-    return hashlib.sha256(SEPARATEUR.join(str(m) for m in morceaux).encode("utf-8")).hexdigest()
+    contenu = SEPARATEUR.join([VERSION_NETTOYAGE, *(str(m) for m in morceaux)])
+    return hashlib.sha256(contenu.encode("utf-8")).hexdigest()

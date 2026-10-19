@@ -7,8 +7,8 @@ from collections import Counter
 from .pseudonymisation import nettoyer_texte
 
 _MARQUEURS_ETABLISSEMENT = re.compile(
-    r"\b(?:universit[ée]s?|[ée]cole|institut|facult[ée]|lyc[ée]e|centre\s+de\s+formation"
-    r"|cfpa|insfp|esi|ens|enp|usthb|ista)\b", re.I)
+    r"\b(?:universit[ée]s?|univ\.?|[ée]cole|institut|facult[ée]|lyc[ée]e|centre\s{1,3}de\s{1,3}formation"
+    r"|cfpa|insfp|esi|ens|enp|usthb|usto|ista)(?![\w])", re.I)
 _SEPARATEURS = re.compile(r"\s*[-–—|,;/@]\s*|\s+(?:à|au)\s+", re.I)
 LIBELLE_EMPLOYEUR_INCONNU = "Entreprise non précisée"
 

@@ -11,6 +11,8 @@ from .patterns import MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SEC
 
 JETON_REFERENCES = "[RÉFÉRENCES SUPPRIMÉES]"
 LONGUEUR_MIN_NOM = 3
+# Texte analysé au plus : 4 fois la longueur envoyée à l'IA (7000), bien au-delà d'un CV réel.
+LONGUEUR_MAX_ANALYSE = 30000
 
 
 def _ner_actif() -> bool:
@@ -68,6 +70,11 @@ def fusionner(detections: list[Detection]) -> list[Detection]:
     retenues: list[Detection] = []
     for d in sorted(detections, key=lambda x: (x.debut, -(x.fin - x.debut))):
         if retenues and d.debut < retenues[-1].fin:
+            # Chevauchement : on étend la détection retenue jusqu'à la fin de la nouvelle, sinon la
+            # fin d'un numéro ou d'un e-mail débordant resterait en clair.
+            derniere = retenues[-1]
+            if d.fin > derniere.fin:
+                retenues[-1] = Detection(derniere.debut, d.fin, derniere.categorie)
             continue
         retenues.append(d)
     return retenues
@@ -89,7 +96,11 @@ def nettoyer_texte(texte, *, avec_ner=None, noms_connus=()) -> ResultatNettoyage
     texte = texte or ""
     if avec_ner is None:
         avec_ner = _ner_actif()
-    from .ner_arabe import SEUIL_ARABE, normaliser_chiffres, proportion_arabe
+    from .ner_arabe import contient_arabe, normaliser_chiffres
+    # Borne le travail : ce texte vient d'un fichier téléversé. Seuls les premiers caractères comptent
+    # (la sortie est de toute façon coupée à 7000 caractères par le parser) et les motifs restent
+    # rapides même sur un contenu hostile.
+    texte = texte[:LONGUEUR_MAX_ANALYSE]
     texte, nb_references = retirer_section_references(texte)
     # Chiffres arabo-indiens → ASCII, même longueur : les positions détectées valent aussi
     # pour le texte d'origine, sur lequel le remplacement s'applique.
@@ -98,7 +109,7 @@ def nettoyer_texte(texte, *, avec_ner=None, noms_connus=()) -> ResultatNettoyage
     if avec_ner:
         from .ner import entites_ner
         detections += entites_ner(texte)
-        if proportion_arabe(texte) >= SEUIL_ARABE:
+        if contient_arabe(texte):
             from .ner_arabe import entites_ner_arabe
             detections += entites_ner_arabe(texte)
     retenues = fusionner(detections)

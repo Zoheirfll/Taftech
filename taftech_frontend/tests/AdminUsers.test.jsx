@@ -27,7 +27,11 @@ vi.mock("../src/Services/jobsService", () => ({
 // Dossier détaillé chargé à l'ouverture de la fiche : ici il échoue, la fiche affiche alors son repli
 // simple (compétences et langues en étiquettes), ce que ces tests vérifient.
 vi.mock("../src/Services/adminDossierService", () => ({
-  adminDossierService: { getDossierCandidat: vi.fn().mockRejectedValue(new Error("hors scénario")) },
+  adminDossierService: {
+    getDossierCandidat: vi.fn().mockRejectedValue(new Error("hors scénario")),
+    getDossierRecruteur: vi.fn().mockRejectedValue(new Error("hors scénario")),
+    getDossierAdmin: vi.fn().mockRejectedValue(new Error("hors scénario")),
+  },
 }));
 
 vi.mock("react-hot-toast", () => ({

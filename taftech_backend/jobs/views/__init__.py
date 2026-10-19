@@ -86,6 +86,8 @@ from .admin import (
     AdminSeoStatsAPIView,
     AdminUsersListAPIView,
     AdminDossierCandidatAPIView,
+    AdminDossierRecruteurAPIView,
+    AdminDossierAdminAPIView,
     AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView,
     AdminCandidaturesListAPIView,

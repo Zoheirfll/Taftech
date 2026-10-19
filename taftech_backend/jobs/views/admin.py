@@ -398,6 +398,35 @@ class AdminDossierCandidatAPIView(APIView):
         return Response(dossier_candidat(user, profil))
 
 
+class AdminDossierRecruteurAPIView(APIView):
+    """Dossier complet d'un recruteur (entreprise, abonnement et crédits, offres, candidatures reçues,
+    équipe, CVthèque, usage de l'IA) pour la fiche admin. Même principe que le dossier candidat :
+    chargé à l'ouverture de la fiche, lecture seule, réservé aux administrateurs, 404 pour tout
+    compte qui n'est pas un recruteur propriétaire d'une entreprise."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, user_id):
+        from ..admin_dossier_recruteur import dossier_recruteur
+        user = User.objects.filter(pk=user_id, role='RECRUTEUR').exclude(is_superuser=True).first()
+        entreprise = getattr(user, 'profil_entreprise', None) if user else None
+        if user is None or entreprise is None:
+            return Response({'error': 'Recruteur introuvable.'}, status=404)
+        return Response(dossier_recruteur(user, entreprise))
+
+
+class AdminDossierAdminAPIView(APIView):
+    """Dossier d'un compte administrateur (type de compte, connexion, actions tracées dans le journal
+    d'audit). Lecture seule, réservé aux administrateurs ; 404 pour tout compte non administrateur."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, user_id):
+        from ..admin_dossier_admin import dossier_admin
+        user = User.objects.filter(pk=user_id).filter(Q(role='ADMIN') | Q(is_staff=True)).first()
+        if user is None:
+            return Response({'error': 'Administrateur introuvable.'}, status=404)
+        return Response(dossier_admin(user))
+
+
 class AdminUserModerateAPIView(APIView):
     permission_classes = [IsAdminRole]
 

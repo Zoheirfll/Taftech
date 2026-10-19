@@ -16,6 +16,8 @@ import useEchapPourFermer from "../../utils/useEchapPourFermer";
 import { formatDatePrecise, formatAge } from "../../utils/cvDates";
 import { nomWilaya } from "../../utils/wilaya";
 import DossierCandidatAdmin from "./DossierCandidatAdmin";
+import DossierRecruteurAdmin from "./DossierRecruteurAdmin";
+import DossierAdminAdmin from "./DossierAdminAdmin";
 
 // Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
 const ROLE_BADGES = {
@@ -596,6 +598,24 @@ const AdminUsers = () => {
                   )}
                 </div>
               )}
+
+            {selectedUser.role === "RECRUTEUR" && (
+              <div className="space-y-5">
+                <h3 className={`text-base font-bold ${tw.textStrong} border-b ${tw.borderSubtle} pb-2`}>
+                  Dossier recruteur
+                </h3>
+                <DossierRecruteurAdmin userId={selectedUser.id} />
+              </div>
+            )}
+
+            {selectedUser.role === "ADMIN" && (
+              <div className="space-y-5">
+                <h3 className={`text-base font-bold ${tw.textStrong} border-b ${tw.borderSubtle} pb-2`}>
+                  Dossier administrateur
+                </h3>
+                <DossierAdminAdmin userId={selectedUser.id} />
+              </div>
+            )}
           </div>
         </div>
       )}

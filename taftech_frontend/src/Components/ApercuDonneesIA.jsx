@@ -55,6 +55,7 @@ export const ApercuDonneesIA = ({ fonction, fichier = null }) => {
       </label>
       <p className={`text-xs ${tw.textMuted} mt-1 mb-2`}>
         Ce masquage est toujours appliqué : votre nom, vos coordonnées et vos pièces d'identité ne sont jamais transmis.
+        Le texte masqué est envoyé à un prestataire d'IA situé hors d'Algérie (États-Unis), qui n'en conserve aucune copie.
       </p>
       <button type="button" onClick={ouvrir} className={`${tw.linkPrimary} text-sm font-semibold flex items-center gap-1`}>
         <Eye size={14} /> Voir les données qui seront transmises
@@ -87,7 +88,7 @@ export const ApercuDonneesIA = ({ fonction, fichier = null }) => {
                     ))}
                   </ul>
                 )}
-                <pre className={`text-xs whitespace-pre-wrap break-words ${tw.textStrong}`}>
+                <pre className={`text-xs whitespace-pre-wrap wrap-break-word ${tw.textStrong}`}>
                   <TexteAvecJetons texte={apercu.texte} />
                 </pre>
               </>

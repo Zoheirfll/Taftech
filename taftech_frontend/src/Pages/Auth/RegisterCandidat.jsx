@@ -20,6 +20,7 @@ const TEXTE_LOI_1807 = {
 1. Finalité : Vos données (Téléphone, CV) sont collectées exclusivement pour faciliter votre mise en relation avec des recruteurs.
 2. Droits de l'utilisateur : Vous disposez d'un droit d'accès, de rectification et de suppression de vos données depuis votre espace personnel.
 3. Sécurité : TAFTECH met en œuvre des mesures de sécurité techniques pour prévenir toute fuite ou utilisation frauduleuse de vos informations.
+4. Analyse par intelligence artificielle (facultative) : si vous utilisez l'analyse de CV, les suggestions de carrière ou les conseils personnalisés, une version de vos données dans laquelle votre nom, vos coordonnées, votre adresse, votre date de naissance, vos pièces d'identité et vos liens personnels sont masqués est transmise à un prestataire d'intelligence artificielle situé hors d'Algérie (États-Unis), qui n'en conserve aucune copie. Vous pouvez consulter les données exactes avant chaque envoi.
 
 En cochant la case de consentement, vous acceptez que vos informations professionnelles soient visibles par les entreprises enregistrées sur la plateforme.`,
 };

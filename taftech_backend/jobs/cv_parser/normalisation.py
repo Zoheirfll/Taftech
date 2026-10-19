@@ -79,6 +79,24 @@ def _normaliser_date_naissance(raw, texte_source=""):
     return None
 
 
+def _normaliser_telephone(valeur):
+    """Numéro algérien à 10 chiffres (0X XX XX XX XX) : retire séparateurs, indicatif
+    international et numéros collés. Logique déplacée de parse_with_groq (inchangée) pour
+    servir aussi aux coordonnées extraites localement du CV."""
+    tel = re.sub(r'[\s.\-()]', '', str(valeur))
+    tel = re.split(r'[/,;]', tel)[0]
+    # Un numéro algérien fait 10 chiffres (0X XX XX XX XX) une fois l'indicatif retiré ; on
+    # retire aussi les numéros collés sans séparateur ("05523990670770960926").
+    chiffres = re.sub(r'\D', '', tel)
+    if chiffres.startswith('00213'):
+        chiffres = '0' + chiffres[5:]
+    elif chiffres.startswith('213') and len(chiffres) > 10:
+        chiffres = '0' + chiffres[3:]
+    if len(chiffres) > 10 and chiffres.startswith('0'):
+        chiffres = chiffres[:10]
+    return chiffres or tel
+
+
 def _normaliser_sexe(valeur):
     """Ramène la valeur libre renvoyée par Groq (Homme/homme/Femme/F/...) vers
     exactement 'HOMME'/'FEMME' (choices de ProfilCandidat.sexe), ou None si

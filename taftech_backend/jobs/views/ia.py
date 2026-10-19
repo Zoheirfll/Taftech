@@ -285,7 +285,11 @@ class ParserCVAPIView(APIView):
                         tmp_file.write(chunk)
             tmp_file.close()
             debut_parsing = time.monotonic()
-            result = parse_cv(tmp_file.name, cv_name)
+            # Nom et prénom du compte : masqués dans le CV en plus de la détection automatique.
+            result = parse_cv(
+                tmp_file.name, cv_name,
+                noms_connus=(request.user.first_name, request.user.last_name),
+            )
             if result.get('success') is False:
                 # Échec du parsing : journalisé (scanné vs IA indisponible/limite de débit), réponse inchangée.
                 code = 'PDF_SCANNE' if 'scann' in str(result.get('error', '')).lower() else 'IA_INDISPONIBLE'

@@ -338,13 +338,14 @@ class ParserCVAPIView(APIView):
                 os.unlink(tmp_file.name)
 
 
-def _appel_groq(messages, max_tokens=500, temperature=None):
+def _appel_groq(messages, max_tokens=500, temperature=None, donnees_candidat=None):
     """Nom conservé pour compatibilité (nombreux appelants) même si l'appel réel passe par
     jobs.ai_engine (Groq ou Ollama selon AIConfig.provider), pas forcément Groq à proprement
     parler. Strip le markdown (**/##/*) — ne jamais utiliser pour un appel attendant du JSON en
     sortie, ça corromprait le format (voir GenererOffreIAAPIView qui appelle call_ai directement)."""
     from ..ai_engine import call_ai
-    texte = call_ai(messages, max_tokens=max_tokens, temperature=temperature)
+    texte = call_ai(messages, max_tokens=max_tokens, temperature=temperature,
+                    donnees_candidat=donnees_candidat)
     return texte.replace('**', '').replace('##', '').replace('*', '')
 
 

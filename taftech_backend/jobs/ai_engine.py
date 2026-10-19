@@ -24,10 +24,18 @@ def _get_groq_client():
     return _groq_client
 
 
-def call_ai(messages, max_tokens=500, temperature=None, response_format=None, timeout=25):
+def call_ai(messages, max_tokens=500, temperature=None, response_format=None, timeout=25,
+            donnees_candidat=None):
     """Appelle le moteur IA configuré (`AIConfig.provider`) et retourne le texte brut de la
     réponse. Lève une exception si l'appel échoue — à charge de l'appelant de la catcher, comme
-    c'était déjà le cas avant ce module (aucun changement de contrat pour les appelants)."""
+    c'était déjà le cas avant ce module.
+
+    `donnees_candidat` : texte des données d'un candidat contenues dans `messages`. S'il est
+    fourni, l'appel est refusé (FuiteDonneesPersonnelles) quand il contient encore un e-mail,
+    un téléphone, une URL personnelle ou un NIN — dernier garde-fou après le nettoyage."""
+    if donnees_candidat is not None:
+        from .confidentialite_ia import verifier_absence_pii
+        verifier_absence_pii(donnees_candidat)
     from .models import AIConfig
     config = AIConfig.get_solo()
     temp = temperature if temperature is not None else config.temperature

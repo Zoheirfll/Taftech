@@ -39,9 +39,29 @@ class ParagrapheIAConfidentialiteTest(TestCase):
         lancer()
         apres_premiere = PageStatique.objects.get(slug="confidentialite").contenu_html
         sortie = lancer()
-        self.assertIn("déjà présente", sortie)
+        self.assertIn("déjà présente et à jour", sortie)
         self.assertEqual(PageStatique.objects.get(slug="confidentialite").contenu_html, apres_premiere)
         self.assertEqual(apres_premiere.count(MARQUEUR), 1)
+
+    def test_ancienne_version_de_la_section_est_remplacee_sans_toucher_au_reste(self):
+        ancienne = (
+            "<h2>6. Analyse par intelligence artificielle (facultative)</h2>\n<p>Ancien texte.</p>\n"
+        )
+        PageStatique.objects.filter(pk=self.page.pk).update(
+            contenu_html=PAGE.replace("<h2>6. Vos droits</h2>", ancienne + "<h2>7. Vos droits</h2>")
+        )
+        lancer()
+        self.page.refresh_from_db()
+        html = self.page.contenu_html
+        self.assertNotIn("Ancien texte.", html)
+        self.assertIn("recruteur auquel vous candidatez", html)
+        self.assertEqual(html.count("Analyse par intelligence artificielle"), 1)
+        self.assertEqual(html.count("7. Vos droits"), 1)
+        self.assertIn("5 ans.", html)
+
+    def test_texte_mentionne_l_analyse_lancee_par_un_recruteur(self):
+        self.assertIn("recruteur", SECTION)
+        self.assertIn("votre nom n'est alors jamais transmis", SECTION)
 
     def test_dry_run_ne_modifie_rien(self):
         sortie = lancer("--dry-run")

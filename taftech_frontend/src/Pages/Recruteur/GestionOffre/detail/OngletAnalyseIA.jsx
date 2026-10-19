@@ -75,6 +75,11 @@ export const OngletAnalyseIA = ({
               )
             )}
           </div>
+          {isPremium && !loadingGroq && (
+            <p className={`text-xs ${tw.textMuted} mb-3`}>
+              Le nom du candidat et ses coordonnées ne sont pas transmis à l'IA.
+            </p>
+          )}
           {loadingGroq ? (
             <div className={`flex items-center gap-2 py-4 ${tw.textTeal}`}>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-700"></div>

@@ -417,6 +417,12 @@ Or `taftech_frontend/src/api/axiosConfig.js` ne mutualisait pas les rafraîchiss
 - **Limites** : un membre d'équipe (compte `CANDIDAT` rattaché à une entreprise) n'est pas concerné ; une requête SQL de plus par appel authentifié d'un compte recruteur (lecture de `profil_entreprise`) ; si `me/` échoue, le frontend n'affiche pas d'écran bloqué (le serveur reste le vrai garde). Le tableau de bord « accessible mais sans candidatures » du §21 n'est plus joignable en usage réel : son garde reste en défense en profondeur.
 - Tests : `jobs/tests/test_recruteur_en_attente_acces_total.py` (6), `EntrepriseValideeGuard.test.jsx` (7).
 
+## ✅ 36. Fiches détaillées des comptes dans l'admin : lecture seule, rôle vérifié (19/10/2026)
+
+Trois routes `admin/utilisateurs/<id>/dossier/`, `dossier-recruteur/`, `dossier-admin/` (détail dans [admin.md](docs/fonctionnel/admin.md)). Audit : toutes en `IsAdminRole` (403 pour candidat et recruteur, testé par cookie JWT réel), `GET` uniquement, un seul compte par appel ; 404 uniforme si le compte n'a pas le rôle attendu, est inconnu ou (recruteur) est un super-administrateur ; le périmètre est borné à l'entreprise du recruteur (test : aucune offre d'une autre entreprise dans la réponse) ; le NIN et les coordonnées de candidats n'y figurent pas ; l'usage IA exclut les lignes remboursées. Front : routes admin déjà protégées par `AdminRoute`.
+
+---
+
 ## ✅ 35. NIN obligatoire pour postuler : écriture unique atomique, jamais exposé (19/10/2026)
 
 - **Besoin** : l'ANEM exige le NIN de tout candidat qui postule. Il n'est pas demandé à l'inscription ; il est obligatoire pour postuler **avec un compte**. La candidature rapide (sans compte) n'en exige pas : **contournement possible, décision assumée de l'utilisateur**, consigné dans `docs/problemes-a-traiter.md`.

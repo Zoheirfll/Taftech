@@ -7,6 +7,23 @@
 
 ---
 
+## 🆕 SESSION 19/10/2026 — Fiches détaillées des comptes (page Utilisateurs)
+
+La modale d'un utilisateur charge, à l'ouverture, un dossier propre à son rôle (jamais pour toute la liste, lecture seule, `IsAdminRole`, 404 si le rôle ne correspond pas) :
+
+| Rôle | Route (`jobs/`) | Module | Composant |
+|---|---|---|---|
+| Candidat | `admin/utilisateurs/<id>/dossier/` | `admin_dossier_candidat.py` | `DossierCandidatAdmin.jsx` |
+| Recruteur | `.../dossier-recruteur/` | `admin_dossier_recruteur.py` | `DossierRecruteurAdmin.jsx` |
+| Administrateur | `.../dossier-admin/` | `admin_dossier_admin.py` | `DossierAdminAdmin.jsx` |
+
+- Candidat : niveaux de compétences et de langues, candidatures (par statut, score moyen, récentes), activité, usage IA. Recruteur : entreprise, abonnement et crédits, offres avec nombre de candidatures, candidatures reçues, équipe, déblocages CVthèque, usage IA de toute l'entreprise (appels remboursés exclus). Administrateur : type de compte, connexion, actions du journal d'audit.
+- Le secteur de l'entreprise passe par `libelle_secteur_entreprise` (le champ stocke un code `TSEC-…`) et la wilaya par `get_wilaya_siege_display`. Le NIN n'est dans aucun dossier (il reste dans le bloc « Légal & Identité »).
+- **Piège (approche fautive corrigée)** : `useDossier(charger, userId)` (`dossierAdminUI.jsx`) met `charger` dans les dépendances de l'effet ; lui passer une fonction fléchée créée au rendu relançait le chargement en boucle (« Chargement du dossier… » sans fin). Passer une référence stable définie hors du composant.
+- Tests : `test_admin_dossier_{candidat,recruteur,admin}.py` (cookie JWT réel), `DossierCandidatAdmin.test.jsx`, `DossierRecruteurAdmin.test.jsx` ; le mock de `adminDossierService` dans `AdminUsers.test.jsx` doit exposer les trois méthodes.
+
+---
+
 ## 🆕 SESSION 28/09/2026 — Revue complète du panel admin (25 pages)
 
 **Demande** : vérifier toutes les pages admin (organisation, détails, erreurs, manques, cohérence, aide, couleurs), en autonomie totale. Détail sécurité dans `SECURITY.md` §18.

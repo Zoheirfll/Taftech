@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { reportError } from "../utils/errorReporter";
 import { jobUrl } from "../utils/slugify";
 import { tw } from "../theme";
+import { useModaleNIN, reponseNinRequis } from "./ModalNIN";
 import {
   MapPin,
   Briefcase,
@@ -20,6 +21,7 @@ const JobCard = ({ job }) => {
   const [isError, setIsError] = useState(false);
 
   const estCloturee = !!job.est_cloturee;
+  const { demanderNIN, modaleNIN } = useModaleNIN();
 
   const handlePostuler = async () => {
     if (estCloturee) return;
@@ -28,6 +30,11 @@ const JobCard = ({ job }) => {
       setStatusMessage(data.message);
       setIsError(false);
     } catch (error) {
+      // NIN exigé par l'ANEM : on le demande, puis la candidature repart toute seule.
+      if (reponseNinRequis(error)) {
+        demanderNIN(handlePostuler);
+        return;
+      }
       if (!error.response || error.response.status >= 500) {
         reportError(`CRASH_POSTULATION_OFFRE_ID_${job.id}`, error);
       }
@@ -124,6 +131,7 @@ const JobCard = ({ job }) => {
           </div>
         </div>
       </div>
+      {modaleNIN}
     </div>
   );
 };

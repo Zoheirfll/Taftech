@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { apiErrMsg } from "../../utils/apiErrMsg";
+import { useModaleNIN, reponseNinRequis } from "../../Components/ModalNIN";
 import {
   MapPin,
   GraduationCap,
@@ -36,6 +37,7 @@ const ReviewCandidature = () => {
   const [profil, setProfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const { demanderNIN, modaleNIN } = useModaleNIN();
   const [motivationMode, setMotivationMode] = useState("texte");
   const [lettreTexte, setLettreTexte] = useState("");
   const [lettreFile, setLettreFile] = useState(null);
@@ -146,9 +148,14 @@ const ReviewCandidature = () => {
       toast.success("Candidature envoyée !");
       navigate("/mes-candidatures");
     } catch (err) {
+      setSubmitting(false);
+      // NIN exigé par l'ANEM : on le demande, puis la candidature repart toute seule.
+      if (reponseNinRequis(err)) {
+        demanderNIN(handleConfirm);
+        return;
+      }
       toast.error(apiErrMsg(err, "Erreur ou candidature déjà envoyée."));
       reportError("ECHEC_SOUMISSION_CANDIDATURE", err);
-      setSubmitting(false);
     }
   };
 
@@ -735,6 +742,7 @@ const ReviewCandidature = () => {
           {submitting ? "Envoi en cours..." : "Confirmer & postuler"}
         </button>
       </div>
+      {modaleNIN}
     </div>
   );
 };

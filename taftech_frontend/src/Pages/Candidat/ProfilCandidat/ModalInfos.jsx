@@ -152,6 +152,11 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   </p>
                 </div>
               )}
+              {!editInfo.nin && (
+                <p className={`text-xs ${tw.textMuted}`}>
+                  NIN : il vous sera demandé une seule fois, à votre première candidature (exigence de l'ANEM).
+                </p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={tw.formLabel}>

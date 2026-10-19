@@ -5,6 +5,7 @@ from collections import Counter
 
 from django.conf import settings
 
+from .audit import noter
 from .modeles import JETONS, Detection, ResultatNettoyage
 from .patterns import MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SECTION
 
@@ -104,4 +105,5 @@ def nettoyer_texte(texte, *, avec_ner=None, noms_connus=()) -> ResultatNettoyage
     categories = dict(Counter(d.categorie for d in retenues))
     if nb_references:
         categories["REFERENCES"] = nb_references
+    noter(categories)  # journal d'audit : décomptes seulement, jamais de contenu
     return ResultatNettoyage(texte=appliquer(texte, retenues), categories=categories)

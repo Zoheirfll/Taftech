@@ -266,6 +266,31 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     expect(screen.queryByText(/Aucun plafond défini/)).toBeNull();
   });
 
+  it("📊 Affiche la consommation du mois par fonctionnalité (appels et tokens)", async () => {
+    jobsService.getAIConfig.mockResolvedValue({
+      ...mockConfig,
+      appels_ia_mois: 2,
+      budget_ia_appels_mois_max: null,
+      budget_ia_alerte_pct: 80,
+      consommation_mois: [
+        { fonction: "PARSER_CV", libelle: "Parser CV (candidat)", appels: 2, remboursees: 1,
+          tokens_entree: 4000, tokens_sortie: 1200, moyenne_tokens: 2600 },
+        { fonction: "CONSEILS_DASHBOARD", libelle: "Conseils personnalisés (candidat)", appels: 0,
+          remboursees: 0, tokens_entree: 0, tokens_sortie: 0, moyenne_tokens: 0 },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <AdminIAConfig />
+      </MemoryRouter>,
+    );
+    const tableau = await screen.findByTestId("consommation-ia");
+    expect(tableau).toHaveTextContent("Parser CV (candidat)");
+    expect(tableau).toHaveTextContent(/4\s?000/);
+    expect(tableau).toHaveTextContent(/2\s?600/);
+    expect(tableau).toHaveTextContent("Conseils personnalisés (candidat)");
+  });
+
   it("🟢 HP4 : Changer le modèle Groq met à jour le champ", async () => {
     jobsService.updateAIConfig.mockResolvedValue(mockConfig);
 

@@ -22,10 +22,16 @@ CHAMPS_MODELE = (
 class AIConfigSerializer(serializers.ModelSerializer):
     # Lecture seule : consommation IA du mois en cours, pour la jauge « x / plafond » de l'admin.
     appels_ia_mois = serializers.SerializerMethodField()
+    # Lecture seule : appels et tokens du mois par fonctionnalité (suivi de la consommation Groq).
+    consommation_mois = serializers.SerializerMethodField()
 
     def get_appels_ia_mois(self, obj):
         from ..ia_quota import appels_ia_du_mois
         return appels_ia_du_mois()
+
+    def get_consommation_mois(self, obj):
+        from ..ia_quota import consommation_par_fonction_du_mois
+        return consommation_par_fonction_du_mois()
 
     class Meta:
         model = AIConfig
@@ -39,6 +45,6 @@ class AIConfigSerializer(serializers.ModelSerializer):
             'generation_offre_actif', 'generation_offre_max_tokens', 'generation_offre_prompt',
             'conseils_dashboard_actif', 'conseils_dashboard_max_tokens', 'conseils_dashboard_prompt',
             'conseils_dashboard_limite_jour', 'conseils_dashboard_limite_mois',
-            'budget_ia_appels_mois_max', 'budget_ia_alerte_pct', 'appels_ia_mois',
+            'budget_ia_appels_mois_max', 'budget_ia_alerte_pct', 'appels_ia_mois', 'consommation_mois',
             'date_modification',
         ]

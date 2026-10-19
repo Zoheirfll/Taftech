@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
-import { ShieldCheck, X } from "lucide-react";
+import { X } from "lucide-react";
 import { tw } from "../theme";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
@@ -47,9 +47,7 @@ export const ModalNIN = ({ ouvert, onFermer, onEnregistre }) => {
     <div className={tw.modalOverlay} role="dialog" aria-modal="true" aria-label="NIN obligatoire pour postuler">
       <form onSubmit={soumettre} noValidate className={`${tw.modalPanel} w-full max-w-md p-6`}>
         <div className="flex items-start justify-between mb-3">
-          <h3 className={`${tw.sectionHeading} flex items-center gap-2`}>
-            <ShieldCheck size={18} className={tw.textSuccess} /> Votre NIN est nécessaire pour postuler
-          </h3>
+          <h3 className={tw.sectionHeading}>Votre NIN est nécessaire pour postuler</h3>
           <button type="button" onClick={onFermer} aria-label="Fermer" className={`p-1 rounded ${tw.modalCloseButton}`}>
             <X size={18} />
           </button>

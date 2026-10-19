@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldCheck, Eye, X } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { tw } from "../theme";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
@@ -50,7 +50,6 @@ export const ApercuDonneesIA = ({ fonction, fichier = null }) => {
           readOnly
           aria-label="Masquer mes informations personnelles avant l'analyse IA"
         />
-        <ShieldCheck size={16} className={tw.textSuccess} />
         Masquer mes informations personnelles avant l'analyse IA
       </label>
       <p className={`text-xs ${tw.textMuted} mt-1 mb-2`}>

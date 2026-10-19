@@ -20,6 +20,9 @@ from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import PublicReadThrottle, FileUploadThrottle
+from ..confidentialite_ia import (
+    jeton_candidat, lignes_experiences, lignes_formations, nettoyer_champ,
+)
 
 User = get_user_model()
 
@@ -437,9 +440,9 @@ class AnalyseGroqRecruteurAPIView(APIView):
         if not ok:
             return Response(quota_info, status=403)
 
+        jeton = jeton_candidat()  # identifiant technique temporaire : le nom du candidat ne part jamais
         snapshot = candidature.profil_snapshot
         if snapshot:
-            nom = f"{snapshot.get('last_name', '')} {snapshot.get('first_name', '')}"
             titre = snapshot.get('titre_professionnel', 'Non renseigné')
             diplome = snapshot.get('diplome', 'Non renseigné')
             competences = snapshot.get('competences', 'Non renseigné')
@@ -449,7 +452,6 @@ class AnalyseGroqRecruteurAPIView(APIView):
         elif candidature.candidat:
             try:
                 profil = candidature.candidat.profil_candidat
-                nom = f"{candidature.candidat.last_name} {candidature.candidat.first_name}"
                 titre = profil.titre_professionnel or 'Non renseigné'
                 diplome = profil.diplome or 'Non renseigné'
                 competences = profil.competences or 'Non renseigné'
@@ -470,14 +472,17 @@ class AnalyseGroqRecruteurAPIView(APIView):
             return Response({'error': 'Candidature rapide sans profil.'}, status=400)
 
         offre = candidature.offre
-        exp_text = '\n'.join([
-            f"- {e.get('titre_poste')} chez {e.get('entreprise')} ({e.get('date_debut', '')} - {e.get('date_fin') or 'présent'})"
+        titre, diplome, competences = nettoyer_champ(titre), nettoyer_champ(diplome), nettoyer_champ(competences)
+        # Employeurs pseudonymisés (« Entreprise A »…) et établissements retirés : seuls le poste,
+        # les dates, le diplôme et la spécialité sont transmis.
+        exp_text = '\n'.join(f"- {ligne}" for ligne in lignes_experiences([
+            {'titre_poste': e.get('titre_poste'), 'entreprise': e.get('entreprise'),
+             'debut': e.get('date_debut', ''), 'fin': e.get('date_fin')}
             for e in experiences
-        ]) or "Aucune"
-        form_text = '\n'.join([
-            f"- {f.get('diplome')} à {f.get('etablissement')}"
-            for f in formations
-        ]) or "Aucune"
+        ])) or "Aucune"
+        form_text = '\n'.join(f"- {ligne}" for ligne in lignes_formations(
+            [{'diplome': f.get('diplome')} for f in formations]
+        )) or "Aucune"
 
         prompt_source = ai_config.analyse_recruteur_prompt or DEFAULT_PROMPT_ANALYSE_RECRUTEUR
         prompt = (
@@ -487,7 +492,7 @@ class AnalyseGroqRecruteurAPIView(APIView):
             .replace("{specialite}", str(offre.metier.libelle if offre.metier else 'Non précisée'))
             .replace("{type_contrat}", str(offre.type_contrat))
             .replace("{offre_wilaya}", str(offre.wilaya))
-            .replace("{nom_candidat}", str(nom))
+            .replace("{nom_candidat}", jeton)
             .replace("{titre_candidat}", str(titre))
             .replace("{diplome}", str(diplome))
             .replace("{wilaya_candidat}", str(wilaya))
@@ -497,6 +502,7 @@ class AnalyseGroqRecruteurAPIView(APIView):
             .replace("{score}", str(candidature.score_matching))
         )
 
+        donnees_candidat = '\n'.join([titre, diplome, competences, exp_text, form_text])
         if not acquerir_verrou_ia(request.user, 'ANALYSE_RECRUTEUR'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
@@ -504,8 +510,11 @@ class AnalyseGroqRecruteurAPIView(APIView):
             analyse = _appel_groq(
                 [{'role': 'user', 'content': prompt}],
                 max_tokens=ai_config.analyse_recruteur_max_tokens,
-                temperature=0.5
+                temperature=0.5,
+                donnees_candidat=donnees_candidat,
             )
+            # Rattachement local : le jeton n'existe que dans le prompt, la réponse stockée parle du candidat.
+            analyse = analyse.replace(jeton, "le candidat")
             candidature.derniere_analyse_ia = analyse
             candidature.analyse_ia_le = timezone.now()
             candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le'])

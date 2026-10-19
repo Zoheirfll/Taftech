@@ -374,9 +374,6 @@ class AnalyseCarriereGroqAPIView(APIView):
         if not ai_config.analyse_carriere_actif:
             return Response({'error': "L'analyse carrière IA est temporairement désactivée par l'administrateur."}, status=503)
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'SUGGESTIONS_METIER')
-        if not ok:
-            return Response(quota_info, status=403)
         try:
             profil = request.user.profil_candidat
         except Exception:
@@ -385,19 +382,37 @@ class AnalyseCarriereGroqAPIView(APIView):
         # Texte construit par confidentialite_ia.construction : employeurs pseudonymisés, établissements
         # retirés, coordonnées masquées — le même texte est montré au candidat par l'aperçu.
         from ..confidentialite_ia.construction import texte_carriere
+        from ..confidentialite_ia.empreinte import empreinte_ia
         profil_text = texte_carriere(profil)
+        system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
+        empreinte = empreinte_ia(
+            system_prompt, profil_text, ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.analyse_carriere_max_tokens,
+        )
+        # Profil, prompt et modèle inchangés depuis la dernière analyse : on renvoie le résultat
+        # stocké, sans appel IA ni décompte de quota (et même quota épuisé). `?regenerer=1` force
+        # une nouvelle analyse, qui suit le chemin normal (quota, verrou, décompte).
+        if (request.query_params.get('regenerer') != '1' and profil.derniere_analyse_carriere
+                and profil.empreinte_analyse_carriere == empreinte):
+            return Response({
+                'analyse': profil.derniere_analyse_carriere, 'depuis_cache': True,
+                'genere_le': profil.analyse_carriere_le.isoformat() if profil.analyse_carriere_le else None,
+            })
+        ok, quota_info = verifier_quota_ia(request.user, 'SUGGESTIONS_METIER')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'SUGGESTIONS_METIER'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'SUGGESTIONS_METIER')
         try:
-            system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
             analyse = _appel_groq([
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
             ], max_tokens=ai_config.analyse_carriere_max_tokens, donnees_candidat=profil_text)
             profil.derniere_analyse_carriere = analyse
             profil.analyse_carriere_le = timezone.now()
-            profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le'])
+            profil.empreinte_analyse_carriere = empreinte
+            profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le', 'empreinte_analyse_carriere'])
             return Response({
                 'analyse': analyse, 'quota_ia': quota_info,
                 'genere_le': profil.analyse_carriere_le.isoformat(),
@@ -433,9 +448,6 @@ class AnalyseGroqRecruteurAPIView(APIView):
             return Response({'error': 'Action non autorisée pour votre rôle.'}, status=403)
 
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
-        if not ok:
-            return Response(quota_info, status=403)
 
         jeton = jeton_candidat()  # identifiant technique temporaire : le nom du candidat ne part jamais
         snapshot = candidature.profil_snapshot
@@ -500,6 +512,24 @@ class AnalyseGroqRecruteurAPIView(APIView):
         )
 
         donnees_candidat = '\n'.join([titre, diplome, competences, exp_text, form_text])
+        # Le jeton est aléatoire à chaque appel : on le neutralise avant de hacher, sinon l'empreinte
+        # changerait toujours. Prompt (offre, score, profil), modèle et longueur entrent dans le hash.
+        from ..confidentialite_ia.empreinte import empreinte_ia
+        empreinte = empreinte_ia(
+            prompt.replace(jeton, "{CANDIDAT}"), ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.analyse_recruteur_max_tokens,
+        )
+        regenerer = request.data.get('regenerer') in (True, 'true', 'True', '1', 1)
+        # Analyse déjà faite sur les mêmes données : on la renvoie sans appel IA ni décompte du quota
+        # du palier (lecture d'un résultat déjà obtenu, même palier expiré ou quota épuisé).
+        if not regenerer and candidature.derniere_analyse_ia and candidature.empreinte_analyse_ia == empreinte:
+            return Response({
+                'analyse': candidature.derniere_analyse_ia, 'depuis_cache': True,
+                'genere_le': candidature.analyse_ia_le.isoformat() if candidature.analyse_ia_le else None,
+            })
+        ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'ANALYSE_RECRUTEUR'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
@@ -514,7 +544,8 @@ class AnalyseGroqRecruteurAPIView(APIView):
             analyse = analyse.replace(jeton, "le candidat")
             candidature.derniere_analyse_ia = analyse
             candidature.analyse_ia_le = timezone.now()
-            candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le'])
+            candidature.empreinte_analyse_ia = empreinte
+            candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le', 'empreinte_analyse_ia'])
             return Response({'analyse': analyse, 'quota_ia': quota_info})
         except Exception as e:
             logger.error("Erreur Groq recruteur : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))

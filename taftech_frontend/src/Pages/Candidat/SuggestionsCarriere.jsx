@@ -80,6 +80,8 @@ const SuggestionsCarriere = () => {
   const [loadingAnalyse, setLoadingAnalyse] = useState(false);
   const [analysedemandee, setAnalyseDemandee] = useState(false);
   const [analyseGenereLe, setAnalyseGenereLe] = useState(null);
+  // Vrai quand le serveur a renvoyé l'analyse déjà stockée (profil inchangé : aucun quota utilisé).
+  const [analyseDepuisCache, setAnalyseDepuisCache] = useState(false);
   const [quotaAnalyse, setQuotaAnalyse] = useState(null);
   const [page, setPage] = useState(1);
 
@@ -116,14 +118,16 @@ const SuggestionsCarriere = () => {
     })();
   }, []);
 
-  const handleAnalyseIA = async () => {
+  const handleAnalyseIA = async (regenerer = false) => {
     setLoadingAnalyse(true);
     setAnalyseDemandee(true);
     setAnalyse(null);
+    setAnalyseDepuisCache(false);
     try {
-      const data = await jobsService.getAnalyseCarriere();
+      const data = await jobsService.getAnalyseCarriere(regenerer);
       setAnalyse(data.analyse);
       setAnalyseGenereLe(data.genere_le || null);
+      setAnalyseDepuisCache(Boolean(data.depuis_cache));
       if (data.quota_ia) setQuotaAnalyse({ ...data.quota_ia, disponible: true });
     } catch (err) {
       reportError("ECHEC_GET_ANALYSE_CARRIERE", err);
@@ -248,7 +252,7 @@ const SuggestionsCarriere = () => {
           </div>
           {!loadingAnalyse && (
             <button
-              onClick={handleAnalyseIA}
+              onClick={() => handleAnalyseIA()}
               disabled={quotaAnalyse && quotaAnalyse.disponible === false}
               className={`flex items-center gap-2 px-4 py-2 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
             >
@@ -260,6 +264,20 @@ const SuggestionsCarriere = () => {
         <div className={`px-5 py-3 border-b ${tw.borderSubtle}`}>
           <ApercuDonneesIA fonction="ANALYSE_CARRIERE" />
         </div>
+
+        {analyseDepuisCache && !loadingAnalyse && (
+          <div className={`px-5 py-2 border-b ${tw.borderSubtle} ${tw.surfaceMuted} flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] ${tw.textMuted700}`}>
+            <span>Votre profil n'a pas changé depuis cette analyse : résultat conservé, aucun quota utilisé.</span>
+            <button
+              type="button"
+              onClick={() => handleAnalyseIA(true)}
+              disabled={quotaAnalyse && quotaAnalyse.disponible === false}
+              className={`${tw.linkPrimary} font-semibold disabled:opacity-50`}
+            >
+              Régénérer quand même
+            </button>
+          </div>
+        )}
 
         {(analyseGenereLe || quotaAnalyse) && (
           <div className={`px-5 py-2 border-b ${tw.borderSubtle} ${tw.surfaceMuted} flex items-center gap-2 text-[11px] ${tw.textMuted700}`}>

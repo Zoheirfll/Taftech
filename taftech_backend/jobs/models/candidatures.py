@@ -101,6 +101,8 @@ class Candidature(models.Model):
     # panel recruteur consomment le même appel/champ (jobs/views/ia.py::AnalyseGroqRecruteurAPIView).
     derniere_analyse_ia = models.TextField(null=True, blank=True, verbose_name="Dernière analyse IA (recruteur)")
     analyse_ia_le = models.DateTimeField(null=True, blank=True, verbose_name="Date de la dernière analyse IA")
+    # Empreinte (SHA-256) de la dernière analyse recruteur : voir ProfilCandidat.empreinte_analyse_carriere.
+    empreinte_analyse_ia = models.CharField(max_length=64, blank=True, default='')
 
     def __str__(self):
         nom = self.candidat.username if self.candidat else f"{self.nom_rapide} {self.prenom_rapide} (Rapide)"

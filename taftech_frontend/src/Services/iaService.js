@@ -60,9 +60,13 @@ export const iaService = {
   },
 
   // Analyse carrière Groq (candidat)
-  getAnalyseCarriere: async () => {
+  // `regenerer` : force une nouvelle analyse même si le profil n'a pas changé (compte dans le quota).
+  // Sans lui, un profil inchangé renvoie le résultat déjà stocké (`depuis_cache`), sans quota utilisé.
+  getAnalyseCarriere: async (regenerer = false) => {
     try {
-      const response = await api.get("jobs/analyse-carriere/");
+      const response = await api.get("jobs/analyse-carriere/", {
+        params: regenerer ? { regenerer: 1 } : {},
+      });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ANALYSE_CARRIERE", err);
@@ -71,10 +75,12 @@ export const iaService = {
   },
 
   // Analyse Groq recruteur
-  getAnalyseGroqRecruteur: async (candidatureId) => {
+  // `regenerer` : nouvelle analyse même si le profil et l'offre n'ont pas changé (compte dans le quota).
+  getAnalyseGroqRecruteur: async (candidatureId, regenerer = false) => {
     try {
       const response = await api.post(
         `jobs/candidatures/${candidatureId}/analyse-groq/`,
+        regenerer ? { regenerer: true } : {},
       );
       return response.data;
     } catch (err) {

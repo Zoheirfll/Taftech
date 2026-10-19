@@ -83,10 +83,6 @@ class ConseilsPersonnalisesIAAPIView(APIView):
             return Response({"error": "Les conseils personnalisés sont temporairement désactivés par l'administrateur."}, status=503)
 
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'CONSEILS_DASHBOARD')
-        if not ok:
-            return Response(quota_info, status=403)
-
         try:
             profil = request.user.profil_candidat
         except Exception:
@@ -95,14 +91,30 @@ class ConseilsPersonnalisesIAAPIView(APIView):
         # Données strictement nécessaires (effectifs par statut, diplôme du référentiel) : le même
         # texte est montré au candidat par l'aperçu des données transmises.
         from ..confidentialite_ia.construction import texte_conseils
+        from ..confidentialite_ia.empreinte import empreinte_ia
         donnees_text = texte_conseils(request.user, profil)
+        system_prompt = ai_config.conseils_dashboard_prompt or DEFAULT_PROMPT_CONSEILS_DASHBOARD
+        empreinte = empreinte_ia(
+            system_prompt, donnees_text, ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.conseils_dashboard_max_tokens,
+        )
+        # Données, prompt et modèle inchangés : résultat stocké renvoyé sans appel IA ni décompte
+        # (même quota épuisé). `?regenerer=1` force une nouvelle génération (quota, verrou, décompte).
+        if (request.query_params.get('regenerer') != '1' and profil.derniers_conseils_dashboard
+                and profil.empreinte_conseils == empreinte):
+            return Response({
+                "conseils": profil.derniers_conseils_dashboard, "depuis_cache": True,
+                "genere_le": profil.conseils_dashboard_le.isoformat() if profil.conseils_dashboard_le else None,
+            }, status=200)
+        ok, quota_info = verifier_quota_ia(request.user, 'CONSEILS_DASHBOARD')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'CONSEILS_DASHBOARD'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'CONSEILS_DASHBOARD')
         try:
             from ..ai_engine import call_ai
             import json
-            system_prompt = ai_config.conseils_dashboard_prompt or DEFAULT_PROMPT_CONSEILS_DASHBOARD
             content = call_ai(
                 [
                     {'role': 'system', 'content': system_prompt},
@@ -119,7 +131,8 @@ class ConseilsPersonnalisesIAAPIView(APIView):
             conseils = [str(c).strip() for c in conseils if str(c).strip()][:5]
             profil.derniers_conseils_dashboard = conseils
             profil.conseils_dashboard_le = timezone.now()
-            profil.save(update_fields=['derniers_conseils_dashboard', 'conseils_dashboard_le'])
+            profil.empreinte_conseils = empreinte
+            profil.save(update_fields=['derniers_conseils_dashboard', 'conseils_dashboard_le', 'empreinte_conseils'])
             return Response({
                 "conseils": conseils, "quota_ia": quota_info,
                 "genere_le": profil.conseils_dashboard_le.isoformat(),

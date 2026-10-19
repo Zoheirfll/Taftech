@@ -66,6 +66,11 @@ class ProfilCandidat(models.Model):
     conseils_dashboard_le = models.DateTimeField(null=True, blank=True, verbose_name="Date des derniers conseils IA")
     derniere_analyse_carriere = models.TextField(null=True, blank=True, verbose_name="Dernière analyse carrière IA")
     analyse_carriere_le = models.DateTimeField(null=True, blank=True, verbose_name="Date de la dernière analyse carrière IA")
+    # Empreinte (SHA-256) du prompt, des données envoyées, du modèle et de max_tokens au moment de la
+    # dernière analyse : si elle n'a pas changé, le résultat stocké est renvoyé sans appel IA ni
+    # décompte de quota (voir confidentialite_ia/empreinte.py). Aucune donnée personnelle : un hash.
+    empreinte_analyse_carriere = models.CharField(max_length=64, blank=True, default='')
+    empreinte_conseils = models.CharField(max_length=64, blank=True, default='')
     photo_profil = models.ImageField(
         upload_to='photos_profil/',
         blank=True,

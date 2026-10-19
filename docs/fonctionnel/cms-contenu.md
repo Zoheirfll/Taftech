@@ -7,6 +7,16 @@
 
 ---
 
+## 🆕 SESSION 19/10/2026 — Paragraphe à ajouter à la page « Confidentialité » (action de l'admin)
+
+La page `/confidentialite` est un **contenu éditable en base** (Admin → Pages du site), pas du code : il n'a donc pas été modifié automatiquement (c'est un texte juridique). Le consentement à l'inscription (`RegisterCandidat.jsx`, point 4) et l'aperçu des données IA mentionnent déjà le transfert. **À copier dans la page** (relu par un juriste avant publication) :
+
+> **Analyse par intelligence artificielle (facultative).** Pour analyser un CV, proposer des métiers ou des conseils, TafTech envoie à un prestataire d'intelligence artificielle situé hors d'Algérie (Groq, États-Unis) une version de vos données dans laquelle votre nom, vos coordonnées, votre adresse, votre date de naissance, vos pièces d'identité et vos liens personnels sont masqués. Le prestataire n'en conserve aucune copie (rétention zéro des données). Vous pouvez consulter le texte exact avant chaque envoi. Le calcul des correspondances avec les offres est réalisé par TafTech, sans prestataire d'IA externe. Ces fonctions sont facultatives.
+
+Ne pas écrire « anonyme » ni « anonymisé » (la pseudonymisation n'est pas une anonymisation) et ne pas affirmer d'autorisation de l'ANPDP tant qu'elle n'est pas détenue : question ouverte, voir [problemes-a-traiter.md](../problemes-a-traiter.md).
+
+---
+
 ## 🆕 SESSION 13/10/2026 — Point 11 des corrections finales : cycle de vie des compétences du référentiel (admin)
 
 **Constat** : le référentiel n'avait qu'un booléen (« Suggérée » = visible, « Masquée »), sans file de validation ; aucune compétence n'était proposée automatiquement, donc rien à valider. Ajout d'un cycle clair, **sans qu'aucune proposition ne devienne officielle d'elle-même**.

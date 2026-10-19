@@ -170,3 +170,26 @@ Tranchées le 17/10/2026 (meilleur choix sans changer le modèle de données) : 
 5. Le plafond mensuel en dépense Groq sera défini lors du passage au compte payant.
 
 **Hors périmètre** : parser de CV non mis en cache (son résultat n'est pas stocké, il préremplit un formulaire) ; aperçu recruteur du prompt (le recruteur voit déjà le profil, YAGNI).
+
+## 15. État d'implémentation (19/10/2026) — couverture des exigences
+
+Tout est codé et testé sur la branche `feature/pseudonymisation-ia` (18 tâches du plan). Journal : [docs/journal/2026-10-19-pseudonymisation-ia.md](../../journal/2026-10-19-pseudonymisation-ia.md). **Deux vérifications dépendent de CV réels fournis par l'utilisateur** et restent à faire : la mesure de qualité du parser (R3/R17) et la mesure du NER arabe (R21, condition d'adoption).
+
+| Exigence | Réalisée par | Vérifiée par |
+|---|---|---|
+| R1 Groq et modèle conservés | `AIConfig` et fournisseur inchangés | `test_ai_engine`, `test_call_ai_garde` |
+| R2, R3, R17 CV jamais envoyé brut, rattachement local | `confidentialite_ia/`, `cv_parser/parser.py` (`NOTE_JETONS`, `coordonnees.py`) | `test_cv_parser_confidentialite`, `test_ia_integration_jwt` (le nettoyage ne peut pas être contourné) |
+| R4 détection des types de données | `patterns.py`, `ner.py`, `ner_arabe.py` | `test_confidentialite_motifs`, `_ner`, `_arabe` |
+| R5, R9 case verrouillée, aperçu | `ApercuDonneesIA.jsx`, `views/ia_apercu.py` | `ApercuDonneesIA.test.jsx`, `test_apercu_donnees_ia` |
+| R6 même mécanisme partout | `call_ai(donnees_candidat=)`, `construction.py` | `test_ia_pseudonymisation_vues`, `test_architecture_ia` |
+| R7, R15 matching local, génération d'offre inchangée | aucun appel IA dans `matcher.py` | `test_architecture_ia` |
+| R8, R16 ZDR, clé côté serveur | console Groq (17/10/2026), `.env` | `test_cle_groq_non_exposee` |
+| R10 analyse recruteur sans nom | jeton `CANDIDAT_xxxxxx` | `test_ia_pseudonymisation_vues` |
+| R11 employeurs pseudonymisés | `champs_structures.py` | `test_confidentialite_champs` |
+| R12, R13, R14 classification et conseils minimaux | `domaine_agent.py`, `referentiel_utils.py`, `construction.py` | `test_confidentialite_classification`, `test_ia_pseudonymisation_vues` |
+| R18 tokens et audit | `UtilisationIA`, `ai_engine._enregistrer_usage`, `audit.py` | `test_ia_tokens` |
+| R19 résultat stocké réutilisé | `empreinte.py`, vues IA | `test_ia_cache_resultats` |
+| R20 quota Groq | disjoncteur, `rembourser_quota_ia`, `utils/erreursIA.js` | `test_ia_fournisseur_sature`, `erreursIA.test.js` |
+| R21 arabe | `ner_arabe.py` | `test_confidentialite_arabe` (dont un test réel Stanza) ; mesure sur CV réels à faire |
+| R22 information du candidat | `RegisterCandidat.jsx` (point 4), `ApercuDonneesIA.jsx` ; page CMS à compléter par l'admin | paragraphe fourni dans `docs/fonctionnel/cms-contenu.md` |
+| R23 NIN | `EnregistrerNINAPIView`, garde de `PostulerAPIView`, `ModalNIN.jsx` | `test_nin_postuler`, `ModalNIN.test.jsx` |

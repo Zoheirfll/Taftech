@@ -95,6 +95,26 @@ Backend `jobs/seo_pages.py` : `chemin_canonique_offre`, `construire_job_posting`
 ### Vie privée, hors ligne et formulaires (18/10/2026)
 Frontend : `Components/CookieBanner.jsx` (information cookies), `Components/Analytics.jsx` (mesure sans cookie, variables `VITE_ANALYTICS_*`), `Components/CarteSurDemande.jsx` (carte Google après clic), `Components/GoogleAuthProvider.jsx` (script Google limité à la connexion et à l'inscription), `Pages/Public/Merci.jsx` (remerciement), `utils/useErreursChamps.js` (+ `Components/FieldError.jsx`, `utils/fieldErrors.js`) pour les erreurs sous chaque champ, `utils/registerServiceWorker.js` (appelé par `main.jsx`, production seulement), `public/sw.js`, `public/hors-ligne.html`, `public/manifest.webmanifest`, icônes `public/taftech-icone-192.png` et `-512.png`. Backend : `jobs/image_utils.py` (optimisation des images envoyées, branchée par `JobsConfig.ready` dans `jobs/apps.py`), `jobs/seo_views.py` (`offres_indexables`, `stats_job_posting`, `alertes_configuration`, `rendu_serveur_pret`). Détail : [ui-site-public-mobile.md](../fonctionnel/ui-site-public-mobile.md), SECURITY.md §33.
 
+### `confidentialite_ia/` (nouveau, 19/10/2026) — pseudonymisation avant tout appel IA
+
+Backend `jobs/confidentialite_ia/` : un fichier par responsabilité. Règle : tout texte contenant des données candidat passe par ce package avant `call_ai`, et `call_ai(..., donnees_candidat=texte)` refuse ce qui contient encore un e-mail, un téléphone, une URL personnelle ou un NIN.
+
+| Fichier | Contient |
+|---|---|
+| `modeles.py` | `Detection`, `ResultatNettoyage`, jetons (`[EMAIL]`, `[NOM]`…) et libellés des catégories |
+| `patterns.py` | Motifs regex (e-mail, téléphone algérien, URL, NIN 18 chiffres, pièce d'identité, date de naissance, adresse, titres de sections « Références »), mots-clés arabes |
+| `pseudonymisation.py` | `nettoyer_texte` (déterministe : l'aperçu montré au candidat = ce qui part), fusion des détections, section « Références » |
+| `ner.py` | Noms et lieux d'en-tête par spaCy `fr_core_news_md`, **échec fermé** (`ModeleNerIndisponible`) |
+| `ner_arabe.py` | Chiffres arabo-indiens → ASCII (même longueur), mesure du script arabe, noms et lieux par Stanza, échec fermé |
+| `coordonnees.py` | Extraction **locale** des coordonnées du CV brut (e-mail, téléphone, liens, nom, date de naissance, wilaya) : elles remplissent le profil sans passer par l'IA |
+| `filet.py` | `verifier_absence_pii` / `FuiteDonneesPersonnelles`, dernier garde-fou appelé par `call_ai` |
+| `champs_structures.py` | Jeton `CANDIDAT_xxxxxx`, employeurs « Entreprise A/B », établissements retirés, effectifs par statut |
+| `construction.py` | Textes envoyés par l'analyse carrière et les conseils, partagés avec l'aperçu |
+| `audit.py` | Compteur d'entités masquées par demande (ContextVar), enregistré sur `UtilisationIA.entites_masquees` |
+| `empreinte.py` | Empreinte SHA-256 des données envoyées (réutilisation d'une analyse inchangée, sans appel IA) |
+
+Hors package : `views/ia_apercu.py` (route d'aperçu), `ai_engine.py` (garde, tokens, disjoncteur Groq), `ia_quota.py` (remboursement des refus fournisseur, consommation par fonction). Fiche : [parser-cv-ia.md](../fonctionnel/parser-cv-ia.md). Tests d'architecture : `jobs/tests/test_architecture_ia.py`.
+
 ## Fichiers proches de la limite (à surveiller)
 
 Plafond dur 1000 lignes, plafond doux 800. À découper si on y ajoute du code : `Services/adminService.js` (994), `theme.js` (937), `Recruteur/OffresListPage.jsx` (927, son bloc « Formation requise » réutilise désormais `CreateJob/BlocFormationRequise.jsx`), `Admin/AdminOffres.jsx` (909), `views/offres.py` (883), `views/admin.py` (877), `referentiel_utils.py` (875), `Candidat/CandidatDashboard.jsx` (845), `Admin/AdminReferentielV2.jsx` (798, hors de la zone depuis la suppression de l'ancien panneau « Formations à vérifier »).

@@ -7,6 +7,34 @@
 
 ---
 
+## 🆕 SESSION 19/10/2026 — Confidentialité avant appel IA, coût et résilience Groq
+
+> **À lire avant de toucher au nettoyage des données candidat, à `call_ai`, aux quotas IA ou à un nouvel appel IA.** Conception : [spec](../superpowers/specs/2026-10-17-pseudonymisation-ia-design.md) ; plan : [plan](../superpowers/plans/2026-10-17-pseudonymisation-ia.md) ; sécurité : SECURITY.md §34 ; carte : [carte-du-code.md](../architecture/carte-du-code.md).
+
+**Flux** : données brutes chez TafTech → nettoyage (`jobs/confidentialite_ia/`) → appel Groq → réponse → rattachement local au profil. Le matching (`matcher.py`, `matching_cache.py`) reste 100 % local et n'appelle jamais l'IA (test d'architecture). La génération d'offre ne reçoit aucune donnée candidat.
+
+**Parser de CV** : le texte du CV est nettoyé (nom, e-mail, téléphone, adresse, date de naissance, NIN/pièces, liens, bloc « Références ») avant l'appel ; `NOTE_JETONS` explique à l'IA que ces champs sont remplacés par des jetons entre crochets. Les coordonnées sont extraites **localement** du CV brut (`coordonnees.py`) et prennent toujours le pas sur ce que renvoie l'IA (une valeur qui n'est qu'un jeton est écartée par `_sans_jeton`). **Champ perdu par construction : l'adresse** (jamais extraite, le candidat la saisit). `sexe` reste déduit par l'IA des civilités (« Mme », « M. »), plus du prénom.
+
+**Autres fonctions** : analyse recruteur par jeton `CANDIDAT_xxxxxx` (aléatoire, non stocké, remplacé par « le candidat » dans le résultat) ; analyse carrière avec employeurs en « Entreprise A/B » + domaine du métier de l'expérience (le secteur réel de l'employeur n'existe pas dans le modèle) et établissements retirés ; conseils avec effectifs par statut et diplôme du référentiel ; classification des métiers (`domaine_agent.py`), des diplômes et spécialités (`referentiel_utils.py`) sur intitulés nettoyés.
+
+**Échec fermé** : si spaCy (ou Stanza pour un texte contenant de l'arabe) est indisponible, aucun appel IA n'a lieu (le parser renvoie son échec habituel, l'aperçu un 503). Le masquage n'est **pas désactivable** (aucun paramètre d'API, case verrouillée dans l'interface ; `CONFIDENTIALITE_IA_NER_ACTIF=false` est refusé en production).
+
+**Aperçu** (`POST jobs/ia/apercu-donnees/`, candidat seulement) : montre le texte exact transmis et le décompte des catégories masquées ; n'appelle jamais l'IA, ne consomme aucun quota. Composant `ApercuDonneesIA` (case verrouillée + bouton « Voir les données qui seront transmises ») sur l'import de CV, les suggestions carrière et les conseils. **L'import de CV n'analyse plus tout de suite le fichier choisi** : le candidat voit l'aperçu puis clique sur « Analyser mon CV ».
+
+**CV en arabe** : chiffres arabo-indiens normalisés avant détection, mots-clés arabes (adresse, date de naissance, références), noms et lieux par Stanza. **Condition d'adoption non remplie à ce jour : la mesure sur 10 CV arabes réels** (nom du candidat masqué sur au moins 9 CV, aucun téléphone ni e-mail en clair). Si elle échoue, basculer sur le refus des CV majoritairement arabes (voir le plan, Task 3b, Step 7). Test réel disponible : `ArabeStanzaTest`.
+
+**Mesure de qualité du parser (à faire, plan Task 9 Step 8)** : comparer sur 10 CV réels, avant (`main`) et après, titre, nombre d'expériences et de formations, compétences, wilaya, nom, e-mail, téléphone ; consigner **uniquement des décomptes** dans `docs/journal/`, jamais le contenu d'un CV. Si l'extraction d'expériences ou de formations baisse sensiblement, le signaler.
+
+**Suivi, cache et quota Groq** (demande de l'employeur, Free Plan en test puis Developer) :
+- `UtilisationIA` porte les tokens (entrée/sortie cumulés sur tous les appels d'une demande), le modèle, le décompte des entités masquées (jamais de contenu) et un `statut` (`ACCEPTE` / `REMBOURSE`). La page admin « Configuration IA » affiche la consommation du mois par fonction (`consommation_mois`).
+- Une analyse dont les données, le prompt et le modèle sont inchangés est **renvoyée sans appel Groq ni décompte** (`depuis_cache`), même quota épuisé ; `?regenerer=1` (ou `regenerer: true` côté recruteur) force une nouvelle analyse. Le parser n'est pas mis en cache (son résultat préremplit un formulaire).
+- Groq répond 429 : disjoncteur de 30 à 3600 s (en-tête `retry-after`, 60 s par défaut), appel **remboursé**, message « L'analyse IA est temporairement indisponible », bouton qui reste actif (`utils/erreursIA.js`). Les autres pannes restent décomptées (demande du client du 18/08).
+- **Plafond de dépense Groq** : à définir au passage au compte payant ; les tokens enregistrés en sont la base. Aujourd'hui le plafond global compte des appels (`budget_ia_appels_mois_max`).
+
+**Pièges** : (1) la ContextVar de la demande est vidée par `liberer_verrou_ia` : tout nouvel appelant doit suivre `consommer_quota_ia` → … → `liberer_verrou_ia` (le garde `finally`) ; (2) `onClick={handleAnalyseIA}` passerait l'événement comme `regenerer` : toujours `onClick={() => handleAnalyseIA()}` ; (3) chaque worker gunicorn charge ses propres modèles (environ 1 Go) : voir `docs/exploitation/deploiement.md`.
+
+---
+
 ## 🆕 SESSION 29/09/2026 — Corrections du parser CV + page admin « Qualité IA »
 
 **Demande** : améliorer le parser et le matching au fil de l'eau à partir de l'usage réel, avec de la visibilité dans l'admin. Périmètre validé par l'utilisateur : journal de parsing + corrections des candidats + file de correction + suivi du matching.

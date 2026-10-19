@@ -20,7 +20,7 @@ from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import PublicReadThrottle, FileUploadThrottle
-from ..ai_engine import FournisseurIASature, fournisseur_sature
+from ..ai_engine import FournisseurIASature, saturation_de_la_demande
 from ..confidentialite_ia import (
     jeton_candidat, lignes_experiences, lignes_formations, nettoyer_champ,
 )
@@ -297,9 +297,10 @@ class ParserCVAPIView(APIView):
             if result.get('success') is False:
                 # Échec du parsing : journalisé (scanné vs IA indisponible/limite de débit), réponse inchangée.
                 code = 'PDF_SCANNE' if 'scann' in str(result.get('error', '')).lower() else 'IA_INDISPONIBLE'
-                # parse_cv avale les erreurs du fournisseur : le drapeau de saturation dit si le
-                # refus vient du quota Groq (appel remboursé) plutôt que d'une vraie panne.
-                if code == 'IA_INDISPONIBLE' and fournisseur_sature():
+                # parse_cv avale les erreurs du fournisseur : on rembourse seulement si CETTE demande a
+                # été refusée par le fournisseur (429 reçu ou appel bloqué par la pause), pas parce que
+                # le drapeau global est levé pendant qu'elle échoue pour une autre cause.
+                if code == 'IA_INDISPONIBLE' and saturation_de_la_demande():
                     from ..ia_quota import rembourser_quota_ia
                     rembourser_quota_ia()
                     result['error'] = MESSAGE_FOURNISSEUR_SATURE
@@ -465,7 +466,9 @@ class AnalyseGroqRecruteurAPIView(APIView):
 
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise or candidature.offre.entreprise != entreprise:
-            return Response({'error': 'Non autorisé.'}, status=403)
+            # Même réponse qu'un identifiant inexistant : sinon la différence 404 / 403 permettrait à un
+            # recruteur de deviner quelles candidatures existent chez d'autres entreprises.
+            return Response({'error': 'Candidature introuvable.'}, status=404)
         # Contrôle par appartenance à l'entreprise et rôle d'équipe (et non `user.role`, qui
         # écartait à tort les membres d'équipe dont le compte est de type CANDIDAT). L'analyse
         # consomme le quota du palier : un membre « Invité » (lecture seule) ne peut pas la lancer.

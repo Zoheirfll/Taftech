@@ -6,6 +6,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -42,6 +43,9 @@ class LimiteOffresEnAttenteTest(APITestCase):
 
 class AnalyseIARolesTest(APITestCase):
     def setUp(self):
+        # Le cache est partagé entre les tests : une pause du fournisseur IA ou un verrou laissés par un
+        # autre module ne doivent jamais fausser ces cas.
+        cache.clear()
         self.proprio, self.entreprise = make_entreprise("audit_ia_proprio", palier_nom="BUSINESS")
         offre = OffreEmploi.objects.create(
             entreprise=self.entreprise, titre="Offre", wilaya="16 - Alger",
@@ -80,7 +84,13 @@ class AnalyseIARolesTest(APITestCase):
     def test_autre_entreprise_refusee(self, mock_ia):
         autre, _ = make_entreprise("audit_ia_autre", palier_nom="BUSINESS")
         self.client.force_authenticate(user=autre)
-        self.assertEqual(self.client.post(self.url).status_code, 403)
+        # 404 (et non 403) : identique à un identifiant inexistant, pour ne pas révéler qu'une
+        # candidature existe chez une autre entreprise.
+        reponse = self.client.post(self.url)
+        self.assertEqual(reponse.status_code, 404)
+        inconnue = self.client.post(reverse("analyse-groq", args=[999999]))
+        self.assertEqual(inconnue.status_code, 404)
+        self.assertEqual(reponse.json(), inconnue.json())
         mock_ia.assert_not_called()
 
     @patch("jobs.views.ia._appel_groq", return_value="Analyse de test")
@@ -89,7 +99,8 @@ class AnalyseIARolesTest(APITestCase):
             username="audit_ia_simple", email="audit_ia_simple@test.dz", password="pwd", role="CANDIDAT",
         )
         self.client.force_authenticate(user=simple)
-        self.assertEqual(self.client.post(self.url).status_code, 403)
+        # Sans entreprise : même 404 qu'une candidature inexistante (aucune information sur son existence).
+        self.assertEqual(self.client.post(self.url).status_code, 404)
         mock_ia.assert_not_called()
 
 

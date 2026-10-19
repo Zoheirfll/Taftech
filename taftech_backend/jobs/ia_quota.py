@@ -322,6 +322,8 @@ def liberer_verrou_ia(user, fonction):
         # Le journal d'audit ne doit jamais empêcher de libérer le verrou de l'utilisateur.
         logger.exception("Enregistrement du décompte des entités masquées en échec")
     finally:
+        from .ai_engine import SATURATION_DEMANDE
         _utilisation_courante.set(None)
         COMPTEUR_ENTITES.set(None)
+        SATURATION_DEMANDE.set(False)
         cache.delete(f"ia_lock_{user.id}_{fonction}")

@@ -6,6 +6,7 @@ prod soit un changement de config admin, pas un futur chantier de refactor.
 """
 import os
 import logging
+from contextvars import ContextVar
 from django.core.cache import cache
 from groq import Groq, RateLimitError
 import ollama
@@ -30,6 +31,17 @@ class FournisseurIASature(Exception):
 
 def fournisseur_sature() -> bool:
     return bool(cache.get(CLE_SATURATION))
+
+
+# Vrai quand la demande EN COURS a elle-même été refusée par le fournisseur (429 reçu, ou appel
+# bloqué par la pause). Sert à ne rembourser que les appels réellement refusés pour cette raison :
+# le drapeau global `fournisseur_sature()` peut être levé alors qu'une demande échoue pour une autre
+# cause (modèle de détection indisponible, par exemple). Remis à zéro à la fin de la demande.
+SATURATION_DEMANDE: ContextVar = ContextVar("saturation_demande", default=False)
+
+
+def saturation_de_la_demande() -> bool:
+    return SATURATION_DEMANDE.get()
 
 
 def _delai_attente(exc) -> int:
@@ -97,6 +109,7 @@ def call_ai(messages, max_tokens=500, temperature=None, response_format=None, ti
     if config.provider == 'OLLAMA':
         return _call_ollama(messages, config.ollama_model, max_tokens, temp)
     if fournisseur_sature():
+        SATURATION_DEMANDE.set(True)
         raise FournisseurIASature("Fournisseur IA en pause (quota atteint).")
     return _call_groq(messages, config.groq_model, config.reasoning_effort, max_tokens, temp, response_format, timeout)
 
@@ -122,6 +135,7 @@ def _call_groq(messages, model, reasoning_effort, max_tokens, temperature, respo
         cache.set(CLE_SATURATION, True, timeout=delai)
         # Jamais le corps de la réponse d'erreur dans les journaux : seulement le fait et la durée.
         logger.warning("Groq : quota atteint (429), appels IA suspendus %s s", delai)
+        SATURATION_DEMANDE.set(True)
         raise FournisseurIASature("Quota du fournisseur IA atteint.") from exc
     usage = getattr(response, 'usage', None)
     _enregistrer_usage(

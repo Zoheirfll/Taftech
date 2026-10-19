@@ -14,10 +14,12 @@ class ReinitialiserContexteIAMiddleware:
 
     @staticmethod
     def _reinitialiser():
+        from jobs.ai_engine import SATURATION_DEMANDE
         from jobs.confidentialite_ia.audit import COMPTEUR_ENTITES
         from jobs.ia_quota import _utilisation_courante
         _utilisation_courante.set(None)
         COMPTEUR_ENTITES.set(None)
+        SATURATION_DEMANDE.set(False)
 
     def __call__(self, request):
         self._reinitialiser()

@@ -31,6 +31,7 @@ def erreur_429(retry_after=None):
 class FournisseurSatureTest(APITestCase):
     def setUp(self):
         cache.clear()
+        self.addCleanup(cache.clear)  # la pause du fournisseur ne doit jamais polluer un autre test
         AIConfig.get_solo()
         self.user = User.objects.create_user(
             username="sat_cand", email="sat_cand@test.dz", password="pwd", role="CANDIDAT",
@@ -101,6 +102,58 @@ class FournisseurSatureTest(APITestCase):
         self.assertFalse(reponse.data["success"])
         self.assertIn("temporairement indisponible", reponse.data["error"])
         self.assertEqual(UtilisationIA.objects.get(fonction="PARSER_CV").statut, "REMBOURSE")
+
+
+class RemboursementCibleTest(APITestCase):
+    """Le remboursement ne dépend plus du drapeau global : seule la demande réellement refusée par le
+    fournisseur est remboursée."""
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)  # la pause du fournisseur ne doit jamais polluer un autre test
+        AIConfig.get_solo()
+        self.user = User.objects.create_user(
+            username="rb_cand", email="rb_cand@test.dz", password="pwd", role="CANDIDAT",
+        )
+        ProfilCandidat.objects.create(user=self.user, titre_professionnel="Développeur")
+        self.client.force_authenticate(user=self.user)
+
+    def _parser(self):
+        fichier = SimpleUploadedFile("cv.pdf", b"%PDF-1.4 test", content_type="application/pdf")
+        cv = "Karim Benali, développeur Python. " + "Expérience en développement web. " * 5
+        with override_settings(CONFIDENTIALITE_IA_NER_ACTIF=False), \
+                patch("jobs.cv_parser.parser.extract_text", return_value=cv), \
+                patch("jobs.cv_parser.parser.extract_photo_from_pdf", return_value=None):
+            return self.client.post(reverse("parser-cv"), {"cv": fichier}, format="multipart")
+
+    def test_echec_pour_une_autre_cause_pendant_la_pause_n_est_pas_rembourse(self):
+        """Pause Groq en cours, mais la demande échoue AVANT tout appel (modèle de détection
+        indisponible) : ce n'est pas un refus du fournisseur, l'appel reste décompté."""
+        from jobs.confidentialite_ia import ModeleNerIndisponible
+        cache.set(CLE_SATURATION, True, timeout=60)
+        with patch("jobs.cv_parser.parser.nettoyer_texte", side_effect=ModeleNerIndisponible("x")), \
+                patch("jobs.ia_quota.verifier_quota_ia", return_value=(True, {})):
+            reponse = self._parser()
+        self.assertFalse(reponse.data["success"])
+        self.assertEqual(UtilisationIA.objects.get(fonction="PARSER_CV").statut, "ACCEPTE")
+
+    @patch("jobs.ai_engine._get_groq_client")
+    def test_refus_reel_du_fournisseur_reste_rembourse(self, client):
+        client.return_value.chat.completions.create.side_effect = erreur_429()
+        self._parser()
+        self.assertEqual(UtilisationIA.objects.get(fonction="PARSER_CV").statut, "REMBOURSE")
+
+    def test_appel_bloque_par_la_pause_est_rembourse(self):
+        cache.set(CLE_SATURATION, True, timeout=60)
+        with patch("jobs.ia_quota.verifier_quota_ia", return_value=(True, {})):
+            self._parser()  # la pause bloque l'appel dans call_ai : la demande est refusée
+        self.assertEqual(UtilisationIA.objects.get(fonction="PARSER_CV").statut, "REMBOURSE")
+
+    def test_la_saturation_d_une_demande_ne_deborde_pas_sur_la_suivante(self):
+        from jobs.ai_engine import SATURATION_DEMANDE
+        SATURATION_DEMANDE.set(True)  # reste d'une demande précédente
+        self.client.get(reverse("api-constants"))  # le middleware remet à zéro
+        self.assertFalse(SATURATION_DEMANDE.get())
 
 
 class DelaiPauseTest(SimpleTestCase):

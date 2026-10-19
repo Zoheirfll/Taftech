@@ -50,7 +50,7 @@ from .views import (
     AdminCompteAdminsAPIView,
 
     # IA
-    OffresRecommandeesAPIView, ParserCVAPIView,
+    OffresRecommandeesAPIView, ParserCVAPIView, ApercuDonneesIAAPIView,
     AdminReferentielMetiersAPIView, AdminReferentielSpecialitesAPIView, AdminReferentielDiplomesAPIView,
     AdminRelationsSimilaireAPIView, AdminFormationsAVerifierAPIView,
     EnregistrerCorrectionsParsingAPIView, AdminQualiteIAParserAPIView, AdminQualiteIACorrectionsAPIView,
@@ -311,6 +311,7 @@ urlpatterns = [
     # IA
     path('recommandations/', OffresRecommandeesAPIView.as_view(), name='recommandations'),
     path('parser-cv/', ParserCVAPIView.as_view(), name='parser-cv'),
+    path('ia/apercu-donnees/', ApercuDonneesIAAPIView.as_view(), name='ia-apercu-donnees'),
     path('parsing/<int:parsing_id>/corrections/', EnregistrerCorrectionsParsingAPIView.as_view(), name='parsing-corrections'),
     path('admin/qualite-ia/parser/', AdminQualiteIAParserAPIView.as_view(), name='admin-qualite-ia-parser'),
     path('admin/qualite-ia/corrections/', AdminQualiteIACorrectionsAPIView.as_view(), name='admin-qualite-ia-corrections'),

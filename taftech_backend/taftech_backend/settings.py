@@ -133,6 +133,7 @@ REST_FRAMEWORK = {
         'invitation_cvtheque': '20/day',
         'file_upload': '20/hour',
         'cv_parser': '10/hour',
+        'apercu_ia': '60/hour',
         'admin_upload': '100/hour',
     },
 }

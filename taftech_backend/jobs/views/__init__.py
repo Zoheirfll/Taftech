@@ -104,6 +104,7 @@ from .ia import (
     GenererOffreIAAPIView,
     QuotaIAAffichageAPIView,
 )
+from .ia_apercu import ApercuDonneesIAAPIView
 from .bulletin import GenererBulletinPDFAPIView
 from .equipe import (
     EquipeAPIView,

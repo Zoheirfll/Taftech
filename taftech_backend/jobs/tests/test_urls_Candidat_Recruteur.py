@@ -18,7 +18,10 @@ class JobPublicAndCandidateTests(APITestCase):
             entreprise=self.ent, titre="Developpeur Python", wilaya="31 - Oran", 
             est_active=True, statut_moderation='APPROUVEE'
         )
-        self.cand = User.objects.create_user(username="cand_test", role="CANDIDAT", email="cand@test.dz")
+        self.cand = User.objects.create_user(
+            username="cand_test", role="CANDIDAT", email="cand@test.dz",
+            nin="100000000000000005",  # exigé pour postuler (ANEM)
+        )
 
     def test_recherche_offres_filtree(self):
         """ US-PUB-01: Test des filtres de recherche """

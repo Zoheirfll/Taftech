@@ -14,7 +14,7 @@ from .views import (
     MettreAJourReponseExigenceAPIView,
 
     # Profil candidat
-    ProfilCandidatAPIView, ExperienceAPIView, ExperienceDetailAPIView,
+    ProfilCandidatAPIView, EnregistrerNINAPIView, ExperienceAPIView, ExperienceDetailAPIView,
     FormationAPIView, FormationDetailAPIView,
     OffreSauvegardeeListCreateAPIView, OffreSauvegardeeDeleteAPIView,
     AlerteEmploiListCreateAPIView, AlerteEmploiDetailAPIView,
@@ -148,6 +148,7 @@ urlpatterns = [
 
     # Profil candidat
     path('profil/', ProfilCandidatAPIView.as_view(), name='profil-candidat'),
+    path('profil/nin/', EnregistrerNINAPIView.as_view(), name='profil-nin'),
     path('profil/experiences/', ExperienceAPIView.as_view(), name='profil-experiences'),
     path('profil/experiences/<int:pk>/', ExperienceDetailAPIView.as_view(), name='profil-experience-detail'),
     path('profil/formations/', FormationAPIView.as_view(), name='profil-formations'),

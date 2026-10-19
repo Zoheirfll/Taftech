@@ -37,6 +37,14 @@ class PostulerAPIView(APIView):
     def post(self, request, offre_id):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Seuls les candidats peuvent postuler."}, status=status.HTTP_403_FORBIDDEN)
+        # Exigence ANEM : le NIN est obligatoire pour postuler avec un compte (il n'est pas demandé à
+        # l'inscription). La candidature rapide, sans compte, n'est pas concernée (limite consignée
+        # dans docs/problemes-a-traiter.md).
+        if not request.user.nin:
+            return Response(
+                {"error": "Votre NIN est obligatoire pour postuler.", "code": "NIN_REQUIS"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         try:
             offre = OffreEmploi.objects.get(id=offre_id, est_active=True)
         except OffreEmploi.DoesNotExist:

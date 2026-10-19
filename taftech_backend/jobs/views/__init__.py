@@ -25,6 +25,7 @@ from .offres import (
 )
 from .profils import (
     ProfilCandidatAPIView,
+    EnregistrerNINAPIView,
     ExperienceAPIView,
     ExperienceDetailAPIView,
     FormationAPIView,

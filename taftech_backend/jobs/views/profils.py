@@ -21,9 +21,60 @@ from ..serializers import (
     ParametresNotificationsSerializer
 )
 from .equipe import get_entreprise_for_user
-from ..throttles import FileUploadThrottle
+from ..throttles import FileUploadThrottle, WriteActionThrottle
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 
 logger = logging.getLogger(__name__)
+
+MESSAGE_NIN_NON_ENREGISTRABLE = (
+    "Ce NIN ne peut pas être enregistré. Vérifiez-le ou contactez le support TafTech."
+)
+
+
+class EnregistrerNINAPIView(APIView):
+    """Enregistrement du NIN du candidat connecté (exigé par l'ANEM pour postuler à une offre).
+
+    Le NIN n'est pas demandé à l'inscription : il est saisi une seule fois, au moment de la première
+    candidature. Il est ensuite immuable (une correction passe par l'administrateur). Visible du
+    candidat et de l'admin seulement : jamais renvoyé par cette route, jamais dans le profil_snapshot,
+    la CVthèque, la vue recruteur ni un prompt IA."""
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [WriteActionThrottle]
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'CANDIDAT':
+            return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
+        if user.nin:
+            return Response(
+                {"error": "Votre NIN est déjà enregistré. Pour le corriger, contactez le support TafTech.",
+                 "code": "NIN_DEJA_ENREGISTRE"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        nin = str(request.data.get('nin') or '').strip()
+        if not re.fullmatch(r'\d{18}', nin):
+            return Response(
+                {"nin": ["Le NIN doit contenir exactement 18 chiffres."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        refus = Response(
+            {"error": MESSAGE_NIN_NON_ENREGISTRABLE, "code": "NIN_NON_ENREGISTRABLE"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+        try:
+            with transaction.atomic():
+                # Message volontairement générique : on ne révèle jamais qu'un NIN appartient déjà
+                # à un autre compte.
+                if get_user_model().objects.filter(nin=nin).exclude(pk=user.pk).exists():
+                    return refus
+                user.nin = nin
+                user.save(update_fields=['nin'])
+        except IntegrityError:
+            return refus  # course entre deux enregistrements simultanés du même NIN
+        # Trace sans la valeur du NIN.
+        logger.info("NIN enregistré pour l'utilisateur %s", user.pk)
+        return Response({"nin_enregistre": True}, status=status.HTTP_200_OK)
 
 
 class ProfilCandidatAPIView(APIView):

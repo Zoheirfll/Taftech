@@ -39,7 +39,8 @@ class ProfilSnapshotTestCase(TestCase):
             role="CANDIDAT",
             first_name="Zoheir",
             last_name="Filali",
-            telephone="0664540375"
+            telephone="0664540375",
+            nin="100000000000000003",  # exigé pour postuler (ANEM)
         )
 
         self.profil, _ = ProfilCandidat.objects.get_or_create(user=self.candidat)
@@ -224,7 +225,8 @@ class ProfilSnapshotTestCase(TestCase):
             username="candidat_vide",
             email="vide@test.dz",
             password="Pass1234!",
-            role="CANDIDAT"
+            role="CANDIDAT",
+            nin="100000000000000004",  # exigé pour postuler (ANEM)
         )
         ProfilCandidat.objects.get_or_create(user=candidat_vide)
         self.client.force_authenticate(user=candidat_vide)

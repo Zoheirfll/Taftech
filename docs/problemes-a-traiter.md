@@ -26,3 +26,23 @@ Depuis le retrait du repli hiérarchique, **le champ 1 (simple) n'a plus AUCUN e
 3. Autre approche à définir.
 
 **À faire à la reprise** : trancher l'une des options ci-dessus avec l'utilisateur avant toute implémentation (décision structurante affectant le score sur potentiellement toutes les offres actives).
+
+---
+
+## 🟠 NIN obligatoire pour postuler : contournable par la candidature rapide
+
+**Trouvé le** : 19/10/2026 (exigence ANEM, plan `docs/superpowers/plans/2026-10-17-pseudonymisation-ia.md`, Task 18).
+
+**Décision de l'utilisateur** : le NIN devient obligatoire pour postuler avec un compte (pas à l'inscription), et la candidature rapide (`PostulerRapideAPIView`, sans compte ni profil) reste sans NIN.
+
+**Problème concret** : un candidat qui veut éviter de saisir son NIN peut postuler par la voie rapide. L'obligation ANEM n'est donc pas garantie pour toutes les candidatures.
+
+**Options à trancher plus tard** : exiger le NIN aussi dans le formulaire rapide ; supprimer la candidature rapide ; accepter l'écart et le documenter auprès de l'ANEM.
+
+## 🟠 Transfert de données vers Groq (États-Unis) : cadre juridique loi 18-07 à confirmer
+
+**Trouvé le** : 19/10/2026 (plan pseudonymisation, Task 17).
+
+**Contexte** : le texte masqué des CV et des profils est envoyé à un prestataire d'IA hors d'Algérie (ZDR activé, données pseudonymisées). Une pseudonymisation n'est pas une anonymisation.
+
+**À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.

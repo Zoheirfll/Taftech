@@ -481,12 +481,22 @@ export const adminService = {
       throw err;
     }
   },
-  getExplorateurGroupe: async (groupeId, page = 1) => {
+  getExplorateurGroupe: async (groupeId, page = 1, search = "", sousGroupes = false) => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/groupe/${groupeId}/`, { params: { page } });
+      const params = sousGroupes ? { page, search, sous_groupes: 1 } : { page, search };
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/groupe/${groupeId}/`, { params });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_EXPLORATEUR_GROUPE", err);
+      throw err;
+    }
+  },
+  getExplorateurSpecialite: async (specialiteId) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/specialite/${specialiteId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_SPECIALITE", err);
       throw err;
     }
   },
@@ -499,19 +509,19 @@ export const adminService = {
       throw err;
     }
   },
-  getExplorateurAnomalie: async (code, page = 1) => {
+  getExplorateurAnomalie: async (code, page = 1, search = "") => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/anomalies/${code}/`, { params: { page } });
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/anomalies/${code}/`, { params: { page, search } });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_EXPLORATEUR_ANOMALIE", err);
       throw err;
     }
   },
-  getExplorateurFormations: async (domaineId, page = 1) => {
+  getExplorateurFormations: async (domaineId, page = 1, search = "") => {
     try {
       const response = await api.get("jobs/admin/referentiel-v2/explorateur/formations/", {
-        params: domaineId ? { domaine: domaineId, page } : {},
+        params: domaineId ? { domaine: domaineId, page, search } : {},
       });
       return response.data;
     } catch (err) {

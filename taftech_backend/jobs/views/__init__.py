@@ -204,6 +204,7 @@ from .referentiel_explorateur import (
     AdminExplorateurMetierAPIView,
     AdminExplorateurAnomaliesAPIView,
     AdminExplorateurFormationsAPIView,
+    AdminExplorateurSpecialiteAPIView,
 )
 from .referentiel_admin import (
     AdminReferentielMetiersAPIView,

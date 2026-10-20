@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..models import (
-    Appellation, DomaineFormation, GroupeMetier, Metier, MetierCompetence, MetierFormation,
-    SpecialiteFormation,
+    Appellation, DiplomeSpecialite, DomaineFormation, FiliereFormation, GroupeMetier, Metier,
+    MetierCompetence, MetierFormation, SpecialiteFormation, TypeDiplome,
 )
 from ..permissions import IsAdminRole
-from ..referentiel_utils import _nettoyer_libelle_secteur_nsec
+from ..referentiel_utils import _nettoyer_libelle_secteur_nsec, normaliser_recherche
 
 TAILLE_PAGE = 15  # lignes par page des listes (pagination côté serveur : aucune liste n'est coupée)
 PROFONDEUR_MAX = 10  # garde-fou contre une boucle dans la hiérarchie
@@ -32,6 +32,18 @@ ANOMALIES_METIERS = {
 
 def _metiers_actifs():
     return Metier.objects.filter(METIER_ACTIF)
+
+
+def _terme(request):
+    """Texte cherché (`?search=`), normalisé comme `cle_recherche` (sans accent ni casse)."""
+    return normaliser_recherche(request.query_params.get('search', '')).strip()
+
+
+def _filtrer_cle(queryset, terme):
+    """Garde les lignes dont `cle_recherche` contient chacun des mots cherchés."""
+    for mot in terme.split():
+        queryset = queryset.filter(cle_recherche__icontains=mot)
+    return queryset
 
 
 def _fenetre(request, total):
@@ -106,6 +118,9 @@ class AdminExplorateurArbreAPIView(APIView):
                 for g in groupes
             ],
             'totaux': {
+                'secteurs': sum(1 for g in groupes if g.type_groupe == 'secteur_source'),
+                'domaines': sum(1 for g in groupes if g.type_groupe == 'domaine_source'),
+                'sous_domaines': sum(1 for g in groupes if g.type_groupe == 'sous_domaine_source'),
                 'metiers_actifs': _metiers_actifs().count(),
                 'appellations': Appellation.objects.filter(actif=True).count(),
                 'liens_competences': MetierCompetence.objects.count(),
@@ -117,8 +132,21 @@ class AdminExplorateurArbreAPIView(APIView):
         })
 
 
+def _descendants(groupes, groupe_id):
+    """Identifiants du groupe et de tous ses sous-groupes (parcours en mémoire, profondeur bornée)."""
+    enfants = {}
+    for g in groupes:
+        enfants.setdefault(g.parent_id, []).append(g.id)
+    ids, a_visiter, profondeur = {groupe_id}, [groupe_id], 0
+    while a_visiter and profondeur < PROFONDEUR_MAX:
+        a_visiter = [e for g in a_visiter for e in enfants.get(g, []) if e not in ids]
+        ids.update(a_visiter)
+        profondeur += 1
+    return ids
+
+
 def _metiers_comptes(queryset):
-    return queryset.annotate(
+    return queryset.select_related('groupe_principal').annotate(
         n_appellations=Count('appellations', filter=Q(appellations__actif=True), distinct=True),
         n_competences=Count('competences_suggerees', distinct=True),
         n_formations=Count('formations_suggerees', distinct=True),
@@ -128,19 +156,26 @@ def _metiers_comptes(queryset):
 def _ligne_metier(m):
     return {
         'id': m.id, 'code': m.code, 'libelle': m.libelle, 'selectionnable': m.selectionnable,
+        'groupe': _libelle_groupe(m.groupe_principal) if m.groupe_principal else '—',
         'nb_appellations': m.n_appellations, 'nb_competences': m.n_competences, 'nb_formations': m.n_formations,
     }
 
 
 class AdminExplorateurGroupeAPIView(APIView):
-    """Métiers actifs rattachés directement à un groupe, avec leurs compteurs."""
+    """Métiers actifs rattachés directement à un groupe, avec leurs compteurs ; avec `?sous_groupes=1`,
+    tous les métiers du groupe et de ses sous-groupes (le nombre affiché sur chaque ligne de l'arbre)."""
     permission_classes = [IsAdminRole]
 
     def get(self, request, groupe_id):
         groupe = GroupeMetier.objects.filter(pk=groupe_id).first()
         if groupe is None:
             return Response({'error': 'Groupe introuvable.'}, status=404)
-        qs = _metiers_actifs().filter(groupe_principal=groupe)
+        if request.query_params.get('sous_groupes') == '1':
+            ids = _descendants(list(GroupeMetier.objects.only('id', 'parent_id')), groupe.id)
+            qs = _metiers_actifs().filter(groupe_principal_id__in=ids)
+        else:
+            qs = _metiers_actifs().filter(groupe_principal=groupe)
+        qs = _filtrer_cle(qs, _terme(request))
         meta, debut, fin = _fenetre(request, qs.count())
         return Response({
             'groupe': {'id': groupe.id, 'libelle': _libelle_groupe(groupe), 'code': groupe.code},
@@ -182,7 +217,7 @@ class AdminExplorateurMetierAPIView(APIView):
 
 
 def _elements_metiers(request, qs):
-    qs = qs.select_related('groupe_principal').order_by('libelle')
+    qs = _filtrer_cle(qs, _terme(request)).select_related('groupe_principal').order_by('libelle')
     meta, debut, fin = _fenetre(request, qs.count())
     return {
         **meta,
@@ -206,7 +241,11 @@ class AdminExplorateurAnomaliesAPIView(APIView):
             return Response({'code': code, **_elements_metiers(request, _sans_appellation(actifs))})
         if code == 'groupes_vides':
             groupes, _, cumuls = _arbre()
-            vides = sorted(_groupes_vides(groupes, cumuls), key=lambda g: (g.type_groupe, g.libelle))
+            terme = _terme(request)
+            vides = sorted(
+                (g for g in _groupes_vides(groupes, cumuls) if terme in normaliser_recherche(_libelle_groupe(g))),
+                key=lambda g: (g.type_groupe, g.libelle),
+            )
             meta, debut, fin = _fenetre(request, len(vides))
             return Response({
                 'code': code, **meta,
@@ -216,7 +255,8 @@ class AdminExplorateurAnomaliesAPIView(APIView):
                 ],
             })
         if code == 'specialites_sans_diplome':
-            qs = SpecialiteFormation.objects.filter(diplomes_lies__isnull=True).select_related('domaine').order_by('libelle')
+            qs = _filtrer_cle(SpecialiteFormation.objects.filter(diplomes_lies__isnull=True), _terme(request))
+            qs = qs.select_related('domaine').order_by('libelle')
             meta, debut, fin = _fenetre(request, qs.count())
             return Response({
                 'code': code, **meta,
@@ -228,6 +268,37 @@ class AdminExplorateurAnomaliesAPIView(APIView):
         return Response({'error': 'Anomalie inconnue.'}, status=404)
 
 
+class AdminExplorateurSpecialiteAPIView(APIView):
+    """Fiche d'une spécialité de formation : diplômes avec lesquels elle est attestée et métiers qui y sont liés."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, specialite_id):
+        s = SpecialiteFormation.objects.filter(pk=specialite_id).select_related('domaine', 'filiere').first()
+        if s is None:
+            return Response({'error': 'Spécialité introuvable.'}, status=404)
+        liens_metiers = (
+            s.metiers_lies.select_related('metier__groupe_principal').order_by('metier__libelle')
+        )
+        return Response({
+            'specialite': {
+                'id': s.id, 'code': s.code, 'libelle': s.libelle, 'domaine': s.domaine.libelle,
+                'filiere': s.filiere.libelle if s.filiere else '', 'nature': s.nature,
+                'selectionnable': s.selectionnable,
+            },
+            'diplomes': list(
+                s.diplomes_lies.select_related('diplome').order_by('diplome__libelle')
+                .values('diplome_id', 'diplome__libelle', 'diplome__systeme', 'statut')
+            ),
+            'metiers': [
+                {
+                    'id': lien.metier_id, 'libelle': lien.metier.libelle, 'relation': lien.relation,
+                    'groupe': _libelle_groupe(lien.metier.groupe_principal) if lien.metier.groupe_principal else '—',
+                }
+                for lien in liens_metiers
+            ],
+        })
+
+
 class AdminExplorateurFormationsAPIView(APIView):
     """Domaines de formation avec le nombre de filières et de spécialités ; avec `?domaine=<id>`,
     les spécialités de ce domaine (plafonnées, total exact)."""
@@ -236,12 +307,19 @@ class AdminExplorateurFormationsAPIView(APIView):
     def get(self, request):
         domaine_id = request.query_params.get('domaine', '')
         if domaine_id.isdigit():
-            qs = SpecialiteFormation.objects.filter(domaine_id=int(domaine_id)).select_related('filiere').annotate(
+            base = _filtrer_cle(SpecialiteFormation.objects.filter(domaine_id=int(domaine_id)), _terme(request))
+            qs = base.select_related('filiere').annotate(
                 n_metiers=Count('metiers_lies', distinct=True), n_diplomes=Count('diplomes_lies', distinct=True),
             ).order_by('libelle')
             meta, debut, fin = _fenetre(request, qs.count())
+            filieres = (
+                FiliereFormation.objects.filter(domaine_id=int(domaine_id))
+                .annotate(nb_specialites=Count('specialites')).order_by('libelle')
+                .values('id', 'libelle', 'nb_specialites')
+            )
             return Response({
                 **meta,
+                'filieres': list(filieres),
                 'specialites': [
                     {
                         'id': s.id, 'libelle': s.libelle, 'filiere': s.filiere.libelle if s.filiere else '',
@@ -255,6 +333,13 @@ class AdminExplorateurFormationsAPIView(APIView):
             n_filieres=Count('filieres', distinct=True), n_specialites=Count('specialites', distinct=True),
         ).order_by('libelle')
         return Response({
+            'totaux': {
+                'domaines': DomaineFormation.objects.count(),
+                'filieres': FiliereFormation.objects.count(),
+                'specialites': SpecialiteFormation.objects.count(),
+                'types_diplome': TypeDiplome.objects.count(),
+                'liens_diplome_specialite': DiplomeSpecialite.objects.count(),
+            },
             'domaines': [
                 {
                     'id': d.id, 'code': d.code, 'libelle': d.libelle, 'systeme': d.systeme, 'actif': d.actif,

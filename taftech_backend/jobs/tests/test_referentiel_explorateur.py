@@ -43,6 +43,7 @@ class ExplorateurReferentielTest(APITestCase):
         self.assertEqual(par_id[self.secteur.id]['nb_metiers'], 1)
         self.assertEqual(par_id[self.secteur.id]['libelle'], 'Agriculture')  # lettre ANEM retirée, casse remise en forme
         self.assertEqual(data['totaux']['metiers_actifs'], 2)
+        self.assertEqual((data['totaux']['secteurs'], data['totaux']['domaines'], data['totaux']['sous_domaines']), (2, 1, 0))
 
     def test_anomalies_comptees_et_listees(self):
         data = self.client.get(reverse('admin-explorateur-arbre')).data
@@ -73,6 +74,44 @@ class ExplorateurReferentielTest(APITestCase):
         self.assertEqual((p2['page'], len(p2['metiers'])), (2, 5))
         self.assertEqual(self.client.get(url, {'page': 999}).data['page'], 2)  # page hors limites : ramenée à la dernière
         self.assertEqual(self.client.get(url, {'page': 'abc'}).data['page'], 1)
+
+    def test_recherche_sans_accent_dans_les_listes_et_totaux_formations(self):
+        domaine = DomaineFormation.objects.create(code='DF2', libelle='Informatique', systeme='LMD')
+        SpecialiteFormation.objects.create(code='SF2', domaine=domaine, libelle='Réseaux', cle_recherche='reseaux')
+        SpecialiteFormation.objects.create(code='SF3', domaine=domaine, libelle='Sécurité', cle_recherche='securite')
+        url = reverse('admin-explorateur-formations')
+        trouvees = self.client.get(url, {'domaine': domaine.id, 'search': 'RÉSEAUX'}).data
+        self.assertEqual([s['libelle'] for s in trouvees['specialites']], ['Réseaux'])
+        self.assertEqual(self.client.get(url).data['totaux']['specialites'], 2)
+        liste = reverse('admin-explorateur-anomalies', kwargs={'code': 'metiers_sans_groupe'})
+        self.assertEqual(self.client.get(liste, {'search': 'sans'}).data['total'], 1)
+        self.assertEqual(self.client.get(liste, {'search': 'zzz'}).data['total'], 0)
+        vides = reverse('admin-explorateur-anomalies', kwargs={'code': 'groupes_vides'})
+        self.assertEqual(self.client.get(vides, {'search': 'vide'}).data['total'], 1)
+        self.assertEqual(self.client.get(vides, {'search': 'zzz'}).data['total'], 0)
+
+    def test_chaque_compteur_a_sa_liste(self):
+        # Groupe avec sous-groupes : les métiers du domaine apparaissent aussi au niveau du secteur.
+        url = reverse('admin-explorateur-groupe', kwargs={'groupe_id': self.secteur.id})
+        direct = self.client.get(url).data
+        cumule = self.client.get(url, {'sous_groupes': 1}).data
+        self.assertEqual((direct['total'], cumule['total']), (0, 1))
+        self.assertEqual(cumule['metiers'][0]['groupe'], 'Cultures')
+        # Spécialité : diplômes liés et métiers liés correspondent aux chiffres de la liste.
+        from jobs.models import DiplomeSpecialite, FiliereFormation, MetierFormation, TypeDiplome
+        domaine = DomaineFormation.objects.create(code='DF9', libelle='Agriculture', systeme='LMD')
+        filiere = FiliereFormation.objects.create(code='FI9', domaine=domaine, libelle='Agro', cle_recherche='agro')
+        spec = SpecialiteFormation.objects.create(code='SF9', domaine=domaine, filiere=filiere, libelle='Agronomie', cle_recherche='agronomie')
+        diplome = TypeDiplome.objects.create(code='TD9', libelle='Licence', systeme='LMD')
+        DiplomeSpecialite.objects.create(code='DS9', diplome=diplome, specialite=spec)
+        MetierFormation.objects.create(code='MF9', metier=self.metier, specialite=spec)
+        liste = self.client.get(reverse('admin-explorateur-formations'), {'domaine': domaine.id}).data
+        self.assertEqual((liste['specialites'][0]['nb_diplomes'], liste['specialites'][0]['nb_metiers']), (1, 1))
+        self.assertEqual(liste['filieres'][0]['nb_specialites'], 1)
+        fiche = self.client.get(reverse('admin-explorateur-specialite', kwargs={'specialite_id': spec.id})).data
+        self.assertEqual([d['diplome__libelle'] for d in fiche['diplomes']], ['Licence'])
+        self.assertEqual([m['libelle'] for m in fiche['metiers']], ['Agronome'])
+        self.assertEqual(self.client.get(reverse('admin-explorateur-specialite', kwargs={'specialite_id': 0})).status_code, 404)
 
     def test_formations_domaines_puis_specialites(self):
         domaine = DomaineFormation.objects.create(code='DF1', libelle='Informatique', systeme='LMD')

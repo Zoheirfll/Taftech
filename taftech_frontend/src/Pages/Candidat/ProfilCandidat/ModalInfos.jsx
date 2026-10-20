@@ -190,8 +190,14 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   </label>
                   <MetierAutocomplete
                     proposable
-                    value={editInfo.metier_libelle || ""}
-                    onSelect={(item) => setEditInfo({ ...editInfo, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
+                    value={editInfo.metier_appellation_libelle || editInfo.metier_libelle || ""}
+                    onSelect={(item) => setEditInfo({
+                      ...editInfo,
+                      metier: item.metier_id,
+                      metier_libelle: item.metier_libelle,
+                      metier_appellation: item.appellation_id || null,
+                      metier_appellation_libelle: item.appellation_libelle,
+                    })}
                   />
                 </div>
               </div>

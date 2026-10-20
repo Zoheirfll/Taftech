@@ -20,6 +20,7 @@ from ..metiers_matching import calculer_metiers_accessibles
 from .ia import GroqThrottle, reponse_fournisseur_sature
 from ..ai_engine import FournisseurIASature
 from ..throttles import FileUploadThrottle
+from .admin_filtres import rendez_vous_filtres
 
 MAX_DOCUMENTS_CANDIDAT = 20
 
@@ -593,10 +594,7 @@ class RendezVousAdminListAPIView(APIView):
     def get(self, request):
         if request.user.role != 'ADMIN':
             return Response({"error": "Accès refusé."}, status=403)
-        rdvs = RendezVous.objects.select_related('candidat').all()
-        statut = request.query_params.get('statut')
-        if statut:
-            rdvs = rdvs.filter(statut=statut)
+        rdvs = rendez_vous_filtres(request.query_params)  # mêmes filtres que l'export Excel
         data = [
             {
                 'id': r.id, 'date_heure': r.date_heure, 'motif': r.motif, 'statut': r.statut,

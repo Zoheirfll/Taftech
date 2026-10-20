@@ -3,13 +3,14 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
-import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
+import { Search, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -98,27 +99,6 @@ const AdminUsers = () => {
     );
   };
 
-  const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier...");
-    try {
-      const blob = await jobsService.exportUtilisateurs();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "utilisateurs_taftech.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
-      reportError("ECHEC_EXPORT_EXCEL_USERS", err);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
-
 
   const renderTags = (data) => {
     if (!data)
@@ -160,12 +140,11 @@ const AdminUsers = () => {
           "Pour créer ou retirer un administrateur, utilisez la page « Comptes admins ».",
         ]}
         actions={
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
-          >
-            <Download size={15} /> Exporter Excel
-          </button>
+          <BoutonExportExcel
+            ressource="utilisateurs"
+            params={{ search: searchTerm, role: roleFiltre, ordering }}
+            nomFichier="utilisateurs_taftech"
+          />
         }
       />
       <div className="flex">

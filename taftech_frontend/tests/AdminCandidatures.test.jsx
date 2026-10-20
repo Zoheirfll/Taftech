@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import AdminCandidatures from "../src/Pages/Admin/AdminCandidatures";
 import { jobsService } from "../src/Services/jobsService";
+import { adminService } from "../src/Services/adminService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
@@ -18,9 +19,14 @@ import toast from "react-hot-toast";
 vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getAdminCandidatures: vi.fn(),
-    exportCandidatures: vi.fn(),
   },
 }));
+
+// L'export passe par `adminService.exporterListe` (composant BoutonExportExcel) : on ne simule que lui.
+vi.mock("../src/Services/adminService", async (importOriginal) => {
+  const reel = await importOriginal();
+  return { ...reel, adminService: { ...reel.adminService, exporterListe: vi.fn() } };
+});
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -103,7 +109,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
       count: 0,
       results: [],
     });
-    jobsService.exportCandidatures.mockResolvedValue(new Blob(["test data"]));
+    adminService.exporterListe.mockResolvedValue(new Blob(["test data"]));
 
     render(<AdminCandidatures />);
 
@@ -111,7 +117,10 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
     fireEvent.click(exportBtn);
 
     await waitFor(() => {
-      expect(jobsService.exportCandidatures).toHaveBeenCalled();
+      // Mêmes filtres que la liste affichée (ici : aucun filtre, tri par défaut).
+      expect(adminService.exporterListe).toHaveBeenCalledWith("candidatures", {
+        search: "", statut: "", ordering: "-date_postulation",
+      });
       expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
       // ✅ CORRECTION : On vérifie l'appel sur 'window'
       expect(window.URL.createObjectURL).toHaveBeenCalled();

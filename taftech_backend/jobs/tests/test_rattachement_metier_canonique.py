@@ -79,6 +79,101 @@ class RattachementMetierTests(TestCase):
         premier = _candidats_pour_experience("Gestionnaire RH", "", limite=3)[0]
         self.assertEqual(premier[1], self.assistant.id)
 
+    def test_titre_profil_generique_s_appuie_sur_l_experience_la_plus_recente(self):
+        # « Ingénieur IA et cadre administratif » ne contient que des mots génériques ou
+        # trop courts : sans repli, aucune appellation candidate et métier du profil vide.
+        from unittest.mock import patch
+        from jobs.domaine_agent import SPECIALITE_INDEX, classifier_metiers_experiences
+        paie = _metier("TAF-PAIE", "Chargé de paie", self.assistant.groupe_principal)
+        _appellation("A9", "Chargé de paie", paie, "charge de paie")
+        reponse = '{"classifications": [{"index": 0, "appellation_choisie": 0, "raison": "x"}]}'
+        experiences = [{"titre_poste": "Cadre administratif & chargé de paie",
+                        "description": "Gestion de la paie de 4000 employés"}]
+        with patch("jobs.cv_parser._call_groq", return_value=reponse) as groq:
+            resultat = classifier_metiers_experiences(
+                experiences, titre_professionnel="Ingénieur IA et cadre administratif")
+        self.assertEqual(resultat.get(SPECIALITE_INDEX), paie.id)
+        # L'IA doit voir le titre de l'expérience (comparable aux candidats « paie »), pas le titre
+        # composite : sur le titre composite elle répondait « aucune appellation » (constaté en réel).
+        prompt = groq.call_args.args[0]
+        self.assertIn("[PROFIL] Cadre administratif & chargé de paie", prompt)
+        self.assertNotIn("Ingénieur IA et cadre administratif", prompt)
+
+    def test_titre_composite_accepte_si_une_fonction_est_couverte(self):
+        # « X et Y » : l'appellation « X » suffit, le titre n'a pas à être couvert en entier.
+        from jobs.domaine_agent import _candidats_pour_experience
+        admin_ventes = _metier("TAF-VENTES", "Administrateur des ventes", self.assistant.groupe_principal)
+        _appellation("A10", "Administrateur des ventes", admin_ventes, "administrateur des ventes")
+        titre = "Administrateur des ventes et support IT"
+        candidats = _candidats_pour_experience(titre, "", limite=10)
+        bon = next(i for i, c in enumerate(candidats) if c[0] == "Administrateur des ventes")
+        self.assertEqual(self._classer(titre, bon), {0: admin_ventes.id})
+
+    def test_titre_composite_en_majuscules_est_decoupe_comme_en_minuscules(self):
+        # Les CV écrivent souvent les intitulés en MAJUSCULES : « … ET SUPPORT IT » (bug réel).
+        from jobs.domaine_agent import _titre_couvert_par
+        self.assertTrue(_titre_couvert_par("ADMINISTRATEUR DES VENTES ET SUPPORT IT", "Administrateur des ventes"))
+        self.assertTrue(_titre_couvert_par("HOTE D'ACCUEIL ET DE CAISSE", "Hôte de caisse"))
+        self.assertFalse(_titre_couvert_par("ADMINISTRATEUR DES VENTES ET SUPPORT IT", "Administrateur Cloud"))
+
+    def test_appellation_d_encadrement_non_proposee_sans_encadrement_dans_le_poste(self):
+        # « Chargé de paie » ne doit pas se voir proposer « Responsable Paie » (constaté en réel).
+        from jobs.domaine_agent import _candidats_pour_experience
+        groupe = self.assistant.groupe_principal
+        resp = _metier("TAF-RPAIE", "Responsable Paie", groupe)
+        gest = _metier("TAF-GPAIE", "Gestionnaire de Paie", groupe)
+        _appellation("A12", "Responsable Paie", resp, "responsable paie")
+        _appellation("A13", "Gestionnaire de Paie", gest, "gestionnaire de paie")
+        libelles = [c[0] for c in _candidats_pour_experience("Chargé de paie", "Gestion de la paie", limite=10)]
+        self.assertIn("Gestionnaire de Paie", libelles)
+        self.assertNotIn("Responsable Paie", libelles)
+
+    def test_appellation_d_encadrement_proposee_si_le_poste_ou_les_missions_l_evoquent(self):
+        from jobs.domaine_agent import _candidats_pour_experience
+        groupe = self.assistant.groupe_principal
+        resp = _metier("TAF-RPAIE", "Responsable Paie", groupe)
+        _appellation("A12", "Responsable Paie", resp, "responsable paie")
+        for titre, description in [("Responsable paie", ""), ("Chargé de paie", "Encadrement d'une équipe de 5 personnes")]:
+            libelles = [c[0] for c in _candidats_pour_experience(titre, description, limite=10)]
+            self.assertIn("Responsable Paie", libelles, (titre, description))
+
+    def test_si_tout_est_encadrement_la_liste_n_est_pas_videe(self):
+        from jobs.domaine_agent import _candidats_pour_experience
+        resp = _metier("TAF-RPAIE", "Responsable Paie", self.assistant.groupe_principal)
+        _appellation("A12", "Responsable Paie", resp, "responsable paie")
+        libelles = [c[0] for c in _candidats_pour_experience("Chargé de paie", "", limite=10)]
+        self.assertEqual(libelles, ["Responsable Paie"])
+
+    def test_appellation_la_plus_proche_du_titre_passe_en_premier_et_est_acceptee(self):
+        # « Développeur d'applications web » : « Développeur web » (2 mots sur 3) est plus proche que
+        # « Développeur Android » (1 sur 3) ; le mot court « web » compte.
+        from jobs.domaine_agent import _candidats_pour_experience, _titre_couvert_par
+        groupe = self.assistant.groupe_principal
+        for code, libelle, cle in [("TAF-DW", "Développeur web", "developpeur web"),
+                                   ("TAF-DA", "Développeur d'application", "developpeur d application"),
+                                   ("TAF-AND", "Développeur Android", "developpeur android")]:
+            _appellation("A-" + code, libelle, _metier(code, libelle, groupe), cle)
+        titre = "DÉVELOPPEUR D'APPLICATIONS WEB"
+        libelles = [c[0] for c in _candidats_pour_experience(titre, "", limite=10)]
+        self.assertLess(libelles.index("Développeur web"), libelles.index("Développeur Android"))
+        self.assertLess(libelles.index("Développeur d'application"), libelles.index("Développeur Android"))
+        self.assertTrue(_titre_couvert_par(titre, "Développeur web"))
+        self.assertTrue(_titre_couvert_par(titre, "Développeur d'application"))
+        self.assertFalse(_titre_couvert_par(titre, "Développeur Android"))
+
+    def test_une_moitie_exacte_des_mots_ne_suffit_pas(self):
+        from jobs.domaine_agent import _titre_couvert_par
+        self.assertFalse(_titre_couvert_par("Gestionnaire recrutement", "Gestionnaire administratif ressources humaines"))
+
+    def test_pluriel_du_titre_ne_bloque_pas_l_appellation_au_singulier(self):
+        from jobs.domaine_agent import _candidats_pour_experience
+        dev = _metier("TAF-DEV", "Développeur d'application", self.assistant.groupe_principal)
+        _appellation("A11", "Développeur d'application", dev, "developpeur d application")
+        titre = "Développeur d'applications web"
+        candidats = _candidats_pour_experience(titre, "", limite=10)
+        bon = next(i for i, c in enumerate(candidats) if c[0] == "Développeur d'application")
+        self.assertEqual(self._classer(titre, bon), {0: dev.id})
+
     def test_intitule_public_conserve_et_rattache_au_metier_canonique(self):
         import jobs.referentiel_fusions as fusions
         ancien = fusions.METIERS_REDIRECTIONS

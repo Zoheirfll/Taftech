@@ -3,6 +3,8 @@
 Plus aucun export CSV : le séparateur « ; » + BOM s'ouvrait avec toutes les données dans
 une seule colonne sur smartphone (correction client n°16).
 """
+from decimal import Decimal
+
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
@@ -13,9 +15,12 @@ LONGUEUR_MAX_ONGLET = 31  # limite Excel pour un nom d'onglet
 
 
 def _valeur_cellule(valeur):
-    """Types simples conservés (les nombres restent numériques) ; le reste en texte."""
+    """Types simples conservés (les nombres restent numériques, `Decimal` compris : un score de 77.00
+    s'exporte en nombre, pas en texte) ; le reste en texte."""
     if valeur is None or isinstance(valeur, (int, float, str)):
         return valeur
+    if isinstance(valeur, Decimal):
+        return float(valeur)
     return str(valeur)
 
 

@@ -53,27 +53,34 @@ def _type_valide(valeur):
     return valeur if valeur in ADAPTATEURS else ''
 
 
+def demandes_ajout_filtrees(params):
+    """(demandes du type demandé, ces demandes filtrées par statut et libellé). La liste calcule ses
+    compteurs sur la première, et l'export Excel reprend la seconde : mêmes filtres des deux côtés."""
+    base_du_type = DemandeAjout.objects.all()
+    type_demande = _type_valide(params.get('type', ''))
+    if type_demande:
+        base_du_type = base_du_type.filter(type=type_demande)
+    filtrees = base_du_type
+    statut = params.get('statut', '')
+    if statut in dict(DemandeAjout.STATUT_CHOICES):
+        filtrees = filtrees.filter(statut=statut)
+    recherche = params.get('search', '').strip()
+    if recherche:
+        filtrees = filtrees.filter(libelle__icontains=recherche)
+    return base_du_type, filtrees
+
+
 class AdminDemandesAjoutAPIView(APIView):
     """GET : demandes d'ajout, filtrées par `type`, `statut` et `search` (libellé), 30 par page, avec les
     compteurs par statut du type demandé."""
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        type_demande = _type_valide(request.query_params.get('type', ''))
-        base = DemandeAjout.objects.all()
-        if type_demande:
-            base = base.filter(type=type_demande)
+        base_du_type, base = demandes_ajout_filtrees(request.query_params)  # mêmes filtres que l'export Excel
         compteurs = {code: 0 for code, _ in DemandeAjout.STATUT_CHOICES}
-        for ligne in base.values('statut').annotate(n=Count('id')):
+        for ligne in base_du_type.values('statut').annotate(n=Count('id')):
             compteurs[ligne['statut']] = ligne['n']
         compteurs['TOUTES'] = sum(compteurs.values())
-
-        statut = request.query_params.get('statut', '')
-        if statut in dict(DemandeAjout.STATUT_CHOICES):
-            base = base.filter(statut=statut)
-        recherche = request.query_params.get('search', '').strip()
-        if recherche:
-            base = base.filter(libelle__icontains=recherche)
         base = (
             base.select_related('traite_par').prefetch_related('demandeurs')
             .annotate(

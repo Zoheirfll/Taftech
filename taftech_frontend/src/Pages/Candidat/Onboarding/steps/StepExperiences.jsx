@@ -67,8 +67,14 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
               </div>
               <MetierAutocomplete
                 proposable
-                value={exp.metier_libelle || ""}
-                onSelect={(item) => setPendingExperiences((list) => list.map((e, i) => (i === idx ? { ...e, metier: item.metier_id, metier_libelle: item.appellation_libelle } : e)))}
+                value={exp.appellation_libelle || exp.metier_libelle || ""}
+                onSelect={(item) => setPendingExperiences((list) => list.map((e, i) => (i === idx ? {
+                  ...e,
+                  metier: item.metier_id,
+                  metier_libelle: item.metier_libelle,
+                  appellation: item.appellation_id || null,
+                  appellation_libelle: item.appellation_libelle,
+                } : e)))}
               />
               <textarea
                 value={exp.description || ""}
@@ -91,10 +97,10 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-bold ${tw.textStrong}`}>{exp.titre_poste}</p>
                 <p className={`text-xs ${tw.textMuted}`}>{exp.entreprise}</p>
-                {(exp.date_debut || exp.date_fin || exp.metier_libelle) && (
+                {(exp.date_debut || exp.date_fin || exp.appellation_libelle || exp.metier_libelle) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                     {exp.date_debut ? `${formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — ` : ""}{exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "présent"}
-                    {exp.metier_libelle && ` · ${exp.metier_libelle}`}
+                    {(exp.appellation_libelle || exp.metier_libelle) && ` · ${exp.appellation_libelle || exp.metier_libelle}`}
                   </p>
                 )}
                 {exp.description && <p className={`text-xs ${tw.textMuted} mt-1 whitespace-pre-line`}>{exp.description}</p>}

@@ -40,6 +40,7 @@ const formatText = (text) => {
 const normalizeExp = (exp) => ({
   ...exp,
   metier: exp.metier || null,
+  appellation: exp.appellation || null,
   date_fin: exp.date_fin || null,
 });
 
@@ -118,6 +119,8 @@ export const useProfilCandidat = () => {
         diplome_ref_libelle: pData.diplome_ref_libelle || "",
         metier: pData.metier || "",
         metier_libelle: pData.metier_libelle || "",
+        metier_appellation: pData.metier_appellation || null,
+        metier_appellation_libelle: pData.metier_appellation_libelle || "",
         service_militaire: pData.service_militaire || "",
         permis_conduire: pData.permis_conduire || false,
         passeport_valide: pData.passeport_valide || false,
@@ -125,6 +128,8 @@ export const useProfilCandidat = () => {
       setEditPref({
         metier_souhaite: pData.metier_souhaite || "",
         metier_souhaite_libelle: pData.metier_souhaite_libelle || "",
+        metier_souhaite_appellation: pData.metier_souhaite_appellation || null,
+        metier_souhaite_appellation_libelle: pData.metier_souhaite_appellation_libelle || "",
         salaire_souhaite: pData.salaire_souhaite || "",
         mobilite: pData.mobilite || "",
         situation_actuelle: pData.situation_actuelle || "",
@@ -218,12 +223,14 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => key !== "nin" && key !== "metier_libelle" && key !== "metier_souhaite_libelle" && key !== "diplome_ref_libelle")
+        .filter((key) => !["nin", "metier_libelle", "metier_souhaite_libelle", "diplome_ref_libelle", "metier_appellation_libelle", "metier_souhaite_appellation_libelle"].includes(key))
         // `metier`/`metier_souhaite`/`diplome_ref` sont des PrimaryKeyRelatedField nullables côté
         // DRF — une chaîne vide (valeur par défaut tant qu'aucun choix n'est fait) est rejetée,
         // contrairement à `null` (que FormData ne sait pas transporter) : on omet simplement la
         // clé, ce qui laisse la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
-        .filter((key) => !((key === "metier" || key === "metier_souhaite" || key === "diplome_ref") && !dataState[key]))
+        // Idem pour les appellations (clés étrangères nullables) : omises tant qu'aucune n'est choisie ; le
+        // serveur efface l'ancienne si le métier change sans appellation.
+        .filter((key) => !(["metier", "metier_souhaite", "diplome_ref", "metier_appellation", "metier_souhaite_appellation"].includes(key) && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
@@ -349,6 +356,8 @@ export const useProfilCandidat = () => {
       entreprise: exp.entreprise || "",
       metier: exp.metier || "",
       metier_libelle: exp.metier_libelle || "",
+      appellation: exp.appellation || null,
+      appellation_libelle: exp.appellation_libelle || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
       date_debut_precision: exp.date_debut_precision || "JOUR",
@@ -409,7 +418,9 @@ export const useProfilCandidat = () => {
       date_debut_precision: form.date_debut_precision || "JOUR",
       date_fin_precision: form.date_fin_precision || "JOUR",
       description: form.description || "",
+      specialite_texte: form.specialite_texte || "",
       diplome_ref: form.diplome_ref || "",
+      diplome_ref_libelle: form.diplome_ref_libelle || "",
       specialite_ref: form.specialite_ref || "",
       statut: form.statut || "OBTENU",
     });
@@ -506,6 +517,29 @@ export const useProfilCandidat = () => {
       fetchData();
     } catch (err) {
       reportError("ECHEC_AJOUT_LANGUE", err);
+    }
+  };
+
+  // Remplace l'entrée EXACTE « Nom:Niveau » à sa place (jamais par préfixe : « An » ne doit pas toucher
+  // « Anglais ») et retire un éventuel doublon du même nom.
+  const handleUpdateLanguage = async (ancienneEntree, nom, niveau) => {
+    const nouvelleEntree = `${nom}:${niveau}`;
+    const langues = (profil.langues || "")
+      .split(",")
+      .filter((l) => l)
+      .map((l) => (l === ancienneEntree ? nouvelleEntree : l))
+      .filter((l, i, liste) => l === nouvelleEntree
+        ? liste.findIndex((x) => x.split(":")[0].trim().toLowerCase() === nom.toLowerCase()) === i
+        : l.split(":")[0].trim().toLowerCase() !== nom.toLowerCase());
+    const formData = new FormData();
+    formData.append("langues", langues.join(","));
+    try {
+      await profilService.updateProfil(formData);
+      toast.success("Langue mise à jour");
+      fetchData();
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour de la langue."));
+      reportError("ECHEC_MODIFICATION_LANGUE", err);
     }
   };
 
@@ -618,6 +652,7 @@ export const useProfilCandidat = () => {
     handleSupprimerCompetence,
     handleChangerNiveauCompetence,
     handleAddLanguage,
+    handleUpdateLanguage,
     handleUpdateLinks,
   };
 };

@@ -10,6 +10,37 @@ Travail initial effectué sur `security/audit-2026-07` (créée depuis `main`) �
 
 ---
 
+## ✅ 39. Explorateur du référentiel : lecture seule, réservé aux administrateurs (20/10/2026)
+
+Page `/admin-taftech/explorateur-referentiel` (`AdminExplorateurReferentiel.jsx`) et 5 routes `admin/referentiel-v2/explorateur/{arbre,groupe/<id>,metier/<id>,anomalies/<code>,formations}/` (`jobs/views/referentiel_explorateur.py`). **Audit** : toutes en `IsAdminRole` (403 pour candidat, vérifié par test sur les vraies routes), uniquement `GET`, aucune écriture ni donnée personnelle (référentiel public). Listes paginées côté serveur (15 par page, `?page=` borné, aucune ligne inaccessible) ; `code` d'anomalie inconnu → 404 ; un métier « actif » exclut les redirections (`metier_canonique` ≠ lui-même). Tests : `jobs/tests/test_referentiel_explorateur.py` (5).
+
+---
+
+## ✅ 38. Le super-administrateur est hors de portée des administrateurs simples (20/10/2026)
+
+**Constat** : seul le changement de mot de passe (`AdminCompteAdminsAPIView.patch`) et la suppression étaient déjà refusés. Un admin simple pouvait encore **bloquer** le super-admin (`admin-user-moderer`, risque de verrouillage), **ouvrir sa fiche** (`dossier-admin`) et **lire ses actions** dans le journal d'audit (liste et export Excel, y compris par la recherche).
+
+**Correctif** : `AdminUserModerateAPIView` → 403 ; `AdminDossierAdminAPIView` → 404 ; `audit_logs_filtres(params, demandeur)` (`admin_filtres.py`) exclut `admin__is_superuser=True` tant que le demandeur n'est pas super-admin, ce qui couvre d'un coup la liste, la recherche et l'export (même fonction). Le super-admin garde la vue complète.
+
+**Tests** : `jobs/tests/test_admin_protection_superadmin.py` (7 tests sur les vraies routes). **Limite connue** : les actions d'un admin simple restent visibles de tous les admins ; seule la trace du super-admin est masquée.
+
+---
+
+## ✅ 37. Exports Excel de l'administration : mêmes filtres que la liste, tracés (NIN inclus dans les utilisateurs) (20/10/2026)
+
+Les exports de l'admin (`jobs/views/admin_exports.py`, routes `admin/export/<ressource>/`) couvrent désormais toutes les listes de données : utilisateurs, candidatures, entreprises, offres, demandes d'ajout, demandes premium, rendez-vous, journal d'audit, erreurs système. L'export des utilisateurs contient des données personnelles (téléphone, date de naissance, adresse, commune, sexe) : décision de l'utilisateur du 20/10/2026, voir ci-dessous les garde-fous.
+
+- **Accès** : `IsAdminRole` sur chaque export (403 pour un recruteur ou un candidat, 401/403 sans session), vérifié sur les 9 routes (`test_admin_exports_complets`).
+- **NIN** : exporté **uniquement** dans l'export des utilisateurs (colonne « NIN », texte complet de 18 chiffres), sur **décision explicite de l'utilisateur du 20/10/2026** (il avait d'abord choisi de l'exclure, avant de le demander ; la recommandation de l'exclure est consignée ici). Aucun autre export ne le contient (test sur les 8 autres routes). La trace d'audit de cet export porte la mention « contient le NIN, la date de naissance et l'adresse ». Les super-administrateurs sont exclus de l'export des utilisateurs, comme de la liste.
+- **Même périmètre que la liste affichée** : la liste et l'export appellent les mêmes fonctions de filtrage (`views/admin_filtres.py`, `demandes_ajout_filtrees`), sans duplication possible. Un export filtré n'expose donc pas plus que l'écran.
+- **Traçabilité** : chaque export écrit une ligne dans le journal d'audit (action `AUTRE`, détail « Export utilisateurs (N lignes, role=CANDIDAT, search=…) », IP), comme l'export des statistiques. Un export en masse de données personnelles est ainsi toujours attribuable à un administrateur.
+- **Erreurs système** : ni `stack_trace` ni `user_agent` ne sont exportés (données internes, inutiles à la lecture de la liste).
+- **Formules Excel** : toutes les chaînes sont forcées en texte (`neutraliser_formules`) sur les 9 exports (test avec `=HYPERLINK(...)` dans les noms, libellés, messages d'erreur et détails d'audit). Les `Decimal` sont exportés en nombres.
+- **Export recruteur** (`recruteur_exports.py`) : colonnes enrichies à partir du profil figé à la candidature (titre, wilaya, commune, métier, diplôme, compétences, langues…), donc ce que le recruteur voit déjà ; **jamais** adresse, date de naissance, sexe ni NIN ; périmètre limité à son entreprise (offre d'une autre entreprise : 404) ; le nom de fichier dérivé du titre de l'offre est assaini.
+- **Risque résiduel** : un classeur téléchargé quitte la plateforme (poste de l'administrateur). Mitigation : compte admin nominatif et trace d'audit qui signale la présence du NIN. Le NIN est la donnée la plus sensible de l'export : ne pas partager ni conserver le classeur au-delà du besoin. À rappeler dans les consignes aux administrateurs (loi 18-07).
+
+---
+
 ## ✅ 18. Revue complète du panel admin — garde-fous sur les actions sensibles (28/09/2026)
 
 Revue page par page des 25 écrans `/admin-taftech`. Findings sécurité/intégrité (le reste — UX, bugs d'affichage — est dans `CLAUDE.md`, session du 28/09/2026) :

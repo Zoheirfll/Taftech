@@ -5,6 +5,15 @@ from ..models import ProfilCandidat, ExperienceCandidat, FormationCandidat, Comp
 User = get_user_model()
 
 
+def appellation_appartient_au_metier(appellation, metier):
+    """Vrai si l'appellation relève de ce métier, directement ou via son métier canonique. Sans métier, une
+    appellation n'a pas de sens : faux."""
+    if metier is None:
+        return False
+    metier_appellation = appellation.metier.metier_canonique or appellation.metier
+    return metier.pk in (appellation.metier_id, metier_appellation.pk)
+
+
 class ExperienceSerializer(serializers.ModelSerializer):
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
     appellation_libelle = serializers.CharField(source='appellation.libelle', read_only=True, default=None)
@@ -16,6 +25,14 @@ class ExperienceSerializer(serializers.ModelSerializer):
             'appellation', 'appellation_libelle', 'date_debut', 'date_fin', 'date_debut_precision', 'date_fin_precision', 'description',
         ]
 
+    def validate(self, attrs):
+        """L'appellation affichée doit appartenir au métier de l'expérience (le métier, éventuellement via son
+        métier canonique, reste la clé du calcul) : jamais un intitulé sans rapport avec lui."""
+        metier, appellation = attrs.get('metier'), attrs.get('appellation')
+        if metier and appellation and not appellation_appartient_au_metier(appellation, metier):
+            raise serializers.ValidationError({'appellation': "Cette appellation n'appartient pas au métier choisi."})
+        return attrs
+
 
 class FormationSerializer(serializers.ModelSerializer):
     diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
@@ -25,7 +42,7 @@ class FormationSerializer(serializers.ModelSerializer):
         model = FormationCandidat
         fields = [
             'id', 'diplome', 'etablissement', 'date_debut', 'date_fin', 'date_fin_prevue',
-            'date_debut_precision', 'date_fin_precision', 'description',
+            'date_debut_precision', 'date_fin_precision', 'description', 'specialite_texte',
             'diplome_ref', 'diplome_ref_libelle', 'specialite_ref', 'specialite_ref_libelle', 'statut',
             'pays_formation', 'statut_validation', 'document_reference', 'est_principale', 'version_referentiel',
         ]
@@ -74,6 +91,9 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     diplome = serializers.SerializerMethodField()
     metier_libelle = serializers.SerializerMethodField()
     metier_souhaite_libelle = serializers.CharField(source='metier_souhaite.libelle', read_only=True, default=None)
+    metier_appellation_libelle = serializers.SerializerMethodField()  # masqué avant déblocage, comme le métier
+    metier_souhaite_appellation_libelle = serializers.CharField(
+        source='metier_souhaite_appellation.libelle', read_only=True, default=None)
     diplome_ref_libelle = serializers.SerializerMethodField()
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
 
@@ -83,6 +103,8 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'titre_professionnel', 'cv_pdf', 'cv_pdf_maj_le', 'photo_profil', 'diplome', 'sexe',
             'diplome_ref', 'diplome_ref_libelle', 'niveau_scolaire_ref_libelle',
             'metier', 'metier_libelle', 'metier_souhaite', 'metier_souhaite_libelle',
+            'metier_appellation', 'metier_appellation_libelle',
+            'metier_souhaite_appellation', 'metier_souhaite_appellation_libelle',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin', 'date_naissance',
             'experiences_detail', 'formations_detail',
@@ -138,6 +160,28 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
 
     def get_metier_libelle(self, obj):
         return obj.metier.libelle if obj.metier_id and self._peut_voir_coordonnees(obj) else None
+
+    def get_metier_appellation_libelle(self, obj):
+        return obj.metier_appellation.libelle if obj.metier_appellation_id and self._peut_voir_coordonnees(obj) else None
+
+    def validate(self, attrs):
+        """Une appellation doit appartenir au métier correspondant ; changer de métier sans renvoyer
+        d'appellation efface l'ancienne (elle n'appartient plus au nouveau métier)."""
+        for champ_metier, champ_appellation in (
+                ('metier', 'metier_appellation'), ('metier_souhaite', 'metier_souhaite_appellation')):
+            if champ_metier not in attrs and champ_appellation not in attrs:
+                continue
+            metier = attrs[champ_metier] if champ_metier in attrs else getattr(self.instance, champ_metier, None)
+            if champ_appellation in attrs:
+                appellation = attrs[champ_appellation]
+            else:
+                appellation = getattr(self.instance, champ_appellation, None)
+                if appellation and not appellation_appartient_au_metier(appellation, metier):
+                    attrs[champ_appellation] = None
+                    appellation = None
+            if appellation and not appellation_appartient_au_metier(appellation, metier):
+                raise serializers.ValidationError({champ_appellation: "Cette appellation n'appartient pas au métier choisi."})
+        return attrs
 
     def get_date_naissance(self, obj):
         """Masquée tant que le profil n'est pas débloqué en CVthèque — au même titre
@@ -209,6 +253,9 @@ class ProfilCandidatAdminSerializer(serializers.ModelSerializer):
     formations_detail = FormationSerializer(many=True, read_only=True)
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
     metier_souhaite_libelle = serializers.CharField(source='metier_souhaite.libelle', read_only=True, default=None)
+    metier_appellation_libelle = serializers.CharField(source='metier_appellation.libelle', read_only=True, default=None)
+    metier_souhaite_appellation_libelle = serializers.CharField(
+        source='metier_souhaite_appellation.libelle', read_only=True, default=None)
     diplome_ref_libelle = serializers.CharField(source='diplome_ref.libelle', read_only=True, default=None)
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
 

@@ -15,7 +15,7 @@ const SectionPreferences = ({ profil, formatText, setShowPrefForm }) => (
               {[
                 {
                   label: "Métier souhaité",
-                  value: profil.metier_souhaite_libelle || "Non renseigné",
+                  value: profil.metier_souhaite_appellation_libelle || profil.metier_souhaite_libelle || "Non renseigné",
                 },
                 {
                   label: "Salaire souhaité",

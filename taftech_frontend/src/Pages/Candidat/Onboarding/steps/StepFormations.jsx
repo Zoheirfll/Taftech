@@ -44,21 +44,24 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                   diplomeId={f.diplome_ref}
                   specialiteId={f.specialite_ref}
                   onChangeDiplome={(id, label) => {
+                    // Un intitulé saisi (ou venu du CV) est conservé ; seul un intitulé qui n'était que le
+                    // libellé du type précédent suit le nouveau choix.
+                    const personnalise = !!f.diplome && f.diplome !== f.diplome_ref_libelle;
                     updateFields(idx, {
                       diplome_ref: id,
                       diplome_ref_libelle: label || "",
-                      ...(id && label ? { diplome: label } : {}),
+                      ...(id && label && !personnalise ? { diplome: label } : {}),
                     });
                   }}
                   onChangeSpecialite={(id, label) => {
                     updateFields(idx, {
                       specialite_ref: id,
                       specialite_ref_libelle: label || "",
-                      ...(id && label ? { description: label, specialite_autre: "" } : {}),
+                      ...(id && label ? { specialite_texte: "", specialite_autre: "" } : {}),
                     });
                   }}
-                  autreTexte={f.description}
-                  onChangeAutreTexte={(texte) => updateFields(idx, { description: texte, specialite_autre: texte })}
+                  autreTexte={f.specialite_texte || ""}
+                  onChangeAutreTexte={(texte) => updateFields(idx, { specialite_texte: texte, specialite_autre: texte })}
                   diplomeAutreTexte={f.diplome}
                   onChangeDiplomeAutreTexte={(texte) => updateField(idx, "diplome", texte)}
                   onConfirmerSuggestion={(diplomeRef, diplomeLabel, specialiteRef, specialiteLabel) =>
@@ -71,6 +74,13 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                   }
                 />
               </div>
+              <input
+                aria-label="Intitulé de la formation"
+                value={f.diplome || ""}
+                onChange={(e) => updateField(idx, "diplome", e.target.value)}
+                placeholder="Intitulé de la formation"
+                className={tw.authInput}
+              />
               <input
                 value={f.etablissement || ""}
                 onChange={(e) => updateField(idx, "etablissement", e.target.value)}
@@ -120,6 +130,29 @@ export const StepFormations = ({ pendingFormations, setPendingFormations, format
                     {f.diplome_ref_libelle && f.specialite_ref_libelle && " · "}
                     {f.specialite_ref_libelle}
                   </p>
+                )}
+                {!f.specialite_ref && f.specialites_suggerees?.length > 0 && (
+                  <div className="mt-1.5">
+                    <p className={`text-xs ${tw.textMuted}`}>Votre spécialité ? Choisissez-la en un clic :</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {f.specialites_suggerees.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => updateFields(idx, {
+                            specialite_ref: s.id,
+                            specialite_ref_libelle: s.libelle,
+                            specialite_texte: "",
+                            specialite_autre: "",
+                            specialites_suggerees: [],
+                          })}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}
+                        >
+                          {s.libelle}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {(f.date_debut || f.date_fin) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>{f.date_debut ? `${formatDatePrecise(f.date_debut, f.date_debut_precision)} — ` : ""}{f.date_fin ? formatDatePrecise(f.date_fin, f.date_fin_precision) : "présent"}</p>

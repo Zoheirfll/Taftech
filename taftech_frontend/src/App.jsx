@@ -191,6 +191,7 @@ const AdminSeo          = lazy(() => import("./Pages/Admin/AdminSeo"));
 const AdminRendezVous   = lazy(() => import("./Pages/Admin/AdminRendezVous"));
 const AdminAbonnementsIA = lazy(() => import("./Pages/Admin/AdminAbonnementsIA"));
 const AdminQualiteIA = lazy(() => import("./Pages/Admin/AdminQualiteIA"));
+const AdminExplorateurReferentiel = lazy(() => import("./Pages/Admin/AdminExplorateurReferentiel"));
 const AdminTypesDocuments = lazy(() => import("./Pages/Admin/AdminTypesDocuments"));
 const AdminAuditLogs    = lazy(() => import("./Pages/Admin/AdminAuditLogs"));
 const AdminComptes      = lazy(() => import("./Pages/Admin/AdminComptes"));
@@ -395,6 +396,7 @@ function AppContent() {
               <Route path="/admin-taftech/referentiel-similarites" element={<Navigate to="/admin-taftech/referentiel-metiers" replace />} />
               <Route path="/admin-taftech/abonnements-ia" element={<AdminAbonnementsIA />} />
               <Route path="/admin-taftech/qualite-ia" element={<AdminQualiteIA />} />
+              <Route path="/admin-taftech/explorateur-referentiel" element={<AdminExplorateurReferentiel />} />
               {/* Anciennes URLs (3 pages séparées, fusionnées en onglets) — redirigées pour ne
                   jamais casser un lien déjà partagé/mis en favori. */}
               <Route path="/admin-taftech/paliers" element={<Navigate to="/admin-taftech/abonnements-ia?tab=paliers" replace />} />

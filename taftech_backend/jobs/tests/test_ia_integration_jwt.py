@@ -79,7 +79,7 @@ class IAIntegrationJWTTest(APITestCase):
         fichier = SimpleUploadedFile("cv.pdf", b"%PDF-1.4 test", content_type="application/pdf")
         with patch("jobs.cv_parser.parser.extract_text", return_value=CV), \
                 patch("jobs.cv_parser.parser.extract_photo_from_pdf", return_value=None), \
-                patch("jobs.domaine_agent.classifier_metiers_experiences", return_value={}), \
+                patch("jobs.domaine_agent.classifier_appellations_experiences", return_value={}), \
                 patch("jobs.cv_parser.parser._call_groq", return_value=REPONSE_IA) as mock_ia:
             reponse = self.client.post(
                 reverse("parser-cv"),

@@ -26,6 +26,7 @@ import {
   GraduationCap,
   BookOpen,
   Gauge,
+  Compass,
   Menu,
   X,
   LogOut,
@@ -94,6 +95,7 @@ const NAV_GROUPS = [
     label: "Référentiels",
     dot: "bg-violet-500",
     items: [
+      { to: "/admin-taftech/explorateur-referentiel", icon: Compass, label: "Explorateur" },
       { to: "/admin-taftech/referentiel-metiers", icon: Briefcase, label: "Métiers", badgeKey: "demandes_a_examiner.METIER" },
       { to: "/admin-taftech/referentiel-formations", icon: GraduationCap, label: "Formations", badgeKey: "demandes_a_examiner.DIPLOME" },
       { to: "/admin-taftech/referentiel-specialites", icon: BookOpen, label: "Spécialités", badgeKey: "demandes_a_examiner.SPECIALITE" },

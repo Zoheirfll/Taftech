@@ -309,33 +309,43 @@ class ParserCVAPIView(APIView):
                 result['parsing_id'] = _journaliser_parsing(request.user, {}, cv_name, debut_parsing, code_erreur=code)
                 return Response(result, status=status.HTTP_200_OK)
             experiences = result.get('experiences', [])
-            from ..domaine_agent import classifier_metiers_experiences, SPECIALITE_INDEX
+            from ..domaine_agent import classifier_appellations_experiences, SPECIALITE_INDEX
             from ..models import Metier
-            classifications = classifier_metiers_experiences(
+            classifications = classifier_appellations_experiences(
                 experiences, titre_professionnel=result.get('titre_professionnel')
             )
             metiers_par_id = {
-                m.id: m.libelle for m in Metier.objects.filter(pk__in=set(classifications.values()))
+                m.id: m.libelle for m in Metier.objects.filter(pk__in={c[0] for c in classifications.values()})
             }
             stats_metier = {'ia': 0, 'repli': 0, 'aucun': 0}
             for i, exp in enumerate(experiences):
                 if not isinstance(exp, dict):
                     continue
-                metier_id = classifications.get(i)
-                if metier_id:
+                classe = classifications.get(i)
+                if classe:
+                    metier_id, appellation_id, appellation_libelle = classe
                     exp['metier'] = metier_id
                     exp['metier_libelle'] = metiers_par_id.get(metier_id)
+                    # L'appellation choisie (« Développeur web ») est ce que le candidat voit ; le métier
+                    # officiel qui la regroupe reste la clé du calcul.
+                    exp['appellation'] = appellation_id
+                    exp['appellation_libelle'] = appellation_libelle
                     stats_metier['ia'] += 1
                 else:
                     metier = _deviner_metier_experience(exp.get('titre_poste'), exp.get('description'))
                     exp['metier'] = metier.id if metier else None
                     exp['metier_libelle'] = metier.libelle if metier else None
+                    exp['appellation'] = None
+                    exp['appellation_libelle'] = None
                     stats_metier['repli' if metier else 'aucun'] += 1
             if SPECIALITE_INDEX in classifications:
-                result['metier'] = classifications[SPECIALITE_INDEX]
-                result['metier_libelle'] = metiers_par_id.get(classifications[SPECIALITE_INDEX])
+                profil_metier_id, profil_appellation_id, profil_appellation_libelle = classifications[SPECIALITE_INDEX]
+                result['metier'] = profil_metier_id
+                result['metier_libelle'] = metiers_par_id.get(profil_metier_id)
+                result['metier_appellation'] = profil_appellation_id
+                result['metier_appellation_libelle'] = profil_appellation_libelle
 
-            from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte
+            from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte, suggerer_specialites_pour_diplome
             for f in result.get('formations', []):
                 if not isinstance(f, dict):
                     continue
@@ -344,6 +354,12 @@ class ParserCVAPIView(APIView):
                 f['diplome_ref_libelle'] = type_diplome.libelle if type_diplome else None
                 f['specialite_ref'] = specialite.id if specialite else None
                 f['specialite_ref_libelle'] = specialite.libelle if specialite else None
+                # Diplôme reconnu mais spécialité non devinée : spécialités déjà reliées à ce diplôme et
+                # proches de l'intitulé, proposées en un clic (le candidat valide, rien n'est choisi pour lui).
+                f['specialites_suggerees'] = [] if specialite else [
+                    {'id': s.id, 'libelle': s.libelle}
+                    for s in suggerer_specialites_pour_diplome(type_diplome, f.get('diplome'))
+                ]
             result['quota_ia'] = quota_info
             result['parsing_id'] = _journaliser_parsing(
                 request.user, result, cv_name, debut_parsing, stats_metier,

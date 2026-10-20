@@ -8,6 +8,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -233,7 +234,11 @@ const AdminRendezVous = () => {
           "Jours bloqués : congés ou jours fériés. Aucun créneau n'est proposé ces jours-là, même s'ils figurent dans le gabarit.",
           "Délai minimum : un candidat ne peut pas réserver moins de X heures à l'avance. Horizon : jusqu'à combien de jours à l'avance il peut réserver.",
           "Rendez-vous : changez le statut (Confirmé → Passé une fois le rendez-vous tenu). Annuler demande confirmation. Prévenez le candidat par email, il n'est pas notifié automatiquement.",
+          "« Exporter les rendez-vous » télécharge tous les rendez-vous pris (candidat, date, motif, statut, notes) ; l'export est tracé dans le journal d'audit.",
         ]}
+        actions={
+          <BoutonExportExcel ressource="rendez-vous" nomFichier="rendez_vous_taftech" libelle="Exporter les rendez-vous" />
+        }
       />
 
       <div className={`${tw.card} p-5`}>

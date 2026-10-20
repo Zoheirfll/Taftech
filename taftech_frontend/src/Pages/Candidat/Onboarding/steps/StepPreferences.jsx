@@ -16,8 +16,14 @@ export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipSt
           <label className={`${tw.authLabel} mb-1.5`}>Métier souhaité</label>
           <MetierAutocomplete
             proposable
-            value={prefsForm.metier_souhaite_libelle || ""}
-            onSelect={(item) => setPrefsForm((prev) => ({ ...prev, metier_souhaite: item.metier_id, metier_souhaite_libelle: item.appellation_libelle }))}
+            value={prefsForm.metier_souhaite_appellation_libelle || prefsForm.metier_souhaite_libelle || ""}
+            onSelect={(item) => setPrefsForm((prev) => ({
+              ...prev,
+              metier_souhaite: item.metier_id,
+              metier_souhaite_libelle: item.metier_libelle,
+              metier_souhaite_appellation: item.appellation_id || null,
+              metier_souhaite_appellation_libelle: item.appellation_libelle,
+            }))}
           />
         </div>
         <div>

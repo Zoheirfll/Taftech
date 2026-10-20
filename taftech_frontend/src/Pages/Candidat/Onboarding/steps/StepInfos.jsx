@@ -122,8 +122,14 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
           <label className={`${tw.authLabel} mb-1.5`}>Métier</label>
           <MetierAutocomplete
             proposable
-            value={infosForm.metier_libelle || ""}
-            onSelect={(item) => setInfosForm((prev) => ({ ...prev, metier: item.metier_id, metier_libelle: item.appellation_libelle }))}
+            value={infosForm.metier_appellation_libelle || infosForm.metier_libelle || ""}
+            onSelect={(item) => setInfosForm((prev) => ({
+              ...prev,
+              metier: item.metier_id,
+              metier_libelle: item.metier_libelle,
+              metier_appellation: item.appellation_id || null,
+              metier_appellation_libelle: item.appellation_libelle,
+            }))}
           />
         </div>
         <div>

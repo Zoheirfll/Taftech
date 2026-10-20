@@ -37,7 +37,7 @@ def formations_concernees():
             statut_validation='A_PRECISER', diplome_ref__isnull=False, specialite_ref__isnull=True,
             demande_specialite__isnull=True,
         ).exclude(diplome_ref__code=CODE_DIPLOME_AUTRE)
-        if len(_texte(f.description)) >= LIBELLE_MIN
+        if len(_texte(f.specialite_texte)) >= LIBELLE_MIN
     ]
     return diplomes, specialites
 
@@ -55,7 +55,7 @@ class Command(BaseCommand):
             self.stdout.write(f"  - formation {formation.id} : « {_texte(formation.diplome)[:80]} »")
         self.stdout.write(f"Formations avec une spécialité non résolue : {len(specialites)}")
         for formation in specialites[:ECHANTILLON]:
-            self.stdout.write(f"  - formation {formation.id} : « {_texte(formation.description)[:80]} »")
+            self.stdout.write(f"  - formation {formation.id} : « {_texte(formation.specialite_texte)[:80]} »")
 
         if not options['appliquer']:
             self.stdout.write("Simulation : rien n'a été écrit. Relancez avec --appliquer pour migrer.")
@@ -70,7 +70,7 @@ class Command(BaseCommand):
         ids_specialites = {f.id for f in specialites}
         liees = non_liees = 0
         for formation in diplomes + [f for f in specialites if f.id not in {d.id for d in diplomes}]:
-            specialite_autre = _texte(formation.description) if formation.id in ids_specialites else ''
+            specialite_autre = _texte(formation.specialite_texte) if formation.id in ids_specialites else ''
             synchroniser_depuis_formation(formation, formation.profil.user, specialite_autre)
             formation.refresh_from_db()
             if formation.demande_diplome_id or formation.demande_specialite_id:
@@ -90,7 +90,8 @@ class Command(BaseCommand):
         vues = {f.id: f for f in diplomes + specialites}
         donnees = [
             {
-                'id': f.id, 'diplome': f.diplome, 'description': f.description, 'diplome_ref_id': f.diplome_ref_id,
+                'id': f.id, 'diplome': f.diplome, 'description': f.description, 'specialite_texte': f.specialite_texte,
+                'diplome_ref_id': f.diplome_ref_id,
                 'specialite_ref_id': f.specialite_ref_id, 'statut_validation': f.statut_validation,
                 'demande_diplome_id': f.demande_diplome_id, 'demande_specialite_id': f.demande_specialite_id,
             }

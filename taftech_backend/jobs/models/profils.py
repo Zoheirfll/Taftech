@@ -117,6 +117,16 @@ class ProfilCandidat(models.Model):
         help_text="Distinct de `metier` (situation actuelle) — un candidat peut viser un métier différent de "
                   "celui qu'il exerce aujourd'hui.",
     )
+    # Appellation précise choisie pour chacun des deux métiers (« Développeur web » au sein de « Études et
+    # développement informatique ») : affichage seulement, le métier reste la clé du calcul.
+    metier_appellation = models.ForeignKey(
+        'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier',
+        verbose_name="Appellation du métier actuel (référentiel v2)",
+    )
+    metier_souhaite_appellation = models.ForeignKey(
+        'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier_souhaite',
+        verbose_name="Appellation du métier souhaité (référentiel v2)",
+    )
 
     # --- ANCIENS CHAMPS GARDÉS ---
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme (ancien champ, conservé pour compat historique)")
@@ -283,6 +293,12 @@ class FormationCandidat(models.Model):
     )
 
     description = models.TextField(blank=True, null=True, verbose_name="Description ou mention")
+    specialite_texte = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Spécialité saisie en « Autre, préciser »",
+        help_text="Texte libre de la spécialité absente de la liste (vide dès qu'une `specialite_ref` est choisie). "
+                  "Distinct de `description` (note libre : mémoire, mention) qui ne déclenche aucune vérification.",
+    )
 
     # Trace d'audit du refus admin (statut_validation='REFUSEE') — jamais de hard delete d'une
     # formation candidat sans garde-fou : motif + auteur + date conservés même si le candidat
@@ -325,14 +341,15 @@ class FormationCandidat(models.Model):
         # attente que le Type de diplôme, mais uniquement quand elle est réellement
         # pertinente pour CE diplôme précis (des couples `DiplomeSpecialite` existent) —
         # sinon un Bac (qui n'a le plus souvent aucune spécialité attestée) serait à tort
-        # marqué "à vérifier" simplement parce que le champ est resté vide. `description`
-        # sert de signal d'intention : c'est le champ où `FormationReferentielSelect`
-        # recopie le texte tapé en mode "Autre, préciser" de la Spécialité (non résolu) ET
-        # le libellé d'un vrai choix référentiel confirmé — non vide + `specialite_ref`
-        # absent = une tentative est restée sans correspondance.
+        # marqué "à vérifier" simplement parce que le champ est resté vide. `specialite_texte`
+        # sert de signal d'intention : c'est le texte tapé en mode "Autre, préciser" de la
+        # Spécialité (non résolu) — non vide + `specialite_ref` absent = une tentative est
+        # restée sans correspondance. (Avant le 19/10/2026 ce rôle était tenu par
+        # `description`, qui recevait aussi le « Mémoire : … » importé du CV : une simple note
+        # déclenchait à tort une vérification et s'affichait comme « spécialité ».)
         diplome_incertain = not self.diplome_ref_id and bool(self.diplome)
         specialite_incertaine = False
-        if self.diplome_ref_id and not self.specialite_ref_id and self.description:
+        if self.diplome_ref_id and not self.specialite_ref_id and self.specialite_texte:
             specialite_incertaine = DiplomeSpecialite.objects.filter(
                 diplome_id=self.diplome_ref_id, selectionnable=True,
             ).exists()

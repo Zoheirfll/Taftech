@@ -49,8 +49,8 @@ const SectionExperiences = ({ profil, formatDate, setEditingExpId, setNewExp, se
                       </h4>
                       <p className={`text-xs ${tw.textPrimary} font-medium`}>
                         {exp.entreprise}
-                        {exp.metier_libelle && (
-                          <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.metier_libelle}</span>
+                        {(exp.appellation_libelle || exp.metier_libelle) && (
+                          <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.appellation_libelle || exp.metier_libelle}</span>
                         )}
                       </p>
                       <p className={`text-xs ${tw.textMuted} mt-1`}>

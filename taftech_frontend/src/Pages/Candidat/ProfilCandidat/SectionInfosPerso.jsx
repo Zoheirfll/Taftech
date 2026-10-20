@@ -53,7 +53,7 @@ const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInp
                     || profil.niveau_scolaire_ref_libelle
                     || constants.diplomes.find(d => d.value === profil.diplome)?.label
                     || formatText(profil.diplome)}
-                  {profil.metier_libelle && <> {" · "}{profil.metier_libelle}</>}
+                  {(profil.metier_appellation_libelle || profil.metier_libelle) && <> {" · "}{profil.metier_appellation_libelle || profil.metier_libelle}</>}
                 </p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-2">
                   {profil.niveau_experience && (

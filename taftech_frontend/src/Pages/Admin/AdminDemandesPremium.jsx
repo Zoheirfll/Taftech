@@ -8,6 +8,7 @@ import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
 import { confirmToast } from "../../utils/confirmToast";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 
@@ -84,7 +85,15 @@ const AdminDemandesPremium = () => {
           "Avant d'activer, vérifiez le reçu de paiement reçu sur l'email TafTech et que le montant correspond au palier et à la durée.",
           "Choisissez le palier (Starter, Pro, Business, Enterprise) et la durée, puis « Activer ». Un abonnement encore actif est prolongé à partir de sa date d'expiration, sans perte de jours.",
           "Une demande activée passe dans l'onglet « Traitées », avec sa date de traitement.",
+          "« Exporter Excel » télécharge les demandes de l'onglet affiché ; l'export est tracé dans le journal d'audit.",
         ]}
+        actions={
+          <BoutonExportExcel
+            ressource="demandes-premium"
+            params={{ statut: filtre === "toutes" ? "" : filtre }}
+            nomFichier="demandes_premium_taftech"
+          />
+        }
       />
 
       <div className="flex gap-2 flex-wrap" role="tablist" aria-label="Filtrer les demandes">

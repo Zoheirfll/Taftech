@@ -18,7 +18,10 @@ from ..models import (
 )
 from ..constants import WILAYAS_CHOICES
 from ..permissions import IsAdminRole
-from .export_xlsx import reponse_xlsx
+from .admin_filtres import (
+    audit_logs_filtres, candidatures_filtrees, entreprises_filtrees, offres_filtrees,
+    utilisateurs_filtres, utilisateurs_recherches,
+)
 from ..referentiel_utils import secteur_et_domaine_par_metier
 from ..seo_views import (
     STATIC_PATHS, alertes_configuration, offres_indexables, rendu_serveur_pret, stats_job_posting,
@@ -83,21 +86,7 @@ class AdminOffresListAPIView(APIView):
     }
 
     def get(self, request):
-        search = request.query_params.get('search', '')
-        statut = request.query_params.get('statut', '')
-        ordering = request.query_params.get('ordering', '-date_publication')
-        field = ordering.lstrip('-')
-        if field not in self.ORDERING_FIELDS:
-            ordering = '-date_publication'
-        offres = OffreEmploi.objects.select_related('entreprise').all().order_by(ordering)
-        if search:
-            offres = offres.filter(
-                Q(titre__icontains=search) | Q(entreprise__nom_entreprise__icontains=search)
-            )
-        if statut == 'CLOTUREE':
-            offres = offres.filter(est_cloturee=True)
-        elif statut in ('EN_ATTENTE', 'APPROUVEE', 'REJETEE'):
-            offres = offres.filter(statut_moderation=statut, est_cloturee=False)
+        offres = offres_filtrees(request.query_params)  # mêmes filtres que l'export Excel
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(offres, request)
         serializer = OffreDashboardDTO(result_page, many=True)
@@ -133,26 +122,7 @@ class AdminEntreprisesListAPIView(APIView):
     ORDERING_FIELDS = {'id': 'id', 'nom_entreprise': 'nom_entreprise'}
 
     def get(self, request):
-        search = request.query_params.get('search', '')
-        ordering = request.query_params.get('ordering', '-id')
-        field = ordering.lstrip('-')
-        if field not in self.ORDERING_FIELDS:
-            ordering = '-id'
-        entreprises = ProfilEntreprise.objects.all().order_by(ordering)
-        # Lien de la bannière « abonnements qui expirent » du tableau de bord : abonnements encore
-        # actifs dont la date d'expiration tombe dans les N prochains jours (même règle que
-        # `premium_expirant_bientot` de AdminStatsAPIView).
-        expire_sous = request.query_params.get('abonnement_expire_sous', '')
-        if expire_sous.isdigit() and 0 < int(expire_sous) <= 365:
-            maintenant = timezone.now()
-            entreprises = entreprises.filter(
-                abonnement__date_expiration__gte=maintenant,
-                abonnement__date_expiration__lte=maintenant + datetime.timedelta(days=int(expire_sous)),
-            )
-        if search:
-            entreprises = entreprises.filter(
-                Q(nom_entreprise__icontains=search) | Q(registre_commerce__icontains=search)
-            )
+        entreprises = entreprises_filtrees(request.query_params)  # mêmes filtres que l'export Excel
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(entreprises, request)
         serializer = EntrepriseDashboardDetailSerializer(result_page, many=True)
@@ -355,26 +325,13 @@ class AdminUsersListAPIView(APIView):
     ORDERING_FIELDS = {'date_joined': 'date_joined', 'last_name': 'last_name'}
 
     def get(self, request):
-        search = request.query_params.get('search', '')
-        role = request.query_params.get('role', '')
-        ordering = request.query_params.get('ordering', '-date_joined')
-        field = ordering.lstrip('-')
-        if field not in self.ORDERING_FIELDS:
-            ordering = '-date_joined'
-        users = User.objects.exclude(is_superuser=True).order_by(ordering)
-        if search:
-            users = users.filter(
-                Q(first_name__icontains=search) |
-                Q(last_name__icontains=search) |
-                Q(email__icontains=search)
-            )
+        recherches = utilisateurs_recherches(request.query_params)  # mêmes filtres que l'export Excel
         counts = {
-            'CANDIDAT': users.filter(role='CANDIDAT').count(),
-            'RECRUTEUR': users.filter(role='RECRUTEUR').count(),
-            'ADMIN': users.filter(role='ADMIN').count(),
+            'CANDIDAT': recherches.filter(role='CANDIDAT').count(),
+            'RECRUTEUR': recherches.filter(role='RECRUTEUR').count(),
+            'ADMIN': recherches.filter(role='ADMIN').count(),
         }
-        if role in ('CANDIDAT', 'RECRUTEUR', 'ADMIN'):
-            users = users.filter(role=role)
+        users = utilisateurs_filtres(request.query_params)
         paginator = AdminPagination()
         result_page = paginator.paginate_queryset(users, request)
         serializer = AdminUserSerializer(result_page, many=True)
@@ -422,7 +379,8 @@ class AdminDossierAdminAPIView(APIView):
     def get(self, request, user_id):
         from ..admin_dossier_admin import dossier_admin
         user = User.objects.filter(pk=user_id).filter(Q(role='ADMIN') | Q(is_staff=True)).first()
-        if user is None:
+        # Un super-administrateur n'est pas consultable (activité tracée comprise) par un admin simple.
+        if user is None or (user.is_superuser and not request.user.is_superuser):
             return Response({'error': 'Administrateur introuvable.'}, status=404)
         return Response(dossier_admin(user))
 
@@ -433,6 +391,11 @@ class AdminUserModerateAPIView(APIView):
     def patch(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
+            if user.is_superuser and not request.user.is_superuser:
+                return Response(
+                    {"error": "Impossible de modifier un superutilisateur."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             # Un admin qui se bloque lui-même perd immédiatement l'accès au panel (plus aucun
             # moyen de revenir en arrière sans intervention en base).
             if user.pk == request.user.pk:
@@ -489,23 +452,8 @@ class AdminCandidaturesListAPIView(APIView):
     ORDERING_FIELDS = {'date_postulation': 'date_postulation', 'score_matching': 'score_matching', 'note_globale': 'note_globale'}
 
     def get(self, request):
-        search = request.query_params.get('search', '')
-        statut = request.query_params.get('statut', '')
-        ordering = request.query_params.get('ordering', '-date_postulation')
-        field = ordering.lstrip('-')
-        if field not in self.ORDERING_FIELDS:
-            ordering = '-date_postulation'
-        candidatures = Candidature.objects.select_related('candidat', 'offre__entreprise', 'offre__questionnaire').order_by(ordering)
-        if search:
-            candidatures = candidatures.filter(
-                Q(candidat__first_name__icontains=search) |
-                Q(candidat__last_name__icontains=search) |
-                Q(nom_rapide__icontains=search) |
-                Q(offre__titre__icontains=search) |
-                Q(offre__entreprise__nom_entreprise__icontains=search)
-            )
-        if statut:
-            candidatures = candidatures.filter(statut=statut)
+        # Mêmes filtres que l'export Excel ; la liste charge en plus le questionnaire de l'offre.
+        candidatures = candidatures_filtrees(request.query_params).select_related('offre__questionnaire')
         # AdminPagination (et non PageNumberPagination brut) : honore `?page_size=` comme les
         # autres listes admin — le frontend demande 20 lignes par page partout.
         paginator = AdminPagination()
@@ -526,88 +474,8 @@ class AdminCandidaturesListAPIView(APIView):
         return paginator.get_paginated_response(data)
 
 
-class ExportAdminCandidaturesExcelAPIView(APIView):
-    permission_classes = [IsAdminRole]
-
-    def get(self, request):
-        colonnes = ['ID', 'Date', 'Candidat', 'Email / Tel', 'Offre', 'Entreprise', 'Statut', 'Score IA (%)', 'Note Entretien (/20)']
-        lignes = []
-        queryset = Candidature.objects.select_related('candidat', 'offre__entreprise').order_by('-date_postulation')
-        for cand in queryset:
-            if cand.candidat:
-                nom = f"{cand.candidat.last_name} {cand.candidat.first_name}"
-                contact = cand.candidat.email
-            else:
-                nom = f"{cand.nom_rapide} {cand.prenom_rapide} (Rapide)"
-                contact = cand.email_rapide
-            lignes.append([
-                cand.id,
-                cand.date_postulation.strftime("%d/%m/%Y"),
-                nom, contact,
-                cand.offre.titre,
-                cand.offre.entreprise.nom_entreprise,
-                cand.get_statut_display(),
-                cand.score_matching if cand.score_matching is not None else "N/A",
-                cand.note_globale if cand.note_globale is not None else "Non évalué"
-            ])
-        return reponse_xlsx("candidatures_taftech", "Candidatures", colonnes, lignes)
-
-
-class ExportEntreprisesExcelAPIView(APIView):
-    permission_classes = [IsAdminRole]
-
-    def get(self, request):
-        colonnes = ['ID', 'Nom', 'Secteur', 'Wilaya', 'Approuvée', 'Email', 'Téléphone']
-        from ..referentiel_utils import libelle_secteur_entreprise
-        lignes = [
-            [
-                ent.id, ent.nom_entreprise,
-                libelle_secteur_entreprise(ent.secteur_activite),
-                ent.wilaya_siege,
-                'Oui' if ent.est_approuvee else 'Non',
-                ent.user.email,
-                ent.user.telephone if hasattr(ent.user, 'telephone') else ""
-            ]
-            for ent in ProfilEntreprise.objects.select_related('user').order_by('-id')
-        ]
-        return reponse_xlsx("entreprises_taftech", "Entreprises", colonnes, lignes)
-
-
-class ExportOffresExcelAPIView(APIView):
-    permission_classes = [IsAdminRole]
-
-    def get(self, request):
-        colonnes = ['ID', 'Titre', 'Entreprise', 'Wilaya', 'Contrat', 'Statut', 'Clôturée', 'Date']
-        lignes = [
-            [
-                offre.id, offre.titre,
-                offre.entreprise.nom_entreprise,
-                offre.wilaya,
-                offre.get_type_contrat_display() if offre.type_contrat else "",
-                offre.get_statut_moderation_display(),
-                'Oui' if offre.est_cloturee else 'Non',
-                offre.date_publication.strftime("%d/%m/%Y")
-            ]
-            for offre in OffreEmploi.objects.select_related('entreprise').order_by('-date_publication')
-        ]
-        return reponse_xlsx("offres_taftech", "Offres", colonnes, lignes)
-
-
-class ExportUtilisateursExcelAPIView(APIView):
-    permission_classes = [IsAdminRole]
-
-    def get(self, request):
-        colonnes = ['ID', 'Email', 'Nom', 'Prénom', 'Rôle', 'Actif', 'Date Inscription']
-        lignes = [
-            [
-                u.id, u.email, u.last_name, u.first_name,
-                getattr(u, 'role', 'CANDIDAT'),
-                'Oui' if u.is_active else 'Non',
-                u.date_joined.strftime("%d/%m/%Y") if u.date_joined else ""
-            ]
-            for u in User.objects.order_by('-date_joined')
-        ]
-        return reponse_xlsx("utilisateurs_taftech", "Utilisateurs", colonnes, lignes)
+# Les exports Excel de l'administration (utilisateurs, candidatures, entreprises, offres, demandes,
+# rendez-vous, journal d'audit, erreurs système) vivent dans `admin_exports.py`.
 
 
 class AdminMarcheAPIView(APIView):
@@ -746,14 +614,7 @@ class AdminAuditLogAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        logs = AuditLog.objects.select_related('admin').all()
-        search = request.query_params.get('search', '').strip()
-        if search:
-            logs = logs.filter(
-                Q(admin__email__icontains=search) |
-                Q(action__icontains=search) |
-                Q(detail__icontains=search)
-            )
+        logs = audit_logs_filtres(request.query_params, request.user)  # mêmes filtres que l'export Excel
         paginator = AdminPagination()
         paginator.page_size = int(request.query_params.get('page_size', 20))
         result_page = paginator.paginate_queryset(logs, request)
@@ -856,6 +717,8 @@ class AdminCompteAdminsAPIView(APIView):
                 'last_name': u.last_name,
                 'telephone': u.telephone or '',
                 'is_superuser': u.is_superuser,
+                # Le bouton « Modifier » n'est affiché que si la route l'acceptera (voir `patch`).
+                'modifiable': request.user.is_superuser or not u.is_superuser,
                 'is_active': u.is_active,
                 'date_joined': u.date_joined.strftime('%d/%m/%Y'),
             }

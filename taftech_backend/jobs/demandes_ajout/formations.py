@@ -27,10 +27,10 @@ def _demande_ou_none(utilisateur, type_demande, libelle, contexte):
 
 def _specialite_a_preciser(formation, autre_diplome):
     """Vrai si la formation attend une vérification à cause de sa spécialité (mécanisme existant de
-    `FormationCandidat.save()`) : un vrai diplôme, aucune spécialité de référence, un texte dans `description`."""
+    `FormationCandidat.save()`) : un vrai diplôme, aucune spécialité de référence, un texte dans `specialite_texte`."""
     return (
         not autre_diplome and formation.statut_validation == 'A_PRECISER'
-        and not formation.specialite_ref_id and bool(nettoyer(formation.description))
+        and not formation.specialite_ref_id and bool(nettoyer(formation.specialite_texte))
     )
 
 
@@ -61,7 +61,7 @@ def synchroniser_depuis_formation(formation, utilisateur, specialite_autre=''):
     if not texte_specialite and _specialite_a_preciser(formation, autre_diplome):
         # Formation importée (CV, assistant) dont la spécialité n'a pas été résolue : l'ancienne file
         # « Formations à vérifier » la montrait à l'admin, elle devient une demande de spécialité.
-        texte_specialite = nettoyer(formation.description)
+        texte_specialite = nettoyer(formation.specialite_texte)
     if not formation.specialite_ref_id and len(texte_specialite) >= LIBELLE_MIN:
         demande = _demande_ou_none(
             utilisateur, DemandeAjout.TYPE_SPECIALITE, texte_specialite, texte_diplome[:CONTEXTE_MAX],

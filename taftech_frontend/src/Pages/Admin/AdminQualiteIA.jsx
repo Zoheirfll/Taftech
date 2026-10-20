@@ -9,6 +9,9 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import { AdminErreurChargement, AdminVide } from "../../Components/AdminEtat";
+import AdminPagination from "../../Components/AdminPagination";
+
+const LIGNES_PAR_PAGE = 10;
 
 const ONGLETS = [
   { key: "parser", label: "Parser CV", icon: FileSearch },
@@ -39,6 +42,7 @@ const Barre = ({ pct, couleur = "bg-indigo-500" }) => (
 
 const PanneauParser = () => {
   const [jours, setJours] = useState(30);
+  const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(false);
 
@@ -60,11 +64,14 @@ const PanneauParser = () => {
     return <div className={tw.card}><AdminVide icon={FileSearch} titre="Aucun CV analysé sur cette période." texte="Le journal se remplit à chaque analyse de CV par un candidat." /></div>;
   }
   const maxSemaine = Math.max(...data.par_semaine.map((s) => s.total), 1);
+  const totalPages = Math.max(1, Math.ceil(data.recents.length / LIGNES_PAR_PAGE));
+  const pageCourante = Math.min(page, totalPages);
+  const recentsAffiches = data.recents.slice((pageCourante - 1) * LIGNES_PAR_PAGE, pageCourante * LIGNES_PAR_PAGE);
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <select value={jours} onChange={(e) => setJours(Number(e.target.value))} className={`px-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Période">
+        <select value={jours} onChange={(e) => { setJours(Number(e.target.value)); setPage(1); }} className={`px-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Période">
           <option value={7}>7 derniers jours</option>
           <option value={30}>30 derniers jours</option>
           <option value={90}>90 derniers jours</option>
@@ -137,7 +144,7 @@ const PanneauParser = () => {
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase} text-xs`}>
-              {data.recents.map((p) => (
+              {recentsAffiches.map((p) => (
                 <tr key={p.id} className={tw.rowHover}>
                   <td className="px-4 py-2.5">{new Date(p.date).toLocaleString("fr-FR")}</td>
                   <td className="px-4 py-2.5">
@@ -156,6 +163,7 @@ const PanneauParser = () => {
             </tbody>
           </table>
         </div>
+        <AdminPagination page={pageCourante} totalPages={totalPages} totalCount={data.recents.length} onChange={setPage} />
       </div>
     </div>
   );
@@ -163,6 +171,7 @@ const PanneauParser = () => {
 
 const PanneauCorrections = () => {
   const [type, setType] = useState("");
+  const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState(false);
 
@@ -195,10 +204,14 @@ const PanneauCorrections = () => {
   if (erreur) return <AdminErreurChargement onRetry={charger} />;
   if (!data) return <p className={`text-sm ${tw.textMuted}`}>Chargement…</p>;
 
+  const totalPages = Math.max(1, Math.ceil(data.resultats.length / LIGNES_PAR_PAGE));
+  const pageCourante = Math.min(page, totalPages);
+  const resultatsAffiches = data.resultats.slice((pageCourante - 1) * LIGNES_PAR_PAGE, pageCourante * LIGNES_PAR_PAGE);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <select value={type} onChange={(e) => setType(e.target.value)} className={`px-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Type de correction">
+        <select value={type} onChange={(e) => { setType(e.target.value); setPage(1); }} className={`px-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Type de correction">
           <option value="">Tous les types</option>
           <option value="METIER_EXPERIENCE">Métiers</option>
           <option value="DIPLOME">Diplômes</option>
@@ -220,7 +233,7 @@ const PanneauCorrections = () => {
                 </tr>
               </thead>
               <tbody className={`divide-y ${tw.divideBase} text-xs`}>
-                {data.resultats.map((l, i) => (
+                {resultatsAffiches.map((l, i) => (
                   <tr key={i} className={tw.rowHover}>
                     <td className="px-4 py-2.5">{LIBELLES_TYPE[l.type_correction]}</td>
                     <td className="px-4 py-2.5 font-medium">{l.texte_source || "—"}</td>
@@ -238,6 +251,7 @@ const PanneauCorrections = () => {
             </table>
           </div>
         )}
+        <AdminPagination page={pageCourante} totalPages={totalPages} totalCount={data.resultats.length} onChange={setPage} />
       </div>
     </div>
   );

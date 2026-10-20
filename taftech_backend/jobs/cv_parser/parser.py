@@ -10,8 +10,13 @@ from .normalisation import _normaliser_date_naissance, _normaliser_mobilite, _no
 from .extraction import extract_photo_from_docx, extract_photo_from_pdf, extract_text
 from .sections import extraire_competences_par_ligne
 from ..confidentialite_ia import ModeleNerIndisponible, extraire_coordonnees, nettoyer_texte
+from .dates_fin import completer_dates_fin
+from .entreprise import completer_entreprise
+from .jetons import restaurer_jetons
 
 logger = logging.getLogger(__name__)
+
+_CHAMPS_AVEC_JETONS = ("titre_poste", "entreprise", "description", "diplome", "etablissement")
 
 LONGUEUR_MAX_PARSER = 7000  # budget TPM Groq : voir le commentaire dans parse_with_groq
 
@@ -217,6 +222,18 @@ def parse_cv(file_path, file_name, noms_connus=()):
     ai_data["wilaya"] = ai_data.get("wilaya") or coord.get("wilaya")
     ai_data["date_naissance_raw"] = coord.get("date_naissance_raw") or _sans_jeton(ai_data.get("date_naissance_raw"))
     ai_data["adresse"] = None  # jamais extraite : perdue par construction (le candidat la saisit)
+
+    # Un jeton de masquage recopié par l'IA dans un texte du profil (« [NOM], maintenance… » pour
+    # « Monitoring, maintenance… ») est restauré depuis le CV brut, ou retiré.
+    for bloc in ("experiences", "formations"):
+        for element in ai_data.get(bloc) or []:
+            for champ in _CHAMPS_AVEC_JETONS:
+                if champ in element:
+                    element[champ] = restaurer_jetons(element[champ], text)
+    # CV en colonnes : fin d'expérience seule sous le titre, laissée vide par l'IA.
+    completer_dates_fin(ai_data.get("experiences"), text)
+    # Entreprise obligatoire à l'enregistrement : relue sous le titre si le masquage l'a fait perdre.
+    completer_entreprise(ai_data.get("experiences"), text)
 
     # Normalisation contre le référentiel admin (CompetenceReferentiel) — fait converger
     # les doublons/synonymes ("Gestion de projet" / "Project Management" / "Gestion des

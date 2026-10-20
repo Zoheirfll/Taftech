@@ -5,6 +5,8 @@ import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
 import { TooltipIcon } from "../../Components/Tooltip";
 import QuotaIABadge from "../../Components/QuotaIABadge";
+import { ApercuDonneesIA } from "../../Components/ApercuDonneesIA";
+import { bloqueLaFonctionIA } from "../../utils/erreursIA";
 import RadialGauge from "../../Components/RadialGauge";
 import { jobUrl } from "../../utils/slugify";
 import {
@@ -174,6 +176,8 @@ const CandidatDashboard = () => {
   const [conseilsLoading, setConseilsLoading] = useState(false);
   const [conseilsDemandes, setConseilsDemandes] = useState(false);
   const [conseilsGenereLe, setConseilsGenereLe] = useState(null);
+  // Vrai quand le serveur a renvoyé les conseils déjà stockés (données inchangées : aucun quota utilisé).
+  const [conseilsDepuisCache, setConseilsDepuisCache] = useState(false);
   const [quotaConseils, setQuotaConseils] = useState(null);
   const [wilayas, setWilayas] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -225,19 +229,21 @@ const CandidatDashboard = () => {
     fetchDashboard();
   }, []);
 
-  const handleGenererConseils = async () => {
+  const handleGenererConseils = async (regenerer = false) => {
     setConseilsLoading(true);
     setConseilsDemandes(true);
     setConseilsErreur(null);
+    setConseilsDepuisCache(false);
     try {
-      const data = await jobsService.getConseilsPersonnalises();
+      const data = await jobsService.getConseilsPersonnalises(regenerer);
       setConseils(data.conseils || []);
       setConseilsGenereLe(data.genere_le || null);
+      setConseilsDepuisCache(Boolean(data.depuis_cache));
       if (data.quota_ia) setQuotaConseils({ ...data.quota_ia, disponible: true });
     } catch (error) {
       reportError("ECHEC_CHARGEMENT_CONSEILS_IA", error);
       setConseilsErreur(error.response?.data?.error || "Service IA temporairement indisponible.");
-      if (error.response?.data?.quota_restant_jour !== undefined || error.response?.data?.code) {
+      if (bloqueLaFonctionIA(error.response?.data)) {
         setQuotaConseils({ ...error.response.data, disponible: false });
       }
     } finally {
@@ -674,7 +680,7 @@ const CandidatDashboard = () => {
               </h2>
               {(!conseilsDemandes || conseils.length > 0) && !conseilsLoading && (
                 <button
-                  onClick={handleGenererConseils}
+                  onClick={() => handleGenererConseils()}
                   disabled={quotaConseils && quotaConseils.disponible === false}
                   className={`flex items-center gap-1.5 px-3 py-1.5 ${tw.textOnDark} ${tw.bgPrimarySolidHover} text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -682,6 +688,22 @@ const CandidatDashboard = () => {
                 </button>
               )}
             </div>
+            <div className="mb-3">
+              <ApercuDonneesIA fonction="CONSEILS_DASHBOARD" />
+            </div>
+            {conseilsDepuisCache && !conseilsLoading && (
+              <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] ${tw.textMuted700} mb-2`}>
+                <span>Vos données n'ont pas changé depuis ces conseils : résultat conservé, aucun quota utilisé.</span>
+                <button
+                  type="button"
+                  onClick={() => handleGenererConseils(true)}
+                  disabled={quotaConseils && quotaConseils.disponible === false}
+                  className={`${tw.linkPrimary} font-semibold disabled:opacity-50`}
+                >
+                  Régénérer quand même
+                </button>
+              </div>
+            )}
             {(conseilsGenereLe || quotaConseils) && (
               <div className={`flex items-center gap-2 text-[10px] ${tw.textMuted700} mb-2`}>
                 {conseilsGenereLe && (

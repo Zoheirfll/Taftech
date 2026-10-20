@@ -24,9 +24,12 @@ export const dashboardCandidatService = {
     }
   },
 
-  getConseilsPersonnalises: async () => {
+  // `regenerer` : force de nouveaux conseils même si les données n'ont pas changé (compte dans le quota).
+  getConseilsPersonnalises: async (regenerer = false) => {
     try {
-      const response = await api.get("jobs/conseils-personnalises/");
+      const response = await api.get("jobs/conseils-personnalises/", {
+        params: regenerer ? { regenerer: 1 } : {},
+      });
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_CONSEILS_PERSONNALISES", err);

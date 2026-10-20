@@ -82,6 +82,7 @@ const ProfilCandidat = () => {
     handleSupprimerCompetence,
     handleChangerNiveauCompetence,
     handleAddLanguage,
+    handleUpdateLanguage,
     handleUpdateGeneric,
     handleUpdateCV,
     handleDeleteCV,
@@ -278,7 +279,7 @@ const ProfilCandidat = () => {
             handleSupprimerCompetence={handleSupprimerCompetence}
             handleChangerNiveauCompetence={handleChangerNiveauCompetence}
           />
-          <SidebarLangues profil={profil} handleRemoveTag={handleRemoveTag} handleAddLanguage={handleAddLanguage} />
+          <SidebarLangues profil={profil} handleRemoveTag={handleRemoveTag} handleAddLanguage={handleAddLanguage} handleUpdateLanguage={handleUpdateLanguage} />
         </div>
       </div>
 

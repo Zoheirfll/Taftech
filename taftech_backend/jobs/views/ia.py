@@ -20,6 +20,10 @@ from ..matching_cache import scores_offres_actives_pour_candidat
 from ..cv_parser import parse_cv
 from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import PublicReadThrottle, FileUploadThrottle
+from ..ai_engine import FournisseurIASature, saturation_de_la_demande
+from ..confidentialite_ia import (
+    jeton_candidat, lignes_experiences, lignes_formations, nettoyer_champ,
+)
 
 User = get_user_model()
 
@@ -248,10 +252,9 @@ class ParserCVAPIView(APIView):
         ok, quota_info = verifier_quota_ia(request.user, 'PARSER_CV')
         if not ok:
             return Response(quota_info, status=403)
-        if not acquerir_verrou_ia(request.user, 'PARSER_CV'):
-            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
-        consommer_quota_ia(request.user, 'PARSER_CV')
-
+        # Les validations du fichier passent AVANT le verrou et le décompte : un fichier invalide ne
+        # consomme aucun quota, ne pose aucun verrou et ne laisse aucun contexte de demande dans le
+        # thread (revue de sécurité du 19/10/2026 : ces retours anticipés sortaient du try/finally).
         cv_file = request.FILES.get('cv')
         if cv_file:
             if cv_file.size > 5 * 1024 * 1024:
@@ -271,6 +274,10 @@ class ParserCVAPIView(APIView):
         if ext not in ['.pdf', '.docx', '.doc']:
             return Response({"error": f"Format non supporté ({ext})."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not acquerir_verrou_ia(request.user, 'PARSER_CV'):
+            return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
+        consommer_quota_ia(request.user, 'PARSER_CV')
+
         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
         try:
             if cv_file:
@@ -282,41 +289,63 @@ class ParserCVAPIView(APIView):
                         tmp_file.write(chunk)
             tmp_file.close()
             debut_parsing = time.monotonic()
-            result = parse_cv(tmp_file.name, cv_name)
+            # Nom et prénom du compte : masqués dans le CV en plus de la détection automatique.
+            result = parse_cv(
+                tmp_file.name, cv_name,
+                noms_connus=(request.user.first_name, request.user.last_name),
+            )
             if result.get('success') is False:
                 # Échec du parsing : journalisé (scanné vs IA indisponible/limite de débit), réponse inchangée.
                 code = 'PDF_SCANNE' if 'scann' in str(result.get('error', '')).lower() else 'IA_INDISPONIBLE'
+                # parse_cv avale les erreurs du fournisseur : on rembourse seulement si CETTE demande a
+                # été refusée par le fournisseur (429 reçu ou appel bloqué par la pause), pas parce que
+                # le drapeau global est levé pendant qu'elle échoue pour une autre cause.
+                if code == 'IA_INDISPONIBLE' and saturation_de_la_demande():
+                    from ..ia_quota import rembourser_quota_ia
+                    rembourser_quota_ia()
+                    result['error'] = MESSAGE_FOURNISSEUR_SATURE
+                    code = 'IA_FOURNISSEUR_SATURE'
                 result['quota_ia'] = quota_info
                 result['parsing_id'] = _journaliser_parsing(request.user, {}, cv_name, debut_parsing, code_erreur=code)
                 return Response(result, status=status.HTTP_200_OK)
             experiences = result.get('experiences', [])
-            from ..domaine_agent import classifier_metiers_experiences, SPECIALITE_INDEX
+            from ..domaine_agent import classifier_appellations_experiences, SPECIALITE_INDEX
             from ..models import Metier
-            classifications = classifier_metiers_experiences(
+            classifications = classifier_appellations_experiences(
                 experiences, titre_professionnel=result.get('titre_professionnel')
             )
             metiers_par_id = {
-                m.id: m.libelle for m in Metier.objects.filter(pk__in=set(classifications.values()))
+                m.id: m.libelle for m in Metier.objects.filter(pk__in={c[0] for c in classifications.values()})
             }
             stats_metier = {'ia': 0, 'repli': 0, 'aucun': 0}
             for i, exp in enumerate(experiences):
                 if not isinstance(exp, dict):
                     continue
-                metier_id = classifications.get(i)
-                if metier_id:
+                classe = classifications.get(i)
+                if classe:
+                    metier_id, appellation_id, appellation_libelle = classe
                     exp['metier'] = metier_id
                     exp['metier_libelle'] = metiers_par_id.get(metier_id)
+                    # L'appellation choisie (« Développeur web ») est ce que le candidat voit ; le métier
+                    # officiel qui la regroupe reste la clé du calcul.
+                    exp['appellation'] = appellation_id
+                    exp['appellation_libelle'] = appellation_libelle
                     stats_metier['ia'] += 1
                 else:
                     metier = _deviner_metier_experience(exp.get('titre_poste'), exp.get('description'))
                     exp['metier'] = metier.id if metier else None
                     exp['metier_libelle'] = metier.libelle if metier else None
+                    exp['appellation'] = None
+                    exp['appellation_libelle'] = None
                     stats_metier['repli' if metier else 'aucun'] += 1
             if SPECIALITE_INDEX in classifications:
-                result['metier'] = classifications[SPECIALITE_INDEX]
-                result['metier_libelle'] = metiers_par_id.get(classifications[SPECIALITE_INDEX])
+                profil_metier_id, profil_appellation_id, profil_appellation_libelle = classifications[SPECIALITE_INDEX]
+                result['metier'] = profil_metier_id
+                result['metier_libelle'] = metiers_par_id.get(profil_metier_id)
+                result['metier_appellation'] = profil_appellation_id
+                result['metier_appellation_libelle'] = profil_appellation_libelle
 
-            from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte
+            from ..referentiel_utils import resoudre_diplome_et_specialite_depuis_texte, suggerer_specialites_pour_diplome
             for f in result.get('formations', []):
                 if not isinstance(f, dict):
                     continue
@@ -325,26 +354,51 @@ class ParserCVAPIView(APIView):
                 f['diplome_ref_libelle'] = type_diplome.libelle if type_diplome else None
                 f['specialite_ref'] = specialite.id if specialite else None
                 f['specialite_ref_libelle'] = specialite.libelle if specialite else None
+                # Diplôme reconnu mais spécialité non devinée : spécialités déjà reliées à ce diplôme et
+                # proches de l'intitulé, proposées en un clic (le candidat valide, rien n'est choisi pour lui).
+                f['specialites_suggerees'] = [] if specialite else [
+                    {'id': s.id, 'libelle': s.libelle}
+                    for s in suggerer_specialites_pour_diplome(type_diplome, f.get('diplome'))
+                ]
             result['quota_ia'] = quota_info
             result['parsing_id'] = _journaliser_parsing(
                 request.user, result, cv_name, debut_parsing, stats_metier,
             )
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": f"Erreur parsing : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Jamais le texte brut de l'exception dans la réponse : il peut venir du fournisseur IA
+            # (clé, organisation, extrait de la requête). Le type d'erreur suffit au diagnostic.
+            logger.error("Erreur parsing CV : %s", type(e).__name__)
+            return Response(
+                {"error": "Erreur lors de l'analyse du CV.", "code": "PARSING_ECHEC"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         finally:
             liberer_verrou_ia(request.user, 'PARSER_CV')
             if os.path.exists(tmp_file.name):
                 os.unlink(tmp_file.name)
 
 
-def _appel_groq(messages, max_tokens=500, temperature=None):
+MESSAGE_FOURNISSEUR_SATURE = "L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement."
+
+
+def reponse_fournisseur_sature():
+    """Réponse commune quand le fournisseur IA a refusé l'appel faute de quota (429) : l'appel de
+    l'utilisateur est remboursé (il ne compte dans aucun quota) et le reste du site continue de
+    fonctionner. À appeler dans le `except FournisseurIASature` d'une vue, avant `liberer_verrou_ia`."""
+    from ..ia_quota import rembourser_quota_ia
+    rembourser_quota_ia()
+    return Response({'error': MESSAGE_FOURNISSEUR_SATURE, 'code': 'IA_FOURNISSEUR_SATURE'}, status=503)
+
+
+def _appel_groq(messages, max_tokens=500, temperature=None, donnees_candidat=None):
     """Nom conservé pour compatibilité (nombreux appelants) même si l'appel réel passe par
     jobs.ai_engine (Groq ou Ollama selon AIConfig.provider), pas forcément Groq à proprement
     parler. Strip le markdown (**/##/*) — ne jamais utiliser pour un appel attendant du JSON en
     sortie, ça corromprait le format (voir GenererOffreIAAPIView qui appelle call_ai directement)."""
     from ..ai_engine import call_ai
-    texte = call_ai(messages, max_tokens=max_tokens, temperature=temperature)
+    texte = call_ai(messages, max_tokens=max_tokens, temperature=temperature,
+                    donnees_candidat=donnees_candidat)
     return texte.replace('**', '').replace('##', '').replace('*', '')
 
 
@@ -360,49 +414,53 @@ class AnalyseCarriereGroqAPIView(APIView):
         if not ai_config.analyse_carriere_actif:
             return Response({'error': "L'analyse carrière IA est temporairement désactivée par l'administrateur."}, status=503)
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'SUGGESTIONS_METIER')
-        if not ok:
-            return Response(quota_info, status=403)
         try:
             profil = request.user.profil_candidat
         except Exception:
             return Response({'error': 'Profil introuvable.'}, status=404)
 
-        experiences = [
-            f"{e.titre_poste} chez {e.entreprise} ({_date_precise(e.date_debut, e.date_debut_precision)} - {_date_precise(e.date_fin, e.date_fin_precision) or 'présent'})"
-            for e in profil.experiences_detail.all()
-        ]
-        formations = [f"{f.diplome} à {f.etablissement}" for f in profil.formations_detail.all()]
-
-        metier_actuel = profil.metier.libelle if profil.metier else None
-        metier_souhaite = profil.metier_souhaite.libelle if profil.metier_souhaite else None
-        profil_text = f"""
-Titre : {profil.titre_professionnel or 'Non renseigné'}
-Diplôme : {profil.diplome or 'Non renseigné'}
-Métier : {metier_actuel or 'Non renseigné'}
-Compétences : {profil.competences or 'Non renseigné'}
-Expériences : {', '.join(experiences) if experiences else 'Aucune'}
-Formations : {', '.join(formations) if formations else 'Aucune'}
-Métier souhaité : {metier_souhaite or 'Non renseigné'}
-"""
+        # Texte construit par confidentialite_ia.construction : employeurs pseudonymisés, établissements
+        # retirés, coordonnées masquées — le même texte est montré au candidat par l'aperçu.
+        from ..confidentialite_ia.construction import texte_carriere
+        from ..confidentialite_ia.empreinte import empreinte_ia
+        profil_text = texte_carriere(profil)
+        system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
+        empreinte = empreinte_ia(
+            system_prompt, profil_text, ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.analyse_carriere_max_tokens,
+        )
+        # Profil, prompt et modèle inchangés depuis la dernière analyse : on renvoie le résultat
+        # stocké, sans appel IA ni décompte de quota (et même quota épuisé). `?regenerer=1` force
+        # une nouvelle analyse, qui suit le chemin normal (quota, verrou, décompte).
+        if (request.query_params.get('regenerer') != '1' and profil.derniere_analyse_carriere
+                and profil.empreinte_analyse_carriere == empreinte):
+            return Response({
+                'analyse': profil.derniere_analyse_carriere, 'depuis_cache': True,
+                'genere_le': profil.analyse_carriere_le.isoformat() if profil.analyse_carriere_le else None,
+            })
+        ok, quota_info = verifier_quota_ia(request.user, 'SUGGESTIONS_METIER')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'SUGGESTIONS_METIER'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'SUGGESTIONS_METIER')
         try:
-            system_prompt = ai_config.analyse_carriere_prompt or DEFAULT_PROMPT_ANALYSE_CARRIERE
             analyse = _appel_groq([
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': f'Analyse ce profil :\n{profil_text}'}
-            ], max_tokens=ai_config.analyse_carriere_max_tokens)
+            ], max_tokens=ai_config.analyse_carriere_max_tokens, donnees_candidat=profil_text)
             profil.derniere_analyse_carriere = analyse
             profil.analyse_carriere_le = timezone.now()
-            profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le'])
+            profil.empreinte_analyse_carriere = empreinte
+            profil.save(update_fields=['derniere_analyse_carriere', 'analyse_carriere_le', 'empreinte_analyse_carriere'])
             return Response({
                 'analyse': analyse, 'quota_ia': quota_info,
                 'genere_le': profil.analyse_carriere_le.isoformat(),
             })
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
-            logger.error("Erreur Groq carrière : %s", e)
+            logger.error("Erreur Groq carrière : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'SUGGESTIONS_METIER')
@@ -424,7 +482,9 @@ class AnalyseGroqRecruteurAPIView(APIView):
 
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise or candidature.offre.entreprise != entreprise:
-            return Response({'error': 'Non autorisé.'}, status=403)
+            # Même réponse qu'un identifiant inexistant : sinon la différence 404 / 403 permettrait à un
+            # recruteur de deviner quelles candidatures existent chez d'autres entreprises.
+            return Response({'error': 'Candidature introuvable.'}, status=404)
         # Contrôle par appartenance à l'entreprise et rôle d'équipe (et non `user.role`, qui
         # écartait à tort les membres d'équipe dont le compte est de type CANDIDAT). L'analyse
         # consomme le quota du palier : un membre « Invité » (lecture seule) ne peut pas la lancer.
@@ -432,13 +492,10 @@ class AnalyseGroqRecruteurAPIView(APIView):
             return Response({'error': 'Action non autorisée pour votre rôle.'}, status=403)
 
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
-        if not ok:
-            return Response(quota_info, status=403)
 
+        jeton = jeton_candidat()  # identifiant technique temporaire : le nom du candidat ne part jamais
         snapshot = candidature.profil_snapshot
         if snapshot:
-            nom = f"{snapshot.get('last_name', '')} {snapshot.get('first_name', '')}"
             titre = snapshot.get('titre_professionnel', 'Non renseigné')
             diplome = snapshot.get('diplome', 'Non renseigné')
             competences = snapshot.get('competences', 'Non renseigné')
@@ -448,7 +505,6 @@ class AnalyseGroqRecruteurAPIView(APIView):
         elif candidature.candidat:
             try:
                 profil = candidature.candidat.profil_candidat
-                nom = f"{candidature.candidat.last_name} {candidature.candidat.first_name}"
                 titre = profil.titre_professionnel or 'Non renseigné'
                 diplome = profil.diplome or 'Non renseigné'
                 competences = profil.competences or 'Non renseigné'
@@ -469,14 +525,17 @@ class AnalyseGroqRecruteurAPIView(APIView):
             return Response({'error': 'Candidature rapide sans profil.'}, status=400)
 
         offre = candidature.offre
-        exp_text = '\n'.join([
-            f"- {e.get('titre_poste')} chez {e.get('entreprise')} ({e.get('date_debut', '')} - {e.get('date_fin') or 'présent'})"
+        titre, diplome, competences = nettoyer_champ(titre), nettoyer_champ(diplome), nettoyer_champ(competences)
+        # Employeurs pseudonymisés (« Entreprise A »…) et établissements retirés : seuls le poste,
+        # les dates, le diplôme et la spécialité sont transmis.
+        exp_text = '\n'.join(f"- {ligne}" for ligne in lignes_experiences([
+            {'titre_poste': e.get('titre_poste'), 'entreprise': e.get('entreprise'),
+             'debut': e.get('date_debut', ''), 'fin': e.get('date_fin')}
             for e in experiences
-        ]) or "Aucune"
-        form_text = '\n'.join([
-            f"- {f.get('diplome')} à {f.get('etablissement')}"
-            for f in formations
-        ]) or "Aucune"
+        ])) or "Aucune"
+        form_text = '\n'.join(f"- {ligne}" for ligne in lignes_formations(
+            [{'diplome': f.get('diplome')} for f in formations]
+        )) or "Aucune"
 
         prompt_source = ai_config.analyse_recruteur_prompt or DEFAULT_PROMPT_ANALYSE_RECRUTEUR
         prompt = (
@@ -486,7 +545,7 @@ class AnalyseGroqRecruteurAPIView(APIView):
             .replace("{specialite}", str(offre.metier.libelle if offre.metier else 'Non précisée'))
             .replace("{type_contrat}", str(offre.type_contrat))
             .replace("{offre_wilaya}", str(offre.wilaya))
-            .replace("{nom_candidat}", str(nom))
+            .replace("{nom_candidat}", jeton)
             .replace("{titre_candidat}", str(titre))
             .replace("{diplome}", str(diplome))
             .replace("{wilaya_candidat}", str(wilaya))
@@ -496,6 +555,25 @@ class AnalyseGroqRecruteurAPIView(APIView):
             .replace("{score}", str(candidature.score_matching))
         )
 
+        donnees_candidat = '\n'.join([titre, diplome, competences, exp_text, form_text])
+        # Le jeton est aléatoire à chaque appel : on le neutralise avant de hacher, sinon l'empreinte
+        # changerait toujours. Prompt (offre, score, profil), modèle et longueur entrent dans le hash.
+        from ..confidentialite_ia.empreinte import empreinte_ia
+        empreinte = empreinte_ia(
+            prompt.replace(jeton, "{CANDIDAT}"), ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.analyse_recruteur_max_tokens,
+        )
+        regenerer = request.data.get('regenerer') in (True, 'true', 'True', '1', 1)
+        # Analyse déjà faite sur les mêmes données : on la renvoie sans appel IA ni décompte du quota
+        # du palier (lecture d'un résultat déjà obtenu, même palier expiré ou quota épuisé).
+        if not regenerer and candidature.derniere_analyse_ia and candidature.empreinte_analyse_ia == empreinte:
+            return Response({
+                'analyse': candidature.derniere_analyse_ia, 'depuis_cache': True,
+                'genere_le': candidature.analyse_ia_le.isoformat() if candidature.analyse_ia_le else None,
+            })
+        ok, quota_info = verifier_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'ANALYSE_RECRUTEUR'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'ANALYSE_RECRUTEUR')
@@ -503,14 +581,20 @@ class AnalyseGroqRecruteurAPIView(APIView):
             analyse = _appel_groq(
                 [{'role': 'user', 'content': prompt}],
                 max_tokens=ai_config.analyse_recruteur_max_tokens,
-                temperature=0.5
+                temperature=0.5,
+                donnees_candidat=donnees_candidat,
             )
+            # Rattachement local : le jeton n'existe que dans le prompt, la réponse stockée parle du candidat.
+            analyse = analyse.replace(jeton, "le candidat")
             candidature.derniere_analyse_ia = analyse
             candidature.analyse_ia_le = timezone.now()
-            candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le'])
+            candidature.empreinte_analyse_ia = empreinte
+            candidature.save(update_fields=['derniere_analyse_ia', 'analyse_ia_le', 'empreinte_analyse_ia'])
             return Response({'analyse': analyse, 'quota_ia': quota_info})
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
-            logger.error("Erreur Groq recruteur : %s", e)
+            logger.error("Erreur Groq recruteur : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'ANALYSE_RECRUTEUR')
@@ -595,7 +679,7 @@ class GenererOffreIAAPIView(APIView):
                     break
                 except Exception as e:
                     derniere_erreur = e
-                    logger.warning("GenererOffreIA tentative %s échouée : %s", tentative + 1, e)
+                    logger.warning("GenererOffreIA tentative %s échouée : %s", tentative + 1, type(e).__name__)
             if data is None:
                 raise derniere_erreur
             questions_brutes = data.get('questions_entretien', [])
@@ -665,8 +749,10 @@ class GenererOffreIAAPIView(APIView):
                 'metier_resolu_libelle': metier_resolu.libelle if metier_resolu else None,
                 'quota_ia': quota_info,
             })
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
-            logger.error("Erreur GenererOffreIA : %s", e)
+            logger.error("Erreur GenererOffreIA : %s", type(e).__name__)
             return Response({'error': 'Service IA temporairement indisponible.'}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'GENERATION_OFFRE')

@@ -5,6 +5,7 @@ import { convertDateRaw, convertDateFin, precisionDateRaw, precisionDateFin } fr
 import { reportError } from "../../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 
 const CHAMPS_PROFIL = [
   { label: "Téléphone", test: (p) => !!p.telephone },
@@ -82,6 +83,8 @@ export const useOnboardingWizard = () => {
       diplome_ref_libelle: p.diplome_ref_libelle || "",
       metier: p.metier || "",
       metier_libelle: p.metier_libelle || "",
+      metier_appellation: p.metier_appellation || null,
+      metier_appellation_libelle: p.metier_appellation_libelle || "",
       titre_professionnel: p.titre_professionnel || "",
       service_militaire: p.service_militaire || "",
       bio: p.bio || "",
@@ -94,6 +97,8 @@ export const useOnboardingWizard = () => {
     setPrefsForm({
       metier_souhaite: p.metier_souhaite || "",
       metier_souhaite_libelle: p.metier_souhaite_libelle || "",
+      metier_souhaite_appellation: p.metier_souhaite_appellation || null,
+      metier_souhaite_appellation_libelle: p.metier_souhaite_appellation_libelle || "",
       salaire_souhaite: p.salaire_souhaite || "",
       mobilite: p.mobilite || "",
       situation_actuelle: p.situation_actuelle || "",
@@ -169,6 +174,10 @@ export const useOnboardingWizard = () => {
         diplome_ref_libelle: result.diplome_ref_libelle || prev.diplome_ref_libelle,
         metier: result.metier || prev.metier,
         metier_libelle: result.metier_libelle || prev.metier_libelle,
+        // Un nouveau métier détecté apporte SON appellation (ou aucune) : celle du métier précédent ne
+        // s'applique plus ; sans métier détecté, l'appellation actuelle est conservée.
+        metier_appellation: result.metier ? (result.metier_appellation || null) : prev.metier_appellation,
+        metier_appellation_libelle: result.metier ? (result.metier_appellation_libelle || "") : prev.metier_appellation_libelle,
         sexe: result.sexe || prev.sexe,
         date_naissance: result.date_naissance || prev.date_naissance,
         titre_professionnel: result.titre_professionnel || prev.titre_professionnel,
@@ -205,6 +214,8 @@ export const useOnboardingWizard = () => {
             entreprise: exp.entreprise,
             metier: exp.metier || null,
             metier_libelle: exp.metier_libelle || "",
+            appellation: exp.appellation || null,
+            appellation_libelle: exp.appellation_libelle || "",
             metier_propose: exp.metier || null,
             metier_propose_libelle: exp.metier_libelle || "",
             date_debut: convertDateRaw(exp.date_debut_raw),
@@ -233,6 +244,7 @@ export const useOnboardingWizard = () => {
             diplome_propose_libelle: f.diplome_ref_libelle || "",
             specialite_propose: f.specialite_ref || null,
             specialite_propose_libelle: f.specialite_ref_libelle || "",
+            specialites_suggerees: f.specialites_suggerees || [],
           })),
         );
       }
@@ -262,7 +274,7 @@ export const useOnboardingWizard = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de l'analyse."));
       reportError("ECHEC_PARSER_CV_ONBOARDING", err);
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaParserCV({ ...err.response.data, disponible: false });
       }
     } finally {
@@ -275,10 +287,10 @@ export const useOnboardingWizard = () => {
     setSaving(true);
     const formData = new FormData();
     Object.entries(infosForm).forEach(([key, value]) => {
-      if (key === "metier_libelle" || key === "diplome_ref_libelle") return;
+      if (key === "metier_libelle" || key === "diplome_ref_libelle" || key === "metier_appellation_libelle") return;
       // `metier`/`diplome_ref` sont des PrimaryKeyRelatedField nullables — une chaîne vide
       // est rejetée par DRF, on omet simplement la clé si aucune valeur n'a été choisie.
-      if ((key === "metier" || key === "diplome_ref") && !value) return;
+      if ((key === "metier" || key === "diplome_ref" || key === "metier_appellation") && !value) return;
       if (infosMode === "remplacer" || value) formData.append(key, value ?? "");
     });
     if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
@@ -328,12 +340,27 @@ export const useOnboardingWizard = () => {
         propose_id: exp.metier_propose, propose_libelle: exp.metier_propose_libelle,
         corrige_id: exp.metier, corrige_libelle: exp.metier_libelle,
       })));
-      await Promise.allSettled(
+      const resultats = await Promise.allSettled(
         pendingExperiences.map(({ metier_propose, metier_propose_libelle, ...exp }) => // eslint-disable-line no-unused-vars
-          profilService.addExperience(exp).catch((err) => reportError("ECHEC_ADD_EXP_ONBOARDING", err)),
+          profilService.addExperience(exp),
         ),
       );
+      const echecs = resultats
+        .map((r, i) => (r.status === "rejected" ? { exp: pendingExperiences[i], err: r.reason } : null))
+        .filter(Boolean);
+      echecs.forEach(({ err }) => reportError("ECHEC_ADD_EXP_ONBOARDING", err));
       await refresh();
+      if (echecs.length > 0) {
+        // Jamais de passage silencieux à l'étape suivante : les expériences réussies sont déjà
+        // enregistrées, on ne garde à l'écran que celles en échec et on passe en mode « Ajouter »
+        // pour que le nouvel essai ne supprime rien.
+        setPendingExperiences(echecs.map(({ exp }) => exp));
+        setExperiencesMode("ajouter");
+        toast.error(
+          `${echecs.length} expérience(s) n'ont pas été enregistrées : ${apiErrMsg(echecs[0].err, "vérifiez les champs obligatoires (poste, entreprise)")}`,
+        );
+        return;
+      }
       nextStep();
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des expériences."));
@@ -367,7 +394,7 @@ export const useOnboardingWizard = () => {
         },
       ]));
       await Promise.allSettled(
-        pendingFormations.map(({ diplome_propose, diplome_propose_libelle, specialite_propose, specialite_propose_libelle, ...f }) => // eslint-disable-line no-unused-vars
+        pendingFormations.map(({ diplome_propose, diplome_propose_libelle, specialite_propose, specialite_propose_libelle, specialites_suggerees, ...f }) => // eslint-disable-line no-unused-vars
           // diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF —
           // une chaîne vide (laissée par le Select une fois vidé) est rejetée, seul `null`
           // est accepté (même piège déjà géré par `normalizeForm` dans useProfilCandidat.js).
@@ -437,10 +464,10 @@ export const useOnboardingWizard = () => {
     setSaving(true);
     const formData = new FormData();
     Object.entries(prefsForm)
-      .filter(([key]) => key !== "metier_souhaite_libelle")
+      .filter(([key]) => key !== "metier_souhaite_libelle" && key !== "metier_souhaite_appellation_libelle")
       // `metier_souhaite` est un PrimaryKeyRelatedField nullable — une chaîne vide est
-      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi.
-      .filter(([key, value]) => !(key === "metier_souhaite" && !value))
+      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi (idem pour l'appellation).
+      .filter(([key, value]) => !((key === "metier_souhaite" || key === "metier_souhaite_appellation") && !value))
       .forEach(([key, value]) => formData.append(key, value ?? ""));
     try {
       await profilService.updateProfil(formData);

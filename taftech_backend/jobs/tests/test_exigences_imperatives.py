@@ -106,7 +106,10 @@ class PostulerAvecExigencesAPITest(APITestCase):
         self.rec_user, self.entreprise, self.offre = _make_offre(username="rec_exig_post")
         self.exigence_permis = ExigenceImperative.objects.create(offre=self.offre, label="Permis B")
         self.exigence_habilitation = ExigenceImperative.objects.create(offre=self.offre, label="Habilitation électrique")
-        self.cand_user = User.objects.create_user(username="cand_exig_post", email="cand_exig_post@test.dz", password="pwd", role="CANDIDAT")
+        self.cand_user = User.objects.create_user(
+            username="cand_exig_post", email="cand_exig_post@test.dz", password="pwd", role="CANDIDAT",
+            nin="100000000000000002",  # exigé pour postuler (ANEM)
+        )
         ProfilCandidat.objects.create(user=self.cand_user, wilaya="16 - Alger")
         self.client.force_authenticate(user=self.cand_user)
 

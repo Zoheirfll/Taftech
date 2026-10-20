@@ -12,6 +12,7 @@ import { reportError } from "../../../utils/errorReporter";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { grouperParFamille } from "../../../utils/familleFormation";
 import { CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../../utils/exigencesCategories";
+import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 
 // Les entrées génériques "Autre X — préciser" du référentiel sont masquées ici : dans une
 // liste d'exigences utilisée pour le matching, elles ne comparent rien côté candidat (bruit
@@ -288,7 +289,7 @@ export function useCreateJob() {
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."), { id: toastId });
       reportError("ECHEC_GENERER_OFFRE_IA", err);
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaGenerationOffre({ ...err.response.data, disponible: false });
       }
     } finally {

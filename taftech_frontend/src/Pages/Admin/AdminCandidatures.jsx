@@ -4,7 +4,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import { Search, Download, X, HelpCircle, FileText } from "lucide-react";
+import { Search, X, HelpCircle, FileText } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { TooltipIcon } from "../../Components/Tooltip";
@@ -12,6 +12,7 @@ import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
 import { criteresNonDemandes } from "../../utils/criteresMatching";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminVide } from "../../Components/AdminEtat";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
@@ -93,27 +94,6 @@ const AdminCandidatures = () => {
     fetchCandidatures(1, searchTerm, statutFiltre);
   };
 
-  const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier...");
-    try {
-      const blob = await jobsService.exportCandidatures();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "candidatures_taftech.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
-      reportError("ECHEC_EXPORT_EXCEL_CANDIDATURES", err);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
-
   return (
     <div className="space-y-5">
       <AdminPageHeader
@@ -129,12 +109,11 @@ const AdminCandidatures = () => {
           "La recherche porte sur le nom du candidat, le titre de l'offre et l'entreprise ; validez avec Entrée ou « Chercher ».",
         ]}
         actions={
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors ${tw.focusRing}`}
-          >
-            <Download size={15} /> Exporter Excel
-          </button>
+          <BoutonExportExcel
+            ressource="candidatures"
+            params={{ search: searchTerm, statut: statutFiltre, ordering }}
+            nomFichier="candidatures_taftech"
+          />
         }
       />
 

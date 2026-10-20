@@ -3,18 +3,22 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
-import { Search, Download, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
+import { Search, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 import { formatDatePrecise, formatAge } from "../../utils/cvDates";
 import { nomWilaya } from "../../utils/wilaya";
+import DossierCandidatAdmin from "./DossierCandidatAdmin";
+import DossierRecruteurAdmin from "./DossierRecruteurAdmin";
+import DossierAdminAdmin from "./DossierAdminAdmin";
 
 // Badge de rôle — une couleur par rôle (Recruteur et Admin partageaient le même violet).
 const ROLE_BADGES = {
@@ -95,27 +99,6 @@ const AdminUsers = () => {
     );
   };
 
-  const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier...");
-    try {
-      const blob = await jobsService.exportUtilisateurs();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "utilisateurs_taftech.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
-      reportError("ECHEC_EXPORT_EXCEL_USERS", err);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
-
 
   const renderTags = (data) => {
     if (!data)
@@ -157,12 +140,11 @@ const AdminUsers = () => {
           "Pour créer ou retirer un administrateur, utilisez la page « Comptes admins ».",
         ]}
         actions={
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
-          >
-            <Download size={15} /> Exporter Excel
-          </button>
+          <BoutonExportExcel
+            ressource="utilisateurs"
+            params={{ search: searchTerm, role: roleFiltre, ordering }}
+            nomFichier="utilisateurs_taftech"
+          />
         }
       />
       <div className="flex">
@@ -356,10 +338,10 @@ const AdminUsers = () => {
                   Contact & Compte
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium`}>
-                  📧 {selectedUser.email}
+                  E-mail : {selectedUser.email}
                 </p>
                 <p className={`text-sm ${tw.textSlate800} font-medium mt-1`}>
-                  📞 {selectedUser.telephone || "Non renseigné"}
+                  Téléphone : {selectedUser.telephone || "Non renseigné"}
                 </p>
                 <p className={`text-xs ${tw.textPrimary} font-semibold mt-1`}>
                   {ROLE_BADGES[selectedUser.role]?.label || selectedUser.role} · inscrit le {formatDate(selectedUser.date_joined)}
@@ -382,8 +364,8 @@ const AdminUsers = () => {
                   className={`inline-block mt-2 text-[10px] font-semibold px-2 py-1 rounded-full ${selectedUser.consentement_loi_18_07 ? tw.scoreHigh : "bg-red-50 text-red-600"}`}
                 >
                   {selectedUser.consentement_loi_18_07
-                    ? "✅ Loi 18-07 acceptée"
-                    : "❌ Loi 18-07 non acceptée"}
+                    ? "Loi 18-07 acceptée"
+                    : "Loi 18-07 non acceptée"}
                 </span>
               </div>
             </div>
@@ -413,7 +395,7 @@ const AdminUsers = () => {
                         {selectedUser.profil_candidat.diplome || "N/A"}
                       </p>
                       <p className="text-xs text-indigo-600 mt-0.5">
-                        📍 {nomWilaya(selectedUser.profil_candidat.wilaya) || "N/A"}
+                        {nomWilaya(selectedUser.profil_candidat.wilaya) || "N/A"}
                         {selectedUser.profil_candidat.commune
                           ? ` · ${selectedUser.profil_candidat.commune}`
                           : ""}
@@ -559,20 +541,27 @@ const AdminUsers = () => {
                     </div>
                   )}
 
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
-                    <div>
-                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
-                        Compétences
-                      </p>
-                      {renderTags(selectedUser.profil_candidat.competences)}
-                    </div>
-                    <div>
-                      <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
-                        Langues
-                      </p>
-                      {renderTags(selectedUser.profil_candidat.langues)}
-                    </div>
-                  </div>
+                  {/* Dossier détaillé chargé à l'ouverture de la fiche (niveaux, candidatures, activité,
+                      IA). Le bloc simple ci-dessous sert de repli pendant le chargement ou en cas d'échec. */}
+                  <DossierCandidatAdmin
+                    userId={selectedUser.id}
+                    repli={
+                      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
+                        <div>
+                          <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
+                            Compétences
+                          </p>
+                          {renderTags(selectedUser.profil_candidat.competences)}
+                        </div>
+                        <div>
+                          <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>
+                            Langues
+                          </p>
+                          {renderTags(selectedUser.profil_candidat.langues)}
+                        </div>
+                      </div>
+                    }
+                  />
 
                   {selectedUser.profil_candidat.cv_pdf && (
                     <div className="text-center pt-2">
@@ -582,12 +571,30 @@ const AdminUsers = () => {
                         rel="noreferrer"
                         className={`inline-flex items-center gap-2 px-5 py-2.5 ${tw.buttonDark} text-sm font-semibold rounded-lg transition-colors shadow-sm`}
                       >
-                        📄 Télécharger le CV PDF
+                        Télécharger le CV PDF
                       </a>
                     </div>
                   )}
                 </div>
               )}
+
+            {selectedUser.role === "RECRUTEUR" && (
+              <div className="space-y-5">
+                <h3 className={`text-base font-bold ${tw.textStrong} border-b ${tw.borderSubtle} pb-2`}>
+                  Dossier recruteur
+                </h3>
+                <DossierRecruteurAdmin userId={selectedUser.id} />
+              </div>
+            )}
+
+            {selectedUser.role === "ADMIN" && (
+              <div className="space-y-5">
+                <h3 className={`text-base font-bold ${tw.textStrong} border-b ${tw.borderSubtle} pb-2`}>
+                  Dossier administrateur
+                </h3>
+                <DossierAdminAdmin userId={selectedUser.id} />
+              </div>
+            )}
           </div>
         </div>
       )}

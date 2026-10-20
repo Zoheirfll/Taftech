@@ -192,14 +192,16 @@ const AdminComptes = () => {
                   <td className={`px-5 py-4 text-sm ${tw.textMuted700}`}>{a.date_joined}</td>
                   <td className="px-5 py-4 text-right">
                    <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => ouvrirModifier(a)}
-                      className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
-                      title="Modifier"
-                      aria-label={`Modifier le compte ${a.email}`}
-                    >
-                      <Edit2 size={13} />
-                    </button>
+                    {a.modifiable && (
+                      <button
+                        onClick={() => ouvrirModifier(a)}
+                        className={`p-2 ${tw.surfaceSubtle} ${tw.textMuted} rounded-lg ${tw.hoverSurfaceSubtleStrong} transition-colors ${tw.focusRing}`}
+                        title="Modifier"
+                        aria-label={`Modifier le compte ${a.email}`}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                    )}
                     {!a.is_superuser && (
                       <button
                         onClick={() => ouvrirSupprimer(a)}

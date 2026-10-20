@@ -629,6 +629,37 @@ def _resoudre_specialite_pour_diplome(type_diplome, mots, texte=None):
     return None
 
 
+def suggerer_specialites_pour_diplome(type_diplome, texte, limite=5):
+    """Spécialités à PROPOSER au candidat (jamais choisies à sa place) quand le diplôme est reconnu mais
+    qu'aucune spécialité n'est assez sûre — ex. « Licence en informatique » : le référentiel n'atteste pas
+    « Informatique » pour une licence, mais « Systèmes informatiques » y est relié.
+
+    Uniquement des couples `DiplomeSpecialite` attestés pour CE diplôme (F06) ; au moins un mot significatif
+    commun avec l'intitulé (le score de 1 mot, trop faible pour une résolution automatique, suffit pour une
+    suggestion que le candidat valide). Tri : plus de mots communs d'abord, puis ordre alphabétique."""
+    from .models import DiplomeSpecialite
+
+    if type_diplome is None or not texte:
+        return []
+    t = normaliser_recherche(texte)
+    mots = {_singulariser(m) for m in re.findall(r"\w+", t) if len(m) >= 3 and m not in _MOTS_GENERIQUES_DIPLOME}
+    mots = {m for m in mots if len(m) >= 4}
+    if not mots:
+        return []
+    candidats = []
+    vus = set()
+    for couple in DiplomeSpecialite.objects.filter(diplome=type_diplome, selectionnable=True).select_related('specialite'):
+        cle = normaliser_recherche(couple.specialite.libelle)
+        if cle in vus:
+            continue
+        score = len(mots & _mots_singularises(couple.specialite.libelle))
+        if score:
+            vus.add(cle)
+            candidats.append((-score, cle, couple.specialite))
+    candidats.sort(key=lambda c: (c[0], c[1]))
+    return [specialite for _, _, specialite in candidats[:limite]]
+
+
 def _resoudre_specialite_via_ia(texte, candidates):
     """Départage l'IA entre un petit nombre de spécialités déjà à égalité de score
     (jamais parmi les ~967 spécialités du référentiel entier — uniquement celles
@@ -636,7 +667,11 @@ def _resoudre_specialite_via_ia(texte, candidates):
     jamais une spécialité hors de cette liste restreinte. Best-effort, comme le repli
     diplôme : toute erreur retombe silencieusement sur None."""
     from .ai_engine import call_ai
+    from .confidentialite_ia import nettoyer_intitule_formation
 
+    texte = nettoyer_intitule_formation(texte)  # sans nom d'établissement ni coordonnées
+    if not texte:
+        return None  # il ne reste que le nom de l'établissement : rien à classifier
     liste = "\n".join(f"{i}: {c.libelle}" for i, c in enumerate(candidates))
     prompt = (
         "Un candidat a déclaré cet intitulé de formation sur son CV : "
@@ -654,13 +689,15 @@ def _resoudre_specialite_via_ia(texte, candidates):
             max_tokens=300,
             temperature=0,
             response_format={"type": "json_object"},
+            donnees_candidat=texte,
         )
         data = json.loads(content)
         idx = data.get("index")
         if isinstance(idx, int) and 0 <= idx < len(candidates):
             return candidates[idx]
-    except Exception:
-        logger.warning("Départage IA spécialité échoué pour %r", texte, exc_info=True)
+    except Exception as exc:
+        # Jamais l'intitulé saisi dans les journaux : seulement le type d'erreur.
+        logger.warning("Départage IA spécialité échoué (%s)", type(exc).__name__)
     return None
 
 
@@ -674,7 +711,12 @@ def _resoudre_diplome_via_ia(texte):
     retombe silencieusement sur None — ce repli ne doit jamais faire échouer tout le
     parsing du CV."""
     from .ai_engine import call_ai
+    from .confidentialite_ia import nettoyer_intitule_formation
     from .models import TypeDiplome
+
+    texte = nettoyer_intitule_formation(texte)  # sans nom d'établissement ni coordonnées
+    if not texte:
+        return None  # il ne reste que le nom de l'établissement : rien à classifier
 
     # "D-AUTRE" (le placeholder générique "Autre diplôme — préciser") est exclu de la liste
     # proposée à l'IA — bug réel constaté : privée de tout candidat pertinent, l'IA se
@@ -710,13 +752,15 @@ def _resoudre_diplome_via_ia(texte):
             max_tokens=300,
             temperature=0,
             response_format={"type": "json_object"},
+            donnees_candidat=texte,
         )
         data = json.loads(content)
         idx = data.get("index")
         if isinstance(idx, int) and 0 <= idx < len(types):
             return types[idx]
-    except Exception:
-        logger.warning("Résolution diplôme via IA échouée pour %r", texte, exc_info=True)
+    except Exception as exc:
+        # Jamais l'intitulé saisi dans les journaux : seulement le type d'erreur.
+        logger.warning("Résolution diplôme via IA échouée (%s)", type(exc).__name__)
     return None
 
 

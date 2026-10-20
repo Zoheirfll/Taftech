@@ -16,7 +16,7 @@ User = get_user_model()
 # et les champs calculés/automatiques).
 CHAMPS_CONFIG_AUDIT = tuple(
     f for f in AIConfigSerializer.Meta.fields
-    if f not in CHAMPS_PROMPT and f not in ('id', 'appels_ia_mois', 'date_modification')
+    if f not in CHAMPS_PROMPT and f not in ('id', 'appels_ia_mois', 'consommation_mois', 'date_modification')
 )
 DETAIL_AUDIT_MAX = 255  # AuditLog.detail est un CharField(255)
 

@@ -10,6 +10,12 @@ export const ADMIN_PAGE_SIZE = 20;
 // recherche cassait sinon la requête).
 const q = (v) => encodeURIComponent(v ?? "");
 
+// Listes dont l'export Excel existe côté serveur (`jobs/views/admin_exports.py`, routes `admin/export/<ressource>/`).
+export const RESSOURCES_EXPORT = [
+  "utilisateurs", "candidatures", "entreprises", "offres",
+  "demandes-ajout", "demandes-premium", "rendez-vous", "journal-audit", "erreurs-systeme",
+];
+
 export const adminService = {
   // Offres
   getAdminOffres: async (page = 1, search = "", statut = "", ordering = "") => {
@@ -135,53 +141,16 @@ export const adminService = {
     }
   },
 
-  // Exports
-  exportCandidatures: async () => {
-    try {
-      const response = await api.get("/jobs/admin/export/candidatures/", {
-        responseType: "blob",
-      });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_EXPORT_CANDIDATURES_API", err);
-      throw err;
-    }
-  },
-
-  exportEntreprises: async () => {
-    try {
-      const response = await api.get("/jobs/admin/export/entreprises/", {
-        responseType: "blob",
-      });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_EXPORT_ENTREPRISES_API", err);
-      throw err;
-    }
-  },
-
-  exportOffres: async () => {
-    try {
-      const response = await api.get("/jobs/admin/export/offres/", {
-        responseType: "blob",
-      });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_EXPORT_OFFRES_API", err);
-      throw err;
-    }
-  },
-
-  exportUtilisateurs: async () => {
-    try {
-      const response = await api.get("/jobs/admin/export/utilisateurs/", {
-        responseType: "blob",
-      });
-      return response.data;
-    } catch (err) {
-      reportError("ECHEC_EXPORT_UTILISATEURS_API", err);
-      throw err;
-    }
+  // Exports Excel des listes (`BoutonExportExcel`). `params` = les filtres de la liste affichée (recherche, rôle,
+  // statut…) : le serveur applique les mêmes que la liste, l'export contient donc ce que l'admin voit. Les filtres
+  // vides ne sont pas envoyés. L'erreur est journalisée par le composant, pas ici (évite un double rapport).
+  exporterListe: async (ressource, params = {}) => {
+    if (!RESSOURCES_EXPORT.includes(ressource)) throw new Error(`Export inconnu : ${ressource}`);
+    const filtres = Object.fromEntries(
+      Object.entries(params).filter(([, valeur]) => valeur !== "" && valeur !== null && valeur !== undefined),
+    );
+    const response = await api.get(`/jobs/admin/export/${ressource}/`, { params: filtres, responseType: "blob" });
+    return response.data;
   },
 
   // Broadcast
@@ -498,6 +467,55 @@ export const adminService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_QUALITE_IA_MATCHING", err);
+      throw err;
+    }
+  },
+
+  // Explorateur du référentiel (lecture seule) : hiérarchie des métiers, formations, anomalies
+  getExplorateurArbre: async () => {
+    try {
+      const response = await api.get("jobs/admin/referentiel-v2/explorateur/arbre/");
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_ARBRE", err);
+      throw err;
+    }
+  },
+  getExplorateurGroupe: async (groupeId, page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/groupe/${groupeId}/`, { params: { page } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_GROUPE", err);
+      throw err;
+    }
+  },
+  getExplorateurMetier: async (metierId) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/metier/${metierId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_METIER", err);
+      throw err;
+    }
+  },
+  getExplorateurAnomalie: async (code, page = 1) => {
+    try {
+      const response = await api.get(`jobs/admin/referentiel-v2/explorateur/anomalies/${code}/`, { params: { page } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_ANOMALIE", err);
+      throw err;
+    }
+  },
+  getExplorateurFormations: async (domaineId, page = 1) => {
+    try {
+      const response = await api.get("jobs/admin/referentiel-v2/explorateur/formations/", {
+        params: domaineId ? { domaine: domaineId, page } : {},
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_FORMATIONS", err);
       throw err;
     }
   },

@@ -91,8 +91,14 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                 </label>
                 <MetierAutocomplete
                   proposable
-                  value={newExp.metier_libelle || ""}
-                  onSelect={(item) => setNewExp({ ...newExp, metier: item.metier_id, metier_libelle: item.appellation_libelle })}
+                  value={newExp.appellation_libelle || newExp.metier_libelle || ""}
+                  onSelect={(item) => setNewExp({
+                    ...newExp,
+                    metier: item.metier_id,
+                    metier_libelle: item.metier_libelle,
+                    appellation: item.appellation_id || null,
+                    appellation_libelle: item.appellation_libelle,
+                  })}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -7,6 +7,47 @@
 
 ---
 
+## 🆕 SESSION 20/10/2026 — Exports Excel à jour et exportables partout
+
+**Principe** : toute liste de données de l'admin a un bouton « Exporter Excel » (`Components/BoutonExportExcel.jsx`, un seul comportement : chargement, erreur lisible, pas de double clic) qui envoie **les filtres affichés** à `adminService.exporterListe(ressource, params)` ; le serveur les applique avec **le même code que la liste** (`jobs/views/admin_filtres.py`, plus `demandes_ajout_filtrees` dans `views/demandes_ajout.py`). Ce que l'on voit est ce que l'on exporte.
+
+| Ressource (`admin/export/<ressource>/`) | Page | Filtres suivis |
+|---|---|---|
+| `utilisateurs` | Utilisateurs | recherche, rôle, tri |
+| `candidatures` | Candidatures globales | recherche, statut, tri |
+| `entreprises` | Validation des entreprises | recherche, tri, `abonnement_expire_sous` |
+| `offres` | Modération des offres | recherche, statut, tri |
+| `demandes-ajout` | Demandes d'ajout (panneau) | type, statut, recherche |
+| `demandes-premium` | Demandes d'abonnement | onglet (`attente` / `traitee`) |
+| `rendez-vous` | Rendez-vous | statut (aucun filtre sur la page) |
+| `journal-audit` | Journal d'audit | recherche |
+| `erreurs-systeme` | Erreurs système | aucun |
+
+**Utilisateurs** (colonnes complètes, décision du 20/10/2026) : identité, e-mail, rôle, actif, dates d'inscription et de dernière connexion, e-mail vérifié, compte Google, consentements loi 18-07 et CVthèque, téléphone, **date de naissance**, **NIN** (décision du 20/10/2026, texte complet ; l'audit le mentionne), intitulé de poste ; candidat : sexe, wilaya, commune, **adresse**, titre, métier (appellation) et métier officiel, métier souhaité (appellation et officiel), niveau d'études, situation, mobilité, salaire souhaité, nombres d'expériences / formations / compétences, langues, CV déposé, visible CVthèque, LinkedIn, GitHub, complétude du profil (%), nombre de candidatures ; recruteur : entreprise, validée, palier. Le NIN n'est exporté **que** dans cet export (aucun autre). Les super-administrateurs sont exclus (comme de la liste : avant, l'export les incluait alors que la liste les cachait).
+
+**Entreprises** : slug, secteur, localisation, registre de commerce, taille, site, responsable, palier, début et fin d'abonnement, crédits achetés, nombre d'offres et de candidatures reçues. **Offres** : code public, expérience, postes, diplôme, salaire, métier de référence (interne : l'export est réservé à l'admin), motif de rejet, dates, nombre de candidatures. **Candidatures** : téléphone, wilaya, source, candidature rapide, date d'entretien, notes détaillées.
+
+**Pièges** : (1) chaque ligne doit avoir autant de cellules que d'en-têtes (un compte sans profil candidat décalait toutes les colonnes : constante `NB_COLONNES_CANDIDAT`, test « autant de cellules que d'en-têtes ») ; (2) un `Decimal` (score IA) s'exportait en texte « 77.00 » (corrigé dans `export_xlsx._valeur_cellule`) ; (3) les pages comptent sur le même code d'erreur journalisé `ECHEC_EXPORT_EXCEL_<RESSOURCE>` ; (4) toute nouvelle liste exportable s'ajoute à `RESSOURCES_EXPORT` (`adminService.js`) **et** à `TOUTES_LES_ROUTES` du test. Export recruteur : voir `recruteur_exports.py` (colonnes enrichies depuis le profil figé à la candidature, sans donnée personnelle sensible). Sécurité : SECURITY.md §37.
+
+---
+
+## 🆕 SESSION 19/10/2026 — Fiches détaillées des comptes (page Utilisateurs)
+
+La modale d'un utilisateur charge, à l'ouverture, un dossier propre à son rôle (jamais pour toute la liste, lecture seule, `IsAdminRole`, 404 si le rôle ne correspond pas) :
+
+| Rôle | Route (`jobs/`) | Module | Composant |
+|---|---|---|---|
+| Candidat | `admin/utilisateurs/<id>/dossier/` | `admin_dossier_candidat.py` | `DossierCandidatAdmin.jsx` |
+| Recruteur | `.../dossier-recruteur/` | `admin_dossier_recruteur.py` | `DossierRecruteurAdmin.jsx` |
+| Administrateur | `.../dossier-admin/` | `admin_dossier_admin.py` | `DossierAdminAdmin.jsx` |
+
+- Candidat : niveaux de compétences et de langues, candidatures (par statut, score moyen, récentes), activité, usage IA. Recruteur : entreprise, abonnement et crédits, offres avec nombre de candidatures, candidatures reçues, équipe, déblocages CVthèque, usage IA de toute l'entreprise (appels remboursés exclus). Administrateur : type de compte, connexion, actions du journal d'audit.
+- Le secteur de l'entreprise passe par `libelle_secteur_entreprise` (le champ stocke un code `TSEC-…`) et la wilaya par `get_wilaya_siege_display`. Le NIN n'est dans aucun dossier (il reste dans le bloc « Légal & Identité »).
+- **Piège (approche fautive corrigée)** : `useDossier(charger, userId)` (`dossierAdminUI.jsx`) met `charger` dans les dépendances de l'effet ; lui passer une fonction fléchée créée au rendu relançait le chargement en boucle (« Chargement du dossier… » sans fin). Passer une référence stable définie hors du composant.
+- Tests : `test_admin_dossier_{candidat,recruteur,admin}.py` (cookie JWT réel), `DossierCandidatAdmin.test.jsx`, `DossierRecruteurAdmin.test.jsx` ; le mock de `adminDossierService` dans `AdminUsers.test.jsx` doit exposer les trois méthodes.
+
+---
+
 ## 🆕 SESSION 28/09/2026 — Revue complète du panel admin (25 pages)
 
 **Demande** : vérifier toutes les pages admin (organisation, détails, erreurs, manques, cohérence, aide, couleurs), en autonomie totale. Détail sécurité dans `SECURITY.md` §18.

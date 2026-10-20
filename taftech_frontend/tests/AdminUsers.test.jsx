@@ -12,6 +12,7 @@ import {
 import AdminUsers from "../src/Pages/Admin/AdminUsers";
 import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
+import { adminService } from "../src/Services/adminService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
@@ -20,7 +21,22 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getAdminUsers: vi.fn(),
     moderateUser: vi.fn(),
-    exportUtilisateurs: vi.fn(),
+  },
+}));
+
+// L'export passe par `adminService.exporterListe` (composant BoutonExportExcel) : on ne simule que lui.
+vi.mock("../src/Services/adminService", async (importOriginal) => {
+  const reel = await importOriginal();
+  return { ...reel, adminService: { ...reel.adminService, exporterListe: vi.fn() } };
+});
+
+// Dossier détaillé chargé à l'ouverture de la fiche : ici il échoue, la fiche affiche alors son repli
+// simple (compétences et langues en étiquettes), ce que ces tests vérifient.
+vi.mock("../src/Services/adminDossierService", () => ({
+  adminDossierService: {
+    getDossierCandidat: vi.fn().mockRejectedValue(new Error("hors scénario")),
+    getDossierRecruteur: vi.fn().mockRejectedValue(new Error("hors scénario")),
+    getDossierAdmin: vi.fn().mockRejectedValue(new Error("hors scénario")),
   },
 }));
 
@@ -132,7 +148,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
 
   it("🟢 HP4 : Exportation Excel réussie", async () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
-    jobsService.exportUtilisateurs.mockResolvedValue(new Blob(["data"]));
+    adminService.exporterListe.mockResolvedValue(new Blob(["data"]));
 
     render(<AdminUsers />);
 
@@ -140,7 +156,10 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     fireEvent.click(screen.getByText(/Exporter/i));
 
     await waitFor(() => {
-      expect(jobsService.exportUtilisateurs).toHaveBeenCalled();
+      // Mêmes filtres que la liste affichée (ici : aucun filtre, tri par défaut).
+      expect(adminService.exporterListe).toHaveBeenCalledWith("utilisateurs", {
+        search: "", role: "", ordering: "-date_joined",
+      });
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
     });
@@ -213,7 +232,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
 
   it("🔴 EC5 : Crash Exportation -> Toast dismiss et reportError", async () => {
     jobsService.getAdminUsers.mockResolvedValue(mockDataNormal);
-    jobsService.exportUtilisateurs.mockRejectedValue(new Error("File Error"));
+    adminService.exporterListe.mockRejectedValue(new Error("File Error"));
 
     render(<AdminUsers />);
 
@@ -223,7 +242,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     await waitFor(() => {
       expect(toast.dismiss).toHaveBeenCalled();
       expect(reporter.reportError).toHaveBeenCalledWith(
-        "ECHEC_EXPORT_EXCEL_USERS",
+        "ECHEC_EXPORT_EXCEL_UTILISATEURS",
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'exportation.");

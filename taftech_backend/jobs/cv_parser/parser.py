@@ -6,16 +6,44 @@ import logging
 from .prompts import PROMPT_CV_COMPLET
 from .groq_json import _call_groq, _extract_json_object
 from .competences import _eclater_competence_composee, _est_competence_valide, _filtrer_competences_valides, _labels_du_referentiel, _normaliser_avec_referentiel, _parser_niveaux_competences
-from .normalisation import _normaliser_date_naissance, _normaliser_mobilite, _normaliser_sexe, _normaliser_situation_actuelle
+from .normalisation import _normaliser_date_naissance, _normaliser_mobilite, _normaliser_sexe, _normaliser_situation_actuelle, _normaliser_telephone
 from .extraction import extract_photo_from_docx, extract_photo_from_pdf, extract_text
 from .sections import extraire_competences_par_ligne
+from ..confidentialite_ia import ModeleNerIndisponible, extraire_coordonnees, nettoyer_texte
+from .dates_fin import completer_dates_fin
+from .entreprise import completer_entreprise
+from .jetons import restaurer_jetons
 
 logger = logging.getLogger(__name__)
 
+_CHAMPS_AVEC_JETONS = ("titre_poste", "entreprise", "description", "diplome", "etablissement")
 
-def parse_with_groq(text):
+LONGUEUR_MAX_PARSER = 7000  # budget TPM Groq : voir le commentaire dans parse_with_groq
+
+# Le CV envoyé à l'IA est nettoyé : cette note l'en informe pour qu'elle ne recopie jamais un jeton
+# et laisse vides les champs personnels (remplis localement par TafTech à partir du CV brut).
+NOTE_JETONS = (
+    "Les informations personnelles du candidat (nom, e-mail, téléphone, adresse, date de "
+    "naissance, liens, pièces d'identité) ont été remplacées par des jetons entre crochets "
+    "comme [NOM] ou [EMAIL]. Ne les recopie jamais et renvoie null pour les champs "
+    "correspondants (nom_complet, telephone, email, linkedin, github, adresse, "
+    "date_naissance_raw).\n\n"
+)
+
+
+def _sans_jeton(valeur):
+    """Écarte une valeur renvoyée par l'IA qui n'est qu'un jeton de masquage (ex. « [NOM] »)."""
+    if valeur is None or re.fullmatch(r"\s*\[[^\]]*\]\s*", str(valeur)):
+        return None
+    return valeur
+
+
+def parse_with_groq(text, noms_connus=()):
     """
     Appelle Groq UNE SEULE FOIS pour tout extraire (titre, expériences, formations, infos perso).
+    Le texte est d'abord nettoyé (nom, coordonnées, adresse, pièces d'identité masqués) : l'IA ne
+    voit jamais le CV brut. `noms_connus` : nom/prénom du compte, masqués en plus de la détection.
+    Retourne None si le nettoyage est impossible (modèle de détection indisponible, échec fermé).
     Avant : 4 appels séquentiels renvoyant chacun le CV complet en entrée → 4x la consommation
     de tokens pour le même texte, ce qui déclenchait le rate-limit Groq (429) sur les CV longs.
     Retourne un dict complet, ou None si l'appel échoue entièrement.
@@ -23,7 +51,12 @@ def parse_with_groq(text):
     # Réduit vs la version précédente : la liste des domaines ANEM injectée dans le
     # prompt (~900 tokens) grignote le budget TPM Groq (8000 tokens/min, requête =
     # prompt + max_tokens de complétion, donc le budget complet doit tenir dessous).
-    text_truncated = text[:7000]
+    try:
+        nettoye = nettoyer_texte(text, noms_connus=noms_connus)
+    except ModeleNerIndisponible:
+        logger.error("Parser CV : modèle de détection indisponible, aucun appel IA.")
+        return None
+    text_truncated = nettoye.texte[:LONGUEUR_MAX_PARSER]
 
     result = {
         "titre_professionnel": None,
@@ -51,14 +84,16 @@ def parse_with_groq(text):
     from ..models import AIConfig
     ai_config = AIConfig.get_solo()
     prompt_source = ai_config.parser_cv_prompt or PROMPT_CV_COMPLET
-    prompt = prompt_source.replace("{cv_text}", text_truncated)
-    content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
+    prompt = NOTE_JETONS + prompt_source.replace("{cv_text}", text_truncated)
+    content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens,
+                         donnees_candidat=text_truncated)
     infos = _extract_json_object(content)
     if not infos:
         # Un échec ponctuel (timeout, JSON malformé, 429) ne doit pas dégrader
         # tout le résultat vers le regex — un seul retry avant d'abandonner.
         logger.warning("Groq : échec 1er appel parsing CV, retry...")
-        content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens)
+        content = _call_groq(prompt, max_tokens=ai_config.parser_cv_max_tokens,
+                             donnees_candidat=text_truncated)
         infos = _extract_json_object(content)
         if not infos:
             return None
@@ -87,20 +122,7 @@ def parse_with_groq(text):
     if infos.get("nom_complet"):
         result["nom_complet"] = str(infos["nom_complet"]).strip()
     if infos.get("telephone"):
-        tel = re.sub(r'[\s.\-()]', '', str(infos["telephone"]))
-        tel = re.split(r'[/,;]', tel)[0]
-        # L'IA colle parfois 2 numéros sans séparateur ("05523990670770960926") ou
-        # préfixe l'indicatif international ("2130552399067") — un numéro algérien
-        # fait 10 chiffres (0X XX XX XX XX) une fois l'indicatif retiré.
-        digits_only = re.sub(r'\D', '', tel)
-        if digits_only.startswith('00213'):
-            digits_only = '0' + digits_only[5:]
-        elif digits_only.startswith('213') and len(digits_only) > 10:
-            digits_only = '0' + digits_only[3:]
-        if len(digits_only) > 10 and digits_only.startswith('0'):
-            digits_only = digits_only[:10]
-        tel = digits_only or tel
-        result["telephone"] = tel
+        result["telephone"] = _normaliser_telephone(infos["telephone"])
     if infos.get("competences"):
         items = [m for c in str(infos["competences"]).split(',') for m in _eclater_competence_composee(c.strip())]
         valides = [c for c in items if _est_competence_valide(c)]
@@ -163,7 +185,7 @@ def parse_with_groq(text):
 # ==========================================
 # 8. FONCTION PRINCIPALE
 # ==========================================
-def parse_cv(file_path, file_name):
+def parse_cv(file_path, file_name, noms_connus=()):
     text = extract_text(file_path, file_name)
 
     if not text or len(text.strip()) < 50:
@@ -184,12 +206,34 @@ def parse_cv(file_path, file_name):
     # === Extraction 100% IA — plus de repli regex ===
     # Un échec (après le retry interne de parse_with_groq) retourne une erreur
     # explicite plutôt qu'un résultat dégradé silencieusement.
-    ai_data = parse_with_groq(text)
+    ai_data = parse_with_groq(text, noms_connus=noms_connus)
     if not ai_data:
         return {
             "success": False,
             "error": "Le service d'analyse IA est momentanément indisponible. Réessayez dans quelques instants."
         }
+
+    # Coordonnées extraites localement du CV brut : l'IA, qui n'a vu que le texte nettoyé, ne les
+    # connaît pas. La valeur locale prime toujours (rattachement au profil dans TafTech).
+    coord = extraire_coordonnees(text)
+    for cle in ("email", "linkedin", "github", "nom_complet"):
+        ai_data[cle] = coord.get(cle) or _sans_jeton(ai_data.get(cle))
+    ai_data["telephone"] = _normaliser_telephone(coord["telephone"]) if coord.get("telephone") else None
+    ai_data["wilaya"] = ai_data.get("wilaya") or coord.get("wilaya")
+    ai_data["date_naissance_raw"] = coord.get("date_naissance_raw") or _sans_jeton(ai_data.get("date_naissance_raw"))
+    ai_data["adresse"] = None  # jamais extraite : perdue par construction (le candidat la saisit)
+
+    # Un jeton de masquage recopié par l'IA dans un texte du profil (« [NOM], maintenance… » pour
+    # « Monitoring, maintenance… ») est restauré depuis le CV brut, ou retiré.
+    for bloc in ("experiences", "formations"):
+        for element in ai_data.get(bloc) or []:
+            for champ in _CHAMPS_AVEC_JETONS:
+                if champ in element:
+                    element[champ] = restaurer_jetons(element[champ], text)
+    # CV en colonnes : fin d'expérience seule sous le titre, laissée vide par l'IA.
+    completer_dates_fin(ai_data.get("experiences"), text)
+    # Entreprise obligatoire à l'enregistrement : relue sous le titre si le masquage l'a fait perdre.
+    completer_entreprise(ai_data.get("experiences"), text)
 
     # Normalisation contre le référentiel admin (CompetenceReferentiel) — fait converger
     # les doublons/synonymes ("Gestion de projet" / "Project Management" / "Gestion des

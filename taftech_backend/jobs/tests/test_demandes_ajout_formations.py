@@ -162,10 +162,10 @@ class SpecialiteAutreTests(FormationDemandesBase):
         une formation à préciser à cause de sa spécialité devient quand même une demande."""
         formation = FormationCandidat.objects.create(
             profil=self.profil, diplome='Licence', etablissement='Université', diplome_ref=self.licence,
-            description='Cybersécurité', statut='OBTENU',
+            specialite_texte='Cybersécurité', statut='OBTENU',
         )
         self.assertEqual(formation.statut_validation, 'A_PRECISER')
-        self.modifier(formation, diplome='Licence', diplome_ref=self.licence.pk, description='Cybersécurité')
+        self.modifier(formation, diplome='Licence', diplome_ref=self.licence.pk, specialite_texte='Cybersécurité')
         demande = D.objects.get()
         self.assertEqual((demande.type, demande.libelle), ('SPECIALITE', 'Cybersécurité'))
 

@@ -124,6 +124,27 @@ describe("🚀 UI & Logique - Composant <SuggestionsCarriere />", () => {
     });
   });
 
+  it("🟢 HP4b : Profil inchangé → résultat conservé, message explicite et régénération possible", async () => {
+    jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
+    jobsService.getAnalyseCarriere
+      .mockResolvedValueOnce({ ...mockAnalyse, depuis_cache: true })
+      .mockResolvedValueOnce({ ...mockAnalyse });
+
+    render(<SuggestionsCarriere />);
+
+    await waitFor(() => screen.getByText("Analyser mon profil"));
+    fireEvent.click(screen.getByText("Analyser mon profil"));
+
+    // Le serveur renvoie l'analyse déjà stockée : le candidat est prévenu qu'aucun quota n'a servi.
+    await waitFor(() => screen.getByText(/résultat conservé, aucun quota utilisé/i));
+    expect(jobsService.getAnalyseCarriere).toHaveBeenLastCalledWith(false);
+
+    // « Régénérer quand même » demande une vraie nouvelle analyse (qui compte dans le quota).
+    fireEvent.click(screen.getByText("Régénérer quand même"));
+    await waitFor(() => expect(jobsService.getAnalyseCarriere).toHaveBeenLastCalledWith(true));
+    await waitFor(() => expect(screen.queryByText(/résultat conservé, aucun quota utilisé/i)).not.toBeInTheDocument());
+  });
+
   it("🟢 HP5 : Réinitialiser l'analyse cache les sections et réaffiche le bouton", async () => {
     jobsService.getMetiersAccessibles.mockResolvedValue(mockMetiers);
     jobsService.getAnalyseCarriere.mockResolvedValue(mockAnalyse);

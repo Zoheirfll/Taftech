@@ -10,6 +10,37 @@ Travail initial effectué sur `security/audit-2026-07` (créée depuis `main`) �
 
 ---
 
+## ✅ 39. Explorateur du référentiel : lecture seule, réservé aux administrateurs (20/10/2026)
+
+Page `/admin-taftech/explorateur-referentiel` (`AdminExplorateurReferentiel.jsx`) et 5 routes `admin/referentiel-v2/explorateur/{arbre,groupe/<id>,metier/<id>,anomalies/<code>,formations}/` (`jobs/views/referentiel_explorateur.py`). **Audit** : toutes en `IsAdminRole` (403 pour candidat, vérifié par test sur les vraies routes), uniquement `GET`, aucune écriture ni donnée personnelle (référentiel public). Listes paginées côté serveur (15 par page, `?page=` borné, aucune ligne inaccessible) ; `code` d'anomalie inconnu → 404 ; un métier « actif » exclut les redirections (`metier_canonique` ≠ lui-même). Tests : `jobs/tests/test_referentiel_explorateur.py` (5).
+
+---
+
+## ✅ 38. Le super-administrateur est hors de portée des administrateurs simples (20/10/2026)
+
+**Constat** : seul le changement de mot de passe (`AdminCompteAdminsAPIView.patch`) et la suppression étaient déjà refusés. Un admin simple pouvait encore **bloquer** le super-admin (`admin-user-moderer`, risque de verrouillage), **ouvrir sa fiche** (`dossier-admin`) et **lire ses actions** dans le journal d'audit (liste et export Excel, y compris par la recherche).
+
+**Correctif** : `AdminUserModerateAPIView` → 403 ; `AdminDossierAdminAPIView` → 404 ; `audit_logs_filtres(params, demandeur)` (`admin_filtres.py`) exclut `admin__is_superuser=True` tant que le demandeur n'est pas super-admin, ce qui couvre d'un coup la liste, la recherche et l'export (même fonction). Le super-admin garde la vue complète.
+
+**Tests** : `jobs/tests/test_admin_protection_superadmin.py` (7 tests sur les vraies routes). **Limite connue** : les actions d'un admin simple restent visibles de tous les admins ; seule la trace du super-admin est masquée.
+
+---
+
+## ✅ 37. Exports Excel de l'administration : mêmes filtres que la liste, tracés (NIN inclus dans les utilisateurs) (20/10/2026)
+
+Les exports de l'admin (`jobs/views/admin_exports.py`, routes `admin/export/<ressource>/`) couvrent désormais toutes les listes de données : utilisateurs, candidatures, entreprises, offres, demandes d'ajout, demandes premium, rendez-vous, journal d'audit, erreurs système. L'export des utilisateurs contient des données personnelles (téléphone, date de naissance, adresse, commune, sexe) : décision de l'utilisateur du 20/10/2026, voir ci-dessous les garde-fous.
+
+- **Accès** : `IsAdminRole` sur chaque export (403 pour un recruteur ou un candidat, 401/403 sans session), vérifié sur les 9 routes (`test_admin_exports_complets`).
+- **NIN** : exporté **uniquement** dans l'export des utilisateurs (colonne « NIN », texte complet de 18 chiffres), sur **décision explicite de l'utilisateur du 20/10/2026** (il avait d'abord choisi de l'exclure, avant de le demander ; la recommandation de l'exclure est consignée ici). Aucun autre export ne le contient (test sur les 8 autres routes). La trace d'audit de cet export porte la mention « contient le NIN, la date de naissance et l'adresse ». Les super-administrateurs sont exclus de l'export des utilisateurs, comme de la liste.
+- **Même périmètre que la liste affichée** : la liste et l'export appellent les mêmes fonctions de filtrage (`views/admin_filtres.py`, `demandes_ajout_filtrees`), sans duplication possible. Un export filtré n'expose donc pas plus que l'écran.
+- **Traçabilité** : chaque export écrit une ligne dans le journal d'audit (action `AUTRE`, détail « Export utilisateurs (N lignes, role=CANDIDAT, search=…) », IP), comme l'export des statistiques. Un export en masse de données personnelles est ainsi toujours attribuable à un administrateur.
+- **Erreurs système** : ni `stack_trace` ni `user_agent` ne sont exportés (données internes, inutiles à la lecture de la liste).
+- **Formules Excel** : toutes les chaînes sont forcées en texte (`neutraliser_formules`) sur les 9 exports (test avec `=HYPERLINK(...)` dans les noms, libellés, messages d'erreur et détails d'audit). Les `Decimal` sont exportés en nombres.
+- **Export recruteur** (`recruteur_exports.py`) : colonnes enrichies à partir du profil figé à la candidature (titre, wilaya, commune, métier, diplôme, compétences, langues…), donc ce que le recruteur voit déjà ; **jamais** adresse, date de naissance, sexe ni NIN ; périmètre limité à son entreprise (offre d'une autre entreprise : 404) ; le nom de fichier dérivé du titre de l'offre est assaini.
+- **Risque résiduel** : un classeur téléchargé quitte la plateforme (poste de l'administrateur). Mitigation : compte admin nominatif et trace d'audit qui signale la présence du NIN. Le NIN est la donnée la plus sensible de l'export : ne pas partager ni conserver le classeur au-delà du besoin. À rappeler dans les consignes aux administrateurs (loi 18-07).
+
+---
+
 ## ✅ 18. Revue complète du panel admin — garde-fous sur les actions sensibles (28/09/2026)
 
 Revue page par page des 25 écrans `/admin-taftech`. Findings sécurité/intégrité (le reste — UX, bugs d'affichage — est dans `CLAUDE.md`, session du 28/09/2026) :
@@ -416,6 +447,41 @@ Or `taftech_frontend/src/api/axiosConfig.js` ne mutualisait pas les rafraîchiss
 - **Piège** : `force_authenticate` (test) **contourne** la classe d'authentification où le garde est appliqué ; les tests passent donc par un vrai jeton dans le cookie.
 - **Limites** : un membre d'équipe (compte `CANDIDAT` rattaché à une entreprise) n'est pas concerné ; une requête SQL de plus par appel authentifié d'un compte recruteur (lecture de `profil_entreprise`) ; si `me/` échoue, le frontend n'affiche pas d'écran bloqué (le serveur reste le vrai garde). Le tableau de bord « accessible mais sans candidatures » du §21 n'est plus joignable en usage réel : son garde reste en défense en profondeur.
 - Tests : `jobs/tests/test_recruteur_en_attente_acces_total.py` (6), `EntrepriseValideeGuard.test.jsx` (7).
+
+## ✅ 36. Fiches détaillées des comptes dans l'admin : lecture seule, rôle vérifié (19/10/2026)
+
+Trois routes `admin/utilisateurs/<id>/dossier/`, `dossier-recruteur/`, `dossier-admin/` (détail dans [admin.md](docs/fonctionnel/admin.md)). Audit : toutes en `IsAdminRole` (403 pour candidat et recruteur, testé par cookie JWT réel), `GET` uniquement, un seul compte par appel ; 404 uniforme si le compte n'a pas le rôle attendu, est inconnu ou (recruteur) est un super-administrateur ; le périmètre est borné à l'entreprise du recruteur (test : aucune offre d'une autre entreprise dans la réponse) ; le NIN et les coordonnées de candidats n'y figurent pas ; l'usage IA exclut les lignes remboursées. Front : routes admin déjà protégées par `AdminRoute`.
+
+---
+
+## ✅ 35. NIN obligatoire pour postuler : écriture unique atomique, jamais exposé (19/10/2026)
+
+- **Besoin** : l'ANEM exige le NIN de tout candidat qui postule. Il n'est pas demandé à l'inscription ; il est obligatoire pour postuler **avec un compte**. La candidature rapide (sans compte) n'en exige pas : **contournement possible, décision assumée de l'utilisateur**, consigné dans `docs/problemes-a-traiter.md`.
+- **Serveur** : `PostulerAPIView` répond 403 `NIN_REQUIS` si `User.nin` est vide (rôle vérifié d'abord, aucune candidature créée). Route `POST jobs/profil/nin/` (`EnregistrerNINAPIView`) : `IsAuthenticated` + rôle `CANDIDAT`, périmètre = le compte lui-même, 18 chiffres, **écriture unique atomique** (la condition « NIN encore vide » est dans la requête SQL : deux requêtes simultanées du même compte ne s'écrasent pas ; 409 `NIN_DEJA_ENREGISTRE`), correction par l'admin seulement.
+- **Anti-énumération** : un NIN déjà pris et un NIN non enregistrable donnent la **même réponse générique** (400 `NIN_NON_ENREGISTRABLE`) ; limite dédiée `nin_enregistrement` **10 essais par jour et par compte** (un NIN libre est accepté, un NIN pris refusé : sans limite basse, un attaquant à plusieurs comptes sonderait les NIN existants). La réponse ne renvoie jamais le NIN ; la trace du journal ne contient pas sa valeur.
+- **Confidentialité** : visible du candidat et de l'admin seulement. Vérifié par test : absent du `profil_snapshot`, de `CandidatureRecruteurDTO`, de `ProfilCandidatDTO` sans `include_nin` (CVthèque), de `texte_carriere`, `texte_conseils` et de tout prompt IA (en plus, `patterns.py` masque un NIN de 18 chiffres, y compris avec séparateurs).
+- **Limites** : (1) l'**oracle d'existence** subsiste en version réduite (10 essais/jour/compte, plusieurs comptes) ; (2) l'**inscription** (`accounts/serializers.py`) avait déjà un message « NIN déjà utilisé » distinct, plus ancien que ce chantier, **à harmoniser** ; (3) la candidature rapide contourne l'obligation.
+- Tests : `jobs/tests/test_nin_postuler.py` (14, dont l'écriture atomique avec un objet utilisateur périmé), `ModalNIN.test.jsx` (9).
+
+## ✅ 34. Pseudonymisation des données candidat avant tout appel IA, résilience du fournisseur (19/10/2026)
+
+- **Risque** : les traitements IA se font chez un prestataire hors d'Algérie (Groq, États-Unis) ; le CV brut contenait nom, coordonnées, adresse, date de naissance, pièces d'identité. Loi 18-07.
+- **Périmètre** : parser de CV, classification des métiers, diplômes et spécialités, analyse carrière, conseils, analyse recruteur. Hors périmètre : génération d'offre (aucune donnée candidat) ; matching (100 % local, test d'architecture `test_architecture_ia.py`).
+- **Mécanisme** (`jobs/confidentialite_ia/`) : nettoyage déterministe (motifs + spaCy français + Stanza arabe + noms du compte), **échec fermé** (modèle absent = aucun appel IA), filet `call_ai(donnees_candidat=…)` qui refuse un e-mail, téléphone, URL ou NIN restant, jeton aléatoire `CANDIDAT_xxxxxx` pour l'analyse recruteur, employeurs en « Entreprise A/B », établissements retirés, coordonnées extraites **localement** du CV brut. Le masquage n'est **pas désactivable** (aucun paramètre, `CONFIDENTIALITE_IA_NER_ACTIF=false` refusé en production). Aperçu au candidat du texte exact transmis (`POST jobs/ia/apercu-donnees/`, candidat seulement, sans appel IA ni quota).
+- **Compte Groq** : Zero Data Retention activé le 17/10/2026. **Incident** : une ancienne clé était dans l'historique git (commit `9b04392`) ; révoquée et remplacée.
+- **Défauts trouvés et corrigés pendant le chantier** : (1) `ParserCVAPIView` renvoyait `str(e)` (texte de l'exception du fournisseur) au navigateur ; (2) plusieurs journaux écrivaient le texte brut des erreurs du fournisseur, qui peut citer la clé : désormais type et statut seulement, avec tests (`test_cle_groq_non_exposee.py`).
+- **Revue de sécurité indépendante (19/10/2026, agent `ecc:security-reviewer`)** : aucun point critique ; aucun chemin où le NIN, un nom ou la clé atteint un prompt, un journal ou une réponse. **1 point HAUT + 7 MOYENS corrigés** :
+  - **HAUT, déni de service** : les motifs (e-mail, adresse…) étaient à temps quadratique sur un texte hostile (40 000 caractères = 5 s, une suite d'espaces = plus d'une minute) ; un candidat pouvait bloquer un worker avec un fichier de 5 Mo. Corrigé : quantificateurs **tous bornés**, texte analysé borné à 30 000 caractères, test avec 10 entrées hostiles (moins de 3 s chacune).
+  - Fuite de la date de naissance avec « né à Oran, le … » ; téléphones « 0550 123 456 », « (0550) 12 34 56 », « +213 (0)550… », « 0550/12/34/56 » et numéros étrangers ; NIN avec séparateurs ; liens personnels hors LinkedIn/GitHub (facebook, t.me, sites en `.dz`…) ; chiffres pleine chasse : tous détectés et masqués, sans prendre une suite de dates pour un téléphone (testé).
+  - Nom arabe isolé dans un CV surtout français (sous 5 % des lettres) : Stanza se déclenche aussi dès 15 lettres arabes.
+  - **Contexte de demande IA oublié sur les sorties anticipées** de `ParserCVAPIView` (le quota était consommé avant les validations du fichier) : validations déplacées avant le décompte, et **middleware** `ReinitialiserContexteIAMiddleware` qui vide le contexte au début et à la fin de chaque requête (un thread gunicorn réutilisé ne voit jamais le contexte d'une autre requête).
+  - NIN : écriture unique rendue atomique, essais limités (voir §35).
+  - Aussi corrigés : une entité détectée qui déborde sur un numéro ne laisse plus la fin en clair (fusion par union) ; l'empreinte du cache contient `VERSION_NETTOYAGE` (un résultat produit avec d'anciennes règles n'est plus resservi) ; marqueurs d'établissements étendus (« Univ. », « USTO »).
+- **Trois points bas de la revue, corrigés ensuite le même jour** : (B1) la garde `donnees_candidat` reste facultative dans la signature de `call_ai`, mais `test_architecture_ia.py` lit désormais le code (analyse syntaxique) et **fait échouer les tests si un appel n'a pas ce paramètre** (seule exception, explicite : `GenererOffreIAAPIView.post`, qui n'envoie aucune donnée candidat) ; (B6) le remboursement ne dépend plus du drapeau global de pause : seule la demande **réellement refusée** par le fournisseur (429 reçu ou appel bloqué par la pause) est remboursée, via une ContextVar remise à zéro par le middleware ; (B8) `AnalyseGroqRecruteurAPIView` répond **404 dans tous les cas** (identifiant inexistant, autre entreprise, utilisateur sans entreprise), ce qui supprime le sondage 404/403. À noter : les noms d'employeurs et d'établissements écrits dans le **texte** du CV du parser partent tels quels dans le texte nettoyé (choix de conception à valider : seuls les identifiants directs sont masqués).
+- **Piège de test découvert** : la pause du fournisseur est stockée dans le cache, partagé entre les tests ; un test de saturation pouvait faire échouer un test d'un autre module selon l'ordre d'exécution (403 inattendu). Les tests de saturation nettoient maintenant le cache après chaque cas.
+- **Coût et résilience** : tokens et entités masquées (décomptes, jamais de contenu) enregistrés par appel ; un refus du fournisseur (429) est **remboursé** et met les appels IA en pause 30 s à 1 h ; une analyse inchangée est renvoyée sans appel ni décompte. Les réponses d'erreur à l'utilisateur restent génériques.
+- **Limites** : une pseudonymisation n'est **pas** une anonymisation (loi 18-07) : des noms rares, des employeurs ou un texte libre peuvent ré-identifier ; les noms d'organisations ne sont pas masqués par spaCy ; la qualité de détection des noms **arabes** reste à mesurer sur des CV réels (condition d'adoption, voir `docs/fonctionnel/parser-cv-ia.md`) ; le cadre juridique d'un transfert hors d'Algérie (ANPDP) est une **question ouverte** pour l'employeur.
+- Tests : une centaine de tests backend ajoutés (`test_confidentialite_*`, `test_call_ai_garde`, `test_ia_pseudonymisation_vues`, `test_cv_parser_confidentialite`, `test_apercu_donnees_ia`, `test_architecture_ia`, `test_cle_groq_non_exposee`, `test_ia_integration_jwt`, `test_ia_tokens`, `test_ia_cache_resultats`, `test_ia_fournisseur_sature`) et frontend (`ApercuDonneesIA`, `erreursIA`, `ModalNIN`).
 
 ## ✅ 33. Vie privée du navigateur : contenus tiers, cookies, hors ligne, images envoyées (18/10/2026)
 - **Contenus tiers** : (1) la carte Google de la page entreprise ne se charge plus qu'après un clic (`CarteSurDemande`) : avant, chaque visite contactait Google (adresse IP, cookies de Google) ; (2) le script « Continuer avec Google » (`GoogleOAuthProvider`) chargeait Google sur **toutes** les pages depuis `main.jsx` ; il est maintenant limité aux pages de connexion et d'inscription (`GoogleAuthProvider`). Vérifié en navigateur : aucune requête vers Google sur `/offres`, une seule sur `/login`.

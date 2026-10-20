@@ -154,9 +154,21 @@ class UtilisationIA(models.Model):
         ('GENERATION_OFFRE', "Génération d'offre (recruteur)"),
         ('ANALYSE_RECRUTEUR', 'Analyse IA candidature (recruteur)'),
     ]
+    STATUT_CHOICES = [
+        ('ACCEPTE', "Appel décompté"),
+        ('REMBOURSE', "Appel remboursé (refus du fournisseur : ne compte pas dans les quotas)"),
+    ]
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='utilisations_ia')
     fonction = models.CharField(max_length=25, choices=FONCTION_CHOICES)
     date_heure = models.DateTimeField(auto_now_add=True)
+    # Suivi de consommation (demande de l'employeur, 19/10/2026) : tokens cumulés de tous les appels
+    # IA faits pour cette demande (un parsing de CV en fait plusieurs), modèle utilisé, et décompte
+    # des entités masquées par catégorie (jamais de contenu : {"EMAIL": 1, "NOM": 3}).
+    tokens_entree = models.PositiveIntegerField(default=0)
+    tokens_sortie = models.PositiveIntegerField(default=0)
+    modele = models.CharField(max_length=100, blank=True, default='')
+    entites_masquees = models.JSONField(default=dict, blank=True)
+    statut = models.CharField(max_length=10, choices=STATUT_CHOICES, default='ACCEPTE')
 
     class Meta:
         ordering = ['-date_heure']

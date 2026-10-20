@@ -12,6 +12,7 @@ import {
 import AdminEntreprises from "../src/Pages/Admin/AdminEntreprises";
 import { ConfirmModalHost } from "../src/utils/confirmToast";
 import { jobsService } from "../src/Services/jobsService";
+import { adminService } from "../src/Services/adminService";
 import * as reporter from "../src/utils/errorReporter";
 import toast from "react-hot-toast";
 
@@ -19,11 +20,16 @@ vi.mock("../src/Services/jobsService", () => ({
   jobsService: {
     getAdminEntreprises: vi.fn(),
     moderateEntreprise: vi.fn(),
-    exportEntreprises: vi.fn(),
     getDemandesPremium: vi.fn(),
     activerPremium: vi.fn(),
   },
 }));
+
+// L'export passe par `adminService.exporterListe` (composant BoutonExportExcel) : on ne simule que lui.
+vi.mock("../src/Services/adminService", async (importOriginal) => {
+  const reel = await importOriginal();
+  return { ...reel, adminService: { ...reel.adminService, exporterListe: vi.fn() } };
+});
 vi.mock("react-hot-toast", () => ({
   default: {
     loading: vi.fn(() => "toast-id"),
@@ -112,12 +118,15 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
 
   it("🟢 Happy Path 4 : Export réussi", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
-    jobsService.exportEntreprises.mockResolvedValue(new Blob(["data,test"]));
+    adminService.exporterListe.mockResolvedValue(new Blob(["data,test"]));
     render(<AdminEntreprises />);
     await waitFor(() => screen.getByText(/Exporter/i));
     fireEvent.click(screen.getByText(/Exporter/i));
     await waitFor(() => {
-      expect(jobsService.exportEntreprises).toHaveBeenCalled();
+      // Mêmes filtres que la liste affichée (ici : aucun filtre, tri par défaut).
+      expect(adminService.exporterListe).toHaveBeenCalledWith("entreprises", {
+        search: "", ordering: "-id", abonnement_expire_sous: null,
+      });
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
     });
@@ -139,7 +148,7 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
 
   it("🔴 Edge Case : Crash lors de l'export déclenche reportError", async () => {
     jobsService.getAdminEntreprises.mockResolvedValue(mockData);
-    jobsService.exportEntreprises.mockRejectedValue(new Error("API Down"));
+    adminService.exporterListe.mockRejectedValue(new Error("API Down"));
     render(<AdminEntreprises />);
     await waitFor(() => screen.getByText(/Exporter/i));
     fireEvent.click(screen.getByText(/Exporter/i));

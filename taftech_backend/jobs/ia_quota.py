@@ -8,6 +8,7 @@ Convention du projet reconduite ici (déjà utilisée par quota_cv_atteint) : ja
 stocké à incrémenter/reset — toujours recompter les lignes UtilisationIA de la période en cours.
 """
 import logging
+from contextvars import ContextVar
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -16,9 +17,15 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
+from .confidentialite_ia.audit import COMPTEUR_ENTITES
 from .models import AIConfig, QuotaIAOverride, UtilisationIA
 
 logger = logging.getLogger(__name__)
+
+# Clé (pk) de la ligne UtilisationIA de la demande en cours : `call_ai` y ajoute les tokens
+# consommés, `liberer_verrou_ia` la vide. Une demande peut faire plusieurs appels IA (parser,
+# métiers, diplômes) : tous se cumulent sur la même ligne.
+_utilisation_courante: ContextVar = ContextVar("utilisation_ia_courante", default=None)
 
 # Fonctions gérées côté Palier recruteur (le reste est géré côté AIConfig candidat, flat).
 FONCTIONS_RECRUTEUR = {'GENERATION_OFFRE', 'ANALYSE_RECRUTEUR'}
@@ -100,19 +107,59 @@ def _utilisateurs_du_quota(user, fonction):
 
 def appels_ia_du_mois():
     """Appels IA du mois en cours, tous comptes et toutes fonctions confondus (base du plafond global)."""
-    return UtilisationIA.objects.filter(date_heure__gte=_debut_mois()).count()
+    return UtilisationIA.objects.filter(date_heure__gte=_debut_mois()).exclude(statut='REMBOURSE').count()
+
+
+def consommation_par_fonction_du_mois():
+    """Consommation IA du mois en cours, par fonctionnalité : appels décomptés, appels remboursés
+    (refus du fournisseur) et tokens (entrée/sortie). Base du futur plafond de dépense Groq."""
+    from django.db.models import Count, Q, Sum
+    agregats = {
+        a['fonction']: a
+        for a in UtilisationIA.objects.filter(date_heure__gte=_debut_mois()).values('fonction').annotate(
+            appels=Count('id', filter=~Q(statut='REMBOURSE')),
+            remboursees=Count('id', filter=Q(statut='REMBOURSE')),
+            entree=Sum('tokens_entree'),
+            sortie=Sum('tokens_sortie'),
+        )
+    }
+    resultat = []
+    for fonction, libelle in UtilisationIA.FONCTION_CHOICES:
+        a = agregats.get(fonction, {})
+        appels, entree, sortie = a.get('appels', 0), a.get('entree') or 0, a.get('sortie') or 0
+        resultat.append({
+            'fonction': fonction,
+            'libelle': libelle,
+            'appels': appels,
+            'remboursees': a.get('remboursees', 0),
+            'tokens_entree': entree,
+            'tokens_sortie': sortie,
+            'moyenne_tokens': round((entree + sortie) / appels) if appels else 0,
+        })
+    return resultat
 
 
 def _compter(user, fonction, depuis):
+    # Un appel remboursé (refus du fournisseur) ne compte dans aucun quota.
     return UtilisationIA.objects.filter(
         user_id__in=_utilisateurs_du_quota(user, fonction), fonction=fonction, date_heure__gte=depuis,
-    ).count()
+    ).exclude(statut='REMBOURSE').count()
 
 
 def verifier_quota_ia(user, fonction):
     """Retourne (ok: bool, payload: dict). `payload` contient toujours quota_restant_jour/mois
     (None = illimité) ; si ok=False, ajoute 'error', 'code', 'renouvellement_le'."""
     config = AIConfig.get_solo()
+    # Fournisseur en pause (quota du plan Groq atteint) : on le dit tout de suite, sans verrou ni
+    # décompte. Le reste de la plateforme n'est pas concerné ; la lecture d'un résultat déjà stocké
+    # est traitée avant cette vérification par les vues.
+    from .ai_engine import fournisseur_sature
+    if config.provider == 'GROQ' and fournisseur_sature():
+        return False, {
+            'error': "L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement.",
+            'code': 'IA_FOURNISSEUR_SATURE',
+            'renouvellement_le': None,
+        }
     if config.budget_ia_appels_mois_max is not None:
         total_mois = appels_ia_du_mois()
         if total_mois >= config.budget_ia_appels_mois_max:
@@ -162,12 +209,32 @@ def verifier_quota_ia(user, fonction):
 def consommer_quota_ia(user, fonction):
     """Log l'appel — à appeler dès que la demande est acceptée, avant l'appel IA réel (compte
     même un appel qui échouera côté Groq, sur demande explicite du client)."""
-    UtilisationIA.objects.create(user=user, fonction=fonction)
+    ligne = UtilisationIA.objects.create(user=user, fonction=fonction)
+    # La demande en cours : les appels IA qui suivent y cumulent leurs tokens, et le masquage y
+    # compte les entités retirées (flush dans liberer_verrou_ia).
+    _utilisation_courante.set(ligne.pk)
+    COMPTEUR_ENTITES.set({})
     try:
         verifier_alertes_budget_ia()
     except Exception:
         # Une panne d'alerte ne doit jamais bloquer la fonctionnalité IA de l'utilisateur.
         logger.exception("Vérification des alertes de budget IA en échec")
+    return ligne
+
+
+def utilisation_courante():
+    """Clé de la ligne UtilisationIA de la demande en cours, ou None hors contexte de quota."""
+    return _utilisation_courante.get()
+
+
+def rembourser_quota_ia():
+    """Rembourse l'appel de la demande en cours : le fournisseur a refusé faute de quota (429), ce
+    n'est pas la faute de l'utilisateur. La ligne reste dans le journal (traçabilité) mais ne compte
+    plus dans aucun quota ni dans le plafond global. À appeler avant `liberer_verrou_ia`.
+    Les autres pannes (délai dépassé, JSON invalide) restent décomptées, comme demandé le 18/08."""
+    pk = _utilisation_courante.get()
+    if pk:
+        UtilisationIA.objects.filter(pk=pk).update(statut='REMBOURSE')
 
 
 def verifier_alertes_budget_ia():
@@ -245,4 +312,18 @@ def acquerir_verrou_ia(user, fonction, ttl=30):
 
 
 def liberer_verrou_ia(user, fonction):
-    cache.delete(f"ia_lock_{user.id}_{fonction}")
+    """Libère le verrou et clôt la demande : enregistre le décompte des entités masquées sur la ligne
+    UtilisationIA, puis vide le contexte (aucune fuite d'une requête vers la suivante)."""
+    try:
+        pk, compteur = _utilisation_courante.get(), COMPTEUR_ENTITES.get()
+        if pk and compteur:
+            UtilisationIA.objects.filter(pk=pk).update(entites_masquees=compteur)
+    except Exception:
+        # Le journal d'audit ne doit jamais empêcher de libérer le verrou de l'utilisateur.
+        logger.exception("Enregistrement du décompte des entités masquées en échec")
+    finally:
+        from .ai_engine import SATURATION_DEMANDE
+        _utilisation_courante.set(None)
+        COMPTEUR_ENTITES.set(None)
+        SATURATION_DEMANDE.set(False)
+        cache.delete(f"ia_lock_{user.id}_{fonction}")

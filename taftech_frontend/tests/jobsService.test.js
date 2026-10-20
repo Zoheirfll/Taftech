@@ -63,10 +63,13 @@ describe("🔧 Logique Métier - Service <jobsService />", () => {
     it("Demande bien un type blob pour les exports", async () => {
       api.get.mockResolvedValue({ data: new Blob() });
 
-      await jobsService.exportCandidatures();
+      // Les filtres de la liste sont transmis, les filtres vides ne le sont pas.
+      await jobsService.exporterListe("candidatures", { search: "karim", statut: "", ordering: "-date_postulation" });
       expect(api.get).toHaveBeenCalledWith("/jobs/admin/export/candidatures/", {
+        params: { search: "karim", ordering: "-date_postulation" },
         responseType: "blob",
       });
+      await expect(jobsService.exporterListe("../secret")).rejects.toThrow("Export inconnu");
 
       await jobsService.telechargerBulletin("42");
       expect(api.get).toHaveBeenCalledWith("/jobs/candidatures/42/bulletin/", {

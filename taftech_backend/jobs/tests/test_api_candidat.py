@@ -25,7 +25,8 @@ class ApiCandidatTest(APITestCase):
 
         # 3. Création du candidat pour les tests connectés
         self.user_candidat = User.objects.create_user(
-            username="candidat_api", email="cand@test.com", password="pwd", role="CANDIDAT"
+            username="candidat_api", email="cand@test.com", password="pwd", role="CANDIDAT",
+            nin="100000000000000001",  # exigé pour postuler (ANEM)
         )
 
     # =======================================================

@@ -7,6 +7,18 @@
 
 ---
 
+## 🆕 SESSION 19/10/2026 — NIN obligatoire pour postuler (exigence ANEM)
+
+- **Règle** : le NIN n'est **pas** demandé à l'inscription ; il est **obligatoire pour postuler avec un compte**. Il est saisi une seule fois, à la première candidature, puis immuable (correction par le support/admin).
+- **Serveur** : `PostulerAPIView` répond 403 `NIN_REQUIS` si `User.nin` est vide (le rôle est vérifié d'abord). Route d'enregistrement `POST jobs/profil/nin/` (`EnregistrerNINAPIView`, candidat authentifié, throttle `write_action`) : 18 chiffres (sinon 400 par champ `nin`), 409 `NIN_DEJA_ENREGISTRE` si déjà renseigné, **message générique** `NIN_NON_ENREGISTRABLE` si le NIN appartient à un autre compte (on ne révèle jamais son existence). La réponse ne renvoie jamais le NIN ; la trace du journal ne contient pas sa valeur.
+- **Interface** : `Components/ModalNIN.jsx` (+ hook `useModaleNIN`) : quand le serveur répond `NIN_REQUIS`, la modale s'ouvre, le NIN est enregistré, puis la candidature est **rejouée automatiquement**. Branché sur `JobCard`, `JobDetail` et `Recruteur/ReviewCandidature.jsx` (les trois appelants de `jobsService.postuler`). Le profil candidat affiche le NIN en lecture seule s'il existe, sinon un message explicatif.
+- **Confidentialité** : visible du **candidat et de l'admin seulement**. Jamais dans `profil_snapshot`, la vue recruteur (`CandidatureRecruteurDTO`), la CVthèque (`ProfilCandidatDTO` sans `include_nin`), ni un prompt IA (le NIN est aussi détecté et masqué par `patterns.py`). Tests : `jobs/tests/test_nin_postuler.py` (12), `ModalNIN.test.jsx` (9).
+- **Limite assumée (décision du 19/10/2026)** : la **candidature rapide** (`PostulerRapideAPIView`, sans compte ni profil) n'exige pas le NIN : un candidat peut contourner l'obligation ANEM par cette voie. Consigné dans [problemes-a-traiter.md](../problemes-a-traiter.md).
+- **Pas d'écran de saisie dans le profil** (YAGNI) : le NIN se saisit uniquement à la candidature ; `ModalInfos.jsx` explique pourquoi le champ est vide.
+- **Existant** : les candidats sans NIN le saisissent à leur prochaine candidature ; les candidatures déjà envoyées ne sont pas modifiées. 5 fichiers de tests de candidature ont reçu un NIN fictif pour leurs candidats.
+
+---
+
 > ⚠️ **Mise à jour 13/10/2026 (point 12)** : le comportement du réglage de visibilité décrit dans la section du 03/09 ci-dessous (« le profil reste toujours visible/recherchable, seul le déblocage est bloqué ; les déblocages déjà acquis restent valides ») est **remplacé**. Désormais : profil masqué → il disparaît de la CVthèque et l'accès est suspendu pour tous les recruteurs, y compris ceux qui l'avaient débloqué (rendu sans nouvelle dépense si le candidat réaffiche) ; compte supprimé → tout accès cesse. Le réglage s'appelle « Visibilité de mon profil dans la CVthèque ». Voir `SECURITY.md` §22 et `portail-recruteur.md`.
 
 ## 🆕 SESSION 03/09/2026 — Retours revue croisée : score Formation, refonte Mes documents, visibilité CVthèque, partage de documents

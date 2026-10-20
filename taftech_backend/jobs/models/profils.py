@@ -66,6 +66,11 @@ class ProfilCandidat(models.Model):
     conseils_dashboard_le = models.DateTimeField(null=True, blank=True, verbose_name="Date des derniers conseils IA")
     derniere_analyse_carriere = models.TextField(null=True, blank=True, verbose_name="Dernière analyse carrière IA")
     analyse_carriere_le = models.DateTimeField(null=True, blank=True, verbose_name="Date de la dernière analyse carrière IA")
+    # Empreinte (SHA-256) du prompt, des données envoyées, du modèle et de max_tokens au moment de la
+    # dernière analyse : si elle n'a pas changé, le résultat stocké est renvoyé sans appel IA ni
+    # décompte de quota (voir confidentialite_ia/empreinte.py). Aucune donnée personnelle : un hash.
+    empreinte_analyse_carriere = models.CharField(max_length=64, blank=True, default='')
+    empreinte_conseils = models.CharField(max_length=64, blank=True, default='')
     photo_profil = models.ImageField(
         upload_to='photos_profil/',
         blank=True,
@@ -111,6 +116,16 @@ class ProfilCandidat(models.Model):
         verbose_name="Métier souhaité / préférence de recherche (référentiel v2)",
         help_text="Distinct de `metier` (situation actuelle) — un candidat peut viser un métier différent de "
                   "celui qu'il exerce aujourd'hui.",
+    )
+    # Appellation précise choisie pour chacun des deux métiers (« Développeur web » au sein de « Études et
+    # développement informatique ») : affichage seulement, le métier reste la clé du calcul.
+    metier_appellation = models.ForeignKey(
+        'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier',
+        verbose_name="Appellation du métier actuel (référentiel v2)",
+    )
+    metier_souhaite_appellation = models.ForeignKey(
+        'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier_souhaite',
+        verbose_name="Appellation du métier souhaité (référentiel v2)",
     )
 
     # --- ANCIENS CHAMPS GARDÉS ---
@@ -278,6 +293,12 @@ class FormationCandidat(models.Model):
     )
 
     description = models.TextField(blank=True, null=True, verbose_name="Description ou mention")
+    specialite_texte = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Spécialité saisie en « Autre, préciser »",
+        help_text="Texte libre de la spécialité absente de la liste (vide dès qu'une `specialite_ref` est choisie). "
+                  "Distinct de `description` (note libre : mémoire, mention) qui ne déclenche aucune vérification.",
+    )
 
     # Trace d'audit du refus admin (statut_validation='REFUSEE') — jamais de hard delete d'une
     # formation candidat sans garde-fou : motif + auteur + date conservés même si le candidat
@@ -320,14 +341,15 @@ class FormationCandidat(models.Model):
         # attente que le Type de diplôme, mais uniquement quand elle est réellement
         # pertinente pour CE diplôme précis (des couples `DiplomeSpecialite` existent) —
         # sinon un Bac (qui n'a le plus souvent aucune spécialité attestée) serait à tort
-        # marqué "à vérifier" simplement parce que le champ est resté vide. `description`
-        # sert de signal d'intention : c'est le champ où `FormationReferentielSelect`
-        # recopie le texte tapé en mode "Autre, préciser" de la Spécialité (non résolu) ET
-        # le libellé d'un vrai choix référentiel confirmé — non vide + `specialite_ref`
-        # absent = une tentative est restée sans correspondance.
+        # marqué "à vérifier" simplement parce que le champ est resté vide. `specialite_texte`
+        # sert de signal d'intention : c'est le texte tapé en mode "Autre, préciser" de la
+        # Spécialité (non résolu) — non vide + `specialite_ref` absent = une tentative est
+        # restée sans correspondance. (Avant le 19/10/2026 ce rôle était tenu par
+        # `description`, qui recevait aussi le « Mémoire : … » importé du CV : une simple note
+        # déclenchait à tort une vérification et s'affichait comme « spécialité ».)
         diplome_incertain = not self.diplome_ref_id and bool(self.diplome)
         specialite_incertaine = False
-        if self.diplome_ref_id and not self.specialite_ref_id and self.description:
+        if self.diplome_ref_id and not self.specialite_ref_id and self.specialite_texte:
             specialite_incertaine = DiplomeSpecialite.objects.filter(
                 diplome_id=self.diplome_ref_id, selectionnable=True,
             ).exists()

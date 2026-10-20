@@ -17,6 +17,7 @@ import { construireJobPosting, offreIndexable, urlCanoniqueOffre } from "../../u
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
 import { erreurFichier, FICHIER_CV } from "../../utils/validations";
+import { useModaleNIN, reponseNinRequis } from "../../Components/ModalNIN";
 
 const EXPERIENCE_LABELS = {
   DEBUTANT: "Débutant",
@@ -159,6 +160,7 @@ const JobDetail = () => {
   const [error, setError] = useState("");
   const [postulerStatus, setPostulerStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { demanderNIN, modaleNIN } = useModaleNIN();
   const [lettreMotivation, setLettreMotivation] = useState("");
   const [postulationMode, setPostulationMode] = useState(null);
   const [fastForm, setFastForm] = useState({
@@ -210,6 +212,11 @@ const JobDetail = () => {
       });
       setPostulerStatus("success");
     } catch (err) {
+      // NIN exigé par l'ANEM : on le demande, puis la candidature repart toute seule.
+      if (reponseNinRequis(err)) {
+        demanderNIN(handlePostulerTafTech);
+        return;
+      }
       setPostulerStatus("error");
       toast.error(err.response?.data?.error || "Erreur lors de la postulation.");
       reportError("ECHEC_POSTULER_TAFTECH", err);
@@ -818,6 +825,7 @@ const JobDetail = () => {
           </div>
         </div>
       )}
+      {modaleNIN}
     </div>
   );
 };

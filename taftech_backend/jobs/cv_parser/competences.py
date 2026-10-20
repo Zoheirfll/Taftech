@@ -8,7 +8,7 @@ _NIVEAU_LABEL_VERS_CODE = {
 }
 
 
-PARSER_VERSION = "parser-2026.09.29"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
+PARSER_VERSION = "parser-2026.10.19-8"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
 _MAX_MOTS_COMPETENCE = 8
 _MAX_MOTS_COMPETENCE_LIGNE = 8  # au-delà, un libellé composé est éclaté (voir _eclater_competence_composee)
 _MAX_CHARS_COMPETENCE = 70

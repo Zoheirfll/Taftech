@@ -56,7 +56,7 @@ const FEATURES = [
 ];
 
 // Calculés / informatifs côté serveur : ne jamais les renvoyer dans le PUT.
-const CHAMPS_LECTURE_SEULE = ["prompts_accessibles", "budget_modifiable", "modele_modifiable", "appels_ia_mois"];
+const CHAMPS_LECTURE_SEULE = ["prompts_accessibles", "budget_modifiable", "modele_modifiable", "appels_ia_mois", "consommation_mois"];
 // Plafond et seuil : réservés au Super Admin (le serveur répond 403 si un admin simple les envoie).
 const CHAMPS_BUDGET = ["budget_ia_appels_mois_max", "budget_ia_alerte_pct"];
 // Bornes de max_tokens : miroir de MAX_TOKENS_MIN / MAX_TOKENS_MAX dans jobs/models/ia.py (le serveur
@@ -269,6 +269,37 @@ const AdminIAConfig = () => {
                 ? `${config.appels_ia_mois} / ${config.budget_ia_appels_mois_max} appels IA ce mois-ci (${Math.round((config.appels_ia_mois / config.budget_ia_appels_mois_max) * 100)} %)`
                 : `${config.appels_ia_mois} appels IA ce mois-ci`}
             </p>
+          )}
+          {Array.isArray(config.consommation_mois) && config.consommation_mois.length > 0 && (
+            <div className="overflow-x-auto" data-testid="consommation-ia">
+              <table className="w-full text-xs">
+                <caption className={`text-left text-[10px] font-medium ${tw.textMuted} mb-1`}>
+                  Consommation du mois par fonctionnalité (les appels remboursés ne comptent pas)
+                </caption>
+                <thead>
+                  <tr className={tw.textMuted}>
+                    <th className="text-left font-medium py-1 pr-3">Fonction</th>
+                    <th className="text-right font-medium py-1 px-2">Appels</th>
+                    <th className="text-right font-medium py-1 px-2">Remboursés</th>
+                    <th className="text-right font-medium py-1 px-2">Tokens entrée</th>
+                    <th className="text-right font-medium py-1 px-2">Tokens sortie</th>
+                    <th className="text-right font-medium py-1 pl-2">Moyenne / appel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {config.consommation_mois.map((ligne) => (
+                    <tr key={ligne.fonction} className={`border-t ${tw.borderSubtle} ${tw.textStrong}`}>
+                      <td className="py-1 pr-3">{ligne.libelle}</td>
+                      <td className="text-right py-1 px-2">{ligne.appels.toLocaleString("fr-FR")}</td>
+                      <td className="text-right py-1 px-2">{ligne.remboursees.toLocaleString("fr-FR")}</td>
+                      <td className="text-right py-1 px-2">{ligne.tokens_entree.toLocaleString("fr-FR")}</td>
+                      <td className="text-right py-1 px-2">{ligne.tokens_sortie.toLocaleString("fr-FR")}</td>
+                      <td className="text-right py-1 pl-2">{ligne.moyenne_tokens.toLocaleString("fr-FR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {!config.budget_ia_appels_mois_max && (
             <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

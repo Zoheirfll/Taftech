@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _call_groq(prompt, max_tokens=3000):
+def _call_groq(prompt, max_tokens=3000, donnees_candidat=None):
     """
     Appelle le moteur IA configuré (Groq ou Ollama selon AIConfig.provider) avec un timeout.
     Nom conservé pour compatibilité (domaine_agent.py l'importe) même si l'appel réel passe
@@ -20,10 +20,12 @@ def _call_groq(prompt, max_tokens=3000):
             [{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
             temperature=0,  # extraction/classification : mêmes entrées => mêmes sorties
+            donnees_candidat=donnees_candidat,
         )
         return content.strip() if content else None
     except Exception as e:
-        logger.error("IA (parser CV) : erreur - %s", e)
+        # Jamais le texte brut de l'erreur (peut citer la clé ou la requête) : type et statut seulement.
+        logger.error("IA (parser CV) : erreur %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
         return None
 
 

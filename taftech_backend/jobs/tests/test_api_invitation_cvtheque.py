@@ -33,7 +33,9 @@ def _make_entreprise(email="rec_invit@test.dz", palier_nom="PRO"):
 
 
 def _make_candidat(email="cand_invit@test.dz"):
-    return User.objects.create_user(username=email, email=email, password="pwd", role="CANDIDAT")
+    # NIN fictif unique, exigé pour postuler (ANEM) : dérivé de l'e-mail.
+    nin = str(abs(sum(ord(c) * 31 ** i for i, c in enumerate(email))) % 10 ** 18).zfill(18)
+    return User.objects.create_user(username=email, email=email, password="pwd", role="CANDIDAT", nin=nin)
 
 
 def _make_offre(entreprise):

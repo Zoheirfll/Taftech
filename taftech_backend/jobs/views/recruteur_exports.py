@@ -11,7 +11,7 @@ from ..models import OffreEmploi, Candidature
 from ..informations_societe import ligne_pied_de_page
 from .equipe import get_entreprise_for_user
 from ..throttles import WriteActionThrottle
-from .export_xlsx import neutraliser_formules, reponse_xlsx
+from .export_xlsx import reponse_xlsx
 from .recruteur_dashboard import _calculer_kpis_periode
 
 
@@ -159,29 +159,33 @@ class RapportDashboardPDFAPIView(APIView):
         return response
 
 
-def _construire_classeur_candidatures(candidatures, inclure_offre=False):
-    """Construit un classeur Excel (openpyxl) à partir d'un queryset/liste de Candidature."""
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment
+def _nom_fichier_sur(titre, defaut="export"):
+    """Nom de fichier sans caractère spécial (le titre d'une offre est saisi par un recruteur)."""
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in str(titre))[:60] or defaut
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Candidatures"
 
-    entetes = ["Date", "Candidat", "Email", "Téléphone"]
+def _colonnes_et_lignes_candidatures(candidatures, inclure_offre=False):
+    """(colonnes, lignes) des candidatures reçues. Les informations professionnelles viennent du profil figé à
+    la candidature (`profil_snapshot`) : exactement ce que le recruteur voit sur la candidature. Jamais
+    d'adresse, de date de naissance, de sexe ni de NIN."""
+    from ..models import ProfilCandidat
+
+    mobilites = dict(ProfilCandidat.MOBILITE_CHOICES)
+    situations = dict(ProfilCandidat.SITUATION_ACTUELLE)
+    colonnes = ["Date", "Candidat", "Email", "Téléphone"]
     if inclure_offre:
-        entetes.append("Offre")
-    entetes += [
+        colonnes.append("Offre")
+    colonnes += [
+        "Titre professionnel", "Wilaya", "Commune", "Métier", "Métier souhaité", "Diplôme", "Prétention salariale",
+        "Mobilité", "Situation actuelle", "Compétences", "Langues", "Nb expériences",
+        "Source", "Candidature rapide", "Date d'entretien",
         "Statut", "Score matching IA (%)",
         "Note technique (/5)", "Note communication (/5)",
         "Note motivation (/5)", "Note expérience (/5)",
         "Note globale (/20)", "Commentaire recruteur",
     ]
-    ws.append(entetes)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(vertical="center")
 
+    lignes = []
     for cand in candidatures:
         if cand.candidat:
             nom = f"{cand.candidat.last_name} {cand.candidat.first_name}".strip()
@@ -191,6 +195,8 @@ def _construire_classeur_candidatures(candidatures, inclure_offre=False):
             nom = f"{cand.nom_rapide or ''} {cand.prenom_rapide or ''}".strip()
             email = cand.email_rapide or ''
             telephone = getattr(cand, 'telephone_rapide', '') or ''
+        profil = cand.profil_snapshot if isinstance(cand.profil_snapshot, dict) else {}
+        experiences = profil.get('experiences')
         ligne = [
             cand.date_postulation.strftime("%d/%m/%Y") if cand.date_postulation else '',
             nom, email, telephone,
@@ -198,6 +204,16 @@ def _construire_classeur_candidatures(candidatures, inclure_offre=False):
         if inclure_offre:
             ligne.append(cand.offre.titre)
         ligne += [
+            profil.get('titre_professionnel') or '', profil.get('wilaya') or '', profil.get('commune') or '',
+            profil.get('metier') or '', profil.get('metier_souhaite') or '',
+            profil.get('diplome_ref_libelle') or profil.get('diplome') or '', profil.get('salaire_souhaite') or '',
+            mobilites.get(profil.get('mobilite'), profil.get('mobilite')) or '',
+            situations.get(profil.get('situation_actuelle'), profil.get('situation_actuelle')) or '',
+            profil.get('competences') or '', profil.get('langues') or '',
+            len(experiences) if isinstance(experiences, list) else '',
+            cand.get_source_display() if hasattr(cand, 'get_source_display') else cand.source,
+            'Oui' if cand.est_rapide else 'Non',
+            cand.date_entretien.strftime("%d/%m/%Y %H:%M") if cand.date_entretien else '',
             cand.get_statut_display(),
             cand.score_matching if cand.score_matching is not None else '',
             cand.note_technique if cand.note_technique is not None else '',
@@ -207,14 +223,8 @@ def _construire_classeur_candidatures(candidatures, inclure_offre=False):
             float(cand.note_globale) if cand.note_globale is not None else '',
             cand.commentaire_evaluation or '',
         ]
-        ws.append(ligne)
-    neutraliser_formules(ws)
-
-    for col_cells in ws.columns:
-        longueur = max((len(str(c.value)) for c in col_cells if c.value is not None), default=10)
-        ws.column_dimensions[col_cells[0].column_letter].width = min(longueur + 2, 50)
-    ws.freeze_panes = "A2"
-    return wb
+        lignes.append(ligne)
+    return colonnes, lignes
 
 
 class ExportCandidaturesOffreExcelAPIView(APIView):
@@ -233,16 +243,8 @@ class ExportCandidaturesOffreExcelAPIView(APIView):
         except OffreEmploi.DoesNotExist:
             return Response({"error": "Offre introuvable."}, status=status.HTTP_404_NOT_FOUND)
         candidatures = offre.candidatures.select_related('candidat').order_by('-date_postulation')
-        wb = _construire_classeur_candidatures(candidatures, inclure_offre=False)
-
-        from django.http import HttpResponse
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        nom_fichier = f"candidatures_{offre.titre[:40].replace(' ', '_')}.xlsx"
-        response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
-        wb.save(response)
-        return response
+        colonnes, lignes = _colonnes_et_lignes_candidatures(candidatures, inclure_offre=False)
+        return reponse_xlsx(f"candidatures_{_nom_fichier_sur(offre.titre[:40])}", "Candidatures", colonnes, lignes)
 
 
 class ExportCandidaturesExcelAPIView(APIView):
@@ -261,15 +263,8 @@ class ExportCandidaturesExcelAPIView(APIView):
             .filter(offre__entreprise=entreprise)
             .order_by('-date_postulation')
         )
-        wb = _construire_classeur_candidatures(candidatures, inclure_offre=True)
-
-        from django.http import HttpResponse
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = 'attachment; filename="candidatures_taftech.xlsx"'
-        wb.save(response)
-        return response
+        colonnes, lignes = _colonnes_et_lignes_candidatures(candidatures, inclure_offre=True)
+        return reponse_xlsx("candidatures_taftech", "Candidatures", colonnes, lignes)
 
 
 EXPORT_GRAPHIQUE_MAX_LIGNES = 20000  # très au-dessus d'un vrai graphique ; borne seulement l'abus

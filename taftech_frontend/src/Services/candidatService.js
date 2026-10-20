@@ -159,6 +159,18 @@ export const candidatService = {
     }
   },
 
+  // NIN du candidat connecté (exigé par l'ANEM pour postuler) : enregistré une seule fois, la
+  // réponse ne le renvoie jamais. Erreurs par champ (`nin`) ou code NIN_DEJA_ENREGISTRE (409).
+  enregistrerNIN: async (nin) => {
+    try {
+      const response = await api.post("jobs/profil/nin/", { nin });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_ENREGISTRER_NIN_API", err);
+      throw err;
+    }
+  },
+
   // Postuler
   postuler: async (offreId, candidatureData = {}) => {
     try {

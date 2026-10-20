@@ -7,6 +7,20 @@
 
 ---
 
+## 🆕 SESSION 19/10/2026 — Paragraphe à ajouter à la page « Confidentialité » (action de l'admin)
+
+La page `/confidentialite` est un **contenu éditable en base** (Admin → Pages du site), pas du code : chaque environnement a la sienne. Le consentement à l'inscription (`RegisterCandidat.jsx`, point 4) et l'aperçu des données IA mentionnent déjà le transfert.
+
+**Fait en développement (19/10/2026)** : la section « 6. Analyse par intelligence artificielle (facultative) » a été ajoutée, « Vos droits » devenant la section 7, avec la commande `python manage.py ajouter_paragraphe_ia_confidentialite` (idempotente, `--dry-run` pour prévisualiser, trace dans le journal d'audit ; code : `jobs/management/commands/ajouter_paragraphe_ia_confidentialite.py`). **En production** : lancer la même commande **après relecture juridique** du texte ci-dessous (ou le coller à la main dans Admin → Pages du site). Texte :
+
+> **Analyse par intelligence artificielle (facultative).** Pour analyser un CV, proposer des métiers ou donner des conseils personnalisés, TafTech envoie à un prestataire d'intelligence artificielle situé hors d'Algérie (Groq, États-Unis) une version de vos données dans laquelle votre nom, vos coordonnées, votre adresse, votre date de naissance, vos pièces d'identité et vos liens personnels sont masqués. Le prestataire n'en conserve aucune copie (rétention zéro des données). Avant chaque envoi, vous pouvez consulter le texte exact qui sera transmis. **Il en va de même lorsqu'un recruteur auquel vous candidatez utilise l'analyse IA de votre candidature : votre nom n'est alors jamais transmis.** Le calcul des correspondances entre votre profil et les offres est réalisé par TafTech, sans prestataire d'IA externe. Ces fonctions sont facultatives pour vous.
+
+*(Le cas « analyse lancée par un recruteur » a été ajouté le 19/10/2026 : le premier texte ne couvrait que les fonctions lancées par le candidat lui-même. La commande remplace automatiquement l'ancienne version de la section.)*
+
+Ne pas écrire « anonyme » ni « anonymisé » (la pseudonymisation n'est pas une anonymisation) et ne pas affirmer d'autorisation de l'ANPDP tant qu'elle n'est pas détenue : question ouverte, voir [problemes-a-traiter.md](../problemes-a-traiter.md).
+
+---
+
 ## 🆕 SESSION 13/10/2026 — Point 11 des corrections finales : cycle de vie des compétences du référentiel (admin)
 
 **Constat** : le référentiel n'avait qu'un booléen (« Suggérée » = visible, « Masquée »), sans file de validation ; aucune compétence n'était proposée automatiquement, donc rien à valider. Ajout d'un cycle clair, **sans qu'aucune proposition ne devienne officielle d'elle-même**.

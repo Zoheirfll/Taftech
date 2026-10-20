@@ -7,6 +7,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 
 const AdminSystemLogs = () => {
@@ -74,6 +75,7 @@ const AdminSystemLogs = () => {
         ]}
         actions={
           <>
+            <BoutonExportExcel ressource="erreurs-systeme" nomFichier="erreurs_systeme_taftech" />
             <button
               onClick={() => fetchLogs(page)}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border ${tw.borderSubtle} bg-white text-xs font-semibold ${tw.textMuted700} hover:bg-slate-50 transition-colors ${tw.focusRing}`}

@@ -1,6 +1,6 @@
 # Pseudonymisation des données candidat avant envoi à l'IA cloud — conception
 
-> Date : 17/10/2026 · Statut : **conception validée par l'utilisateur le 17/10/2026, relecture finale demandée** · Origine : consigne de l'employeur (conserver l'IA cloud, ajouter une couche de confidentialité).
+> Date : 17/10/2026 · Statut : **conception finale validée par l'utilisateur le 19/10/2026** (brainstorming de synthèse : volet arabe R21, volet coût et résilience Groq R18 à R20, compléments d'audit) · Origine : consigne de l'employeur (conserver l'IA cloud, ajouter une couche de confidentialité). Plan d'exécution : [docs/superpowers/plans/2026-10-17-pseudonymisation-ia.md](../plans/2026-10-17-pseudonymisation-ia.md) (Tasks 1 à 18, dont 3b).
 
 ## 1. Objectif
 
@@ -40,8 +40,9 @@ Point d'entrée commun existant : `jobs/ai_engine.py::call_ai` (isole déjà le 
 Nom/prénom · téléphone · e-mail · adresse · date de naissance · NIN / numéro de document d'identité · URLs personnelles (LinkedIn, GitHub, site) · photo · coordonnées de références.
 
 - **Photo** : jamais envoyée, seul le texte est extrait du PDF/DOCX.
-- **Recognizers Presidio personnalisés** : e-mail, téléphones algériens (`+213`, `05/06/07…`), URLs, NIN (format à confirmer avec l'employeur), dates de naissance (contexte « né(e) le »).
-- **NER spaCy** (modèle français, à évaluer pour l'arabe et les noms translittérés) : noms, adresses/lieux.
+- **Motifs maison (`patterns.py`)** : e-mail, téléphones algériens (`+213`, `05/06/07…`), URLs, NIN (18 chiffres), dates de naissance (contexte « né(e) le »), mots-clés arabes (« الاسم », « العنوان », « تاريخ الميلاد », « المراجع »). Les chiffres arabo-indiens (٠١٢…) sont convertis en chiffres ASCII avant détection (correspondance 1 pour 1, les positions ne bougent pas).
+- **NER spaCy** (modèle français) : noms, adresses/lieux dans les passages en alphabet latin.
+- **NER Stanza arabe** (voir §14) : noms et lieux dans les passages en alphabet arabe.
 - **Section « Références »** : détectée par titre de section, contenu supprimé.
 - Remplacement par des jetons stables (`[NOM]`, `[EMAIL]`, `[TEL]`…).
 
@@ -86,7 +87,8 @@ Même principe pour Analyse carrière et Conseils personnalisés : bouton « Voi
 
 ## 9. Sécurité et traçabilité
 
-- Journal d'audit : chaque appel IA journalise la fonction, l'utilisateur et le **décompte** des entités masquées (jamais le contenu du CV ni le texte envoyé).
+- Journal d'audit : chaque appel IA journalise la fonction, l'utilisateur et le **décompte** des entités masquées (jamais le contenu du CV ni le texte envoyé). Réalisation : colonne JSON `entites_masquees` sur `UtilisationIA` (Task 14), avec les tokens consommés.
+- Test : aucune réponse de l'API ne contient la valeur de `GROQ_API_KEY` (Task 13).
 - **Clé API Groq** : uniquement côté serveur (`os.getenv("GROQ_API_KEY")` dans `ai_engine.py`), absente du frontend, vérifiée le 17/10/2026. Un test vérifie qu'aucune réponse API ne la contient. **Incident constaté** : le commit `9b04392` contient une vraie clé dans l'historique git (`taftech_backend/.env`, retiré depuis) → **révoquer et regénérer la clé** (phase 0).
 - **Zero Data Retention** : à activer dans la console Groq (Data Controls) par le titulaire du compte, capture à remettre à l'employeur. Ce n'est pas du code.
 - Nouvelle section dans `SECURITY.md` et mise à jour de `docs/fonctionnel/parser-cv-ia.md`.
@@ -97,7 +99,7 @@ Même principe pour Analyse carrière et Conseils personnalisés : bouton « Voi
 
 - Unitaires par type d'entité (jeu de textes factices, noms algériens, arabe/français).
 - Test de non-fuite : le texte envoyé à `call_ai` (mocké) ne contient ni e-mail, ni téléphone, ni nom du jeu de test.
-- Test d'architecture : aucun appel IA avec données candidat hors `garde.py`. Liste blanche des appelants de `call_ai` : `views/ia.py`, `views/candidat_dashboard.py`, `referentiel_utils.py`, `cv_parser/groq_json.py` ; tout nouvel appelant fait échouer le test et force une revue.
+- Test d'architecture : aucun appel IA avec données candidat hors du package `confidentialite_ia` (garde dans `filet.py`, branché dans `call_ai`). Liste blanche des appelants de `call_ai` : `views/ia.py`, `views/candidat_dashboard.py`, `referentiel_utils.py`, `cv_parser/groq_json.py` ; tout nouvel appelant fait échouer le test et force une revue.
 - Test d'architecture : `matcher.py` et `matching_cache.py` ne contiennent aucun appel IA.
 - Test de filet de sécurité : `call_ai(..., donnees_candidat=True)` lève `FuiteDonneesPersonnelles` si le prompt contient encore un e-mail, un téléphone, une URL personnelle ou un NIN.
 - Test des appels de classification (`referentiel_utils`) : le prompt ne contient pas le nom de l'établissement d'un intitulé « Master informatique – Université d'Oran ».
@@ -136,6 +138,15 @@ M1 = premier message de l'employeur (workflow et interface), M2 = second message
 - **R16** Clé Groq uniquement côté serveur, jamais exposée au navigateur (M2-8) — §9 — vérifié le 17/10/2026 ; **incident** : clé présente dans l'historique git (commit `9b04392`), à révoquer en phase 0.
 - **R17** Objectif global : données brutes chez TafTech → pseudonymisation → Groq → réponse → rattachement local (M2 final) — §1, §6.
 
+Exigences ajoutées le 19/10/2026 (demande de l'employeur sur le coût Groq, et audit de synthèse) — détail dans [§14](#14-volet-coût-et-résilience-groq-et-volet-arabe-19102026) :
+
+- **R18** Suivi des appels et des tokens consommés par fonctionnalité, avec décompte des entités masquées — plan Task 14.
+- **R19** Quotas raisonnables par utilisateur (déjà en place) et réutilisation des résultats stockés quand l'analyse n'a pas besoin d'être recalculée — plan Task 15.
+- **R20** Quota ou panne Groq : la plateforme continue, message « analyse IA temporairement indisponible », appel remboursé en cas de refus fournisseur (429) — plan Task 16. Plafond mensuel de dépense Groq : défini au passage au compte payant.
+- **R21** CV en arabe : détection des noms et lieux en alphabet arabe (Stanza), chiffres arabo-indiens normalisés ; échec fermé — plan Task 3b.
+- **R22** Information du candidat et de l'employeur : consentement et politique de confidentialité mentionnent la transmission du texte masqué à un prestataire cloud (loi 18-07) — plan Task 17.
+- **R23** NIN exigé par l'ANEM : obligatoire pour postuler avec un compte (pas à l'inscription), visible du candidat et de l'admin seulement, jamais transmis à l'IA ; la candidature rapide (sans compte) reste sans NIN, contournement consigné — plan Task 18. Chantier indépendant de l'IA, mais soumis à la même règle : le NIN est un identifiant national détecté et masqué avant tout appel IA (§4).
+
 ## 13. Décisions ouvertes (à trancher avec l'utilisateur)
 
 Tranchées le 17/10/2026 : employeurs remplacés par le secteur ; case non décochable.
@@ -143,6 +154,42 @@ Tranchées le 17/10/2026 : employeurs remplacés par le secteur ; case non déco
 Tranchées le 17/10/2026 (meilleur choix sans changer le modèle de données) : établissements de formation retirés ; employeurs remplacés par « Entreprise A/B… » + domaine du métier de l'expérience (le secteur de l'employeur n'existe pas dans `ExperienceCandidat`).
 
 1. **Secteur d'employeur réel (facultatif)** : si l'employeur exige vraiment « le secteur d'activité de l'entreprise », il faut un nouveau champ sur `ExperienceCandidat` (saisi par le candidat ou déduit par le parser) : choix de modèle de données, donc à valider avant. La solution ci-dessus ne le requiert pas.
-2. **Format du NIN** et liste exacte des pièces d'identité à détecter.
-3. **Arabe** : les CV en arabe sont-ils dans le périmètre ? Si oui, évaluer un modèle NER multilingue (plus lourd).
-4. **Hébergement** : taille du modèle spaCy et mémoire disponible sur le serveur de production.
+2. **Format du NIN** et liste exacte des pièces d'identité à détecter : hypothèse retenue, NIN = 18 chiffres ; à confirmer avec l'employeur.
+3. ~~**Arabe**~~ — **tranché le 19/10/2026** : Stanza (NER arabe) pour les passages en alphabet arabe, condition d'adoption = mesure sur 10 CV arabes réels, sinon refus de l'analyse IA des CV majoritairement arabes (§14).
+4. **Hébergement** : mémoire du serveur de production pour spaCy (environ 200 Mo), Stanza arabe et PyTorch (estimation 1 à 1,5 Go au total) — à mesurer pendant la Task 1.
+
+## 14. Volet coût et résilience Groq, et volet arabe (19/10/2026)
+
+**Contexte** : Global ZDR activé ; Free Plan Groq pendant les tests, passage au Developer/pay-as-you-go quand le volume l'exigera ; pas d'infrastructure IA locale. Déjà en place avant ce volet : quotas par compte et par fonction (`ia_quota.py`, `QuotaIAOverride`), verrou anti-doublon, plafond global en appels avec alerte e-mail, résultats d'analyse stockés sur le profil.
+
+**Décisions validées le 19/10/2026**
+1. Refus du fournisseur (429) : l'appel est **remboursé** (ne compte pas dans le quota) ; les autres pannes restent décomptées (règle du 18/08 conservée). Un disjoncteur de 30 à 3600 s (défaut 60 s) évite de marteler Groq.
+2. Données inchangées : le résultat stocké est renvoyé **sans appel Groq ni décompte** (empreinte SHA-256 du prompt, du texte, du modèle et de `max_tokens`) ; « Régénérer quand même » décompte.
+3. Tokens : colonnes sur `UtilisationIA` (pas de nouveau modèle) ; ils serviront de base au futur plafond de dépense.
+4. Arabe : Stanza + mesure réelle (voir R21). spaCy `xx_ent_wiki_sm` écarté (prise en charge de l'arabe non confirmée), GLiNER PII officiel écarté (arabe absent de ses langues), GLiNER arabe communautaire écarté (modèle non officiel pour une application RH sous loi 18-07).
+5. Le plafond mensuel en dépense Groq sera défini lors du passage au compte payant.
+
+**Hors périmètre** : parser de CV non mis en cache (son résultat n'est pas stocké, il préremplit un formulaire) ; aperçu recruteur du prompt (le recruteur voit déjà le profil, YAGNI).
+
+## 15. État d'implémentation (19/10/2026) — couverture des exigences
+
+Tout est codé et testé sur la branche `feature/pseudonymisation-ia` (18 tâches du plan). Journal : [docs/journal/2026-10-19-pseudonymisation-ia.md](../../journal/2026-10-19-pseudonymisation-ia.md). **Deux vérifications dépendent de CV réels fournis par l'utilisateur** et restent à faire : la mesure de qualité du parser (R3/R17) et la mesure du NER arabe (R21, condition d'adoption).
+
+| Exigence | Réalisée par | Vérifiée par |
+|---|---|---|
+| R1 Groq et modèle conservés | `AIConfig` et fournisseur inchangés | `test_ai_engine`, `test_call_ai_garde` |
+| R2, R3, R17 CV jamais envoyé brut, rattachement local | `confidentialite_ia/`, `cv_parser/parser.py` (`NOTE_JETONS`, `coordonnees.py`) | `test_cv_parser_confidentialite`, `test_ia_integration_jwt` (le nettoyage ne peut pas être contourné) |
+| R4 détection des types de données | `patterns.py`, `ner.py`, `ner_arabe.py` | `test_confidentialite_motifs`, `_ner`, `_arabe` |
+| R5, R9 case verrouillée, aperçu | `ApercuDonneesIA.jsx`, `views/ia_apercu.py` | `ApercuDonneesIA.test.jsx`, `test_apercu_donnees_ia` |
+| R6 même mécanisme partout | `call_ai(donnees_candidat=)`, `construction.py` | `test_ia_pseudonymisation_vues`, `test_architecture_ia` |
+| R7, R15 matching local, génération d'offre inchangée | aucun appel IA dans `matcher.py` | `test_architecture_ia` |
+| R8, R16 ZDR, clé côté serveur | console Groq (17/10/2026), `.env` | `test_cle_groq_non_exposee` |
+| R10 analyse recruteur sans nom | jeton `CANDIDAT_xxxxxx` | `test_ia_pseudonymisation_vues` |
+| R11 employeurs pseudonymisés | `champs_structures.py` | `test_confidentialite_champs` |
+| R12, R13, R14 classification et conseils minimaux | `domaine_agent.py`, `referentiel_utils.py`, `construction.py` | `test_confidentialite_classification`, `test_ia_pseudonymisation_vues` |
+| R18 tokens et audit | `UtilisationIA`, `ai_engine._enregistrer_usage`, `audit.py` | `test_ia_tokens` |
+| R19 résultat stocké réutilisé | `empreinte.py`, vues IA | `test_ia_cache_resultats` |
+| R20 quota Groq | disjoncteur, `rembourser_quota_ia`, `utils/erreursIA.js` | `test_ia_fournisseur_sature`, `erreursIA.test.js` |
+| R21 arabe | `ner_arabe.py` | `test_confidentialite_arabe` (dont un test réel Stanza) ; mesure sur CV réels à faire |
+| R22 information du candidat | `RegisterCandidat.jsx` (point 4), `ApercuDonneesIA.jsx` ; page CMS à compléter par l'admin | paragraphe fourni dans `docs/fonctionnel/cms-contenu.md` |
+| R23 NIN | `EnregistrerNINAPIView`, garde de `PostulerAPIView`, `ModalNIN.jsx` | `test_nin_postuler`, `ModalNIN.test.jsx` |

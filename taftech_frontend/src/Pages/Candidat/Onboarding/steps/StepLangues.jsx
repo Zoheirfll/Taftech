@@ -5,18 +5,22 @@ import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCa
 
 const NIVEAUX = ["Débutant", "Intermédiaire", "Avancé", "Langue maternelle"];
 
+// « , » et « : » séparent les langues et les niveaux dans le champ enregistré (« Arabe:Maternelle,Anglais:Avancé »).
+const sansSeparateurs = (texte) => texte.replace(/[,:]/g, "");
+
 export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, setLanguesMode, saveLanguesStep, skipStep, profil, saving }) => {
   const [nouvelleLangue, setNouvelleLangue] = useState("");
   const [nouveauNiveau, setNouveauNiveau] = useState(NIVEAUX[1]);
 
   const ajouter = () => {
-    const langue = nouvelleLangue.trim();
+    const langue = sansSeparateurs(nouvelleLangue).trim();
     if (!langue) return;
     setPendingLangues((list) => [...list.filter((l) => l.langue.toLowerCase() !== langue.toLowerCase()), { langue, niveau: nouveauNiveau }]);
     setNouvelleLangue("");
   };
 
   const removeAt = (idx) => setPendingLangues((list) => list.filter((_, i) => i !== idx));
+  const updateAt = (idx, patch) => setPendingLangues((list) => list.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
   return (
     <div>
@@ -26,10 +30,18 @@ export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, se
       </div>
       <div className="space-y-2 mb-4">
         {pendingLangues.map((l, idx) => (
-          <div key={idx} className={`${tw.card} p-3 flex items-center justify-between`}>
-            <div>
-              <span className={`text-sm font-semibold ${tw.textStrong}`}>{l.langue}</span>
-              <span className={`text-xs ${tw.textMuted} ml-2`}>{l.niveau}</span>
+          <div key={idx} className={`${tw.card} p-3 flex items-center gap-2`}>
+            <input
+              aria-label="Langue"
+              value={l.langue}
+              onChange={(e) => updateAt(idx, { langue: sansSeparateurs(e.target.value) })}
+              className={`${tw.authInput} flex-1`}
+            />
+            <div className="w-40 shrink-0">
+              <select aria-label="Niveau" value={l.niveau} onChange={(e) => updateAt(idx, { niveau: e.target.value })} className={tw.authInput}>
+                {/* Un niveau issu du CV absent de la liste (« Maternelle ») reste affiché tel quel. */}
+                {(NIVEAUX.includes(l.niveau) ? NIVEAUX : [l.niveau, ...NIVEAUX]).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
             </div>
             <button type="button" onClick={() => removeAt(idx)} aria-label="Supprimer" className="p-1.5 rounded-lg hover:bg-red-100 text-red-600">
               <Trash2 size={14} />

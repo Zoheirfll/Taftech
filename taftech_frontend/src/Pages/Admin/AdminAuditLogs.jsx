@@ -4,6 +4,7 @@ import { ShieldCheck, RefreshCw, ChevronLeft, ChevronRight, Search } from "lucid
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminErreurChargement, AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 
@@ -88,12 +89,19 @@ const AdminAuditLogs = () => {
           "La recherche porte sur le nom de l'admin, le type d'action et le détail.",
         ]}
         actions={
-          <button
-            onClick={fetchLogs}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border ${tw.borderSubtle} bg-white text-xs font-semibold ${tw.textMuted700} hover:bg-slate-50 transition-colors ${tw.focusRing}`}
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Actualiser
-          </button>
+          <>
+            <BoutonExportExcel
+              ressource="journal-audit"
+              params={{ search: searchApplique }}
+              nomFichier="journal_audit_taftech"
+            />
+            <button
+              onClick={fetchLogs}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border ${tw.borderSubtle} bg-white text-xs font-semibold ${tw.textMuted700} hover:bg-slate-50 transition-colors ${tw.focusRing}`}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Actualiser
+            </button>
+          </>
         }
       />
 

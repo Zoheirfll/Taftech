@@ -632,6 +632,7 @@ class MetierAutocompleteAPIView(APIView):
                 "metier_id": metier.id,
                 "metier_libelle": metier.libelle,
                 "appellation_libelle": app.libelle,
+                "appellation_id": app.id,  # le candidat peut conserver l'appellation choisie (affichage)
                 # Forme recommandée par IMPORT étape 11 (api_reference).
                 "id": metier.id,
                 "label": metier.libelle,

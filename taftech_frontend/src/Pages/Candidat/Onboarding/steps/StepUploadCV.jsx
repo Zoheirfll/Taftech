@@ -1,15 +1,19 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Sparkles, FileText } from "lucide-react";
 import { tw } from "../../../../theme";
 import QuotaIABadge from "../../../../Components/QuotaIABadge";
+import { ApercuDonneesIA } from "../../../../Components/ApercuDonneesIA";
 
 export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaParserCV }) => {
   const inputRef = useRef(null);
+  // Le fichier choisi n'est plus analysé tout de suite : le candidat peut d'abord voir les
+  // données qui seront transmises à l'IA, puis lance l'analyse lui-même.
+  const [fichierEnAttente, setFichierEnAttente] = useState(null);
 
   const onChange = (e) => {
     const file = e.target.files[0];
     e.target.value = "";
-    if (file) uploadCV(file);
+    if (file) setFichierEnAttente(file);
   };
 
   return (
@@ -44,6 +48,12 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
       )}
 
       {profil?.cv_pdf && (
+        <div className="mb-4">
+          <ApercuDonneesIA fonction="PARSER_CV" />
+        </div>
+      )}
+
+      {profil?.cv_pdf && (
         <button
           type="button"
           onClick={() => uploadCV(null)}
@@ -68,6 +78,21 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
           <div className="h-px flex-1 bg-slate-200" />
           <span className={`text-xs ${tw.textMuted}`}>ou téléversez un nouveau CV</span>
           <div className="h-px flex-1 bg-slate-200" />
+        </div>
+      )}
+
+      {fichierEnAttente && (
+        <div className="mb-4 space-y-3 text-left">
+          <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{fichierEnAttente.name}</p>
+          <ApercuDonneesIA fonction="PARSER_CV" fichier={fichierEnAttente} />
+          <button
+            type="button"
+            onClick={() => uploadCV(fichierEnAttente)}
+            disabled={parserLoading || quotaParserCV?.disponible === false}
+            className={`${tw.buttonPrimary} w-full flex items-center justify-center gap-2 py-3 disabled:opacity-60`}
+          >
+            <Sparkles size={16} /> Analyser mon CV
+          </button>
         </div>
       )}
 

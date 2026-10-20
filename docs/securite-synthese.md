@@ -27,6 +27,10 @@
 | Dépendances (CVE) | ✅ | `pip-audit` propre (Django/cryptography/sqlparse patchés) — session 20/08/2026. `npm audit` : 10 CVE restantes, toutes `devDependencies` (Cypress), zéro risque prod |
 | Scan CVE automatisé | ✅ | Dependabot (`.github/dependabot.yml`, pip + npm, hebdo) — session 20/08/2026 |
 | Anti-abus par email | ✅ | `EmailRateThrottle` (10/jour/email) en plus du throttle IP sur candidature rapide/spontanée/contact — session 20/08/2026 |
+| Pseudonymisation avant appel IA | ✅ | Nettoyage local (motifs + spaCy + Stanza), échec fermé, filet dans `call_ai`, aperçu au candidat — session 19/10/2026, SECURITY.md §34 |
+| Aucune fuite de la clé / des erreurs du fournisseur IA | ✅ | Réponses et journaux ne contiennent plus le texte brut des exceptions (type et statut seulement) — 19/10/2026 |
+| NIN obligatoire pour postuler, jamais exposé | ✅ | Écriture unique, message générique, absent du snapshot / vue recruteur / CVthèque / prompts IA — 19/10/2026, SECURITY.md §35 |
+| Résilience du quota fournisseur IA | ✅ | Disjoncteur sur 429, appel remboursé, tokens suivis par fonction — 19/10/2026 |
 | Throttling uploads/IA | ✅ | `FileUploadThrottle` (20/h, uploads candidat/recruteur), `CVParserThrottle` (10/h, dédié parser CV — aucun throttle avant), `AdminFileUploadThrottle` (100/h, CMS admin), documents privés candidat plafonnés à 1/type + 20 total — session 03/09/2026, détail `SECURITY.md` §17 |
 
 **Ne jamais committer `.env`.** Regénérer `SECRET_KEY` avant la prod.

@@ -38,7 +38,7 @@ class MigrerFormationsTests(TestCase):
 
         self.f_autre = formation('Licence pro', diplome_ref=self.autre)
         self.f_sans_ref = formation('Master maison')
-        self.f_specialite = formation('Licence', diplome_ref=self.licence, description='Cybersécurité')
+        self.f_specialite = formation('Licence', diplome_ref=self.licence, specialite_texte='Cybersécurité')
         self.f_complete = formation('Licence', diplome_ref=self.licence, specialite_ref=self.specialite, description='Génie logiciel')
         self.f_trop_courte = formation('ab', diplome_ref=self.autre)
         self.tmp = tempfile.TemporaryDirectory()

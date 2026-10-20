@@ -6,6 +6,7 @@ import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
+import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 import toast from "react-hot-toast";
 
 export const useGestionOffre = () => {
@@ -364,8 +365,11 @@ export const useGestionOffre = () => {
   const handleAnalyseGroq = async () => {
     setLoadingGroq(true);
     try {
+      // « Relancer » (une analyse existe déjà) demande une nouvelle analyse : sans cela, le serveur
+      // renvoie le résultat stocké quand le profil n'a pas changé et le bouton semblerait inactif.
       const data = await jobsService.getAnalyseGroqRecruteur(
         selectedCandidature.id,
+        Boolean(analyseGroq),
       );
       setAnalyseGroq(data.analyse);
       patchAnalyseCandidature(selectedCandidature.id, data.analyse);
@@ -373,7 +377,7 @@ export const useGestionOffre = () => {
     } catch (err) {
       toast.error(apiErrMsg(err, "Service IA indisponible."));
       reportError("ECHEC_ANALYSE_GROQ_RECRUTEUR", err);
-      if (err.response?.data?.quota_restant_jour !== undefined || err.response?.data?.code) {
+      if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });
       }
     } finally {

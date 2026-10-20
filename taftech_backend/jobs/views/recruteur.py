@@ -12,7 +12,7 @@ from .recruteur_exports import (
     ExportCandidaturesOffreExcelAPIView,
     ExportGraphiqueExcelAPIView,
     RapportDashboardPDFAPIView,
-    _construire_classeur_candidatures,
+    _colonnes_et_lignes_candidatures,
 )
 from .recruteur_entreprise import (
     EntreprisePhotosAPIView,

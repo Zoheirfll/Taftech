@@ -6,7 +6,7 @@
 
 **Architecture:** Un package `jobs/confidentialite_ia/` (motifs regex + spaCy pour noms/lieux, échec fermé) est la source unique. `call_ai(..., donnees_candidat=texte)` refuse tout texte contenant encore un e-mail, téléphone, URL ou NIN. Les infos personnelles du profil (nom, e-mail, téléphone…) sont extraites localement, jamais par l'IA. Un endpoint d'aperçu et un composant React montrent le texte exact envoyé.
 
-**Tech Stack:** Django 5.2 + DRF (tests `python manage.py test`), spaCy `fr_core_news_md`, React 18 + Vite + Vitest.
+**Tech Stack:** Django 5.2 + DRF (tests `python manage.py test`), spaCy `fr_core_news_md` (français), Stanza modèle arabe (CV en arabe, Task 3b), React 18 + Vite + Vitest.
 
 **Spec :** [docs/superpowers/specs/2026-10-17-pseudonymisation-ia-design.md](../specs/2026-10-17-pseudonymisation-ia-design.md) — exigences R1 à R17 (§12). Presidio est écarté (spec §5).
 
@@ -34,6 +34,9 @@ Créer :
 - `taftech_backend/jobs/confidentialite_ia/modeles.py` — `Detection`, `ResultatNettoyage`, jetons, libellés.
 - `taftech_backend/jobs/confidentialite_ia/patterns.py` — motifs regex (source unique).
 - `taftech_backend/jobs/confidentialite_ia/ner.py` — noms/lieux par spaCy, échec fermé.
+- `taftech_backend/jobs/confidentialite_ia/ner_arabe.py` — script arabe, chiffres arabo-indiens, noms/lieux par Stanza, échec fermé (Task 3b).
+- `taftech_backend/jobs/confidentialite_ia/audit.py` — compteur d'entités masquées du contexte courant (Task 14).
+- `taftech_backend/jobs/confidentialite_ia/empreinte.py` — empreinte SHA-256 des données envoyées (Task 15).
 - `taftech_backend/jobs/confidentialite_ia/pseudonymisation.py` — `nettoyer_texte`, références, fusion.
 - `taftech_backend/jobs/confidentialite_ia/coordonnees.py` — extraction locale des coordonnées.
 - `taftech_backend/jobs/confidentialite_ia/champs_structures.py` — jeton candidat, pseudonymes d'employeurs, lignes, intitulés.
@@ -71,6 +74,15 @@ Expected : des lignes `spacy==X.Y.Z`, `fr_core_news_md @ https://github.com/...w
 
 Run : `python -c "import spacy; nlp = spacy.load('fr_core_news_md'); print([(e.text, e.label_) for e in nlp('Jean Dupont habite à Oran.').ents])"`
 Expected : une liste contenant `('Jean Dupont', 'PER')` et `('Oran', 'LOC')`. Si le modèle ne se charge pas, ne pas continuer.
+
+- [ ] **Step 2b: Installer Stanza et son modèle arabe** (pour la Task 3b)
+
+```powershell
+pip install stanza
+python -c "import stanza; stanza.download('ar', processors='tokenize,ner')"
+python -c "import stanza; nlp = stanza.Pipeline('ar', processors='tokenize,ner', download_method=None); print([(e.text, e.type) for e in nlp('يعمل أحمد بن علي في وهران').ents])"
+```
+Expected : au moins une entité `PER` ou `LOC`. **À vérifier sur la documentation Stanza** (ce plan n'a pas pu confirmer la liste exacte des processeurs requis pour le NER arabe ni la taille du téléchargement) : noter dans le journal la commande qui fonctionne, la taille sur disque et la mémoire utilisée (spaCy + Stanza + PyTorch), à reporter dans `docs/exploitation/deploiement.md`. Si l'installation est impossible, ne pas continuer la Task 3b : signaler à l'utilisateur (repli = refuser les CV arabes).
 
 - [ ] **Step 3: Ajouter les lignes à requirements.txt**
 
@@ -546,6 +558,190 @@ Expected : `OK` (5 tests). Si le modèle ne reconnaît pas `Jean Dupont`, **ne p
 ```bash
 git add taftech_backend/jobs/confidentialite_ia/ner.py taftech_backend/jobs/tests/test_confidentialite_ner.py
 git commit -m "feat: reconnaissance des noms et lieux par spaCy, echec ferme" -- taftech_backend/jobs/confidentialite_ia/ner.py taftech_backend/jobs/tests/test_confidentialite_ner.py
+```
+
+---
+
+### Task 3b: CV en arabe — chiffres arabo-indiens, mots-clés arabes, noms par Stanza (R21)
+
+> Décidé le 19/10/2026 : Stanza (NER arabe) + mesure sur CV réels ; spaCy `xx_ent_wiki_sm` écarté (arabe non confirmé), GLiNER écarté (voir spec §14).
+
+**Files:**
+- Create: `taftech_backend/jobs/confidentialite_ia/ner_arabe.py`
+- Modify: `taftech_backend/jobs/confidentialite_ia/patterns.py` (mots-clés arabes)
+- Modify: `taftech_backend/jobs/confidentialite_ia/pseudonymisation.py` (détection sur texte normalisé, remplacement sur l'original)
+- Test: `taftech_backend/jobs/tests/test_confidentialite_arabe.py`
+
+**Interfaces:**
+- `ner_arabe.normaliser_chiffres(texte) -> str` : convertit `٠١٢٣٤٥٦٧٨٩` et `۰۱۲۳۴۵۶۷۸۹` en `0123456789`. Correspondance 1 pour 1 : **les positions ne changent pas**, donc les détections calculées sur le texte normalisé s'appliquent telles quelles au texte d'origine.
+- `ner_arabe.proportion_arabe(texte) -> float` (lettres arabes / lettres), `ner_arabe.SEUIL_ARABE = 0.05`, `ner_arabe.entites_ner_arabe(texte) -> list[Detection]` (`NOM`, `LIEU` dans les 600 premiers caractères), même `ModeleNerIndisponible` que `ner.py`.
+- `nettoyer_texte` : si `proportion_arabe(texte) >= SEUIL_ARABE` et que le NER est actif, Stanza s'ajoute à spaCy. **Échec fermé** : modèle arabe absent = `ModeleNerIndisponible` = aucun appel IA (le parser renvoie son échec habituel, l'aperçu un 503, le candidat remplit son profil à la main).
+
+- [ ] **Step 1: Tests qui échouent** (`test_confidentialite_arabe.py`)
+
+```python
+"""CV en arabe : chiffres arabo-indiens, mots-clés arabes, échec fermé, noms par Stanza."""
+from unittest import skipUnless
+from unittest.mock import patch
+
+from django.test import SimpleTestCase
+
+from jobs.confidentialite_ia.ner import ModeleNerIndisponible
+from jobs.confidentialite_ia.ner_arabe import normaliser_chiffres, proportion_arabe
+from jobs.confidentialite_ia.pseudonymisation import nettoyer_texte
+
+try:
+    import stanza  # noqa: F401
+    STANZA = True
+except ImportError:
+    STANZA = False
+
+
+class ArabeMotifsTest(SimpleTestCase):
+    def test_normalisation_chiffres_conserve_la_longueur(self):
+        brut = "٠٥٥٥ ١٢ ٣٤ ٥٦"
+        self.assertEqual(normaliser_chiffres(brut), "0555 12 34 56")
+        self.assertEqual(len(normaliser_chiffres(brut)), len(brut))
+
+    def test_telephone_en_chiffres_arabes_masque(self):
+        r = nettoyer_texte("الهاتف: ٠٥٥٥ ١٢ ٣٤ ٥٦", avec_ner=False)
+        self.assertIn("[TÉLÉPHONE]", r.texte)
+        self.assertNotIn("٠٥٥٥", r.texte)
+
+    def test_adresse_arabe_masquee(self):
+        r = nettoyer_texte("العنوان: 12 شارع ديدوش مراد، الجزائر", avec_ner=False)
+        self.assertIn("[ADRESSE]", r.texte)
+        self.assertNotIn("ديدوش", r.texte)
+
+    def test_date_de_naissance_arabe_masquee(self):
+        r = nettoyer_texte("تاريخ الميلاد: ١٢/٠٣/١٩٩٠", avec_ner=False)
+        self.assertIn("[DATE_NAISSANCE]", r.texte)
+        self.assertNotIn("١٩٩٠", r.texte)
+
+    def test_section_references_arabe_supprimee(self):
+        cv = "المراجع\nالسيد علي — ٠٥٥٥ ١٢ ٣٤ ٥٦\n\nاللغات\nالفرنسية"
+        r = nettoyer_texte(cv, avec_ner=False)
+        self.assertNotIn("علي", r.texte)
+        self.assertIn("اللغات", r.texte)
+
+    def test_proportion_arabe(self):
+        self.assertGreater(proportion_arabe("مرحبا بالعالم"), 0.9)
+        self.assertEqual(proportion_arabe("Hello world"), 0.0)
+        self.assertEqual(proportion_arabe(""), 0.0)
+
+    def test_texte_francais_inchange_par_la_normalisation(self):
+        self.assertEqual(nettoyer_texte("Développeur Python 2019", avec_ner=False).texte, "Développeur Python 2019")
+
+
+class ArabeEchecFermeTest(SimpleTestCase):
+    def test_modele_arabe_absent_aucun_nettoyage(self):
+        with patch("jobs.confidentialite_ia.ner_arabe._charger_arabe", side_effect=ModeleNerIndisponible("x")), \
+                patch("jobs.confidentialite_ia.ner.entites_ner", return_value=[]):
+            with self.assertRaises(ModeleNerIndisponible):
+                nettoyer_texte("يعمل أحمد بن علي في وهران")
+
+    def test_cv_latin_n_exige_pas_stanza(self):
+        with patch("jobs.confidentialite_ia.ner_arabe._charger_arabe", side_effect=ModeleNerIndisponible("x")), \
+                patch("jobs.confidentialite_ia.ner.entites_ner", return_value=[]):
+            nettoyer_texte("Développeur Python")  # ne lève pas
+
+
+@skipUnless(STANZA, "Stanza non installé")
+class ArabeStanzaTest(SimpleTestCase):
+    def test_nom_arabe_masque(self):
+        r = nettoyer_texte("أحمد بن علي\nمهندس برمجيات يعمل مع محمد الأمين على مشروع كبير")
+        self.assertIn("[NOM]", r.texte)
+```
+
+- [ ] **Step 2: Lancer** `python manage.py test jobs.tests.test_confidentialite_arabe -v 2` — attendu : échec (module `ner_arabe` absent).
+- [ ] **Step 3: Écrire `ner_arabe.py`**
+
+```python
+"""Prise en charge des CV en arabe : normalisation des chiffres, mesure du script, noms et lieux
+par Stanza (chargé une seule fois). Même règle que ner.py : si le modèle manque, on lève
+ModeleNerIndisponible, jamais de repli silencieux."""
+import logging
+import re
+
+from .modeles import Detection
+from .ner import ModeleNerIndisponible
+
+logger = logging.getLogger(__name__)
+
+SEUIL_ARABE = 0.05
+ZONE_ENTETE = 600
+_TABLE_CHIFFRES = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+_LETTRE_ARABE = re.compile(r"[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]")
+
+_pipeline = None
+
+
+def normaliser_chiffres(texte: str) -> str:
+    return texte.translate(_TABLE_CHIFFRES)
+
+
+def proportion_arabe(texte: str) -> float:
+    lettres = [c for c in texte if c.isalpha()]
+    if not lettres:
+        return 0.0
+    return sum(1 for c in lettres if _LETTRE_ARABE.match(c)) / len(lettres)
+
+
+def _charger_arabe():
+    global _pipeline
+    if _pipeline is None:
+        try:
+            import stanza
+            _pipeline = stanza.Pipeline("ar", processors="tokenize,ner", download_method=None, verbose=False)
+        except Exception as exc:
+            logger.error("Modèle Stanza arabe indisponible : %s", type(exc).__name__)
+            raise ModeleNerIndisponible("Modèle arabe indisponible.") from exc
+    return _pipeline
+
+
+def entites_ner_arabe(texte: str) -> list[Detection]:
+    detections = []
+    for ent in _charger_arabe()(texte).ents:
+        if ent.type == "PER":
+            detections.append(Detection(ent.start_char, ent.end_char, "NOM"))
+        elif ent.type == "LOC" and ent.start_char < ZONE_ENTETE:
+            detections.append(Detection(ent.start_char, ent.end_char, "LIEU"))
+    return detections
+```
+
+- [ ] **Step 4: Mots-clés arabes dans `patterns.py`** — ajouter à `MOTIFS` (avant `TELEPHONE`) :
+
+```python
+    ("ADRESSE", re.compile(r"العنوان\s*:?[^\n]{3,100}")),
+    ("DATE_NAISSANCE", re.compile(
+        rf"(?:تاريخ\s+الميلاد|المولود(?:ة)?\s+في|ولد(?:ت)?\s+في)\s*:?\s*(?P<valeur>{_DATE})")),
+```
+et compléter `TITRE_REFERENCES` : `r"^\s*(?:personnes?\s+de\s+)?(?:r[ée]f[ée]rences?|المراجع|مراجع)\s*:?\s*$"` ; `TITRE_SECTION` : ajouter `|الخبرات|الخبرة|التكوين|المهارات|اللغات|الهوايات|المشاريع|الشهادات`.
+
+- [ ] **Step 5: Détecter sur le texte normalisé, remplacer sur l'original** — dans `pseudonymisation.nettoyer_texte` :
+
+```python
+    from .ner_arabe import SEUIL_ARABE, normaliser_chiffres, proportion_arabe
+    texte, nb_references = retirer_section_references(texte)
+    normalise = normaliser_chiffres(texte)          # même longueur : positions identiques
+    detections = detecter_motifs(normalise) + detecter_noms_connus(texte, noms_connus)
+    if avec_ner:
+        from .ner import entites_ner
+        detections += entites_ner(texte)
+        if proportion_arabe(texte) >= SEUIL_ARABE:
+            from .ner_arabe import entites_ner_arabe
+            detections += entites_ner_arabe(texte)
+```
+(le reste de la fonction est inchangé : `appliquer(texte, retenues)` travaille sur le texte d'origine). Faire de même dans `coordonnees._premier` (recherche sur `normaliser_chiffres(texte)`) et dans `filet.verifier_absence_pii` (un téléphone en chiffres arabes ne doit pas échapper au garde-fou).
+
+- [ ] **Step 6: Vérifier** `python manage.py test jobs.tests.test_confidentialite_arabe jobs.tests.test_confidentialite_motifs jobs.tests.test_confidentialite_ner -v 2` — attendu : `OK` (le test Stanza est ignoré si Stanza n'est pas installé).
+- [ ] **Step 7: Mesure sur CV arabes réels (condition d'adoption, manuelle)** — avec 10 CV arabes ou mixtes fournis par l'utilisateur (hors dépôt, jamais commités), compter pour chacun : nom principal masqué (oui/non), noms de tiers masqués, téléphone, e-mail, adresse. Consigner **uniquement** un tableau de décomptes dans `docs/journal/`. **Seuil de décision** : nom du candidat masqué sur au moins 9 CV sur 10 et aucun téléphone/e-mail en clair. Sinon : ne pas activer l'arabe — `nettoyer_texte` lève alors `ArabeNonSupporte` pour tout texte dont `proportion_arabe >= 0.30` (message au candidat : « Les CV rédigés en arabe ne peuvent pas encore être analysés automatiquement, complétez votre profil à la main »), et l'utilisateur en est informé avant de poursuivre.
+- [ ] **Step 8: Documenter le déploiement** — `docs/exploitation/deploiement.md` : installation de Stanza et du modèle arabe, taille disque, mémoire mesurée au Step 2b de la Task 1.
+- [ ] **Step 9: Commit**
+
+```bash
+git add taftech_backend/jobs/confidentialite_ia taftech_backend/jobs/tests/test_confidentialite_arabe.py docs/exploitation/deploiement.md
+git commit -m "feat: prise en charge des CV en arabe (chiffres, mots-cles, noms par Stanza)" -- taftech_backend/jobs/confidentialite_ia taftech_backend/jobs/tests/test_confidentialite_arabe.py docs/exploitation/deploiement.md
 ```
 
 ---
@@ -2418,6 +2614,14 @@ Dans « Règles critiques », ajouter : « Données candidat envoyées à l'IA :
 
 Dans la spec, passer le statut en « implémenté le 17/10/2026 » et cocher, dans §12, chaque exigence R1 à R17 avec le fichier/test qui la couvre (tableau de couverture ci-dessous).
 
+- [ ] **Step 4b: Aucune fuite de la clé Groq ni de message fournisseur dans les réponses**
+
+Constat de l'audit du 19/10/2026 : `ParserCVAPIView` (`views/ia.py`, bloc `except Exception as e`) renvoie `f"Erreur parsing : {str(e)}"` — le texte brut d'une exception du fournisseur (qui peut citer la clé, l'organisation ou le contenu de la requête) atteint le navigateur. Remplacer par `logger.error("Erreur parsing CV : %s", type(e).__name__)` et la réponse générique `{"error": "Erreur lors de l'analyse du CV.", "code": "PARSING_ECHEC"}` (500). Test (`jobs/tests/test_cle_groq_non_exposee.py`) : avec `GROQ_API_KEY="gsk_CLE_DE_TEST_123"` (`patch.dict(os.environ)`) et un `call_ai` qui lève `Exception("401 invalid key gsk_CLE_DE_TEST_123")`, les routes parser, analyse carrière, conseils et analyse recruteur répondent sans que `response.content` contienne `gsk_CLE_DE_TEST_123` ni le mot `Traceback`. Même contrôle sur la réponse de `GET /api/jobs/ia/...` de configuration publique éventuelle.
+
+- [ ] **Step 4c: Tests d'intégration par vrai cookie JWT** (règle du projet : jamais seulement `force_authenticate`)
+
+Chercher le helper de connexion par cookie déjà utilisé par les tests du garde d'entreprise (`Grep "ENTREPRISE_NON_VALIDEE|cookie" taftech_backend/jobs/tests`) et l'employer pour : l'aperçu (`ia-apercu-donnees`), le parser (le nettoyage ne peut pas être contourné : aucun paramètre ne le désactive, un champ `masquer=false` ou `nettoyer=0` dans le corps est ignoré), l'analyse recruteur (prompt sans nom ni prénom) et l'accès d'un recruteur à `ia-apercu-donnees` (403).
+
 - [ ] **Step 5: Vérification complète**
 
 ```powershell
@@ -2443,6 +2647,197 @@ git commit -m "docs: pseudonymisation des donnees candidat avant appel IA (SECUR
 
 ---
 
+## Volet coût et résilience Groq (demande de l'employeur du 19/10/2026)
+
+> À exécuter **après** les Tasks 1 à 13 (elles modifient `call_ai`, ce volet l'étend). Contexte : Global ZDR activé, Free Plan Groq pendant les tests, passage au Developer/pay-as-you-go quand le volume l'exigera, pas d'infrastructure IA locale. **Déjà en place, à ne pas refaire** : quotas par compte et par fonction (`ia_quota.py`, `QuotaIAOverride`), verrou anti-doublon, plafond global en appels avec alerte e-mail. **Décisions validées le 19/10/2026** : (1) un refus de quota côté Groq (429) est **remboursé** (l'appel ne compte pas dans le quota de l'utilisateur), les autres pannes restent décomptées ; (2) profil inchangé = résultat stocké renvoyé **sans appel Groq ni décompte**, un bouton « Régénérer quand même » décompte ; (3) le plafond mensuel en dépense Groq sera défini au passage au compte payant (hors périmètre ici : les tokens enregistrés par la Task 14 en seront la base).
+
+### Task 14: Suivi des tokens par fonctionnalité (R18)
+
+**Files:**
+- Modify: `taftech_backend/jobs/models/ia.py` (`UtilisationIA`) + migration
+- Modify: `taftech_backend/jobs/ia_quota.py` (`consommer_quota_ia`, `liberer_verrou_ia`)
+- Modify: `taftech_backend/jobs/ai_engine.py` (`_call_groq`, `_call_ollama`)
+- Modify: `taftech_backend/jobs/views/ai_config.py` (consommation affichée à l'admin, ~ligne 179)
+- Modify: `taftech_frontend/src/Pages/Admin/` (page Configuration IA : colonne tokens)
+- Test: `taftech_backend/jobs/tests/test_ia_tokens.py`
+
+**Interfaces:**
+- `UtilisationIA` gagne `tokens_entree`, `tokens_sortie` (`PositiveIntegerField`, défaut 0), `modele` (`CharField(100)`, vide), `statut` (`ACCEPTE` par défaut | `REMBOURSE`) et `entites_masquees` (`JSONField`, défaut `{}` : décompte par catégorie, ex. `{"EMAIL": 1, "NOM": 3}`, **jamais de contenu**).
+- **Audit des entités masquées** (spec §9) : `confidentialite_ia/audit.py` expose une `ContextVar` `COMPTEUR_ENTITES` (dict ou `None`). `consommer_quota_ia` y place un dict vide ; `nettoyer_texte` y additionne ses `categories` quand il existe ; `liberer_verrou_ia` écrit le dict dans `entites_masquees` de la ligne courante puis vide les deux `ContextVar`. L'aperçu (qui n'appelle pas `consommer_quota_ia`) ne compte donc rien.
+- `consommer_quota_ia(user, fonction)` **retourne** la ligne créée et la range dans une `ContextVar` (`_utilisation_courante`) ; `liberer_verrou_ia` la vide. `call_ai` additionne les tokens (`F()`) sur cette ligne : un parsing de CV fait plusieurs appels IA (parser, métiers, diplômes), tous sont cumulés sur la même ligne.
+- Tout calcul de quota (`_compter`, `appels_ia_du_mois`) exclut `statut='REMBOURSE'`.
+- Hors contexte de quota (aucune ligne courante), les tokens sont seulement écrits dans le journal technique (décomptes, jamais de contenu).
+
+- [ ] **Step 1: Tests qui échouent** (`test_ia_tokens.py`)
+
+```python
+from unittest.mock import MagicMock, patch
+
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.test import TestCase
+
+from jobs.ai_engine import call_ai
+from jobs.ia_quota import appels_ia_du_mois, consommer_quota_ia, liberer_verrou_ia
+from jobs.models import AIConfig, UtilisationIA
+
+User = get_user_model()
+
+
+def _reponse(entree, sortie):
+    r = MagicMock()
+    r.choices[0].message.content = "ok"
+    r.usage.prompt_tokens, r.usage.completion_tokens = entree, sortie
+    return r
+
+
+class TokensIATest(TestCase):
+    def setUp(self):
+        cache.clear()
+        AIConfig.get_solo()
+        self.user = User.objects.create_user(username="tok", email="tok@test.dz", password="p", role="CANDIDAT")
+
+    @patch("jobs.ai_engine._get_groq_client")
+    def test_tokens_cumules_sur_la_ligne_du_quota(self, client):
+        client.return_value.chat.completions.create.side_effect = [_reponse(100, 40), _reponse(50, 10)]
+        ligne = consommer_quota_ia(self.user, "PARSER_CV")
+        call_ai([{"role": "user", "content": "a"}])
+        call_ai([{"role": "user", "content": "b"}])
+        ligne.refresh_from_db()
+        self.assertEqual((ligne.tokens_entree, ligne.tokens_sortie), (150, 50))
+        self.assertTrue(ligne.modele)
+
+    @patch("jobs.ai_engine._get_groq_client")
+    def test_sans_contexte_de_quota_aucune_ligne_modifiee(self, client):
+        client.return_value.chat.completions.create.return_value = _reponse(10, 5)
+        call_ai([{"role": "user", "content": "a"}])
+        self.assertEqual(UtilisationIA.objects.count(), 0)
+
+    @patch("jobs.ai_engine._get_groq_client")
+    def test_contexte_vide_apres_liberation(self, client):
+        client.return_value.chat.completions.create.return_value = _reponse(10, 5)
+        ligne = consommer_quota_ia(self.user, "PARSER_CV")
+        liberer_verrou_ia(self.user, "PARSER_CV")
+        call_ai([{"role": "user", "content": "a"}])
+        ligne.refresh_from_db()
+        self.assertEqual(ligne.tokens_entree, 0)
+
+    def test_ligne_remboursee_exclue_du_plafond(self):
+        ligne = consommer_quota_ia(self.user, "PARSER_CV")
+        ligne.statut = "REMBOURSE"
+        ligne.save(update_fields=["statut"])
+        self.assertEqual(appels_ia_du_mois(), 0)
+```
+
+- [ ] **Step 2: Lancer** `python manage.py test jobs.tests.test_ia_tokens -v 2` — attendu : échec (champs absents).
+- [ ] **Step 3: Modèle** — ajouter les 4 champs à `UtilisationIA`, puis `python manage.py makemigrations jobs` et **immédiatement** `python manage.py migrate` (piège du projet).
+- [ ] **Step 4: `ia_quota.py`** — `ContextVar` `_utilisation_courante` ; `consommer_quota_ia` la renseigne et retourne la ligne ; `liberer_verrou_ia` la remet à `None` ; `.exclude(statut='REMBOURSE')` dans `_compter` et `appels_ia_du_mois`.
+- [ ] **Step 5: `ai_engine.py`** — dans `_call_groq`, lire `response.usage` (`prompt_tokens`, `completion_tokens`, `getattr(..., 0)` par prudence) et appeler `_enregistrer_usage(modele, entree, sortie)` : si une ligne courante existe, `UtilisationIA.objects.filter(pk=...).update(tokens_entree=F('tokens_entree')+e, tokens_sortie=F('tokens_sortie')+s, modele=modele)` ; dans tous les cas `logger.info("IA tokens modele=%s entree=%s sortie=%s", ...)` (aucun contenu). `_call_ollama` : `prompt_eval_count` / `eval_count`.
+- [ ] **Step 5b: Décompte des entités masquées** — créer `audit.py` (`COMPTEUR_ENTITES = ContextVar("compteur_entites", default=None)`), brancher `nettoyer_texte`, `consommer_quota_ia` et `liberer_verrou_ia` comme décrit plus haut. Test à ajouter à `test_ia_tokens.py` : après `consommer_quota_ia`, `nettoyer_texte("a@b.dz 0555 12 34 56", avec_ner=False)` puis `liberer_verrou_ia` → la ligne porte `{"EMAIL": 1, "TELEPHONE": 1}` et ne contient aucune valeur ; un `nettoyer_texte` hors contexte de quota n'écrit rien.
+- [ ] **Step 6: Consommation visible par l'admin** — dans `ai_config.py`, ajouter par fonction : appels du mois, tokens entrée/sortie du mois, moyenne de tokens par appel. Colonne correspondante sur la page Configuration IA (tokens `tw.*`, pas de couleur en dur).
+- [ ] **Step 7: Vérifier** `python manage.py test jobs.tests.test_ia_tokens jobs.tests.test_ia_quota jobs.tests.test_ai_config_securite -v 2` — attendu : `OK`.
+- [ ] **Step 8: Commit** (fichiers listés, jamais `git add .`) : `feat: suivi des tokens IA par fonctionnalite`.
+
+---
+
+### Task 15: Résultats stockés réutilisés si les données n'ont pas changé (R19)
+
+**Files:**
+- Modify: `taftech_backend/jobs/models/` (`ProfilCandidat` : `empreinte_analyse_carriere`, `empreinte_conseils` ; `Candidature` : `empreinte_analyse_ia` ; `CharField(64)`, vide) + migration
+- Create: `taftech_backend/jobs/confidentialite_ia/empreinte.py`
+- Modify: `taftech_backend/jobs/views/ia.py` (carrière, analyse recruteur), `taftech_backend/jobs/views/candidat_dashboard.py` (conseils)
+- Modify: `taftech_frontend/src/Pages/Candidat/SuggestionsCarriere.jsx`, `CandidatDashboard.jsx`
+- Test: `taftech_backend/jobs/tests/test_ia_cache_resultats.py`
+
+**Interfaces:**
+- `empreinte_ia(*morceaux) -> str` : SHA-256 hexadécimal du prompt système, du texte envoyé, du modèle et de `max_tokens` (un changement de prompt ou de modèle par l'admin invalide donc le résultat stocké). Pour l'analyse recruteur, le jeton `CANDIDAT_xxxxxx` aléatoire est remplacé par une constante **avant** le calcul, sinon l'empreinte changerait à chaque appel.
+- Si `empreinte == stockée` et qu'un résultat est stocké, et que `?regenerer=1` (ou `regenerer: true` pour le POST) est absent : la vue renvoie le résultat stocké avec `depuis_cache: true` et `genere_le`, **avant** la vérification de quota, le verrou et le décompte. Le candidat peut donc relire son analyse même quota épuisé.
+- `regenerer` suit le chemin normal (quota, verrou, décompte) et remplace le résultat et l'empreinte.
+- Le parser de CV n'est pas concerné (son résultat n'est pas stocké sur le profil, il préremplit un formulaire).
+
+- [ ] **Step 1: Tests qui échouent** — pour chacune des 3 routes (`analyse-carriere`, `conseils-personnalises`, `analyse-groq`) : (a) deux appels successifs sans changement → un seul appel IA (`mock.call_count == 1`) et une seule ligne `UtilisationIA` ; (b) modification d'une compétence du profil → nouvel appel ; (c) `regenerer` → nouvel appel et nouveau décompte ; (d) quota journalier épuisé + résultat stocké à jour → 200 avec `depuis_cache: true` ; (e) changement de `analyse_carriere_prompt` dans `AIConfig` → nouvel appel.
+- [ ] **Step 2: Lancer** — attendu : échec.
+- [ ] **Step 3: Champs + migration** puis `migrate` immédiatement.
+- [ ] **Step 4: `empreinte.py`** (`hashlib.sha256`, séparateur `\x1f` entre morceaux).
+- [ ] **Step 5: Brancher les 3 vues** — construire le texte (déjà fait par `construction.py` / Task 6), calculer l'empreinte, appliquer la règle ci-dessus. Renseigner l'empreinte au moment où le résultat est enregistré.
+- [ ] **Step 6: Frontend** — si `depuis_cache`, afficher « Analyse à jour — générée le JJ/MM/AAAA » et un bouton « Régénérer quand même » (appelle avec `regenerer`, compte dans le quota, `confirmToast` si le quota restant est inférieur ou égal à 2) ; mettre à jour les mocks `jobsService` des tests concernés.
+- [ ] **Step 7: Vérifier** `python manage.py test jobs.tests.test_ia_cache_resultats jobs.tests.test_ia_pseudonymisation_vues jobs.tests.test_ia_quota -v 2` puis `npx vitest run`.
+- [ ] **Step 8: Commit** : `feat: reutilisation des analyses IA stockees quand le profil est inchange`.
+
+---
+
+### Task 16: Quota ou panne Groq — la plateforme continue, sans pénaliser l'utilisateur (R20)
+
+**Files:**
+- Modify: `taftech_backend/jobs/ai_engine.py` (`FournisseurIASature`, disjoncteur)
+- Modify: `taftech_backend/jobs/ia_quota.py` (`verifier_quota_ia`, `rembourser_quota_ia`)
+- Modify: `taftech_backend/jobs/views/ia.py`, `taftech_backend/jobs/views/candidat_dashboard.py`
+- Modify: `taftech_frontend/src/` (messages par code, composants IA)
+- Test: `taftech_backend/jobs/tests/test_ia_fournisseur_sature.py`
+
+**Interfaces:**
+- `ai_engine.FournisseurIASature(Exception)` levée quand Groq répond 429 (`groq.RateLimitError`). Le délai d'attente vient de l'en-tête `retry-after` s'il existe, borné entre 30 et 3600 s, 60 s par défaut ; il est posé dans le cache sous `ia_fournisseur_sature` (disjoncteur).
+- `ai_engine.fournisseur_sature() -> bool` lit ce drapeau. Tant qu'il est posé, `call_ai` lève immédiatement `FournisseurIASature` **sans appeler Groq** (on ne martèle pas un fournisseur déjà saturé, et le Free Plan n'est pas aggravé).
+- `verifier_quota_ia` renvoie `(False, {code: 'IA_FOURNISSEUR_SATURE', error: "L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement."})` quand le drapeau est posé : aucun verrou pris, aucun décompte. Même convention de statut que `BUDGET_IA_EPUISE`.
+- `rembourser_quota_ia(ligne)` passe la ligne à `statut='REMBOURSE'`. Appelée par les vues quand l'appel échoue sur `FournisseurIASature`, ou (parser, dont les erreurs sont avalées en interne) quand `fournisseur_sature()` est vrai à la fin du traitement.
+- Les classificateurs (`referentiel_utils`, `domaine_agent`) retombent déjà sur le repli local : ne rien changer, les tester.
+
+- [ ] **Step 1: Tests qui échouent** :
+  - 429 simulé (`groq.RateLimitError`) sur la route carrière → 503 `IA_FOURNISSEUR_SATURE`, ligne `REMBOURSE`, quota restant inchangé ;
+  - appel suivant dans la minute → réponse immédiate, **zéro** appel au client Groq (`assert_not_called`) ;
+  - une autre erreur (timeout) → 503 `Service IA temporairement indisponible`, ligne **non** remboursée ;
+  - parser de CV avec Groq saturé → réponse 200 `success: false` + `IA_INDISPONIBLE`, ligne remboursée, import manuel toujours possible ;
+  - route métier non IA (liste d'offres) → 200 pendant la saturation (la plateforme continue) ;
+  - le message d'erreur ne contient ni clé ni détail du fournisseur.
+- [ ] **Step 2: Lancer** — attendu : échec.
+- [ ] **Step 3: `ai_engine.py`** — attraper `RateLimitError` dans `_call_groq`, poser le drapeau, lever `FournisseurIASature` ; `call_ai` vérifie le drapeau après le garde de confidentialité et avant l'appel. Ne jamais journaliser le corps de la réponse d'erreur.
+- [ ] **Step 4: `ia_quota.py`** — contrôle du drapeau en tête de `verifier_quota_ia` (avant le budget) ; `rembourser_quota_ia`.
+- [ ] **Step 5: Vues** — `except FournisseurIASature` avant `except Exception`, avec remboursement et code `IA_FOURNISSEUR_SATURE` (503).
+- [ ] **Step 6: Frontend** — pour ce code, message « L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement. » (toast + état du bloc IA), sans bloquer le reste de la page ; le bouton redevient actif. Aucun nouveau flux : réutiliser l'affichage déjà prévu pour `BUDGET_IA_EPUISE`.
+- [ ] **Step 7: Vérifier** `python manage.py test jobs.tests.test_ia_fournisseur_sature jobs.tests.test_ia_quota jobs.tests.test_ia_tokens -v 2` puis `npx vitest run`.
+- [ ] **Step 8: Documenter et commiter** — SECURITY.md (nouvelle section : suivi des tokens, remboursement 429, disjoncteur, aucune donnée candidat dans les journaux), `docs/exploitation/` (procédure Free Plan → Developer, plafond de dépense Groq à définir au passage au payant), `docs/fonctionnel/parser-cv-ia.md`, CLAUDE.md (règle : tout nouvel appel IA passe par `consommer_quota_ia` et gère `FournisseurIASature`). Commit : `feat: gestion du quota fournisseur Groq (disjoncteur, remboursement, message propre)`.
+
+---
+
+### Task 17: Information du candidat et consentement (R22)
+
+**Files:**
+- Modify: la page publique `/confidentialite` et le texte de consentement (chemins à trouver : `Grep "confidentialite|consentement" taftech_frontend/src`), `docs/fonctionnel/ui-site-public-mobile.md`
+- Test: le test existant de cette page (le trouver avec `Grep "Confidentialite" taftech_frontend/tests`)
+
+- [ ] **Step 1: Lire le texte actuel** de la page et du consentement (catégories de données, durées, sous-traitants) avant toute modification. Ne rien affirmer qui ne soit pas vrai ou détenu : **pas de mention d'autorisation de l'ANPDP ni de conformité à la loi 18-07 sans justificatif** (règle du projet).
+- [ ] **Step 2: Ajouter un paragraphe « Analyse par intelligence artificielle »** dont le fond est : pour analyser un CV, proposer des métiers ou des conseils, TafTech envoie à un prestataire d'IA situé hors d'Algérie (Groq, États-Unis) une version de vos données dans laquelle nom, coordonnées, adresse, date de naissance, pièces d'identité et liens personnels sont masqués ; le prestataire n'en conserve pas de copie (Zero Data Retention activé sur le compte TafTech) ; vous pouvez voir le texte exact avant l'envoi ; le calcul des correspondances avec les offres se fait chez TafTech, sans IA externe. Éviter les mots « anonyme » et « anonymisé » (la pseudonymisation n'est pas une anonymisation).
+- [ ] **Step 3: Point juridique à confirmer par l'employeur** : le cadre applicable à un transfert de données hors d'Algérie au titre de la loi 18-07 (formalités éventuelles auprès de l'ANPDP). À consigner dans `docs/problemes-a-traiter.md` comme question ouverte pour l'employeur ; ne pas le trancher dans le code.
+- [ ] **Step 4: Test** : la page affiche le paragraphe ; adapter le test existant. **Step 5: Commit** `docs: information sur l'analyse IA dans la politique de confidentialite`.
+
+---
+
+### Task 18: NIN obligatoire pour postuler (demande ANEM du 19/10/2026) — chantier indépendant de l'IA
+
+> Hors périmètre de la pseudonymisation mais dépend de sa règle : le NIN ne doit **jamais** atteindre l'IA. Décisions validées le 19/10/2026 : (1) NIN **non demandé à l'inscription**, **obligatoire pour postuler** avec un compte ; (2) visible par le **candidat et l'admin seulement** (règle actuelle conservée : jamais au recruteur, jamais dans `profil_snapshot` ni dans la CVthèque) ; (3) la **candidature rapide** (`PostulerRapideAPIView`, sans compte) reste **sans NIN**. **Limite assumée** : un candidat peut contourner l'obligation ANEM en postulant par la voie rapide ; à consigner dans `docs/problemes-a-traiter.md` pour décision ultérieure de l'utilisateur.
+
+**Constat du code (19/10/2026)** : `User.nin` existe (18 chiffres, unique, nullable, `accounts/models.py:24`), n'est plus collecté à l'inscription, **aucun écran ne permet de le saisir** (`ModalInfos.jsx` l'affiche en lecture seule, `useProfilCandidat.js:221` l'exclut de la sauvegarde). SECURITY.md indique « NIN validé une seule fois puis immuable ».
+
+**Files:**
+- Modify: `taftech_backend/jobs/views/candidatures.py` (`PostulerAPIView`), `taftech_backend/accounts/` (route et serializer d'enregistrement du NIN)
+- Modify: `taftech_frontend/src/Pages/Candidat/ProfilCandidat/ModalInfos.jsx`, `useProfilCandidat.js`, le composant du bouton « Postuler » (chercher avec `Grep "postuler" taftech_frontend/src`)
+- Test: `taftech_backend/accounts/tests/test_nin_postuler.py`, test frontend du parcours de candidature
+
+**Interfaces:**
+- `PostulerAPIView.post` : après la vérification du rôle, `if not request.user.nin` → `403 {"error": "Votre NIN est obligatoire pour postuler.", "code": "NIN_REQUIS"}`. Aucun effet sur `PostulerRapideAPIView`.
+- Nouvelle route candidat authentifié (rôle `CANDIDAT`) pour enregistrer le NIN : 18 chiffres, **écriture une seule fois** (si `nin` est déjà renseigné → `409 NIN_DEJA_ENREGISTRE`, la correction passe par l'admin), unicité contrôlée avec un message **générique** (« Ce NIN ne peut pas être enregistré, contactez le support ») pour ne pas révéler qu'il appartient à un autre compte, throttle anti-énumération (`WriteActionThrottle` ou équivalent du projet), journal d'audit sans la valeur du NIN.
+- Le NIN n'est jamais ajouté à `profil_snapshot`, à `ProfilCandidatDTO` hors `include_nin`, ni à aucun texte envoyé à l'IA.
+
+- [ ] **Step 1: Tests qui échouent** (cookie JWT réel, pas `force_authenticate`) : postuler sans NIN → 403 `NIN_REQUIS` et aucune candidature créée ; enregistrer un NIN valide puis postuler → 201 ; NIN de 17 chiffres ou avec lettres → 400 ; second enregistrement → 409 ; NIN d'un autre compte → message générique, même statut qu'un refus de validation ; recruteur appelant la route → 403 ; la candidature créée a un `profil_snapshot` **sans** NIN ; `GET` des candidatures reçues côté recruteur ne contient pas le NIN ; candidature rapide sans NIN → toujours 201 (comportement conservé).
+- [ ] **Step 2: Test d'architecture IA** : pour un candidat ayant un NIN, ni `texte_carriere`, ni `texte_conseils`, ni le prompt de l'analyse recruteur, ni le texte nettoyé du parser ne contiennent ce NIN.
+- [ ] **Step 3: Backend** — implémenter le garde, la route et l'audit ci-dessus.
+- [ ] **Step 4: Frontend** — au clic sur « Postuler », si le profil n'a pas de NIN (ou si la réponse est `NIN_REQUIS`) : modale stylée (tokens `tw.*`, pas de `window.prompt`) expliquant « Votre NIN est exigé par l'ANEM pour toute candidature. Il n'est jamais communiqué aux recruteurs. » avec un champ validé par `useErreursChamps` (18 chiffres, erreur sous le champ), puis reprise automatique de la candidature. `ModalInfos.jsx` : champ de saisie quand le NIN est vide, lecture seule ensuite. Mettre à jour les mocks `jobsService`/`authService` des tests concernés.
+- [ ] **Step 5: Audit de sécurité (règle 9 du projet)** : route protégée par `IsAuthenticated` + rôle `CANDIDAT`, périmètre = l'utilisateur lui-même ; aucune donnée sensible renvoyée par la route (réponse sans NIN) ; documenter dans SECURITY.md (nouvelle section) et dans `docs/fonctionnel/espace-candidat.md`.
+- [ ] **Step 6: Candidats existants** : ceux qui n'ont pas de NIN le saisissent à leur prochaine candidature ; les candidatures déjà envoyées ne sont pas modifiées. Vérifier que la page `/confidentialite` (qui cite déjà le NIN) reste exacte.
+- [ ] **Step 7: Vérifier et commiter** `python manage.py test accounts jobs.tests.test_audit_acces_paliers`, `npx vitest run`, `npm run build` ; commit `feat: NIN obligatoire pour postuler avec un compte (exigence ANEM)`.
+
+---
+
 ## Couverture des exigences (spec §12)
 
 - **R1** Groq et modèle conservés : aucune modification de `AIConfig` ni du fournisseur ; Task 5 vérifie que `test_ai_engine` reste vert.
@@ -2462,3 +2857,10 @@ git commit -m "docs: pseudonymisation des donnees candidat avant appel IA (SECUR
 - **R15** Génération d'offre inchangée : Task 11 (`test_generation_d_offre_ne_recoit_aucune_donnee_candidat`).
 - **R16** Clé Groq côté serveur : vérifié le 17/10/2026 ; incident traité ; consigné Task 13.
 - **R17** Objectif global : Tasks 9 (coordonnées extraites localement, rattachées au profil) et 6 (résultat rattaché à la candidature).
+- **R18** Suivi des appels et des tokens par fonctionnalité : Task 14.
+- **R19** Quotas par utilisateur (déjà en place, `ia_quota.py`) et réutilisation des résultats stockés sans nouvel appel : Task 15.
+- **R20** Quota ou panne Groq : la plateforme continue, message « analyse IA temporairement indisponible », appel remboursé : Task 16. Le plafond mensuel de dépense Groq sera défini au passage au compte payant (hors périmètre, s'appuiera sur les tokens de la Task 14).
+- **R21** CV en arabe : Task 3b (chiffres arabo-indiens, mots-clés arabes, noms par Stanza, échec fermé, mesure sur CV réels comme condition d'adoption).
+- **R22** Information du candidat sur le transfert vers un prestataire cloud : Task 17 (texte rédigé sans « anonyme » ni mention d'autorisation non détenue ; point juridique renvoyé à l'employeur).
+- **R23** NIN obligatoire pour postuler avec un compte (exigence ANEM), jamais visible du recruteur, jamais transmis à l'IA : Task 18 ; test d'architecture IA inclus. Candidature rapide inchangée (limite consignée).
+- **Complément d'audit (Task 13, Steps 4b et 4c)** : aucune réponse API ne contient la clé Groq ni un message brut du fournisseur (défaut corrigé dans `ParserCVAPIView`), et les routes sensibles sont testées avec un vrai cookie JWT.

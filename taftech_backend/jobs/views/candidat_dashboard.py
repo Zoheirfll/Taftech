@@ -17,8 +17,10 @@ from ..models import (
 )
 from ..profile_score import calculer_score_profil
 from ..metiers_matching import calculer_metiers_accessibles
-from .ia import GroqThrottle
+from .ia import GroqThrottle, reponse_fournisseur_sature
+from ..ai_engine import FournisseurIASature
 from ..throttles import FileUploadThrottle
+from .admin_filtres import rendez_vous_filtres
 
 MAX_DOCUMENTS_CANDIDAT = 20
 
@@ -83,45 +85,38 @@ class ConseilsPersonnalisesIAAPIView(APIView):
             return Response({"error": "Les conseils personnalisés sont temporairement désactivés par l'administrateur."}, status=503)
 
         from ..ia_quota import verifier_quota_ia, consommer_quota_ia, acquerir_verrou_ia, liberer_verrou_ia
-        ok, quota_info = verifier_quota_ia(request.user, 'CONSEILS_DASHBOARD')
-        if not ok:
-            return Response(quota_info, status=403)
-
         try:
             profil = request.user.profil_candidat
         except Exception:
             return Response({"error": "Profil introuvable."}, status=404)
 
-        score = calculer_score_profil(request.user)
-        candidatures = Candidature.objects.filter(candidat=request.user)
-        from ..models import AlerteEmploi
-        alertes = AlerteEmploi.objects.filter(candidat=request.user)
-
-        competences_faibles = [
-            f"{c.label} ({c.get_niveau_display()})"
-            for c in profil.competences_detail.exclude(niveau='CONFIRME')[:5]
-        ]
-        nb_nouvelles_offres_alertes = sum(
-            1 for a in alertes if a.derniere_consultation is None
+        # Données strictement nécessaires (effectifs par statut, diplôme du référentiel) : le même
+        # texte est montré au candidat par l'aperçu des données transmises.
+        from ..confidentialite_ia.construction import texte_conseils
+        from ..confidentialite_ia.empreinte import empreinte_ia
+        donnees_text = texte_conseils(request.user, profil)
+        system_prompt = ai_config.conseils_dashboard_prompt or DEFAULT_PROMPT_CONSEILS_DASHBOARD
+        empreinte = empreinte_ia(
+            system_prompt, donnees_text, ai_config.provider, ai_config.groq_model,
+            ai_config.ollama_model, ai_config.conseils_dashboard_max_tokens,
         )
-
-        donnees_text = f"""
-Score de profil global : {score['total']}/100
-Détail du score : {score['details']}
-Nombre de candidatures envoyées : {candidatures.count()}
-Statuts des candidatures : {list(candidatures.values_list('statut', flat=True))}
-Compétences non confirmées (niveau faible) : {', '.join(competences_faibles) if competences_faibles else 'Aucune'}
-Nombre d'alertes emploi configurées : {alertes.count()}
-Titre professionnel : {profil.titre_professionnel or 'Non renseigné'}
-Diplôme : {profil.diplome or 'Non renseigné'}
-"""
+        # Données, prompt et modèle inchangés : résultat stocké renvoyé sans appel IA ni décompte
+        # (même quota épuisé). `?regenerer=1` force une nouvelle génération (quota, verrou, décompte).
+        if (request.query_params.get('regenerer') != '1' and profil.derniers_conseils_dashboard
+                and profil.empreinte_conseils == empreinte):
+            return Response({
+                "conseils": profil.derniers_conseils_dashboard, "depuis_cache": True,
+                "genere_le": profil.conseils_dashboard_le.isoformat() if profil.conseils_dashboard_le else None,
+            }, status=200)
+        ok, quota_info = verifier_quota_ia(request.user, 'CONSEILS_DASHBOARD')
+        if not ok:
+            return Response(quota_info, status=403)
         if not acquerir_verrou_ia(request.user, 'CONSEILS_DASHBOARD'):
             return Response({'error': 'Un traitement IA est déjà en cours pour ce compte.', 'code': 'IA_APPEL_EN_COURS'}, status=429)
         consommer_quota_ia(request.user, 'CONSEILS_DASHBOARD')
         try:
             from ..ai_engine import call_ai
             import json
-            system_prompt = ai_config.conseils_dashboard_prompt or DEFAULT_PROMPT_CONSEILS_DASHBOARD
             content = call_ai(
                 [
                     {'role': 'system', 'content': system_prompt},
@@ -129,6 +124,7 @@ Diplôme : {profil.diplome or 'Non renseigné'}
                 ],
                 max_tokens=ai_config.conseils_dashboard_max_tokens,
                 response_format={'type': 'json_object'},
+                donnees_candidat=donnees_text,
             )
             parsed = json.loads(content)
             conseils = parsed.get('conseils', [])
@@ -137,13 +133,16 @@ Diplôme : {profil.diplome or 'Non renseigné'}
             conseils = [str(c).strip() for c in conseils if str(c).strip()][:5]
             profil.derniers_conseils_dashboard = conseils
             profil.conseils_dashboard_le = timezone.now()
-            profil.save(update_fields=['derniers_conseils_dashboard', 'conseils_dashboard_le'])
+            profil.empreinte_conseils = empreinte
+            profil.save(update_fields=['derniers_conseils_dashboard', 'conseils_dashboard_le', 'empreinte_conseils'])
             return Response({
                 "conseils": conseils, "quota_ia": quota_info,
                 "genere_le": profil.conseils_dashboard_le.isoformat(),
             }, status=200)
+        except FournisseurIASature:
+            return reponse_fournisseur_sature()
         except Exception as e:
-            logger.error("Erreur Groq conseils personnalisés : %s", e)
+            logger.error("Erreur Groq conseils personnalisés : %s (statut %s)", type(e).__name__, getattr(e, "status_code", "?"))
             return Response({"error": "Service IA temporairement indisponible."}, status=503)
         finally:
             liberer_verrou_ia(request.user, 'CONSEILS_DASHBOARD')
@@ -595,10 +594,7 @@ class RendezVousAdminListAPIView(APIView):
     def get(self, request):
         if request.user.role != 'ADMIN':
             return Response({"error": "Accès refusé."}, status=403)
-        rdvs = RendezVous.objects.select_related('candidat').all()
-        statut = request.query_params.get('statut')
-        if statut:
-            rdvs = rdvs.filter(statut=statut)
+        rdvs = rendez_vous_filtres(request.query_params)  # mêmes filtres que l'export Excel
         data = [
             {
                 'id': r.id, 'date_heure': r.date_heure, 'motif': r.motif, 'statut': r.statut,

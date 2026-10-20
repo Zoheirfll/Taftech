@@ -5,7 +5,6 @@ import { reportError } from "../../utils/errorReporter";
 import { Link } from "react-router-dom";
 import {
   Search,
-  Download,
   Eye,
   Pencil,
   CheckCircle,
@@ -21,6 +20,7 @@ import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminVide } from "../../Components/AdminEtat";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
@@ -213,27 +213,6 @@ const AdminOffres = () => {
     }
   };
 
-  const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier...");
-    try {
-      const blob = await jobsService.exportOffres();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "offres_taftech.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
-      reportError("ECHEC_EXPORT_EXCEL_OFFRES", err);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
-
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
   const modalClass = `${tw.modalOverlay} p-4`;
 
@@ -253,12 +232,11 @@ const AdminOffres = () => {
           "Filtrez par statut et triez par date ou expiration en cliquant sur l'en-tête des colonnes.",
         ]}
         actions={
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
-          >
-            <Download size={15} /> Exporter Excel
-          </button>
+          <BoutonExportExcel
+            ressource="offres"
+            params={{ search: searchTerm, statut: statutFiltre, ordering }}
+            nomFichier="offres_taftech"
+          />
         }
       />
         <div className="flex flex-col sm:flex-row gap-3">

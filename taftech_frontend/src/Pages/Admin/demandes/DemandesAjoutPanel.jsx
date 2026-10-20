@@ -9,6 +9,7 @@ import { tw } from "../../../theme";
 import AdminPagination from "../../../Components/AdminPagination";
 import SkeletonTableRows from "../../../Components/SkeletonTableRows";
 import { AdminVide } from "../../../Components/AdminEtat";
+import BoutonExportExcel from "../../../Components/BoutonExportExcel";
 import DecisionDemandeModal from "./DecisionDemandeModal";
 import {
   ORIGINES_DEMANDE, PASTILLES_DEMANDE, STATUTS_DEMANDE, TYPES_DEMANDE, formatDateDemande,
@@ -72,7 +73,7 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par statut">
+      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filtrer par statut">
         {PASTILLES_DEMANDE.map((pastille) => {
           const actif = statutFiltre === pastille.code;
           return (
@@ -89,6 +90,13 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
             </button>
           );
         })}
+        <div className="ml-auto">
+          <BoutonExportExcel
+            ressource="demandes-ajout"
+            params={{ type, statut: statutFiltre, search: rechercheEffective }}
+            nomFichier={`demandes_ajout_${String(type).toLowerCase()}_taftech`}
+          />
+        </div>
       </div>
 
       <div className="relative max-w-sm">

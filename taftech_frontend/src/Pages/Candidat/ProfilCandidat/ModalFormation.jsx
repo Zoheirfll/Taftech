@@ -53,14 +53,24 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                   diplomeId={newForm.diplome_ref}
                   specialiteId={newForm.specialite_ref}
                   onChangeDiplome={(id, label) => {
-                    setNewForm((p) => ({ ...p, diplome_ref: id, ...(id && label ? { diplome: label } : {}) }));
+                    setNewForm((p) => {
+                      // Un intitulé saisi (ou venu du CV) est conservé ; seul un intitulé qui n'était que le
+                      // libellé du type précédent suit le nouveau choix.
+                      const personnalise = !!p.diplome && p.diplome !== p.diplome_ref_libelle;
+                      return {
+                        ...p,
+                        diplome_ref: id,
+                        diplome_ref_libelle: label || "",
+                        ...(id && label && !personnalise ? { diplome: label } : {}),
+                      };
+                    });
                     effacer("diplome");
                   }}
                   onChangeSpecialite={(id, label) =>
-                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { description: label, specialite_autre: "" } : {}) }))
+                    setNewForm((p) => ({ ...p, specialite_ref: id, ...(id && label ? { specialite_texte: "", specialite_autre: "" } : {}) }))
                   }
-                  autreTexte={newForm.description}
-                  onChangeAutreTexte={(texte) => setNewForm((p) => ({ ...p, description: texte, specialite_autre: texte }))}
+                  autreTexte={newForm.specialite_texte || ""}
+                  onChangeAutreTexte={(texte) => setNewForm((p) => ({ ...p, specialite_texte: texte, specialite_autre: texte }))}
                   diplomeAutreTexte={newForm.diplome}
                   onChangeDiplomeAutreTexte={(texte) => {
                     setNewForm({ ...newForm, diplome: texte });
@@ -102,6 +112,32 @@ export const ModalFormation = ({ inputClass, modalClass, modalInnerClass, btnPri
                   }}
                 />
                 <FieldError id="err-etablissement" message={erreurs.etablissement} />
+              </div>
+              <div>
+                <label htmlFor="formation-intitule" className={tw.formLabel}>
+                  Intitulé de la formation
+                </label>
+                <input
+                  id="formation-intitule"
+                  className={inputClass}
+                  value={newForm.diplome || ""}
+                  onChange={(e) => {
+                    setNewForm({ ...newForm, diplome: e.target.value });
+                    effacer("diplome");
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="formation-description" className={tw.formLabel}>
+                  Description ou mention (optionnel)
+                </label>
+                <textarea
+                  id="formation-description"
+                  rows={3}
+                  className={`${inputClass} resize-y`}
+                  value={newForm.description || ""}
+                  onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

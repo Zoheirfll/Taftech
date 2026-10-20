@@ -25,6 +25,7 @@ from .offres import (
 )
 from .profils import (
     ProfilCandidatAPIView,
+    EnregistrerNINAPIView,
     ExperienceAPIView,
     ExperienceDetailAPIView,
     FormationAPIView,
@@ -84,17 +85,27 @@ from .admin import (
     AdminStatsAPIView,
     AdminSeoStatsAPIView,
     AdminUsersListAPIView,
+    AdminDossierCandidatAPIView,
+    AdminDossierRecruteurAPIView,
+    AdminDossierAdminAPIView,
     AdminUserModerateAPIView,
     AdminBroadcastEmailAPIView,
     AdminCandidaturesListAPIView,
-    ExportAdminCandidaturesExcelAPIView,
-    ExportEntreprisesExcelAPIView,
-    ExportOffresExcelAPIView,
-    ExportUtilisateursExcelAPIView,
     AdminMarcheAPIView,
     AdminAuditLogAPIView,
     AdminDemandesPremiumAPIView,
     AdminCompteAdminsAPIView,
+)
+from .admin_exports import (
+    ExportAdminCandidaturesExcelAPIView,
+    ExportEntreprisesExcelAPIView,
+    ExportOffresExcelAPIView,
+    ExportUtilisateursExcelAPIView,
+    ExportDemandesAjoutExcelAPIView,
+    ExportDemandesPremiumExcelAPIView,
+    ExportRendezVousExcelAPIView,
+    ExportAuditLogsExcelAPIView,
+    ExportErreursSystemeExcelAPIView,
 )
 from .ia import (
     OffresRecommandeesAPIView,
@@ -104,6 +115,7 @@ from .ia import (
     GenererOffreIAAPIView,
     QuotaIAAffichageAPIView,
 )
+from .ia_apercu import ApercuDonneesIAAPIView
 from .bulletin import GenererBulletinPDFAPIView
 from .equipe import (
     EquipeAPIView,
@@ -186,6 +198,13 @@ from .candidat_dashboard import (
     TypeDocumentAdminAPIView,
 )
 from .profils import AlerteMarquerVueAPIView
+from .referentiel_explorateur import (
+    AdminExplorateurArbreAPIView,
+    AdminExplorateurGroupeAPIView,
+    AdminExplorateurMetierAPIView,
+    AdminExplorateurAnomaliesAPIView,
+    AdminExplorateurFormationsAPIView,
+)
 from .referentiel_admin import (
     AdminReferentielMetiersAPIView,
     AdminReferentielSpecialitesAPIView,

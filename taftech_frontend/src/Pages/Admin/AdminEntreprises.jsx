@@ -3,7 +3,7 @@ import { jobsService } from "../../Services/jobsService";
 import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import { Search, Download, X, Building2 } from "lucide-react";
+import { Search, X, Building2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { nomWilaya } from "../../utils/wilaya";
@@ -11,6 +11,7 @@ import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import { mediaUrl } from "../../utils/mediaUrl";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminVide } from "../../Components/AdminEtat";
 import AdminPagination from "../../Components/AdminPagination";
 import { ADMIN_PAGE_SIZE } from "../../Services/adminService";
@@ -118,27 +119,6 @@ const AdminEntreprises = () => {
     });
   };
 
-  const handleExport = async () => {
-    const toastId = toast.loading("Génération du fichier...");
-    try {
-      const blob = await jobsService.exportEntreprises();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "entreprises_taftech.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
-      reportError("ECHEC_EXPORT_EXCEL_ENTREPRISES", err);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
-
   return (
     <div className="space-y-5">
       <AdminPageHeader
@@ -155,12 +135,11 @@ const AdminEntreprises = () => {
           "« Voir » ouvre la fiche complète (légal, contact, présentation, photos). Échap ou un clic à l'extérieur la ferme.",
         ]}
         actions={
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 ${tw.buttonSuccessSolid} text-sm font-semibold rounded-lg transition-colors shadow-sm ${tw.focusRing}`}
-          >
-            <Download size={15} /> Exporter Excel
-          </button>
+          <BoutonExportExcel
+            ressource="entreprises"
+            params={{ search: searchTerm, ordering, abonnement_expire_sous: expireSous }}
+            nomFichier="entreprises_taftech"
+          />
         }
       />
       <div className="flex">

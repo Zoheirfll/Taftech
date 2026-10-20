@@ -20,6 +20,7 @@ from ..throttles import WriteActionThrottle
 from .admin import _get_client_ip
 
 MAX_CORRECTIONS_PAR_ENVOI = 30
+NB_ANALYSES_RECENTES_MAX = 200  # le tableau « analyses récentes » est paginé côté écran
 TYPES_CORRECTION = {code for code, _ in CorrectionParsing.TYPES}
 
 
@@ -115,7 +116,7 @@ class AdminQualiteIAParserAPIView(APIView):
                 'nb_competences': p.nb_competences, 'exp_sans_metier': p.nb_exp_sans_metier,
                 'exp_repli': p.nb_exp_metier_repli, 'source_competences': p.source_competences,
             }
-            for p in qs[:25]
+            for p in qs[:NB_ANALYSES_RECENTES_MAX]
         ]
         return Response({
             'jours': jours,

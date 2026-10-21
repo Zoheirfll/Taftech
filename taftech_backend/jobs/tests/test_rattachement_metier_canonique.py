@@ -116,6 +116,41 @@ class RattachementMetierTests(TestCase):
         self.assertTrue(_titre_couvert_par("HOTE D'ACCUEIL ET DE CAISSE", "Hôte de caisse"))
         self.assertFalse(_titre_couvert_par("ADMINISTRATEUR DES VENTES ET SUPPORT IT", "Administrateur Cloud"))
 
+    def test_forme_feminine_du_titre_couvre_l_appellation_au_masculin(self):
+        # Bug réel (21/10/2026) : « HÔTESSE DE CAISSE » ne couvrait pas « Hôte de Caisse » (1 mot sur 2).
+        from jobs.domaine_agent import _titre_couvert_par
+        self.assertTrue(_titre_couvert_par("HÔTESSE DE CAISSE ET D'ACCUEIL", "Hôte de Caisse"))
+        self.assertTrue(_titre_couvert_par("Cheffe de projet digital", "Chef de projet digital"))
+        self.assertTrue(_titre_couvert_par("Vendeuse en parfumerie", "Vendeur en parfumerie"))
+        self.assertTrue(_titre_couvert_par("Éducatrice spécialisée", "Éducateur spécialisé"))
+        self.assertFalse(_titre_couvert_par("HÔTESSE DE CAISSE", "Hôte de l'air"))
+
+    def test_employeur_et_parentheses_du_titre_sont_ignores_par_le_garde_fou(self):
+        # Le CV colle parfois l'employeur au poste : « … CHEZ UNO - ES-SENIA », « (Stage de Licence) ».
+        from jobs.domaine_agent import _titre_couvert_par
+        self.assertTrue(_titre_couvert_par("HÔTESSE DE CAISSE ET D'ACCUEIL CHEZ UNO - ES-SENIA", "Hôte de Caisse"))
+        self.assertTrue(_titre_couvert_par("Technicien support informatique (Stage de Licence)", "Technicien support informatique"))
+        self.assertFalse(_titre_couvert_par("Comptable chez Hôte Caisse SARL", "Hôte de Caisse"))
+
+    def test_le_prompt_impose_le_niveau_hierarchique_du_titre(self):
+        # Constaté en réel (21/10/2026) : « Responsable Administration RH & Recrutement » classé par l'IA en
+        # « Gestionnaire Administration du Personnel », refusé ensuite par le garde-fou : métier vide.
+        from jobs.domaine_agent import PROMPT_CLASSIFICATION
+        self.assertIn("niveau hiérarchique", PROMPT_CLASSIFICATION)
+        self.assertIn("ne le rétrograde pas", PROMPT_CLASSIFICATION)
+
+    def test_stagiaire_ne_bloque_pas_le_metier_du_stage(self):
+        # Constaté en réel (21/10/2026) : « Stagiaire en Informatique » restait sans métier, car aucune
+        # appellation ne contient « stagiaire ». Le statut de stagiaire n'est pas le métier exercé.
+        from jobs.domaine_agent import _candidats_pour_experience, _titre_couvert_par
+        metier = _metier("TAF-SUPINFO", "Technicien support informatique", self.assistant.groupe_principal)
+        _appellation("A20", "Technicien support informatique", metier, "technicien support informatique")
+        libelles = [c[0] for c in _candidats_pour_experience(
+            "Stagiaire en Informatique", "Maintenance et assistance technique sur les postes informatiques", limite=10)]
+        self.assertIn("Technicien support informatique", libelles)
+        self.assertTrue(_titre_couvert_par("Stagiaire en Informatique (Stage de Licence)", "Technicien support informatique"))
+        self.assertFalse(_titre_couvert_par("Stagiaire en Informatique", "Technicien réseau"))
+
     def test_appellation_d_encadrement_non_proposee_sans_encadrement_dans_le_poste(self):
         # « Chargé de paie » ne doit pas se voir proposer « Responsable Paie » (constaté en réel).
         from jobs.domaine_agent import _candidats_pour_experience

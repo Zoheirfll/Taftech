@@ -4,6 +4,7 @@ import Select from "react-select";
 import { selectStyles, tw } from "../../../theme";
 import { grouperParFamille } from "../../../utils/familleFormation";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import FieldError from "../../../Components/FieldError";
 import { useErreursChamps } from "../../../utils/useErreursChamps";
 
@@ -190,15 +191,35 @@ export const ModalInfos = ({ inputClass, modalClass, modalInnerClass, btnPrimary
                   </label>
                   <MetierAutocomplete
                     proposable
-                    value={editInfo.metier_appellation_libelle || editInfo.metier_libelle || ""}
+                    value={editInfo.metier_appellation_libelle || editInfo.metier_libelle || editInfo.demande_metier_libelle || ""}
                     onSelect={(item) => setEditInfo({
                       ...editInfo,
                       metier: item.metier_id,
                       metier_libelle: item.metier_libelle,
                       metier_appellation: item.appellation_id || null,
                       metier_appellation_libelle: item.appellation_libelle,
+                      demande_metier: "",
+                      demande_metier_libelle: "",
+                      demande_metier_statut: "",
+                      demande_metier_motif: "",
+                    })}
+                    onPropose={(proposition) => setEditInfo({
+                      ...editInfo,
+                      metier: "",
+                      metier_libelle: "",
+                      metier_appellation: null,
+                      metier_appellation_libelle: "",
+                      demande_metier: proposition.id,
+                      demande_metier_libelle: proposition.libelle,
+                      demande_metier_statut: "A_EXAMINER",
+                      demande_metier_motif: "",
                     })}
                   />
+                  {editInfo.demande_metier && !editInfo.metier && (
+                    <div className="mt-1.5">
+                      <MetierProposeBadge propose={{ statut: editInfo.demande_metier_statut || "A_EXAMINER", motif_refus: editInfo.demande_metier_motif }} />
+                    </div>
+                  )}
                 </div>
               </div>
               <div>

@@ -1,6 +1,7 @@
 // Carte "Informations personnelles" : photo, identité, badges (service militaire, permis...) et contacts.
 import { Pencil, Camera, User, Phone, Mail, Check, Minus, Award, Briefcase } from "lucide-react";
 import { tw } from "../../../theme";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { formatDureeMois } from "../../../utils/cvDates";
 import { SECTION_CLASS, SECTION_TITLE, EDIT_BTN } from "./profilUi";
@@ -54,7 +55,13 @@ const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInp
                     || constants.diplomes.find(d => d.value === profil.diplome)?.label
                     || formatText(profil.diplome)}
                   {(profil.metier_appellation_libelle || profil.metier_libelle) && <> {" · "}{profil.metier_appellation_libelle || profil.metier_libelle}</>}
+                  {!(profil.metier_appellation_libelle || profil.metier_libelle) && profil.metier_propose && <> {" · "}{profil.metier_propose.libelle}</>}
                 </p>
+                {!(profil.metier_appellation_libelle || profil.metier_libelle) && profil.metier_propose && (
+                  <div className="mt-1 flex justify-center md:justify-start">
+                    <MetierProposeBadge propose={profil.metier_propose} />
+                  </div>
+                )}
                 <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-2">
                   {profil.niveau_experience && (
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full ${tw.bgPrimarySoft} ${tw.textPrimaryStrong}`}>

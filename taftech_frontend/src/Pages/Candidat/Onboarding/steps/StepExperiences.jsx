@@ -65,16 +65,29 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
                   className={tw.authInput}
                 />
               </div>
+              <label className={`block text-xs font-semibold ${tw.textStrong}`}>
+                Métier <span className={`font-normal ${tw.textMuted}`}>(détermine les offres qui vous sont recommandées)</span>
+              </label>
               <MetierAutocomplete
                 proposable
-                value={exp.appellation_libelle || exp.metier_libelle || ""}
+                value={exp.appellation_libelle || exp.metier_libelle || exp.demande_metier_libelle || ""}
                 onSelect={(item) => setPendingExperiences((list) => list.map((e, i) => (i === idx ? {
                   ...e,
                   metier: item.metier_id,
                   metier_libelle: item.metier_libelle,
                   appellation: item.appellation_id || null,
                   appellation_libelle: item.appellation_libelle,
+                  demande_metier: null,
+                  demande_metier_libelle: "",
                 } : e)))}
+                onPropose={(proposition) => updateFields(idx, {
+                  metier: null,
+                  metier_libelle: "",
+                  appellation: null,
+                  appellation_libelle: "",
+                  demande_metier: proposition.id,
+                  demande_metier_libelle: proposition.libelle,
+                })}
               />
               <textarea
                 value={exp.description || ""}
@@ -97,12 +110,24 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-bold ${tw.textStrong}`}>{exp.titre_poste}</p>
                 <p className={`text-xs ${tw.textMuted}`}>{exp.entreprise}</p>
-                {(exp.date_debut || exp.date_fin || exp.appellation_libelle || exp.metier_libelle) && (
+                {(exp.date_debut || exp.date_fin) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                     {exp.date_debut ? `${formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — ` : ""}{exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "présent"}
-                    {(exp.appellation_libelle || exp.metier_libelle) && ` · ${exp.appellation_libelle || exp.metier_libelle}`}
                   </p>
                 )}
+                {/* Le métier alimente le calcul du matching : mis en évidence, et signalé quand il manque. */}
+                <div className="mt-1.5">
+                  {exp.appellation_libelle || exp.metier_libelle ? (
+                    <span className={tw.badgePrimary}>Métier : {exp.appellation_libelle || exp.metier_libelle}</span>
+                  ) : exp.demande_metier_libelle ? (
+                    // Proposé par le candidat : sélectionné en attendant la décision, ne compte pas dans le calcul.
+                    <span className={tw.badgeAccent}>Métier proposé : {exp.demande_metier_libelle} — en attente de validation</span>
+                  ) : (
+                    <button type="button" onClick={() => setEditingIndex(idx)} className={`${tw.badgeAccent} cursor-pointer`}>
+                      Métier à choisir (utile pour vos offres recommandées)
+                    </button>
+                  )}
+                </div>
                 {exp.description && <p className={`text-xs ${tw.textMuted} mt-1 whitespace-pre-line`}>{exp.description}</p>}
               </div>
               <div className="flex items-center gap-1 shrink-0">

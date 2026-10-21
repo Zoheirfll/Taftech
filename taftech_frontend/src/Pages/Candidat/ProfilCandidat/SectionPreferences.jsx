@@ -1,6 +1,7 @@
 // Carte "Préférences de recrutement" : métier souhaité, salaire, mobilité, situation.
 import { Pencil } from "lucide-react";
 import { tw } from "../../../theme";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import { SECTION_CLASS, SECTION_TITLE, EDIT_BTN } from "./profilUi";
 
 const SectionPreferences = ({ profil, formatText, setShowPrefForm }) => (
@@ -15,7 +16,10 @@ const SectionPreferences = ({ profil, formatText, setShowPrefForm }) => (
               {[
                 {
                   label: "Métier souhaité",
-                  value: profil.metier_souhaite_appellation_libelle || profil.metier_souhaite_libelle || "Non renseigné",
+                  value: profil.metier_souhaite_appellation_libelle || profil.metier_souhaite_libelle
+                    || profil.metier_souhaite_propose?.libelle || "Non renseigné",
+                  badge: !(profil.metier_souhaite_appellation_libelle || profil.metier_souhaite_libelle)
+                    ? profil.metier_souhaite_propose : null,
                 },
                 {
                   label: "Salaire souhaité",
@@ -26,7 +30,7 @@ const SectionPreferences = ({ profil, formatText, setShowPrefForm }) => (
                   label: "Situation actuelle",
                   value: formatText(profil.situation_actuelle),
                 },
-              ].map(({ label, value }) => (
+              ].map(({ label, value, badge }) => (
                 <div
                   key={label}
                   className={`p-3 rounded-lg ${tw.prefCardSoft}`}
@@ -35,6 +39,7 @@ const SectionPreferences = ({ profil, formatText, setShowPrefForm }) => (
                     {label}
                   </p>
                   <p className={`text-sm font-semibold ${tw.textPrimary}`}>{value}</p>
+                  {badge && <div className="mt-1.5"><MetierProposeBadge propose={badge} /></div>}
                 </div>
               ))}
             </div>

@@ -1,8 +1,40 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from ..models import ProfilCandidat, ExperienceCandidat, FormationCandidat, CompetenceCandidat
+from ..models import ProfilCandidat, ExperienceCandidat, FormationCandidat, CompetenceCandidat, DemandeAjout
 
 User = get_user_model()
+
+
+def _demande_metier_autorisee(serializer, champ, demande):
+    """Une demande de métier ne se lie au profil que si elle est celle du compte connecté (ouverte, de type
+    métier). Un lien déjà posé sur l'objet modifié reste valable tel quel (le formulaire peut le renvoyer).
+    Sans utilisateur dans le contexte de la vue : refus (fermé par défaut)."""
+    if demande is None:
+        return None
+    instance = serializer.instance
+    if instance is not None and getattr(instance, f'{champ}_id', None) == demande.pk:
+        return demande
+    from ..demandes_ajout.metiers import demande_metier_utilisable
+    utilisateur = serializer.context.get('utilisateur_demandeur')
+    if utilisateur is None or not demande_metier_utilisable(demande, utilisateur):
+        raise serializers.ValidationError("Cette demande de métier ne peut pas être liée à votre profil.")
+    return demande
+
+
+def _metier_propose(demande):
+    from ..demandes_ajout.metiers import resume_demande_metier
+    return resume_demande_metier(demande)
+
+
+def _appliquer_choix_metier(attrs, champ_metier, champ_demande, champ_appellation=None):
+    """Un vrai métier choisi retire la proposition ; une proposition remplace le métier choisi avant (jamais les
+    deux : seul le métier officiel compte pour le calcul)."""
+    if attrs.get(champ_metier):
+        attrs[champ_demande] = None
+    elif attrs.get(champ_demande) is not None:
+        attrs[champ_metier] = None
+        if champ_appellation:
+            attrs[champ_appellation] = None
 
 
 def appellation_appartient_au_metier(appellation, metier):
@@ -17,17 +49,38 @@ def appellation_appartient_au_metier(appellation, metier):
 class ExperienceSerializer(serializers.ModelSerializer):
     metier_libelle = serializers.CharField(source='metier.libelle', read_only=True, default=None)
     appellation_libelle = serializers.CharField(source='appellation.libelle', read_only=True, default=None)
+    # Métier proposé en attente de décision : écrit par le candidat, lu seulement par lui (jamais par un
+    # recruteur : `inclure_metier_propose` n'est posé que par les vues du candidat), jamais un critère de calcul.
+    demande_metier = serializers.PrimaryKeyRelatedField(
+        queryset=DemandeAjout.objects.filter(type=DemandeAjout.TYPE_METIER),
+        required=False, allow_null=True, write_only=True,
+    )
+    metier_propose = serializers.SerializerMethodField()
 
     class Meta:
         model = ExperienceCandidat
         fields = [
             'id', 'titre_poste', 'entreprise', 'metier', 'metier_libelle',
             'appellation', 'appellation_libelle', 'date_debut', 'date_fin', 'date_debut_precision', 'date_fin_precision', 'description',
+            'demande_metier', 'metier_propose',
         ]
+
+    def get_metier_propose(self, obj):
+        return _metier_propose(obj.demande_metier)
+
+    def to_representation(self, instance):
+        donnees = super().to_representation(instance)
+        if not self.context.get('inclure_metier_propose'):
+            donnees.pop('metier_propose', None)
+        return donnees
+
+    def validate_demande_metier(self, demande):
+        return _demande_metier_autorisee(self, 'demande_metier', demande)
 
     def validate(self, attrs):
         """L'appellation affichée doit appartenir au métier de l'expérience (le métier, éventuellement via son
         métier canonique, reste la clé du calcul) : jamais un intitulé sans rapport avec lui."""
+        _appliquer_choix_metier(attrs, 'metier', 'demande_metier', 'appellation')
         metier, appellation = attrs.get('metier'), attrs.get('appellation')
         if metier and appellation and not appellation_appartient_au_metier(appellation, metier):
             raise serializers.ValidationError({'appellation': "Cette appellation n'appartient pas au métier choisi."})
@@ -96,6 +149,17 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
         source='metier_souhaite_appellation.libelle', read_only=True, default=None)
     diplome_ref_libelle = serializers.SerializerMethodField()
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
+    # Métiers proposés en attente de décision : voir ExperienceSerializer. Absents de la réponse hors vues du candidat.
+    demande_metier = serializers.PrimaryKeyRelatedField(
+        queryset=DemandeAjout.objects.filter(type=DemandeAjout.TYPE_METIER),
+        required=False, allow_null=True, write_only=True,
+    )
+    demande_metier_souhaite = serializers.PrimaryKeyRelatedField(
+        queryset=DemandeAjout.objects.filter(type=DemandeAjout.TYPE_METIER),
+        required=False, allow_null=True, write_only=True,
+    )
+    metier_propose = serializers.SerializerMethodField()
+    metier_souhaite_propose = serializers.SerializerMethodField()
 
     class Meta:
         model = ProfilCandidat
@@ -105,6 +169,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'metier', 'metier_libelle', 'metier_souhaite', 'metier_souhaite_libelle',
             'metier_appellation', 'metier_appellation_libelle',
             'metier_souhaite_appellation', 'metier_souhaite_appellation_libelle',
+            'demande_metier', 'demande_metier_souhaite', 'metier_propose', 'metier_souhaite_propose',
             'experiences', 'competences', 'competences_detail', 'langues',
             'first_name', 'last_name', 'email', 'telephone', 'nin', 'date_naissance',
             'experiences_detail', 'formations_detail',
@@ -164,9 +229,30 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     def get_metier_appellation_libelle(self, obj):
         return obj.metier_appellation.libelle if obj.metier_appellation_id and self._peut_voir_coordonnees(obj) else None
 
+    def get_metier_propose(self, obj):
+        return _metier_propose(obj.demande_metier)
+
+    def get_metier_souhaite_propose(self, obj):
+        return _metier_propose(obj.demande_metier_souhaite)
+
+    def to_representation(self, instance):
+        donnees = super().to_representation(instance)
+        if not self.context.get('inclure_metier_propose'):  # jamais montré à un recruteur
+            donnees.pop('metier_propose', None)
+            donnees.pop('metier_souhaite_propose', None)
+        return donnees
+
+    def validate_demande_metier(self, demande):
+        return _demande_metier_autorisee(self, 'demande_metier', demande)
+
+    def validate_demande_metier_souhaite(self, demande):
+        return _demande_metier_autorisee(self, 'demande_metier_souhaite', demande)
+
     def validate(self, attrs):
         """Une appellation doit appartenir au métier correspondant ; changer de métier sans renvoyer
         d'appellation efface l'ancienne (elle n'appartient plus au nouveau métier)."""
+        _appliquer_choix_metier(attrs, 'metier', 'demande_metier', 'metier_appellation')
+        _appliquer_choix_metier(attrs, 'metier_souhaite', 'demande_metier_souhaite', 'metier_souhaite_appellation')
         for champ_metier, champ_appellation in (
                 ('metier', 'metier_appellation'), ('metier_souhaite', 'metier_souhaite_appellation')):
             if champ_metier not in attrs and champ_appellation not in attrs:

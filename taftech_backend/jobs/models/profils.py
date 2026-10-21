@@ -127,6 +127,18 @@ class ProfilCandidat(models.Model):
         'Appellation', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier_souhaite',
         verbose_name="Appellation du métier souhaité (référentiel v2)",
     )
+    # Métier proposé par le candidat (« Je ne trouve pas mon métier ») : affiché sur le profil en attente de
+    # la décision de l'admin, mais JAMAIS un critère de calcul (le matching ne lit que `metier` /
+    # `metier_souhaite`). Accepté ou rattaché : le métier officiel est posé et le lien retiré ; refusé : le lien
+    # reste pour afficher le motif, sans effet sur le score.
+    demande_metier = models.ForeignKey(
+        'DemandeAjout', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier',
+        verbose_name="Demande d'ajout du métier actuel",
+    )
+    demande_metier_souhaite = models.ForeignKey(
+        'DemandeAjout', null=True, blank=True, on_delete=models.SET_NULL, related_name='profils_metier_souhaite',
+        verbose_name="Demande d'ajout du métier souhaité",
+    )
 
     # --- ANCIENS CHAMPS GARDÉS ---
     diplome = models.CharField(max_length=100, choices=DIPLOMES_CHOICES, blank=True, null=True, verbose_name="Diplôme (ancien champ, conservé pour compat historique)")
@@ -182,6 +194,11 @@ class ExperienceCandidat(models.Model):
         verbose_name="Appellation précise (référentiel v2)",
         help_text="FORMULAIRE experience.appellation_id — conserve l'intitulé précis au sein d'une fiche métier "
                   "large (ex. une fiche Metier peut regrouper plusieurs appellations de poste distinctes).",
+    )
+    # Métier proposé en attente de décision (voir ProfilCandidat.demande_metier) : jamais un critère de calcul.
+    demande_metier = models.ForeignKey(
+        'DemandeAjout', null=True, blank=True, on_delete=models.SET_NULL, related_name='experiences_metier',
+        verbose_name="Demande d'ajout du métier de cette expérience",
     )
 
     date_debut = models.DateField(verbose_name="Date de début")

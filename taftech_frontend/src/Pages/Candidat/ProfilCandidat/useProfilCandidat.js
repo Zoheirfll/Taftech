@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import communesAlgerie from "../../../data/communes.json";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { formatDatePrecise } from "../../../utils/cvDates";
+import { notifierProfilMisAJour } from "../../../utils/evenementsProfil";
 
 const INITIAL_EXP = {
   titre_poste: "",
@@ -37,12 +38,23 @@ const formatText = (text) => {
     .replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
 };
 
-const normalizeExp = (exp) => ({
-  ...exp,
-  metier: exp.metier || null,
-  appellation: exp.appellation || null,
-  date_fin: exp.date_fin || null,
-});
+// Clés d'affichage du métier proposé (jamais envoyées : seul `demande_metier*` l'est).
+const CLES_AFFICHAGE_PROPOSITION = [
+  "demande_metier_libelle", "demande_metier_statut", "demande_metier_motif",
+  "demande_metier_souhaite_libelle", "demande_metier_souhaite_statut", "demande_metier_souhaite_motif",
+];
+
+const normalizeExp = (exp) => {
+  const envoye = {
+    ...exp,
+    metier: exp.metier || null,
+    appellation: exp.appellation || null,
+    date_fin: exp.date_fin || null,
+    demande_metier: exp.demande_metier || null,
+  };
+  CLES_AFFICHAGE_PROPOSITION.forEach((cle) => delete envoye[cle]);
+  return envoye;
+};
 
 // diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF — une chaîne
 // vide "" (valeur par défaut des <select> non renseignés) est rejetée (seul `null` est accepté).
@@ -121,6 +133,10 @@ export const useProfilCandidat = () => {
         metier_libelle: pData.metier_libelle || "",
         metier_appellation: pData.metier_appellation || null,
         metier_appellation_libelle: pData.metier_appellation_libelle || "",
+        demande_metier: pData.metier_propose?.id || "",
+        demande_metier_libelle: pData.metier_propose?.libelle || "",
+        demande_metier_statut: pData.metier_propose?.statut || "",
+        demande_metier_motif: pData.metier_propose?.motif_refus || "",
         service_militaire: pData.service_militaire || "",
         permis_conduire: pData.permis_conduire || false,
         passeport_valide: pData.passeport_valide || false,
@@ -130,6 +146,10 @@ export const useProfilCandidat = () => {
         metier_souhaite_libelle: pData.metier_souhaite_libelle || "",
         metier_souhaite_appellation: pData.metier_souhaite_appellation || null,
         metier_souhaite_appellation_libelle: pData.metier_souhaite_appellation_libelle || "",
+        demande_metier_souhaite: pData.metier_souhaite_propose?.id || "",
+        demande_metier_souhaite_libelle: pData.metier_souhaite_propose?.libelle || "",
+        demande_metier_souhaite_statut: pData.metier_souhaite_propose?.statut || "",
+        demande_metier_souhaite_motif: pData.metier_souhaite_propose?.motif_refus || "",
         salaire_souhaite: pData.salaire_souhaite || "",
         mobilite: pData.mobilite || "",
         situation_actuelle: pData.situation_actuelle || "",
@@ -223,14 +243,14 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => !["nin", "metier_libelle", "metier_souhaite_libelle", "diplome_ref_libelle", "metier_appellation_libelle", "metier_souhaite_appellation_libelle"].includes(key))
+        .filter((key) => !["nin", "metier_libelle", "metier_souhaite_libelle", "diplome_ref_libelle", "metier_appellation_libelle", "metier_souhaite_appellation_libelle", ...CLES_AFFICHAGE_PROPOSITION].includes(key))
         // `metier`/`metier_souhaite`/`diplome_ref` sont des PrimaryKeyRelatedField nullables côté
         // DRF — une chaîne vide (valeur par défaut tant qu'aucun choix n'est fait) est rejetée,
         // contrairement à `null` (que FormData ne sait pas transporter) : on omet simplement la
         // clé, ce qui laisse la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
         // Idem pour les appellations (clés étrangères nullables) : omises tant qu'aucune n'est choisie ; le
         // serveur efface l'ancienne si le métier change sans appellation.
-        .filter((key) => !(["metier", "metier_souhaite", "diplome_ref", "metier_appellation", "metier_souhaite_appellation"].includes(key) && !dataState[key]))
+        .filter((key) => !(["metier", "metier_souhaite", "diplome_ref", "metier_appellation", "metier_souhaite_appellation", "demande_metier", "demande_metier_souhaite"].includes(key) && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
       toast.success("Profil mis à jour !");
@@ -281,6 +301,7 @@ export const useProfilCandidat = () => {
     try {
       await profilService.updateProfil(formData);
       toast.success("Photo mise à jour !");
+      notifierProfilMisAJour();
       fetchData();
     } catch (err) {
       toast.error(apiErrMsg(err, "Erreur lors du téléchargement."));
@@ -358,6 +379,10 @@ export const useProfilCandidat = () => {
       metier_libelle: exp.metier_libelle || "",
       appellation: exp.appellation || null,
       appellation_libelle: exp.appellation_libelle || "",
+      demande_metier: exp.metier_propose?.id || null,
+      demande_metier_libelle: exp.metier_propose?.libelle || "",
+      demande_metier_statut: exp.metier_propose?.statut || "",
+      demande_metier_motif: exp.metier_propose?.motif_refus || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
       date_debut_precision: exp.date_debut_precision || "JOUR",

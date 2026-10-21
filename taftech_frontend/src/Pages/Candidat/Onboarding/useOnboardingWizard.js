@@ -6,6 +6,8 @@ import { reportError } from "../../../utils/errorReporter";
 import toast from "react-hot-toast";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
+import { notifierProfilMisAJour } from "../../../utils/evenementsProfil";
+import { doitRetirerPhoto } from "../../../utils/photoProfil";
 
 const CHAMPS_PROFIL = [
   { label: "Téléphone", test: (p) => !!p.telephone },
@@ -85,6 +87,10 @@ export const useOnboardingWizard = () => {
       metier_libelle: p.metier_libelle || "",
       metier_appellation: p.metier_appellation || null,
       metier_appellation_libelle: p.metier_appellation_libelle || "",
+      // Métier proposé en attente de décision (« Je ne trouve pas mon métier ») : voir demande_metier côté API.
+      demande_metier: p.metier_propose?.id || "",
+      demande_metier_libelle: p.metier_propose?.libelle || "",
+      demande_metier_statut: p.metier_propose?.statut || "",
       titre_professionnel: p.titre_professionnel || "",
       service_militaire: p.service_militaire || "",
       bio: p.bio || "",
@@ -99,6 +105,9 @@ export const useOnboardingWizard = () => {
       metier_souhaite_libelle: p.metier_souhaite_libelle || "",
       metier_souhaite_appellation: p.metier_souhaite_appellation || null,
       metier_souhaite_appellation_libelle: p.metier_souhaite_appellation_libelle || "",
+      demande_metier_souhaite: p.metier_souhaite_propose?.id || "",
+      demande_metier_souhaite_libelle: p.metier_souhaite_propose?.libelle || "",
+      demande_metier_souhaite_statut: p.metier_souhaite_propose?.statut || "",
       salaire_souhaite: p.salaire_souhaite || "",
       mobilite: p.mobilite || "",
       situation_actuelle: p.situation_actuelle || "",
@@ -178,6 +187,8 @@ export const useOnboardingWizard = () => {
         // s'applique plus ; sans métier détecté, l'appellation actuelle est conservée.
         metier_appellation: result.metier ? (result.metier_appellation || null) : prev.metier_appellation,
         metier_appellation_libelle: result.metier ? (result.metier_appellation_libelle || "") : prev.metier_appellation_libelle,
+        // Un métier officiel détecté remplace une proposition en attente.
+        ...(result.metier ? { demande_metier: "", demande_metier_libelle: "", demande_metier_statut: "" } : {}),
         sexe: result.sexe || prev.sexe,
         date_naissance: result.date_naissance || prev.date_naissance,
         titre_professionnel: result.titre_professionnel || prev.titre_professionnel,
@@ -288,13 +299,17 @@ export const useOnboardingWizard = () => {
     const formData = new FormData();
     Object.entries(infosForm).forEach(([key, value]) => {
       if (key === "metier_libelle" || key === "diplome_ref_libelle" || key === "metier_appellation_libelle") return;
+      if (key === "demande_metier_libelle" || key === "demande_metier_statut") return; // affichage seulement
       // `metier`/`diplome_ref` sont des PrimaryKeyRelatedField nullables — une chaîne vide
       // est rejetée par DRF, on omet simplement la clé si aucune valeur n'a été choisie.
-      if ((key === "metier" || key === "diplome_ref" || key === "metier_appellation") && !value) return;
+      if ((key === "metier" || key === "diplome_ref" || key === "metier_appellation" || key === "demande_metier") && !value) return;
       if (infosMode === "remplacer" || value) formData.append(key, value ?? "");
     });
     if (pendingPhoto && (infosMode === "remplacer" || !profil?.photo_profil)) {
       formData.append("photo_profil", pendingPhoto);
+    } else if (doitRetirerPhoto({ infosMode, cvAnalyse: parsedData, photoEnAttente: pendingPhoto, profil })) {
+      // Le candidat suit son nouveau CV (Remplacer) et celui-ci n'a pas de photo : l'ancienne part aussi.
+      formData.append("remove_photo_profil", "true");
     }
     // Toujours attaché si un fichier a été réellement choisi lors du parsing — c'est le
     // fichier que le candidat vient explicitement de sélectionner, indépendant du mode
@@ -304,6 +319,7 @@ export const useOnboardingWizard = () => {
     }
     try {
       await profilService.updateProfil(formData);
+      if (formData.has("photo_profil") || formData.has("remove_photo_profil")) notifierProfilMisAJour();
       setPendingPhoto(null);
       setPendingCvFile(null);
       await refresh();
@@ -314,7 +330,7 @@ export const useOnboardingWizard = () => {
     } finally {
       setSaving(false);
     }
-  }, [infosForm, infosMode, pendingPhoto, pendingCvFile, profil, nextStep, refresh, saving]);
+  }, [infosForm, infosMode, pendingPhoto, pendingCvFile, parsedData, profil, nextStep, refresh, saving]);
 
   // Champs pré-remplis par le parser puis modifiés par le candidat -> paires (proposé, choisi).
   const envoyerCorrections = useCallback((corrections) => {
@@ -341,7 +357,7 @@ export const useOnboardingWizard = () => {
         corrige_id: exp.metier, corrige_libelle: exp.metier_libelle,
       })));
       const resultats = await Promise.allSettled(
-        pendingExperiences.map(({ metier_propose, metier_propose_libelle, ...exp }) => // eslint-disable-line no-unused-vars
+        pendingExperiences.map(({ metier_propose, metier_propose_libelle, demande_metier_libelle, ...exp }) => // eslint-disable-line no-unused-vars
           profilService.addExperience(exp),
         ),
       );
@@ -465,9 +481,13 @@ export const useOnboardingWizard = () => {
     const formData = new FormData();
     Object.entries(prefsForm)
       .filter(([key]) => key !== "metier_souhaite_libelle" && key !== "metier_souhaite_appellation_libelle")
+      .filter(([key]) => key !== "demande_metier_souhaite_libelle" && key !== "demande_metier_souhaite_statut")
       // `metier_souhaite` est un PrimaryKeyRelatedField nullable — une chaîne vide est
-      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi (idem pour l'appellation).
-      .filter(([key, value]) => !((key === "metier_souhaite" || key === "metier_souhaite_appellation") && !value))
+      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi (idem pour l'appellation
+      // et pour le métier proposé en attente).
+      .filter(([key, value]) => !(
+        (key === "metier_souhaite" || key === "metier_souhaite_appellation" || key === "demande_metier_souhaite") && !value
+      ))
       .forEach(([key, value]) => formData.append(key, value ?? ""));
     try {
       await profilService.updateProfil(formData);

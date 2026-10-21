@@ -349,7 +349,10 @@ class AdaptateurMetier(Adaptateur):
         return cible.pk, cible.libelle
 
     def appliquer(self, demande, entree_id):
-        """Un métier proposé ne rattache aucun profil ni aucune offre : le demandeur le choisit ensuite dans la liste."""
+        """Les expériences et profils de CANDIDATS liés à la demande reçoivent le métier officiel (voir
+        `metiers.py`). Aucune offre n'est jamais modifiée : une décision ne change pas une offre publiée."""
+        from .metiers import appliquer_metier_aux_candidats
+        appliquer_metier_aux_candidats(demande, entree_id)
 
 
 class AdaptateurCompetence(Adaptateur):

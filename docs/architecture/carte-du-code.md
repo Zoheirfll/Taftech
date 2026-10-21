@@ -83,6 +83,9 @@ Attention aux tests qui font `@patch` : pour simuler l'appel Groq dans `parse_wi
 | `adaptateurs.py` | Un adaptateur par type (`DIPLOME`, `SPECIALITE` ; métiers et compétences aux étapes 2 et 3) : entrée existante, entrées proches, accepter, rattacher, effets |
 | `service.py` | `creer_demande`, `accepter_demande`, `rattacher_demande`, `refuser_demande`, notifications |
 | `formations.py` | Lien avec `FormationCandidat` : `synchroniser_depuis_formation`, effets d'une décision |
+| `metiers.py` (21/10/2026) | Lien avec le profil du candidat pour un métier proposé : `demande_metier_utilisable`, `resume_demande_metier`, `appliquer_metier_aux_candidats` (appelée par `AdaptateurMetier.appliquer`) |
+
+Frontend (21/10/2026) : `Components/MetierProposeBadge.jsx` (état d'un métier proposé), props `onPropose` (`MetierAutocomplete`) et `onProposed` (`ProposerMetierModal`) ; `utils/evenementsProfil.js` (signal « profil mis à jour » écouté par la Navbar) ; `utils/photoProfil.js` (`doitRetirerPhoto`, règle du retrait de photo en mode « Remplacer »).
 
 Modèle dans `models/demande_ajout.py`, API dans `views/demandes_ajout.py` et `serializers/demande_ajout.py`. Fiche : [demandes-ajout.md](../fonctionnel/demandes-ajout.md).
 

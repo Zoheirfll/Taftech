@@ -7,6 +7,18 @@
 
 ---
 
+## 🆕 SESSION 21/10/2026 — Texte du PDF fiable, métiers vides, masquage, photo
+
+Détail complet et approches abandonnées : [journal du 21/10/2026](../journal/2026-10-21-parser-cv-metiers-photo.md). À retenir avant de toucher à cette zone :
+
+- **Extraction du texte** (`cv_parser/extraction.py`) : `extract_text_from_pdf_smart` lit les mots avec **PyMuPDF** et retire les caractères invisibles (U+200B/C/D, U+2060, U+FEFF) que certains éditeurs (Canva…) glissent dans les mots ; `pdfplumber` les lit comme une espace (« Analy se », « HÔT ESSE ») et ne permet pas de les retirer. Lignes regroupées par **proximité verticale** sur le centre du mot (plus de tranches fixes). Repli sur `pdfplumber` si PyMuPDF échoue. Un texte abîmé fausse **tout** ce qui suit : masquage, classification, IA.
+- **Classification du métier** (`domaine_agent.py`) : le garde-fou `_titre_couvert_par` compare au masculin singulier (`_forme_neutre`, féminin traité **avant** `_singulariser`), ignore employeur et parenthèses (`_nettoyer_titre_poste`) ; « stagiaire/stage » sont génériques ; le prompt impose le **niveau hiérarchique** du titre. L'IA reste non déterministe : le garde-fou refuse tout choix qui ne couvre pas le titre (point 7 : jamais de métier deviné).
+- **Masquage** (`confidentialite_ia/`) : wilayas de l'en-tête par liste ; mots d'organisation retirés en bordure d'une entité « personne » ; mot unique en début de ligne suivi de texte non traité comme entité. Communes non masquées.
+- **Photo** : en mode « Remplacer », un nouveau CV analysé sans photo retire l'ancienne (`utils/photoProfil.js`) ; la Navbar se met à jour par le signal `utils/evenementsProfil.js`.
+- **Métier proposé** : voir [demandes-ajout.md](demandes-ajout.md) (lien `demande_metier`, jamais un critère).
+
+---
+
 ## 🆕 SESSION 19/10/2026 (suite) — Corrections du parser : métiers vides, jetons résiduels
 
 **Constat** (CV réel de l'utilisateur, `PARSER_VERSION = parser-2026.10.19`) : métier du profil vide ou faux, métiers d'expériences vides, jeton `[NOM]` dans une description enregistrée.

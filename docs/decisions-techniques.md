@@ -13,6 +13,11 @@
 - `CandidatInfoDTO` et `profil_snapshot` incluent bio/linkedin/github
 - `difflib` — stdlib Python, pas d'installation requise
 - `ajuster_score_avec_groq` — supprimé, ne plus utiliser
+- **Texte des CV PDF (21/10/2026)** : certains éditeurs (Canva…) glissent un caractère invisible (U+200C) dans les mots ; `pdfplumber` le lit comme une espace (« Analy se »). L'extraction lit les mots avec PyMuPDF et le retire. Un texte abîmé fausse masquage, classification et IA : ne jamais « réparer » en aval. Filtrer côté `pdfplumber` ne marche pas (pdfminer l'a déjà converti en espace).
+- **`referentiel_utils._singulariser` retire aussi le « e » final** des mots de plus de 6 lettres (« hotesse » → « hotess ») : traiter le féminin **avant**, comme `domaine_agent._forme_neutre`.
+- **spaCy (`fr_core_news_md`) et les mots capitalisés** : un mot courant qui ouvre une ligne ou une puce (« Expertise », « Reporting ») ressort en `LOC`/`PER`. Règle : mot unique en début de ligne suivi de texte = pas une entité (`ner._ouvre_une_ligne_de_texte`). Les noms d'établissement (« Hypermarché ») sont retirés en bordure d'entité (`_MOTS_ORGANISATION`).
+- **Un champ réservé au candidat dans un sérialiseur partagé** (`ExperienceSerializer`, `ProfilCandidatDTO` servent aussi aux vues recruteur et à la CVthèque) : ne l'exposer que si le contexte porte une clé posée par les seules vues du candidat (`inclure_metier_propose`), et le tester sur la **vraie route recruteur**.
+- **Classification du métier non déterministe** : deux appels IA identiques peuvent donner deux résultats ; le garde-fou `_titre_couvert_par` refuse ce qui ne couvre pas le titre. Ne pas ajouter de repli « meilleur candidat » (point 7). Un métier vide est un état normal, le candidat le choisit (badge « Métier à choisir »).
 
 ---
 

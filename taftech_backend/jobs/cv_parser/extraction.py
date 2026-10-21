@@ -1,5 +1,6 @@
 """Extraction du texte brut (PDF/DOCX) et de la photo d'un CV."""
 import base64
+import re
 import pdfplumber
 from docx import Document
 import fitz  # pymupdf - pour extraire les images du PDF
@@ -12,6 +13,17 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 1. EXTRACTION DU TEXTE BRUT
 # ==========================================
+# Caractères de largeur nulle que certains éditeurs de CV (Canva…) glissent au milieu des mots
+# (« Analy‌se », « HÔT‌ESSE ») : pdfplumber/pdfminer les lit comme une vraie espace et renvoie
+# « Analy se » (puis le masquage de confidentialité prend « Analy » pour un nom). PyMuPDF les
+# restitue tels quels, ce qui permet de les retirer.
+_SANS_CARACTERES_INVISIBLES = {ord(c): None for c in ("​", "‌", "‍", "⁠", "﻿")}
+# « Novembre2023 » (mois collé à l'année dans le PDF) : l'espace est rétablie pour la lecture des dates.
+_MOIS_COLLE_ANNEE = re.compile(
+    r"\b(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)"
+    r"((?:19|20)\d{2})\b", re.IGNORECASE)
+
+
 def extract_text_from_pdf(file_path):
     """Extrait tout le texte d'un PDF."""
     text = ""
@@ -44,31 +56,37 @@ def extract_text_from_pdf_smart(file_path):
     """
     text = ""
     try:
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                words = page.extract_words(
-                    keep_blank_chars=False,
-                    use_text_flow=False,
-                    extra_attrs=["fontname", "size"]
-                )
+        doc = fitz.open(file_path)
+        try:
+            for page in doc:
+                # (x0, y0, x1, y1, mot, ...) : on retire les caractères invisibles du mot, puis on
+                # écarte les mots devenus vides. Le regroupement par ligne se fait sur le CENTRE vertical
+                # du mot : son bord haut varie avec la police (gras/normal) et éclatait une même ligne.
+                words = [
+                    {"x0": w[0], "top": (w[1] + w[3]) / 2, "text": w[4].translate(_SANS_CARACTERES_INVISIBLES)}
+                    for w in page.get_text("words")
+                ]
+                words = [w for w in words if w["text"].strip()]
                 if not words:
                     continue
 
-                # Regroupe les mots par ligne (même position Y approximative)
-                lines_dict = {}
-                tolerance = 3  # tolérance en pixels pour considérer "même ligne"
-                for w in words:
-                    y_key = round(w['top'] / tolerance) * tolerance
-                    if y_key not in lines_dict:
-                        lines_dict[y_key] = []
-                    lines_dict[y_key].append(w)
+                # Regroupe les mots par ligne : un mot rejoint la ligne en cours s'il est à moins de
+                # `tolerance` du premier mot de cette ligne (des tranches fixes coupaient parfois une
+                # même ligne en deux, ex. « Arabe : … | Anglais : … » mêlant gras et normal).
+                tolerance = 3  # tolérance en points pour considérer "même ligne"
+                lignes = []  # [(y_du_premier_mot, [mots])]
+                for w in sorted(words, key=lambda w: w['top']):
+                    if lignes and w['top'] - lignes[-1][0] <= tolerance:
+                        lignes[-1][1].append(w)
+                    else:
+                        lignes.append((w['top'], [w]))
 
                 # Trie chaque ligne par position X (de gauche à droite)
-                sorted_y = sorted(lines_dict.keys())
-                for y in sorted_y:
-                    line_words = sorted(lines_dict[y], key=lambda w: w['x0'])
-                    line_text = " ".join(w['text'] for w in line_words)
-                    text += line_text + "\n"
+                for _, mots_ligne in lignes:
+                    line_text = " ".join(w['text'] for w in sorted(mots_ligne, key=lambda w: w['x0']))
+                    text += _MOIS_COLLE_ANNEE.sub(r"\1 \2", line_text) + "\n"
+        finally:
+            doc.close()
     except Exception as e:
         logger.error("Erreur extraction PDF smart : %s", e)
     return text

@@ -345,6 +345,30 @@ describe("OnboardingWizard", () => {
     expect(envoye).not.toHaveProperty("demande_metier_libelle");
   });
 
+  it("l'étape Expériences signale une date de début manquante et n'envoie rien (ni suppression)", async () => {
+    jobsService.parserCV.mockResolvedValue({
+      success: true,
+      formations: [],
+      experiences: [
+        { titre_poste: "Organisateur de conditionnement", entreprise: "ACG SIM", date_debut_raw: "", date_fin_raw: "novembre 2020", description: "" },
+      ],
+    });
+    render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
+    await screen.findByText(/Upload CV/i);
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input, { target: { files: [new File(["contenu"], "cv.pdf", { type: "application/pdf" })] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Analyser mon CV/i }));
+
+    await screen.findByRole("button", { name: /Continuer/i });
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // -> 3 (save infos)
+    expect(await screen.findByRole("button", { name: /Date de début manquante/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("date de début")));
+    expect(profilService.addExperience).not.toHaveBeenCalled();
+    expect(profilService.deleteExperience).not.toHaveBeenCalled();
+  });
+
   it("l'étape Langues permet de modifier le nom et le niveau d'une langue détectée", async () => {
     jobsService.parserCV.mockResolvedValue({
       success: true, experiences: [], formations: [], langues: "Arabe:Maternelle,Anglais:Avancé",

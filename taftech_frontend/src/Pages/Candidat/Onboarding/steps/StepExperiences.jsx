@@ -110,6 +110,11 @@ export const StepExperiences = ({ pendingExperiences, setPendingExperiences, exp
               <div className="min-w-0 flex-1">
                 <p className={`text-sm font-bold ${tw.textStrong}`}>{exp.titre_poste}</p>
                 <p className={`text-xs ${tw.textMuted}`}>{exp.entreprise}</p>
+                {!exp.date_debut && (
+                  <button type="button" onClick={() => setEditingIndex(idx)} className={`${tw.badgeError} cursor-pointer mt-1`}>
+                    Date de début manquante : à renseigner pour enregistrer
+                  </button>
+                )}
                 {(exp.date_debut || exp.date_fin) && (
                   <p className={`text-xs ${tw.textMuted} mt-0.5`}>
                     {exp.date_debut ? `${formatDatePrecise(exp.date_debut, exp.date_debut_precision)} — ` : ""}{exp.date_fin ? formatDatePrecise(exp.date_fin, exp.date_fin_precision) : "présent"}

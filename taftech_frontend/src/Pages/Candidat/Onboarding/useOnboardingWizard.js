@@ -342,6 +342,13 @@ export const useOnboardingWizard = () => {
 
   const saveExperiencesStep = useCallback(async () => {
     if (saving) return;
+    // La date de début est obligatoire côté serveur : on le vérifie AVANT tout envoi, sinon, en mode
+    // « Remplacer », les anciennes expériences seraient supprimées puis la nouvelle refusée.
+    const sansDebut = pendingExperiences.find((exp) => !exp.date_debut);
+    if (sansDebut) {
+      toast.error(`Renseignez la date de début de « ${sansDebut.titre_poste || "l'expérience"} » (bouton crayon) avant de continuer.`);
+      return;
+    }
     setSaving(true);
     try {
       if (experiencesMode === "remplacer") {

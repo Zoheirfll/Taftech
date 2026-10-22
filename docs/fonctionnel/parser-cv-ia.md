@@ -7,6 +7,10 @@
 
 ---
 
+## 🆕 SESSION 22/10/2026 — Masquage : faux positifs d'un CV industriel
+
+Détail et approches écartées : [journal du 22/10/2026](../journal/2026-10-22-masquage-faux-positifs.md). À retenir : (1) un mot que spaCy ne prend pour une personne que dans **moins de la moitié** de ses occurrences (≥ 2) est un nom d'entreprise, pas masqué (`ner._detecte_a_tort`) ; un nom cité une seule fois reste masqué ; (2) **dans le corps** du CV, une « personne » suivie de `- / ,` puis d'une wilaya est une commune, pas masquée ; dans l'en-tête, « Nom, Oran » garde son nom masqué ; (3) ponctuation seule en bordure d'une entité (`|`, `-`) jamais incluse dans le masque ; (4) un lien linkedin/github coupé après un tiret en fin de ligne est masqué en entier (`patterns._SUITE_URL`, jamais d'absorption d'une ligne ordinaire) ; (5) `patterns.motif_wilayas()` est la source unique du motif des wilayas ; (6) **extraction** : les tableaux d'au moins 3 colonnes sont lus colonne par colonne (`cv_parser/colonnes.py`, repli sur les lignes simples) ; les lignes « TITRE … date », frises et CV à 2 colonnes sont inchangées (`MIN_COLONNES = 3`, à revoir sur un corpus de CV réels) ; (7) un lien LinkedIn/GitHub coupé en fin de ligne est aussi recollé dans l'**extraction locale** des coordonnées (`coordonnees.py` partage `patterns.SUITE_URL`) ; (8) « Sept. - Nov. 2020 » (année écrite une fois) : `dates_fin.completer_annee_partagee` relit le début sur la ligne du titre.
+
 ## 🆕 SESSION 21/10/2026 — Texte du PDF fiable, métiers vides, masquage, photo
 
 Détail complet et approches abandonnées : [journal du 21/10/2026](../journal/2026-10-21-parser-cv-metiers-photo.md). À retenir avant de toucher à cette zone :

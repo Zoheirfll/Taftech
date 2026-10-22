@@ -7,6 +7,12 @@
 
 ---
 
+## 🆕 SESSION 22/10/2026 — Ajouts hors classeurs : `referentiel_ajouts.json` + `appliquer_ajouts_referentiel`
+
+Cause : un CV industriel sortait avec 5 « Métier à choisir » : le garde-fou « ne pas deviner » refusait faute d'**appellation** (le référentiel ANEM avait déjà « Encadrement méthode en production industrielle » C1401 et « Direction, ingénierie en production industrielle » C2501). **Règle** : avant de créer un métier, chercher si un métier officiel existe déjà et lui ajouter une **appellation** (alias) ; ne créer un métier que s'il n'a aucun équivalent. Les ajouts faits en dehors des classeurs du client vivent dans `jobs/data/referentiel_ajouts.json` (versionné, cibles désignées par **codes stables** : `metier` = code du métier officiel, `groupe` = code d'un domaine ou sous-domaine) et s'appliquent par `python manage.py appliquer_ajouts_referentiel [--dry-run] [--fichier …]` : idempotente (`[déjà fait]`), tout-ou-rien (cible ou groupe introuvable = rien d'écrit), jamais de doublon d'une appellation active ; `import_referentiel_v2` ne supprime rien, la commande se rejoue après chaque import. Codes créés : `TAF-AJ-<id>` (métier ou appellation), `TAF-AJ-<id>-A` (appellation d'un métier créé). Détail : [journal du 22/10/2026](../journal/2026-10-22-masquage-faux-positifs.md). Tests : `test_ajouts_referentiel.py` (8).
+
+---
+
 ## 🆕 SESSION 14/10/2026 — Point 23 : métiers proposés par les utilisateurs, à valider ou rejeter
 
 Un candidat ou un recruteur qui ne trouve pas son métier le **propose** (lien « Je ne trouve pas mon métier » sur `MetierAutocomplete proposable`, jamais sur les filtres ni côté admin). Modèle `PropositionMetier` (cycle Suggéré → Validé | Rejeté, Rejeté → Validé en réexamen), logique dans `jobs/propositions_metier.py`, API `referentiel/metiers/proposer/` et `admin/propositions-metiers/` (liste, `/<id>/valider/`, `/<id>/rejeter/`), page admin « Métiers suggérés ». **Aucun effet avant décision** : pas de métier ni d'appellation créés, aucun score modifié.

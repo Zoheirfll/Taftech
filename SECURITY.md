@@ -558,4 +558,10 @@ Trois routes `admin/utilisateurs/<id>/dossier/`, `dossier-recruteur/`, `dossier-
 - **Traçabilité** : action d'audit `CORRIGER_OFFRE` (migration 0142) avec les champs réellement modifiés ; **e-mail au recruteur** avec ancienne et nouvelle valeur de chaque champ (aperçu de 60 caractères, jamais bloquant). Aucune trace ni e-mail si rien n'a changé.
 - **Point à trancher (hors périmètre de cette route)** : l'ancienne route `admin/offres/<id>/moderer/` accepte toujours n'importe quel champ de l'offre à tout moment (`OffreEmploiSerializer` partiel) ; l'écran n'envoie plus que le statut et le motif. Candidat à un durcissement.
 - **Pas couvert** : diplômes/spécialités requis, compétences structurées et exigences impératives (le recruteur les modifie lui-même).
+
+## ✅ 41. Masquage avant l'IA : fuite d'un identifiant LinkedIn coupé, faux positifs réduits (22/10/2026)
+
+- **Fuite corrigée** : un lien `linkedin.com/in/prenom-nom-` coupé en fin de ligne par le PDF laissait la fin de l'identifiant (`-a3257762`, identifiant de profil) en clair dans le texte envoyé à l'IA : le motif d'URL s'arrêtait au retour à la ligne. `patterns._SUITE_URL` reprend le premier mot de la ligne suivante **uniquement si la ligne finit par un tiret** (quantificateur borné à 100, règle anti-ReDoS du fichier) ; une ligne ordinaire n'est jamais absorbée.
+- **Faux positifs réduits sans affaiblir le masquage** : règles ciblées dans `ner.py` (le NER reste actif). Garde-fous voulus : un nom cité **une seule fois** n'est jamais écarté ; « Nom, Oran » dans l'**en-tête** garde son nom masqué ; seules les communes du **corps** suivies d'une wilaya sont laissées lisibles (décision antérieure : communes non masquées).
+- Tests : 6 nouveaux (`test_confidentialite_ner.py`, `test_confidentialite_motifs.py`), 184 tests ciblés OK. Journal : [2026-10-22-masquage-faux-positifs.md](docs/journal/2026-10-22-masquage-faux-positifs.md).
 - Tests : `test_admin_corriger_offre.py` (7 : correction + audit + e-mail, sans changement, offre publiée/rejetée refusée, statut non modifiable, champ absent, admin seulement, introuvable) ; `AdminOffres.test.jsx`.

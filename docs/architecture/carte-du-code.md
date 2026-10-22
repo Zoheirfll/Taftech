@@ -35,6 +35,7 @@ Aucune migration n'a été créée par ce découpage (`makemigrations --check` :
 | Fichier | Contient |
 |---|---|
 | `extraction.py` | Lecture du texte des PDF/DOCX et de la photo |
+| `colonnes.py` | Reconstruction des lignes d'une page PDF : lecture ligne par ligne, tableaux de 3 colonnes ou plus lus colonne par colonne (22/10/2026) |
 | `champs.py` | Email, téléphone, nom, wilaya, diplôme, permis... |
 | `sections.py` | Découpage du CV en sections, compétences, langues |
 | `experiences.py` | Expériences professionnelles |

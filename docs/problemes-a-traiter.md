@@ -37,6 +37,14 @@ Depuis le retrait du repli hiérarchique, **le champ 1 (simple) n'a plus AUCUN e
 
 **À faire** : passer un jeu de quelques dizaines de CV réels (fournis par l'utilisateur, jamais dans le dépôt) dans l'ancienne et la nouvelle extraction, comparer les lignes (colonnes, dates, puces) avant fusion.
 
+## 🟡 Tableaux en colonnes d'un PDF : lecture colonne par colonne limitée à 3 colonnes (22/10/2026)
+
+Livré (option B, `cv_parser/colonnes.py`, voir le journal du jour) mais **limité aux tableaux d'au moins 3 colonnes** (`MIN_COLONNES`) : frises date + texte et CV à 2 colonnes restent lus ligne par ligne pour ne pas séparer une date de son poste. À trancher après un **corpus de CV réels** : passer à 2 colonnes ? Rejouer d'abord le CV de Rafik Boumaza (colonnes « Expertises clés », « Repères de performance ») et comparer l'ancien et le nouveau texte.
+
+## ✅ Référentiel sans métiers industriels : traité (22/10/2026), à rejouer en production
+
+Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de l'utilisateur appliquée : 3 appellations sur des métiers officiels (« Organisateur industriel », « Manager de fabrication », « Manager de production ») et 2 métiers (« Chef de projet industriel/technique »), par `jobs/data/referentiel_ajouts.json` + `appliquer_ajouts_referentiel` (journal du jour). **En attente** : rejouer la commande en production ; vérifier sur le CV réel après ré-import. Restent volontairement non rattachés : « Organisateur de conditionnement », « Vehicle Technical Manager » (à proposer par les candidats). D'autres métiers manquants pourront être ajoutés au même fichier.
+
 ## 🟠 Communes non masquées avant l'IA
 
 **Trouvé le** : 21/10/2026.

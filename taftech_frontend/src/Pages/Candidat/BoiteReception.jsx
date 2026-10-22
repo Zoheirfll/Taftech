@@ -2,11 +2,10 @@ import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
+import { notifier } from "../../utils/notifier";
 import {
   Inbox,
   Mail,
@@ -50,7 +49,7 @@ const BoiteReception = () => {
         const data = await jobsService.getNotifications();
         setNotifications(data);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_INBOX", error);
       } finally {
         setLoading(false);
@@ -81,9 +80,9 @@ const BoiteReception = () => {
         await jobsService.deleteNotification(notif.id);
         setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
         setSelectedNotif((prev) => (prev?.id === notif.id ? null : prev));
-        toast.success("Message supprimé.");
+        notifier.succes("Message supprimé", "Il ne figure plus dans votre boîte de réception.");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_DELETE_NOTIF_CANDIDAT", error);
       }
     });

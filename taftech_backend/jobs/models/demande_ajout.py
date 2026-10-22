@@ -10,7 +10,9 @@ class DemandeAjout(models.Model):
     **refuser** (motif obligatoire). Même cycle pour les quatre types (spécification du 16/10/2026).
 
     Rien n'entre jamais tout seul dans le référentiel : tant que l'admin n'a pas décidé, la demande
-    n'est visible nulle part côté public, ne rattache aucune saisie et ne change aucun score.
+    n'est visible nulle part côté public et ne change aucun score. Seul le demandeur la voit sur SON profil : une
+    formation (diplôme, spécialité) ou un métier (expérience, profil) garde le lien vers sa demande, sans jamais compter
+    dans le calcul (métiers : `demandes_ajout/metiers.py`).
     Étape 1 : seuls les types DIPLOME et SPECIALITE sont gérés (métiers : étape 2, compétences : étape 3)."""
     TYPE_METIER = 'METIER'
     TYPE_COMPETENCE = 'COMPETENCE'

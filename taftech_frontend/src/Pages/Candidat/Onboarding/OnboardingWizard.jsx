@@ -105,6 +105,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             infosMode={wizard.infosMode}
             setInfosMode={wizard.setInfosMode}
             saveInfosStep={wizard.saveInfosStep}
+            parsedData={wizard.parsedData}
             skipStep={wizard.skipStep}
             constants={wizard.constants}
             profil={wizard.profil}

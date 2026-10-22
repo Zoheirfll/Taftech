@@ -161,7 +161,7 @@ describe("🔑 UI & Logique - Composant <ForgotPassword />", () => {
         "ECHEC_FORGOT_PASSWORD",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Une erreur est survenue.");
+      expect(toast.error).toHaveBeenCalledWith("Demande impossible\nUne erreur est survenue.");
       expect(screen.getByText("Envoyer le code")).toBeInTheDocument();
     });
   });

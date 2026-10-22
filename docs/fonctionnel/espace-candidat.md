@@ -7,6 +7,15 @@
 
 ---
 
+## 🆕 SESSION 21/10/2026 — Mes candidatures : pagination « Voir plus »
+
+- `GET jobs/mes-candidatures/` : **sans `?page`** = liste complète (tableau), car `CandidatDashboard` en tire ses compteurs ; **avec `?page=N`** = `{count, next, previous, results}`, 10 par page (`page_size` ≤ 50, `MesCandidaturesPagination`). Tri `-date_maj, -id` (l'`id` stabilise l'ordre entre deux pages).
+- `MesCandidatures.jsx` : page 1 au chargement, bouton « Voir plus (N restantes) » qui **ajoute** la page suivante (jamais de remplacement : le scroll et les panneaux « Pourquoi ce score ? » ouverts sont conservés), compteur « X sur Y ».
+- Choix : pagination seule, sans suppression. Un masquage côté candidat (champ + migration) reste possible plus tard ; le recruteur garderait de toute façon la candidature.
+- Tests : `jobs/tests/test_api_mes_candidatures_pagination.py` (5 tests sur la vraie route : liste complète, page 1, page 2 sans doublon, périmètre du compte, anonyme refusé). Build Vite OK.
+
+---
+
 ## 🆕 SESSION 19/10/2026 — NIN obligatoire pour postuler (exigence ANEM)
 
 - **Règle** : le NIN n'est **pas** demandé à l'inscription ; il est **obligatoire pour postuler avec un compte**. Il est saisi une seule fois, à la première candidature, puis immuable (correction par le support/admin).

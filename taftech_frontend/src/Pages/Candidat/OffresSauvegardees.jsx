@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bookmark, MapPin, Trash2 } from "lucide-react";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const OffresSauvegardees = () => {
   const [favoris, setFavoris] = useState([]);
@@ -17,7 +16,7 @@ const OffresSauvegardees = () => {
         const data = await jobsService.getOffresSauvegardees();
         setFavoris(data);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_FAVORIS", error);
       } finally {
         setIsLoading(false);
@@ -31,11 +30,11 @@ const OffresSauvegardees = () => {
     setFavoris(prev => prev.filter((f) => f.id !== id));
     try {
       await jobsService.supprimerSauvegarde(id);
-      toast.success("Offre retirée des favoris.");
+      notifier.succes("Offre retirée des favoris");
     } catch (error) {
       setFavoris(previousFavoris);
       reportError("ECHEC_SUPPRESSION_FAVORI", error);
-      toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+      notifier.echec("Suppression impossible", error);
     }
   };
 

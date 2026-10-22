@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { confirmToast } from "../../utils/confirmToast";
 import {
@@ -19,7 +19,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const ROLES_LABELS = {
   PROPRIETAIRE: {
@@ -78,7 +77,7 @@ const MonEquipe = () => {
       const d = await jobsService.getEquipe();
       setData(d);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_GET_EQUIPE", err);
     } finally {
       setLoading(false);
@@ -101,26 +100,26 @@ const MonEquipe = () => {
       setAuditLog(logs);
     } catch (err) {
       reportError("ECHEC_GET_AUDIT_LOG", err);
-      toast.error(apiErrMsg(err, "Impossible de charger le journal."));
+      notifier.echec("Chargement du journal impossible", err);
     } finally {
       setAuditLoading(false);
     }
   };
 
   const handleInviter = async () => {
-    if (!form.email.trim()) return toast.error("Email obligatoire.");
+    if (!form.email.trim()) return notifier.erreur("Adresse e-mail manquante", "Saisissez l'adresse e-mail de la personne à inviter.");
     setSaving(true);
     try {
       await jobsService.inviterMembre(
         form.email.trim().toLowerCase(),
         form.role,
       );
-      toast.success(`Invitation envoyée à ${form.email} !`);
+      notifier.succes("Invitation envoyée", form.email);
       setModal(null);
       charger();
     } catch (err) {
       reportError("ECHEC_INVITER_MEMBRE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de l'invitation."));
+      notifier.echec("Invitation impossible", err);
     } finally {
       setSaving(false);
     }
@@ -130,12 +129,12 @@ const MonEquipe = () => {
     setSaving(true);
     try {
       await jobsService.changerRoleMembre(modal.data.id, roleEdit);
-      toast.success("Rôle mis à jour.");
+      notifier.succes("Rôle mis à jour");
       setModal(null);
       charger();
     } catch (err) {
       reportError("ECHEC_CHANGER_ROLE_MEMBRE", err);
-      toast.error(apiErrMsg(err, "Erreur."));
+      notifier.echec("Action impossible", err);
     } finally {
       setSaving(false);
     }
@@ -148,11 +147,11 @@ const MonEquipe = () => {
         setSaving(true);
         try {
           await jobsService.retirerMembre(membre.id);
-          toast.success("Membre retiré.");
+          notifier.succes("Membre retiré");
           charger();
         } catch (err) {
           reportError("ECHEC_RETIRER_MEMBRE", err);
-          toast.error(apiErrMsg(err, "Erreur."));
+          notifier.echec("Action impossible", err);
         } finally {
           setSaving(false);
         }
@@ -163,11 +162,11 @@ const MonEquipe = () => {
   const handleAnnulerInvitation = async (id) => {
     try {
       await jobsService.annulerInvitation(id);
-      toast.success("Invitation annulée.");
+      notifier.succes("Invitation annulée");
       charger();
     } catch (err) {
       reportError("ECHEC_ANNULER_INVITATION", err);
-      toast.error(apiErrMsg(err, "Impossible d'annuler l'invitation."));
+      notifier.echec("Annulation impossible", err);
     }
   };
 

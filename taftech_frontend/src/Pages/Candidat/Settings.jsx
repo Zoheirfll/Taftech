@@ -1,7 +1,7 @@
 import FieldError from "../../Components/FieldError";
 import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
@@ -53,7 +53,7 @@ const Settings = () => {
         setNotifications(parametres);
         setEstCompteGoogle(me.est_compte_google || false);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_PARAMETRES", error);
       } finally {
         setIsLoading(false);
@@ -68,11 +68,11 @@ const Settings = () => {
     setNotifications(prev => ({ ...prev, [field]: !prev[field] }));
     try {
       await jobsService.updateParametres(updated);
-      toast.success("Préférence enregistrée !");
+      notifier.succes("Préférence enregistrée");
     } catch (error) {
       setNotifications(previousState);
       reportError("ECHEC_MAJ_PARAMETRES", error);
-      toast.error(apiErrMsg(error, "Échec de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", error);
     }
   };
 
@@ -81,11 +81,11 @@ const Settings = () => {
     setPwdErrors({});
     if (passwords.new !== passwords.confirm) {
       setPwdErrors({ confirm: "Les mots de passe ne correspondent pas." });
-      return toast.error("Les mots de passe ne correspondent pas.");
+      return notifier.erreur("Les mots de passe ne correspondent pas");
     }
     if (passwords.new.length < 8) {
       setPwdErrors({ new: "Au moins 8 caractères." });
-      return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+      return notifier.erreur("Mot de passe trop court", "Il doit contenir au moins 8 caractères.");
     }
     setPwdLoading(true);
     try {
@@ -93,13 +93,13 @@ const Settings = () => {
         ancien_mdp: passwords.old,
         nouveau_mdp: passwords.new,
       });
-      toast.success(estCompteGoogle ? "Mot de passe défini avec succès !" : "Mot de passe modifié avec succès !");
+      notifier.succes(estCompteGoogle ? "Mot de passe défini" : "Mot de passe modifié");
       setPasswords({ old: "", new: "", confirm: "" });
       if (estCompteGoogle) setEstCompteGoogle(false);
     } catch (err) {
       const msg = apiErrMsg(err, "Erreur lors du changement.");
       setPwdErrors(/ancien|actuel/i.test(msg) ? { old: msg } : /mot de passe/i.test(msg) ? { new: msg } : {});
-      toast.error(msg);
+      notifier.erreur("Modification du mot de passe impossible", msg);
       reportError("ECHEC_CHANGER_MDP_SETTINGS", err);
     } finally {
       setPwdLoading(false);
@@ -109,7 +109,7 @@ const Settings = () => {
   const handleSupprimerCompte = async (e) => {
     e.preventDefault();
     if (deleteForm.confirmation.trim().toUpperCase() !== "SUPPRIMER") {
-      return toast.error("Tapez SUPPRIMER pour confirmer.");
+      return notifier.erreur("Confirmation requise", "Tapez SUPPRIMER pour confirmer.");
     }
     setDeleteLoading(true);
     try {
@@ -117,10 +117,10 @@ const Settings = () => {
         confirmation: deleteForm.confirmation,
         mot_de_passe: deleteForm.mot_de_passe,
       });
-      toast.success("Votre compte a été désactivé.");
+      notifier.succes("Compte désactivé");
       authService.logout("/login");
     } catch (error) {
-      toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+      notifier.echec("Désactivation du compte impossible", error);
       reportError("ECHEC_SUPPRIMER_COMPTE_SETTINGS", error);
       setDeleteLoading(false);
     }

@@ -147,7 +147,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     fireEvent.submit(screen.getByRole("button", { name: /Réinitialiser/i }).closest("form"));
 
     expect(toast.error).toHaveBeenCalledWith(
-      "Les mots de passe ne correspondent pas.",
+      "Les mots de passe ne correspondent pas",
     );
     expect(authService.resetPassword).not.toHaveBeenCalled();
   });
@@ -163,7 +163,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
     fireEvent.submit(screen.getByRole("button", { name: /Réinitialiser/i }).closest("form"));
 
     expect(toast.error).toHaveBeenCalledWith(
-      "Le mot de passe doit contenir au moins 8 caractères.",
+      "Mot de passe trop court\nIl doit contenir au moins 8 caractères.",
     );
     expect(authService.resetPassword).not.toHaveBeenCalled();
   });
@@ -187,7 +187,7 @@ describe("🔐 UI & Logique - Composant <ResetPassword />", () => {
         "ECHEC_RESET_PASSWORD",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Code invalide ou expiré.");
+      expect(toast.error).toHaveBeenCalledWith("Réinitialisation impossible\nCode invalide ou expiré.");
     });
   });
 });

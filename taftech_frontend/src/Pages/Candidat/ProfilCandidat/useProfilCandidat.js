@@ -4,10 +4,10 @@ import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import communesAlgerie from "../../../data/communes.json";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { formatDatePrecise } from "../../../utils/cvDates";
+import { notifierProfilMisAJour } from "../../../utils/evenementsProfil";
 
 const INITIAL_EXP = {
   titre_poste: "",
@@ -37,12 +37,23 @@ const formatText = (text) => {
     .replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
 };
 
-const normalizeExp = (exp) => ({
-  ...exp,
-  metier: exp.metier || null,
-  appellation: exp.appellation || null,
-  date_fin: exp.date_fin || null,
-});
+// Clés d'affichage du métier proposé (jamais envoyées : seul `demande_metier*` l'est).
+const CLES_AFFICHAGE_PROPOSITION = [
+  "demande_metier_libelle", "demande_metier_statut", "demande_metier_motif",
+  "demande_metier_souhaite_libelle", "demande_metier_souhaite_statut", "demande_metier_souhaite_motif",
+];
+
+const normalizeExp = (exp) => {
+  const envoye = {
+    ...exp,
+    metier: exp.metier || null,
+    appellation: exp.appellation || null,
+    date_fin: exp.date_fin || null,
+    demande_metier: exp.demande_metier || null,
+  };
+  CLES_AFFICHAGE_PROPOSITION.forEach((cle) => delete envoye[cle]);
+  return envoye;
+};
 
 // diplome_ref/specialite_ref sont des PrimaryKeyRelatedField nullable côté DRF — une chaîne
 // vide "" (valeur par défaut des <select> non renseignés) est rejetée (seul `null` est accepté).
@@ -121,6 +132,10 @@ export const useProfilCandidat = () => {
         metier_libelle: pData.metier_libelle || "",
         metier_appellation: pData.metier_appellation || null,
         metier_appellation_libelle: pData.metier_appellation_libelle || "",
+        demande_metier: pData.metier_propose?.id || "",
+        demande_metier_libelle: pData.metier_propose?.libelle || "",
+        demande_metier_statut: pData.metier_propose?.statut || "",
+        demande_metier_motif: pData.metier_propose?.motif_refus || "",
         service_militaire: pData.service_militaire || "",
         permis_conduire: pData.permis_conduire || false,
         passeport_valide: pData.passeport_valide || false,
@@ -130,6 +145,10 @@ export const useProfilCandidat = () => {
         metier_souhaite_libelle: pData.metier_souhaite_libelle || "",
         metier_souhaite_appellation: pData.metier_souhaite_appellation || null,
         metier_souhaite_appellation_libelle: pData.metier_souhaite_appellation_libelle || "",
+        demande_metier_souhaite: pData.metier_souhaite_propose?.id || "",
+        demande_metier_souhaite_libelle: pData.metier_souhaite_propose?.libelle || "",
+        demande_metier_souhaite_statut: pData.metier_souhaite_propose?.statut || "",
+        demande_metier_souhaite_motif: pData.metier_souhaite_propose?.motif_refus || "",
         salaire_souhaite: pData.salaire_souhaite || "",
         mobilite: pData.mobilite || "",
         situation_actuelle: pData.situation_actuelle || "",
@@ -141,7 +160,7 @@ export const useProfilCandidat = () => {
         github: pData.github || "",
       });
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de synchronisation avec le serveur."));
+      notifier.echec("Synchronisation impossible", err);
       reportError("ECHEC_FETCH_PROFIL_DATA", err);
     } finally {
       setLoading(false);
@@ -223,21 +242,21 @@ export const useProfilCandidat = () => {
     try {
       const formData = new FormData();
       Object.keys(dataState)
-        .filter((key) => !["nin", "metier_libelle", "metier_souhaite_libelle", "diplome_ref_libelle", "metier_appellation_libelle", "metier_souhaite_appellation_libelle"].includes(key))
+        .filter((key) => !["nin", "metier_libelle", "metier_souhaite_libelle", "diplome_ref_libelle", "metier_appellation_libelle", "metier_souhaite_appellation_libelle", ...CLES_AFFICHAGE_PROPOSITION].includes(key))
         // `metier`/`metier_souhaite`/`diplome_ref` sont des PrimaryKeyRelatedField nullables côté
         // DRF — une chaîne vide (valeur par défaut tant qu'aucun choix n'est fait) est rejetée,
         // contrairement à `null` (que FormData ne sait pas transporter) : on omet simplement la
         // clé, ce qui laisse la valeur actuelle inchangée (PUT partiel) plutôt que d'échouer sur "".
         // Idem pour les appellations (clés étrangères nullables) : omises tant qu'aucune n'est choisie ; le
         // serveur efface l'ancienne si le métier change sans appellation.
-        .filter((key) => !(["metier", "metier_souhaite", "diplome_ref", "metier_appellation", "metier_souhaite_appellation"].includes(key) && !dataState[key]))
+        .filter((key) => !(["metier", "metier_souhaite", "diplome_ref", "metier_appellation", "metier_souhaite_appellation", "demande_metier", "demande_metier_souhaite"].includes(key) && !dataState[key]))
         .forEach((key) => formData.append(key, dataState[key]));
       await profilService.updateProfil(formData);
-      toast.success("Profil mis à jour !");
+      notifier.succes("Profil mis à jour");
       setModalState(false);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
+      notifier.echec("Mise à jour impossible", err);
       reportError("ECHEC_UPDATE_PROFIL_GENERIC", err);
     }
   };
@@ -249,11 +268,11 @@ export const useProfilCandidat = () => {
       formData.append("titre_professionnel", editCV.titre);
       if (editCV.file) formData.append("cv_pdf", editCV.file);
       await profilService.updateProfil(formData);
-      toast.success("Dossier CV actualisé");
+      notifier.succes("Dossier CV actualisé");
       setShowCVForm(false);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'envoi du fichier"));
+      notifier.echec("Envoi du fichier impossible", err);
       reportError("ECHEC_UPDATE_CV", err);
     }
   };
@@ -263,10 +282,10 @@ export const useProfilCandidat = () => {
       const formData = new FormData();
       formData.append("remove_cv_pdf", "true");
       await profilService.updateProfil(formData);
-      toast.success("CV supprimé");
+      notifier.succes("CV supprimé");
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la suppression du CV"));
+      notifier.echec("Suppression du CV impossible", err);
       reportError("ECHEC_DELETE_CV", err);
     }
   };
@@ -280,10 +299,11 @@ export const useProfilCandidat = () => {
     formData.append("photo_profil", fichierRecadre);
     try {
       await profilService.updateProfil(formData);
-      toast.success("Photo mise à jour !");
+      notifier.succes("Photo mise à jour");
+      notifierProfilMisAJour();
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du téléchargement."));
+      notifier.echec("Envoi de la photo impossible", err);
       reportError("ECHEC_UPDATE_PHOTO", err);
     }
   };
@@ -304,22 +324,22 @@ export const useProfilCandidat = () => {
     if (!file) return;
     const ext = "." + file.name.split(".").pop().toLowerCase();
     if (![".pdf", ".docx", ".doc"].includes(ext)) {
-      toast.error("Format non supporté.");
+      notifier.erreur("Format non supporté", "Formats acceptés : PDF, DOC et DOCX.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 5 Mo).");
+      notifier.erreur("Fichier trop volumineux", "La taille maximale est de 5 Mo.");
       return;
     }
-    const toastId = toast.loading("Envoi du CV...");
+    const toastId = notifier.chargement("Envoi du CV en cours");
     try {
       const formData = new FormData();
       formData.append("cv_pdf", file);
       await profilService.updateProfil(formData);
-      toast.success("CV ajouté !", { id: toastId });
+      notifier.succes("CV ajouté", undefined, { id: toastId });
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'envoi du fichier"), { id: toastId });
+      notifier.echec("Envoi du fichier impossible", err, { id: toastId });
       reportError("ECHEC_QUICK_UPLOAD_CV", err);
     }
   };
@@ -328,12 +348,12 @@ export const useProfilCandidat = () => {
     e.preventDefault();
     try {
       await profilService.addExperience(normalizeExp(newExp));
-      toast.success("Expérience ajoutée");
+      notifier.succes("Expérience ajoutée");
       setShowExpForm(false);
       setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Vérifiez les données."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_AJOUT_EXP", err);
     }
   };
@@ -344,7 +364,7 @@ export const useProfilCandidat = () => {
         await profilService.deleteExperience(id);
         fetchData();
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de suppression"));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_DELETE_EXP", err);
       }
     });
@@ -358,6 +378,10 @@ export const useProfilCandidat = () => {
       metier_libelle: exp.metier_libelle || "",
       appellation: exp.appellation || null,
       appellation_libelle: exp.appellation_libelle || "",
+      demande_metier: exp.metier_propose?.id || null,
+      demande_metier_libelle: exp.metier_propose?.libelle || "",
+      demande_metier_statut: exp.metier_propose?.statut || "",
+      demande_metier_motif: exp.metier_propose?.motif_refus || "",
       date_debut: exp.date_debut || "",
       date_fin: exp.date_fin || "",
       date_debut_precision: exp.date_debut_precision || "JOUR",
@@ -372,13 +396,13 @@ export const useProfilCandidat = () => {
     e.preventDefault();
     try {
       await profilService.updateExperience(editingExpId, normalizeExp(newExp));
-      toast.success("Expérience mise à jour");
+      notifier.succes("Expérience mise à jour");
       setShowExpForm(false);
       setEditingExpId(null);
       setNewExp(INITIAL_EXP);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
+      notifier.echec("Mise à jour impossible", err);
       reportError("ECHEC_UPDATE_EXP", err);
     }
   };
@@ -387,12 +411,12 @@ export const useProfilCandidat = () => {
     e.preventDefault();
     try {
       await profilService.addFormation(normalizeForm(newForm));
-      toast.success("Formation ajoutée");
+      notifier.succes("Formation ajoutée");
       setShowFormForm(false);
       setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'ajout"));
+      notifier.echec("Ajout impossible", err);
       reportError("ECHEC_AJOUT_FORMATION", err);
     }
   };
@@ -403,7 +427,7 @@ export const useProfilCandidat = () => {
         await profilService.deleteFormation(id);
         fetchData();
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de suppression"));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_DELETE_FORMATION", err);
       }
     });
@@ -432,13 +456,13 @@ export const useProfilCandidat = () => {
     e.preventDefault();
     try {
       await profilService.updateFormation(editingFormId, normalizeForm(newForm));
-      toast.success("Formation mise à jour");
+      notifier.succes("Formation mise à jour");
       setShowFormForm(false);
       setEditingFormId(null);
       setNewForm(INITIAL_FORM);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour"));
+      notifier.echec("Mise à jour impossible", err);
       reportError("ECHEC_UPDATE_FORMATION", err);
     }
   };
@@ -535,10 +559,10 @@ export const useProfilCandidat = () => {
     formData.append("langues", langues.join(","));
     try {
       await profilService.updateProfil(formData);
-      toast.success("Langue mise à jour");
+      notifier.succes("Langue mise à jour");
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour de la langue."));
+      notifier.echec("Mise à jour de la langue impossible", err);
       reportError("ECHEC_MODIFICATION_LANGUE", err);
     }
   };
@@ -549,11 +573,11 @@ export const useProfilCandidat = () => {
     Object.entries(editLinks).forEach(([k, v]) => formData.append(k, v));
     try {
       await profilService.updateProfil(formData);
-      toast.success("Informations mises à jour !");
+      notifier.succes("Informations mises à jour");
       setShowLinksForm(false);
       fetchData();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_UPDATE_LINKS", err);
     }
   };

@@ -2,8 +2,7 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, Coins } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -33,7 +32,7 @@ const AdminCreditPacks = () => {
       setItems(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_CREDIT_PACKS", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -60,9 +59,9 @@ const AdminCreditPacks = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.nom.trim()) return toast.error("Le nom est obligatoire.");
-    if (!(Number(form.credits) >= 1)) return toast.error("Un pack doit contenir au moins 1 crédit.");
-    if (!(Number(form.prix_da) >= 1)) return toast.error("Le prix doit être d'au moins 1 DA.");
+    if (!form.nom.trim()) return notifier.erreur("Nom manquant", "Le nom est obligatoire.");
+    if (!(Number(form.credits) >= 1)) return notifier.erreur("Nombre de crédits invalide", "Un pack doit contenir au moins 1 crédit.");
+    if (!(Number(form.prix_da) >= 1)) return notifier.erreur("Prix invalide", "Le prix doit être d'au moins 1 DA.");
     const payload = {
       ...form,
       credits: Number(form.credits) || 0,
@@ -72,16 +71,16 @@ const AdminCreditPacks = () => {
     try {
       if (editingId) {
         await jobsService.updateCreditPack(editingId, payload);
-        toast.success("Pack mis à jour !");
+        notifier.succes("Pack mis à jour");
       } else {
         await jobsService.createCreditPack(payload);
-        toast.success("Pack ajouté !");
+        notifier.succes("Pack ajouté");
       }
       setShowModal(false);
       fetchItems();
     } catch (err) {
       reportError("ECHEC_SAVE_CREDIT_PACK", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -90,10 +89,10 @@ const AdminCreditPacks = () => {
       try {
         await jobsService.deleteCreditPack(id);
         setItems((prev) => prev.filter((i) => i.id !== id));
-        toast.success("Pack supprimé.");
+        notifier.succes("Pack supprimé");
       } catch (err) {
         reportError("ECHEC_DELETE_CREDIT_PACK", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

@@ -2,6 +2,7 @@
 import { useSubmitLock } from "../../../utils/useSubmitLock";
 import { tw } from "../../../theme";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import DatePrecisionInput from "../../../Components/DatePrecisionInput";
 import FieldError from "../../../Components/FieldError";
 import { useErreursChamps } from "../../../utils/useErreursChamps";
@@ -91,15 +92,35 @@ export const ModalExperience = ({ inputClass, modalClass, modalInnerClass, btnPr
                 </label>
                 <MetierAutocomplete
                   proposable
-                  value={newExp.appellation_libelle || newExp.metier_libelle || ""}
+                  value={newExp.appellation_libelle || newExp.metier_libelle || newExp.demande_metier_libelle || ""}
                   onSelect={(item) => setNewExp({
                     ...newExp,
                     metier: item.metier_id,
                     metier_libelle: item.metier_libelle,
                     appellation: item.appellation_id || null,
                     appellation_libelle: item.appellation_libelle,
+                    demande_metier: null,
+                    demande_metier_libelle: "",
+                    demande_metier_statut: "",
+                    demande_metier_motif: "",
+                  })}
+                  onPropose={(proposition) => setNewExp({
+                    ...newExp,
+                    metier: "",
+                    metier_libelle: "",
+                    appellation: null,
+                    appellation_libelle: "",
+                    demande_metier: proposition.id,
+                    demande_metier_libelle: proposition.libelle,
+                    demande_metier_statut: "A_EXAMINER",
+                    demande_metier_motif: "",
                   })}
                 />
+                {newExp.demande_metier && !newExp.metier && (
+                  <div className="mt-1.5">
+                    <MetierProposeBadge propose={{ statut: newExp.demande_metier_statut || "A_EXAMINER", motif_refus: newExp.demande_metier_motif }} />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

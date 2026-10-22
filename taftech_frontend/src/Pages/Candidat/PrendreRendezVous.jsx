@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { CalendarClock, Clock, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const STATUT_LABELS = { CONFIRME: "Confirmé", ANNULE: "Annulé", PASSE: "Passé" };
 const STATUT_STYLE = { CONFIRME: tw.scoreHigh, ANNULE: tw.scoreLow, PASSE: tw.statusNeutralSoft };
@@ -34,7 +33,7 @@ const PrendreRendezVous = () => {
         setCreneaux(disponibilites);
         setRendezVous(mesRdv);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_RENDEZ_VOUS", error);
       } finally {
         setIsLoading(false);
@@ -64,10 +63,10 @@ const PrendreRendezVous = () => {
       setCreneaux((prev) => prev.filter((c) => c !== selection));
       setSelection(null);
       setMotif("");
-      toast.success("Rendez-vous confirmé !");
+      notifier.succes("Rendez-vous confirmé");
     } catch (error) {
       reportError("ECHEC_RESERVATION_RDV_UI", error);
-      toast.error(apiErrMsg(error, "Impossible de réserver ce créneau."));
+      notifier.echec("Réservation impossible", error);
     } finally {
       setReserving(false);
     }
@@ -78,9 +77,9 @@ const PrendreRendezVous = () => {
       try {
         await jobsService.annulerRendezVous(id);
         setRendezVous((prev) => prev.map((r) => (r.id === id ? { ...r, statut: "ANNULE" } : r)));
-        toast.success("Rendez-vous annulé.");
+        notifier.succes("Rendez-vous annulé");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de l'annulation."));
+        notifier.echec("Annulation impossible", error);
         reportError("ECHEC_ANNULATION_RDV_UI", error);
       }
     });

@@ -39,6 +39,8 @@ _MOTS_GENERIQUES = {
     "operateur", "operatrice", "administratif", "administrative", "developpement",
     "gestion", "operations", "activites", "service", "national", "general", "generale",
     "professionnel", "professionnelle", "poste", "travail", "expert", "experte",
+    # Statut, pas métier : « Stagiaire en Informatique » se classe sur « informatique ».
+    "stagiaire", "stagiaires", "stage", "stages",
 }
 
 
@@ -145,23 +147,52 @@ def _candidats_pour_experience(titre_poste, description, limite=10):
     return _construire(not evoque_encadrement) or _construire(False)
 
 
+_FEMININS_IRREGULIERS = {"hotesse": "hote", "cheffe": "chef", "maitresse": "maitre"}
+_SUFFIXES_FEMININS = (("trice", "teur"), ("euse", "eur"))  # directrice→directeur, vendeuse→vendeur
+
+
+def _forme_neutre(mot):
+    """Mot normalisé ramené au singulier masculin : « hôtesses » et « hôte » se comparent comme
+    un seul mot (sinon « Hôtesse de caisse » ne couvrait pas l'appellation « Hôte de Caisse »)."""
+    from .referentiel_utils import _singulariser
+
+    # Le féminin se traite AVANT `_singulariser`, qui retire aussi le « e » final (« hotesse » → « hotess »).
+    if len(mot) > 4 and mot.endswith("s") and not mot.endswith("ss"):
+        mot = mot[:-1]
+    if len(mot) > 4 and mot.endswith("ee"):  # « spécialisée » → « spécialisé »
+        mot = mot[:-1]
+    if mot in _FEMININS_IRREGULIERS:
+        return _FEMININS_IRREGULIERS[mot]
+    for feminin, masculin in _SUFFIXES_FEMININS:
+        if len(mot) >= 6 and mot.endswith(feminin):
+            return mot[: -len(feminin)] + masculin
+    return _singulariser(mot)
+
+
+def _nettoyer_titre_poste(titre):
+    """Retire ce qui n'est pas la fonction : parenthèses (« (Stage de Licence) ») et employeur ou lieu
+    collé au poste (« … chez UNO - ES-SENIA », « … @ Société »). Le CV les glisse parfois dans le titre."""
+    titre = re.sub(r"\([^)]*\)", " ", titre or "")
+    return re.sub(r"\s+(?:chez|@)\s+.*$", "", titre, flags=re.IGNORECASE).strip()
+
+
 def _titre_couvert_par(titre, libelle_appellation):
     """Garde-fou serveur : l'appellation choisie par l'IA doit couvrir une fonction entière du
     titre. Un titre composite (« Administrateur des ventes et support IT ») se découpe sur
-    « et », « & », « , », « / » : couvrir UNE des fonctions suffit. Comparaison au singulier
-    (« applications » ↔ « application »). Un titre sans mot significatif n'est pas bloqué."""
-    from .referentiel_utils import _singulariser
-
-    mots_libelle = {_singulariser(m) for m in re.findall(
+    « et », « & », « , », « / » : couvrir UNE des fonctions suffit. Comparaison au singulier et au
+    masculin (« applications » ↔ « application », « hôtesse » ↔ « hôte »), employeur et parenthèses
+    du titre écartés. Un titre sans mot significatif n'est pas bloqué."""
+    mots_libelle = {_forme_neutre(m) for m in re.findall(
         r"\w+", developper_abreviations(normaliser_recherche(libelle_appellation)))}
-    fonctions = [_mots_pertinents(seg) for seg in re.split(r"\s+(?:et|&)\s+|[,/;]", titre or "", flags=re.IGNORECASE)]
+    fonctions = [_mots_pertinents(seg) for seg in re.split(
+        r"\s+(?:et|&)\s+|[,/;]", _nettoyer_titre_poste(titre), flags=re.IGNORECASE)]
     fonctions = [mots for mots in fonctions if mots]
     if not fonctions:
         return True
     # Plus de la moitié des mots d'UNE fonction suffit (« Développeur web » couvre 2 mots sur 3 de
     # « Développeur d'applications web »). Une moitié exacte ne suffit pas : « Gestionnaire administratif
     # RH » ne doit pas passer pour « Gestionnaire recrutement ».
-    return any(2 * sum(1 for m in mots if _singulariser(m) in mots_libelle) > len(mots) for mots in fonctions)
+    return any(2 * sum(1 for m in mots if _forme_neutre(m) in mots_libelle) > len(mots) for mots in fonctions)
 
 
 PROMPT_CLASSIFICATION = """Tu es un expert RH spécialisé dans la nomenclature des métiers utilisée par TAFTECH (Algérie).
@@ -172,6 +203,7 @@ RÈGLES :
 - Tu dois choisir UNIQUEMENT parmi les appellations listées pour chaque élément (identifiées par leur position dans la liste, ex: appellation n°2) — jamais un métier hors de cette liste, même s'il te semble plus juste : si aucune ne convient, réponds "" pour cet élément.
 - Ignore le secteur de l'employeur si le métier exercé est transverse (ex: comptable dans une clinique = comptabilité, pas santé ; développeur chez un fabricant de véhicules = informatique, pas industrie).
 - Ne choisis une appellation d'encadrement ou de direction (chef, directeur, responsable, manager, management) que si le titre ou les missions décrivent réellement un encadrement d'équipe. Sinon, préfère l'appellation d'exécution ou de spécialité la plus proche du titre (ex. « Gestionnaire de paie » pour un chargé de paie).
+- Respecte le niveau hiérarchique du titre : un « Responsable », « Chef » ou « Directeur » reçoit, quand la liste en propose une qui convient, une appellation de même niveau (« Responsable … », « Chef de … ») ; ne le rétrograde pas en « Gestionnaire », « Assistant » ou « Agent ». Inversement, un titre d'exécution ne reçoit pas une appellation de direction.
 - Si aucune appellation proposée ne correspond, ou si l'élément est trop vague (ex: "Stage", "Employé polyvalent" sans autre détail), réponds "" plutôt que de deviner au hasard.
 - Exception : pour l'élément [PROFIL], ne réponds "" que si VRAIMENT aucune des appellations proposées ne convient — c'est le titre professionnel choisi par le candidat lui-même. Si ce titre combine plusieurs fonctions (ex: "Ingénieur IA et Cadre administratif"), classe-le selon la PREMIÈRE fonction mentionnée.
 

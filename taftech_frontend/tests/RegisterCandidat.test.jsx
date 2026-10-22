@@ -245,7 +245,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
     await waitFor(() => {
       // 🌟 Fixé : Aligné sur la chaîne de ton composant (sans mention de la photo)
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du téléchargement.",
+        "Envoi de la photo impossible\nVeuillez réessayer dans quelques instants.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_UPDATE_PHOTO",

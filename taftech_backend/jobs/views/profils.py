@@ -101,7 +101,7 @@ class ProfilCandidatAPIView(APIView):
         # compétences" et le profil restent vides tant que le candidat ne resauvegarde rien.
         if profil.competences and profil.competences.strip() and not profil.competences_detail.exists():
             _synchroniser_competences_depuis_texte(profil)
-        serializer = ProfilCandidatDTO(profil, context={'is_premium': True, 'include_nin': True})
+        serializer = ProfilCandidatDTO(profil, context={**_contexte_candidat(request), 'is_premium': True, 'include_nin': True})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -200,7 +200,9 @@ class ProfilCandidatAPIView(APIView):
                 return Response({"error": " ".join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
             profil.photo_profil = nouvelle_photo
 
-        serializer = ProfilCandidatDTO(profil, data=data, partial=True)
+        serializer = ProfilCandidatDTO(
+            profil, data=data, partial=True, context={**_contexte_candidat(request), 'is_premium': True},
+        )
         if serializer.is_valid():
             serializer.save()
             if 'competences' in data:
@@ -261,6 +263,13 @@ def _synchroniser_competences_depuis_texte(profil):
     profil.competences_detail.exclude(label__in=labels_texte).delete()
 
 
+def _contexte_candidat(request):
+    """Contexte des sérialiseurs du candidat sur SON profil : l'utilisateur sert à vérifier qu'une demande de
+    métier est bien la sienne, et `inclure_metier_propose` autorise l'affichage de ses propositions en attente
+    (jamais posé dans une vue recruteur)."""
+    return {'utilisateur_demandeur': request.user, 'inclure_metier_propose': True}
+
+
 class ExperienceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -268,7 +277,7 @@ class ExperienceAPIView(APIView):
         if request.user.role != 'CANDIDAT':
             return Response({"error": "Réservé aux candidats."}, status=status.HTTP_403_FORBIDDEN)
         profil = request.user.profil_candidat
-        serializer = ExperienceSerializer(data=request.data)
+        serializer = ExperienceSerializer(data=request.data, context=_contexte_candidat(request))
         if serializer.is_valid():
             serializer.save(profil=profil)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -285,7 +294,7 @@ class ExperienceDetailAPIView(APIView):
             experience = ExperienceCandidat.objects.get(pk=pk, profil=request.user.profil_candidat)
         except ExperienceCandidat.DoesNotExist:
             return Response({"error": "Expérience introuvable."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ExperienceSerializer(experience, data=request.data)
+        serializer = ExperienceSerializer(experience, data=request.data, context=_contexte_candidat(request))
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

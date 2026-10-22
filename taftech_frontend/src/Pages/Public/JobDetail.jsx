@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { TooltipIcon } from "../../Components/Tooltip";
@@ -199,7 +199,7 @@ const JobDetail = () => {
   const handlePostulerTafTech = async () => {
     if (isSubmitting) return;
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
-      toast.error("Vous devez être connecté en tant que candidat.");
+      notifier.erreur("Connexion requise", "Vous devez être connecté en tant que candidat.");
       navigate(`/login?next=${encodeURIComponent(`/jobs/${job.id}/postuler`)}`);
       return;
     }
@@ -218,7 +218,7 @@ const JobDetail = () => {
         return;
       }
       setPostulerStatus("error");
-      toast.error(err.response?.data?.error || "Erreur lors de la postulation.");
+      notifier.erreur("Candidature impossible", err.response?.data?.error || "Veuillez réessayer dans quelques instants.");
       reportError("ECHEC_POSTULER_TAFTECH", err);
     } finally {
       setIsSubmitting(false);
@@ -227,7 +227,7 @@ const JobDetail = () => {
 
   const handleReviewClick = () => {
     if (!authService.isAuthenticated() || authService.getUserRole() !== "CANDIDAT") {
-      toast.error("Connectez-vous pour voir votre profil.");
+      notifier.erreur("Connexion requise", "Connectez-vous pour voir votre profil.");
       navigate(`/login?next=${encodeURIComponent(`/jobs/${job.id}/postuler`)}`);
       return;
     }
@@ -264,7 +264,7 @@ const JobDetail = () => {
       return;
     }
     setIsSubmitting(true);
-    const toastId = toast.loading("Envoi de votre candidature...");
+    const toastId = notifier.chargement("Envoi de votre candidature en cours");
     const formData = new FormData();
     Object.keys(fastForm).forEach((key) => {
       if (fastForm[key] !== null && fastForm[key] !== "") formData.append(key, fastForm[key]);
@@ -272,11 +272,11 @@ const JobDetail = () => {
     try {
       await jobsService.postulerRapide(job.id, formData);
       setPostulerStatus("success");
-      toast.success("Candidature envoyée !", { id: toastId });
+      notifier.succes("Candidature envoyée", undefined, { id: toastId });
     } catch (err) {
       setPostulerStatus("error");
       depuisReponse(err);
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi.", { id: toastId });
+      notifier.erreur("Envoi impossible", err.response?.data?.error || "Veuillez réessayer dans quelques instants.", { id: toastId });
       reportError("ECHEC_POSTULER_RAPIDE", err);
     } finally {
       setIsSubmitting(false);
@@ -312,7 +312,7 @@ const JobDetail = () => {
     }
     definir(manquantes);
     if (Object.keys(manquantes).length) {
-      toast.error("Répondez aux questions obligatoires (*).");
+      notifier.erreur("Questions obligatoires", "Répondez aux questions marquées d'un astérisque (*).");
       return false;
     }
     return true;

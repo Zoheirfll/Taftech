@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Search, X, HelpCircle, FileText } from "lucide-react";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -69,7 +68,7 @@ const AdminCandidatures = () => {
       setTotalCount(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / ADMIN_PAGE_SIZE) || 1);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_CHARGEMENT_CANDIDATURES_ADMIN", err);
     } finally {
       setLoading(false);

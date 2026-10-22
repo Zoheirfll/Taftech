@@ -110,7 +110,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
       expect(jobsService.updateAIConfig).toHaveBeenCalledWith(
         expect.objectContaining({ parser_cv_actif: false }),
       );
-      expect(toast.success).toHaveBeenCalledWith("Configuration IA mise à jour !");
+      expect(toast.success).toHaveBeenCalledWith("Configuration IA mise à jour");
     });
   });
 
@@ -342,7 +342,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
         "ECHEC_GET_AI_CONFIG",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -373,7 +373,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
     fireEvent.change(screen.getByDisplayValue("0.7"), { target: { value: "" } });
     fireEvent.click(screen.getByText("Enregistrer"));
 
-    expect(toast.error).toHaveBeenCalledWith("La température doit être comprise entre 0 et 2.");
+    expect(toast.error).toHaveBeenCalledWith("Température invalide\nLa température doit être comprise entre 0 et 2.");
     expect(jobsService.updateAIConfig).not.toHaveBeenCalled();
   });
 
@@ -397,7 +397,7 @@ describe("🤖 UI & Logique - Composant <AdminIAConfig />", () => {
         "ECHEC_UPDATE_AI_CONFIG",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de la sauvegarde.");
+      expect(toast.error).toHaveBeenCalledWith("Enregistrement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 });

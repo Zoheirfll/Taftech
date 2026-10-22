@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { tw } from "../../theme";
 import { Download, FileText, Search } from "lucide-react";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const NOM_LABELS = { STARTER: "Starter", PRO: "Pro", BUSINESS: "Business", ENTERPRISE: "Enterprise" };
 
@@ -42,7 +41,7 @@ const FacturationPage = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du téléchargement de la facture."));
+      notifier.echec("Téléchargement de la facture impossible", err);
     } finally {
       setTelechargementId(null);
     }

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Gauge, FileSearch, PenLine, Target, RefreshCw } from "lucide-react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { adminService } from "../../Services/adminService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -193,9 +192,9 @@ const PanneauCorrections = () => {
       async () => {
         try {
           await adminService.creerAppellationDepuisCorrection(ligne.texte_source, ligne.corrige_id);
-          toast.success("Appellation ajoutée au référentiel.");
+          notifier.succes("Appellation ajoutée au référentiel");
         } catch (err) {
-          toast.error(apiErrMsg(err, "Impossible d'ajouter l'appellation."));
+          notifier.echec("Ajout de l'appellation impossible", err);
         }
       },
     );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import {
   RefreshCw,
@@ -29,7 +29,6 @@ import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import { AdminErreurChargement, AdminVide } from "../../Components/AdminEtat";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 // Carte KPI — cliquable (`to`) quand une page admin permet d'agir sur ce chiffre.
 const StatCard = ({ icon: Icon, label, value, color, info, to }) => {
@@ -88,7 +87,7 @@ const AdminStatistiques = () => {
       const data = await jobsService.getAdminStats();
       setStats(data);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du chargement des statistiques."));
+      notifier.echec("Chargement des statistiques impossible", err);
       reportError("ECHEC_CHARGEMENT_STATS_ADMIN", err);
     } finally {
       setLoading(false);
@@ -103,7 +102,7 @@ const AdminStatistiques = () => {
       setMarche(data);
     } catch (err) {
       setErreurMarche(true);
-      toast.error(apiErrMsg(err, "Erreur lors du chargement des données marché."));
+      notifier.echec("Chargement des données du marché impossible", err);
       reportError("ECHEC_CHARGEMENT_MARCHE_ADMIN", err);
     } finally {
       setLoadingMarche(false);

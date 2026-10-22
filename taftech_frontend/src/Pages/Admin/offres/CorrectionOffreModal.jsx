@@ -1,12 +1,11 @@
 // Correction d'une offre « En attente » par l'admin (16/10/2026) : tous les champs de l'offre, seuls les
 // champs réellement modifiés sont envoyés. Le serveur trace l'audit et prévient le recruteur par e-mail.
 import React, { useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { jobsService } from "../../../Services/jobsService";
 import MetierAutocomplete from "../../../Components/MetierAutocomplete";
 import useEchapPourFermer from "../../../utils/useEchapPourFermer";
 import { reportError } from "../../../utils/errorReporter";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { nomWilaya } from "../../../utils/wilaya";
 import { tw } from "../../../theme";
 
@@ -46,17 +45,17 @@ const CorrectionOffreModal = ({ offre, onClose, onSaved }) => {
 
   const enregistrer = async (e) => {
     e.preventDefault();
-    if (!String(valeurs.titre).trim()) return toast.error("Le titre ne peut pas être vide.");
+    if (!String(valeurs.titre).trim()) return notifier.erreur("Titre manquant", "Le titre ne peut pas être vide.");
     if (modifies.length === 0) return onClose();
     setEnCours(true);
     try {
       const donnees = Object.fromEntries(modifies.map((champ) => [champ, valeurs[champ] === "" ? null : valeurs[champ]]));
       if (donnees.titre) donnees.titre = String(donnees.titre).trim();
       await jobsService.corrigerOffre(offre.id, donnees);
-      toast.success("Offre corrigée — le recruteur a été prévenu par e-mail.");
+      notifier.succes("Offre corrigée", "Le recruteur a été prévenu par e-mail.");
       onSaved();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la correction."));
+      notifier.echec("Correction impossible", err);
       reportError("ECHEC_CORRECTION_OFFRE", err);
     } finally {
       setEnCours(false);

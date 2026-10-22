@@ -147,7 +147,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
         statut: "RETENU",
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Statut mis à jour.",
+        "Statut mis à jour",
       );
       expect(screen.getByText(/Télécharger/i)).toBeInTheDocument();
     });
@@ -188,7 +188,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
         message_entretien: "",
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Entretien programmé et email envoyé !",
+        "Entretien programmé\nUn e-mail a été envoyé au candidat.",
       );
     });
   });
@@ -246,7 +246,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
         note_experience: 5,
         commentaire_evaluation: "Top candidat",
       });
-      expect(toast.success).toHaveBeenCalledWith("Évaluation sauvegardée !");
+      expect(toast.success).toHaveBeenCalledWith("Évaluation enregistrée");
     });
   });
 
@@ -273,7 +273,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
       expect(jobsService.telechargerBulletin).toHaveBeenCalledWith(100);
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Bulletin généré !",
+        "Bulletin généré",
       );
     });
   });
@@ -309,7 +309,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
     );
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Offre introuvable.");
+      expect(toast.error).toHaveBeenCalledWith("Offre introuvable");
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
     });
   });
@@ -331,7 +331,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la mise à jour.",
+        "Mise à jour impossible\nVeuillez réessayer dans quelques instants.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_MISE_A_JOUR_STATUT",
@@ -360,7 +360,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Date et heure requises.",
+        "Date et heure requises\nRenseignez la date et l'heure de l'entretien.",
       );
       expect(jobsService.updateStatutCandidature).not.toHaveBeenCalled();
     });
@@ -391,7 +391,7 @@ describe("💼 UI & Logique - Composant <GestionOffre />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez remplir toutes les notes.",
+        "Notes manquantes\nRenseignez toutes les notes avant d'enregistrer.",
       );
       expect(jobsService.evaluerCandidature).not.toHaveBeenCalled();
     });

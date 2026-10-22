@@ -161,7 +161,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
 
     await waitFor(() => {
       expect(jobsService.createQuestionnaire).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Questionnaire créé !");
+      expect(toast.success).toHaveBeenCalledWith("Questionnaire créé");
     });
   });
 
@@ -208,7 +208,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
 
     await waitFor(() => {
       expect(jobsService.deleteQuestionnaire).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Questionnaire supprimé.");
+      expect(toast.success).toHaveBeenCalledWith("Questionnaire supprimé");
     });
   });
 
@@ -262,7 +262,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Veuillez remplir tous les champs obligatoires.");
+      expect(toast.error).toHaveBeenCalledWith("Formulaire incomplet\nVeuillez remplir tous les champs obligatoires.");
       expect(jobsService.createQuestionnaire).not.toHaveBeenCalled();
     });
   });
@@ -286,7 +286,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez remplir tous les champs obligatoires.",
+        "Formulaire incomplet\nVeuillez remplir tous les champs obligatoires.",
       );
     });
   });
@@ -315,7 +315,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
     fireEvent.click(screen.getByText(/Créer le questionnaire/i));
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Une question disqualifiante doit être justifiée par une exigence professionnelle.",
+        "Formulaire incomplet\nUne question disqualifiante doit être justifiée par une exigence professionnelle.",
       );
     });
     expect(jobsService.createQuestionnaire).not.toHaveBeenCalled();
@@ -358,7 +358,7 @@ describe("📋 UI & Logique - Composant <Questionnaires />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la suppression.",
+        "Suppression impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

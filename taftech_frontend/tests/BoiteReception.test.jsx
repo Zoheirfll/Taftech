@@ -99,7 +99,7 @@ describe("📥 UI & Logique - Composant <BoiteReception />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement.",
+        "Chargement impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

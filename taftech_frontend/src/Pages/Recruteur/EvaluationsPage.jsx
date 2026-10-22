@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Search, Trash2 } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 
@@ -56,9 +55,9 @@ const EvaluationsPage = () => {
             ),
           })),
         );
-        toast.success("Évaluation supprimée.");
+        notifier.succes("Évaluation supprimée");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRIMER_EVALUATION_LISTE", error);
       }
     });

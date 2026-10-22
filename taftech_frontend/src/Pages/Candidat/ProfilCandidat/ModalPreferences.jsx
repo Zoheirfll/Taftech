@@ -2,6 +2,7 @@
 import { useSubmitLock } from "../../../utils/useSubmitLock";
 import { tw } from "../../../theme";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import FieldError from "../../../Components/FieldError";
 import { useErreursChamps } from "../../../utils/useErreursChamps";
 
@@ -36,15 +37,35 @@ export const ModalPreferences = ({ inputClass, modalClass, modalInnerClass, btnP
                 </label>
                 <MetierAutocomplete
                   proposable
-                  value={editPref.metier_souhaite_appellation_libelle || editPref.metier_souhaite_libelle || ""}
+                  value={editPref.metier_souhaite_appellation_libelle || editPref.metier_souhaite_libelle || editPref.demande_metier_souhaite_libelle || ""}
                   onSelect={(item) => setEditPref({
                     ...editPref,
                     metier_souhaite: item.metier_id,
                     metier_souhaite_libelle: item.metier_libelle,
                     metier_souhaite_appellation: item.appellation_id || null,
                     metier_souhaite_appellation_libelle: item.appellation_libelle,
+                    demande_metier_souhaite: "",
+                    demande_metier_souhaite_libelle: "",
+                    demande_metier_souhaite_statut: "",
+                    demande_metier_souhaite_motif: "",
+                  })}
+                  onPropose={(proposition) => setEditPref({
+                    ...editPref,
+                    metier_souhaite: "",
+                    metier_souhaite_libelle: "",
+                    metier_souhaite_appellation: null,
+                    metier_souhaite_appellation_libelle: "",
+                    demande_metier_souhaite: proposition.id,
+                    demande_metier_souhaite_libelle: proposition.libelle,
+                    demande_metier_souhaite_statut: "A_EXAMINER",
+                    demande_metier_souhaite_motif: "",
                   })}
                 />
+                {editPref.demande_metier_souhaite && !editPref.metier_souhaite && (
+                  <div className="mt-1.5">
+                    <MetierProposeBadge propose={{ statut: editPref.demande_metier_souhaite_statut || "A_EXAMINER", motif_refus: editPref.demande_metier_souhaite_motif }} />
+                  </div>
+                )}
               </div>
               <div>
                 <label className={tw.formLabel}>

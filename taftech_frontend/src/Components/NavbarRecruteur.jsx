@@ -108,7 +108,8 @@ const NavbarRecruteur = () => {
       const load = async () => {
         try {
           const dash = await jobsService.getDashboard();
-          if (dash.entreprise?.logo) setUserPhoto(mediaUrl(dash.entreprise.logo));
+          // Toujours mis à jour : sans logo, l'ancien ne doit pas rester affiché.
+          setUserPhoto(dash.entreprise?.logo ? mediaUrl(dash.entreprise.logo) : null);
           if (dash.palier_actif) {
             setIsPremium(true);
             setPalierNom(dash.palier_actif);

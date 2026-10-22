@@ -3,10 +3,9 @@
 // `params` = les filtres de la liste affichée : le serveur applique les mêmes, l'export contient ce que l'on voit.
 import { useState } from "react";
 import { Download } from "lucide-react";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import { adminService } from "../Services/adminService";
 import { reportError } from "../utils/errorReporter";
-import { apiErrMsg } from "../utils/apiErrMsg";
 import { tw } from "../theme";
 
 const telecharger = (contenu, nomFichier) => {
@@ -26,16 +25,16 @@ const BoutonExportExcel = ({ ressource, params = {}, nomFichier, libelle = "Expo
   const exporter = async () => {
     if (enCours) return;
     setEnCours(true);
-    const toastId = toast.loading("Génération du fichier...");
+    const toastId = notifier.chargement("Génération du fichier en cours");
     try {
       const contenu = await adminService.exporterListe(ressource, params);
       telecharger(contenu, `${nomFichier}.xlsx`);
-      toast.success("Téléchargement réussi !");
+      notifier.succes("Téléchargement terminé");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
+      notifier.echec("Exportation impossible", err);
       reportError(`ECHEC_EXPORT_EXCEL_${ressource.toUpperCase().replace(/-/g, "_")}`, err);
     } finally {
-      toast.dismiss(toastId);
+      notifier.fermer(toastId);
       setEnCours(false);
     }
   };

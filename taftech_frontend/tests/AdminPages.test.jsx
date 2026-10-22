@@ -134,7 +134,7 @@ describe("📄 UI & Logique - Composant <AdminPages />", () => {
 
     await waitFor(() => {
       expect(jobsService.createPageStatique).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Page créée !");
+      expect(toast.success).toHaveBeenCalledWith("Page créée");
     });
   });
 
@@ -154,7 +154,7 @@ describe("📄 UI & Logique - Composant <AdminPages />", () => {
         "ECHEC_GET_ADMIN_PAGES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -177,7 +177,7 @@ describe("📄 UI & Logique - Composant <AdminPages />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Le contenu ne peut pas être vide.");
+      expect(toast.error).toHaveBeenCalledWith("Contenu manquant\nLe contenu ne peut pas être vide.");
       expect(jobsService.createPageStatique).not.toHaveBeenCalled();
     });
   });

@@ -311,13 +311,62 @@ describe("OnboardingWizard", () => {
 
     await screen.findByRole("button", { name: /Continuer/i });
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // -> 3 (save infos)
-    expect(await screen.findByText(/· Développeur web/)).toBeInTheDocument();
+    expect(await screen.findByText("Métier : Développeur web")).toBeInTheDocument();
     expect(screen.queryByText(/Études et développement informatique/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
     await waitFor(() => expect(profilService.addExperience).toHaveBeenCalled());
     const envoye = profilService.addExperience.mock.calls[0][0];
     expect([envoye.metier, envoye.appellation]).toEqual([7, 41]);
+  });
+
+  it("l'étape Expériences signale en évidence une expérience sans métier, et l'enregistre sans lien de demande", async () => {
+    jobsService.parserCV.mockResolvedValue({
+      success: true,
+      formations: [],
+      experiences: [
+        { titre_poste: "Pilote de drone", entreprise: "Société X", date_debut_raw: "Janvier 2026", date_fin_raw: "", description: "" },
+      ],
+    });
+    render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
+    await screen.findByText(/Upload CV/i);
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input, { target: { files: [new File(["contenu"], "cv.pdf", { type: "application/pdf" })] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Analyser mon CV/i }));
+
+    await screen.findByRole("button", { name: /Continuer/i });
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // -> 3 (save infos)
+    expect(await screen.findByRole("button", { name: /Métier à choisir/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
+    await waitFor(() => expect(profilService.addExperience).toHaveBeenCalled());
+    const envoye = profilService.addExperience.mock.calls[0][0];
+    expect(envoye.demande_metier ?? null).toBeNull();
+    expect(envoye).not.toHaveProperty("demande_metier_libelle");
+  });
+
+  it("l'étape Expériences signale une date de début manquante et n'envoie rien (ni suppression)", async () => {
+    jobsService.parserCV.mockResolvedValue({
+      success: true,
+      formations: [],
+      experiences: [
+        { titre_poste: "Organisateur de conditionnement", entreprise: "ACG SIM", date_debut_raw: "", date_fin_raw: "novembre 2020", description: "" },
+      ],
+    });
+    render(<MemoryRouter><OnboardingWizard mode="page" /></MemoryRouter>);
+    await screen.findByText(/Upload CV/i);
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input, { target: { files: [new File(["contenu"], "cv.pdf", { type: "application/pdf" })] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Analyser mon CV/i }));
+
+    await screen.findByRole("button", { name: /Continuer/i });
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // -> 3 (save infos)
+    expect(await screen.findByRole("button", { name: /Date de début manquante/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuer/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("date de début")));
+    expect(profilService.addExperience).not.toHaveBeenCalled();
+    expect(profilService.deleteExperience).not.toHaveBeenCalled();
   });
 
   it("l'étape Langues permet de modifier le nom et le niveau d'une langue détectée", async () => {
@@ -370,7 +419,7 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // save expériences
 
     await waitFor(() =>
-      expect(toast.error.mock.calls.some(([message]) => /1 expérience\(s\) n'ont pas été enregistrées/.test(message))).toBe(true),
+      expect(toast.error.mock.calls.some(([message]) => /1 expérience\(s\) non enregistrée\(s\)/.test(message))).toBe(true),
     );
     // L'étape n'avance pas : l'expérience en échec reste à l'écran, prête à un nouvel essai.
     expect(screen.getByText(/expérience\(s\) prête\(s\)/i)).toBeInTheDocument();

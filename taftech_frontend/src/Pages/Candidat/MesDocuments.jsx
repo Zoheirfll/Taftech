@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import React, { useState, useEffect, useRef } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { profilService } from "../../Services/profilService";
 import { reportError } from "../../utils/errorReporter";
@@ -10,7 +10,6 @@ import InfoBanner from "../../Components/InfoBanner";
 import Tooltip from "../../Components/Tooltip";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -51,7 +50,7 @@ const MesDocuments = () => {
         await refetchProfil();
         if (typesData.length > 0) setTypeSelectionne(String(typesData[0].id));
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_MES_DOCUMENTS", error);
       } finally {
         setIsLoading(false);
@@ -71,10 +70,10 @@ const MesDocuments = () => {
       // directement la réponse, même pattern que ProfilCandidat/useProfilCandidat.js.
       await profilService.updateProfil(formData);
       await refetchProfil();
-      toast.success("CV mis à jour !");
+      notifier.succes("CV mis à jour");
     } catch (error) {
       reportError("ECHEC_UPLOAD_CV_MES_DOCUMENTS", error);
-      toast.error(apiErrMsg(error, "Impossible d'envoyer ce CV."));
+      notifier.echec("Envoi du CV impossible", error);
     } finally {
       setUploadingCV(false);
       if (cvInputRef.current) cvInputRef.current.value = "";
@@ -88,9 +87,9 @@ const MesDocuments = () => {
         formData.append("remove_cv_pdf", "true");
         await profilService.updateProfil(formData);
         await refetchProfil();
-        toast.success("CV supprimé.");
+        notifier.succes("CV supprimé");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRESSION_CV_MES_DOCUMENTS", error);
       }
     });
@@ -103,9 +102,9 @@ const MesDocuments = () => {
       formData.append("visible_cvtheque", (!profil.visible_cvtheque).toString());
       await profilService.updateProfil(formData);
       const updated = await refetchProfil();
-      toast.success(updated.visible_cvtheque ? "Déblocage réactivé." : "Déblocage désactivé.");
+      notifier.succes(updated.visible_cvtheque ? "Déblocage réactivé" : "Déblocage désactivé");
     } catch (error) {
-      toast.error(apiErrMsg(error, "Erreur lors de la mise à jour."));
+      notifier.echec("Mise à jour impossible", error);
       reportError("ECHEC_TOGGLE_VISIBLE_CVTHEQUE", error);
     } finally {
       setTogglingVisibilite(false);
@@ -123,7 +122,7 @@ const MesDocuments = () => {
       const data = await jobsService.getEntreprisesEligiblesPartage(docId);
       setEntreprisesEligibles(data);
     } catch (error) {
-      toast.error(apiErrMsg(error, "Impossible de charger les entreprises."));
+      notifier.echec("Chargement des entreprises impossible", error);
       reportError("ECHEC_ENTREPRISES_ELIGIBLES", error);
     } finally {
       setLoadingEntreprises(false);
@@ -153,9 +152,9 @@ const MesDocuments = () => {
           };
         })
       );
-      toast.success(dejaPartage ? "Partage révoqué." : "Document partagé.");
+      notifier.succes(dejaPartage ? "Partage révoqué" : "Document partagé");
     } catch (error) {
-      toast.error(apiErrMsg(error, "Erreur lors du partage."));
+      notifier.echec("Partage impossible", error);
       reportError("ECHEC_TOGGLE_PARTAGE_DOCUMENT", error);
     }
   };
@@ -167,10 +166,10 @@ const MesDocuments = () => {
     try {
       const created = await jobsService.uploaderDocument(fichier, typeSelectionne || null, fichier.name);
       setDocuments((prev) => [created, ...prev]);
-      toast.success("Document ajouté !");
+      notifier.succes("Document ajouté");
     } catch (error) {
       reportError("ECHEC_UPLOAD_DOCUMENT_UI", error);
-      toast.error(apiErrMsg(error, "Impossible d'ajouter ce document."));
+      notifier.echec("Ajout du document impossible", error);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -182,9 +181,9 @@ const MesDocuments = () => {
       try {
         await jobsService.supprimerDocument(id);
         setDocuments((prev) => prev.filter((d) => d.id !== id));
-        toast.success("Document supprimé.");
+        notifier.succes("Document supprimé");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRESSION_DOCUMENT_UI", error);
       }
     });

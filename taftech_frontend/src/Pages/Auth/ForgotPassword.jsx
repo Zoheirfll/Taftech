@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { authService } from "../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { Mail, ArrowLeft } from "lucide-react";
 import { tw } from "../../theme";
@@ -30,7 +30,7 @@ const ForgotPassword = () => {
       reportError("ECHEC_FORGOT_PASSWORD", err);
       const message = apiErrMsg(err, "Une erreur est survenue.");
       definir({ email: message });
-      toast.error(message);
+      notifier.erreur("Demande impossible", message);
     } finally {
       setLoading(false);
     }

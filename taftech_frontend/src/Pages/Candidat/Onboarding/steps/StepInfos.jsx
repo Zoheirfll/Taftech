@@ -4,6 +4,8 @@ import { tw } from "../../../../theme";
 import { grouperParFamille } from "../../../../utils/familleFormation";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
 import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
+import { MetierProposeBadge } from "../../../../Components/MetierProposeBadge";
+import { doitRetirerPhoto } from "../../../../utils/photoProfil";
 
 const HAS_EXISTING_INFOS = (p) =>
   !!(p?.telephone || p?.wilaya || p?.commune || p?.diplome || p?.metier || p?.sexe || p?.bio || p?.linkedin || p?.github);
@@ -16,7 +18,7 @@ const SERVICE_MILITAIRE_OPTIONS = [
   { value: "INCORPORE", label: "Incorporé" },
 ];
 
-export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, skipStep, constants, profil, saving, pendingPhoto }) => {
+export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, skipStep, constants, profil, saving, pendingPhoto, parsedData }) => {
   const set = (field) => (e) => {
     const value = e.target.value;
     setInfosForm((prev) => ({ ...prev, [field]: value }));
@@ -34,6 +36,14 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
         <h3 className={tw.pageTitlePetit}>Informations personnelles</h3>
         {HAS_EXISTING_INFOS(profil) && <WizardCategoryToggle mode={infosMode} onChange={setInfosMode} />}
       </div>
+
+      {doitRetirerPhoto({ infosMode, cvAnalyse: parsedData, photoEnAttente: pendingPhoto, profil }) && (
+        <div role="status" className={`p-3 rounded-xl border mb-4 ${tw.bgWarningSoft} ${tw.borderWarning}`}>
+          <p className={`text-xs font-medium ${tw.textWarning}`}>
+            Votre nouveau CV ne contient pas de photo : en mode « Remplacer », votre photo actuelle sera retirée. Choisissez « Ajouter » pour la conserver.
+          </p>
+        </div>
+      )}
 
       {photoPreviewUrl && (
         <div className={`flex items-center gap-3 p-3 rounded-xl border mb-4 ${tw.bgSuccessSoft} border-emerald-200`}>
@@ -122,15 +132,31 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
           <label className={`${tw.authLabel} mb-1.5`}>Métier</label>
           <MetierAutocomplete
             proposable
-            value={infosForm.metier_appellation_libelle || infosForm.metier_libelle || ""}
+            value={infosForm.metier_appellation_libelle || infosForm.metier_libelle || infosForm.demande_metier_libelle || ""}
             onSelect={(item) => setInfosForm((prev) => ({
               ...prev,
               metier: item.metier_id,
               metier_libelle: item.metier_libelle,
               metier_appellation: item.appellation_id || null,
               metier_appellation_libelle: item.appellation_libelle,
+              demande_metier: "",
+              demande_metier_libelle: "",
+              demande_metier_statut: "",
+            }))}
+            onPropose={(proposition) => setInfosForm((prev) => ({
+              ...prev,
+              metier: "",
+              metier_libelle: "",
+              metier_appellation: null,
+              metier_appellation_libelle: "",
+              demande_metier: proposition.id,
+              demande_metier_libelle: proposition.libelle,
+              demande_metier_statut: "A_EXAMINER",
             }))}
           />
+          {infosForm.demande_metier && !infosForm.metier && (
+            <div className="mt-1.5"><MetierProposeBadge propose={{ statut: infosForm.demande_metier_statut || "A_EXAMINER" }} /></div>
+          )}
         </div>
         <div>
           <label htmlFor="onb-service-militaire" className={`${tw.authLabel} mb-1.5`}>Service militaire</label>

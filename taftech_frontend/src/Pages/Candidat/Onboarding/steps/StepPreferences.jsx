@@ -1,6 +1,7 @@
 import React from "react";
 import { tw } from "../../../../theme";
 import { MetierAutocomplete } from "../../../../Components/MetierAutocomplete";
+import { MetierProposeBadge } from "../../../../Components/MetierProposeBadge";
 
 export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipStep, saving }) => {
   const set = (field) => (e) => {
@@ -16,15 +17,31 @@ export const StepPreferences = ({ prefsForm, setPrefsForm, savePrefsStep, skipSt
           <label className={`${tw.authLabel} mb-1.5`}>Métier souhaité</label>
           <MetierAutocomplete
             proposable
-            value={prefsForm.metier_souhaite_appellation_libelle || prefsForm.metier_souhaite_libelle || ""}
+            value={prefsForm.metier_souhaite_appellation_libelle || prefsForm.metier_souhaite_libelle || prefsForm.demande_metier_souhaite_libelle || ""}
             onSelect={(item) => setPrefsForm((prev) => ({
               ...prev,
               metier_souhaite: item.metier_id,
               metier_souhaite_libelle: item.metier_libelle,
               metier_souhaite_appellation: item.appellation_id || null,
               metier_souhaite_appellation_libelle: item.appellation_libelle,
+              demande_metier_souhaite: "",
+              demande_metier_souhaite_libelle: "",
+              demande_metier_souhaite_statut: "",
+            }))}
+            onPropose={(proposition) => setPrefsForm((prev) => ({
+              ...prev,
+              metier_souhaite: "",
+              metier_souhaite_libelle: "",
+              metier_souhaite_appellation: null,
+              metier_souhaite_appellation_libelle: "",
+              demande_metier_souhaite: proposition.id,
+              demande_metier_souhaite_libelle: proposition.libelle,
+              demande_metier_souhaite_statut: "A_EXAMINER",
             }))}
           />
+          {prefsForm.demande_metier_souhaite && !prefsForm.metier_souhaite && (
+            <div className="mt-1.5"><MetierProposeBadge propose={{ statut: prefsForm.demande_metier_souhaite_statut || "A_EXAMINER" }} /></div>
+          )}
         </div>
         <div>
           <label htmlFor="onb-salaire" className={`${tw.authLabel} mb-1.5`}>Salaire mensuel attendu</label>

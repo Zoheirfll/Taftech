@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import {
   BarChart3,
   Briefcase,
@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { tw, colors } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -164,7 +163,7 @@ const AdminStatsPeriode = () => {
       setDonnees(await jobsService.getAdminStatsPeriode(periode.debut, periode.fin, entrepriseId || null));
     } catch (err) {
       setErreur(true);
-      toast.error(apiErrMsg(err, "Erreur lors du chargement des statistiques."));
+      notifier.echec("Chargement des statistiques impossible", err);
       reportError("ECHEC_CHARGEMENT_STATS_PERIODE", err);
     } finally {
       setChargement(false);
@@ -176,8 +175,8 @@ const AdminStatsPeriode = () => {
   }, [charger]);
 
   const appliquer = () => {
-    if (!saisie.debut || !saisie.fin) return toast.error("Renseignez les deux dates.");
-    if (saisie.debut > saisie.fin) return toast.error("La date de début doit précéder la date de fin.");
+    if (!saisie.debut || !saisie.fin) return notifier.erreur("Dates manquantes", "Renseignez les deux dates.");
+    if (saisie.debut > saisie.fin) return notifier.erreur("Période invalide", "La date de début doit précéder la date de fin.");
     setPeriode(saisie);
   };
 
@@ -189,7 +188,7 @@ const AdminStatsPeriode = () => {
 
   const exporter = async () => {
     setExportEnCours(true);
-    const toastId = toast.loading("Génération du fichier...");
+    const toastId = notifier.chargement("Génération du fichier en cours");
     try {
       const blob = await jobsService.exportAdminStatsPeriode(periode.debut, periode.fin, entrepriseId || null);
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -200,12 +199,12 @@ const AdminStatsPeriode = () => {
       lien.click();
       lien.parentNode.removeChild(lien);
       window.URL.revokeObjectURL(url);
-      toast.success("Téléchargement réussi !");
+      notifier.succes("Téléchargement terminé");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'exportation."));
+      notifier.echec("Exportation impossible", err);
       reportError("ECHEC_EXPORT_STATS_PERIODE", err);
     } finally {
-      toast.dismiss(toastId);
+      notifier.fermer(toastId);
       setExportEnCours(false);
     }
   };

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Star, Trash2, Pencil, Plus, X } from "lucide-react";
 import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
 
@@ -41,7 +40,7 @@ const MesCompetences = () => {
         const data = await jobsService.getMesCompetencesDetail();
         setCompetences(data);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_MES_COMPETENCES", error);
       } finally {
         setIsLoading(false);
@@ -74,12 +73,12 @@ const MesCompetences = () => {
         const existe = prev.some((c) => c.id === saved.id);
         return existe ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev];
       });
-      toast.success(editingId ? "Compétence mise à jour !" : "Compétence ajoutée !");
+      notifier.succes(editingId ? "Compétence mise à jour" : "Compétence ajoutée");
       closeModal();
     } catch (error) {
       reportError("ECHEC_AJOUT_COMPETENCE_UI", error);
       depuisReponse(error);
-      toast.error(apiErrMsg(error, "Impossible d'enregistrer cette compétence."));
+      notifier.echec("Enregistrement impossible", error);
     }
   };
 
@@ -102,9 +101,9 @@ const MesCompetences = () => {
       try {
         await jobsService.supprimerCompetence(id);
         setCompetences((prev) => prev.filter((c) => c.id !== id));
-        toast.success("Compétence supprimée.");
+        notifier.succes("Compétence supprimée");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRESSION_COMPETENCE_UI", error);
       }
     });

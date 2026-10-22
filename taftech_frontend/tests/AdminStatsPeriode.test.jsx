@@ -130,7 +130,7 @@ describe("📊 UI & Logique - Composant <AdminStatsPeriode />", () => {
     fireEvent.change(screen.getByLabelText("Date de fin"), { target: { value: "2020-01-01" } });
     fireEvent.change(screen.getByLabelText("Date de début"), { target: { value: "2026-01-01" } });
     fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
-    expect(toast.error).toHaveBeenCalledWith("La date de début doit précéder la date de fin.");
+    expect(toast.error).toHaveBeenCalledWith("Période invalide\nLa date de début doit précéder la date de fin.");
     expect(jobsService.getAdminStatsPeriode).toHaveBeenCalledTimes(1);
   });
 
@@ -152,7 +152,7 @@ describe("📊 UI & Logique - Composant <AdminStatsPeriode />", () => {
     const [debut, fin] = jobsService.getAdminStatsPeriode.mock.calls[0];
     fireEvent.click(screen.getByRole("button", { name: /exporter/i }));
     await waitFor(() => expect(jobsService.exportAdminStatsPeriode).toHaveBeenCalledWith(debut, fin, null));
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !"));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Téléchargement terminé"));
   });
 
   it("🟢 le filtre par entreprise recharge les données et l'export pour cette entreprise", async () => {

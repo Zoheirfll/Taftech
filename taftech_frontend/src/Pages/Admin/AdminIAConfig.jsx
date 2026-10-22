@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { AlertTriangle, ChevronDown, ChevronUp, Cpu } from "lucide-react";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -86,7 +85,7 @@ const AdminIAConfig = () => {
     } catch (err) {
       setErreur(true);
       reportError("ECHEC_GET_AI_CONFIG", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -120,10 +119,10 @@ const AdminIAConfig = () => {
       const payload = Object.fromEntries(Object.entries(config).filter(([cle]) => !exclus.includes(cle)));
       const updated = await jobsService.updateAIConfig(payload);
       setConfig(updated);
-      toast.success("Configuration IA mise à jour !");
+      notifier.succes("Configuration IA mise à jour");
     } catch (err) {
       reportError("ECHEC_UPDATE_AI_CONFIG", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSaving(false);
     }
@@ -134,7 +133,7 @@ const AdminIAConfig = () => {
     // Champ vide : Number("") vaut 0 — à exclure explicitement, sinon il passerait pour 0.
     const temperature = config.temperature === "" || config.temperature == null ? NaN : Number(config.temperature);
     if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) {
-      toast.error("La température doit être comprise entre 0 et 2.");
+      notifier.erreur("Température invalide", "La température doit être comprise entre 0 et 2.");
       return;
     }
     const tokensTropBas = FEATURES.filter((f) => {
@@ -142,13 +141,14 @@ const AdminIAConfig = () => {
       return v !== undefined && v !== null && !(Number(v) >= MAX_TOKENS_MIN && Number(v) <= MAX_TOKENS_MAX);
     });
     if (tokensTropBas.length > 0) {
-      toast.error(`max_tokens doit être compris entre ${MAX_TOKENS_MIN} et ${MAX_TOKENS_MAX} — ${tokensTropBas.map((f) => f.label).join(", ")}.`);
+      notifier.erreur("Valeur de max_tokens invalide", `max_tokens doit être compris entre ${MAX_TOKENS_MIN} et ${MAX_TOKENS_MAX} — ${tokensTropBas.map((f) => f.label).join(", ")}.`);
       return;
     }
     const problemes = getTokensManquants();
     if (problemes.length > 0) {
-      toast.error(
-        `Variable(s) manquante(s) — ${problemes.map((p) => `${p.label} : ${p.tokens.join(", ")}`).join(" · ")}. Ces prompts ne fonctionneront pas correctement sans elles.`,
+      notifier.erreur(
+        "Variables manquantes",
+        `${problemes.map((p) => `${p.label} : ${p.tokens.join(", ")}`).join(" · ")}. Ces prompts ne fonctionneront pas correctement sans elles.`,
         { duration: 8000 },
       );
       return;
@@ -440,7 +440,7 @@ const QuotaOverridesPanel = () => {
       setOverrides(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_QUOTA_IA_OVERRIDES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement des overrides."));
+      notifier.echec("Chargement des overrides impossible", err);
     }
   };
 
@@ -457,7 +457,7 @@ const QuotaOverridesPanel = () => {
       setUsage(data);
     } catch (err) {
       reportError("ECHEC_GET_QUOTA_IA_USAGE", err);
-      toast.error(apiErrMsg(err, "Compte introuvable."));
+      notifier.echec("Compte introuvable", err);
     } finally {
       setChecking(false);
     }
@@ -466,7 +466,7 @@ const QuotaOverridesPanel = () => {
   const creerOverride = async (e) => {
     e.preventDefault();
     if (!usage) {
-      toast.error("Vérifiez d'abord le compte (email) avant de créer un override.");
+      notifier.erreur("Compte non vérifié", "Vérifiez d'abord le compte (e-mail) avant de créer un override.");
       return;
     }
     setSaving(true);
@@ -478,12 +478,12 @@ const QuotaOverridesPanel = () => {
         limite_mois: form.limite_mois === "" ? null : Number(form.limite_mois),
         justification: form.justification,
       });
-      toast.success("Override enregistré.");
+      notifier.succes("Override enregistré");
       setForm({ fonction: "PARSER_CV", limite_jour: "", limite_mois: "", justification: "" });
       fetchOverrides();
     } catch (err) {
       reportError("ECHEC_CREER_QUOTA_IA_OVERRIDE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la création."));
+      notifier.echec("Création impossible", err);
     } finally {
       setSaving(false);
     }
@@ -493,11 +493,11 @@ const QuotaOverridesPanel = () => {
     confirmToast("Supprimer cet override ? Le compte reviendra au quota par défaut (palier ou config globale).", async () => {
       try {
         await jobsService.supprimerQuotaIAOverride(id);
-        toast.success("Override supprimé.");
+        notifier.succes("Override supprimé");
         fetchOverrides();
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_QUOTA_IA_OVERRIDE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

@@ -1,9 +1,8 @@
 // Orchestrateur du détail d'une candidature : assemble l'en-tête, la barre d'onglets et l'onglet actif (voir ./detail/).
 import React from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { jobsService } from "../../../Services/jobsService";
 import { tw } from "../../../theme";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { reportError } from "../../../utils/errorReporter";
 import { EnteteCandidature } from "./detail/EnteteCandidature";
 import { BarreOnglets } from "./detail/BarreOnglets";
@@ -44,9 +43,9 @@ export const DetailCandidature = ({
     try {
       await jobsService.mettreAJourReponseExigence(selectedCandidature.id, exigenceId, statut);
       setExigenceOverrides((prev) => ({ ...prev, [exigenceId]: statut }));
-      toast.success("Exigence mise à jour.");
+      notifier.succes("Exigence mise à jour");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour de l'exigence."));
+      notifier.echec("Mise à jour de l'exigence impossible", err);
       reportError("ECHEC_VERIFICATION_EXIGENCE", err);
     }
   };

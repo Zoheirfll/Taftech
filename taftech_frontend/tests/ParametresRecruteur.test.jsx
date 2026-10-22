@@ -141,7 +141,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
 
     await waitFor(() => {
       expect(jobsService.updateProfilEntreprise).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Profil mis à jour !");
+      expect(toast.success).toHaveBeenCalledWith("Profil mis à jour");
     });
   });
 
@@ -245,7 +245,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     await waitFor(() => {
       expect(jobsService.updateParametresRecruteur).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Préférences de notification sauvegardées !",
+        "Préférences de notification enregistrées",
       );
     });
   });
@@ -281,7 +281,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
         "ECHEC_CHARGEMENT_PARAMETRES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -305,7 +305,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
         "ECHEC_SAVE_PROFIL_PARAMETRES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de la sauvegarde.");
+      expect(toast.error).toHaveBeenCalledWith("Enregistrement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -355,7 +355,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
         "accounts/changer-mot-de-passe/",
         expect.objectContaining({ ancien_mdp: "AncienMdp123!", nouveau_mdp: "NouveauMdp456!" })
       );
-      expect(toast.success).toHaveBeenCalledWith("Mot de passe modifié !");
+      expect(toast.success).toHaveBeenCalledWith("Mot de passe modifié");
     });
   });
 
@@ -422,7 +422,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
     fireEvent.click(screen.getByRole("button", { name: /Modifier/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Ancien mot de passe incorrect.");
+      expect(toast.error).toHaveBeenCalledWith("Modification impossible\nAncien mot de passe incorrect.");
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_CHANGER_MDP_RECRUTEUR",
         expect.anything()
@@ -456,7 +456,7 @@ describe("⚙️ UI & Logique - Composant <ParametresRecruteur />", () => {
         "accounts/changer-mot-de-passe/",
         expect.objectContaining({ nouveau_mdp: "PremierMdp123!" })
       );
-      expect(toast.success).toHaveBeenCalledWith("Mot de passe défini !");
+      expect(toast.success).toHaveBeenCalledWith("Mot de passe défini");
     });
   });
 });

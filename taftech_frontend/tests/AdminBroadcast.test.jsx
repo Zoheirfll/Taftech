@@ -62,7 +62,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
         sujet: "Nouvelle mise à jour",
         message: "Contenu de la newsletter...",
       });
-      expect(toast.success).toHaveBeenCalledWith("Campagne expédiée");
+      expect(toast.success).toHaveBeenCalledWith("Messages envoyés\nCampagne expédiée");
     });
   });
 
@@ -115,7 +115,7 @@ describe("📢 UI & Logique - Composant <AdminBroadcast />", () => {
         "ECHEC_ENVOI_BROADCAST",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'envoi.");
+      expect(toast.error).toHaveBeenCalledWith("Envoi impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 });

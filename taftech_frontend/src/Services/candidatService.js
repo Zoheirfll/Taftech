@@ -14,9 +14,12 @@ export const candidatService = {
   },
 
   // Mes candidatures
-  getMesCandidatures: async () => {
+  getMesCandidatures: async (page) => {
     try {
-      const response = await api.get("jobs/mes-candidatures/");
+      const response = await api.get(
+        "jobs/mes-candidatures/",
+        page ? { params: { page } } : undefined,
+      );
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_MES_CANDIDATURES_API", err);

@@ -5,6 +5,7 @@ import { profilService } from "../Services/profilService";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
 import { mediaUrl } from "../utils/mediaUrl";
+import { ecouterProfilMisAJour } from "../utils/evenementsProfil";
 import logoTafTech from "../assets/logo-taftech.png";
 import { tw } from "../theme";
 import {
@@ -55,17 +56,22 @@ const Navbar = () => {
       dupBottomNav ? "hidden md:flex" : "flex"
     } ${isActive(path) ? tw.navLinkMobileActive : tw.navLinkMobileInactive}`;
 
+  // Incrémenté quand le profil change (photo) : relance le chargement ci-dessous sans changer d'URL.
+  const [versionProfil, setVersionProfil] = useState(0);
+  useEffect(() => ecouterProfilMisAJour(() => setVersionProfil((v) => v + 1)), []);
+
   useEffect(() => {
     if (isLogged) {
       const loadUserPhoto = async () => {
         try {
           if (role === "RECRUTEUR") {
             const dash = await jobsService.getDashboard();
-            if (dash.entreprise?.logo) setUserPhoto(mediaUrl(dash.entreprise.logo));
+            // Toujours mis à jour : sans logo/photo, l'ancienne image ne doit pas rester affichée.
+            setUserPhoto(dash.entreprise?.logo ? mediaUrl(dash.entreprise.logo) : null);
           } else if (role === "CANDIDAT") {
             // Un ADMIN n'a pas de profil candidat : l'appel échouait (et journalisait une erreur) à chaque page.
             const data = await profilService.getProfil();
-            if (data.photo_profil) setUserPhoto(mediaUrl(data.photo_profil));
+            setUserPhoto(data.photo_profil ? mediaUrl(data.photo_profil) : null);
           }
         } catch (error) {
           reportError("ECHEC_CHARGEMENT_PHOTO_NAVBAR", error);
@@ -85,7 +91,7 @@ const Navbar = () => {
         loadNotifications();
       }
     }
-  }, [isLogged, role, location.pathname]);
+  }, [isLogged, role, location.pathname, versionProfil]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

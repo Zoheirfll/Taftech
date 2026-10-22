@@ -73,7 +73,7 @@ describe("🛡️ AdminComptes — comptes administrateurs", () => {
     fireEvent.change(screen.getByPlaceholderText("8 caractères minimum"), { target: { value: "court" } });
     fireEvent.click(screen.getByText("Créer le compte"));
 
-    expect(toast.error).toHaveBeenCalledWith("Le mot de passe doit contenir au moins 8 caractères.");
+    expect(toast.error).toHaveBeenCalledWith("Mot de passe trop court\nIl doit contenir au moins 8 caractères.");
     expect(adminService.createAdmin).not.toHaveBeenCalled();
   });
 });

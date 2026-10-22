@@ -87,6 +87,22 @@ export const tw = {
   inputSearch:
     "w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100",
 
+  // NOTIFICATIONS sobres (`Components/Notification.jsx`, via `utils/notifier.jsx`) — essai du 21/10/2026
+  notifCarte:
+    "flex w-[22rem] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-md border border-l-4 border-slate-200 bg-white px-4 py-3 shadow-lg",
+  notifSucces: "border-l-emerald-600",
+  notifErreur: "border-l-red-600",
+  notifNeutre: "border-l-slate-400",
+  notifIconeSucces: "mt-0.5 shrink-0 text-emerald-600",
+  notifIconeErreur: "mt-0.5 shrink-0 text-red-600",
+  notifIconeNeutre: "mt-0.5 shrink-0 text-slate-500",
+  notifIconeChargement: "mt-0.5 shrink-0 animate-spin text-slate-500",
+  notifVisible: "translate-x-0 opacity-100 transition-all duration-200",
+  notifMasquee: "translate-x-4 opacity-0 transition-all duration-200",
+  notifTitre: "text-sm font-semibold text-slate-900",
+  notifDetail: "mt-0.5 text-xs font-normal text-slate-600",
+  notifFermer: "shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700",
+
   // BADGES
   badgePrimary:
     "inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full",

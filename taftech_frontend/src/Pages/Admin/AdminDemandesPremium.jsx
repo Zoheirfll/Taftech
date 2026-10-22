@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { adminService } from "../../Services/adminService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Star, Check } from "lucide-react";
 import { tw } from "../../theme";
 import { TooltipIcon } from "../../Components/Tooltip";
@@ -31,7 +30,7 @@ const AdminDemandesPremium = () => {
       const data = await adminService.getDemandesPremium();
       setDemandes(data || []);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_CHARGEMENT_DEMANDES_PREMIUM", err);
     } finally {
       setLoading(false);
@@ -53,10 +52,10 @@ const AdminDemandesPremium = () => {
         setActivationId(demande.id);
         try {
           await adminService.activerPremium(demande.id, nb_mois, palier);
-          toast.success(`Abonnement ${NOM_PALIER[palier]} activé pour ${demande.nom_entreprise} !`);
+          notifier.succes(`Abonnement ${NOM_PALIER[palier]} activé`, demande.nom_entreprise);
           charger();
         } catch (err) {
-          toast.error(apiErrMsg(err, "Erreur lors de l'activation."));
+          notifier.echec("Activation impossible", err);
           reportError("ECHEC_ACTIVER_PREMIUM_ADMIN", err);
         } finally {
           setActivationId(null);

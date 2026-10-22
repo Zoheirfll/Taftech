@@ -33,3 +33,74 @@ class NerTest(SimpleTestCase):
         with patch("jobs.confidentialite_ia.ner._charger", side_effect=ModeleNerIndisponible("absent")):
             with self.assertRaises(ModeleNerIndisponible):
                 nettoyer_texte("Jean Dupont")
+
+
+class LieuxEnteteTest(SimpleTestCase):
+    """Les wilayas de l'en-tête sont masquées par une liste, sans dépendre de la reconnaissance
+    automatique (qui ratait « EL KERMA / ORAN » en majuscules, collé à une autre entité)."""
+
+    def test_wilaya_de_l_entete_masquee_meme_en_majuscules_et_sans_modele(self):
+        texte = "BELAMRI Meriem\nLICENCIÉ EN INFORMATIQUE\nEL KERMA / ORAN | 0657 89 79 66 |\nProfil"
+        r = nettoyer_texte(texte, avec_ner=False)
+        self.assertNotIn("ORAN", r.texte)
+        self.assertIn("[LIEU]", r.texte)
+        self.assertEqual(r.categories.get("LIEU"), 1)
+
+    def test_wilaya_hors_entete_conservee(self):
+        corps = "x " * 400 + "Mission réalisée à Oran pour un client."
+        self.assertIn("Oran", nettoyer_texte(corps, avec_ner=False).texte)
+
+    def test_un_mot_qui_contient_un_nom_de_wilaya_n_est_pas_masque(self):
+        self.assertIn("Algérie", nettoyer_texte("Profil basé en Algérie", avec_ner=False).texte)
+
+
+class NerMotDeDebutDeLigneTest(SimpleTestCase):
+    """Un mot courant qui n'est capitalisé que parce qu'il ouvre une ligne (« Expertise confirmée… »,
+    « - Reporting RH… ») n'est ni un lieu ni un nom (constaté sur un CV réel le 21/10/2026)."""
+
+    EXTRAIT = (
+        "CURRICULUM VITAE\nMme KARIMI Lina, Oran, Algérie.\nTél : 0552 39 90 67\n"
+        "PROFIL PROFESSIONNEL\nResponsable des Ressources Humaines avec plus de 8 ans d’expérience.\n"
+        "Expertise confirmée en administration du personnel, relations sociales, paie.\n"
+        "Habituée aux contextes auditables, fortement réglementés et à forts enjeux sociaux.\n"
+        "EXPÉRIENCE PROFESSIONNELLE\n- Coordination avec les organismes institutionnels (ANEM, CNAS).\n"
+        "- Reporting RH et suivi des indicateurs sociaux.\n"
+    )
+
+    def test_mots_courants_en_debut_de_ligne_restent_lisibles(self):
+        texte = nettoyer_texte(self.EXTRAIT).texte
+        for debut in ("Expertise confirmée", "Habituée aux", "- Reporting RH"):
+            self.assertIn(debut, texte)
+
+    def test_nom_et_lieux_de_l_entete_restent_masques(self):
+        texte = nettoyer_texte(self.EXTRAIT).texte
+        self.assertNotIn("KARIMI", texte)
+        self.assertNotIn("Oran", texte)
+
+    def test_mot_seul_sur_sa_ligne_n_est_pas_ecarte(self):
+        from jobs.confidentialite_ia.ner import _ouvre_une_ligne_de_texte
+        texte = "Arzew\nExpertise confirmée\n- Reporting RH\n"
+        self.assertFalse(_ouvre_une_ligne_de_texte(texte, 0, 5))
+        self.assertTrue(_ouvre_une_ligne_de_texte(texte, 6, 15))
+        self.assertTrue(_ouvre_une_ligne_de_texte(texte, 28, 37))
+
+
+class NerMotsDOrganisationTest(SimpleTestCase):
+    """Un nom commun d'établissement (« Hypermarché ») détecté comme personne par spaCy n'est pas un nom."""
+
+    EXTRAIT = (
+        "HÔTESSE DE CAISSE ET D’ACCUEIL CHEZ UNO - ES-SENIA\nNovembre 2023\nHypermarché UNO Es-senia\n"
+        "Septembre 2025\nGestion des transactions et comptage de caisse\n"
+    )
+
+    def test_hypermarche_n_est_pas_masque_comme_un_nom(self):
+        r = nettoyer_texte(self.EXTRAIT)
+        self.assertIn("Hypermarché", r.texte)
+        self.assertNotIn("NOM", r.categories)
+
+    def test_nom_de_personne_a_cote_d_un_mot_d_organisation_reste_masque(self):
+        from jobs.confidentialite_ia.ner import entites_ner
+        texte = "Université Karim Benali"
+        detections = entites_ner(texte)
+        masque = "".join(texte[d.debut:d.fin] for d in detections if d.categorie == "NOM")
+        self.assertNotIn("Université", masque)

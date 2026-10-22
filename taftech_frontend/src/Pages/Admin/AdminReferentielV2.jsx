@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { adminService } from "../../Services/adminService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Pencil, X, Search, Trash2, Plus } from "lucide-react";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import { CheckCircle2 } from "lucide-react";
@@ -134,7 +133,7 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
       setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_V2", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -164,10 +163,10 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
     try {
       await UPDATERS[onglet](item.id, { selectionnable: !item.selectionnable });
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, selectionnable: !i.selectionnable } : i)));
-      toast.success(item.selectionnable ? `« ${item.libelle} » masqué des listes de choix.` : `« ${item.libelle} » de nouveau proposé.`);
+      notifier.succes(item.selectionnable ? "Entrée masquée des listes de choix" : "Entrée de nouveau proposée", item.libelle);
     } catch (err) {
       reportError("ECHEC_TOGGLE_ADMIN_REFERENTIEL_V2", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
+      notifier.echec("Mise à jour impossible", err);
     }
   };
 
@@ -182,17 +181,17 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
   const handleSaveLibelle = async (e) => {
     e.preventDefault();
     if (!editLibelle.trim()) {
-      toast.error("Le libellé ne peut pas être vide.");
+      notifier.erreur("Libellé manquant", "Le libellé ne peut pas être vide.");
       return;
     }
     try {
       await UPDATERS[onglet](editing.id, { libelle: editLibelle.trim() });
-      toast.success("Libellé mis à jour.");
+      notifier.succes("Libellé mis à jour");
       setEditing(null);
       fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_UPDATE_LIBELLE_REFERENTIEL_V2", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -369,7 +368,7 @@ const RelationsSimilairesPanel = () => {
       setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_RELATIONS_SIMILAIRES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -391,11 +390,11 @@ const RelationsSimilairesPanel = () => {
   const handleCreer = async (e) => {
     e.preventDefault();
     if (!metierA || !metierB) {
-      toast.error("Sélectionnez les deux métiers à rapprocher.");
+      notifier.erreur("Sélection incomplète", "Sélectionnez les deux métiers à rapprocher.");
       return;
     }
     if (metierA.metier_id === metierB.metier_id) {
-      toast.error("Les deux métiers doivent être différents.");
+      notifier.erreur("Métiers identiques", "Les deux métiers doivent être différents.");
       return;
     }
     setSaving(true);
@@ -405,14 +404,14 @@ const RelationsSimilairesPanel = () => {
         metier_arrivee: metierB.metier_id,
         justification,
       });
-      toast.success("Relation créée — les deux métiers seront désormais comptés compatibles à 70% dans le matching.");
+      notifier.succes("Relation créée", "Les deux métiers seront désormais comptés compatibles à 70 % dans le matching.");
       setMetierA(null);
       setMetierB(null);
       setJustification("");
       fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_CREER_RELATION_SIMILAIRE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la création."));
+      notifier.echec("Création impossible", err);
     } finally {
       setSaving(false);
     }
@@ -424,11 +423,11 @@ const RelationsSimilairesPanel = () => {
       async () => {
         try {
           await adminService.supprimerRelationSimilaire(item.id);
-          toast.success("Relation supprimée.");
+          notifier.succes("Relation supprimée");
           fetchItems(search, page);
         } catch (err) {
           reportError("ECHEC_SUPPRIMER_RELATION_SIMILAIRE", err);
-          toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+          notifier.echec("Suppression impossible", err);
         }
       }
     );
@@ -630,7 +629,7 @@ const RelationsSpecialitesPanel = () => {
       setTotalCount(data.count || 0);
     } catch (err) {
       reportError("ECHEC_GET_RELATIONS_SPECIALITES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -652,11 +651,11 @@ const RelationsSpecialitesPanel = () => {
   const handleCreer = async (e) => {
     e.preventDefault();
     if (!specA || !specB) {
-      toast.error("Sélectionnez les deux spécialités à rapprocher.");
+      notifier.erreur("Sélection incomplète", "Sélectionnez les deux spécialités à rapprocher.");
       return;
     }
     if (specA.id === specB.id) {
-      toast.error("Les deux spécialités doivent être différentes.");
+      notifier.erreur("Spécialités identiques", "Les deux spécialités doivent être différentes.");
       return;
     }
     setSaving(true);
@@ -666,14 +665,14 @@ const RelationsSpecialitesPanel = () => {
         specialite_arrivee: specB.id,
         justification,
       });
-      toast.success("Relation créée — les deux spécialités seront désormais comptées compatibles à 70% dans le matching.");
+      notifier.succes("Relation créée", "Les deux spécialités seront désormais comptées compatibles à 70 % dans le matching.");
       setSpecA(null);
       setSpecB(null);
       setJustification("");
       fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_CREER_RELATION_SPECIALITE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la création."));
+      notifier.echec("Création impossible", err);
     } finally {
       setSaving(false);
     }
@@ -685,11 +684,11 @@ const RelationsSpecialitesPanel = () => {
       async () => {
         try {
           await adminService.supprimerRelationSpecialite(item.id);
-          toast.success("Relation supprimée.");
+          notifier.succes("Relation supprimée");
           fetchItems(search, page);
         } catch (err) {
           reportError("ECHEC_SUPPRIMER_RELATION_SPECIALITE", err);
-          toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+          notifier.echec("Suppression impossible", err);
         }
       }
     );

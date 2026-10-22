@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { apiErrMsg } from "../../utils/apiErrMsg";
@@ -63,7 +63,7 @@ const ReviewCandidature = () => {
         setJob(jobData);
         setProfil(profilData);
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de chargement du profil."));
+        notifier.echec("Chargement du profil impossible", err);
         reportError("ECHEC_CHARGEMENT_REVIEW_CANDIDATURE", err);
       } finally {
         setLoading(false);
@@ -100,7 +100,7 @@ const ReviewCandidature = () => {
     for (const q of questionsRequises) {
       const val = reponsesQuestionnaire[q.id];
       if (!val || val.toString().trim() === "") {
-        toast.error(`La question "${q.texte}" est obligatoire.`);
+        notifier.erreur("Question obligatoire", `Répondez à la question « ${q.texte} ».`);
         return false;
       }
     }
@@ -145,7 +145,7 @@ const ReviewCandidature = () => {
         });
       }
       await jobsService.postuler(id, formData);
-      toast.success("Candidature envoyée !");
+      notifier.succes("Candidature envoyée");
       navigate("/mes-candidatures");
     } catch (err) {
       setSubmitting(false);
@@ -154,7 +154,7 @@ const ReviewCandidature = () => {
         demanderNIN(handleConfirm);
         return;
       }
-      toast.error(apiErrMsg(err, "Erreur ou candidature déjà envoyée."));
+      notifier.erreur("Candidature impossible", apiErrMsg(err, "Une erreur est survenue ou la candidature a déjà été envoyée."));
       reportError("ECHEC_SOUMISSION_CANDIDATURE", err);
     }
   };

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { reportError } from "../../../utils/errorReporter";
 import { Eye, EyeOff, CheckCircle, LogIn } from "lucide-react";
 import FieldError from "../../../Components/FieldError";
@@ -30,30 +30,30 @@ const LoginRecruteur = () => {
       return;
     }
     setLoading(true);
-    const toastId = toast.loading("Connexion en cours...");
+    const toastId = notifier.chargement("Connexion en cours");
     try {
       const data = await authService.login(credentials.username, credentials.password, "recruteur", rememberMe);
       if (data.role !== "RECRUTEUR" && !data.est_membre_equipe) {
-        toast.error("Ce compte n'est pas un compte recruteur.", { id: toastId });
+        notifier.erreur("Accès refusé", "Ce compte n'est pas un compte recruteur.", { id: toastId });
         authService.logout("/recruteurs/connexion");
         return;
       }
-      toast.success("Connexion réussie !", { id: toastId });
+      notifier.succes("Connexion réussie", undefined, { id: toastId });
       navigate("/dashboard");
       window.location.reload();
     } catch (err) {
       const errData = err.response?.data;
       if (errData?.code === "COMPTE_NON_VERIFIE") {
-        toast.dismiss(toastId);
+        notifier.fermer(toastId);
         localStorage.setItem("taftech_pending_verification_recruteur", errData.email);
-        toast("Votre compte n'est pas encore vérifié. Terminez la vérification.", { icon: "📧" });
+        notifier.info("Compte non vérifié", "Terminez la vérification pour vous connecter.");
         navigate("/recruteurs/inscription");
         return;
       }
       if (errData?.code === "PREMIUM_EXPIRE") {
-        toast.error(errData.detail, { id: toastId, duration: 6000 });
+        notifier.erreur("Connexion impossible", errData.detail, { id: toastId, duration: 6000 });
       } else {
-        toast.error("Email ou mot de passe incorrect.", { id: toastId });
+        notifier.erreur("Connexion impossible", "Email ou mot de passe incorrect.", { id: toastId });
         definir({ password: "Email ou mot de passe incorrect." });
         reportError("ECHEC_CONNEXION_RECRUTEUR", err);
       }

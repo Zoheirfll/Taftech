@@ -2,7 +2,7 @@
 // Identique pour les types de diplôme et les spécialités (puis les métiers et les compétences).
 import React, { useCallback, useEffect, useState } from "react";
 import Select from "react-select";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { X } from "lucide-react";
 import { adminService } from "../../../Services/adminService";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
@@ -84,7 +84,7 @@ const DecisionDemandeModal = ({ demande, modeInitial = "RATTACHER", onClose, onD
       let resultat;
       if (mode === "RATTACHER") {
         resultat = await adminService.rattacherDemande(demande.id, entree.id);
-        toast.success(`« ${demande.libelle} » rattachée à « ${entree.libelle} ».`);
+        notifier.succes("Demande rattachée", `« ${demande.libelle} » rattachée à « ${entree.libelle} ».`);
       } else if (mode === "ACCEPTER") {
         resultat = await adminService.accepterDemande(demande.id, {
           libelle: libelle.trim(),
@@ -92,10 +92,10 @@ const DecisionDemandeModal = ({ demande, modeInitial = "RATTACHER", onClose, onD
           filiere_id: filiere?.value || null,
           diplomes_ids: diplomes.map((d) => d.value),
         });
-        toast.success(`« ${libelle.trim()} » ajoutée au référentiel.`);
+        notifier.succes("Demande acceptée", `« ${libelle.trim()} » ajoutée au référentiel.`);
       } else {
         resultat = await adminService.refuserDemande(demande.id, motif.trim());
-        toast.success("Demande refusée.");
+        notifier.succes("Demande refusée");
       }
       onDecidee?.(resultat);
       fermer();

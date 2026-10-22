@@ -13,11 +13,13 @@ import ProposerMetierModal from "./ProposerMetierModal";
  *  - value: libellé actuellement affiché dans le champ (ex: metier_libelle déjà connu)
  *  - onSelect({ metier_id, metier_libelle, appellation_libelle }): appelé au choix d'une suggestion
  *  - placeholder
+ *  - onPropose({ id, libelle }): écrans du CANDIDAT seulement. Après l'envoi d'une proposition, l'écran la garde
+ *    sélectionnée (lien `demande_metier`) en attendant la décision ; sans cette prop, comportement historique.
  *  - proposable: affiche « Je ne trouve pas mon métier » (proposition à l'équipe, validée ou
  *    rejetée par l'admin). Réservé aux écrans où un candidat ou un recruteur choisit SON métier :
  *    jamais sur les filtres de recherche ni côté admin.
  */
-export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "", proposable = false }) => {
+export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "", proposable = false, onPropose }) => {
   const [texte, setTexte] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
   const [ouvert, setOuvert] = useState(false);
@@ -88,6 +90,7 @@ export const MetierAutocomplete = ({ value = "", onSelect, placeholder = "", pro
           open={propositionOuverte}
           libelleInitial={texte.trim()}
           onClose={() => setPropositionOuverte(false)}
+          onProposed={onPropose}
         />
       )}
     </div>

@@ -1,6 +1,7 @@
 // Carte "Expériences professionnelles" : frise chronologique avec ajout, modification, suppression.
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { tw } from "../../../theme";
+import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import { SECTION_CLASS, SECTION_TITLE, ICON_ACTION_BTN } from "./profilUi";
 
 const SectionExperiences = ({ profil, formatDate, setEditingExpId, setNewExp, setShowExpForm, handleEditExp, handleDeleteExp }) => (
@@ -49,10 +50,22 @@ const SectionExperiences = ({ profil, formatDate, setEditingExpId, setNewExp, se
                       </h4>
                       <p className={`text-xs ${tw.textPrimary} font-medium`}>
                         {exp.entreprise}
-                        {(exp.appellation_libelle || exp.metier_libelle) && (
-                          <span className={`ml-2 ${tw.textMuted} font-normal`}>· {exp.appellation_libelle || exp.metier_libelle}</span>
-                        )}
                       </p>
+                      {/* Le métier alimente le calcul du matching : bien visible, signalé quand il manque. */}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {exp.appellation_libelle || exp.metier_libelle ? (
+                          <span className={tw.badgePrimary}>Métier : {exp.appellation_libelle || exp.metier_libelle}</span>
+                        ) : exp.metier_propose ? (
+                          <>
+                            <span className={tw.badgeAccent}>Métier proposé : {exp.metier_propose.libelle}</span>
+                            <MetierProposeBadge propose={exp.metier_propose} />
+                          </>
+                        ) : (
+                          <button type="button" onClick={() => handleEditExp(exp)} className={`${tw.badgeAccent} cursor-pointer`}>
+                            Métier à choisir (utile pour vos offres recommandées)
+                          </button>
+                        )}
+                      </div>
                       <p className={`text-xs ${tw.textMuted} mt-1`}>
                         {formatDate(exp.date_debut, exp.date_debut_precision)} —{" "}
                         {exp.date_fin ? formatDate(exp.date_fin, exp.date_fin_precision) : "Aujourd'hui"}

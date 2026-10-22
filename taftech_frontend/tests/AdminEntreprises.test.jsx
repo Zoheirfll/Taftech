@@ -111,7 +111,7 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
         est_approuvee: true,
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Entreprise approuvée — le recruteur est prévenu par email.",
+        "Entreprise approuvée\nLe recruteur est prévenu par e-mail.",
       );
     });
   });
@@ -128,7 +128,7 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
         search: "", ordering: "-id", abonnement_expire_sous: null,
       });
       expect(window.URL.createObjectURL).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
+      expect(toast.success).toHaveBeenCalledWith("Téléchargement terminé");
     });
   });
 
@@ -157,7 +157,7 @@ describe("🏢 UI & Logique - Composant <AdminEntreprises />", () => {
         "ECHEC_EXPORT_EXCEL_ENTREPRISES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'exportation.");
+      expect(toast.error).toHaveBeenCalledWith("Exportation impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 

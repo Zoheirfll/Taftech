@@ -131,7 +131,7 @@ describe("📥 <DemandesAjoutPanel /> — onglet Demandes du référentiel", () 
 
     fireEvent.click(soumettre);
     await waitFor(() => expect(adminService.refuserDemande).toHaveBeenCalledWith(1, "Trop vague"));
-    expect(toast.success).toHaveBeenCalledWith("Demande refusée.");
+    expect(toast.success).toHaveBeenCalledWith("Demande refusée");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(adminService.getDemandesAjout.mock.calls.length).toBeGreaterThanOrEqual(2));
     expect(onChange).toHaveBeenCalled();
@@ -187,7 +187,7 @@ describe("📥 <DemandesAjoutPanel /> — onglet Demandes du référentiel", () 
         libelle: "Licence professionnelle", parent: "superieur_lmd", filiere_id: null, diplomes_ids: [],
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith("« Licence professionnelle » ajoutée au référentiel.");
+    expect(toast.success).toHaveBeenCalledWith("Demande acceptée\n« Licence professionnelle » ajoutée au référentiel.");
   });
 
   it("🟢 Accepter une spécialité : domaine, filière et diplômes concernés", async () => {

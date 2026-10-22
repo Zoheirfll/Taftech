@@ -3,7 +3,7 @@ import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { KeyRound, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { tw } from "../../theme";
@@ -42,15 +42,15 @@ const ResetPassword = () => {
     e.preventDefault();
     if (form.nouveau_mdp !== form.confirmer_mdp) {
       setFieldErrors({ confirmer_mdp: "Les mots de passe ne correspondent pas." });
-      return toast.error("Les mots de passe ne correspondent pas.");
+      return notifier.erreur("Les mots de passe ne correspondent pas");
     }
     if (form.nouveau_mdp.length < 8) {
       setFieldErrors({ nouveau_mdp: "Au moins 8 caractères." });
-      return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+      return notifier.erreur("Mot de passe trop court", "Il doit contenir au moins 8 caractères.");
     }
     const code = otp.join("");
     if (code.length !== 6) {
-      return toast.error("Veuillez saisir les 6 chiffres du code.");
+      return notifier.erreur("Code incomplet", "Saisissez les 6 chiffres du code.");
     }
     setLoading(true);
     try {
@@ -61,7 +61,7 @@ const ResetPassword = () => {
       reportError("ECHEC_RESET_PASSWORD", err);
       const msg = err.response?.data?.error;
       if (msg && /mot de passe/i.test(msg)) setFieldErrors({ nouveau_mdp: msg });
-      toast.error(msg || "Code invalide ou expiré.");
+      notifier.erreur("Réinitialisation impossible", msg || "Code invalide ou expiré.");
     } finally {
       setLoading(false);
     }

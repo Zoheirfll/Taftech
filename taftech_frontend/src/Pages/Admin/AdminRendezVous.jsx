@@ -2,11 +2,10 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Trash2, X, Save, CalendarClock } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -60,7 +59,7 @@ const AdminRendezVous = () => {
       setRdvs(liste(rv));
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_RDV_DATA", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -78,8 +77,8 @@ const AdminRendezVous = () => {
   const handleSaveConfig = async () => {
     const delai = Number(config.delai_min_reservation_heures);
     const horizon = Number(config.horizon_max_jours);
-    if (!Number.isFinite(delai) || delai < 0) return toast.error("Le délai minimum doit être un nombre d'heures positif.");
-    if (!Number.isFinite(horizon) || horizon < 1) return toast.error("L'horizon doit être d'au moins 1 jour.");
+    if (!Number.isFinite(delai) || delai < 0) return notifier.erreur("Délai invalide", "Le délai minimum doit être un nombre d'heures positif.");
+    if (!Number.isFinite(horizon) || horizon < 1) return notifier.erreur("Horizon invalide", "L'horizon doit être d'au moins 1 jour.");
     setSavingConfig(true);
     try {
       const updated = await jobsService.updateAdminConfigRdv({
@@ -88,10 +87,10 @@ const AdminRendezVous = () => {
         horizon_max_jours: horizon,
       });
       if (updated) setConfig(updated);
-      toast.success("Configuration mise à jour !");
+      notifier.succes("Configuration mise à jour");
     } catch (err) {
       reportError("ECHEC_UPDATE_ADMIN_CONFIG_RDV", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSavingConfig(false);
     }
@@ -101,18 +100,18 @@ const AdminRendezVous = () => {
     e.preventDefault();
     // Un créneau qui finit avant de commencer ne génère aucun rendez-vous réservable.
     if (formCreneau.heure_fin <= formCreneau.heure_debut)
-      return toast.error("L'heure de fin doit être après l'heure de début.");
+      return notifier.erreur("Horaires invalides", "L'heure de fin doit être après l'heure de début.");
     if (!formCreneau.duree_creneau_minutes || formCreneau.duree_creneau_minutes < 5)
-      return toast.error("La durée d'un créneau doit être d'au moins 5 minutes.");
+      return notifier.erreur("Durée invalide", "La durée d'un créneau doit être d'au moins 5 minutes.");
     try {
       await jobsService.creerAdminDisponibilite(formCreneau);
-      toast.success("Créneau ajouté !");
+      notifier.succes("Créneau ajouté");
       setShowModalCreneau(false);
       setFormCreneau(CRENEAU_VIDE);
       fetchAll();
     } catch (err) {
       reportError("ECHEC_CREER_ADMIN_DISPONIBILITE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de l'ajout."));
+      notifier.echec("Ajout impossible", err);
     }
   };
 
@@ -121,27 +120,27 @@ const AdminRendezVous = () => {
       try {
         await jobsService.supprimerAdminDisponibilite(id);
         setCreneaux((prev) => prev.filter((c) => c.id !== id));
-        toast.success("Créneau supprimé.");
+        notifier.succes("Créneau supprimé");
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_ADMIN_DISPONIBILITE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };
 
   const handleAddJourBloque = async (e) => {
     e.preventDefault();
-    if (!formJour.date) return toast.error("Une date est requise.");
-    if (formJour.date < aujourdhuiISO()) return toast.error("Impossible de bloquer une date passée.");
+    if (!formJour.date) return notifier.erreur("Date manquante", "Une date est requise.");
+    if (formJour.date < aujourdhuiISO()) return notifier.erreur("Date invalide", "Impossible de bloquer une date passée.");
     try {
       await jobsService.creerAdminJourBloque(formJour);
-      toast.success("Jour bloqué ajouté !");
+      notifier.succes("Jour bloqué ajouté");
       setShowModalJour(false);
       setFormJour({ date: "", motif: "" });
       fetchAll();
     } catch (err) {
       reportError("ECHEC_CREER_ADMIN_JOUR_BLOQUE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de l'ajout."));
+      notifier.echec("Ajout impossible", err);
     }
   };
 
@@ -150,10 +149,10 @@ const AdminRendezVous = () => {
       try {
         await jobsService.supprimerAdminJourBloque(id);
         setJoursBloques((prev) => prev.filter((j) => j.id !== id));
-        toast.success("Jour bloqué supprimé.");
+        notifier.succes("Jour bloqué supprimé");
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_ADMIN_JOUR_BLOQUE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };
@@ -162,10 +161,10 @@ const AdminRendezVous = () => {
     try {
       await jobsService.modifierAdminRendezVous(id, { statut });
       setRdvs((prev) => prev.map((r) => (r.id === id ? { ...r, statut } : r)));
-      toast.success("Rendez-vous mis à jour.");
+      notifier.succes("Rendez-vous mis à jour");
     } catch (err) {
       reportError("ECHEC_MODIFIER_ADMIN_RENDEZ_VOUS", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
+      notifier.echec("Mise à jour impossible", err);
     }
   };
 

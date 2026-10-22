@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import { X } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
 import { apiErrMsg } from "../utils/apiErrMsg";
@@ -11,7 +11,7 @@ import { useSubmitLock } from "../utils/useSubmitLock";
 // Fenêtre « Je ne trouve pas mon métier » : envoie une proposition à l'équipe (validée ou rejetée
 // par l'admin). Elle n'ajoute rien à la liste, au profil ni à l'offre : l'utilisateur choisit en
 // attendant le métier le plus proche dans la liste.
-const ProposerMetierModal = ({ open, libelleInitial = "", onClose }) => {
+const ProposerMetierModal = ({ open, libelleInitial = "", onClose, onProposed }) => {
   const [submitBusy, lockSubmit] = useSubmitLock();
   const [libelle, setLibelle] = useState(libelleInitial);
   const [contexte, setContexte] = useState("");
@@ -38,7 +38,13 @@ const ProposerMetierModal = ({ open, libelleInitial = "", onClose }) => {
     setErreur("");
     try {
       const reponse = await jobsService.creerDemandeAjout("METIER", libelle.trim(), contexte.trim());
-      toast.success(reponse.message || "Votre proposition a été envoyée.");
+      if (onProposed) {
+        // Écran du candidat : la proposition reste sélectionnée sur son profil en attendant la décision.
+        onProposed({ id: reponse.id, libelle: libelle.trim() });
+        notifier.succes("Proposition envoyée", "Elle reste sélectionnée en attendant la décision de notre équipe.");
+      } else {
+        notifier.succes("Proposition envoyée", reponse.message);
+      }
       fermer();
     } catch (err) {
       setErreur(apiErrMsg(err, "Impossible d'envoyer la proposition."));
@@ -56,7 +62,9 @@ const ProposerMetierModal = ({ open, libelleInitial = "", onClose }) => {
         </div>
         <div className="p-6 space-y-4">
           <p className={`text-xs ${tw.textMuted}`}>
-            Notre équipe examine votre proposition. En attendant, choisissez le métier le plus proche dans la liste.
+            {onProposed
+              ? "Notre équipe examine votre proposition. Elle reste sélectionnée sur votre profil, mais ne compte pas dans le calcul de vos offres tant qu'elle n'est pas validée."
+              : "Notre équipe examine votre proposition. En attendant, choisissez le métier le plus proche dans la liste."}
           </p>
           <div>
             <label htmlFor="proposition-metier-libelle" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>

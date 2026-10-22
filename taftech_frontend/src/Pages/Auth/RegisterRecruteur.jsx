@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { selectStyles, tw } from "../../theme";
@@ -86,27 +86,28 @@ const RegisterRecruteur = () => {
         ...(formData.secteur_activite ? {} : { secteur_activite: "Sélectionnez un secteur." }),
         ...(formData.wilaya_siege ? {} : { wilaya_siege: "Sélectionnez une wilaya." }),
       });
-      return toast.error("Veuillez sélectionner un secteur et une wilaya.");
+      return notifier.erreur("Informations manquantes", "Sélectionnez un secteur d'activité et une wilaya.");
     }
     if (formData.password !== formData.confirmPassword) {
       setFieldErrors({ confirmPassword: "Les mots de passe ne correspondent pas." });
-      return toast.error("Les mots de passe ne correspondent pas.");
+      return notifier.erreur("Les mots de passe ne correspondent pas");
     }
     setFieldErrors({});
     setLoading(true);
-    const toastId = toast.loading("Création de votre compte entreprise...");
+    const toastId = notifier.chargement("Création de votre compte entreprise en cours");
     try {
       const usernameGenere = formData.email.split("@")[0] + "_pro_" + Math.floor(Math.random() * 999);
       const { confirmPassword, ...payload } = formData;
       const response = await authService.registerRecruteur({ ...payload, username: usernameGenere });
-      toast.success(response.message || "Code envoyé à votre email.", { id: toastId });
+      notifier.succes("Code envoyé", response.message || "Consultez votre boîte e-mail.", { id: toastId });
       sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
       setStep(2);
     } catch (err) {
       setFieldErrors(extraireErreursChamps(err));
       const serverError = err.response?.data;
-      toast.error(
-        serverError?.email?.[0] || serverError?.registre_commerce?.[0] || serverError?.secteur_activite?.[0] || "Une erreur est survenue.",
+      notifier.erreur(
+        "Inscription impossible",
+        serverError?.email?.[0] || serverError?.registre_commerce?.[0] || serverError?.secteur_activite?.[0] || "Veuillez réessayer dans quelques instants.",
         { id: toastId },
       );
       reportError("ECHEC_REGISTRATION_RECRUTEUR", err);
@@ -117,14 +118,14 @@ const RegisterRecruteur = () => {
 
   const handleRenvoyerCode = async () => {
     setLoading(true);
-    const toastId = toast.loading("Envoi d'un nouveau code...");
+    const toastId = notifier.chargement("Envoi d'un nouveau code en cours");
     try {
       await authService.renvoyerCodeVerification(formData.email);
       sessionStorage.setItem("taftech_pending_verification_recruteur", formData.email);
-      toast.success("Nouveau code envoyé !", { id: toastId });
+      notifier.succes("Nouveau code envoyé", undefined, { id: toastId });
       setOtpCode("");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur lors du renvoi.", { id: toastId });
+      notifier.erreur("Envoi du code impossible", err.response?.data?.error || "Veuillez réessayer dans quelques instants.", { id: toastId });
       reportError("ECHEC_RENVOYER_CODE_RECRUTEUR", err);
     } finally {
       setLoading(false);
@@ -133,16 +134,16 @@ const RegisterRecruteur = () => {
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
-    if (otpCode.length !== 6) return toast.error("Le code doit contenir 6 chiffres.");
+    if (otpCode.length !== 6) return notifier.erreur("Code incomplet", "Saisissez les 6 chiffres du code.");
     setLoading(true);
-    const toastId = toast.loading("Vérification en cours...");
+    const toastId = notifier.chargement("Vérification en cours");
     try {
       await authService.verifyEmail(formData.email, otpCode);
       sessionStorage.removeItem("taftech_pending_verification_recruteur");
-      toast.success("Email vérifié avec succès !", { id: toastId });
+      notifier.succes("Email vérifié", undefined, { id: toastId });
       setStep(3);
     } catch (err) {
-      toast.error(err.response?.data?.error || "Code incorrect.", { id: toastId });
+      notifier.erreur("Vérification impossible", err.response?.data?.error || "Code incorrect.", { id: toastId });
       reportError("ECHEC_VERIFICATION_OTP_RECRUTEUR", err);
     } finally {
       setLoading(false);

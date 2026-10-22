@@ -6,10 +6,9 @@ import {
 } from "lucide-react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 import { CARACTERISTIQUES_PALIER, lignesCartePalier, valeurTableau, remiseAnnuellePct } from "../../utils/paliersAffichage";
 
@@ -95,7 +94,7 @@ const AbonnementsPage = () => {
           tentatives++;
           setTimeout(chargerPalierActif, 2000);
         } else if (isPaidReturn && dash.palier_actif) {
-          toast.success("Paiement confirmé, votre abonnement est actif !");
+          notifier.succes("Paiement confirmé", "Votre abonnement est actif.");
         }
       } catch (err) {
         reportError("ECHEC_GET_PALIER_ACTIF", err);
@@ -124,9 +123,9 @@ const AbonnementsPage = () => {
         try {
           await jobsService.toggleRenouvellementAuto(false);
           setRenouvellementAuto(false);
-          toast.success("Renouvellement automatique désactivé.");
+          notifier.succes("Renouvellement automatique désactivé");
         } catch (err) {
-          toast.error(apiErrMsg(err, "Erreur lors de la résiliation."));
+          notifier.echec("Résiliation impossible", err);
         } finally {
           setResiliationEnCours(false);
         }
@@ -139,9 +138,9 @@ const AbonnementsPage = () => {
     try {
       await jobsService.toggleRenouvellementAuto(true);
       setRenouvellementAuto(true);
-      toast.success("Renouvellement automatique réactivé.");
+      notifier.succes("Renouvellement automatique réactivé");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la réactivation."));
+      notifier.echec("Réactivation impossible", err);
     } finally {
       setResiliationEnCours(false);
     }
@@ -154,7 +153,7 @@ const AbonnementsPage = () => {
       const data = await jobsService.chargilyCheckoutPalier(palierNom, periodeAPI);
       window.location.href = data.checkout_url;
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la création du paiement."));
+      notifier.echec("Création du paiement impossible", err);
       setCheckoutEnCours(null);
     }
   };
@@ -167,7 +166,7 @@ const AbonnementsPage = () => {
         window.location.href = checkout_url;
       } catch (err) {
         reportError("ECHEC_CHECKOUT_CREDIT_PACK", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la création du paiement."));
+        notifier.echec("Création du paiement impossible", err);
       } finally {
         setAchatEnCours(null);
       }
@@ -190,7 +189,7 @@ const AbonnementsPage = () => {
       await jobsService.envoyerRecuPremium(moyenManuel, nbMois, messageComplet);
       setEtapeManuelle("confirme");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de la demande."));
+      notifier.echec("Envoi de la demande impossible", err);
     } finally {
       setEnvoiManuelEnCours(false);
     }

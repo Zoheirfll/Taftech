@@ -29,6 +29,38 @@ Depuis le retrait du repli hiérarchique, **le champ 1 (simple) n'a plus AUCUN e
 
 ---
 
+## 🟠 Changement d'extracteur de texte PDF non validé sur un corpus de CV
+
+**Trouvé le** : 21/10/2026.
+
+**Contexte** : l'extraction du texte passe de `pdfplumber` à PyMuPDF (caractères invisibles Canva). Validée sur 4 CV réels seulement.
+
+**À faire** : passer un jeu de quelques dizaines de CV réels (fournis par l'utilisateur, jamais dans le dépôt) dans l'ancienne et la nouvelle extraction, comparer les lignes (colonnes, dates, puces) avant fusion.
+
+## 🟠 Communes non masquées avant l'IA
+
+**Trouvé le** : 21/10/2026.
+
+**Contexte** : les wilayas de l'en-tête sont masquées par liste ; les communes (« El Kerma ») ne le sont que si spaCy les reconnaît, ce qu'il rate en majuscules. Aucune liste de communes dans le projet (le champ est libre). Décision de l'utilisateur : wilayas seulement.
+
+**À faire** : si l'employeur l'exige, constituer une liste officielle des communes ou masquer les segments voisins du téléphone/e-mail sur la ligne de contact (risque de sur-masquage).
+
+## 🟡 Logo de la barre recruteur non rafraîchi après modification
+
+**Trouvé le** : 21/10/2026 (état corrigé le jour même : la barre met à jour son logo, y compris à `null`).
+
+**Contexte** : `NavbarRecruteur.jsx` ne charge le logo qu'au changement de page ; l'écran de modification du logo de l'entreprise n'émet pas encore le signal `notifierProfilMisAJour` (`utils/evenementsProfil.js`), que seule la barre du candidat écoute.
+
+**À faire** : émettre le signal depuis l'écran du logo et l'écouter dans `NavbarRecruteur.jsx`.
+
+## 🟡 Classification IA non déterministe pour les titres composites
+
+**Trouvé le** : 21/10/2026.
+
+**Contexte** : « Responsable Administration RH & Recrutement » reçoit selon l'appel « Responsable Recrutement » ou rien. Le garde-fou refuse ce qui ne couvre pas le titre (point 7).
+
+**À faire** : décider avec l'utilisateur d'un éventuel repli (par exemple n'accepter que les appellations de même niveau hiérarchique), ou laisser le candidat choisir.
+
 ## 🟠 NIN obligatoire pour postuler : contournable par la candidature rapide
 
 **Trouvé le** : 19/10/2026 (exigence ANEM, plan `docs/superpowers/plans/2026-10-17-pseudonymisation-ia.md`, Task 18).

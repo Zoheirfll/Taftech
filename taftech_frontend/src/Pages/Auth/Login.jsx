@@ -5,7 +5,7 @@ import GoogleAuthProvider from "../../Components/GoogleAuthProvider";
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
 import { authService } from "../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
@@ -35,23 +35,23 @@ const Login = () => {
       return;
     }
     setLoading(true);
-    const toastId = toast.loading("Connexion en cours...");
+    const toastId = notifier.chargement("Connexion en cours");
     try {
       await authService.login(credentials.username, credentials.password, "candidat", rememberMe);
-      toast.success("Connexion réussie !", { id: toastId });
+      notifier.succes("Connexion réussie", undefined, { id: toastId });
       navigate(next || "/dashboard-candidat");
       window.location.reload();
     } catch (err) {
       const data = err.response?.data;
       if (data?.code === "COMPTE_NON_VERIFIE") {
-        toast.dismiss(toastId);
+        notifier.fermer(toastId);
         localStorage.setItem("taftech_pending_verification", data.email);
-        toast("Votre compte n'est pas encore vérifié. Terminez la vérification.", { icon: "📧" });
+        notifier.info("Compte non vérifié", "Terminez la vérification pour vous connecter.");
         navigate("/register");
         return;
       }
       const message = apiErrMsg(err, "Email ou mot de passe incorrect.");
-      toast.error(message, { id: toastId });
+      notifier.erreur("Connexion impossible", message, { id: toastId });
       definir({ password: message });
       reportError("ECHEC_CONNEXION", err);
     } finally {
@@ -60,14 +60,14 @@ const Login = () => {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
-    const toastId = toast.loading("Connexion Google...");
+    const toastId = notifier.chargement("Connexion Google en cours");
     try {
       await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "login");
-      toast.success("Connexion réussie !", { id: toastId });
+      notifier.succes("Connexion réussie", undefined, { id: toastId });
       navigate(next || "/dashboard-candidat");
       window.location.reload();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Échec de la connexion Google."), { id: toastId });
+      notifier.echec("Connexion Google impossible", err, { id: toastId });
     }
   };
 
@@ -184,7 +184,7 @@ const Login = () => {
             <GoogleAuthProvider>
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
-                onError={() => toast.error("Échec de la connexion Google.")}
+                onError={() => notifier.erreur("Connexion Google impossible")}
                 text="signin_with"
                 shape="rectangular"
                 theme="outline"

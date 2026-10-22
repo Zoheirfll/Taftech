@@ -18,7 +18,7 @@ import { useGestionOffre } from "./useGestionOffre";
 import { DetailCandidature } from "./DetailCandidature";
 import { Modals } from "./Modals";
 import { authService } from "../../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { TooltipIcon } from "../../../Components/Tooltip";
 import { tw } from "../../../theme";
 import { nomWilaya } from "../../../utils/wilaya";
@@ -279,7 +279,7 @@ const GestionOffre = () => {
                 <button
                   onClick={() => {
                     setShowTop5Only(!showTop5Only);
-                    if (!showTop5Only) toast?.success("Shortlist IA activée !");
+                    if (!showTop5Only) notifier.succes("Shortlist IA activée");
                   }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${showTop5Only ? tw.chipTealActiveSolid : tw.chipTealOutline}`}
                 >

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../Services/jobsService";
 import { reportError } from "../utils/errorReporter";
-import { apiErrMsg } from "../utils/apiErrMsg";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import { Plus, X, GripVertical } from "lucide-react";
 import { tw } from "../theme";
 import { JUSTIFICATION_MAX, justificationManquante } from "../utils/questionDisqualifiante";
@@ -117,7 +116,8 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
     });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error(
+      notifier.erreur(
+        "Formulaire incomplet",
         Object.keys(newErrors).some((k) => k.startsWith("j_"))
           ? "Une question disqualifiante doit être justifiée par une exigence professionnelle."
           : "Veuillez remplir tous les champs obligatoires.",
@@ -128,12 +128,12 @@ export const CreateQuestionnaireModal = ({ open, onClose, onCreated, initialTitr
     setSaving(true);
     try {
       const created = await jobsService.createQuestionnaire(form);
-      toast.success("Questionnaire créé !");
+      notifier.succes("Questionnaire créé");
       onCreated(created);
       handleClose();
     } catch (err) {
       reportError("ECHEC_CREATE_QUESTIONNAIRE_MODAL", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la création."));
+      notifier.echec("Création impossible", err);
     } finally {
       setSaving(false);
     }

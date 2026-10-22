@@ -7,6 +7,18 @@
 
 ---
 
+## 🆕 SESSION 21/10/2026 (soir) — Notifications centralisées et sobres
+
+Détail et approches écartées : [journal du 21/10/2026 (notifications)](../journal/2026-10-21-notifications.md).
+
+- **Un seul point d'entrée** : `utils/notifier.js` (`succes`, `erreur`, `echec`, `info`, `chargement`, `fermer`). Aucun écran n'importe `react-hot-toast` (test `tests/notificationsCentralisees.test.js`, comme pour `window.confirm`).
+- **Une seule apparence** : `Components/NotificationsHost.jsx` (monté une fois dans `App.jsx` : position **en haut à droite**, durée 4 s) affiche toute notification avec `Components/Notification.jsx` : carte blanche à fine bordure, **filet de couleur à gauche** (vert succès, rouge erreur, gris neutre/chargement), icône, titre en demi-gras, détail plus discret, bouton « Fermer ». Couleurs et tailles = jetons `notif*` de `theme.js`. Pas de gras global, pas d'emoji.
+- **Écriture** : titre court sans point ni « ! » ; détail facultatif ; erreur serveur = `echec("Action impossible", err)`. Titres usuels : « Chargement impossible », « Enregistrement impossible », « Suppression impossible », « Mise à jour impossible », « Envoi impossible » ; confirmations : « Profil mis à jour », « Offre sauvegardée », « Candidature envoyée »…
+- **Piège** : `toast.custom` pose un souci ESM/CJS sous Vitest ; la carte est donc rendue par la **fonction enfant du `<Toaster>`** (`{(toast) => <Notification toast={toast} />}`), et le message reste une chaîne `"Titre\nDétail"` que les tests peuvent assertir.
+- **Ne pas** : afficher une notification pour une validation déjà montrée sous le champ (`useErreursChamps`) ; mettre un point d'exclamation ; réintroduire un toast au centre.
+
+---
+
 ## 🆕 SESSION 18/10/2026 (fin) — Checklist qualité : validation point par point
 
 Méthode : build de production servi en local, Playwright (iPhone 13, Pixel 5), plus lecture du code. Limite : émulation, pas de vrai téléphone ; temps de chargement mesurés sans réseau mobile.

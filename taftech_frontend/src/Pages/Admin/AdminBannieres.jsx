@@ -2,12 +2,11 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, Image as ImageIcon, GalleryHorizontal } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { mediaUrl } from "../../utils/mediaUrl";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import ImageCropperModal from "../../Components/ImageCropperModal";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -50,7 +49,7 @@ const AdminBannieres = () => {
       setBannieres(Array.isArray(b) ? b : b?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_BANNIERES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -99,43 +98,43 @@ const AdminBannieres = () => {
 
   const handleSubmitAnnonce = async (e) => {
     e.preventDefault();
-    if (!formAnnonce.texte.trim()) return toast.error("Le texte est obligatoire.");
+    if (!formAnnonce.texte.trim()) return notifier.erreur("Texte manquant", "Le texte est obligatoire.");
     if (formAnnonce.lien_label.trim() && !formAnnonce.lien_url.trim())
-      return toast.error("Un libellé de lien nécessite une URL.");
+      return notifier.erreur("URL manquante", "Un libellé de lien nécessite une URL.");
     try {
       if (editingId) {
         await jobsService.updateSiteAnnonce(editingId, formAnnonce);
-        toast.success("Annonce mise à jour !");
+        notifier.succes("Annonce mise à jour");
       } else {
         await jobsService.createSiteAnnonce(formAnnonce);
-        toast.success("Annonce créée !");
+        notifier.succes("Annonce créée");
       }
       setShowModal(false);
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_SITE_ANNONCE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
   const handleSubmitBanniere = async (e) => {
     e.preventDefault();
-    if (!editingId && !formBanniere.image) return toast.error("L'image est obligatoire.");
+    if (!editingId && !formBanniere.image) return notifier.erreur("Image manquante", "L'image est obligatoire.");
     const payload = { ...formBanniere, ordre: Number(formBanniere.ordre) || 0 };
     if (!payload.image) delete payload.image;
     try {
       if (editingId) {
         await jobsService.updateBanniereAccueil(editingId, payload);
-        toast.success("Bannière mise à jour !");
+        notifier.succes("Bannière mise à jour");
       } else {
         await jobsService.createBanniereAccueil(payload);
-        toast.success("Bannière ajoutée !");
+        notifier.succes("Bannière ajoutée");
       }
       setShowModal(false);
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_BANNIERE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -144,10 +143,10 @@ const AdminBannieres = () => {
       try {
         await jobsService.deleteSiteAnnonce(id);
         setAnnonces((prev) => prev.filter((a) => a.id !== id));
-        toast.success("Annonce supprimée.");
+        notifier.succes("Annonce supprimée");
       } catch (err) {
         reportError("ECHEC_DELETE_SITE_ANNONCE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };
@@ -157,10 +156,10 @@ const AdminBannieres = () => {
       try {
         await jobsService.deleteBanniereAccueil(id);
         setBannieres((prev) => prev.filter((b) => b.id !== id));
-        toast.success("Bannière supprimée.");
+        notifier.succes("Bannière supprimée");
       } catch (err) {
         reportError("ECHEC_DELETE_BANNIERE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

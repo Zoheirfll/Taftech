@@ -112,8 +112,8 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
       );
 
       // Vérification des retours visuels
-      expect(toast.loading).toHaveBeenCalledWith("Connexion en cours...");
-      expect(toast.success).toHaveBeenCalledWith("Connexion réussie !", {
+      expect(toast.loading).toHaveBeenCalledWith("Connexion en cours");
+      expect(toast.success).toHaveBeenCalledWith("Connexion réussie", {
         id: "toast-id",
       });
 
@@ -177,7 +177,7 @@ describe("🔐 UI & Logique - Composant <Login />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Email ou mot de passe incorrect.",
+        "Connexion impossible\nEmail ou mot de passe incorrect.",
         { id: "toast-id" },
       );
       expect(reporter.reportError).toHaveBeenCalledWith(

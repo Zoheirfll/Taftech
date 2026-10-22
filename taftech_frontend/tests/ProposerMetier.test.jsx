@@ -56,8 +56,30 @@ describe("💡 Proposer un métier absent de la liste", () => {
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
 
     await waitFor(() => expect(jobsService.creerDemandeAjout).toHaveBeenCalledWith("METIER", "Technicien drone", "inspection de lignes"));
-    expect(toast.success).toHaveBeenCalledWith("Merci, votre proposition sera examinée.");
+    expect(toast.success).toHaveBeenCalledWith("Proposition envoyée\nMerci, votre proposition sera examinée.");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Proposer un métier" })).toBeNull());
+  });
+
+  it("🟢 Écran du candidat (onPropose) : la proposition est transmise à l'écran, qui la garde sélectionnée", async () => {
+    jobsService.creerDemandeAjout.mockResolvedValue({ id: 55, message: "Merci, votre demande sera examinée." });
+    const onPropose = vi.fn();
+    render(<MetierAutocomplete proposable onPropose={onPropose} />);
+    saisir("Technicien drone");
+    fireEvent.click(screen.getByText("Autre, préciser"));
+    expect(await screen.findByText(/reste sélectionnée sur votre profil/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await waitFor(() => expect(onPropose).toHaveBeenCalledWith({ id: 55, libelle: "Technicien drone" }));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("reste sélectionnée"));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Proposer un métier" })).toBeNull());
+  });
+
+  it("🔒 Sans onPropose (recruteur, admin) : rien n'est transmis, message historique conservé", async () => {
+    jobsService.creerDemandeAjout.mockResolvedValue({ id: 56, message: "Merci, votre demande sera examinée." });
+    render(<MetierAutocomplete proposable />);
+    saisir("Technicien drone");
+    fireEvent.click(screen.getByText("Autre, préciser"));
+    expect(await screen.findByText(/choisissez le métier le plus proche/)).toBeInTheDocument();
   });
 
   it("🔴 Refus du serveur (métier déjà présent) : message affiché, fenêtre conservée", async () => {

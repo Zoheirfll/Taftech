@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Search, X, Building2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -43,7 +42,7 @@ const AdminEntreprises = () => {
       setTotalCount(data.count || 0);
       setSelectedIds([]);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_CHARGEMENT_ENTREPRISES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -81,9 +80,9 @@ const AdminEntreprises = () => {
       );
       const echecs = resultats.filter((r) => r.status === "rejected");
       const reussites = resultats.length - echecs.length;
-      if (reussites > 0) toast.success(`${reussites} entreprise(s) approuvée(s) !`);
+      if (reussites > 0) notifier.succes(`${reussites} entreprise(s) approuvée(s)`);
       if (echecs.length > 0) {
-        toast.error(apiErrMsg(echecs[0].reason, `${echecs.length} approbation(s) en échec.`));
+        notifier.echec(`${echecs.length} approbation(s) en échec`, echecs[0].reason);
         reportError("ECHEC_APPROBATION_GROUPEE_ENTREPRISES", echecs[0].reason);
       }
       setBulkLoading(false);
@@ -95,9 +94,9 @@ const AdminEntreprises = () => {
     try {
       await jobsService.moderateEntreprise(id, { mise_en_avant_accueil: !statutActuel });
       chargerEntreprises();
-      toast.success(statutActuel ? "Retirée des clients mis en avant." : "Ajoutée aux clients mis en avant !");
+      notifier.succes(statutActuel ? "Retirée des clients mis en avant" : "Ajoutée aux clients mis en avant");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la modification."));
+      notifier.echec("Modification impossible", err);
       reportError("ECHEC_TOGGLE_MISE_EN_AVANT", err);
     }
   };
@@ -111,9 +110,9 @@ const AdminEntreprises = () => {
         await jobsService.moderateEntreprise(id, { est_approuvee: !statutActuel });
         chargerEntreprises();
         setSelectedEntreprise((sel) => (sel && sel.id === id ? { ...sel, est_approuvee: !statutActuel } : sel));
-        toast.success(statutActuel ? "Entreprise suspendue." : "Entreprise approuvée — le recruteur est prévenu par email.");
+        notifier.succes(statutActuel ? "Entreprise suspendue" : "Entreprise approuvée", statutActuel ? undefined : "Le recruteur est prévenu par e-mail.");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la modification."));
+        notifier.echec("Modification impossible", err);
         reportError("ECHEC_MODERATION_ENTREPRISE", err);
       }
     });

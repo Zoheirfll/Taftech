@@ -1,6 +1,7 @@
 """Validation, éclatement, niveau et rapprochement référentiel des compétences extraites."""
 import re
 
+from ..referentiel_utils import normaliser_recherche
 
 
 _NIVEAU_LABEL_VERS_CODE = {
@@ -8,7 +9,7 @@ _NIVEAU_LABEL_VERS_CODE = {
 }
 
 
-PARSER_VERSION = "parser-2026.10.19-8"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
+PARSER_VERSION = "parser-2026.10.22-1"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
 _MAX_MOTS_COMPETENCE = 8
 _MAX_MOTS_COMPETENCE_LIGNE = 8  # au-delà, un libellé composé est éclaté (voir _eclater_competence_composee)
 _MAX_CHARS_COMPETENCE = 70
@@ -121,6 +122,32 @@ def _filtrer_competences_valides(labels):
     """Filtre unique appliqué à TOUTES les sources de compétences (IA, bloc lu ligne par
     ligne dans le CV, outils) — une compétence invalide n'atteint jamais le candidat."""
     return [c for c in labels if _est_competence_valide(c)]
+
+
+_MOTS_VIDES = frozenset({"de", "du", "des", "la", "le", "les", "l", "d", "en", "et", "au", "aux", "un", "une",
+                         "pour", "sur", "par", "a"})
+
+
+_LONGUEUR_RACINE = 6  # « amélioration » et « améliorer » partagent leur racine : une dérivation reste ancrée
+
+
+def _singulier(jeton):
+    return jeton[:-1] if len(jeton) > 3 and jeton.endswith(("s", "x")) else jeton
+
+
+def jetons_du_texte(texte):
+    """Mots significatifs d'un texte, sans accents ni pluriel : « Gestion de projets » → {gestion, projet}."""
+    return {_singulier(j)[:_LONGUEUR_RACINE] for j in re.findall(r"\w+", normaliser_recherche(texte or ""))
+            if len(j) >= 2 and j not in _MOTS_VIDES}
+
+
+def est_ancree_dans_le_cv(label, jetons_cv):
+    """Vrai si TOUS les mots significatifs de la compétence figurent dans le CV (`jetons_cv` =
+    `jetons_du_texte(cv)`). L'IA recopie parfois les exemples de sa consigne (« Gestion de la paie »,
+    « Leadership ») sur un CV qui n'en parle pas : une compétence que le CV ne contient pas n'est jamais
+    proposée au candidat (même garde-fou que les dates, `_date_presente_dans_texte`)."""
+    jetons_label = jetons_du_texte(label)
+    return bool(jetons_label) and jetons_label <= jetons_cv
 
 
 NIVEAU_POINTS_PARSER = {'DEBUTANT': 1, 'INTERMEDIAIRE': 2, 'AVANCE': 3, 'CONFIRME': 4}

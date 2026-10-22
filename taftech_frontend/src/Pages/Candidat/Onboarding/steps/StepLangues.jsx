@@ -3,7 +3,9 @@ import { Trash2, Plus } from "lucide-react";
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
 
-const NIVEAUX = ["Débutant", "Intermédiaire", "Avancé", "Langue maternelle"];
+// Mêmes libellés que le score du profil (`profile_score.POINTS_NIVEAU_LANGUE`) et la barre latérale : un autre
+// libellé n'est pas reconnu et ne rapporte aucun point.
+const NIVEAUX = ["Débutant", "Intermédiaire", "Avancé", "Bilingue / Maternelle"];
 
 // « , » et « : » séparent les langues et les niveaux dans le champ enregistré (« Arabe:Maternelle,Anglais:Avancé »).
 const sansSeparateurs = (texte) => texte.replace(/[,:]/g, "");

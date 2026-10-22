@@ -5,12 +5,13 @@ from ..constants import DIPLOMES_MAPPING
 import logging
 from .prompts import PROMPT_CV_COMPLET
 from .groq_json import _call_groq, _extract_json_object
-from .competences import _eclater_competence_composee, _est_competence_valide, _filtrer_competences_valides, _labels_du_referentiel, _normaliser_avec_referentiel, _parser_niveaux_competences
+from .competences import est_ancree_dans_le_cv, jetons_du_texte, _eclater_competence_composee, _est_competence_valide, _filtrer_competences_valides, _labels_du_referentiel, _normaliser_avec_referentiel, _parser_niveaux_competences
 from .normalisation import _normaliser_date_naissance, _normaliser_mobilite, _normaliser_sexe, _normaliser_situation_actuelle, _normaliser_telephone
 from .extraction import extract_photo_from_docx, extract_photo_from_pdf, extract_text
 from .sections import extraire_competences_par_ligne
 from ..confidentialite_ia import ModeleNerIndisponible, extraire_coordonnees, nettoyer_texte
 from .dates_fin import completer_annee_partagee, completer_dates_fin
+from .langues import normaliser_langues
 from .entreprise import completer_entreprise
 from .jetons import restaurer_jetons
 
@@ -136,7 +137,7 @@ def parse_with_groq(text, noms_connus=()):
                 niveaux.setdefault(morceau, niveau)
         result["competences_niveaux"] = {k: v for k, v in niveaux.items() if _est_competence_valide(k)}
     if infos.get("langues"):
-        result["langues"] = str(infos["langues"]).strip()
+        result["langues"] = normaliser_langues(str(infos["langues"]).strip())
 
     result["linkedin"] = infos.get("linkedin")
     result["github"] = infos.get("github")
@@ -248,7 +249,9 @@ def parse_cv(file_path, file_name, noms_connus=()):
     lignes_cv = _filtrer_competences_valides(extraire_competences_par_ligne(text))
     if len(lignes_cv) < 3:
         lignes_cv = []
-    competences_niveaux_ia = {k: v for k, v in competences_niveaux_ia.items() if _est_competence_valide(k)}
+    jetons_cv = jetons_du_texte(text)
+    competences_niveaux_ia = {k: v for k, v in competences_niveaux_ia.items()
+                              if _est_competence_valide(k) and est_ancree_dans_le_cv(k, jetons_cv)}
     if lignes_cv:
         # Bloc "Competences" identifie dans le CV : il fait foi (une competence par ligne),
         # l'IA ne sert plus qu'a proposer un niveau quand elle a garde le meme intitule.
@@ -305,7 +308,7 @@ def parse_cv(file_path, file_name, noms_connus=()):
         "competences_rapprochees": competences_rapprochees,
         "competences_niveaux": competences_niveaux_normalisees,
         "competences_source": "SECTION" if lignes_cv else "IA",
-        "langues": ai_data.get("langues"),
+        "langues": normaliser_langues(ai_data.get("langues")),
         "linkedin": ai_data.get("linkedin"),
         "github": ai_data.get("github"),
         "bio": ai_data.get("bio"),

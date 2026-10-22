@@ -7,7 +7,7 @@ from django.conf import settings
 
 from .audit import noter
 from .modeles import JETONS, Detection, ResultatNettoyage
-from .patterns import MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SECTION
+from .patterns import MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SECTION, motif_wilayas
 
 JETON_REFERENCES = "[RÉFÉRENCES SUPPRIMÉES]"
 LONGUEUR_MIN_NOM = 3
@@ -50,7 +50,6 @@ def detecter_motifs(texte: str) -> list[Detection]:
 
 
 ZONE_ENTETE_LIEUX = 600  # même zone que la reconnaissance automatique (ner.py) et l'extraction des coordonnées
-_MOTIF_WILAYAS = None
 
 
 def detecter_lieux_entete(texte: str) -> list[Detection]:
@@ -58,12 +57,7 @@ def detecter_lieux_entete(texte: str) -> list[Detection]:
     reconnaissance, qui rate les noms en majuscules (« EL KERMA / ORAN »). La wilaya est extraite
     localement pour le profil (`coordonnees.deviner_wilaya`) : la masquer ne fait rien perdre.
     Les communes ne figurent dans aucune liste du projet : elles restent à la reconnaissance automatique."""
-    global _MOTIF_WILAYAS
-    if _MOTIF_WILAYAS is None:
-        from ..constants import WILAYAS_MAPPING
-        noms = sorted(WILAYAS_MAPPING, key=len, reverse=True)
-        _MOTIF_WILAYAS = re.compile(r"(?<!\w)(?:" + "|".join(re.escape(n) for n in noms) + r")(?!\w)", re.IGNORECASE)
-    return [Detection(m.start(), m.end(), "LIEU") for m in _MOTIF_WILAYAS.finditer(texte[:ZONE_ENTETE_LIEUX])]
+    return [Detection(m.start(), m.end(), "LIEU") for m in motif_wilayas().finditer(texte[:ZONE_ENTETE_LIEUX])]
 
 
 def detecter_noms_connus(texte: str, noms) -> list[Detection]:

@@ -12,12 +12,15 @@ import re
 _MOIS = r"(?:janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)"
 _DATE = rf"(?:\d{{1,2}}[/.\-]\d{{1,2}}[/.\-]\d{{2,4}}|\d{{1,2}}(?:er)?\s{{1,3}}{_MOIS}\s{{1,3}}\d{{4}})"
 _FIN_URL = r"[^\s<>\"')\]]{1,200}"
+# Un PDF coupe parfois un lien après un tiret (« …/in/rafik-mohammed-⏎boumaza-a3257762 ») : la suite
+# n'est prise que si la ligne finit par un tiret, jamais sur une ligne ordinaire.
+SUITE_URL = r"(?:(?<=-)\n[^\s<>\"')\]]{1,100})?"  # public : réutilisé par coordonnees.py
 _SEP = r"[\s.\-]"
 
 MOTIFS = (
     ("EMAIL", re.compile(r"[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,24}")),
     ("URL", re.compile(
-        rf"(?:https?://|www\.){_FIN_URL}|\b(?:linkedin|github)\.com/{_FIN_URL}", re.I)),
+        rf"(?:https?://|www\.){_FIN_URL}|\b(?:linkedin|github)\.com/{_FIN_URL}{SUITE_URL}", re.I)),
     # Lien personnel sans « http » : plateforme ou site (facebook.com/…, t.me/…, mon-site.dz/…).
     ("URL", re.compile(
         r"\b[\w-]{1,63}(?:\.[\w-]{1,63}){0,4}\.(?:com|net|org|dz|io|me|co|fr|app|dev|info)/"
@@ -58,3 +61,16 @@ TITRE_SECTION = re.compile(
     r"|centres?\s+d['’]int[ée]r[êe]ts?|projets?|certifications?|dipl[ôo]mes?"
     r"|الخبرات|الخبرة|التكوين|المهارات|اللغات|الهوايات|المشاريع|الشهادات)\b", re.I)
 MAX_LIGNES_REFERENCES = 8
+
+_MOTIF_WILAYAS = None
+
+
+def motif_wilayas():
+    """Motif des noms de wilaya (liste du projet), construit une seule fois. Partagé par le masquage
+    des lieux d'en-tête (pseudonymisation.py) et la règle « commune suivie de sa wilaya » (ner.py)."""
+    global _MOTIF_WILAYAS
+    if _MOTIF_WILAYAS is None:
+        from ..constants import WILAYAS_MAPPING
+        noms = sorted(WILAYAS_MAPPING, key=len, reverse=True)
+        _MOTIF_WILAYAS = re.compile(r"(?<!\w)(?:" + "|".join(re.escape(n) for n in noms) + r")(?!\w)", re.IGNORECASE)
+    return _MOTIF_WILAYAS

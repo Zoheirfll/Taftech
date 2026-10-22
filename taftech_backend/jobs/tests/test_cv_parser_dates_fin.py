@@ -2,7 +2,7 @@
 (« DÉVELOPPEUR N8N Novembre 2025 » puis « Janvier 2026 »). Quand l'IA la laisse vide, on la lit localement."""
 from django.test import SimpleTestCase
 
-from jobs.cv_parser.dates_fin import completer_dates_fin
+from jobs.cv_parser.dates_fin import completer_annee_partagee, completer_dates_fin
 
 CV = (
     "DÉVELOPPEUR D'APPLICATIONS WEB Janvier 2026\n"
@@ -20,6 +20,36 @@ CV = (
 
 def experience(titre, debut, fin=""):
     return {"titre_poste": titre, "date_debut_raw": debut, "date_fin_raw": fin}
+
+
+class CompleterAnneePartageeTests(SimpleTestCase):
+    """CV du 22/10/2026 : « ORGANISATEUR DE CONDITIONNEMENT Sept. - Nov. 2020 » (une seule année)."""
+
+    TEXTE = (
+        "ORGANISATEUR DE CONDITIONNEMENT Sept. - Nov. 2020\nACG SIM\n"
+        "ORGANISATEUR INDUSTRIEL Sept. 2015 - Sept. 2020\nRenault Algérie Production\n"
+    )
+
+    def test_debut_sans_annee_relu_sur_la_ligne_du_titre(self):
+        experiences = [experience("ORGANISATEUR DE CONDITIONNEMENT", "", "Nov. 2020")]
+        completer_annee_partagee(experiences, self.TEXTE)
+        self.assertEqual(experiences[0]["date_debut_raw"], "Sept. 2020")
+        self.assertEqual(experiences[0]["date_fin_raw"], "Nov. 2020")
+
+    def test_fin_vide_completee_avec_la_meme_annee(self):
+        experiences = [experience("ORGANISATEUR DE CONDITIONNEMENT", "")]
+        completer_annee_partagee(experiences, self.TEXTE)
+        self.assertEqual(experiences[0]["date_fin_raw"], "Nov. 2020")
+
+    def test_debut_avec_annee_jamais_modifie(self):
+        experiences = [experience("ORGANISATEUR INDUSTRIEL", "Sept. 2015", "Sept. 2020")]
+        completer_annee_partagee(experiences, self.TEXTE)
+        self.assertEqual(experiences[0]["date_debut_raw"], "Sept. 2015")
+
+    def test_titre_absent_du_texte_ne_change_rien(self):
+        experiences = [experience("DIRECTEUR GENERAL", "", "Nov. 2020")]
+        completer_annee_partagee(experiences, self.TEXTE)
+        self.assertEqual(experiences[0]["date_debut_raw"], "")
 
 
 class CompleterDatesFinTests(SimpleTestCase):

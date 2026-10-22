@@ -4,14 +4,14 @@ import re
 
 from ..constants import WILAYAS_MAPPING
 from .ner_arabe import normaliser_chiffres
-from .patterns import MOTIFS
+from .patterns import MOTIFS, SUITE_URL
 from .pseudonymisation import LONGUEUR_MAX_ANALYSE, _ner_actif
 
 ZONE_ENTETE = 600
 ZONE_NOM = 400
 _FIN_URL = r"[^\s<>\"')\]]+"
-_LINKEDIN = re.compile(rf"(?:https?://)?(?:[\w-]+\.)?linkedin\.com/{_FIN_URL}", re.I)
-_GITHUB = re.compile(rf"(?:https?://)?(?:[\w-]+\.)?github\.com/{_FIN_URL}", re.I)
+_LINKEDIN = re.compile(rf"(?:https?://)?(?:[\w-]+\.)?linkedin\.com/{_FIN_URL}{SUITE_URL}", re.I)
+_GITHUB = re.compile(rf"(?:https?://)?(?:[\w-]+\.)?github\.com/{_FIN_URL}{SUITE_URL}", re.I)
 
 
 def _premier(categorie: str, texte: str):
@@ -51,8 +51,8 @@ def extraire_coordonnees(texte, *, avec_ner=None) -> dict:
     return {
         "email": email.group(0) if email else None,
         "telephone": tel.group(0).strip() if tel else None,
-        "linkedin": linkedin.group(0) if linkedin else None,
-        "github": github.group(0) if github else None,
+        "linkedin": linkedin.group(0).replace("\n", "") if linkedin else None,  # lien coupé en fin de ligne : recollé
+        "github": github.group(0).replace("\n", "") if github else None,
         "date_naissance_raw": naissance.group("valeur") if naissance else None,
         "wilaya": deviner_wilaya(texte[:ZONE_ENTETE]),
         "nom_complet": _nom_entete(texte) if avec_ner else None,

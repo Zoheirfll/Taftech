@@ -141,3 +141,26 @@ class DurcissementRevueSecuriteTest(SimpleTestCase):
         from jobs.confidentialite_ia.pseudonymisation import fusionner
         resultat = fusionner([Detection(0, 5, "NOM"), Detection(3, 10, "TELEPHONE")])
         self.assertEqual(resultat, [Detection(0, 10, "NOM")])
+
+
+class UrlCoupeeEnFinDeLigneTest(SimpleTestCase):
+    """Un lien LinkedIn que le PDF coupe après un tiret ne doit pas laisser son identifiant en clair
+    (CV réel du 22/10/2026 : « -a3257762 » restait visible)."""
+
+    def test_lien_linkedin_coupe_apres_un_tiret_est_masque_en_entier(self):
+        from jobs.confidentialite_ia.pseudonymisation import nettoyer_texte
+        texte = "Oran 0559 71 27 11 linkedin.com/in/rafik-mohammed-\nboumaza-a3257762\nPROFIL EXECUTIF\n"
+        r = nettoyer_texte(texte, avec_ner=False)
+        self.assertNotIn("a3257762", r.texte)
+        self.assertIn("\nPROFIL EXECUTIF", r.texte)  # la ligne suivante n'est pas absorbée
+
+    def test_lien_linkedin_coupe_est_extrait_en_entier_pour_le_profil(self):
+        from jobs.confidentialite_ia.coordonnees import extraire_coordonnees
+        texte = "Oran 0559 71 27 11 linkedin.com/in/rafik-mohammed-\nboumaza-a3257762\nPROFIL EXECUTIF\n"
+        c = extraire_coordonnees(texte, avec_ner=False)
+        self.assertEqual(c["linkedin"], "linkedin.com/in/rafik-mohammed-boumaza-a3257762")
+
+    def test_lien_normal_ne_mange_pas_la_ligne_suivante(self):
+        from jobs.confidentialite_ia.pseudonymisation import nettoyer_texte
+        r = nettoyer_texte("linkedin.com/in/jean-dupont\nPROFIL", avec_ner=False)
+        self.assertIn("\nPROFIL", r.texte)

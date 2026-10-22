@@ -6,6 +6,7 @@ from docx import Document
 import fitz  # pymupdf - pour extraire les images du PDF
 import logging
 
+from .colonnes import lignes_simples, regrouper_lignes
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,8 @@ def extract_text_from_pdf_smart(file_path):
                 # écarte les mots devenus vides. Le regroupement par ligne se fait sur le CENTRE vertical
                 # du mot : son bord haut varie avec la police (gras/normal) et éclatait une même ligne.
                 words = [
-                    {"x0": w[0], "top": (w[1] + w[3]) / 2, "text": w[4].translate(_SANS_CARACTERES_INVISIBLES)}
+                    {"x0": w[0], "x1": w[2], "top": (w[1] + w[3]) / 2,
+                     "text": w[4].translate(_SANS_CARACTERES_INVISIBLES)}
                     for w in page.get_text("words")
                 ]
                 words = [w for w in words if w["text"].strip()]
@@ -81,9 +83,14 @@ def extract_text_from_pdf_smart(file_path):
                     else:
                         lignes.append((w['top'], [w]))
 
-                # Trie chaque ligne par position X (de gauche à droite)
-                for _, mots_ligne in lignes:
-                    line_text = " ".join(w['text'] for w in sorted(mots_ligne, key=lambda w: w['x0']))
+                # Lignes de gauche à droite, sauf les tableaux en colonnes lus colonne par colonne
+                # (colonnes.py). Repli sur la lecture ligne par ligne si la lecture en colonnes échoue.
+                try:
+                    lignes_texte = regrouper_lignes(lignes)
+                except Exception:
+                    logger.exception("Lecture en colonnes impossible : repli sur les lignes simples")
+                    lignes_texte = lignes_simples(lignes)
+                for line_text in lignes_texte:
                     text += _MOIS_COLLE_ANNEE.sub(r"\1 \2", line_text) + "\n"
         finally:
             doc.close()

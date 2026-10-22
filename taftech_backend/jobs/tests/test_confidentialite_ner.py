@@ -104,3 +104,36 @@ class NerMotsDOrganisationTest(SimpleTestCase):
         detections = entites_ner(texte)
         masque = "".join(texte[d.debut:d.fin] for d in detections if d.categorie == "NOM")
         self.assertNotIn("Université", masque)
+
+
+class NerFauxPositifsCvIndustrielTest(SimpleTestCase):
+    """CV réel du 22/10/2026 : un employeur détecté une seule fois comme personne, et une commune
+    (« Hassi Ameur », suivie de sa wilaya) prise pour un nom, avec la barre verticale avalée."""
+
+    EXTRAIT = (
+        "Parcours construit chez Renault Algérie Production,\n"
+        "FieldCore - General Electric et Stellantis autour du management de fabrication.\n"
+        "VEHICLE TECHNICAL MANAGER 2026\nStellantis Production El Djazair - FIAT Oran\n"
+        "ALTEN, via IRMA Global Services | Mission Stellantis Oran\n"
+        "INGÉNIEUR EN ELECTRONIQUE Déc. 2011 - Oct. 2012\n"
+        "SARL CERAL - Ceramique Algérienne | Hassi Ameur - Oran\n"
+    )
+
+    def test_employeur_detecte_une_seule_fois_reste_lisible(self):
+        texte = nettoyer_texte(self.EXTRAIT).texte
+        self.assertIn("General Electric et Stellantis autour", texte)
+
+    def test_commune_suivie_de_sa_wilaya_n_est_pas_un_nom(self):
+        r = nettoyer_texte("Profil\n" + "x " * 400 + "\n" + self.EXTRAIT)  # hors de l'en-tête, comme un vrai CV
+        self.assertIn("Algérienne | Hassi Ameur - Oran", r.texte)
+        self.assertNotIn("NOM", r.categories)
+
+    def test_ponctuation_de_bordure_jamais_incluse_dans_un_nom(self):
+        from jobs.confidentialite_ia.ner import entites_ner
+        texte = "Société Atlas | Karim Benali | Oran"
+        for d in entites_ner(texte):
+            self.assertTrue(texte[d.debut:d.fin][0].isalnum() and texte[d.debut:d.fin][-1].isalnum())
+
+    def test_nom_cite_une_fois_reste_masque(self):
+        texte = "Recommandé par Karim Benali, directeur technique.\n" + "x " * 10
+        self.assertNotIn("Benali", nettoyer_texte(texte).texte)

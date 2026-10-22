@@ -2,9 +2,12 @@
 une seule fois. S'il manque, on lève ModeleNerIndisponible : jamais de repli silencieux (un CV
 non nettoyé ne doit pas partir chez le fournisseur IA)."""
 import logging
+import re
 import unicodedata
+from collections import Counter
 
 from .modeles import Detection
+from .patterns import motif_wilayas
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +47,35 @@ def _sans_accents(mot: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", mot.lower()) if unicodedata.category(c) != "Mn")
 
 
+def _a_retirer_en_bordure(token) -> bool:
+    """Mot d'organisation ou ponctuation seule (« | », « - ») : jamais une partie du nom."""
+    return not any(c.isalnum() for c in token.text) or _sans_accents(token.text) in _MOTS_ORGANISATION
+
+
+# Commune suivie de sa wilaya (« Hassi Ameur - Oran », « Oued Tlélat, Oran ») : un lieu, pas une personne.
+_SEPARATEUR_WILAYA = re.compile(r"[ \t]*[-–/,][ \t]*")
+
+
+def _suivie_d_une_wilaya(texte: str, fin: int) -> bool:
+    sep = _SEPARATEUR_WILAYA.match(texte, fin)
+    return bool(sep) and motif_wilayas().match(texte, sep.end()) is not None
+
+
+def _detecte_a_tort(texte: str, mot: str, nb_detections: int) -> bool:
+    """Un mot que spaCy ne prend pour une personne que dans moins de la moitié de ses occurrences
+    (« Stellantis » : 1 sur 3) est un nom d'entreprise, pas un nom de personne. Un nom cité une seule
+    fois n'est jamais écarté."""
+    total = len(re.findall(rf"(?<!\w){re.escape(mot)}(?!\w)", texte, re.I))
+    return total >= 2 and nb_detections * 2 < total
+
+
 def _sans_mots_d_organisation(ent):
     """(début, fin) en caractères de l'entité privée de ses mots d'organisation de bordure, ou None
     s'il ne reste aucun mot."""
     mots = [t for t in ent if not t.is_space]
-    while mots and _sans_accents(mots[0].text) in _MOTS_ORGANISATION:
+    while mots and _a_retirer_en_bordure(mots[0]):
         mots = mots[1:]
-    while mots and _sans_accents(mots[-1].text) in _MOTS_ORGANISATION:
+    while mots and _a_retirer_en_bordure(mots[-1]):
         mots = mots[:-1]
     if not mots:
         return None
@@ -75,11 +100,17 @@ def _ouvre_une_ligne_de_texte(texte: str, debut: int, fin: int) -> bool:
 
 def entites_ner(texte: str) -> list[Detection]:
     detections = []
-    for ent in _charger()(texte).ents:
+    entites = list(_charger()(texte).ents)
+    nb_par_mot = Counter(e.text.lower() for e in entites if e.label_ == "PER")
+    for ent in entites:
         mots = [t for t in ent if not t.is_space]
         if len(mots) == 1 and _ouvre_une_ligne_de_texte(texte, ent.start_char, ent.end_char):
             continue
         if ent.label_ == "PER" and not any(c.isdigit() for c in ent.text):
+            if ent.start_char >= ZONE_ENTETE and _suivie_d_une_wilaya(texte, ent.end_char):
+                continue  # corps du CV : une commune, pas une personne (l'en-tête garde « Nom, Oran »)
+            if len(mots) == 1 and _detecte_a_tort(texte, ent.text, nb_par_mot[ent.text.lower()]):
+                continue
             bornes = _sans_mots_d_organisation(ent)
             if bornes:
                 detections.append(Detection(bornes[0], bornes[1], "NOM"))

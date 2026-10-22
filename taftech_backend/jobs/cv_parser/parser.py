@@ -10,7 +10,7 @@ from .normalisation import _normaliser_date_naissance, _normaliser_mobilite, _no
 from .extraction import extract_photo_from_docx, extract_photo_from_pdf, extract_text
 from .sections import extraire_competences_par_ligne
 from ..confidentialite_ia import ModeleNerIndisponible, extraire_coordonnees, nettoyer_texte
-from .dates_fin import completer_dates_fin
+from .dates_fin import completer_annee_partagee, completer_dates_fin
 from .entreprise import completer_entreprise
 from .jetons import restaurer_jetons
 
@@ -232,6 +232,8 @@ def parse_cv(file_path, file_name, noms_connus=()):
                     element[champ] = restaurer_jetons(element[champ], text)
     # CV en colonnes : fin d'expérience seule sous le titre, laissée vide par l'IA.
     completer_dates_fin(ai_data.get("experiences"), text)
+    # « Sept. - Nov. 2020 » : année écrite une seule fois, début relu sur la ligne du titre.
+    completer_annee_partagee(ai_data.get("experiences"), text)
     # Entreprise obligatoire à l'enregistrement : relue sous le titre si le masquage l'a fait perdre.
     completer_entreprise(ai_data.get("experiences"), text)
 

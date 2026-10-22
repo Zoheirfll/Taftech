@@ -29,6 +29,33 @@ def _ligne_sous_le_titre(lignes, titre, debut):
     return None
 
 
+_PLAGE_ANNEE_PARTAGEE = re.compile(
+    rf"(?<!\w)(?P<debut>{_MOIS}\.?)\s{{0,3}}[-–—]\s{{0,3}}(?P<fin>{_MOIS}\.?)\s{{1,3}}(?P<annee>\d{{4}})(?!\d)",
+    re.IGNORECASE,
+)
+
+
+def completer_annee_partagee(experiences, cv_brut):
+    """« ORGANISATEUR DE CONDITIONNEMENT Sept. - Nov. 2020 » : l'année n'est écrite qu'une fois, pour les
+    deux mois. L'IA ne garde alors que la fin et le début manque (l'écran bloque l'enregistrement).
+    Quand le début n'a pas d'année, on le relit sur la ligne du titre ; une fin déjà renseignée n'est
+    jamais modifiée (en place, comme `completer_dates_fin`)."""
+    lignes = [_normaliser(ligne) for ligne in (cv_brut or "").split("\n")]
+    for experience in experiences or []:
+        if not isinstance(experience, dict) or re.search(r"\d{4}", experience.get("date_debut_raw") or ""):
+            continue
+        titre = _normaliser(experience.get("titre_poste")).lower()
+        if not titre:
+            continue
+        for ligne in lignes:
+            plage = ligne.lower().startswith(titre) and _PLAGE_ANNEE_PARTAGEE.search(ligne[len(titre):])
+            if plage:
+                experience["date_debut_raw"] = f"{plage['debut']} {plage['annee']}"
+                if not experience.get("date_fin_raw"):
+                    experience["date_fin_raw"] = f"{plage['fin']} {plage['annee']}"
+                break
+
+
 def completer_dates_fin(experiences, cv_brut):
     """Renseigne `date_fin_raw` (en place) quand la fin est seule sous le titre dans le CV brut."""
     lignes = [_normaliser(ligne) for ligne in (cv_brut or "").split("\n")]

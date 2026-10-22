@@ -1,0 +1,12 @@
+{
+  "_commentaire": "Ajouts décidés avec l'utilisateur le 22/10/2026 (CV d'un manager industriel : 5 métiers vides). Les codes visent les identifiants stables du référentiel (métier C1401 : Encadrement méthode en production industrielle ; C2501 : Direction, ingénierie en production industrielle ; groupe TSUB-C3F3E405E022 : Méthodes et gestion industrielles). Appliquer par : python manage.py appliquer_ajouts_referentiel [--dry-run].",
+  "appellations": [
+    {"id": "A01", "metier": "C1401", "libelle": "Organisateur industriel"},
+    {"id": "A02", "metier": "C2501", "libelle": "Manager de fabrication"},
+    {"id": "A03", "metier": "C2501", "libelle": "Manager de production"}
+  ],
+  "metiers": [
+    {"id": "M01", "libelle": "Chef de projet industriel", "groupe": "TSUB-C3F3E405E022"},
+    {"id": "M02", "libelle": "Chef de projet technique", "groupe": "TSUB-C3F3E405E022"}
+  ]
+}

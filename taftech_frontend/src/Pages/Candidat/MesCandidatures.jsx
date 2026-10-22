@@ -168,7 +168,10 @@ const STATUT_LABELS = {
 
 const MesCandidatures = () => {
   const [candidatures, setCandidatures] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [chargementPlus, setChargementPlus] = useState(false);
   const [openAnalyse, setOpenAnalyse] = useState({});
   const toggleAnalyse = (id) =>
     setOpenAnalyse((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -177,8 +180,9 @@ const MesCandidatures = () => {
 
     const fetchCandidatures = async () => {
       try {
-        const data = await jobsService.getMesCandidatures();
-        setCandidatures(data);
+        const data = await jobsService.getMesCandidatures(1);
+        setCandidatures(data.results);
+        setTotal(data.count);
       } catch (error) {
         reportError("ECHEC_RECUPERATION_CANDIDATURES", error);
       } finally {
@@ -187,6 +191,22 @@ const MesCandidatures = () => {
     };
     fetchCandidatures();
   }, []);
+
+  // Ajoute la page suivante à la liste (sans remplacer : le scroll et les
+  // panneaux « Pourquoi ce score ? » ouverts restent en place).
+  const voirPlus = async () => {
+    setChargementPlus(true);
+    try {
+      const data = await jobsService.getMesCandidatures(page + 1);
+      setCandidatures((prev) => [...prev, ...data.results]);
+      setTotal(data.count);
+      setPage(page + 1);
+    } catch (error) {
+      reportError("ECHEC_RECUPERATION_CANDIDATURES_SUITE", error);
+    } finally {
+      setChargementPlus(false);
+    }
+  };
 
   if (loading)
     return (
@@ -364,6 +384,22 @@ const MesCandidatures = () => {
               )}
             </div>
           ))}
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <p className={`text-sm ${tw.textMuted}`}>
+              {candidatures.length} sur {total} candidatures
+            </p>
+            {candidatures.length < total && (
+              <button
+                onClick={voirPlus}
+                disabled={chargementPlus}
+                className={`px-6 py-2.5 rounded-xl border text-sm font-semibold transition-colors disabled:opacity-60 ${tw.toggleAnalyseButton}`}
+              >
+                {chargementPlus
+                  ? "Chargement…"
+                  : `Voir plus (${total - candidatures.length} restantes)`}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
@@ -313,13 +314,25 @@ class PostulerRapideAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class MesCandidaturesPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
 class MesCandidaturesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_maj')
-        serializer = MesCandidaturesDTO(candidatures, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        candidatures = Candidature.objects.select_related('offre__entreprise').filter(candidat=request.user).order_by('-date_maj', '-id')
+        # Sans ?page : liste complète (le tableau de bord en tire ses compteurs).
+        if 'page' not in request.query_params:
+            serializer = MesCandidaturesDTO(candidatures, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = MesCandidaturesPagination()
+        page = paginator.paginate_queryset(candidatures, request, view=self)
+        serializer = MesCandidaturesDTO(page, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 class UpdateCandidatureStatusAPIView(APIView):

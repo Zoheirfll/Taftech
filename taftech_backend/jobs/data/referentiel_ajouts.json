@@ -8,5 +8,9 @@
   "metiers": [
     {"id": "M01", "libelle": "Chef de projet industriel", "groupe": "TSUB-C3F3E405E022"},
     {"id": "M02", "libelle": "Chef de projet technique", "groupe": "TSUB-C3F3E405E022"}
+  ],
+  "couples": [
+    {"id": "C01", "diplome": "D-ING", "specialite": "SP-781F3F10A906", "note": "Diplôme d'ingénieur d'État / Instrumentation (CV USTO, 22/10/2026)"},
+    {"id": "C02", "diplome": "D-ING", "specialite": "SP-5EA35CAA2E15", "note": "Diplôme d'ingénieur d'État / Électronique"}
   ]
 }

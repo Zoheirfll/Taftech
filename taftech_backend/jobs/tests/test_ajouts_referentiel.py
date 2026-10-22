@@ -80,6 +80,64 @@ class AjoutsReferentielTest(TestCase):
         self.assertFalse(Appellation.objects.filter(code="TAF-AJ-A01").exists())
 
 
+class AjoutsCouplesDiplomeSpecialiteTest(TestCase):
+    """CV du 22/10/2026 : « Ingéniorat d'État en Électronique / Instrumentation » ne se voyait proposer que
+    « Électronique des systèmes embarqués » : « Instrumentation » n'était relié qu'au Master académique."""
+
+    def setUp(self):
+        from jobs.models import DiplomeSpecialite, DomaineFormation, SpecialiteFormation, TypeDiplome
+        self.DiplomeSpecialite = DiplomeSpecialite
+        self.diplome = TypeDiplome.objects.create(code="D-ING", libelle="Diplôme d'ingénieur d'État", systeme="universitaire")
+        domaine = DomaineFormation.objects.create(code="DOM-T", libelle="Sciences et technologies")
+        self.instrumentation = SpecialiteFormation.objects.create(
+            code="SP-INSTR", domaine=domaine, libelle="Instrumentation", cle_recherche=normaliser_recherche("Instrumentation"))
+        self.embarques = SpecialiteFormation.objects.create(
+            code="SP-EMB", domaine=domaine, libelle="Électronique des systèmes embarqués",
+            cle_recherche=normaliser_recherche("Électronique des systèmes embarqués"))
+        DiplomeSpecialite.objects.create(code="DS-EMB", diplome=self.diplome, specialite=self.embarques, statut="atteste_catalogue")
+
+    COUPLE = {"couples": [{"id": "C01", "diplome": "D-ING", "specialite": "SP-INSTR"}]}
+
+    def _lancer(self, contenu, *options):
+        return AjoutsReferentielTest._lancer(self, contenu, *options)
+
+    def test_couple_cree(self):
+        self._lancer(self.COUPLE)
+        couple = self.DiplomeSpecialite.objects.get(code="TAF-AJ-C01")
+        self.assertEqual((couple.diplome, couple.specialite), (self.diplome, self.instrumentation))
+        self.assertTrue(couple.selectionnable)
+
+    def test_relance_sans_effet(self):
+        self._lancer(self.COUPLE)
+        sortie = self._lancer(self.COUPLE)
+        self.assertEqual(self.DiplomeSpecialite.objects.filter(diplome=self.diplome, specialite=self.instrumentation).count(), 1)
+        self.assertIn("déjà fait", sortie)
+
+    def test_couple_deja_atteste_sous_un_autre_code_n_est_pas_duplique(self):
+        self.DiplomeSpecialite.objects.create(code="DS-X", diplome=self.diplome, specialite=self.instrumentation)
+        self._lancer(self.COUPLE)
+        self.assertFalse(self.DiplomeSpecialite.objects.filter(code="TAF-AJ-C01").exists())
+
+    def test_diplome_ou_specialite_inconnu_annule_tout(self):
+        contenu = {"couples": [self.COUPLE["couples"][0], {"id": "C02", "diplome": "D-ING", "specialite": "SP-ABSENT"}]}
+        with self.assertRaises(CommandError):
+            self._lancer(contenu)
+        self.assertFalse(self.DiplomeSpecialite.objects.filter(code__startswith="TAF-AJ").exists())
+
+    def test_dry_run_n_ecrit_rien(self):
+        self._lancer(self.COUPLE, "--dry-run")
+        self.assertFalse(self.DiplomeSpecialite.objects.filter(code__startswith="TAF-AJ").exists())
+
+    def test_la_suggestion_propose_instrumentation_apres_l_ajout(self):
+        from jobs.referentiel_utils import suggerer_specialites_pour_diplome
+        texte = "Ingeniorat d'État en Électronique / Instrumentation"
+        avant = [s.libelle for s in suggerer_specialites_pour_diplome(self.diplome, texte)]
+        self.assertNotIn("Instrumentation", avant)
+        self._lancer(self.COUPLE)
+        apres = [s.libelle for s in suggerer_specialites_pour_diplome(self.diplome, texte)]
+        self.assertIn("Instrumentation", apres)  # à score égal le tri est alphabétique : le candidat choisit
+
+
 class FichierLivreTest(SimpleTestCase):
     def test_structure_du_fichier_livre(self):
         with open(CHEMIN_DEFAUT, encoding="utf-8") as f:

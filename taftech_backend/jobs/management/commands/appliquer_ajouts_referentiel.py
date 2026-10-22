@@ -16,12 +16,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from jobs.demandes_ajout.adaptateurs import TYPES_GROUPE_METIER
-from jobs.models import Appellation, GroupeMetier, Metier
+from jobs.models import Appellation, DiplomeSpecialite, GroupeMetier, Metier, SpecialiteFormation, TypeDiplome
 from jobs.referentiel_utils import normaliser_recherche
 
 CHEMIN_DEFAUT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "data", "referentiel_ajouts.json"))
 TYPE_ALIAS = "ajout_referentiel"
+TYPE_COUPLE = "ajout_referentiel"  # statut du couple diplôme ↔ spécialité (aucun code ne filtre sur ce champ)
 
 
 class _Annulation(Exception):
@@ -40,13 +41,13 @@ class Command(BaseCommand):
             donnees = json.load(f)
         try:
             with transaction.atomic():
-                self._appliquer(donnees.get("appellations", []), donnees.get("metiers", []))
+                self._appliquer(donnees.get("appellations", []), donnees.get("metiers", []), donnees.get("couples", []))
                 if options["dry_run"]:
                     raise _Annulation()
         except _Annulation:
             self.stdout.write("DRY-RUN : rien n'est écrit.")
 
-    def _appliquer(self, appellations, metiers):
+    def _appliquer(self, appellations, metiers, couples=()):
         for entree in appellations:
             cible = Metier.objects.filter(code=entree["metier"], selectionnable=True).first()
             if cible is None:
@@ -57,6 +58,23 @@ class Command(BaseCommand):
             if groupe is None:
                 raise CommandError(f"Groupe introuvable : {entree['groupe']} (« {entree['libelle']} »).")
             self._ajouter_metier(f"TAF-AJ-{entree['id']}", groupe, entree["libelle"])
+        for entree in couples:
+            self._ajouter_couple(f"TAF-AJ-{entree['id']}", entree["diplome"], entree["specialite"])
+
+    def _ajouter_couple(self, code, code_diplome, code_specialite):
+        """Spécialité reconnue pour un diplôme : seuls les couples attestés sont proposés au candidat
+        (`referentiel_utils.suggerer_specialites_pour_diplome`, règle F06)."""
+        diplome = TypeDiplome.objects.filter(code=code_diplome).first()
+        specialite = SpecialiteFormation.objects.filter(code=code_specialite).first()
+        if diplome is None or specialite is None:
+            raise CommandError(f"Couple impossible : diplôme {code_diplome} ou spécialité {code_specialite} introuvable.")
+        if DiplomeSpecialite.objects.filter(diplome=diplome, specialite=specialite).exists():
+            self.stdout.write(f"[déjà fait] couple « {diplome.libelle} » / « {specialite.libelle} » déjà présent.")
+            return
+        DiplomeSpecialite.objects.create(
+            code=code, diplome=diplome, specialite=specialite, statut=TYPE_COUPLE, selectionnable=True,
+            precision="Ajout validé par l'administrateur (jobs/data/referentiel_ajouts.json).")
+        self.stdout.write(f"[créé] couple « {diplome.libelle} » / « {specialite.libelle} ».")
 
     def _appellation_existante(self, cle):
         return Appellation.objects.filter(cle_recherche=cle, actif=True).select_related("metier").order_by("id").first()

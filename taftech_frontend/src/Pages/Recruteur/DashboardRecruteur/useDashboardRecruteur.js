@@ -1,10 +1,9 @@
 // Hook du tableau de bord recruteur : chargement des données, filtres, actions et valeurs calculées pour les widgets.
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { jobsService } from "../../../Services/jobsService";
 import { reportError } from "../../../utils/errorReporter";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import {
   calculerStats,
   buildEvolutionBuckets,
@@ -89,7 +88,7 @@ export const useDashboardRecruteur = () => {
     try {
       await jobsService.telechargerRapportDashboard(dateDebut, dateFin);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du téléchargement du rapport."));
+      notifier.echec("Téléchargement du rapport impossible", err);
     }
   };
 
@@ -113,7 +112,7 @@ export const useDashboardRecruteur = () => {
     try {
       await jobsService.exporterCandidaturesExcel();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'export Excel."));
+      notifier.echec("Exportation impossible", err);
       reportError("ECHEC_EXPORT_EXCEL_GLOBAL", err);
     }
   };
@@ -122,9 +121,9 @@ export const useDashboardRecruteur = () => {
     if (!candidatUserId) return;
     try {
       await jobsService.toggleFavoriCV(candidatUserId);
-      toast.success("Favoris mis à jour.");
+      notifier.succes("Favoris mis à jour");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour des favoris."));
+      notifier.echec("Mise à jour des favoris impossible", err);
       reportError("ECHEC_TOGGLE_FAVORI_DASHBOARD", err);
     }
   };
@@ -134,10 +133,10 @@ export const useDashboardRecruteur = () => {
     setEnvoiInvitation(true);
     try {
       await jobsService.inviterCandidatCVTheque(inviterCandidat.candidat?.id, offreInvitation);
-      toast.success("Invitation envoyée !");
+      notifier.succes("Invitation envoyée");
       setInviterCandidat(null);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de l'invitation."));
+      notifier.echec("Envoi de l'invitation impossible", err);
       reportError("ECHEC_INVITER_CANDIDAT_DASHBOARD", err);
     } finally {
       setEnvoiInvitation(false);

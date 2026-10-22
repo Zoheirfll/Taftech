@@ -28,7 +28,7 @@ const LinkedinIcon = () => (
     <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
   </svg>
 );
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 
 const TAILLES_LABELS = {
   TPE: "1 à 10 employés",
@@ -93,13 +93,13 @@ const EntreprisePublic = () => {
       const formData = new FormData();
       Object.keys(form).forEach((key) => { if (form[key]) formData.append(key, form[key]); });
       await jobsService.envoyerCandidatureSpontanee(slug, formData);
-      toast.success("Candidature spontanée envoyée !");
+      notifier.succes("Candidature spontanée envoyée");
       setShowModal(false);
       setForm({ nom: "", prenom: "", email: "", telephone: "", lettre_motivation: "", cv: null });
       definir({});
     } catch (err) {
       depuisReponse(err);
-      toast.error(err.response?.data?.error || "Erreur lors de l'envoi.");
+      notifier.erreur("Envoi impossible", err.response?.data?.error || "Veuillez réessayer dans quelques instants.");
     } finally {
       setIsSubmitting(false);
     }

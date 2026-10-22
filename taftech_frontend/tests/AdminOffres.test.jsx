@@ -100,7 +100,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         statut_moderation: "APPROUVEE",
         motif_rejet: "",
       });
-      expect(toast.success).toHaveBeenCalledWith("Offre approuvée !");
+      expect(toast.success).toHaveBeenCalledWith("Offre approuvée");
     });
   });
 
@@ -129,7 +129,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         motif_rejet: "Salaire manquant",
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Offre rejetée — le recruteur voit le motif dans son tableau de bord.",
+        "Offre rejetée\nLe recruteur voit le motif dans son tableau de bord.",
       );
     });
   });
@@ -155,7 +155,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
     await waitFor(() => {
       // Seuls les champs modifiés partent, jamais le statut de modération.
       expect(jobsService.corrigerOffre).toHaveBeenCalledWith(1, { titre: "Développeur React Senior" });
-      expect(toast.success).toHaveBeenCalledWith("Offre corrigée — le recruteur a été prévenu par e-mail.");
+      expect(toast.success).toHaveBeenCalledWith("Offre corrigée\nLe recruteur a été prévenu par e-mail.");
     });
   });
 
@@ -184,7 +184,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         search: "", statut: "", ordering: "-date_publication",
       });
       expect(window.URL.createObjectURL).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
+      expect(toast.success).toHaveBeenCalledWith("Téléchargement terminé");
     });
   });
 
@@ -200,7 +200,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
     fireEvent.click(screen.getByText("Confirmer le rejet"));
 
     expect(jobsService.moderateOffre).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Veuillez saisir un motif.");
+    expect(toast.error).toHaveBeenCalledWith("Motif manquant\nSaisissez un motif de rejet.");
   });
 
   it("🔴 Edge Case : Erreur serveur déclenche reportError", async () => {
@@ -223,7 +223,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
         "ECHEC_APPROBATION_OFFRE",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'approbation.");
+      expect(toast.error).toHaveBeenCalledWith("Approbation impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 });

@@ -1,7 +1,7 @@
 import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { Bell, Trash2, Plus, X, ChevronDown, ChevronUp, MapPin } from "lucide-react";
@@ -9,7 +9,6 @@ import InfoBanner from "../../Components/InfoBanner";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { nomWilaya } from "../../utils/wilaya";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
 
@@ -39,7 +38,7 @@ const AlertesEmploi = () => {
         setAlertes(alertesData);
         setWilayas(constantsData.wilayas);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_ALERTES", error);
       } finally {
         setIsLoading(false);
@@ -56,14 +55,14 @@ const AlertesEmploi = () => {
     try {
       const response = await jobsService.createAlerte(payload);
       setAlertes(prev => [response, ...prev]);
-      toast.success("Alerte créée !");
+      notifier.succes("Alerte créée");
       setIsModalOpen(false);
       setNewAlerte({ mots_cles: "", wilaya: "", frequence: "QUOTIDIENNE" });
       definir({});
     } catch (error) {
       reportError("ECHEC_CREATION_ALERTE", error);
       depuisReponse(error);
-      toast.error(apiErrMsg(error, "Impossible de créer l'alerte."));
+      notifier.echec("Création de l'alerte impossible", error);
     }
   };
 
@@ -75,14 +74,14 @@ const AlertesEmploi = () => {
     );
     try {
       await jobsService.toggleAlerte(alerteId, !currentState);
-      toast.success(currentState ? "Alerte désactivée" : "Alerte activée");
+      notifier.succes(currentState ? "Alerte désactivée" : "Alerte activée");
     } catch (error) {
       setAlertes(prev =>
         prev.map((a) =>
           a.id === alerteId ? { ...a, est_active: currentState } : a,
         ),
       );
-      toast.error(apiErrMsg(error, "Erreur lors de la modification."));
+      notifier.echec("Modification impossible", error);
       reportError("ECHEC_TOGGLE_ALERTE", error);
     }
   };
@@ -109,9 +108,9 @@ const AlertesEmploi = () => {
       try {
         await jobsService.deleteAlerte(alerteId);
         setAlertes(prev => prev.filter((a) => a.id !== alerteId));
-        toast.success("Alerte supprimée.");
+        notifier.succes("Alerte supprimée");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRESSION_ALERTE", error);
       }
     });

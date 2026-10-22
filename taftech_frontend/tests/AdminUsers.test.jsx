@@ -142,7 +142,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
     await waitFor(() => {
       // 🌟 MODIFICATION ICI : On retire le ", true" car l'API ne prend que l'ID en paramètre
       expect(jobsService.moderateUser).toHaveBeenCalledWith(1);
-      expect(toast.success).toHaveBeenCalledWith("Utilisateur bloqué.");
+      expect(toast.success).toHaveBeenCalledWith("Utilisateur bloqué");
     });
   });
 
@@ -161,7 +161,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         search: "", role: "", ordering: "-date_joined",
       });
       expect(window.URL.createObjectURL).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
+      expect(toast.success).toHaveBeenCalledWith("Téléchargement terminé");
     });
   });
 
@@ -183,7 +183,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         "ECHEC_CHARGEMENT_USERS_ADMIN",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -225,7 +225,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la modification.",
+        "Modification impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });
@@ -245,7 +245,7 @@ describe("👥 UI & Logique - Composant <AdminUsers />", () => {
         "ECHEC_EXPORT_EXCEL_UTILISATEURS",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors de l'exportation.");
+      expect(toast.error).toHaveBeenCalledWith("Exportation impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 

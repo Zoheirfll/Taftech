@@ -3,13 +3,12 @@ import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl } from "../../utils/mediaUrl";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Trash2, Mail, Phone, Copy, FileText, ChevronDown, ChevronUp, User, CheckCircle2 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import Select from "react-select";
 import { selectStylesTeal, tw } from "../../theme";
 import DomaineLabel from "../../Components/DomaineLabel";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 
 const CandidaturesSpontanees = () => {
   const [spontanees, setSpontanees] = useState([]);
@@ -54,7 +53,7 @@ const CandidaturesSpontanees = () => {
       );
     } catch (err) {
       reportError("ECHEC_MARK_SPONTANEE_LUE", err);
-      toast.error(apiErrMsg(err, "Erreur."));
+      notifier.echec("Action impossible", err);
     }
   };
 
@@ -63,10 +62,10 @@ const CandidaturesSpontanees = () => {
       try {
         await jobsService.supprimerCandidatureSpontanee(id);
         setSpontanees(spontanees.filter((s) => s.id !== id));
-        toast.success("Candidature supprimée.");
+        notifier.succes("Candidature supprimée");
       } catch (err) {
         reportError("ECHEC_SUPPRIMER_SPONTANEE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

@@ -6,7 +6,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import GoogleAuthProvider from "../../Components/GoogleAuthProvider";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import Select from "react-select";
 import { reportError } from "../../utils/errorReporter";
 import { selectStyles, tw } from "../../theme";
@@ -96,28 +96,28 @@ const RegisterCandidat = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.consentement_loi_18_07) {
-      toast.error("Vous devez accepter la Loi 18-07 pour vous inscrire.");
+      notifier.erreur("Consentement requis", "Vous devez accepter la Loi 18-07 pour vous inscrire.");
       return;
     }
     if (!formData.wilaya) {
       setFieldErrors({ wilaya: "Veuillez sélectionner votre wilaya." });
-      toast.error("Veuillez sélectionner votre wilaya.");
+      notifier.erreur("Wilaya manquante", "Sélectionnez votre wilaya.");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
       setFieldErrors({ confirmPassword: "Les mots de passe ne correspondent pas." });
-      toast.error("Les mots de passe ne correspondent pas.");
+      notifier.erreur("Les mots de passe ne correspondent pas");
       return;
     }
     setFieldErrors({});
     setLoading(true);
-    const toastId = toast.loading("Création de votre profil...");
+    const toastId = notifier.chargement("Création de votre profil en cours");
     sessionStorage.setItem("taftech_new_registration", "1");
     try {
       const usernameGenere = formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
       const { confirmPassword, ...payload } = formData;
       await authService.registerCandidat({ ...payload, username: usernameGenere });
-      toast.success("Code envoyé à votre adresse email !", { id: toastId });
+      notifier.succes("Code envoyé", "Consultez votre boîte e-mail.", { id: toastId });
       sessionStorage.setItem("taftech_pending_verification", formData.email);
       setRegisteredEmail(formData.email);
       setStep(2);
@@ -127,7 +127,7 @@ const RegisterCandidat = () => {
       const premierMsg = data && typeof data === "object"
         ? Object.values(data).flat().find(Boolean)
         : null;
-      toast.error(premierMsg || "Une erreur est survenue.", { id: toastId });
+      notifier.erreur("Inscription impossible", premierMsg || "Veuillez réessayer dans quelques instants.", { id: toastId });
       reportError("ECHEC_REGISTRATION_CANDIDAT", err);
     } finally {
       setLoading(false);
@@ -153,15 +153,15 @@ const RegisterCandidat = () => {
 
   const handleRenvoyerCode = async () => {
     setLoading(true);
-    const toastId = toast.loading("Envoi d'un nouveau code...");
+    const toastId = notifier.chargement("Envoi d'un nouveau code en cours");
     try {
       await authService.renvoyerCodeVerification(registeredEmail);
       sessionStorage.setItem("taftech_pending_verification", registeredEmail);
-      toast.success("Nouveau code envoyé !", { id: toastId });
+      notifier.succes("Nouveau code envoyé", undefined, { id: toastId });
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du renvoi."), { id: toastId });
+      notifier.echec("Envoi du code impossible", err, { id: toastId });
       reportError("ECHEC_RENVOYER_CODE_CANDIDAT", err);
     } finally {
       setLoading(false);
@@ -172,20 +172,20 @@ const RegisterCandidat = () => {
     e.preventDefault();
     const codeSaisi = otp.join("");
     if (codeSaisi.length !== 6) {
-      toast.error("Veuillez saisir les 6 chiffres du code.");
+      notifier.erreur("Code incomplet", "Saisissez les 6 chiffres du code.");
       return;
     }
     setLoading(true);
-    const toastId = toast.loading("Vérification du code...");
+    const toastId = notifier.chargement("Vérification du code en cours");
     try {
       await authService.verifyEmail(registeredEmail, codeSaisi);
       sessionStorage.removeItem("taftech_pending_verification");
-      toast.success("Email vérifié avec succès !", { id: toastId });
+      notifier.succes("Email vérifié", undefined, { id: toastId });
       const isNewRegistration = sessionStorage.getItem("taftech_new_registration") === "1";
       sessionStorage.removeItem("taftech_new_registration");
       navigate(isNewRegistration ? "/onboarding" : "/login");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Le code est incorrect."), { id: toastId });
+      notifier.erreur("Vérification impossible", apiErrMsg(err, "Le code est incorrect."), { id: toastId });
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0].focus();
       reportError("ECHEC_VERIFY_OTP_CANDIDAT", err);
@@ -356,25 +356,25 @@ const RegisterCandidat = () => {
                 <GoogleAuthProvider>
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
-                    const toastId = toast.loading("Inscription Google...");
+                    const toastId = notifier.chargement("Inscription Google en cours");
                     sessionStorage.setItem("taftech_new_registration", "1");
                     try {
                       const data = await authService.googleLogin(credentialResponse.credential, "CANDIDAT", "register");
-                      toast.dismiss(toastId);
+                      notifier.fermer(toastId);
                       if (data.requires_consent) {
                         setShowConsentModal(true);
                       } else {
-                        toast.success("Compte connecté !");
+                        notifier.succes("Compte connecté");
                         const isNewRegistration = sessionStorage.getItem("taftech_new_registration") === "1";
                         sessionStorage.removeItem("taftech_new_registration");
                         navigate(isNewRegistration ? "/onboarding" : "/dashboard-candidat");
                         window.location.reload();
                       }
                     } catch (err) {
-                      toast.error(apiErrMsg(err, "Échec de l'inscription Google."), { id: toastId });
+                      notifier.echec("Inscription Google impossible", err, { id: toastId });
                     }
                   }}
-                  onError={() => toast.error("Échec de l'inscription Google.")}
+                  onError={() => notifier.erreur("Inscription Google impossible")}
                   text="signup_with" shape="rectangular" theme="outline" size="large" width="360"
                 />
                 </GoogleAuthProvider>
@@ -404,11 +404,11 @@ const RegisterCandidat = () => {
                         setConsentLoading(true);
                         try {
                           await authService.accepterConsentement();
-                          toast.success("Bienvenue sur TAFTECH !");
+                          notifier.succes("Bienvenue sur TAFTECH");
                           navigate("/");
                           window.location.reload();
                         } catch (err) {
-                          toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement du consentement."));
+                          notifier.echec("Enregistrement du consentement impossible", err);
                           setConsentLoading(false);
                         }
                       }}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { Link } from "react-router-dom";
 import {
@@ -18,7 +18,6 @@ import { tw } from "../../theme";
 import { nomWilaya } from "../../utils/wilaya";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminVide } from "../../Components/AdminEtat";
@@ -117,7 +116,7 @@ const AdminOffres = () => {
       } else setOffres(data);
       setSelectedIds([]);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur d'accès aux offres."));
+      notifier.echec("Accès aux offres impossible", err);
       reportError("ECHEC_CHARGEMENT_OFFRES_ADMIN", err);
     } finally {
       setLoading(false);
@@ -156,9 +155,9 @@ const AdminOffres = () => {
       );
       const echecs = resultats.filter((r) => r.status === "rejected");
       const reussites = resultats.length - echecs.length;
-      if (reussites > 0) toast.success(`${reussites} offre(s) approuvée(s) !`);
+      if (reussites > 0) notifier.succes(`${reussites} offre(s) approuvée(s)`);
       if (echecs.length > 0) {
-        toast.error(apiErrMsg(echecs[0].reason, `${echecs.length} approbation(s) en échec.`));
+        notifier.echec(`${echecs.length} approbation(s) en échec`, echecs[0].reason);
         reportError("ECHEC_APPROBATION_GROUPEE_OFFRES", echecs[0].reason);
       }
       setBulkLoading(false);
@@ -185,16 +184,16 @@ const AdminOffres = () => {
           motif_rejet: "",
         });
         chargerOffres();
-        toast.success("Offre approuvée !");
+        notifier.succes("Offre approuvée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de l'approbation."));
+        notifier.echec("Approbation impossible", err);
         reportError("ECHEC_APPROBATION_OFFRE", err);
       }
     });
   };
 
   const handleRefuserSubmit = async () => {
-    if (!motifRejet.trim()) return toast.error("Veuillez saisir un motif.");
+    if (!motifRejet.trim()) return notifier.erreur("Motif manquant", "Saisissez un motif de rejet.");
     if (rejetEnCours) return;
     setRejetEnCours(true);
     try {
@@ -204,9 +203,9 @@ const AdminOffres = () => {
       });
       fermerRejet();
       chargerOffres();
-      toast.success("Offre rejetée — le recruteur voit le motif dans son tableau de bord.");
+      notifier.succes("Offre rejetée", "Le recruteur voit le motif dans son tableau de bord.");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors du rejet."));
+      notifier.echec("Rejet impossible", err);
       reportError("ECHEC_REJET_OFFRE", err);
     } finally {
       setRejetEnCours(false);

@@ -1,6 +1,6 @@
 // Colonne de droite de la CVthèque : en-tête du candidat sélectionné, coordonnées, puis sections du profil.
 import React from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import {
   MapPin,
   GraduationCap,
@@ -127,7 +127,7 @@ const BlocCoordonnees = ({ candidat, debloquageEnCours, onDeverrouiller }) => (
       )}
       {candidat.email && (
         <button
-          onClick={() => { navigator.clipboard.writeText(candidat.email); toast.success("Email copié !"); }}
+          onClick={() => { navigator.clipboard.writeText(candidat.email); notifier.succes("Email copié"); }}
           className={`inline-flex items-center gap-1.5 px-3 py-2 border ${tw.borderBase} text-xs font-medium rounded-lg transition-colors ${tw.surface} ${tw.textMuted700} ${tw.hoverSurfaceMuted}`}
           title="Copier l'email"
         >

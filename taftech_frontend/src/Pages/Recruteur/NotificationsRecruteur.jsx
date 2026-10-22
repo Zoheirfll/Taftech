@@ -2,10 +2,9 @@ import InfoBanner from "../../Components/InfoBanner";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import {
   Bell,
@@ -43,7 +42,7 @@ const NotificationsRecruteur = () => {
         const data = await jobsService.getNotifications("recruteur");
         setNotifications(data);
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors du chargement."));
+        notifier.echec("Chargement impossible", error);
         reportError("ECHEC_CHARGEMENT_NOTIFS_RECRUTEUR", error);
       } finally {
         setLoading(false);
@@ -73,7 +72,7 @@ const NotificationsRecruteur = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, lue: true })));
       setSelectedNotif((prev) => (prev ? { ...prev, lue: true } : prev));
     } catch (error) {
-      toast.error(apiErrMsg(error, "Erreur lors du marquage."));
+      notifier.echec("Marquage impossible", error);
       reportError("ECHEC_MARK_ALL_READ_NOTIF_RECRUTEUR", error);
     }
   };
@@ -85,9 +84,9 @@ const NotificationsRecruteur = () => {
         await jobsService.deleteNotification(notif.id);
         setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
         setSelectedNotif((prev) => (prev?.id === notif.id ? null : prev));
-        toast.success("Notification supprimée.");
+        notifier.succes("Notification supprimée");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_DELETE_NOTIF_RECRUTEUR", error);
       }
     });

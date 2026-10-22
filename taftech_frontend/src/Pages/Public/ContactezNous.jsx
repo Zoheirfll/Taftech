@@ -2,7 +2,7 @@ import FieldError from "../../Components/FieldError";
 import { extraireErreursChamps } from "../../utils/fieldErrors";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Clock, ChevronDown } from "lucide-react";
 import { authService } from "../../Services/authService";
 import { jobsService } from "../../Services/jobsService";
@@ -50,7 +50,7 @@ const ContactezNous = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!accepte) {
-      toast.error("Merci d'accepter l'utilisation de vos données.");
+      notifier.erreur("Consentement requis", "Merci d'accepter l'utilisation de vos données.");
       return;
     }
     const erreurs = {};
@@ -58,7 +58,7 @@ const ContactezNous = () => {
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) erreurs.email = "Adresse e-mail invalide.";
     setFieldErrors(erreurs);
     if (Object.keys(erreurs).length) {
-      toast.error("Veuillez corriger les champs signalés.");
+      notifier.erreur("Formulaire incomplet", "Corrigez les champs signalés.");
       return;
     }
     setIsSubmitting(true);
@@ -70,7 +70,7 @@ const ContactezNous = () => {
     } catch (err) {
       const msg = err.response?.data?.error;
       if (msg === "Adresse e-mail invalide.") setFieldErrors({ email: msg });
-      toast.error(msg || "Erreur lors de l'envoi.");
+      notifier.erreur("Envoi impossible", msg || "Veuillez réessayer dans quelques instants.");
       reportError("ECHEC_FORM_CONTACT", err);
     } finally {
       setIsSubmitting(false);

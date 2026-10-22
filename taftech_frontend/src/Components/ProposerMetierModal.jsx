@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import { X } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
 import { apiErrMsg } from "../utils/apiErrMsg";
@@ -41,9 +41,9 @@ const ProposerMetierModal = ({ open, libelleInitial = "", onClose, onProposed })
       if (onProposed) {
         // Écran du candidat : la proposition reste sélectionnée sur son profil en attendant la décision.
         onProposed({ id: reponse.id, libelle: libelle.trim() });
-        toast.success("Proposition envoyée : elle reste sélectionnée en attendant la décision de notre équipe.");
+        notifier.succes("Proposition envoyée", "Elle reste sélectionnée en attendant la décision de notre équipe.");
       } else {
-        toast.success(reponse.message || "Votre proposition a été envoyée.");
+        notifier.succes("Proposition envoyée", reponse.message);
       }
       fermer();
     } catch (err) {

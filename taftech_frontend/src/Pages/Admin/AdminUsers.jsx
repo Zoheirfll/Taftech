@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
 import { candidatFichierUrl } from "../../utils/mediaUrl";
 import { Search, X, GraduationCap, Briefcase, Shield, Users2 } from "lucide-react";
@@ -8,7 +8,6 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import AdminPagination from "../../Components/AdminPagination";
@@ -60,7 +59,7 @@ const AdminUsers = () => {
         if (data.counts) setCounts(data.counts);
       } else setUsers(data);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_CHARGEMENT_USERS_ADMIN", err);
     } finally {
       setLoading(false);
@@ -87,12 +86,12 @@ const AdminUsers = () => {
         try {
           await jobsService.moderateUser(id);
           chargerUsers();
-          toast.success(
-            isActif ? "Utilisateur bloqué." : "Utilisateur débloqué !",
+          notifier.succes(
+            isActif ? "Utilisateur bloqué" : "Utilisateur débloqué",
           );
           setSelectedUser((sel) => (sel?.id === id ? { ...sel, is_active: !isActif } : sel));
         } catch (err) {
-          toast.error(apiErrMsg(err, "Erreur lors de la modification."));
+          notifier.echec("Modification impossible", err);
           reportError("ECHEC_MODERATION_USER", err);
         }
       },

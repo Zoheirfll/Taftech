@@ -419,7 +419,7 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Continuer/i })); // save expériences
 
     await waitFor(() =>
-      expect(toast.error.mock.calls.some(([message]) => /1 expérience\(s\) n'ont pas été enregistrées/.test(message))).toBe(true),
+      expect(toast.error.mock.calls.some(([message]) => /1 expérience\(s\) non enregistrée\(s\)/.test(message))).toBe(true),
     );
     // L'étape n'avance pas : l'expérience en échec reste à l'écran, prête à un nouvel essai.
     expect(screen.getByText(/expérience\(s\) prête\(s\)/i)).toBeInTheDocument();

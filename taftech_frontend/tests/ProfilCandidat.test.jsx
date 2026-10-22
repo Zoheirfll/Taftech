@@ -256,7 +256,7 @@ describe("👤 UI & Logique - Composant <ProfilCandidat />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du téléchargement.",
+        "Envoi de la photo impossible\nVeuillez réessayer dans quelques instants.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_UPDATE_PHOTO",

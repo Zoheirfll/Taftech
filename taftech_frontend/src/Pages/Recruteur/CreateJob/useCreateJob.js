@@ -2,14 +2,13 @@
 // gestionnaires (saisie, compétences, diplômes, exigences, génération IA, envoi).
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { jobsService } from "../../../Services/jobsService";
 import { rapprocherDuReferentiel } from "../../../utils/competencesReferentiel";
 import { iaService } from "../../../Services/iaService";
 import { recruteurService } from "../../../Services/recruteurService";
 import communesAlgerie from "../../../data/communes.json";
 import { reportError } from "../../../utils/errorReporter";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { grouperParFamille } from "../../../utils/familleFormation";
 import { CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../../utils/exigencesCategories";
 import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
@@ -93,7 +92,7 @@ export function useCreateJob() {
     const label = draftExigenceLabel.trim();
     if (!label) return;
     if (exigencesImperatives.some((e) => e.label.toLowerCase() === label.toLowerCase())) {
-      toast.error("Cette exigence est déjà dans la liste.");
+      notifier.erreur("Exigence déjà ajoutée");
       return;
     }
     setExigencesImperatives((prev) => [...prev, {
@@ -174,7 +173,7 @@ export function useCreateJob() {
     const canonique = await rapprocherDuReferentiel(saisie);
     const trimmed = canonique || saisie;
     if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error("Cette compétence est déjà ajoutée.");
+      notifier.erreur("Compétence déjà ajoutée");
       return;
     }
     setCompetencesRequises((prev) => [
@@ -202,7 +201,7 @@ export function useCreateJob() {
         jobsService.getQuotaIA("GENERATION_OFFRE").then(setQuotaGenerationOffre).catch(() => {});
       } catch (error) {
         reportError("ECHEC_CHARGEMENT_CONSTANTES_JOB", error);
-        toast.error(apiErrMsg(error, "Erreur lors du chargement des listes déroulantes."));
+        notifier.echec("Chargement des listes impossible", error);
       }
     };
     fetchData();
@@ -251,11 +250,11 @@ export function useCreateJob() {
     // l'événement React ici au lieu d'un titre — on ignore tout ce qui n'est pas une chaîne.
     const titrePourGeneration = (typeof titreOverride === "string" ? titreOverride : "") || formData.titre;
     if (!titrePourGeneration) {
-      toast.error("Saisissez au moins le titre du poste avant de générer.");
+      notifier.erreur("Titre du poste manquant", "Saisissez au moins le titre du poste avant de générer.");
       return;
     }
     setIaLoading(true);
-    const toastId = toast.loading("L'IA génère le contenu de votre offre...");
+    const toastId = notifier.chargement("Génération du contenu par l'IA en cours");
     try {
       const result = await iaService.genererOffreIA({
         titre: titrePourGeneration,
@@ -285,9 +284,9 @@ export function useCreateJob() {
         });
       }
       if (result.quota_ia) setQuotaGenerationOffre({ ...result.quota_ia, disponible: true });
-      toast.success("Contenu généré ! Relisez et ajustez selon vos besoins.", { id: toastId });
+      notifier.succes("Contenu généré", "Relisez-le et ajustez-le selon vos besoins.", { id: toastId });
     } catch (err) {
-      toast.error(apiErrMsg(err, "Service IA indisponible."), { id: toastId });
+      notifier.echec("Service IA indisponible", err, { id: toastId });
       reportError("ECHEC_GENERER_OFFRE_IA", err);
       if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaGenerationOffre({ ...err.response.data, disponible: false });
@@ -305,14 +304,14 @@ export function useCreateJob() {
     if (!formData.metier) newErrors.metier = "Le métier est requis.";
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Veuillez corriger les champs manquants.");
+      notifier.erreur("Formulaire incomplet", "Corrigez les champs signalés.");
       const firstKey = Object.keys(newErrors)[0];
       document.getElementById(`field-${firstKey}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
     setErrors({});
     setLoading(true);
-    const toastId = toast.loading("Publication en cours...");
+    const toastId = notifier.chargement("Publication en cours");
     try {
       const payload = {
         ...formData,
@@ -325,11 +324,11 @@ export function useCreateJob() {
       };
       delete payload.metier_libelle;
       await jobsService.creerOffre(payload);
-      toast.success("Offre soumise ! Elle sera visible après validation par notre équipe.", { id: toastId, duration: 5000 });
+      notifier.succes("Offre soumise", "Elle sera visible après validation par notre équipe.", { id: toastId, duration: 5000 });
       setTimeout(() => navigate("/dashboard"), 2500);
     } catch (error) {
       reportError("ECHEC_PUBLICATION_OFFRE", error);
-      toast.error(apiErrMsg(error, "Erreur lors de la publication. Vérifiez vos informations."), { id: toastId, duration: 6000 });
+      notifier.echec("Publication impossible", error, { id: toastId, duration: 6000 });
       setLoading(false);
     }
   };

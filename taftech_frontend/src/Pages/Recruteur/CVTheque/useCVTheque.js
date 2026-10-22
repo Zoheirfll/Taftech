@@ -1,11 +1,10 @@
 // Hook de la CVthèque : tout l'état (filtres, liste, sélection, crédits, consentement), les effets et les actions.
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { jobsService } from "../../../Services/jobsService";
 import { authService } from "../../../Services/authService";
 import { reportError } from "../../../utils/errorReporter";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { confirmToast } from "../../../utils/confirmToast";
 
 export const useCVTheque = () => {
@@ -149,7 +148,7 @@ export const useCVTheque = () => {
       await authService.accepterConsentementCVTheque();
       setConsentGiven(true);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement du consentement."));
+      notifier.echec("Enregistrement du consentement impossible", err);
     } finally {
       setConsentLoading(false);
     }
@@ -167,7 +166,7 @@ export const useCVTheque = () => {
         const offres = (dash.offres || []).filter(o => o.est_active && !o.est_cloturee && o.statut_moderation === 'APPROUVEE');
         setOffresActives(offres.map(o => ({ value: String(o.id), label: o.titre })));
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de chargement des filtres."));
+        notifier.echec("Chargement des filtres impossible", err);
         reportError("ECHEC_CHARGEMENT_FILTRES_CVTHEQUE", err);
       }
     };
@@ -215,7 +214,7 @@ export const useCVTheque = () => {
         setSelectedCandidat(null);
       }
     } catch (error) {
-      if (error.error) toast.error(error.error);
+      if (error.error) notifier.erreur("Recherche impossible", error.error);
       reportError("ECHEC_RECHERCHE_CVTHEQUE", error);
       setCandidats([]);
       setFiltresExigence([]);
@@ -308,13 +307,13 @@ export const useCVTheque = () => {
         setCandidats((prev) => prev.map((c) => (c.user_id === candidat.user_id ? { ...c, est_debloque: true, email: null } : c)));
         // Recharge la fiche pour récupérer email/téléphone/linkedin réellement débloqués.
         chargerCandidats();
-        toast.success("Profil débloqué !");
+        notifier.succes("Profil débloqué");
       } catch (err) {
         reportError("ECHEC_DEVERROUILLER_CANDIDAT", err);
         if (err.response?.status === 403 && err.response?.data?.code === "CREDITS_EPUISES") {
-          toast.error("Plus de crédits disponibles — achetez un pack depuis la page Abonnements.");
+          notifier.erreur("Crédits épuisés", "Achetez un pack depuis la page Abonnements.");
         } else {
-          toast.error(apiErrMsg(err, "Erreur lors du déblocage."));
+          notifier.echec("Déblocage impossible", err);
         }
       } finally {
         setDebloquageEnCours(null);
@@ -326,7 +325,7 @@ export const useCVTheque = () => {
     e.stopPropagation(); // Empêche le clic d'ouvrir le détail
 
     if (!candidat.user_id) {
-      toast.error("Impossible de modifier les favoris.");
+      notifier.erreur("Modification des favoris impossible");
       return;
     }
 
@@ -351,14 +350,12 @@ export const useCVTheque = () => {
       }
 
       if (result.is_favori) {
-        toast.success("Ajouté aux favoris", {
-          icon: "⭐",
-        });
+        notifier.succes("Ajouté aux favoris");
       } else {
-        toast.success("Retiré des favoris");
+        notifier.succes("Retiré des favoris");
       }
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour des favoris."));
+      notifier.echec("Mise à jour des favoris impossible", err);
       reportError("ECHEC_TOGGLE_FAVORI_CV", err);
     }
   };
@@ -374,10 +371,10 @@ export const useCVTheque = () => {
     setEnvoiInvitation(true);
     try {
       await jobsService.inviterCandidatCVTheque(inviterCandidat.user_id, offreInvitation);
-      toast.success("Invitation envoyée !");
+      notifier.succes("Invitation envoyée");
       setInviterCandidat(null);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'envoi de l'invitation."));
+      notifier.echec("Envoi de l'invitation impossible", err);
       reportError("ECHEC_INVITER_CANDIDAT_CVTHEQUE", err);
     } finally {
       setEnvoiInvitation(false);

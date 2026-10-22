@@ -3,12 +3,11 @@ import { libelleUsage } from "../../utils/suggestionStats";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Select from "react-select";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
 import { reportError } from "../../utils/errorReporter";
 import { confirmToast } from "../../utils/confirmToast";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { selectStylesTeal, tw } from "../../theme";
 import { grouperParFamille } from "../../utils/familleFormation";
 import { rapprocherDuReferentiel } from "../../utils/competencesReferentiel";
@@ -79,7 +78,7 @@ const OffresListPage = () => {
     const label = draftExigenceLabel.trim();
     if (!label) return;
     if (exigencesImperatives.some((e) => e.label.toLowerCase() === label.toLowerCase())) {
-      toast.error("Cette exigence est déjà dans la liste.");
+      notifier.erreur("Exigence déjà ajoutée");
       return;
     }
     setExigencesImperatives((prev) => [...prev, {
@@ -168,7 +167,7 @@ const OffresListPage = () => {
   };
 
   const handleSauvegarderModification = async () => {
-    const toastId = toast.loading("Envoi en cours...");
+    const toastId = notifier.chargement("Envoi en cours");
     try {
       const payload = {
         ...modifierForm,
@@ -181,9 +180,9 @@ const OffresListPage = () => {
       setOffres(offres.map((o) => (o.id === offreAModifier.id ? response.offre : o)));
       setShowModifierModal(false);
       setOffreAModifier(null);
-      toast.success("Offre soumise pour revalidation !", { id: toastId });
+      notifier.succes("Offre soumise pour revalidation", undefined, { id: toastId });
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la modification."), { id: toastId });
+      notifier.echec("Modification impossible", err, { id: toastId });
       reportError("ECHEC_MODIFIER_OFFRE", err);
     }
   };
@@ -234,7 +233,7 @@ const OffresListPage = () => {
     const canonique = await rapprocherDuReferentiel(saisie);
     const trimmed = canonique || saisie;
     if (competencesRequises.some((c) => c.label.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error("Cette compétence est déjà ajoutée.");
+      notifier.erreur("Compétence déjà ajoutée");
       return;
     }
     setCompetencesRequises((prev) => [
@@ -254,9 +253,9 @@ const OffresListPage = () => {
       try {
         await jobsService.supprimerOffre(offre.id);
         setOffres(offres.filter((o) => o.id !== offre.id));
-        toast.success("Offre supprimée.");
+        notifier.succes("Offre supprimée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_SUPPRIMER_OFFRE", err);
       } finally {
         setDeletingId(null);

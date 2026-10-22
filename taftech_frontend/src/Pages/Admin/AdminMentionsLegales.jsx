@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Receipt } from "lucide-react";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { extraireErreursChamps } from "../../utils/fieldErrors";
 import FieldError from "../../Components/FieldError";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -87,11 +86,11 @@ const AdminMentionsLegales = () => {
     try {
       const payload = Object.fromEntries(CLES.map((k) => [k, form[k] || ""]));
       await api.put("jobs/admin/mentions-legales/", payload);
-      toast.success("Informations société mises à jour.");
+      notifier.succes("Informations société mises à jour");
     } catch (err) {
       reportError("ECHEC_UPDATE_MENTIONS_LEGALES", err);
       setErreursChamps(extraireErreursChamps(err, CLES));
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSaving(false);
     }

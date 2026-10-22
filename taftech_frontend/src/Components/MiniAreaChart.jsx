@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Download, ChevronDown } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -85,7 +85,7 @@ const MiniAreaChart = ({
     try {
       await jobsService.exporterGraphiqueExcel(exportTitle, cols, rows);
     } catch (err) {
-      toast.error("Erreur lors de l'export Excel.");
+      notifier.erreur("Exportation impossible");
     }
   };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { apiErrMsg } from "../../utils/apiErrMsg";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, ArrowLeft, Image as ImageIcon, Newspaper, ExternalLink } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -46,7 +46,7 @@ const AdminArticles = () => {
       setCategories(Array.isArray(c) ? c : c?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_ARTICLES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ const AdminArticles = () => {
       );
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_ARTICLE", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement de l'article."));
+      notifier.echec("Chargement de l'article impossible", err);
     }
   };
 
@@ -115,18 +115,18 @@ const AdminArticles = () => {
       setCategories((prev) => [...prev, created]);
       setForm((f) => ({ ...f, categorie: created.id }));
       setNouvelleCategorie("");
-      toast.success("Catégorie ajoutée !");
+      notifier.succes("Catégorie ajoutée");
     } catch (err) {
       reportError("ECHEC_CREATE_ARTICLE_CATEGORY", err);
-      toast.error(apiErrMsg(err, "Erreur — cette catégorie existe peut-être déjà."));
+      notifier.erreur("Ajout de la catégorie impossible", apiErrMsg(err, "Cette catégorie existe peut-être déjà."));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.titre.trim()) return toast.error("Le titre est obligatoire.");
-    if (!form.extrait.trim()) return toast.error("L'extrait est obligatoire.");
-    if (!form.contenu_html || form.contenu_html === "<p></p>") return toast.error("Le contenu ne peut pas être vide.");
+    if (!form.titre.trim()) return notifier.erreur("Titre manquant", "Le titre est obligatoire.");
+    if (!form.extrait.trim()) return notifier.erreur("Extrait manquant", "L'extrait est obligatoire.");
+    if (!form.contenu_html || form.contenu_html === "<p></p>") return notifier.erreur("Contenu manquant", "Le contenu ne peut pas être vide.");
     setSaving(true);
     try {
       const payload = { ...form };
@@ -134,16 +134,16 @@ const AdminArticles = () => {
       if (!payload.image_couverture) delete payload.image_couverture;
       if (editingId) {
         await jobsService.updateArticle(editingId, payload);
-        toast.success("Article mis à jour !");
+        notifier.succes("Article mis à jour");
       } else {
         await jobsService.createArticle(payload);
-        toast.success("Article créé !");
+        notifier.succes("Article créé");
       }
       setVue("liste");
       fetchTout();
     } catch (err) {
       reportError("ECHEC_SAVE_ARTICLE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSaving(false);
     }
@@ -154,10 +154,10 @@ const AdminArticles = () => {
       try {
         await jobsService.deleteArticle(id);
         setArticles((prev) => prev.filter((a) => a.id !== id));
-        toast.success("Article supprimé.");
+        notifier.succes("Article supprimé");
       } catch (err) {
         reportError("ECHEC_DELETE_ARTICLE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

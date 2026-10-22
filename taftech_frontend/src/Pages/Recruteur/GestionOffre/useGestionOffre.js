@@ -5,9 +5,8 @@ import { recruteurService } from "../../../Services/recruteurService";
 import { reportError } from "../../../utils/errorReporter";
 import { mediaUrl } from "../../../utils/mediaUrl";
 import { confirmToast } from "../../../utils/confirmToast";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 
 export const useGestionOffre = () => {
   const { id } = useParams();
@@ -72,11 +71,11 @@ export const useGestionOffre = () => {
             setSelectedCandidature(sorted[0]);
           }
         } else {
-          toast.error("Offre introuvable.");
+          notifier.erreur("Offre introuvable");
           navigate("/dashboard");
         }
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de chargement."));
+        notifier.echec("Chargement impossible", err);
         reportError("ECHEC_CHARGEMENT_OFFRE", err);
         navigate("/dashboard");
       } finally {
@@ -188,13 +187,12 @@ export const useGestionOffre = () => {
             : {}),
         });
       }
-      toast.success(
-        nouveauStatut === "ENTRETIEN"
-          ? "Entretien programmé et email envoyé !"
-          : "Statut mis à jour.",
+      notifier.succes(
+        nouveauStatut === "ENTRETIEN" ? "Entretien programmé" : "Statut mis à jour",
+        nouveauStatut === "ENTRETIEN" ? "Un e-mail a été envoyé au candidat." : undefined,
       );
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
+      notifier.echec("Mise à jour impossible", err);
       reportError("ECHEC_MISE_A_JOUR_STATUT", err);
     }
   };
@@ -206,11 +204,11 @@ export const useGestionOffre = () => {
 
   const validerEntretien = () => {
     if (!entretienForm.date || !entretienForm.heure)
-      return toast.error("Date et heure requises.");
-    const toastId = toast.loading("Envoi en cours...");
+      return notifier.erreur("Date et heure requises", "Renseignez la date et l'heure de l'entretien.");
+    const toastId = notifier.chargement("Envoi en cours");
     changerStatut(modalEntretien.candId, "ENTRETIEN", entretienForm).then(
       () => {
-        toast.dismiss(toastId);
+        notifier.fermer(toastId);
         setModalEntretien({ isOpen: false, candId: null });
         setEntretienForm({ date: "", heure: "", message: "" });
       },
@@ -227,9 +225,9 @@ export const useGestionOffre = () => {
         });
         if (selectedCandidature?.id === candidatureId)
           setSelectedCandidature(null);
-        toast.success("Candidature supprimée.");
+        notifier.succes("Candidature supprimée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_SUPPRESSION_CANDIDATURE", err);
       }
     });
@@ -239,9 +237,9 @@ export const useGestionOffre = () => {
     try {
       const updated = await recruteurService.modifierOffre(offre.id, { date_expiration: date || null });
       setOffre({ ...offre, date_expiration: updated.offre?.date_expiration ?? date });
-      toast.success(date ? `Expiration fixée au ${new Date(date).toLocaleDateString("fr-FR")}` : "Expiration supprimée");
+      notifier.succes(date ? `Expiration fixée au ${new Date(date).toLocaleDateString("fr-FR")}` : "Expiration supprimée");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la mise à jour."));
+      notifier.echec("Mise à jour impossible", err);
       reportError("ECHEC_SET_EXPIRATION_OFFRE", err);
     }
   };
@@ -251,9 +249,9 @@ export const useGestionOffre = () => {
       try {
         await jobsService.cloturerOffre(offre.id);
         setOffre({ ...offre, est_cloturee: true });
-        toast.success("Offre clôturée !");
+        notifier.succes("Offre clôturée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la clôture."));
+        notifier.echec("Clôture impossible", err);
         reportError("ECHEC_CLOTURE_OFFRE", err);
       }
     });
@@ -266,7 +264,7 @@ export const useGestionOffre = () => {
         offre.titre?.replace(/[^a-z0-9]+/gi, "_").slice(0, 40) || "offre",
       );
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'export Excel."));
+      notifier.echec("Exportation impossible", err);
       reportError("ECHEC_EXPORT_EXCEL_OFFRE", err);
     }
   };
@@ -278,9 +276,9 @@ export const useGestionOffre = () => {
       !evalForm.note_motivation ||
       !evalForm.note_experience
     ) {
-      return toast.error("Veuillez remplir toutes les notes.");
+      return notifier.erreur("Notes manquantes", "Renseignez toutes les notes avant d'enregistrer.");
     }
-    const toastId = toast.loading("Enregistrement...");
+    const toastId = notifier.chargement("Enregistrement en cours");
     try {
       const response = await jobsService.evaluerCandidature(
         modalEval.candidature.id,
@@ -295,13 +293,13 @@ export const useGestionOffre = () => {
       });
       if (selectedCandidature?.id === updated.id)
         setSelectedCandidature(updated);
-      toast.success("Évaluation sauvegardée !");
+      notifier.succes("Évaluation enregistrée");
       setModalEval({ isOpen: false, candidature: null });
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'évaluation."));
+      notifier.echec("Évaluation impossible", err);
       reportError("ECHEC_EVALUATION_CANDIDAT", err);
     } finally {
-      toast.dismiss(toastId);
+      notifier.fermer(toastId);
     }
   };
 
@@ -318,16 +316,16 @@ export const useGestionOffre = () => {
         });
         if (selectedCandidature?.id === updated.id)
           setSelectedCandidature(updated);
-        toast.success("Évaluation supprimée.");
+        notifier.succes("Évaluation supprimée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_SUPPRIMER_EVALUATION", err);
       }
     });
   };
 
   const handleDownloadBulletin = async (candidatureId) => {
-    const toastId = toast.loading("Génération du bulletin PDF...");
+    const toastId = notifier.chargement("Génération du bulletin PDF en cours");
     try {
       const blob = await jobsService.telechargerBulletin(candidatureId);
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -338,12 +336,12 @@ export const useGestionOffre = () => {
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("Bulletin généré !");
+      notifier.succes("Bulletin généré");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la génération."));
+      notifier.echec("Génération impossible", err);
       reportError("ECHEC_TELECHARGEMENT_BULLETIN", err);
     } finally {
-      toast.dismiss(toastId);
+      notifier.fermer(toastId);
     }
   };
 
@@ -375,7 +373,7 @@ export const useGestionOffre = () => {
       patchAnalyseCandidature(selectedCandidature.id, data.analyse);
       if (data.quota_ia) setQuotaAnalyseRecruteur({ ...data.quota_ia, disponible: true });
     } catch (err) {
-      toast.error(apiErrMsg(err, "Service IA indisponible."));
+      notifier.echec("Service IA indisponible", err);
       reportError("ECHEC_ANALYSE_GROQ_RECRUTEUR", err);
       if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaAnalyseRecruteur({ ...err.response.data, disponible: false });

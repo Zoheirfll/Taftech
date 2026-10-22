@@ -56,7 +56,7 @@ describe("💡 Proposer un métier absent de la liste", () => {
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
 
     await waitFor(() => expect(jobsService.creerDemandeAjout).toHaveBeenCalledWith("METIER", "Technicien drone", "inspection de lignes"));
-    expect(toast.success).toHaveBeenCalledWith("Merci, votre proposition sera examinée.");
+    expect(toast.success).toHaveBeenCalledWith("Proposition envoyée\nMerci, votre proposition sera examinée.");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Proposer un métier" })).toBeNull());
   });
 

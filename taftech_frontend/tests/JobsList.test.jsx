@@ -211,7 +211,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith("jobs/sauvegardes/", { offre: 1 });
-      expect(toast.success).toHaveBeenCalledWith("Offre sauvegardée !");
+      expect(toast.success).toHaveBeenCalledWith("Offre sauvegardée");
     });
   });
 
@@ -239,7 +239,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
 
     await waitFor(() => {
       expect(api.delete).toHaveBeenCalledWith("jobs/sauvegardes/99/");
-      expect(toast.success).toHaveBeenCalledWith("Offre retirée des favoris.");
+      expect(toast.success).toHaveBeenCalledWith("Offre retirée des favoris");
     });
   });
 
@@ -267,7 +267,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Connectez-vous pour sauvegarder une offre.",
+        "Connexion requise\nConnectez-vous pour sauvegarder une offre.",
       );
       expect(api.post).not.toHaveBeenCalled();
     });
@@ -346,7 +346,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la suppression.",
+        "Suppression impossible\nVeuillez réessayer dans quelques instants.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_SUPPRESSION_FAVORI",

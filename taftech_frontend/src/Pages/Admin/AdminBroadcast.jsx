@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
 import { Send, Megaphone } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 
 const AUDIENCES = {
@@ -24,18 +23,18 @@ const AdminBroadcast = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.sujet.trim() || !formData.message.trim())
-      return toast.error("Le sujet et le message sont obligatoires.");
+      return notifier.erreur("Champs manquants", "Le sujet et le message sont obligatoires.");
     confirmToast(
       `Envoyer « ${formData.sujet.trim()} » à tous les candidats abonnés à « ${AUDIENCES[formData.type_envoi]} » ? L'envoi est immédiat et ne peut pas être annulé.`,
       async () => {
         setIsSending(true);
         try {
           const response = await api.post("jobs/admin/broadcast-email/", formData);
-          toast.success(response.data.message || "Emails envoyés !");
+          notifier.succes("Messages envoyés", response.data.message);
           setFormData({ ...formData, sujet: "", message: "" });
         } catch (error) {
           reportError("ECHEC_ENVOI_BROADCAST", error);
-          toast.error(apiErrMsg(error, "Erreur lors de l'envoi."));
+          notifier.echec("Envoi impossible", error);
         } finally {
           setIsSending(false);
         }

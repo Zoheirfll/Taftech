@@ -2,8 +2,7 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, HelpCircle } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
@@ -41,7 +40,7 @@ const AdminFaq = () => {
       setItems(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_FAQ", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -75,22 +74,22 @@ const AdminFaq = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.question.trim()) return toast.error("La question est obligatoire.");
-    if (!form.reponse.trim()) return toast.error("La réponse est obligatoire.");
+    if (!form.question.trim()) return notifier.erreur("Question manquante", "La question est obligatoire.");
+    if (!form.reponse.trim()) return notifier.erreur("Réponse manquante", "La réponse est obligatoire.");
     const payload = { ...form, ordre: Number(form.ordre) || 0 };
     try {
       if (editingId) {
         await jobsService.updateFaqItem(editingId, payload);
-        toast.success("Question mise à jour !");
+        notifier.succes("Question mise à jour");
       } else {
         await jobsService.createFaqItem(payload);
-        toast.success("Question ajoutée !");
+        notifier.succes("Question ajoutée");
       }
       setShowModal(false);
       fetchItems();
     } catch (err) {
       reportError("ECHEC_SAVE_FAQ_ITEM", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -99,10 +98,10 @@ const AdminFaq = () => {
       try {
         await jobsService.deleteFaqItem(id);
         setItems((prev) => prev.filter((i) => i.id !== id));
-        toast.success("Question supprimée.");
+        notifier.succes("Question supprimée");
       } catch (err) {
         reportError("ECHEC_DELETE_FAQ_ITEM", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

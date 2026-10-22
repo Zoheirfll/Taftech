@@ -2,10 +2,9 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Pencil, X, Layers } from "lucide-react";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { confirmToast } from "../../utils/confirmToast";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -46,7 +45,7 @@ const AdminPaliers = () => {
       setPaliers(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_PALIERS", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -69,12 +68,12 @@ const AdminPaliers = () => {
   const enregistrer = async (payload) => {
     try {
       await jobsService.updatePalier(editingId, payload);
-      toast.success("Palier mis à jour !");
+      notifier.succes("Palier mis à jour");
       setShowModal(false);
       fetchPaliers();
     } catch (err) {
       reportError("ECHEC_UPDATE_PALIER", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 

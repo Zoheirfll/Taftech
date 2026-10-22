@@ -68,7 +68,7 @@ describe("💡 <ProposerEntreeModal /> — « Je ne trouve pas mon diplôme / ma
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
 
     await waitFor(() => expect(jobsService.creerDemandeAjout).toHaveBeenCalledWith("SPECIALITE", "Cybersécurité", "Licence informatique"));
-    expect(toast.success).toHaveBeenCalledWith("Merci, votre demande sera examinée par notre équipe.");
+    expect(toast.success).toHaveBeenCalledWith("Demande envoyée\nMerci, votre demande sera examinée par notre équipe.");
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 

@@ -194,7 +194,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez corriger les champs manquants.",
+        "Formulaire incomplet\nCorrigez les champs signalés.",
       );
       expect(jobsService.creerOffre).not.toHaveBeenCalled();
     });
@@ -234,7 +234,7 @@ describe("💼 UI & Logique - Composant <CreateJob />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining("Erreur lors de la publication"),
+        expect.stringContaining("Publication impossible"),
         expect.anything(),
       );
     });

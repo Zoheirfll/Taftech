@@ -103,7 +103,7 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
 
     await waitFor(() => {
       expect(api.delete).toHaveBeenCalledWith("jobs/sauvegardes/1/");
-      expect(toast.success).toHaveBeenCalledWith("Offre retirée des favoris.");
+      expect(toast.success).toHaveBeenCalledWith("Offre retirée des favoris");
     });
   });
 
@@ -122,7 +122,7 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement.",
+        "Chargement impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });
@@ -153,7 +153,7 @@ describe("🔖 UI & Logique - Composant <OffresSauvegardees />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la suppression.",
+        "Suppression impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

@@ -203,7 +203,7 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
     await waitFor(() => {
       expect(jobsService.postulerRapide).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Candidature envoyée !",
+        "Candidature envoyée",
         expect.anything(),
       );
     });

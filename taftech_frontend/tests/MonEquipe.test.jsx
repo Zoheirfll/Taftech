@@ -201,7 +201,7 @@ describe("👥 UI & Logique - Composant <MonEquipe />", () => {
     renderEquipe();
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -214,7 +214,7 @@ describe("👥 UI & Logique - Composant <MonEquipe />", () => {
     fireEvent.click(screen.getByText(/Journal d'activité/i));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Impossible de charger le journal.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement du journal impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -229,6 +229,6 @@ describe("👥 UI & Logique - Composant <MonEquipe />", () => {
     await waitFor(() => screen.getByRole("button", { name: /Envoyer l'invitation/i }));
     fireEvent.click(screen.getByRole("button", { name: /Envoyer l'invitation/i }));
 
-    expect(toast.error).toHaveBeenCalledWith("Email obligatoire.");
+    expect(toast.error).toHaveBeenCalledWith("Adresse e-mail manquante\nSaisissez l'adresse e-mail de la personne à inviter.");
   });
 });

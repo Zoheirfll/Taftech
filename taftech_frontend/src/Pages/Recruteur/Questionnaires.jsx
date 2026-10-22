@@ -3,11 +3,10 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Trash2, Pencil, X, GripVertical, ClipboardList, AlertTriangle } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { JUSTIFICATION_MAX, justificationManquante } from "../../utils/questionDisqualifiante";
 
 const TYPE_OPTIONS = [
@@ -84,7 +83,8 @@ const Questionnaires = () => {
     });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error(
+      notifier.erreur(
+        "Formulaire incomplet",
         Object.keys(newErrors).some((k) => k.startsWith("j_"))
           ? "Une question disqualifiante doit être justifiée par une exigence professionnelle."
           : "Veuillez remplir tous les champs obligatoires.",
@@ -98,16 +98,16 @@ const Questionnaires = () => {
         setQuestionnaires(
           questionnaires.map((q) => (q.id === editingId ? updated : q)),
         );
-        toast.success("Questionnaire mis à jour !");
+        notifier.succes("Questionnaire mis à jour");
       } else {
         const created = await jobsService.createQuestionnaire(form);
         setQuestionnaires([...questionnaires, created]);
-        toast.success("Questionnaire créé !");
+        notifier.succes("Questionnaire créé");
       }
       setShowModal(false);
     } catch (err) {
       reportError("ECHEC_SAVE_QUESTIONNAIRE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -116,10 +116,10 @@ const Questionnaires = () => {
       try {
         await jobsService.deleteQuestionnaire(id);
         setQuestionnaires(questionnaires.filter((q) => q.id !== id));
-        toast.success("Questionnaire supprimé.");
+        notifier.succes("Questionnaire supprimé");
       } catch (err) {
         reportError("ECHEC_DELETE_QUESTIONNAIRE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

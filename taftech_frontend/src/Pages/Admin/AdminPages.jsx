@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, ArrowLeft, FileEdit, ExternalLink, Lock } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import RichTextEditor from "../../Components/RichTextEditor";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
@@ -35,7 +34,7 @@ const AdminPages = () => {
       setPages(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_PAGES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -69,25 +68,25 @@ const AdminPages = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.titre.trim()) return toast.error("Le titre est obligatoire.");
-    if (!form.slug.trim()) return toast.error("Le slug (URL) est obligatoire.");
-    if (!editingId && PAGES_FIXES.includes(form.slug)) return toast.error("Ce slug est réservé à une page système.");
-    if (!form.contenu_html || form.contenu_html === "<p></p>") return toast.error("Le contenu ne peut pas être vide.");
+    if (!form.titre.trim()) return notifier.erreur("Titre manquant", "Le titre est obligatoire.");
+    if (!form.slug.trim()) return notifier.erreur("URL manquante", "Le slug (URL) est obligatoire.");
+    if (!editingId && PAGES_FIXES.includes(form.slug)) return notifier.erreur("Slug réservé", "Ce slug est réservé à une page système.");
+    if (!form.contenu_html || form.contenu_html === "<p></p>") return notifier.erreur("Contenu manquant", "Le contenu ne peut pas être vide.");
     setSaving(true);
     try {
       const payload = { ...form, slug: form.slug.replace(/^-+|-+$/g, "") };
       if (editingId) {
         await jobsService.updatePageStatique(editingId, payload);
-        toast.success("Page mise à jour !");
+        notifier.succes("Page mise à jour");
       } else {
         await jobsService.createPageStatique(payload);
-        toast.success("Page créée !");
+        notifier.succes("Page créée");
       }
       setVue("liste");
       fetchPages();
     } catch (err) {
       reportError("ECHEC_SAVE_PAGE_STATIQUE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSaving(false);
     }
@@ -98,10 +97,10 @@ const AdminPages = () => {
       try {
         await jobsService.deletePageStatique(id);
         setPages((prev) => prev.filter((p) => p.id !== id));
-        toast.success("Page supprimée.");
+        notifier.succes("Page supprimée");
       } catch (err) {
         reportError("ECHEC_DELETE_PAGE_STATIQUE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

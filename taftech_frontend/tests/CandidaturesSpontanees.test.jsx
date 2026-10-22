@@ -164,7 +164,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
 
     await waitFor(() => {
       expect(jobsService.supprimerCandidatureSpontanee).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Candidature supprimée.");
+      expect(toast.success).toHaveBeenCalledWith("Candidature supprimée");
     });
   });
 
@@ -249,7 +249,7 @@ describe("📬 UI & Logique - Composant <CandidaturesSpontanees />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors de la suppression.",
+        "Suppression impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

@@ -120,7 +120,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
 
     await waitFor(() => {
       expect(jobsService.createSiteAnnonce).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Annonce créée !");
+      expect(toast.success).toHaveBeenCalledWith("Annonce créée");
     });
   });
 
@@ -140,7 +140,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
 
     await waitFor(() => {
       expect(jobsService.deleteSiteAnnonce).toHaveBeenCalledWith(1);
-      expect(toast.success).toHaveBeenCalledWith("Annonce supprimée.");
+      expect(toast.success).toHaveBeenCalledWith("Annonce supprimée");
     });
   });
 
@@ -160,7 +160,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
         "ECHEC_GET_ADMIN_BANNIERES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -179,7 +179,7 @@ describe("🖼️ UI & Logique - Composant <AdminBannieres />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Le texte est obligatoire.");
+      expect(toast.error).toHaveBeenCalledWith("Texte manquant\nLe texte est obligatoire.");
       expect(jobsService.createSiteAnnonce).not.toHaveBeenCalled();
     });
   });

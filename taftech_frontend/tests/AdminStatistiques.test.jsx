@@ -152,7 +152,7 @@ describe("📈 UI & Logique - Composant <AdminStatistiques />", () => {
       );
       // L'admin voit un toast
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement des statistiques.",
+        "Chargement des statistiques impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

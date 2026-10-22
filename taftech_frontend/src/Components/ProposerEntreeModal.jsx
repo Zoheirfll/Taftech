@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../utils/notifier";
 import { X } from "lucide-react";
 import { jobsService } from "../Services/jobsService";
 import { apiErrMsg } from "../utils/apiErrMsg";
@@ -54,7 +54,7 @@ const ProposerEntreeModal = ({ open, type = "DIPLOME", libelleInitial = "", cont
     setErreur("");
     try {
       const reponse = await jobsService.creerDemandeAjout(type, libelle.trim(), contexte.trim());
-      toast.success(reponse.message || "Votre demande a été envoyée.");
+      notifier.succes("Demande envoyée", reponse.message);
       fermer();
     } catch (err) {
       setErreur(apiErrMsg(err, "Impossible d'envoyer la demande."));

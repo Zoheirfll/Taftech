@@ -130,7 +130,7 @@ describe("📰 UI & Logique - Composant <AdminArticles />", () => {
 
     await waitFor(() => {
       expect(jobsService.createArticle).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Article créé !");
+      expect(toast.success).toHaveBeenCalledWith("Article créé");
     });
   });
 
@@ -150,7 +150,7 @@ describe("📰 UI & Logique - Composant <AdminArticles />", () => {
 
     await waitFor(() => {
       expect(jobsService.deleteArticle).toHaveBeenCalledWith(1);
-      expect(toast.success).toHaveBeenCalledWith("Article supprimé.");
+      expect(toast.success).toHaveBeenCalledWith("Article supprimé");
     });
   });
 
@@ -170,7 +170,7 @@ describe("📰 UI & Logique - Composant <AdminArticles />", () => {
         "ECHEC_GET_ADMIN_ARTICLES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -193,7 +193,7 @@ describe("📰 UI & Logique - Composant <AdminArticles />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Le contenu ne peut pas être vide.");
+      expect(toast.error).toHaveBeenCalledWith("Contenu manquant\nLe contenu ne peut pas être vide.");
       expect(jobsService.createArticle).not.toHaveBeenCalled();
     });
   });

@@ -2,11 +2,10 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, FolderLock } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import { AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
@@ -31,7 +30,7 @@ const AdminTypesDocuments = () => {
       setItems(data);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_TYPES_DOCUMENTS_UI", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -58,21 +57,21 @@ const AdminTypesDocuments = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.label.trim()) return toast.error("Le libellé est obligatoire.");
+    if (!form.label.trim()) return notifier.erreur("Libellé manquant", "Le libellé est obligatoire.");
     const payload = { ...form, ordre: Number(form.ordre) || 0 };
     try {
       if (editingId) {
         await jobsService.modifierAdminTypeDocument(editingId, payload);
-        toast.success("Type mis à jour !");
+        notifier.succes("Type mis à jour");
       } else {
         await jobsService.creerAdminTypeDocument(payload);
-        toast.success("Type ajouté !");
+        notifier.succes("Type ajouté");
       }
       setShowModal(false);
       fetchItems();
     } catch (err) {
       reportError("ECHEC_SAVE_ADMIN_TYPE_DOCUMENT", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -82,10 +81,10 @@ const AdminTypesDocuments = () => {
       try {
         await jobsService.supprimerAdminTypeDocument(id);
         setItems((prev) => prev.filter((i) => i.id !== id));
-        toast.success("Type supprimé.");
+        notifier.succes("Type supprimé");
       } catch (err) {
         reportError("ECHEC_DELETE_ADMIN_TYPE_DOCUMENT", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

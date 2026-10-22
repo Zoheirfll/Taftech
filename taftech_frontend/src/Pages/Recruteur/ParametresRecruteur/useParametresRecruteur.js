@@ -1,13 +1,12 @@
 // Hook des Paramètres recruteur : chargement (recruteur / membre / candidat), formulaires, uploads d'images et sauvegardes.
 import { useState, useEffect, useRef } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { authService } from "../../../Services/authService";
 import { jobsService } from "../../../Services/jobsService";
 import { profilService } from "../../../Services/profilService";
 import { reportError } from "../../../utils/errorReporter";
 import { confirmToast } from "../../../utils/confirmToast";
 import { mediaUrl } from "../../../utils/mediaUrl";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import communesAlgerie from "../../../data/communes.json";
 import api from "../../../api/axiosConfig";
 
@@ -171,7 +170,7 @@ export const useParametresRecruteur = () => {
 
       } catch (err) {
         reportError("ECHEC_CHARGEMENT_PARAMETRES", err);
-        toast.error(apiErrMsg(err, "Erreur de chargement."));
+        notifier.echec("Chargement impossible", err);
       } finally {
         setLoading(false);
       }
@@ -204,7 +203,7 @@ export const useParametresRecruteur = () => {
     e.target.value = "";
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 5 Mo).");
+      notifier.erreur("Fichier trop volumineux", "La taille maximale est de 5 Mo.");
       return;
     }
     setCropper({
@@ -222,11 +221,11 @@ export const useParametresRecruteur = () => {
     e.target.value = "";
     if (!file) return;
     if (!FORMATS_IMAGE.includes(file.type)) {
-      toast.error("Format non supporté.");
+      notifier.erreur("Format non supporté", "Choisissez un fichier valide.");
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo trop volumineux (max 2 Mo).");
+      notifier.erreur("Logo trop volumineux", "La taille maximale est de 2 Mo.");
       return;
     }
     setCropper({
@@ -244,11 +243,11 @@ export const useParametresRecruteur = () => {
     e.target.value = "";
     if (!file) return;
     if (!FORMATS_IMAGE.includes(file.type)) {
-      toast.error("Format non supporté.");
+      notifier.erreur("Format non supporté", "Choisissez un fichier valide.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Bannière trop volumineuse (max 5 Mo).");
+      notifier.erreur("Bannière trop volumineuse", "La taille maximale est de 5 Mo.");
       return;
     }
     setCropper({
@@ -266,15 +265,15 @@ export const useParametresRecruteur = () => {
     e.target.value = "";
     if (!file) return;
     if (!FORMATS_IMAGE.includes(file.type)) {
-      toast.error("Format non supporté.");
+      notifier.erreur("Format non supporté", "Choisissez un fichier valide.");
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
-      toast.error("Photo trop volumineuse (max 3 Mo).");
+      notifier.erreur("Photo trop volumineuse", "La taille maximale est de 3 Mo.");
       return;
     }
     if (photos.length >= 12) {
-      toast.error("Maximum 12 photos dans la galerie.");
+      notifier.erreur("Galerie complète", "La galerie accepte 12 photos au maximum.");
       return;
     }
     setCropper({ file, aspect: 4 / 3, shape: "rect", apply: (cropped) => { fermerCropper(); envoyerPhotoGalerie(cropped); } });
@@ -286,9 +285,9 @@ export const useParametresRecruteur = () => {
       const photo = await jobsService.ajouterPhotoEntreprise(file, newPhotoLegende);
       setPhotos((prev) => [photo, ...prev]);
       setNewPhotoLegende("");
-      toast.success("Photo ajoutée !");
+      notifier.succes("Photo ajoutée");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'ajout de la photo."));
+      notifier.echec("Ajout de la photo impossible", err);
       reportError("ECHEC_AJOUTER_PHOTO_ENTREPRISE", err);
     } finally {
       setUploadingPhoto(false);
@@ -300,9 +299,9 @@ export const useParametresRecruteur = () => {
       try {
         await jobsService.supprimerPhotoEntreprise(photoId);
         setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-        toast.success("Photo supprimée.");
+        notifier.succes("Photo supprimée");
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
         reportError("ECHEC_SUPPRIMER_PHOTO_ENTREPRISE", err);
       }
     });
@@ -319,17 +318,17 @@ export const useParametresRecruteur = () => {
         if (photoFile) dataToSend.logo = photoFile;
         await jobsService.updateProfilEntreprise(dataToSend);
         setPhotoFile(null);
-        toast.success("Profil mis à jour !");
+        notifier.succes("Profil mis à jour");
       } else {
         // Membres (CANDIDAT en DB) : sauvegarde du profil candidat
         const formData = new FormData();
         Object.entries(profilForm).forEach(([k, v]) => formData.append(k, v));
         if (photoFile) formData.append("photo_profil", photoFile);
         await authService.updateProfilCandidat(formData);
-        toast.success("Profil mis à jour !");
+        notifier.succes("Profil mis à jour");
       }
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_SAVE_PROFIL_PARAMETRES", err);
     } finally {
       setSaving(false);
@@ -338,19 +337,19 @@ export const useParametresRecruteur = () => {
 
   const changerMotDePasse = async (e) => {
     e.preventDefault();
-    if (pwdForm.new !== pwdForm.confirm) return toast.error("Les mots de passe ne correspondent pas.");
-    if (pwdForm.new.length < 8) return toast.error("8 caractères minimum.");
+    if (pwdForm.new !== pwdForm.confirm) return notifier.erreur("Les mots de passe ne correspondent pas");
+    if (pwdForm.new.length < 8) return notifier.erreur("Mot de passe trop court", "Il doit contenir au moins 8 caractères.");
     setPwdLoading(true);
     try {
       await api.post("accounts/changer-mot-de-passe/", {
         ancien_mdp: pwdForm.old,
         nouveau_mdp: pwdForm.new,
       });
-      toast.success(estCompteGoogle ? "Mot de passe défini !" : "Mot de passe modifié !");
+      notifier.succes(estCompteGoogle ? "Mot de passe défini" : "Mot de passe modifié");
       setPwdForm({ old: "", new: "", confirm: "" });
       if (estCompteGoogle) setEstCompteGoogle(false);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur."));
+      notifier.echec("Modification impossible", err);
       reportError("ECHEC_CHANGER_MDP_RECRUTEUR", err);
     } finally {
       setPwdLoading(false);
@@ -372,9 +371,9 @@ export const useParametresRecruteur = () => {
       await jobsService.updateProfilEntreprise(dataToSend);
       setLogoFile(null);
       setBannerFile(null);
-      toast.success("Entreprise mise à jour !");
+      notifier.succes("Entreprise mise à jour");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_SAVE_ENTREPRISE_PARAMETRES", err);
     } finally {
       setSaving(false);
@@ -385,9 +384,9 @@ export const useParametresRecruteur = () => {
     setSaving(true);
     try {
       await jobsService.updateParametresRecruteur(notifForm);
-      toast.success("Préférences de notification sauvegardées !");
+      notifier.succes("Préférences de notification enregistrées");
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_SAVE_NOTIFS_PARAMETRES", err);
     } finally {
       setSaving(false);

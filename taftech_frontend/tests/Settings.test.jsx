@@ -76,7 +76,7 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     fireEvent.click(toggles[1]); // Newsletter toggle
     await waitFor(() => {
       expect(jobsService.updateParametres).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Préférence enregistrée !");
+      expect(toast.success).toHaveBeenCalledWith("Préférence enregistrée");
     });
   });
 
@@ -88,7 +88,7 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
         "ECHEC_CHARGEMENT_PARAMETRES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors du chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -129,7 +129,7 @@ describe("⚙️ UI & Logique - Composant <Settings />", () => {
     });
     fireEvent.click(screen.getByText("Modifier"));
     expect(toast.error).toHaveBeenCalledWith(
-      "Les mots de passe ne correspondent pas.",
+      "Les mots de passe ne correspondent pas",
     );
   });
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { authService } from "../../Services/authService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { CheckCircle2, Loader2, Eye, EyeOff, Building2, Users } from "lucide-react";
 import logoTafTech from "../../assets/logo-taftech.png";
 import { tw } from "../../theme";
@@ -36,7 +36,7 @@ const AccepterInvitation = () => {
   }, [token]);
 
   const handleAccepter = async () => {
-    if (!form.password) return toast.error("Mot de passe requis.");
+    if (!form.password) return notifier.erreur("Mot de passe manquant", "Saisissez un mot de passe.");
     setSaving(true);
     try {
       await jobsService.accepterInvitation(token, {
@@ -56,7 +56,7 @@ const AccepterInvitation = () => {
       }
     } catch (err) {
       const msg = err.response?.data?.error || "Erreur lors de l'acceptation.";
-      toast.error(msg);
+      notifier.erreur("Invitation impossible", msg);
     } finally {
       setSaving(false);
     }

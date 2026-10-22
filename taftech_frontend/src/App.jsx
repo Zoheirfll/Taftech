@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import NotificationsHost from "./Components/NotificationsHost";
 import RouteTitle from "./Components/RouteTitle";
 import Analytics from "./Components/Analytics";
 import CookieBanner from "./Components/CookieBanner";
@@ -280,14 +280,7 @@ function AppContent() {
       <Analytics />
       <CookieBanner />
       <OfflineBanner />
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          duration: 3000,
-          style: { fontWeight: "bold", borderRadius: "10px" },
-        }}
-      />
+      <NotificationsHost />
       <ConfirmModalHost />
 
       {!isAdminPath && <SiteAnnonceBar />}

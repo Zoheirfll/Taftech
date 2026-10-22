@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { tw } from "../../theme";
@@ -350,7 +350,7 @@ const StatistiquesPage = () => {
     try {
       await jobsService.exporterGraphiqueExcel("statistiques-recrutement", colonnes, lignes);
     } catch {
-      toast.error("Erreur lors de l'export Excel.");
+      notifier.erreur("Exportation impossible");
     }
   };
 

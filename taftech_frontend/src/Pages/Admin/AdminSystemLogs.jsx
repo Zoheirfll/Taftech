@@ -2,10 +2,9 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axiosConfig";
 import { AlertTriangle, RefreshCw, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { reportError } from "../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -28,7 +27,7 @@ const AdminSystemLogs = () => {
       setPage(res.data.page || p);
     } catch (err) {
       reportError("ADMIN_SYSTEM_LOGS_FETCH", err);
-      toast.error(apiErrMsg(err, "Impossible de charger les erreurs."));
+      notifier.echec("Chargement des erreurs impossible", err);
     } finally {
       setLoading(false);
     }
@@ -43,13 +42,13 @@ const AdminSystemLogs = () => {
     confirmToast("Supprimer tous les logs d'erreurs ? Cette action est irréversible.", async () => {
       try {
         await api.delete("/accounts/admin/system-logs/");
-        toast.success("Logs supprimés.");
+        notifier.succes("Logs supprimés");
         setLogs([]);
         setTotal(0);
         setTotalPages(1);
       } catch (err) {
         reportError("ADMIN_SYSTEM_LOGS_DELETE", err);
-        toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", err);
       }
     });
   };

@@ -100,7 +100,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
 
     await waitFor(() => {
       expect(jobsService.createFaqItem).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Question ajoutée !");
+      expect(toast.success).toHaveBeenCalledWith("Question ajoutée");
     });
   });
 
@@ -120,7 +120,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
 
     await waitFor(() => {
       expect(jobsService.deleteFaqItem).toHaveBeenCalledWith(1);
-      expect(toast.success).toHaveBeenCalledWith("Question supprimée.");
+      expect(toast.success).toHaveBeenCalledWith("Question supprimée");
     });
   });
 
@@ -140,7 +140,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
         "ECHEC_GET_ADMIN_FAQ",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -158,7 +158,7 @@ describe("❓ UI & Logique - Composant <AdminFaq />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("La question est obligatoire.");
+      expect(toast.error).toHaveBeenCalledWith("Question manquante\nLa question est obligatoire.");
       expect(jobsService.createFaqItem).not.toHaveBeenCalled();
     });
   });

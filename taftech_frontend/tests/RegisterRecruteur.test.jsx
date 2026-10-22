@@ -249,7 +249,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Veuillez sélectionner un secteur et une wilaya.",
+        "Informations manquantes\nSélectionnez un secteur d'activité et une wilaya.",
       );
     });
     expect(authService.registerRecruteur).not.toHaveBeenCalled();
@@ -288,7 +288,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Ce registre existe déjà.",
+        "Inscription impossible\nCe registre existe déjà.",
         expect.anything(),
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
@@ -323,7 +323,7 @@ describe("🏢 UI & Logique - Composant <RegisterRecruteur />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Code expiré",
+        "Vérification impossible\nCode expiré",
         expect.anything(),
       );
       expect(reporter.reportError).toHaveBeenCalledWith(

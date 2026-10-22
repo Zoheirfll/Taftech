@@ -2,8 +2,7 @@ import { useSubmitLock } from "../../utils/useSubmitLock";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw } from "lucide-react";
 import { adminService } from "../../Services/adminService";
 import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
@@ -83,7 +82,7 @@ const AdminCompetences = () => {
       setCompteurs(data.compteurs || {});
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }
@@ -137,20 +136,20 @@ const AdminCompetences = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.label.trim()) return toast.error("Le libellé est obligatoire.");
+    if (!form.label.trim()) return notifier.erreur("Libellé manquant", "Le libellé est obligatoire.");
     try {
       if (editingId) {
         await jobsService.updateCompetence(editingId, form);
-        toast.success("Compétence mise à jour !");
+        notifier.succes("Compétence mise à jour");
       } else {
         await jobsService.createCompetence(form);
-        toast.success("Compétence ajoutée !");
+        notifier.succes("Compétence ajoutée");
       }
       setShowModal(false);
       fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_SAVE_COMPETENCE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
     }
   };
 
@@ -158,7 +157,8 @@ const AdminCompetences = () => {
     const { libelle } = actionVers(statutDe(item), cible);
     try {
       const maj = await jobsService.changerStatutCompetence(item.id, cible);
-      toast.success(
+      notifier.succes(
+        cible === "VALIDEE" && maj?.liens_crees ? "Compétence officielle" : "Statut modifié",
         cible === "VALIDEE" && maj?.liens_crees
           ? `« ${item.label} » est maintenant officielle — ${maj.liens_crees} saisie(s) existante(s) rattachée(s).`
           : `« ${item.label} » : ${libelle.toLowerCase()} effectué.`,
@@ -166,7 +166,7 @@ const AdminCompetences = () => {
       fetchItems(search, page);
     } catch (err) {
       reportError("ECHEC_STATUT_COMPETENCE", err);
-      toast.error(apiErrMsg(err, "Changement de statut impossible."));
+      notifier.echec("Changement de statut impossible", err);
     }
   };
 
@@ -180,10 +180,10 @@ const AdminCompetences = () => {
           await jobsService.deleteCompetence(id);
           setItems((prev) => prev.filter((i) => i.id !== id));
           setTotalCount((c) => Math.max(0, c - 1));
-          toast.success("Compétence supprimée.");
+          notifier.succes("Compétence supprimée");
         } catch (err) {
           reportError("ECHEC_DELETE_COMPETENCE", err);
-          toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+          notifier.echec("Suppression impossible", err);
         }
       },
     );

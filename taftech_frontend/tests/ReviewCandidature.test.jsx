@@ -198,7 +198,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
         "Je suis très motivée.",
       );
 
-      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée !");
+      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée");
       expect(mockNavigate).toHaveBeenCalledWith("/mes-candidatures");
     });
   });
@@ -235,7 +235,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
     await waitFor(() => {
       const sentFormData = vi.mocked(jobsService.postuler).mock.calls[0][1];
       expect(sentFormData.get("lettre_motivation_file")).toBe(file);
-      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée !");
+      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée");
     });
   });
 
@@ -271,7 +271,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
       const formDataSent = vi.mocked(jobsService.postuler).mock.calls[0][1];
       const reponses = JSON.parse(formDataSent.get("reponses"));
       expect(reponses["10"]).toBe("3 ans");
-      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée !");
+      expect(toast.success).toHaveBeenCalledWith("Candidature envoyée");
     });
   });
 
@@ -298,7 +298,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirmer & postuler/i }));
 
     expect(toast.error).toHaveBeenCalledWith(
-      'La question "Combien d\'années d\'expérience ?" est obligatoire.',
+      "Question obligatoire\nRépondez à la question « Combien d'années d'expérience ? ».",
     );
     expect(jobsService.postuler).not.toHaveBeenCalled();
   });
@@ -317,7 +317,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur de chargement du profil.",
+        "Chargement du profil impossible\nVeuillez réessayer dans quelques instants.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_CHARGEMENT_REVIEW_CANDIDATURE",
@@ -349,7 +349,7 @@ describe("📋 UI & Logique - Composant <ReviewCandidature />", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Vous avez déjà postulé à cette offre.",
+        "Candidature impossible\nVous avez déjà postulé à cette offre.",
       );
       expect(reporter.reportError).toHaveBeenCalledWith(
         "ECHEC_SOUMISSION_CANDIDATURE",

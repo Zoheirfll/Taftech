@@ -104,7 +104,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     fireEvent.click(screen.getByLabelText("Réactiver Prompt engineering"));
     await waitFor(() => {
       expect(jobsService.changerStatutCompetence).toHaveBeenCalledWith(7, "VALIDEE");
-      expect(toast.success).toHaveBeenCalledWith("« Prompt engineering » est maintenant officielle — 3 saisie(s) existante(s) rattachée(s).");
+      expect(toast.success).toHaveBeenCalledWith("Compétence officielle\n« Prompt engineering » est maintenant officielle — 3 saisie(s) existante(s) rattachée(s).");
     });
   });
 
@@ -178,7 +178,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
 
     await waitFor(() => {
       expect(jobsService.createCompetence).toHaveBeenCalledWith({ label: "Nouvelle", synonymes: "" });
-      expect(toast.success).toHaveBeenCalledWith("Compétence ajoutée !");
+      expect(toast.success).toHaveBeenCalledWith("Compétence ajoutée");
     });
   });
 
@@ -199,7 +199,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
 
     await waitFor(() => {
       expect(jobsService.deleteCompetence).toHaveBeenCalledWith(1);
-      expect(toast.success).toHaveBeenCalledWith("Compétence supprimée.");
+      expect(toast.success).toHaveBeenCalledWith("Compétence supprimée");
     });
   });
 
@@ -219,7 +219,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
         "ECHEC_GET_ADMIN_COMPETENCES",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur de chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
 
@@ -237,7 +237,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Le libellé est obligatoire.");
+      expect(toast.error).toHaveBeenCalledWith("Libellé manquant\nLe libellé est obligatoire.");
       expect(jobsService.createCompetence).not.toHaveBeenCalled();
     });
   });

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { adminService } from "../../Services/adminService";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import { reportError } from "../../utils/errorReporter";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, Shield, UserCog } from "lucide-react";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -30,7 +29,7 @@ const AdminComptes = () => {
       const data = await adminService.getAdmins();
       setAdmins(data);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
       reportError("ECHEC_GET_ADMINS", err);
     } finally {
       setLoading(false);
@@ -71,26 +70,26 @@ const AdminComptes = () => {
 
   const handleSauvegarder = async (e) => {
     e?.preventDefault();
-    if (!form.email.trim()) return toast.error("Email obligatoire.");
-    if (modal.mode === "create" && !form.password.trim()) return toast.error("Mot de passe obligatoire.");
+    if (!form.email.trim()) return notifier.erreur("Adresse e-mail manquante", "L'adresse e-mail est obligatoire.");
+    if (modal.mode === "create" && !form.password.trim()) return notifier.erreur("Mot de passe manquant", "Le mot de passe est obligatoire.");
     if (form.password && form.password.trim().length < 8)
-      return toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+      return notifier.erreur("Mot de passe trop court", "Il doit contenir au moins 8 caractères.");
     setSaving(true);
     try {
       if (modal.mode === "create") {
         await adminService.createAdmin(form);
-        toast.success("Compte admin créé !");
+        notifier.succes("Compte administrateur créé");
       } else {
         const payload = { ...form };
         if (!payload.password) delete payload.password;
         await adminService.updateAdmin(modal.data.id, payload);
-        toast.success("Compte mis à jour !");
+        notifier.succes("Compte mis à jour");
       }
       fermer();
       charger();
     } catch (err) {
       reportError("ECHEC_SAVE_ADMIN_COMPTE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de l'enregistrement."));
+      notifier.echec("Enregistrement impossible", err);
     } finally {
       setSaving(false);
     }
@@ -101,12 +100,12 @@ const AdminComptes = () => {
     setSaving(true);
     try {
       await adminService.deleteAdmin(modal.data.id);
-      toast.success("Compte supprimé.");
+      notifier.succes("Compte supprimé");
       fermer();
       charger();
     } catch (err) {
       reportError("ECHEC_DELETE_ADMIN_COMPTE", err);
-      toast.error(apiErrMsg(err, "Erreur lors de la suppression."));
+      notifier.echec("Suppression impossible", err);
     } finally {
       setSaving(false);
     }

@@ -3,7 +3,7 @@ import { profilService } from "../../../Services/profilService";
 import { jobsService } from "../../../Services/jobsService";
 import { convertDateRaw, convertDateFin, precisionDateRaw, precisionDateFin } from "../../../utils/cvDates";
 import { reportError } from "../../../utils/errorReporter";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 import { notifierProfilMisAJour } from "../../../utils/evenementsProfil";
@@ -121,7 +121,7 @@ export const useOnboardingWizard = () => {
         await refresh();
         jobsService.getQuotaIA("PARSER_CV").then(setQuotaParserCV).catch(() => {});
       } catch (err) {
-        toast.error(apiErrMsg(err, "Erreur de chargement du profil."));
+        notifier.echec("Chargement du profil impossible", err);
         reportError("ECHEC_FETCH_ONBOARDING_PROFIL", err);
       } finally {
         setLoading(false);
@@ -138,7 +138,7 @@ export const useOnboardingWizard = () => {
     try {
       const result = await jobsService.parserCV(file || null);
       if (!result.success) {
-        toast.error(result.error || "Impossible d'analyser ce CV.");
+        notifier.erreur("Analyse du CV impossible", result.error || "Veuillez réessayer avec un autre fichier.");
         return;
       }
       // Le fichier réellement choisi (pas null == "réutiliser le CV déjà sur le profil")
@@ -283,7 +283,7 @@ export const useOnboardingWizard = () => {
       if (result.quota_ia) setQuotaParserCV({ ...result.quota_ia, disponible: true });
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de l'analyse."));
+      notifier.echec("Analyse impossible", err);
       reportError("ECHEC_PARSER_CV_ONBOARDING", err);
       if (bloqueLaFonctionIA(err.response?.data)) {
         setQuotaParserCV({ ...err.response.data, disponible: false });
@@ -325,7 +325,7 @@ export const useOnboardingWizard = () => {
       await refresh();
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde."));
+      notifier.echec("Enregistrement impossible", err);
       reportError("ECHEC_SAVE_INFOS_ONBOARDING", err);
     } finally {
       setSaving(false);
@@ -346,7 +346,10 @@ export const useOnboardingWizard = () => {
     // « Remplacer », les anciennes expériences seraient supprimées puis la nouvelle refusée.
     const sansDebut = pendingExperiences.find((exp) => !exp.date_debut);
     if (sansDebut) {
-      toast.error(`Renseignez la date de début de « ${sansDebut.titre_poste || "l'expérience"} » (bouton crayon) avant de continuer.`);
+      notifier.erreur(
+        "Date de début manquante",
+        `Renseignez la date de début de « ${sansDebut.titre_poste || "l'expérience"} » (bouton crayon) avant de continuer.`,
+      );
       return;
     }
     setSaving(true);
@@ -379,14 +382,15 @@ export const useOnboardingWizard = () => {
         // pour que le nouvel essai ne supprime rien.
         setPendingExperiences(echecs.map(({ exp }) => exp));
         setExperiencesMode("ajouter");
-        toast.error(
-          `${echecs.length} expérience(s) n'ont pas été enregistrées : ${apiErrMsg(echecs[0].err, "vérifiez les champs obligatoires (poste, entreprise)")}`,
+        notifier.erreur(
+          `${echecs.length} expérience(s) non enregistrée(s)`,
+          apiErrMsg(echecs[0].err, "Vérifiez les champs obligatoires (poste, entreprise)."),
         );
         return;
       }
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des expériences."));
+      notifier.echec("Enregistrement des expériences impossible", err);
       reportError("ECHEC_SAVE_EXPERIENCES_ONBOARDING", err);
     } finally {
       setSaving(false);
@@ -429,7 +433,7 @@ export const useOnboardingWizard = () => {
       await refresh();
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des formations."));
+      notifier.echec("Enregistrement des formations impossible", err);
       reportError("ECHEC_SAVE_FORMATIONS_ONBOARDING", err);
     } finally {
       setSaving(false);
@@ -449,7 +453,7 @@ export const useOnboardingWizard = () => {
       await refresh();
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des langues."));
+      notifier.echec("Enregistrement des langues impossible", err);
       reportError("ECHEC_SAVE_LANGUES_ONBOARDING", err);
     } finally {
       setSaving(false);
@@ -475,7 +479,7 @@ export const useOnboardingWizard = () => {
       await refresh();
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des compétences."));
+      notifier.echec("Enregistrement des compétences impossible", err);
       reportError("ECHEC_SAVE_COMPETENCES_ONBOARDING", err);
     } finally {
       setSaving(false);
@@ -501,7 +505,7 @@ export const useOnboardingWizard = () => {
       await refresh();
       nextStep();
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur lors de la sauvegarde des préférences."));
+      notifier.echec("Enregistrement des préférences impossible", err);
       reportError("ECHEC_SAVE_PREFS_ONBOARDING", err);
     } finally {
       setSaving(false);

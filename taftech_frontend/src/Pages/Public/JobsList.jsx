@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
-import toast from "react-hot-toast";
+import { notifier } from "../../utils/notifier";
 import api from "../../api/axiosConfig";
 import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
@@ -12,7 +12,6 @@ import { grouperParFamille } from "../../utils/familleFormation";
 import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
-import { apiErrMsg } from "../../utils/apiErrMsg";
 import {
   MapPin, Briefcase, Bookmark, Sparkles, Search,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
@@ -156,25 +155,25 @@ const JobsList = () => {
   const expLabel = (val) => constants.experiences.find((e) => e.value === val)?.label || val;
 
   const handleToggleFavori = async (offreId) => {
-    if (!localStorage.getItem("userRole")) return toast.error("Connectez-vous pour sauvegarder une offre.");
+    if (!localStorage.getItem("userRole")) return notifier.erreur("Connexion requise", "Connectez-vous pour sauvegarder une offre.");
     const isDejaSauvegarde = favoris.find((f) => f.offre === offreId);
     if (isDejaSauvegarde) {
       setFavoris(favoris.filter((f) => f.offre !== offreId));
       try {
         await api.delete(`jobs/sauvegardes/${isDejaSauvegarde.id}/`);
-        toast.success("Offre retirée des favoris.");
+        notifier.succes("Offre retirée des favoris");
       } catch (error) {
         setFavoris([...favoris, isDejaSauvegarde]);
-        toast.error(apiErrMsg(error, "Erreur lors de la suppression."));
+        notifier.echec("Suppression impossible", error);
         reportError("ECHEC_SUPPRESSION_FAVORI", error);
       }
     } else {
       try {
         const response = await api.post("jobs/sauvegardes/", { offre: offreId });
         setFavoris([...favoris, response.data]);
-        toast.success("Offre sauvegardée !");
+        notifier.succes("Offre sauvegardée");
       } catch (error) {
-        toast.error(apiErrMsg(error, "Impossible de sauvegarder cette offre."));
+        notifier.echec("Sauvegarde impossible", error);
         reportError("ECHEC_SAUVEGARDE_FAVORI", error);
       }
     }

@@ -101,7 +101,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
         mots_cles: "Designer",
         frequence: "QUOTIDIENNE",
       });
-      expect(toast.success).toHaveBeenCalledWith("Alerte créée !");
+      expect(toast.success).toHaveBeenCalledWith("Alerte créée");
       expect(screen.getByText("Designer")).toBeInTheDocument();
     });
   });
@@ -168,7 +168,7 @@ describe("🔔 UI & Logique - Composant <AlertesEmploi />", () => {
         expect.anything(),
       );
       expect(toast.error).toHaveBeenCalledWith(
-        "Erreur lors du chargement.",
+        "Chargement impossible\nVeuillez réessayer dans quelques instants.",
       );
     });
   });

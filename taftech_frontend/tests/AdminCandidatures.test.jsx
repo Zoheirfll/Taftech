@@ -121,7 +121,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
       expect(adminService.exporterListe).toHaveBeenCalledWith("candidatures", {
         search: "", statut: "", ordering: "-date_postulation",
       });
-      expect(toast.success).toHaveBeenCalledWith("Téléchargement réussi !");
+      expect(toast.success).toHaveBeenCalledWith("Téléchargement terminé");
       // ✅ CORRECTION : On vérifie l'appel sur 'window'
       expect(window.URL.createObjectURL).toHaveBeenCalled();
     });
@@ -139,7 +139,7 @@ describe("📊 UI & Logique - Composant <AdminCandidatures />", () => {
         "ECHEC_CHARGEMENT_CANDIDATURES_ADMIN",
         expect.anything(),
       );
-      expect(toast.error).toHaveBeenCalledWith("Erreur lors du chargement.");
+      expect(toast.error).toHaveBeenCalledWith("Chargement impossible\nVeuillez réessayer dans quelques instants.");
       expect(
         screen.getByText(/Aucune candidature trouvée/i),
       ).toBeInTheDocument();

@@ -1,10 +1,9 @@
 // Onglet « Demandes » d'une page du référentiel (types de diplôme, spécialités) : même tableau, mêmes
 // pastilles de statut et même fenêtre de décision partout (spécification du 16/10/2026).
 import React, { useCallback, useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notifier } from "../../../utils/notifier";
 import { Ban, Check, Inbox, Link2, Search } from "lucide-react";
 import { adminService } from "../../../Services/adminService";
-import { apiErrMsg } from "../../../utils/apiErrMsg";
 import { tw } from "../../../theme";
 import AdminPagination from "../../../Components/AdminPagination";
 import SkeletonTableRows from "../../../Components/SkeletonTableRows";
@@ -40,7 +39,7 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
       setTotalPages(data.total_pages || 1);
       setTotalCount(data.count || 0);
     } catch (err) {
-      toast.error(apiErrMsg(err, "Erreur de chargement."));
+      notifier.echec("Chargement impossible", err);
     } finally {
       setLoading(false);
     }

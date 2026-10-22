@@ -185,7 +185,7 @@ def _titre_couvert_par(titre, libelle_appellation):
     mots_libelle = {_forme_neutre(m) for m in re.findall(
         r"\w+", developper_abreviations(normaliser_recherche(libelle_appellation)))}
     fonctions = [_mots_pertinents(seg) for seg in re.split(
-        r"\s+(?:et|&)\s+|[,/;]", _nettoyer_titre_poste(titre), flags=re.IGNORECASE)]
+        r"\s+(?:et|&)\s+|\s+[-–—|]\s+|[,/;]", _nettoyer_titre_poste(titre), flags=re.IGNORECASE)]
     fonctions = [mots for mots in fonctions if mots]
     if not fonctions:
         return True

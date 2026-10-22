@@ -132,6 +132,16 @@ class RattachementMetierTests(TestCase):
         self.assertTrue(_titre_couvert_par("Technicien support informatique (Stage de Licence)", "Technicien support informatique"))
         self.assertFalse(_titre_couvert_par("Comptable chez Hôte Caisse SARL", "Hôte de Caisse"))
 
+    def test_tiret_separe_la_fonction_de_son_contexte(self):
+        # CV du 22/10/2026 : « MANAGER DE FABRICATION - ATELIER MONTAGE MECANIQUE VEHICULE » était lu comme une
+        # seule fonction de 6 mots ; « Manager de fabrication » n'en couvrait que 2 et le métier restait vide.
+        from jobs.domaine_agent import _titre_couvert_par
+        titre = "MANAGER DE FABRICATION - ATELIER MONTAGE MECANIQUE VEHICULE"
+        self.assertTrue(_titre_couvert_par(titre, "Manager de fabrication"))
+        self.assertTrue(_titre_couvert_par("Responsable RH – Paie", "Responsable RH"))
+        self.assertFalse(_titre_couvert_par(titre, "Hôte de l'air"))
+        self.assertFalse(_titre_couvert_par(titre, "Organisateur industriel"))
+
     def test_le_prompt_impose_le_niveau_hierarchique_du_titre(self):
         # Constaté en réel (21/10/2026) : « Responsable Administration RH & Recrutement » classé par l'IA en
         # « Gestionnaire Administration du Personnel », refusé ensuite par le garde-fou : métier vide.

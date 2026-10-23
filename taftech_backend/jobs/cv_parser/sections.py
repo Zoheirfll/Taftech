@@ -10,7 +10,8 @@ SECTIONS_KEYWORDS = {
     'experiences': [
         'experience', 'expériences', 'expérience', 'experiences',
         'parcours professionnel', 'parcours pro', 'emploi', 'work experience',
-        'professional experience', 'carrière', 'carriere'
+        'professional experience', 'carrière', 'carriere',
+        'work history', 'employment history', 'professional history',
     ],
     'formations': [
         'formation', 'formations', 'education', 'études', 'etudes',
@@ -27,6 +28,7 @@ SECTIONS_KEYWORDS = {
     # la section précédente (ex: compétences) avec le contenu "Centres d'intérêt".
     'interets': [
         'centres d', 'centre d', 'hobbies', 'loisirs', "centres d'intérêt", "centres d'interet",
+        'additional information', 'accomplishments', 'affiliations',
     ],
 }
 

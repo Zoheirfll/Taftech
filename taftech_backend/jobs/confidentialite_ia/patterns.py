@@ -54,6 +54,15 @@ MOTIFS = (
     ("TELEPHONE", re.compile(rf"(?<![\d+])\+(?!213)\d{{1,3}}{_SEP}?\d(?:{_SEP}?\d{{2}}){{4}}(?!\d)")),
 )
 
+    # Numéros étrangers de la diaspora (indicatif « + » ou « 00 », groupes de 2 à 4 chiffres : +216 20 123 456,
+    # +44 7700 900123, 0033612345678), 8 à 15 chiffres au total.
+    ("TELEPHONE", re.compile(
+        rf"(?<![\d+])(?:\+|00)(?!213)(?=(?:[\s.\-()]?\d){{8,15}}(?!\d))\d{{1,3}}(?:{_SEP}?\(?\d{{2,4}}\)?){{2,4}}(?!\d)")),
+    # Format nord-américain : (304) 558-2686, (304)558.2686, 304.558.2686 (trois groupes séparés : jamais des dates).
+    ("TELEPHONE", re.compile(rf"(?<![\d(])\(\d{{3}}\)\s?\d{{3}}{_SEP}\d{{4}}(?!\d)")),
+    ("TELEPHONE", re.compile(rf"(?<![\d+])\d{{3}}{_SEP}\d{{3}}{_SEP}\d{{4}}(?!\d)")),
+    # Britannique national : 07700 900123.
+    ("TELEPHONE", re.compile(r"(?<!\d)07\d{3}\s\d{6}(?!\d)")),
 TITRE_REFERENCES = re.compile(
     r"^\s{0,20}(?:personnes?\s{1,3}de\s{1,3})?(?:r[ée]f[ée]rences?|المراجع|مراجع)\s{0,10}:?\s{0,10}$", re.I)
 TITRE_SECTION = re.compile(

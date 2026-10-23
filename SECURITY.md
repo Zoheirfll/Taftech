@@ -565,3 +565,10 @@ Trois routes `admin/utilisateurs/<id>/dossier/`, `dossier-recruteur/`, `dossier-
 - **Faux positifs réduits sans affaiblir le masquage** : règles ciblées dans `ner.py` (le NER reste actif). Garde-fous voulus : un nom cité **une seule fois** n'est jamais écarté ; « Nom, Oran » dans l'**en-tête** garde son nom masqué ; seules les communes du **corps** suivies d'une wilaya sont laissées lisibles (décision antérieure : communes non masquées).
 - Tests : 6 nouveaux (`test_confidentialite_ner.py`, `test_confidentialite_motifs.py`), 184 tests ciblés OK. Journal : [2026-10-22-masquage-faux-positifs.md](docs/journal/2026-10-22-masquage-faux-positifs.md).
 - Tests : `test_admin_corriger_offre.py` (7 : correction + audit + e-mail, sans changement, offre publiée/rejetée refusée, statut non modifiable, champ absent, admin seulement, introuvable) ; `AdminOffres.test.jsx`.
+
+## ✅ 42. Masquage avant l'IA : numéros étrangers de la diaspora restés en clair (23/10/2026)
+
+- **Constat** (corpus de 2 484 CV, [journal](docs/journal/2026-10-23-corpus-kaggle-evaluation-parser.md)) : les motifs `TELEPHONE` ne couvraient que l'Algérie et le format `+33 6 12 34 56 78`. Restaient en clair avant l'IA : `00` + indicatif, Tunisie (`+216 20 123 456`), Royaume-Uni, Amérique du Nord (`(304) 558-2686`).
+- **Correctif** : 4 motifs dans `patterns.py` (quantificateurs bornés, règle anti-ReDoS), garde-fou testé : dates, années et codes postaux ne sont jamais masqués. Corpus : 85 → 47 CV avec un « numéro » restant, le reste étant des faux positifs du contrôle (codes postaux, identifiants) ou des numéros nationaux sans indicatif, indiscernables d'un matricule.
+- **Reste ouvert** : le filet de `call_ai` n'a pas été testé sur un numéro étranger sans indicatif. Le corpus est en anglais : il ne valide ni le français ni l'arabe.
+- Outil de mesure en lecture seule : `evaluer_corpus_cv` (rapport sans contenu de CV, à écrire hors dépôt).

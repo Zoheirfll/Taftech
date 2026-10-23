@@ -86,3 +86,11 @@ Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de
 **Contexte** : le texte masqué des CV et des profils est envoyé à un prestataire d'IA hors d'Algérie (ZDR activé, données pseudonymisées). Une pseudonymisation n'est pas une anonymisation.
 
 **À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.
+
+## 🟡 Parser et masquage : aucune mesure sur des CV algériens réels (corpus anglais seulement)
+
+**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)).
+
+**Contexte** : le corpus Kaggle (2 484 CV américains en anglais) a servi à corriger les intitulés de section et les numéros étrangers, mais il ne contient ni français, ni arabe, ni PDF en colonnes de type Canva. Le NER arabe, `MIN_COLONNES` (`cv_parser/colonnes.py`) et le filet de `call_ai` face à un numéro étranger sans indicatif restent non validés.
+
+**À faire** : réunir un corpus de CV algériens (avec l'accord des personnes ou anonymisés), le passer dans `python manage.py evaluer_corpus_cv`, puis décider de l'adoption du NER arabe.

@@ -25,6 +25,21 @@ class MotifsDetectionTest(SimpleTestCase):
                 self.assertIn("[TÉLÉPHONE]", r.texte)
                 self.assertNotRegex(r.texte, r"\d{2}[\s.]?\d{2}[\s.]?\d{2}")
 
+    def test_telephones_etrangers_masques(self):
+        # Candidats de la diaspora (corpus de 2 484 CV du 23/10/2026 : ces formats restaient en clair).
+        for numero in ("0033612345678", "+216 20 123 456", "+44 7700 900123", "07700 900123",
+                       "+1 304-558-2686", "(304) 558-2686", "(304)558.2686", "304.558.2686"):
+            with self.subTest(numero=numero):
+                r = nettoyer(f"Tél : {numero}")
+                self.assertIn("[TÉLÉPHONE]", r.texte)
+                self.assertNotRegex(r.texte, r"\d{3}")
+
+    def test_dates_et_annees_ne_sont_pas_des_telephones(self):
+        for texte in ("2010 - 2012 - 2014", "Janvier 2010 - 12/2012", "Promotion 2016/2017/2018",
+                      "Code postal 31000", "Du 12.03.2020 au 15.04.2021", "Chiffre d'affaires 2000 2001 2002"):
+            with self.subTest(texte=texte):
+                self.assertEqual(nettoyer(texte).texte, texte)
+
     def test_urls_personnelles_masquees(self):
         r = nettoyer("https://www.linkedin.com/in/zoheir-fll et github.com/Zoheirfll")
         self.assertNotIn("zoheir-fll", r.texte)

@@ -580,3 +580,11 @@ Trois routes `admin/utilisateurs/<id>/dossier/`, `dossier-recruteur/`, `dossier-
 - **Code** : `confidentialite_ia/patterns.py::trouver_communes`, `pseudonymisation.py::detecter_communes`. Recherche dans un **ensemble** de noms et non par expression régulière géante : l'ancien essai (3 000 branches) coûtait jusqu'à 6 s pour 40 000 caractères (déni de service possible via un CV hostile) ; désormais ≤ 0,5 s pour 30 000 caractères (`LONGUEUR_MAX_ANALYSE`), testé.
 - **Limites** : un lieu absent du fichier reste lisible (ex. « Hassi Ameur ») ; la liste est à compléter à la main. Le lieu de résidence est toujours extrait localement pour le profil (`coordonnees`), le masquage n'enlève rien au profil.
 - Tests : `test_confidentialite_communes.py`, `test_confidentialite_ner.py` (mis à jour).
+
+## ✅ 44. Refus en masse des demandes d'ajout au référentiel (23/10/2026)
+
+- **Route** `POST admin/demandes-ajout/refuser-en-masse/` : `IsAdminRole` (403 pour un candidat ou un recruteur, 401 sans session, vérifié sur la vraie route), 100 demandes au plus par appel, identifiants validés (entiers, dédoublonnés), motif obligatoire contrôlé **avant** toute écriture.
+- **Aucune suppression** : « supprimer » en masse = refuser. Chaque demande suit le chemin du refus unitaire (transition vérifiée, motif conservé et envoyé aux demandeurs, **une trace d'audit par demande**, réexamen possible).
+- **Garde-fous d'interface** : la fenêtre liste les demandes concernées avant validation, la sélection est vidée dès que la liste change, seules les demandes encore refusables sont cochables.
+- Non fait volontairement : l'**acceptation** en masse (elle crée des entrées officielles et exige un parent par demande pour les métiers, diplômes et spécialités).
+- Tests : `test_demandes_ajout_refus_masse.py`.

@@ -106,7 +106,9 @@ class EquipeActionLog(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-date']
+        # `-id` départage deux actions enregistrées dans la même fraction de seconde (même `date`, surtout sous
+        # Windows dont l'horloge a ~15 ms de grain) : sans lui, l'ordre du journal est imprévisible.
+        ordering = ['-date', '-id']
 
     def __str__(self):
         return f"{self.membre} | {self.action} | {self.date:%Y-%m-%d %H:%M}"

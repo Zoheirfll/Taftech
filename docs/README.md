@@ -28,6 +28,7 @@ Point d'entrée : [../CLAUDE.md](../CLAUDE.md) (règles de travail, courtes). To
 | Quelles commandes taper ? | [exploitation/commandes.md](exploitation/commandes.md) |
 | Workflow git, état des tests, tâches reportées | [exploitation/git-tests.md](exploitation/git-tests.md) |
 | Variables `.env` prod, crons, checklist | [exploitation/deploiement.md](exploitation/deploiement.md) |
+| Quoi décider le jour du déploiement (workers, mémoire, cache partagé, capacité Groq) | [exploitation/decisions-au-deploiement.md](exploitation/decisions-au-deploiement.md) |
 | Qu'est-ce qui reste à faire avant et après la mise en ligne ? | [reste-a-faire-2026-10-18.md](reste-a-faire-2026-10-18.md) |
 
 ## Je veux toucher à une zone précise (documentation par chantier)

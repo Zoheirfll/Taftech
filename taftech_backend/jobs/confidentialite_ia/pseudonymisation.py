@@ -7,7 +7,9 @@ from django.conf import settings
 
 from .audit import noter
 from .modeles import JETONS, Detection, ResultatNettoyage
-from .patterns import MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SECTION, motif_wilayas
+from .patterns import (
+    MAX_LIGNES_REFERENCES, MOTIFS, TITRE_REFERENCES, TITRE_SECTION, motif_wilayas, trouver_communes,
+)
 
 JETON_REFERENCES = "[RÉFÉRENCES SUPPRIMÉES]"
 LONGUEUR_MIN_NOM = 3
@@ -58,6 +60,13 @@ def detecter_lieux_entete(texte: str) -> list[Detection]:
     localement pour le profil (`coordonnees.deviner_wilaya`) : la masquer ne fait rien perdre.
     Les communes ne figurent dans aucune liste du projet : elles restent à la reconnaissance automatique."""
     return [Detection(m.start(), m.end(), "LIEU") for m in motif_wilayas().finditer(texte[:ZONE_ENTETE_LIEUX])]
+
+
+def detecter_communes(texte: str) -> list[Detection]:
+    """Communes et wilayas citées n'importe où dans le CV (expériences, formations, adresse), par la liste
+    du projet (`patterns.motif_communes`). Le lieu de résidence est extrait localement pour le profil
+    (`coordonnees`) : le masquer ici ne fait rien perdre."""
+    return [Detection(debut, fin, "LIEU") for debut, fin in trouver_communes(texte)]
 
 
 def detecter_noms_connus(texte: str, noms) -> list[Detection]:
@@ -117,6 +126,7 @@ def nettoyer_texte(texte, *, avec_ner=None, noms_connus=()) -> ResultatNettoyage
     # pour le texte d'origine, sur lequel le remplacement s'applique.
     normalise = normaliser_chiffres(texte)
     detections = detecter_motifs(normalise) + detecter_noms_connus(texte, noms_connus) + detecter_lieux_entete(texte)
+    detections += detecter_communes(texte)
     if avec_ner:
         from .ner import entites_ner
         detections += entites_ner(texte)

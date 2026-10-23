@@ -13,12 +13,13 @@ class NerTest(SimpleTestCase):
         self.assertNotIn("Dupont", r.texte)
         self.assertIn("[NOM]", r.texte)
 
-    def test_lieu_masque_dans_l_entete_seulement(self):
+    def test_lieu_masque_dans_l_entete_et_dans_le_corps(self):
+        # Décision du 23/10/2026 : les villes des expériences sont masquées comme l'adresse (fichier de communes).
         entete = "Jean Dupont\nOran, Algérie\n"
         corps = "x " * 400 + "Mission réalisée à Alger pour un client."
         r = nettoyer_texte(entete + corps)
         self.assertNotIn("Oran", r.texte)
-        self.assertIn("Alger", r.texte)  # hors en-tête : conservé (utile à l'analyse)
+        self.assertNotIn("Alger", r.texte)
 
     def test_noms_connus_masques_sans_modele(self):
         r = nettoyer_texte("Karim BENALI, ingénieur", avec_ner=False, noms_connus=("Karim", "Benali"))
@@ -44,11 +45,11 @@ class LieuxEnteteTest(SimpleTestCase):
         r = nettoyer_texte(texte, avec_ner=False)
         self.assertNotIn("ORAN", r.texte)
         self.assertIn("[LIEU]", r.texte)
-        self.assertEqual(r.categories.get("LIEU"), 1)
+        self.assertEqual(r.categories.get("LIEU"), 2)  # la commune (El Kerma) et la wilaya (Oran)
 
-    def test_wilaya_hors_entete_conservee(self):
+    def test_wilaya_hors_entete_masquee(self):
         corps = "x " * 400 + "Mission réalisée à Oran pour un client."
-        self.assertIn("Oran", nettoyer_texte(corps, avec_ner=False).texte)
+        self.assertNotIn("Oran", nettoyer_texte(corps, avec_ner=False).texte)
 
     def test_un_mot_qui_contient_un_nom_de_wilaya_n_est_pas_masque(self):
         self.assertIn("Algérie", nettoyer_texte("Profil basé en Algérie", avec_ner=False).texte)
@@ -125,7 +126,9 @@ class NerFauxPositifsCvIndustrielTest(SimpleTestCase):
 
     def test_commune_suivie_de_sa_wilaya_n_est_pas_un_nom(self):
         r = nettoyer_texte("Profil\n" + "x " * 400 + "\n" + self.EXTRAIT)  # hors de l'en-tête, comme un vrai CV
-        self.assertIn("Algérienne | Hassi Ameur - Oran", r.texte)
+        # « Oran » est masqué (fichier de communes) ; « Hassi Ameur » n'y figure pas, il reste lisible et n'est
+        # toujours pas pris pour un nom, la barre verticale est conservée.
+        self.assertIn("Algérienne | Hassi Ameur - [LIEU]", r.texte)
         self.assertNotIn("NOM", r.categories)
 
     def test_ponctuation_de_bordure_jamais_incluse_dans_un_nom(self):

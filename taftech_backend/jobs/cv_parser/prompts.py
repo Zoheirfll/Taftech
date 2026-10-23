@@ -52,7 +52,7 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
 - langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
 - linkedin : URL complète du profil LinkedIn si présente. Sinon null.
 - github : URL complète du profil GitHub si présente. Sinon null.
-- bio : résumé percutant et professionnel du profil en 2 phrases maximum basé sur ses expériences. Sinon null.
+- bio : TOUJOURS rédiger un résumé professionnel du profil en 2 phrases maximum, à la troisième personne implicite (sans « je » inventé), basé sur ses expériences ou, à défaut (étudiant, jeune diplômé, stagiaire), sur sa formation et ses compétences. N'invente aucun fait absent du CV. null SEULEMENT si le CV ne contient quasiment aucune information exploitable.
 - wilaya : le nom de la wilaya/ville algérienne de résidence du candidat, tel qu'écrit dans le CV (ex: "Oran", "Alger"). Si non mentionnée : null.
 - adresse : l'adresse postale complète du candidat si explicitement écrite dans le CV (rue, quartier, ville — ex: "Cité 100 Logements, Bt 12, El Kerma, Oran"), telle qu'écrite. Ne recopie jamais juste la wilaya seule ici (déjà capturée par le champ wilaya). Si absente : null.
 - diplome : le libellé exact du diplôme le PLUS ÉLEVÉ obtenu par le candidat, tel qu'écrit dans le CV (ex: "Master 2 en Informatique", "Licence"). Si non déductible : null.

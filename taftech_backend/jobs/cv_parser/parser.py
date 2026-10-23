@@ -12,6 +12,7 @@ from .sections import extraire_competences_par_ligne
 from ..confidentialite_ia import ModeleNerIndisponible, extraire_coordonnees, nettoyer_texte
 from .dates_fin import completer_annee_partagee, completer_dates_fin
 from .langues import normaliser_langues
+from .presentation import bio_de_presentation
 from .entreprise import completer_entreprise
 from .jetons import restaurer_jetons
 
@@ -311,7 +312,8 @@ def parse_cv(file_path, file_name, noms_connus=()):
         "langues": normaliser_langues(ai_data.get("langues")),
         "linkedin": ai_data.get("linkedin"),
         "github": ai_data.get("github"),
-        "bio": ai_data.get("bio"),
+        # L'IA rédige la bio mais la rend parfois nulle : repli sur le paragraphe de présentation du CV.
+        "bio": ai_data.get("bio") or bio_de_presentation(text),
         "experiences": ai_data.get("experiences") or [],
         "formations": ai_data.get("formations") or [],
         "parsing_method": "ia",

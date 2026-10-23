@@ -12,6 +12,10 @@ export const MAX_EXCLUSIONS = 2;
 
 const memeId = (a, b) => String(a) === String(b);
 
+/** Clé de comparaison d'un libellé : sans casse, sans accents, espaces normalisés. */
+const cleLibelle = (libelle) =>
+  String(libelle).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
 /** Phrase de la partie « spécialités » : domaines entiers, « sauf », ou spécialités citées (plafonnées). */
 const partieFormation = (specialites) => {
   const groupes = new Map();
@@ -26,19 +30,29 @@ const partieFormation = (specialites) => {
 
   const domaines = [];
   const citees = [];
+  const couvertes = new Set();
   groupes.forEach((choisies) => {
     const { domaine_libelle: libelle, domaine_total: total, domaine_non_retenues: manquantes = [] } = choisies[0];
     if (total && choisies.length >= total) {
       domaines.push(libelle);
+      choisies.forEach((s) => couvertes.add(cleLibelle(s.libelle)));
     } else if (total && manquantes.length > 0 && manquantes.length <= MAX_EXCLUSIONS
       && manquantes.length < choisies.length && manquantes.length === total - choisies.length) {
       domaines.push(`${libelle} (sauf ${joindre(manquantes, "et")})`);
+      choisies.forEach((s) => couvertes.add(cleLibelle(s.libelle)));
     } else {
       citees.push(...choisies.map((s) => s.libelle));
     }
   });
 
-  const toutes = [...citees, ...isolees];
+  // Le référentiel range parfois une même spécialité dans plusieurs domaines : on ne l'écrit qu'une fois,
+  // et jamais si un domaine cité entièrement la contient déjà.
+  const toutes = [...citees, ...isolees].filter((libelle) => {
+    const cle = cleLibelle(libelle);
+    if (couvertes.has(cle)) return false;
+    couvertes.add(cle);
+    return true;
+  });
   const reste = toutes.length - MAX_SPECIALITES_CITEES;
   const visibles = reste > 0
     ? [...toutes.slice(0, MAX_SPECIALITES_CITEES), `${reste} autre${reste > 1 ? "s" : ""}`]

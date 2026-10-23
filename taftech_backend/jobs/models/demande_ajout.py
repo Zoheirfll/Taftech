@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class DemandeAjout(models.Model):
@@ -94,3 +95,22 @@ class DemandeAjout(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} : {self.libelle}"
+
+
+class ArriveeDemandeur(models.Model):
+    """Qui a rejoint une demande d'ajout, et quand (23/10/2026). Une demande répétée ne crée **jamais** une
+    nouvelle demande ni une seconde ligne pour le même compte : une ligne par (demande, compte), la date est
+    celle de la première fois. `DemandeAjout.demandeurs` reste la source des notifications et des vérifications
+    de droit ; cette table ne sert qu'à l'historique affiché à l'admin."""
+    demande = models.ForeignKey(DemandeAjout, on_delete=models.CASCADE, related_name='arrivees')
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='arrivees_demandes_ajout')
+    date_demande = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['date_demande', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['demande', 'utilisateur'], name='arrivee_demandeur_unique'),
+        ]
+
+    def __str__(self):
+        return f"{self.utilisateur_id} → demande {self.demande_id} ({self.date_demande:%d/%m/%Y})"

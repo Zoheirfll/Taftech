@@ -10,6 +10,6 @@ from .abonnements import (DemandeActivationPremium, Palier, AbonnementEntreprise
 from .ia import (AIConfig, UtilisationIA, ParsingCV, CorrectionParsing, QuotaIAOverride)
 from .cms import (PageStatique, SiteAnnonce, BanniereAccueil, ArticleCategorie, Article, FaqItem)
 from .proposition_metier import PropositionMetier
-from .demande_ajout import DemandeAjout
+from .demande_ajout import ArriveeDemandeur, DemandeAjout
 from .rendezvous import (ConfigRendezVous, DisponibiliteRecurrente, JourBloque, RendezVous)
 from .cvtheque import (InvitationCVTheque, RechercheSauvegardee)

@@ -216,6 +216,44 @@ class AdminExplorateurMetierAPIView(APIView):
         })
 
 
+RECHERCHE_LIMITE = 30
+RECHERCHE_MIN_CARACTERES = 2
+RECHERCHE_APPELLATIONS_PAR_METIER = 3
+
+
+class AdminExplorateurRechercheAPIView(APIView):
+    """Recherche directe d'un métier, par son libellé OU par l'une de ses appellations (lecture seule).
+    Chaque mot saisi doit figurer dans `cle_recherche` (sans accent ni casse) ; une appellation qui a permis
+    de trouver le métier est renvoyée pour que l'admin comprenne pourquoi il sort (« Chef de chantier » →
+    métier « Conducteur de travaux »)."""
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        terme = _terme(request)
+        if len(terme) < RECHERCHE_MIN_CARACTERES:
+            return Response({'resultats': []})
+        trouves = {}
+
+        def entree(metier):
+            return trouves.setdefault(metier.id, {
+                'id': metier.id, 'libelle': metier.libelle, 'appellations': [],
+                'groupe': _libelle_groupe(metier.groupe_principal) if metier.groupe_principal else '—',
+            })
+
+        for metier in _filtrer_cle(_metiers_actifs(), terme).select_related('groupe_principal').order_by('libelle')[:RECHERCHE_LIMITE]:
+            entree(metier)
+        appellations = _filtrer_cle(
+            Appellation.objects.filter(actif=True, metier__in=_metiers_actifs()), terme,
+        ).select_related('metier', 'metier__groupe_principal').order_by('libelle')[:RECHERCHE_LIMITE * 3]
+        for appellation in appellations:
+            ligne = entree(appellation.metier)
+            if (appellation.libelle != appellation.metier.libelle
+                    and len(ligne['appellations']) < RECHERCHE_APPELLATIONS_PAR_METIER):
+                ligne['appellations'].append(appellation.libelle)
+        resultats = sorted(trouves.values(), key=lambda r: normaliser_recherche(r['libelle']))
+        return Response({'resultats': resultats[:RECHERCHE_LIMITE]})
+
+
 def _elements_metiers(request, qs):
     qs = _filtrer_cle(qs, _terme(request)).select_related('groupe_principal').order_by('libelle')
     meta, debut, fin = _fenetre(request, qs.count())

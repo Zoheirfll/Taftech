@@ -7,7 +7,7 @@ from datetime import timedelta
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from ..models import DemandeAjout, Notification
+from ..models import ArriveeDemandeur, DemandeAjout, Notification
 from ..referentiel_utils import normaliser_recherche
 from .adaptateurs import adaptateur_pour
 from .formations import refuser_formations_liees
@@ -23,6 +23,13 @@ def _origine(utilisateur):
     if getattr(utilisateur, 'role', None) == 'CANDIDAT':
         return DemandeAjout.ORIGINE_CANDIDAT
     return DemandeAjout.ORIGINE_RECRUTEUR
+
+
+def enregistrer_demandeur(demande, utilisateur):
+    """Ajoute `utilisateur` aux demandeurs de `demande` et date son arrivée. Idempotent : un même compte ne
+    crée jamais une seconde ligne, la date conservée est celle de sa première demande."""
+    demande.demandeurs.add(utilisateur)
+    ArriveeDemandeur.objects.get_or_create(demande=demande, utilisateur=utilisateur)
 
 
 def _verifier_quota_explicite(utilisateur):
@@ -73,7 +80,7 @@ def creer_demande(utilisateur, type_demande, libelle, contexte='', explicite=Tru
         if not ouverte.demandeurs.filter(pk=utilisateur.pk).exists():
             if explicite:
                 _verifier_quota_explicite(utilisateur)
-            ouverte.demandeurs.add(utilisateur)
+            enregistrer_demandeur(ouverte, utilisateur)
         if explicite and not ouverte.explicite:
             # Une demande créée par simple saisie devient explicite dès qu'une personne la réclame : elle sera notifiée.
             ouverte.explicite = True
@@ -96,7 +103,7 @@ def creer_demande(utilisateur, type_demande, libelle, contexte='', explicite=Tru
                 type=type_demande, libelle=libelle, cle_recherche=cle, contexte=contexte, explicite=explicite,
                 origine=_origine(utilisateur), premier_demandeur=utilisateur,
             )
-            demande.demandeurs.add(utilisateur)
+            enregistrer_demandeur(demande, utilisateur)
         return demande, False
     except IntegrityError:
         # Requête simultanée : une demande ouverte vient d'être créée pour ce libellé.

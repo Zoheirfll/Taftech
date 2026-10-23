@@ -57,6 +57,7 @@ from .views import (
     AdminRelationsSimilaireAPIView, AdminFormationsAVerifierAPIView,
     AdminExplorateurArbreAPIView, AdminExplorateurGroupeAPIView, AdminExplorateurMetierAPIView,
     AdminExplorateurAnomaliesAPIView, AdminExplorateurFormationsAPIView, AdminExplorateurSpecialiteAPIView,
+    AdminExplorateurRechercheAPIView,
     EnregistrerCorrectionsParsingAPIView, AdminQualiteIAParserAPIView, AdminQualiteIACorrectionsAPIView,
     AdminQualiteIACreerAppellationAPIView, AdminQualiteIAMatchingAPIView,
     AdminRelationsSpecialiteAPIView,
@@ -95,6 +96,7 @@ from .views import (
     AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,
     CreerDemandeAjoutAPIView, AdminDemandesAjoutAPIView, AdminDemandeProchesAPIView, AdminDemandeParentsAPIView,
     AdminDemandeAccepterAPIView, AdminDemandeRattacherAPIView, AdminDemandeRefuserAPIView,
+    AdminDemandesRefuserEnMasseAPIView,
 
     # Nouveau tableau de bord candidat (specs/important-features)
     ScoreProfilAPIView, MetiersAccessiblesAPIView, ConseilsPersonnalisesIAAPIView, CompetenceCandidatAPIView,
@@ -123,6 +125,7 @@ urlpatterns = [
     path('demandes-ajout/', CreerDemandeAjoutAPIView.as_view(), name='demande-ajout-creer'),
     path('admin/demandes-ajout/', AdminDemandesAjoutAPIView.as_view(), name='admin-demandes-ajout'),
     path('admin/demandes-ajout/parents/', AdminDemandeParentsAPIView.as_view(), name='admin-demandes-ajout-parents'),
+    path('admin/demandes-ajout/refuser-en-masse/', AdminDemandesRefuserEnMasseAPIView.as_view(), name='admin-demandes-ajout-refuser-en-masse'),
     path('admin/demandes-ajout/<int:pk>/proches/', AdminDemandeProchesAPIView.as_view(), name='admin-demande-ajout-proches'),
     path('admin/demandes-ajout/<int:pk>/accepter/', AdminDemandeAccepterAPIView.as_view(), name='admin-demande-ajout-accepter'),
     path('admin/demandes-ajout/<int:pk>/rattacher/', AdminDemandeRattacherAPIView.as_view(), name='admin-demande-ajout-rattacher'),
@@ -246,6 +249,7 @@ urlpatterns = [
     path('admin/referentiel-v2/explorateur/arbre/', AdminExplorateurArbreAPIView.as_view(), name='admin-explorateur-arbre'),
     path('admin/referentiel-v2/explorateur/groupe/<int:groupe_id>/', AdminExplorateurGroupeAPIView.as_view(), name='admin-explorateur-groupe'),
     path('admin/referentiel-v2/explorateur/metier/<int:metier_id>/', AdminExplorateurMetierAPIView.as_view(), name='admin-explorateur-metier'),
+    path('admin/referentiel-v2/explorateur/recherche/', AdminExplorateurRechercheAPIView.as_view(), name='admin-explorateur-recherche'),
     path('admin/referentiel-v2/explorateur/anomalies/<str:code>/', AdminExplorateurAnomaliesAPIView.as_view(), name='admin-explorateur-anomalies'),
     path('admin/referentiel-v2/explorateur/specialite/<int:specialite_id>/', AdminExplorateurSpecialiteAPIView.as_view(), name='admin-explorateur-specialite'),
     path('admin/referentiel-v2/explorateur/formations/', AdminExplorateurFormationsAPIView.as_view(), name='admin-explorateur-formations'),

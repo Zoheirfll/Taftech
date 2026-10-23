@@ -371,6 +371,16 @@ export const adminService = {
       throw err;
     }
   },
+  // Refus de plusieurs demandes avec le même motif : `{ refusees, ignorees: [{ id, libelle, erreur }], introuvables }`.
+  refuserDemandesEnMasse: async (ids, motif) => {
+    try {
+      const response = await api.post("jobs/admin/demandes-ajout/refuser-en-masse/", { ids, motif });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_REFUSER_DEMANDES_EN_MASSE", err);
+      throw err;
+    }
+  },
 
   getDemandesPremium: async () => {
     try {
@@ -467,6 +477,17 @@ export const adminService = {
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_QUALITE_IA_MATCHING", err);
+      throw err;
+    }
+  },
+
+  // Recherche directe d'un métier par son libellé ou l'une de ses appellations (Explorateur)
+  getExplorateurRecherche: async (terme) => {
+    try {
+      const response = await api.get("jobs/admin/referentiel-v2/explorateur/recherche/", { params: { search: terme } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_EXPLORATEUR_RECHERCHE", err);
       throw err;
     }
   },

@@ -10,6 +10,8 @@ import SkeletonTableRows from "../../../Components/SkeletonTableRows";
 import { AdminVide } from "../../../Components/AdminEtat";
 import BoutonExportExcel from "../../../Components/BoutonExportExcel";
 import DecisionDemandeModal from "./DecisionDemandeModal";
+import DetailDemandeModal from "./DetailDemandeModal";
+import RefusMasseModal from "./RefusMasseModal";
 import {
   ORIGINES_DEMANDE, PASTILLES_DEMANDE, STATUTS_DEMANDE, TYPES_DEMANDE, formatDateDemande,
 } from "./demandesAjoutUi";
@@ -27,6 +29,10 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [decision, setDecision] = useState(null);
+  const [detail, setDetail] = useState(null);
+  // Sélection pour le refus en masse : seulement des demandes encore refusables, vidée dès que la liste change.
+  const [selection, setSelection] = useState(() => new Set());
+  const [refusMasse, setRefusMasse] = useState(false);
 
   const vocabulaire = TYPES_DEMANDE[type] || TYPES_DEMANDE.DIPLOME;
 
@@ -55,6 +61,7 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
 
   useEffect(() => {
     charger();
+    setSelection(new Set());
   }, [charger]);
 
   const choisirPastille = (code) => {
@@ -68,6 +75,15 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
   };
 
   const peutDecider = (item, transition) => item.transitions_possibles?.includes(transition);
+  const refusables = items.filter((item) => peutDecider(item, "REFUSEE"));
+  const toutCoche = refusables.length > 0 && refusables.every((item) => selection.has(item.id));
+  const demandesChoisies = refusables.filter((item) => selection.has(item.id));
+  const basculerSelection = (id) => setSelection((prev) => {
+    const suivante = new Set(prev);
+    if (suivante.has(id)) suivante.delete(id); else suivante.add(id);
+    return suivante;
+  });
+  const basculerTout = () => setSelection(toutCoche ? new Set() : new Set(refusables.map((item) => item.id)));
   const bouton = (classe) => `p-2 ${classe} rounded-lg transition-colors ${tw.focusRing}`;
 
   return (
@@ -109,11 +125,32 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
         />
       </div>
 
+      {demandesChoisies.length > 0 && (
+        <div role="status" className={`flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg border ${tw.borderSubtle} ${tw.surfaceSubtle}`}>
+          <span className={`text-sm font-medium ${tw.textStrong}`}>{demandesChoisies.length} sélectionnée(s)</span>
+          <button type="button" onClick={() => setRefusMasse(true)} className={`px-4 py-2 text-xs font-semibold rounded-lg ${tw.buttonDangerSolid} ${tw.focusRing}`}>
+            Refuser la sélection
+          </button>
+          <button type="button" onClick={() => setSelection(new Set())} className={`text-xs font-semibold ${tw.linkPrimary} ${tw.focusRing} rounded`}>
+            Tout désélectionner
+          </button>
+        </div>
+      )}
+
       <div className={`${tw.card} overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-190">
             <thead className={`${tw.surfaceMuted} border-b ${tw.borderSubtle}`}>
               <tr className={`text-[10px] ${tw.textMuted} uppercase tracking-wider font-semibold`}>
+                <th className="pl-5 py-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={toutCoche}
+                    disabled={refusables.length === 0}
+                    onChange={basculerTout}
+                    aria-label="Sélectionner toutes les demandes refusables de la page"
+                  />
+                </th>
                 <th className="px-5 py-3">Demande</th>
                 <th className="px-5 py-3">Demandée par</th>
                 <th className="px-5 py-3">Utilisée par</th>
@@ -123,18 +160,34 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <SkeletonTableRows columns={5} />
+                <SkeletonTableRows columns={6} />
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <AdminVide icon={Inbox} titre={vocabulaire.vide} />
                   </td>
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
+                  <tr key={item.id} className={`${tw.rowHover} cursor-pointer`} onClick={() => setDetail(item)}>
+                    <td className="pl-5 py-3 w-8" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selection.has(item.id)}
+                        disabled={!peutDecider(item, "REFUSEE")}
+                        onChange={() => basculerSelection(item.id)}
+                        aria-label={`Sélectionner ${item.libelle}`}
+                      />
+                    </td>
                     <td className="px-5 py-3">
-                      <p className={`text-sm font-medium ${tw.textStrong}`}>{item.libelle}</p>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDetail(item); }}
+                        aria-label={`Voir le détail de ${item.libelle}`}
+                        className={`text-left text-sm font-medium ${tw.textStrong} ${tw.focusRing} rounded`}
+                      >
+                        {item.libelle}
+                      </button>
                       {item.contexte && <p className={`text-xs ${tw.textMuted} max-w-sm`}>{item.contexte}</p>}
                       {item.entree_libelle && (
                         <p className={`text-[11px] ${tw.textMuted}`}>
@@ -149,7 +202,12 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
                       <p className={`text-xs ${tw.textMuted700}`}>
                         {ORIGINES_DEMANDE[item.origine] || item.origine} · {item.nb_demandeurs} demandeur(s)
                       </p>
-                      <p className={`text-[11px] ${tw.textMuted}`}>
+                      <p
+                        className={`text-[11px] ${tw.textMuted}`}
+                        title={(item.demandeurs_apercu || [])
+                          .map((d) => `${d.nom}${d.date ? ` — ${formatDateDemande(d.date)}` : ""}`)
+                          .join("\n")}
+                      >
                         {item.demandeurs_apercu?.[0]?.nom || "compte supprimé"}
                         {item.nb_demandeurs > 1 ? ` et ${item.nb_demandeurs - 1} autre(s)` : ""} · {formatDateDemande(item.date_creation)}
                       </p>
@@ -160,7 +218,7 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
                         {STATUTS_DEMANDE[item.statut]?.libelle || item.statut}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {peutDecider(item, "ACCEPTEE") && (
                           <button type="button" onClick={() => setDecision({ demande: item, mode: "ACCEPTER" })} aria-label={`Accepter ${item.libelle}`} title="Accepter" className={bouton(tw.iconButtonHoverPrimary)}>
@@ -187,6 +245,16 @@ const DemandesAjoutPanel = ({ type, onChange }) => {
         </div>
         <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} onChange={setPage} disabled={loading} />
       </div>
+
+      {detail && <DetailDemandeModal demande={detail} onClose={() => setDetail(null)} />}
+
+      {refusMasse && (
+        <RefusMasseModal
+          demandes={demandesChoisies}
+          onClose={() => setRefusMasse(false)}
+          onRefusees={apresDecision}
+        />
+      )}
 
       {decision && (
         <DecisionDemandeModal

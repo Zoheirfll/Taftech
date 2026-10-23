@@ -3,7 +3,7 @@ from rest_framework import serializers
 from ..demandes_ajout import DemandeRefusee, adaptateur_pour
 from ..models import DemandeAjout
 
-MAX_DEMANDEURS_AFFICHES = 5
+MAX_DEMANDEURS_AFFICHES = 50  # la fenêtre de détail de l'admin liste tous les demandeurs (nombre réel : `nb_demandeurs`)
 
 
 class DemandeAjoutAdminSerializer(serializers.ModelSerializer):
@@ -31,10 +31,15 @@ class DemandeAjoutAdminSerializer(serializers.ModelSerializer):
         return len(obj.demandeurs.all())
 
     def get_demandeurs_apercu(self, obj):
+        # Date d'arrivée de chaque demandeur (table `ArriveeDemandeur`) ; absente pour une ligne plus ancienne.
+        dates = {a.utilisateur_id: a.date_demande for a in obj.arrivees.all()}
         apercu = []
         for utilisateur in list(obj.demandeurs.all())[:MAX_DEMANDEURS_AFFICHES]:
             nom = f"{utilisateur.first_name} {utilisateur.last_name}".strip() or utilisateur.email
-            apercu.append({'nom': nom, 'email': utilisateur.email, 'role': utilisateur.role})
+            apercu.append({
+                'nom': nom, 'email': utilisateur.email, 'role': utilisateur.role,
+                'date': dates.get(utilisateur.pk),
+            })
         return apercu
 
     def get_nb_formations(self, obj):

@@ -177,6 +177,7 @@ from .propositions_metier import (
 from .demandes_ajout import (
     CreerDemandeAjoutAPIView, AdminDemandesAjoutAPIView, AdminDemandeProchesAPIView, AdminDemandeParentsAPIView,
     AdminDemandeAccepterAPIView, AdminDemandeRattacherAPIView, AdminDemandeRefuserAPIView,
+    AdminDemandesRefuserEnMasseAPIView,
 )
 from .candidat_dashboard import (
     ScoreProfilAPIView,
@@ -202,6 +203,7 @@ from .referentiel_explorateur import (
     AdminExplorateurArbreAPIView,
     AdminExplorateurGroupeAPIView,
     AdminExplorateurMetierAPIView,
+    AdminExplorateurRechercheAPIView,
     AdminExplorateurAnomaliesAPIView,
     AdminExplorateurFormationsAPIView,
     AdminExplorateurSpecialiteAPIView,

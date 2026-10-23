@@ -299,6 +299,26 @@ const PanneauMetiers = () => {
 
   const voirTous = useCallback((g) => ouvrir({ type: "metiers", groupe: g, titre: `${g.type_libelle} · ${g.libelle}` }), [ouvrir]);
 
+  // Recherche directe d'un métier (libellé ou appellation), avec délai : pas d'appel à chaque frappe.
+  const [metiersTrouves, setMetiersTrouves] = useState([]);
+  useEffect(() => {
+    const saisie = recherche.trim();
+    if (saisie.length < 2) {
+      setMetiersTrouves([]);
+      return undefined;
+    }
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      try {
+        const reponse = await adminService.getExplorateurRecherche(saisie);
+        if (!annule) setMetiersTrouves(reponse.resultats || []);
+      } catch {
+        if (!annule) setMetiersTrouves([]);
+      }
+    }, DELAI_RECHERCHE_MS);
+    return () => { annule = true; clearTimeout(minuteur); };
+  }, [recherche]);
+
   if (erreur) return <AdminErreurChargement onRetry={charger} />;
   if (!data) return <p className={`text-sm ${tw.textMuted}`}>Chargement…</p>;
 
@@ -322,14 +342,43 @@ const PanneauMetiers = () => {
         <div className={`${tw.card} p-3`}>
           <div className="relative mb-3">
             <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
-            <input value={recherche} onChange={(e) => setRecherche(e.target.value)} className={`w-full pl-8 pr-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Rechercher un secteur ou un domaine" />
+            <input value={recherche} onChange={(e) => setRecherche(e.target.value)} className={`w-full pl-8 pr-3 py-2 text-sm rounded-lg ${tw.inputColorsMuted}`} aria-label="Rechercher un métier, une appellation, un secteur ou un domaine" />
           </div>
           <p className={`px-1 pb-2 text-[11px] ${tw.textMuted}`}>Cliquez le nom pour voir les métiers directs, le chiffre pour voir tous les métiers (sous-groupes compris).</p>
           <ul className="max-h-[560px] overflow-y-auto">
             {terme ? (
-              trouves.length === 0 ? <p className={`p-3 text-xs ${tw.textMuted}`}>Aucun groupe ne correspond.</p> : trouves.map((g) => (
-                <NoeudArbre key={g.id} groupe={g} enfantsDe={{}} ouverts={ouverts} selectionId={groupe?.id} onBasculer={basculer} onChoisir={setGroupe} onVoirTous={voirTous} profondeur={0} />
-              ))
+              <>
+                {metiersTrouves.length > 0 && (
+                  <li className="pb-2">
+                    <p className={`px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider ${tw.textMuted}`}>Métiers et appellations</p>
+                    <ul>
+                      {metiersTrouves.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            type="button"
+                            onClick={() => ouvrir({ type: "metier", id: m.id, titre: m.libelle })}
+                            className={`w-full text-left px-3 py-2 rounded-lg ${tw.rowHover} ${tw.focusRing}`}
+                          >
+                            <span className={`block text-sm font-medium ${tw.textStrong}`}>{m.libelle}</span>
+                            {m.appellations.length > 0 && (
+                              <span className={`block text-[11px] ${tw.textMuted}`}>Appellation : {m.appellations.join(", ")}</span>
+                            )}
+                            <span className={`block text-[11px] ${tw.textMuted}`}>{m.groupe}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                )}
+                {trouves.length > 0 && (
+                  <li><p className={`px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider ${tw.textMuted}`}>Secteurs et domaines</p></li>
+                )}
+                {trouves.length === 0 && metiersTrouves.length === 0 ? (
+                  <p className={`p-3 text-xs ${tw.textMuted}`}>Aucun résultat.</p>
+                ) : trouves.map((g) => (
+                  <NoeudArbre key={g.id} groupe={g} enfantsDe={{}} ouverts={ouverts} selectionId={groupe?.id} onBasculer={basculer} onChoisir={setGroupe} onVoirTous={voirTous} profondeur={0} />
+                ))}
+              </>
             ) : racines.map((g) => (
               <NoeudArbre key={g.id} groupe={g} enfantsDe={enfantsDe} ouverts={ouverts} selectionId={groupe?.id} onBasculer={basculer} onChoisir={setGroupe} onVoirTous={voirTous} profondeur={0} />
             ))}

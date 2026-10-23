@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from ..demandes_ajout import (
     ADAPTATEURS, DemandeRefusee, accepter_demande, adaptateur_pour, creer_demande, rattacher_demande, refuser_demande,
 )
+from ..demandes_ajout.regles import nettoyer, valider_motif
 from ..models import DemandeAjout
 from ..permissions import IsAdminRole
 from ..serializers.demande_ajout import DemandeAjoutAdminSerializer
@@ -82,7 +83,7 @@ class AdminDemandesAjoutAPIView(APIView):
             compteurs[ligne['statut']] = ligne['n']
         compteurs['TOUTES'] = sum(compteurs.values())
         base = (
-            base.select_related('traite_par').prefetch_related('demandeurs')
+            base.select_related('traite_par').prefetch_related('demandeurs', 'arrivees')
             .annotate(
                 nb_formations_diplome=Count('formations_diplome', distinct=True),
                 nb_formations_specialite=Count('formations_specialite', distinct=True),
@@ -190,3 +191,43 @@ class AdminDemandeRefuserAPIView(_AdminDemandeBase):
             return Response({'error': str(erreur)}, status=400)
         _audit(request, 'DECISION_DEMANDE_AJOUT', _detail_audit(refusee, "refusée"))
         return Response(DemandeAjoutAdminSerializer(refusee).data)
+
+
+REFUS_MASSE_MAX = 100  # demandes refusées par appel
+
+
+class AdminDemandesRefuserEnMasseAPIView(APIView):
+    """POST : refuse plusieurs demandes d'un coup avec le même motif. Corps `{ids: [...], motif}`.
+
+    Chaque demande suit exactement le chemin du refus unitaire (transition vérifiée, motif conservé, notification
+    du demandeur, une trace d'audit par demande). Une demande qui ne peut plus être refusée (déjà décidée) est
+    signalée dans `ignorees` sans interrompre les autres. Refuser est réversible : une demande refusée peut
+    encore être acceptée ou rattachée."""
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        ids = request.data.get('ids')
+        if not isinstance(ids, list) or not ids:
+            return Response({'error': "Sélectionnez au moins une demande."}, status=400)
+        if len(ids) > REFUS_MASSE_MAX:
+            return Response({'error': f"Au plus {REFUS_MASSE_MAX} demandes à la fois."}, status=400)
+        try:
+            ids = list(dict.fromkeys(int(i) for i in ids))
+        except (TypeError, ValueError):
+            return Response({'error': "Identifiants de demandes invalides."}, status=400)
+        motif = request.data.get('motif')
+        try:
+            valider_motif(nettoyer(motif))  # avant de toucher à quoi que ce soit
+        except ValueError as erreur:
+            return Response({'error': str(erreur)}, status=400)
+
+        refusees, ignorees = 0, []
+        for demande in DemandeAjout.objects.filter(pk__in=ids).order_by('id'):
+            try:
+                refusee = refuser_demande(demande, request.user, motif)
+            except ValueError as erreur:
+                ignorees.append({'id': demande.id, 'libelle': demande.libelle, 'erreur': str(erreur)})
+                continue
+            _audit(request, 'DECISION_DEMANDE_AJOUT', _detail_audit(refusee, "refusée (en masse)"))
+            refusees += 1
+        return Response({'refusees': refusees, 'ignorees': ignorees, 'introuvables': len(ids) - refusees - len(ignorees)})

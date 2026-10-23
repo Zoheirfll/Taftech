@@ -87,6 +87,16 @@ Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de
 
 **À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.
 
+## 🟠 Groq saturé : le parser rend un résultat vide, qualité de l'extraction IA mesurée sur 12 CV seulement
+
+**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)).
+
+**Constat** : sur 50 CV du corpus Kaggle passés par `parse_cv`, **39 ont été refusés par le fournisseur** (`FournisseurIASature`, relancé à 45 s d'intervalle : encore 3 échecs de suite). Dans ces cas le parser **avale l'erreur et rend un résultat vide** (`parsing_method` absent, 0 expérience) : un candidat réel verrait un profil non rempli sans explication claire. La cause (limite de débit du plan gratuit, disjoncteur du projet resté ouvert) n'est **pas vérifiée**.
+
+**Mesuré sur les 12 CV traités** : remplissage des champs seulement (expériences : titre, entreprise, date de début 100 % ; formations : diplôme 100 %, établissement 90 %), **pas l'exactitude** (extractions non relues). Trop peu pour conclure.
+
+**À faire** : (1) vérifier la cause (en-têtes de limite Groq, durée du disjoncteur dans `ia_quota`) ; (2) décider du message affiché au candidat quand l'IA est indisponible ; (3) reprendre la mesure sur les 39 CV restants (`mesure_ia.py` : pause de 45 s, arrêt après 3 échecs) quand l'accès est rétabli ; (4) lier au plafond de dépense et au passage au compte payant (plan du 19/10).
+
 ## 🟡 CV en anglais : NER corrigé le 23/10/2026 (reste : noms d'un seul mot, faux positifs résiduels)
 
 **Corrigé** : modèles français + anglais réunis avec un filtre de forme (`ner.py`, `langue.py`), 338 → 201 détections sur 60 CV, noms de tiers et noms en majuscules masqués ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)). **Reste ouvert** : un nom d'un seul mot n'est plus masqué sur un CV anglais ; faux positifs résiduels (« Line Cook », « Word ») ; mémoire par worker du modèle anglais non mesurée ; aucun vrai nom en en-tête dans le corpus (rappel mesuré sur quelques cas fictifs seulement). Constat d'origine ci-dessous.

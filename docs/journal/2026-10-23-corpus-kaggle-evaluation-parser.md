@@ -48,6 +48,12 @@ Option choisie : **modèle anglais après détection de la langue** (`en_core_we
 - **Limites connues** : un nom d'**un seul mot** n'est plus masqué sur un CV anglais (le nom du compte reste couvert par `detecter_noms_connus`, un référent désigné par son seul prénom non) ; il reste des faux positifs (« Line Cook », « Word », « JD Edwards ») ; un CV anglais court (< 8 mots-outils) suit le chemin français.
 - Déploiement : `en_core_web_sm` ajouté à `requirements.txt` et à [deploiement.md](../exploitation/deploiement.md) ; **sans lui, tout CV anglais est refusé** (échec fermé). Mémoire par worker non mesurée.
 
+## Suite : NER complet, sections, mesure par l'IA
+
+- **NER sur les 2 484 CV** : 0 plantage, 1 CV lent, 47 « numéros » restants (identique à sans NER). La qualité des noms masqués n'a été analysée en détail que sur 60 CV.
+- **15 CV sans Expériences** : intitulés se terminant par « Experience » (« Teaching Experience »…) ; surtout, `find_sections` **écrasait** une section dont le titre revenait (deux « Education », « Teaching » puis « Corporate Experience ») : les premières expériences étaient perdues. Corrigé (`_ajouter`, 4 tests, commit `3e0f0c0`). Le 16ᵉ CV est réellement vide (1 page, aucune image, aucun texte).
+- **Mesure par l'IA** (script jetable, texte masqué comme en production, aucune écriture en base) : sur 50 CV tirés au hasard, **39 refusés par Groq** (`FournisseurIASature`) même relancés à 45 s. Seuls 12 CV mesurés : champs bien remplis, exactitude non relue. Voir [problemes-a-traiter.md](../problemes-a-traiter.md). Les 50 appels ont consommé des tokens du compte Groq du projet.
+
 ## Approches écartées
 
 - **Repérer les titres en majuscules seulement** : les CV du corpus ont des titres en casse normale, le tri ne remontait que des intitulés de poste. Remplacé par « lignes de 4 mots au plus, sans chiffre ».

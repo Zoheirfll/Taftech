@@ -30,7 +30,7 @@ Lecture seule (aucune écriture en base, aucun changement du parser). Le rapport
 
 Presque tous sont des **faux positifs de mon contrôle** (codes postaux `25305-0330`, numéros d'employeur américains `63-1419015`, années, identifiants). Quelques numéros nationaux étrangers **sans indicatif** (`01207673477`) ne se distinguent pas d'un identifiant : les masquer abîmerait des dates et des matricules. Le filet de `call_ai` reste le dernier rempart. Non vérifié ici : que le filet refuse bien ces cas ; à tester avec un CV réel de la diaspora.
 
-## CV en anglais : constat sur le NER (non corrigé, décision en attente)
+## CV en anglais : le NER (constat, puis correction)
 
 Remarque de l'utilisateur : beaucoup de candidats algériens ont un CV en anglais, donc ce corpus est pertinent et le NER doit être jugé sur l'anglais. Mesure (60 CV tirés au hasard, `entites_ner`, aucune modification) :
 
@@ -38,7 +38,15 @@ Remarque de l'utilisateur : beaucoup de candidats algériens ont un CV en anglai
 - **Noms rates** (5 CV fictifs) : `Karim Benali`, `Amine Boudiaf`, `Fatima Zohra Haddad` masqués ; **`SARAH JOHNSON` (majuscules, en-tête) ne l'est pas**. Le nom du candidat reste rattrapé par `detecter_noms_connus` (compte) ; les noms de tiers (référents, managers) non.
 - Le corpus n'a **pas de vrai nom en en-tête** (jeu anonymisé) : le rappel du NER sur de vrais noms anglais n'est mesuré que sur ces 5 cas fictifs.
 
-Options (détail dans [problemes-a-traiter.md](../problemes-a-traiter.md)) : modèle spaCy anglais après détection de langue (recommandé, nouvelle dépendance de déploiement), règles ciblées, ou pas de NER sur l'anglais.
+### Décision de l'utilisateur et correction
+
+Option choisie : **modèle anglais après détection de la langue** (`en_core_web_sm`, nouvelle dépendance). **La mesure a contredit la recommandation initiale** : le modèle anglais **seul** n'est pas meilleur (360 personnes détectées sur 60 CV contre 422 pour le français, rate `Amine Boudiaf`, coupe `Fatima Zohra Haddad`, déborde sur la ligne suivante : `Karim Benali\nSoftware Engineer\nOran` en un seul bloc). Retenu : **les deux modèles réunis** sur un CV détecté anglais, avec un filtre de forme.
+
+- `confidentialite_ia/langue.py` : langue par mots-outils (sans dépendance, déterministe) ; « en » seulement si ≥ 8 mots anglais et 1,5 × plus que de mots français ; le doute, l'arabe et les textes courts restent **français** (comportement historique).
+- `ner.py` : `_charger(langue)` (un modèle par langue, échec fermé si l'anglais manque) ; `_entites_anglais` : personnes du français + de l'anglais, fusionnées par `fusionner` (« Mohamed Lamine » + « Cherif »), gardées si ≥ 2 mots capitalisés **sur une seule ligne** et sans mot de métier ou de rubrique (« Project Manager », « Work History ») ; titres de politesse et mots d'organisation retirés en bordure ; lignes de 2 à 4 mots en majuscules passées en casse de titre avant analyse (« SARAH JOHNSON » ; même longueur, positions préservées) ; lieux d'en-tête par le modèle anglais, sans mot du gabarit (« Company Name, City, State »).
+- Mesure (60 mêmes CV) : **338 → 201 détections**, noms de tiers et noms en majuscules masqués ; 300 CV avec NER : 0 plantage. 111 tests ciblés OK (dont 9 nouveaux : 3 de langue et 6 de comportement, dont 5 rouges avec l'ancien comportement).
+- **Limites connues** : un nom d'**un seul mot** n'est plus masqué sur un CV anglais (le nom du compte reste couvert par `detecter_noms_connus`, un référent désigné par son seul prénom non) ; il reste des faux positifs (« Line Cook », « Word », « JD Edwards ») ; un CV anglais court (< 8 mots-outils) suit le chemin français.
+- Déploiement : `en_core_web_sm` ajouté à `requirements.txt` et à [deploiement.md](../exploitation/deploiement.md) ; **sans lui, tout CV anglais est refusé** (échec fermé). Mémoire par worker non mesurée.
 
 ## Approches écartées
 

@@ -87,7 +87,9 @@ Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de
 
 **À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.
 
-## 🟠 CV en anglais : le NER (français) fait de faux positifs et rate des noms en majuscules
+## 🟡 CV en anglais : NER corrigé le 23/10/2026 (reste : noms d'un seul mot, faux positifs résiduels)
+
+**Corrigé** : modèles français + anglais réunis avec un filtre de forme (`ner.py`, `langue.py`), 338 → 201 détections sur 60 CV, noms de tiers et noms en majuscules masqués ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)). **Reste ouvert** : un nom d'un seul mot n'est plus masqué sur un CV anglais ; faux positifs résiduels (« Line Cook », « Word ») ; mémoire par worker du modèle anglais non mesurée ; aucun vrai nom en en-tête dans le corpus (rappel mesuré sur quelques cas fictifs seulement). Constat d'origine ci-dessous.
 
 **Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)). **Beaucoup de candidats algériens ont un CV en anglais** (remarque de l'utilisateur) : ce n'est pas un cas marginal.
 

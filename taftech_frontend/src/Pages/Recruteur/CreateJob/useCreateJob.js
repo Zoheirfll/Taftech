@@ -10,6 +10,7 @@ import { recruteurService } from "../../../Services/recruteurService";
 import communesAlgerie from "../../../data/communes.json";
 import { reportError } from "../../../utils/errorReporter";
 import { grouperParFamille } from "../../../utils/familleFormation";
+import { estGroupe, membresDuGroupe, optionsNiveaux } from "../../../utils/groupesDiplomes";
 import { CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../../utils/exigencesCategories";
 import { bloqueLaFonctionIA } from "../../../utils/erreursIA";
 
@@ -72,7 +73,10 @@ export function useCreateJob() {
   const typesDiplomesFiltres = (nomenclatureFormation?.types_diplomes || []).filter((d) => !RE_AUTRE_PRECISER.test(d.libelle));
   const specialitesFiltrees = (nomenclatureFormation?.specialites || []).filter((s) => !RE_AUTRE_PRECISER.test(s.libelle));
   // Point 8 : listes présentées par famille (supérieur / formation professionnelle / thèmes).
-  const diplomesGroupes = grouperParFamille(typesDiplomesFiltres, nomenclatureFormation?.familles, (d) => ({ value: d.id, label: d.libelle }));
+  const diplomesGroupes = [
+    ...optionsNiveaux(typesDiplomesFiltres),
+    ...grouperParFamille(typesDiplomesFiltres, nomenclatureFormation?.familles, (d) => ({ value: d.id, label: d.libelle })),
+  ];
   const specialitesGroupes = grouperParFamille(specialitesFiltrees, nomenclatureFormation?.familles, (s) => ({ value: s.id, label: s.libelle }));
 
   // Suggestions compétences/spécialités du métier choisi (référentiel v2, MetierCompetence/
@@ -123,9 +127,14 @@ export function useCreateJob() {
 
   const ajouterDiplomeRequis = () => {
     if (!draftDiplomeId || !nomenclatureFormation) return;
-    if (diplomesRequis.some((d) => String(d.id) === String(draftDiplomeId))) return;
-    const libelle = typesDiplomesFiltres.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
-    setDiplomesRequis((prev) => [...prev, { id: draftDiplomeId, libelle }]);
+    // Un niveau (« Master ») enregistre tous ses types : le score compare les diplômes par identifiant.
+    const aAjouter = estGroupe(draftDiplomeId)
+      ? membresDuGroupe(draftDiplomeId, typesDiplomesFiltres)
+      : typesDiplomesFiltres.filter((t) => String(t.id) === String(draftDiplomeId));
+    setDiplomesRequis((prev) => [
+      ...prev,
+      ...aAjouter.filter((t) => !prev.some((d) => String(d.id) === String(t.id))).map((t) => ({ id: t.id, libelle: t.libelle, code: t.code })),
+    ]);
     setDraftDiplomeId("");
   };
   const retirerDiplomeRequis = (id) => setDiplomesRequis((prev) => prev.filter((d) => String(d.id) !== String(id)));
@@ -150,6 +159,13 @@ export function useCreateJob() {
     // pour ce métier).
     setSpecialitesRequises((prev) => (prev.some((s) => String(s.id) === String(item.id)) ? prev : [...prev, { id: item.id, libelle: item.libelle }]));
   };
+
+  // Ajout groupé (champ d'étude, « Tout ajouter » des suggestions) : sans doublon, ordre conservé.
+  const ajouterSpecialitesRequises = (items) =>
+    setSpecialitesRequises((prev) => [
+      ...prev,
+      ...items.filter((it) => !prev.some((s) => String(s.id) === String(it.id))).map((it) => ({ id: it.id, libelle: it.libelle })),
+    ]);
 
   const handleCompInputChange = async (value) => {
     if (value.length >= 2) {
@@ -342,6 +358,8 @@ export function useCreateJob() {
     competencesRequises, compSuggestions, showCompSuggestions, setShowCompSuggestions, compType, setCompType, compNiveau, setCompNiveau,
     diplomesRequis, specialitesRequises, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
     diplomesGroupes, specialitesGroupes, suggestionsPourMetier,
+    domainesFormation: nomenclatureFormation?.domaines || [], famillesFormation: nomenclatureFormation?.familles,
+    specialitesFiltrees, ajouterSpecialitesRequises,
     exigencesImperatives, draftExigenceLabel, setDraftExigenceLabel, draftExigenceDescription, setDraftExigenceDescription,
     draftExigenceJustificatif, setDraftExigenceJustificatif, draftExigenceCategorie, setDraftExigenceCategorie,
     ajouterExigence, retirerExigence,

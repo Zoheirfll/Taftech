@@ -12,6 +12,9 @@ import {
   Building2, ChevronDown, Users, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import { tw } from "../../theme";
+import { phraseFormation } from "../../utils/phraseFormation";
+import { phraseExperience } from "../../utils/phraseExperience";
+import { phrasesCompetences } from "../../utils/phraseCompetences";
 import Seo from "../../Components/Seo";
 import { construireJobPosting, offreIndexable, urlCanoniqueOffre } from "../../utils/jobPosting";
 import FieldError from "../../Components/FieldError";
@@ -30,13 +33,6 @@ const EXPERIENCE_LABELS = {
 const CONTRAT_LABELS = {
   CDI: "CDI", CDD: "CDD", FREELANCE: "Freelance",
   STAGE: "Stage", ALTERNANCE: "Alternance", INTERIM: "Intérim",
-};
-
-const NIVEAU_LABELS = {
-  DEBUTANT: "Débutant",
-  INTERMEDIAIRE: "Intermédiaire",
-  AVANCE: "Avancé",
-  CONFIRME: "Confirmé",
 };
 
 const formatSalaire = (val) => {
@@ -634,17 +630,9 @@ const JobDetail = () => {
                   <Calendar size={12} />
                   Publié le {new Date(job.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                 </span>
-                {job.est_cloturee ? (
+                {job.est_cloturee && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tw.tagSlateSoft700}`}>
                     Poste pourvu
-                  </span>
-                ) : job.jours_restants !== null && job.jours_restants !== undefined && (
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${job.jours_restants <= 7 ? `${tw.bgErrorSoft} ${tw.textError}` : job.jours_restants <= 30 ? `${tw.bgWarningSoft} ${tw.textWarning}` : `${tw.bgSuccessSoft} ${tw.textSuccess}`}`}>
-                    {job.jours_restants < 0
-                      ? "Expirée"
-                      : job.jours_restants === 0
-                        ? "Expire aujourd'hui"
-                        : `Expire dans ${job.jours_restants} jour${job.jours_restants > 1 ? "s" : ""}`}
                   </span>
                 )}
               </div>
@@ -669,59 +657,41 @@ const JobDetail = () => {
                 {renderTexte(job.profil_recherche)}
               </div>
             )}
+            {(job.diplomes_requis_detail?.length > 0 || job.specialites_requises_detail?.length > 0 || phraseExperience(job.experience_requise, job.experience_annees)) && (
+              <div className={`${tw.cardColors} rounded-xl p-6`}>
+                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Formation et expérience requises</h2>
+                <ul className={`space-y-2 text-sm ${tw.textMuted700}`}>
+                  {(job.diplomes_requis_detail?.length > 0 || job.specialites_requises_detail?.length > 0) && (
+                    <li className="flex items-start gap-2">
+                      <GraduationCap size={16} className="shrink-0 mt-0.5" />
+                      {phraseFormation({ diplomes: job.diplomes_requis_detail || [], specialites: job.specialites_requises_detail || [] })}
+                    </li>
+                  )}
+                  {phraseExperience(job.experience_requise, job.experience_annees) && (
+                    <li className="flex items-start gap-2">
+                      <TrendingUp size={16} className="shrink-0 mt-0.5" />
+                      {phraseExperience(job.experience_requise, job.experience_annees)}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
             {(job.competences_requises?.length > 0 || job.competences) && (
               <div className={`${tw.cardColors} rounded-xl p-6`}>
                 <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Compétences requises</h2>
                 {job.competences_requises?.length > 0 ? (
-                  <div className="space-y-3">
-                    {job.competences_requises.some((c) => c.type_exigence === "OBLIGATOIRE") && (
-                      <div>
-                        <p className={`text-xs font-semibold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>Indispensables</p>
-                        <div className="flex flex-wrap gap-2">
-                          {job.competences_requises.filter((c) => c.type_exigence === "OBLIGATOIRE").map((c) => (
-                            <span key={c.id} className={tw.badgePrimary}>
-                              {c.label}{c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {job.competences_requises.some((c) => c.type_exigence === "SOUHAITEE") && (
-                      <div>
-                        <p className={`text-xs font-semibold uppercase tracking-wide mb-1.5 ${tw.textMuted700}`}>Souhaitées</p>
-                        <div className="flex flex-wrap gap-2">
-                          {job.competences_requises.filter((c) => c.type_exigence === "SOUHAITEE").map((c) => (
-                            <span key={c.id} className={tw.badgeNeutral}>
-                              {c.label}{c.niveau_requis ? ` · ${NIVEAU_LABELS[c.niveau_requis]}` : ""}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ul className={`space-y-2 text-sm ${tw.textMuted700}`}>
+                    {phrasesCompetences(job.competences_requises).map((phrase) => (
+                      <li key={phrase} className="flex items-start gap-2">
+                        <CheckCircle size={16} className="shrink-0 mt-0.5" />
+                        {phrase}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   renderTexte(job.competences)
                 )}
-              </div>
-            )}
-
-            {(job.diplomes_requis_detail?.length > 0 || job.specialites_requises_detail?.length > 0) && (
-              <div className={`${tw.cardColors} rounded-xl p-6`}>
-                <h2 className={`text-base font-extrabold ${tw.textStrong} mb-4 pb-3 border-b ${tw.borderSubtle}`}>Diplômes / Spécialités acceptés</h2>
-                <div className="flex flex-wrap gap-2">
-                  {(job.diplomes_requis_detail || []).map((d) => (
-                    <span key={`d-${d.id}`} className={tw.badgePrimary}>
-                      <GraduationCap size={12} className="inline mr-1" />
-                      {d.libelle}
-                    </span>
-                  ))}
-                  {(job.specialites_requises_detail || []).map((s) => (
-                    <span key={`s-${s.id}`} className={tw.badgePrimary}>
-                      <GraduationCap size={12} className="inline mr-1" />
-                      {s.libelle}
-                    </span>
-                  ))}
-                </div>
               </div>
             )}
 

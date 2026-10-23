@@ -226,4 +226,46 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
       expect(toast.error).toHaveBeenCalledWith("Approbation impossible\nVeuillez réessayer dans quelques instants.");
     });
   });
+
+  describe("🎓 Fiche d'une offre : formation requise", () => {
+    const masters = [
+      { id: 1, code: "D-MAS-A", libelle: "Master académique" },
+      { id: 2, code: "D-MAS-P", libelle: "Master professionnel" },
+      { id: 3, code: "D-MAS-NP", libelle: "Master à nature non précisée" },
+    ];
+    const specialites = [
+      { id: 10, libelle: "Réseaux", domaine_id: 5, domaine_libelle: "Informatique", domaine_total: 20, domaine_non_retenues: [] },
+      { id: 11, libelle: "Génie logiciel", domaine_id: 5, domaine_libelle: "Informatique", domaine_total: 20, domaine_non_retenues: [] },
+    ];
+
+    const ouvrirFiche = async (offre) => {
+      jobsService.getAdminOffres.mockResolvedValue({ count: 1, results: [{ ...mockData.results[0], ...offre }] });
+      render(<AdminOffres />);
+      await waitFor(() => screen.getByTitle("Voir"));
+      fireEvent.click(screen.getByTitle("Voir"));
+    };
+
+    it("🟢 Montre la phrase lue par le candidat, avec les trois masters regroupés", async () => {
+      await ouvrirFiche({ diplomes_requis_detail: masters, specialites_requises_detail: specialites });
+      expect(await screen.findByText("Master (Bac +5) en Réseaux et Génie logiciel")).toBeInTheDocument();
+      expect(screen.getByText("Master (Bac +5)")).toBeInTheDocument();
+      expect(screen.queryByText("Master académique")).toBeNull();
+    });
+
+    it("🟢 Les compétences sont aussi écrites en phrases dans « Ce que le candidat lit »", async () => {
+      await ouvrirFiche({
+        diplomes_requis_detail: masters,
+        specialites_requises_detail: specialites,
+        competences_requises: [{ id: 1, label: "Docker", type_exigence: "SOUHAITEE", niveau_requis: "" }],
+      });
+      expect(await screen.findByText("Compétences souhaitées : Docker.")).toBeInTheDocument();
+    });
+
+    it("🟢 L'admin garde le détail des spécialités pour modérer", async () => {
+      await ouvrirFiche({ diplomes_requis_detail: masters, specialites_requises_detail: specialites });
+      await screen.findByText(/Ce que le candidat lit/);
+      expect(screen.getByText("Réseaux")).toBeInTheDocument();
+      expect(screen.getByText("Génie logiciel")).toBeInTheDocument();
+    });
+  });
 });

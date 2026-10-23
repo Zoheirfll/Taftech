@@ -326,4 +326,71 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
       expect(disabledBtn).toBeDisabled();
     });
   });
+
+  describe("🎓 Formation et expérience : écrites comme une phrase", () => {
+    const afficher = async (donnees) => {
+      jobsService.getJobById.mockResolvedValue({ ...mockJobData, experience_requise: "CONFIRME", ...donnees });
+      render(
+        <MemoryRouter>
+          <JobDetail />
+        </MemoryRouter>,
+      );
+      await waitFor(() => screen.getByText("Lead Développeur React"));
+    };
+
+    it("🟢 L'expérience s'écrit comme une phrase, avec les années du score", async () => {
+      await afficher({ experience_annees: 3 });
+      expect(screen.getByText("Expérience confirmée (environ 3 ans) dans un poste similaire")).toBeInTheDocument();
+    });
+
+    it("🟢 La formation et l'expérience partagent le même bloc", async () => {
+      await afficher({
+        experience_annees: 3,
+        diplomes_requis_detail: [{ id: 1, code: "D-BTS", libelle: "BTS" }],
+        specialites_requises_detail: [],
+      });
+      expect(screen.getByText("Formation et expérience requises")).toBeInTheDocument();
+      expect(screen.getByText("BTS")).toBeInTheDocument();
+    });
+
+    it("🔴 Aucune mention d'expiration sur la page, même pour une offre qui expire bientôt", async () => {
+      await afficher({ experience_annees: 3, jours_restants: 5 });
+      expect(screen.queryByText(/Expire/i)).toBeNull();
+      expect(screen.queryByText(/Expirée/i)).toBeNull();
+    });
+
+    it("🟢 Une offre clôturée affiche toujours « Poste pourvu »", async () => {
+      await afficher({ experience_annees: 3, est_cloturee: true });
+      expect(screen.getAllByText("Poste pourvu").length).toBeGreaterThan(0);
+    });
+
+    it("🟢 Les compétences s'écrivent comme des phrases (indispensables, puis souhaitées), avec le niveau", async () => {
+      await afficher({
+        competences_requises: [
+          { id: 1, label: "Conception d'API", type_exigence: "OBLIGATOIRE", niveau_requis: "CONFIRME" },
+          { id: 2, label: "Gestion de versions Git", type_exigence: "OBLIGATOIRE", niveau_requis: "INTERMEDIAIRE" },
+          { id: 3, label: "Conteneurisation Docker", type_exigence: "SOUHAITEE", niveau_requis: "INTERMEDIAIRE" },
+        ],
+      });
+      expect(screen.getByText("Compétences indispensables : Conception d'API (confirmé) et Gestion de versions Git (intermédiaire).")).toBeInTheDocument();
+      expect(screen.getByText("Compétences souhaitées : Conteneurisation Docker (intermédiaire).")).toBeInTheDocument();
+      expect(screen.queryByText(/Conception d'API · /)).toBeNull();
+    });
+
+    it("🟢 La formation et l'expérience viennent avant les compétences", async () => {
+      await afficher({
+        experience_annees: 3,
+        diplomes_requis_detail: [{ id: 1, code: "D-BTS", libelle: "BTS" }],
+        competences_requises: [{ id: 1, label: "Docker", type_exigence: "SOUHAITEE", niveau_requis: "" }],
+      });
+      const formation = screen.getByText("Formation et expérience requises");
+      const competences = screen.getByText("Compétences requises");
+      expect(formation.compareDocumentPosition(competences) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("🟡 Sans compétence structurée, le texte libre reste affiché", async () => {
+      await afficher({ competences_requises: [], competences: "Maîtrise de React et de Django" });
+      expect(screen.getByText(/Maîtrise de React et de Django/)).toBeInTheDocument();
+    });
+  });
 });

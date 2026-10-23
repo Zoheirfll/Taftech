@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
+import { phraseFormation } from "../../utils/phraseFormation";
+import { phraseExperience } from "../../utils/phraseExperience";
+import { phrasesCompetences } from "../../utils/phraseCompetences";
+import { regrouperDiplomes } from "../../utils/groupesDiplomes";
 import { nomWilaya } from "../../utils/wilaya";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
@@ -628,18 +632,28 @@ const AdminOffres = () => {
               )}
 
               {/* DIPLÔMES / SPÉCIALITÉS ACCEPTÉS */}
-              {(selectedOffre.diplomes_requis_detail?.length > 0 || selectedOffre.specialites_requises_detail?.length > 0) && (
+              {(selectedOffre.diplomes_requis_detail?.length > 0 || selectedOffre.specialites_requises_detail?.length > 0 || phraseExperience(selectedOffre.experience_requise, selectedOffre.experience_annees)) && (
                 <div className={`${tw.card} p-5`}>
                   <h3 className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3 flex items-center gap-2`}>
                     <span className={`w-2 h-4 ${tw.dotEmerald500} rounded-full`} /> Diplômes / spécialités acceptés
                   </h3>
+                  <div className="mb-3 space-y-1">
+                    <p className={`text-xs font-semibold ${tw.textMuted}`}>Ce que le candidat lit :</p>
+                    {[
+                      phraseFormation({ diplomes: selectedOffre.diplomes_requis_detail || [], specialites: selectedOffre.specialites_requises_detail || [] }),
+                      phraseExperience(selectedOffre.experience_requise, selectedOffre.experience_annees),
+                      ...phrasesCompetences(selectedOffre.competences_requises || []),
+                    ].filter(Boolean).map((phrase) => (
+                      <p key={phrase} className={`text-sm ${tw.textStrong}`}>{phrase}</p>
+                    ))}
+                  </div>
                   <div className="space-y-2">
                     {selectedOffre.diplomes_requis_detail?.length > 0 && (
                       <div>
                         <p className={`text-xs font-semibold ${tw.textMuted} mb-1`}>Diplômes acceptés</p>
                         <div className="flex flex-wrap gap-2">
-                          {selectedOffre.diplomes_requis_detail.map((d) => (
-                            <span key={d.id} className={`text-xs font-medium px-2.5 py-1 rounded-full ${tw.chipVioletActive}`}>{d.libelle}</span>
+                          {regrouperDiplomes(selectedOffre.diplomes_requis_detail).map((e) => (
+                            <span key={e.cle} className={`text-xs font-medium px-2.5 py-1 rounded-full ${tw.chipVioletActive}`}>{e.libelle}</span>
                           ))}
                         </div>
                       </div>

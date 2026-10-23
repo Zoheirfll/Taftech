@@ -10,6 +10,7 @@ import { reportError } from "../../utils/errorReporter";
 import { confirmToast } from "../../utils/confirmToast";
 import { selectStylesTeal, tw } from "../../theme";
 import { grouperParFamille } from "../../utils/familleFormation";
+import { estGroupe, membresDuGroupe, optionsNiveaux } from "../../utils/groupesDiplomes";
 import { rapprocherDuReferentiel } from "../../utils/competencesReferentiel";
 import { CATEGORIES_EXIGENCE, CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../utils/exigencesCategories";
 import InfoBanner from "../../Components/InfoBanner";
@@ -63,7 +64,10 @@ const OffresListPage = () => {
   const typesDiplomesFiltres = (nomenclatureFormation?.types_diplomes || []).filter((d) => !RE_AUTRE_PRECISER.test(d.libelle));
   const specialitesFiltrees = (nomenclatureFormation?.specialites || []).filter((s) => !RE_AUTRE_PRECISER.test(s.libelle));
   // Point 8 : listes présentées par famille (supérieur / formation professionnelle / thèmes).
-  const diplomesGroupes = grouperParFamille(typesDiplomesFiltres, nomenclatureFormation?.familles, (d) => ({ value: d.id, label: d.libelle }));
+  const diplomesGroupes = [
+    ...optionsNiveaux(typesDiplomesFiltres),
+    ...grouperParFamille(typesDiplomesFiltres, nomenclatureFormation?.familles, (d) => ({ value: d.id, label: d.libelle })),
+  ];
   const specialitesGroupes = grouperParFamille(specialitesFiltrees, nomenclatureFormation?.familles, (s) => ({ value: s.id, label: s.libelle }));
 
   // Exigences impératives (S12) — même builder que CreateJob.jsx, manquant jusqu'ici
@@ -149,7 +153,7 @@ const OffresListPage = () => {
         dans_referentiel: !!c.competence_ref,
       })),
     );
-    setDiplomesRequis((offre.diplomes_requis_detail || []).map((d) => ({ id: d.id, libelle: d.libelle })));
+    setDiplomesRequis((offre.diplomes_requis_detail || []).map((d) => ({ id: d.id, libelle: d.libelle, code: d.code })));
     setSpecialitesRequises((offre.specialites_requises_detail || []).map((s) => ({ id: s.id, libelle: s.libelle })));
     setDraftDiplomeId("");
     setDraftSpecialiteId("");
@@ -189,9 +193,14 @@ const OffresListPage = () => {
 
   const ajouterDiplomeRequis = () => {
     if (!draftDiplomeId || !nomenclatureFormation) return;
-    if (diplomesRequis.some((d) => String(d.id) === String(draftDiplomeId))) return;
-    const libelle = typesDiplomesFiltres.find((t) => String(t.id) === String(draftDiplomeId))?.libelle || "";
-    setDiplomesRequis((prev) => [...prev, { id: draftDiplomeId, libelle }]);
+    // Un niveau (« Master ») enregistre tous ses types : le score compare les diplômes par identifiant.
+    const aAjouter = estGroupe(draftDiplomeId)
+      ? membresDuGroupe(draftDiplomeId, typesDiplomesFiltres)
+      : typesDiplomesFiltres.filter((t) => String(t.id) === String(draftDiplomeId));
+    setDiplomesRequis((prev) => [
+      ...prev,
+      ...aAjouter.filter((t) => !prev.some((d) => String(d.id) === String(t.id))).map((t) => ({ id: t.id, libelle: t.libelle, code: t.code })),
+    ]);
     setDraftDiplomeId("");
   };
   const retirerDiplomeRequis = (id) => setDiplomesRequis((prev) => prev.filter((d) => String(d.id) !== String(id)));
@@ -211,6 +220,13 @@ const OffresListPage = () => {
     // pour ce métier).
     setSpecialitesRequises((prev) => (prev.some((s) => String(s.id) === String(item.id)) ? prev : [...prev, { id: item.id, libelle: item.libelle }]));
   };
+
+  // Ajout groupé (champ d'étude, « Tout ajouter » des suggestions) : sans doublon, ordre conservé.
+  const ajouterSpecialitesRequises = (items) =>
+    setSpecialitesRequises((prev) => [
+      ...prev,
+      ...items.filter((it) => !prev.some((s) => String(s.id) === String(it.id))).map((it) => ({ id: it.id, libelle: it.libelle })),
+    ]);
 
   const handleCompInputChange = async (value) => {
     if (value.length >= 2) {
@@ -723,6 +739,8 @@ const OffresListPage = () => {
                   diplomesGroupes, specialitesGroupes, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
                   diplomesRequis, specialitesRequises, ajouterDiplomeRequis, retirerDiplomeRequis, ajouterSpecialiteRequise,
                   retirerSpecialiteRequise, ajouterSpecialiteSuggeree, suggestionsPourMetier,
+                  domainesFormation: nomenclatureFormation?.domaines || [], famillesFormation: nomenclatureFormation?.familles,
+                  specialitesFiltrees, ajouterSpecialitesRequises,
                   ajouterDiplomeSuggere: (d) => setDiplomesRequis((prev) => (prev.some((x) => String(x.id) === String(d.id)) ? prev : [...prev, { id: d.id, libelle: d.libelle }])),
                 }}
               />

@@ -7,15 +7,27 @@ import { aplatirGroupes } from "../../../utils/familleFormation";
 import { libelleUsage } from "../../../utils/suggestionStats";
 import SuggestionsDiplomes from "../../../Components/SuggestionsDiplomes";
 import ProposerEntreeModal from "../../../Components/ProposerEntreeModal";
+import DomaineSpecialites from "./DomaineSpecialites";
+import { enrichirSpecialites, phraseFormation } from "../../../utils/phraseFormation";
+import { regrouperDiplomes } from "../../../utils/groupesDiplomes";
 
 const BlocFormationRequise = ({ job }) => {
   // Type de demande d'ajout en cours (« DIPLOME » ou « SPECIALITE »), null quand la fenêtre est fermée.
   const [demandeEnCours, setDemandeEnCours] = useState(null);
   const {
-    diplomesGroupes, specialitesGroupes, draftDiplomeId, setDraftDiplomeId, draftSpecialiteId, setDraftSpecialiteId,
+    diplomesGroupes, draftDiplomeId, setDraftDiplomeId,
     diplomesRequis, specialitesRequises, ajouterDiplomeRequis, retirerDiplomeRequis, ajouterDiplomeSuggere,
-    ajouterSpecialiteRequise, retirerSpecialiteRequise, ajouterSpecialiteSuggeree, suggestionsPourMetier,
+    retirerSpecialiteRequise, ajouterSpecialiteSuggeree, suggestionsPourMetier,
+    domainesFormation = [], famillesFormation, specialitesFiltrees = [], ajouterSpecialitesRequises,
   } = job;
+  // Aperçu de la phrase que le candidat lira sur l'offre publiée (même logique que la page publique).
+  const apercu = phraseFormation({
+    diplomes: diplomesRequis,
+    specialites: enrichirSpecialites(specialitesRequises, specialitesFiltrees, domainesFormation),
+  });
+  const suggestionsRestantes = suggestionsPourMetier.specialites.filter(
+    (s) => !specialitesRequises.some((sp) => String(sp.id) === String(s.id)),
+  );
 
   return (
     <div className="mt-5 border border-slate-200 rounded-xl p-5 bg-slate-50/60">
@@ -58,10 +70,10 @@ const BlocFormationRequise = ({ job }) => {
         </button>
         {diplomesRequis.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {diplomesRequis.map((d) => (
-              <span key={d.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
-                {d.libelle}
-                <button type="button" onClick={() => retirerDiplomeRequis(d.id)} className="hover:text-red-600">
+            {regrouperDiplomes(diplomesRequis).map((e) => (
+              <span key={e.cle} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
+                {e.libelle}
+                <button type="button" onClick={() => e.ids.forEach((id) => retirerDiplomeRequis(id))} className="hover:text-red-600">
                   <X size={12} />
                 </button>
               </span>
@@ -78,24 +90,16 @@ const BlocFormationRequise = ({ job }) => {
 
       <div>
         <p className="text-xs font-semibold text-slate-700 mb-1.5">Spécialités acceptées (optionnel — vide = toute spécialité)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
-          <Select
-            options={specialitesGroupes}
-            value={aplatirGroupes(specialitesGroupes).find((o) => String(o.value) === String(draftSpecialiteId)) || null}
-            onChange={(opt) => setDraftSpecialiteId(opt ? opt.value : "")}
-            styles={selectStylesTeal}
-            placeholder="Sélectionner une spécialité..."
-            isClearable
+        {ajouterSpecialitesRequises && (
+          <DomaineSpecialites
+            domaines={domainesFormation}
+            familles={famillesFormation}
+            specialites={specialitesFiltrees}
+            specialitesRequises={specialitesRequises}
+            onAjouter={ajouterSpecialitesRequises}
+            onRetirer={retirerSpecialiteRequise}
           />
-          <button
-            type="button"
-            onClick={ajouterSpecialiteRequise}
-            disabled={!draftSpecialiteId}
-            className={`${tw.buttonSecondary} h-fit px-4 py-2.5 disabled:opacity-50`}
-          >
-            Ajouter
-          </button>
-        </div>
+        )}
         <button
           type="button"
           onClick={() => setDemandeEnCours("SPECIALITE")}
@@ -103,25 +107,24 @@ const BlocFormationRequise = ({ job }) => {
         >
           Autre, préciser
         </button>
-        {specialitesRequises.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {specialitesRequises.map((s) => (
-              <span key={s.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${tw.badgeNeutral}`}>
-                {s.libelle}
-                <button type="button" onClick={() => retirerSpecialiteRequise(s.id)} className="hover:text-red-600">
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {suggestionsPourMetier.specialites.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-medium text-slate-500 mb-1.5">
-            Suggéré pour ce métier — cliquez pour ajouter la spécialité :
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <p className="text-[11px] font-medium text-slate-500">
+              Suggéré pour ce métier — cliquez pour ajouter la spécialité :
+            </p>
+            {suggestionsRestantes.length > 1 && ajouterSpecialitesRequises && (
+              <button
+                type="button"
+                onClick={() => ajouterSpecialitesRequises(suggestionsRestantes)}
+                className="text-[11px] font-semibold text-teal-700 hover:underline"
+              >
+                {`Tout ajouter (${suggestionsRestantes.length})`}
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {suggestionsPourMetier.specialites
               .filter((s) => !specialitesRequises.some((sp) => String(sp.id) === String(s.id)))
@@ -142,6 +145,13 @@ const BlocFormationRequise = ({ job }) => {
             <p className="text-[11px] text-slate-500 italic mt-2">{suggestionsPourMetier.avertissement}</p>
           )}
         </div>
+      )}
+
+      {apercu && (
+        <p className="mt-4 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs text-slate-700">
+          <span className="font-semibold">Ce que le candidat lira : </span>
+          {apercu}
+        </p>
       )}
 
       <ProposerEntreeModal

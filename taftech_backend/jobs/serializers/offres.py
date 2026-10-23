@@ -41,6 +41,41 @@ class ExigenceImperativeSerializer(serializers.ModelSerializer):
         fields = ('id', 'label', 'description', 'justificatif_requis', 'categorie')
 
 
+MAX_NON_RETENUES = 2  # au-delà, la page publique cite les spécialités gardées au lieu d'écrire « sauf … »
+
+
+def detail_specialites_requises(specialites):
+    """`specialites_requises_detail` d'une offre : `id` et `libelle` (inchangés) + le domaine de la
+    spécialité, le total des spécialités sélectionnables de ce domaine (hors « Autre, préciser ») et, quand
+    il en manque une ou deux, leur libellé. Permet d'écrire « Master 2 en Informatique » ou « … (sauf X) »
+    côté public (`utils/phraseFormation.js`) sans lister les spécialités une par une. 2 requêtes au plus."""
+    from ..models import DomaineFormation, SpecialiteFormation
+    specialites = list(specialites)
+    if not specialites:
+        return []
+    domaine_ids = {s.domaine_id for s in specialites}
+    libelles_domaines = dict(DomaineFormation.objects.filter(pk__in=domaine_ids).values_list('id', 'libelle'))
+    par_domaine = {}
+    selectionnables = (
+        SpecialiteFormation.objects.filter(domaine_id__in=domaine_ids, selectionnable=True)
+        .exclude(code='SP-AUTRE').exclude(libelle__iregex=r'autre.*préciser').order_by('libelle')
+    )
+    for s in selectionnables:
+        par_domaine.setdefault(s.domaine_id, []).append(s)
+    choisies = {s.id for s in specialites}
+    detail = []
+    for s in specialites:
+        du_domaine = par_domaine.get(s.domaine_id, [])
+        manquantes = [x.libelle for x in du_domaine if x.id not in choisies]
+        detail.append({
+            "id": s.id, "libelle": s.libelle,
+            "domaine_id": s.domaine_id, "domaine_libelle": libelles_domaines.get(s.domaine_id),
+            "domaine_total": len(du_domaine),
+            "domaine_non_retenues": manquantes if len(manquantes) <= MAX_NON_RETENUES else [],
+        })
+    return detail
+
+
 class OffreEmploiSerializer(serializers.ModelSerializer):
     entreprise = EntrepriseSimpleSerializer(read_only=True)
     questionnaire = QuestionnaireSerializer(read_only=True)
@@ -52,17 +87,22 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     niveau_scolaire_ref_libelle = serializers.CharField(source='niveau_scolaire_ref.libelle', read_only=True, default=None)
     diplomes_requis_detail = serializers.SerializerMethodField()
     specialites_requises_detail = serializers.SerializerMethodField()
+    experience_annees = serializers.SerializerMethodField()
     exigences_imperatives = ExigenceImperativeSerializer(many=True, read_only=True)
 
     class Meta:
         model = OffreEmploi
         fields = '__all__'
 
+    def get_experience_annees(self, obj):
+        from ..matcher import annees_experience_pour_niveau
+        return annees_experience_pour_niveau(obj.experience_requise)
+
     def get_diplomes_requis_detail(self, obj):
-        return [{"id": d.id, "libelle": d.libelle} for d in obj.diplomes_requis.all()]
+        return [{"id": d.id, "libelle": d.libelle, "code": d.code} for d in obj.diplomes_requis.all()]
 
     def get_specialites_requises_detail(self, obj):
-        return [{"id": s.id, "libelle": s.libelle} for s in obj.specialites_requises.all()]
+        return detail_specialites_requises(obj.specialites_requises.all())
 
     def get_jours_restants(self, obj):
         if not obj.date_expiration or obj.est_cloturee:

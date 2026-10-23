@@ -433,10 +433,17 @@ _MAP_EXP_ANNEES = {
 }
 
 
+def annees_experience_pour_niveau(niveau):
+    """Années d'expérience que le score attend pour un niveau d'offre (0 = critère désactivé). Source
+    unique : l'API l'expose (`experience_annees`) pour que la page publique n'écrive jamais un chiffre
+    que le calcul n'utilise pas."""
+    return _MAP_EXP_ANNEES.get(niveau, 0)
+
+
 def _score_experience(profil, offre):
     """S09 — score continu min(mois_pertinents/mois_minimum, 1). minimum=0 -> critère
     désactivé (None), pas de crédit automatique pour un poste "ouvert aux débutants"."""
-    annees_requises = _MAP_EXP_ANNEES.get(getattr(offre, 'experience_requise', None), 0)
+    annees_requises = annees_experience_pour_niveau(getattr(offre, 'experience_requise', None))
     if annees_requises == 0:
         return None
 

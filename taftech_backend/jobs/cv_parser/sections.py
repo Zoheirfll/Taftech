@@ -12,6 +12,10 @@ SECTIONS_KEYWORDS = {
         'parcours professionnel', 'parcours pro', 'emploi', 'work experience',
         'professional experience', 'carrière', 'carriere',
         'work history', 'employment history', 'professional history',
+        # Intitulés qualifiés (corpus du 23/10/2026) : seuls les qualificatifs sûrs, jamais « … experience »
+        # seul (« Tutoring experience » est une compétence, pas une rubrique).
+        'relevant professional experience', 'relevant experience', 'related experience', 'teaching experience',
+        'corporate experience', 'employment & experience', 'employment and experience',
     ],
     'formations': [
         'formation', 'formations', 'education', 'études', 'etudes',
@@ -31,6 +35,13 @@ SECTIONS_KEYWORDS = {
         'additional information', 'accomplishments', 'affiliations',
     ],
 }
+
+
+def _ajouter(sections, nom, lignes):
+    """Un titre qui revient (deux « Education », « Teaching Experience » puis « Corporate Experience »)
+    complète la section au lieu de l'écraser : sinon les premières expériences étaient perdues."""
+    contenu = "\n".join(lignes).strip()
+    sections[nom] = f"{sections[nom]}\n{contenu}".strip() if nom in sections else contenu
 
 
 def find_sections(text):
@@ -57,14 +68,14 @@ def find_sections(text):
 
         if matched_section:
             if current_section:
-                sections[current_section] = "\n".join(current_content).strip()
+                _ajouter(sections, current_section, current_content)
             current_section = matched_section
             current_content = []
         elif current_section:
             current_content.append(line)
 
     if current_section:
-        sections[current_section] = "\n".join(current_content).strip()
+        _ajouter(sections, current_section, current_content)
 
     return sections
 

@@ -308,6 +308,20 @@ export const useProfilCandidat = () => {
     }
   };
 
+  const handleDeletePhoto = async () => {
+    const formData = new FormData();
+    formData.append("remove_photo_profil", "true");
+    try {
+      await profilService.updateProfil(formData);
+      notifier.succes("Photo supprimée");
+      notifierProfilMisAJour();
+      fetchData();
+    } catch (err) {
+      notifier.echec("Suppression de la photo impossible", err);
+      reportError("ECHEC_DELETE_PHOTO", err);
+    }
+  };
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     e.target.value = "";
@@ -661,6 +675,7 @@ export const useProfilCandidat = () => {
     handleQuickUploadCV,
     cropperPhoto,
     fermerCropperPhoto,
+    handleDeletePhoto,
     uploaderPhotoRecadree,
     handleAddExperience,
     handleDeleteExp,

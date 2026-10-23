@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
-import { Check } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Check, Crop, X } from "lucide-react";
+import ImageCropperModal from "../../../../Components/ImageCropperModal";
 import { tw } from "../../../../theme";
 import { grouperParFamille } from "../../../../utils/familleFormation";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
@@ -18,7 +19,8 @@ const SERVICE_MILITAIRE_OPTIONS = [
   { value: "INCORPORE", label: "Incorporé" },
 ];
 
-export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, skipStep, constants, profil, saving, pendingPhoto, parsedData }) => {
+export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, saveInfosStep, skipStep, constants, profil, saving, pendingPhoto, setPendingPhoto, parsedData }) => {
+  const [recadragePhoto, setRecadragePhoto] = useState(false);
   const set = (field) => (e) => {
     const value = e.target.value;
     setInfosForm((prev) => ({ ...prev, [field]: value }));
@@ -48,8 +50,34 @@ export const StepInfos = ({ infosForm, setInfosForm, infosMode, setInfosMode, sa
       {photoPreviewUrl && (
         <div className={`flex items-center gap-3 p-3 rounded-xl border mb-4 ${tw.bgSuccessSoft} border-emerald-200`}>
           <img src={photoPreviewUrl} alt="Photo détectée" className="w-12 h-12 rounded-lg object-cover" />
-          <p className={`text-xs font-medium ${tw.textSuccess}`}>Photo détectée dans le CV — sera ajoutée à votre profil</p>
+          <p className={`flex-1 text-xs font-medium ${tw.textSuccess}`}>Photo détectée dans le CV — sera ajoutée à votre profil</p>
+          <button
+            type="button"
+            onClick={() => setRecadragePhoto(true)}
+            className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${tw.linkPrimary}`}
+          >
+            <Crop size={13} /> Ajuster
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingPhoto(null)}
+            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"
+          >
+            <X size={13} /> Ne pas l'utiliser
+          </button>
         </div>
+      )}
+      {recadragePhoto && pendingPhoto && (
+        <ImageCropperModal
+          file={pendingPhoto}
+          aspect={1}
+          cropShape="round"
+          onCancel={() => setRecadragePhoto(false)}
+          onValidate={(fichierRecadre) => {
+            setPendingPhoto(fichierRecadre);
+            setRecadragePhoto(false);
+          }}
+        />
       )}
 
       <div className="space-y-4">

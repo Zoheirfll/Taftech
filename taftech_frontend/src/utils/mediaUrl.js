@@ -15,9 +15,13 @@ export const mediaUrl = (path) => {
 
 // CV PDF et photo de profil candidat : servis via une vue authentifiée (vérif propriétaire/
 // recruteur autorisé/admin côté backend) au lieu d'une URL /media/ publique.
-export const candidatFichierUrl = (candidatId, type) => {
+// `version` (facultatif) : l'URL est la même d'un envoi à l'autre, donc le navigateur gardait l'ancienne image
+// jusqu'au rechargement de la page. Passer le nom du fichier enregistré (`profil.photo_profil`, unique à chaque
+// envoi) pour que l'image se mette à jour immédiatement.
+export const candidatFichierUrl = (candidatId, type, version) => {
   if (!candidatId || !type) return null;
-  return `${API_BASE}/api/jobs/media-prive/candidat/${candidatId}/${type}/`;
+  const base = `${API_BASE}/api/jobs/media-prive/candidat/${candidatId}/${type}/`;
+  return version ? `${base}?v=${encodeURIComponent(version)}` : base;
 };
 
 // Document privé partagé ponctuellement par un candidat avec l'entreprise du recruteur

@@ -111,6 +111,7 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             profil={wizard.profil}
             saving={wizard.saving}
             pendingPhoto={wizard.pendingPhoto}
+            setPendingPhoto={wizard.setPendingPhoto}
           />
         )}
         {step === 3 && (

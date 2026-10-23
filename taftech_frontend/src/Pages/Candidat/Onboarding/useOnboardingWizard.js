@@ -63,7 +63,10 @@ export const useOnboardingWizard = () => {
   const [pendingCvFile, setPendingCvFile] = useState(null);
   const parsingIdRef = useRef(null);
 
-  const refresh = useCallback(async () => {
+  // `avecPrefs` : seul le chargement initial remplit les préférences depuis le profil. Les rechargements qui
+  // suivent chaque enregistrement d'étape ne doivent pas ré-écrire les préférences remises à zéro par l'analyse
+  // d'un CV (sinon l'ancien métier souhaité, salaire… réapparaissent à l'étape « Préférences »).
+  const refresh = useCallback(async ({ avecPrefs = false } = {}) => {
     const [p, c, nomenclatureFormation] = await Promise.all([
       profilService.getProfil(),
       jobsService.getConstants(),
@@ -100,25 +103,27 @@ export const useOnboardingWizard = () => {
       passeport_valide: p.passeport_valide || false,
       vehicule_personnel: p.vehicule_personnel || false,
     });
-    setPrefsForm({
-      metier_souhaite: p.metier_souhaite || "",
-      metier_souhaite_libelle: p.metier_souhaite_libelle || "",
-      metier_souhaite_appellation: p.metier_souhaite_appellation || null,
-      metier_souhaite_appellation_libelle: p.metier_souhaite_appellation_libelle || "",
-      demande_metier_souhaite: p.metier_souhaite_propose?.id || "",
-      demande_metier_souhaite_libelle: p.metier_souhaite_propose?.libelle || "",
-      demande_metier_souhaite_statut: p.metier_souhaite_propose?.statut || "",
-      salaire_souhaite: p.salaire_souhaite || "",
-      mobilite: p.mobilite || "",
-      situation_actuelle: p.situation_actuelle || "",
-    });
+    if (avecPrefs) {
+      setPrefsForm({
+        metier_souhaite: p.metier_souhaite || "",
+        metier_souhaite_libelle: p.metier_souhaite_libelle || "",
+        metier_souhaite_appellation: p.metier_souhaite_appellation || null,
+        metier_souhaite_appellation_libelle: p.metier_souhaite_appellation_libelle || "",
+        demande_metier_souhaite: p.metier_souhaite_propose?.id || "",
+        demande_metier_souhaite_libelle: p.metier_souhaite_propose?.libelle || "",
+        demande_metier_souhaite_statut: p.metier_souhaite_propose?.statut || "",
+        salaire_souhaite: p.salaire_souhaite || "",
+        mobilite: p.mobilite || "",
+        situation_actuelle: p.situation_actuelle || "",
+      });
+    }
     return p;
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        await refresh();
+        await refresh({ avecPrefs: true });
         jobsService.getQuotaIA("PARSER_CV").then(setQuotaParserCV).catch(() => {});
       } catch (err) {
         notifier.echec("Chargement du profil impossible", err);
@@ -176,36 +181,49 @@ export const useOnboardingWizard = () => {
         first_name: prenom || prev.first_name,
         last_name: nom || prev.last_name,
         telephone: result.telephone || prev.telephone,
-        wilaya: result.wilaya || prev.wilaya,
         adresse: result.adresse || prev.adresse,
-        diplome: result.diplome || prev.diplome,
-        diplome_ref: result.diplome_ref || prev.diplome_ref,
-        diplome_ref_libelle: result.diplome_ref_libelle || prev.diplome_ref_libelle,
-        metier: result.metier || prev.metier,
-        metier_libelle: result.metier_libelle || prev.metier_libelle,
-        // Un nouveau métier détecté apporte SON appellation (ou aucune) : celle du métier précédent ne
-        // s'applique plus ; sans métier détecté, l'appellation actuelle est conservée.
-        metier_appellation: result.metier ? (result.metier_appellation || null) : prev.metier_appellation,
-        metier_appellation_libelle: result.metier ? (result.metier_appellation_libelle || "") : prev.metier_appellation_libelle,
-        // Un métier officiel détecté remplace une proposition en attente.
-        ...(result.metier ? { demande_metier: "", demande_metier_libelle: "", demande_metier_statut: "" } : {}),
-        sexe: result.sexe || prev.sexe,
+        // Wilaya, téléphone, adresse et date de naissance sont obligatoires à l'inscription : repli sur le profil. La commune
+        // dépend de la wilaya : conservée seulement si la wilaya ne change pas.
+        wilaya: result.wilaya || prev.wilaya,
+        commune: !result.wilaya || result.wilaya === prev.wilaya ? prev.commune : "",
+        // Tout ce qui suit vient du CV analysé et de lui seul : une information absente du nouveau CV
+        // (sexe, LinkedIn, permis, métier…) ne doit pas survivre depuis l'ancien profil.
+        diplome: result.diplome || "",
+        diplome_ref: result.diplome_ref || "",
+        diplome_ref_libelle: result.diplome_ref_libelle || "",
+        metier: result.metier || "",
+        metier_libelle: result.metier_libelle || "",
+        metier_appellation: result.metier_appellation || null,
+        metier_appellation_libelle: result.metier_appellation_libelle || "",
+        // Le métier proposé en attente de l'ancien CV ne suit pas non plus.
+        demande_metier: "",
+        demande_metier_libelle: "",
+        demande_metier_statut: "",
+        sexe: result.sexe || "",
         date_naissance: result.date_naissance || prev.date_naissance,
-        titre_professionnel: result.titre_professionnel || prev.titre_professionnel,
-        service_militaire: result.service_militaire || prev.service_militaire,
-        bio: result.bio || prev.bio,
-        linkedin: result.linkedin || prev.linkedin,
-        github: result.github || prev.github,
-        permis_conduire: result.permis_conduire || prev.permis_conduire,
-        passeport_valide: result.passeport_valide || prev.passeport_valide,
-        vehicule_personnel: result.vehicule_personnel || prev.vehicule_personnel,
+        titre_professionnel: result.titre_professionnel || "",
+        service_militaire: result.service_militaire || "",
+        bio: result.bio || "",
+        linkedin: result.linkedin || "",
+        github: result.github || "",
+        permis_conduire: !!result.permis_conduire,
+        passeport_valide: !!result.passeport_valide,
+        vehicule_personnel: !!result.vehicule_personnel,
       }));
-      setPrefsForm((prev) => ({
-        ...prev,
-        situation_actuelle: result.situation_actuelle || prev.situation_actuelle,
-        mobilite: result.mobilite || prev.mobilite,
-        salaire_souhaite: result.salaire_souhaite || prev.salaire_souhaite,
-      }));
+      // Les préférences repartent de zéro à chaque analyse : seul le CV les remplit (le métier souhaité
+      // n'est jamais déduit d'un CV, il est donc vidé).
+      setPrefsForm({
+        metier_souhaite: "",
+        metier_souhaite_libelle: "",
+        metier_souhaite_appellation: null,
+        metier_souhaite_appellation_libelle: "",
+        demande_metier_souhaite: "",
+        demande_metier_souhaite_libelle: "",
+        demande_metier_souhaite_statut: "",
+        salaire_souhaite: result.salaire_souhaite || "",
+        mobilite: result.mobilite || "",
+        situation_actuelle: result.situation_actuelle || "",
+      });
       if (result.photo?.data) {
         try {
           const byteCharacters = atob(result.photo.data);
@@ -493,12 +511,9 @@ export const useOnboardingWizard = () => {
     Object.entries(prefsForm)
       .filter(([key]) => key !== "metier_souhaite_libelle" && key !== "metier_souhaite_appellation_libelle")
       .filter(([key]) => key !== "demande_metier_souhaite_libelle" && key !== "demande_metier_souhaite_statut")
-      // `metier_souhaite` est un PrimaryKeyRelatedField nullable — une chaîne vide est
-      // rejetée par DRF, on omet simplement la clé si aucun métier n'a été choisi (idem pour l'appellation
-      // et pour le métier proposé en attente).
-      .filter(([key, value]) => !(
-        (key === "metier_souhaite" || key === "metier_souhaite_appellation" || key === "demande_metier_souhaite") && !value
-      ))
+      // `metier_souhaite` (et son appellation, et le métier proposé en attente) sont des PrimaryKeyRelatedField
+      // nullables : DRF convertit la chaîne vide en `null` (vérifié), ce qui EFFACE la valeur enregistrée.
+      // Indispensable : après l'analyse d'un nouveau CV, un métier souhaité laissé vide doit disparaître du profil.
       .forEach(([key, value]) => formData.append(key, value ?? ""));
     try {
       await profilService.updateProfil(formData);

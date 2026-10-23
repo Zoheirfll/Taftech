@@ -18,6 +18,7 @@ import SectionFormations from "./SectionFormations";
 import SidebarCompletion from "./SidebarCompletion";
 import SidebarStats from "./SidebarStats";
 import { dureeExperienceMois } from "../../../utils/cvDates";
+import { notifierProfilMisAJour } from "../../../utils/evenementsProfil";
 import SidebarCompetences from "./SidebarCompetences";
 import SidebarLangues from "./SidebarLangues";
 
@@ -75,6 +76,7 @@ const ProfilCandidat = () => {
     handlePhotoChange,
     cropperPhoto,
     fermerCropperPhoto,
+    handleDeletePhoto,
     uploaderPhotoRecadree,
     handleAddTag,
     handleRemoveTag,
@@ -237,6 +239,7 @@ const ProfilCandidat = () => {
             formatText={formatText}
             photoQuickInputRef={photoQuickInputRef}
             handlePhotoChange={handlePhotoChange}
+            handleDeletePhoto={handleDeletePhoto}
             setShowInfoForm={setShowInfoForm}
           />
           <SectionPreferences profil={profil} formatText={formatText} setShowPrefForm={setShowPrefForm} />
@@ -346,6 +349,9 @@ const ProfilCandidat = () => {
             onClose={() => {
               setShowOnboardingModal(false);
               fetchData();
+              // Filet de sécurité : la barre de navigation recharge aussi sa photo à la fermeture de l'assistant,
+              // quel que soit le chemin pris (le signal de l'étape « Infos » n'est émis que si la photo change).
+              notifierProfilMisAJour();
             }}
           />
         </div>

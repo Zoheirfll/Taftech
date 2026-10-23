@@ -16,6 +16,9 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
     if (file) setFichierEnAttente(file);
   };
 
+  // Un nouveau fichier choisi REMPLACE l'ancien CV à l'écran : on n'affiche plus l'ancien ni son bouton d'analyse.
+  const ancienCvAffiche = !!profil?.cv_pdf && !fichierEnAttente;
+
   return (
     <div className="text-center">
       <h3 className={`${tw.pageTitlePetit} mb-2`}>Facilitez la création de votre profil</h3>
@@ -26,7 +29,7 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
         </div>
       )}
 
-      {profil?.cv_pdf && (
+      {ancienCvAffiche && (
         <div className={`flex items-center gap-3 p-4 rounded-xl border text-left mb-4 ${tw.bgSuccessSoft} border-emerald-200`}>
           <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
             <FileText size={18} className={tw.textSuccess} />
@@ -47,13 +50,13 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
         </div>
       )}
 
-      {profil?.cv_pdf && (
+      {ancienCvAffiche && (
         <div className="mb-4">
           <ApercuDonneesIA fonction="PARSER_CV" />
         </div>
       )}
 
-      {profil?.cv_pdf && (
+      {ancienCvAffiche && (
         <button
           type="button"
           onClick={() => uploadCV(null)}
@@ -73,7 +76,7 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
         </button>
       )}
 
-      {profil?.cv_pdf && (
+      {ancienCvAffiche && (
         <div className="flex items-center gap-3 mb-4">
           <div className="h-px flex-1 bg-slate-200" />
           <span className={`text-xs ${tw.textMuted}`}>ou téléversez un nouveau CV</span>
@@ -83,7 +86,19 @@ export const StepUploadCV = ({ parserLoading, uploadCV, skipStep, profil, quotaP
 
       {fichierEnAttente && (
         <div className="mb-4 space-y-3 text-left">
-          <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{fichierEnAttente.name}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className={`text-sm font-semibold truncate ${tw.textStrong}`}>{fichierEnAttente.name}</p>
+            {profil?.cv_pdf && (
+              <button
+                type="button"
+                onClick={() => setFichierEnAttente(null)}
+                disabled={parserLoading}
+                className={`${tw.linkPrimary} shrink-0 text-xs font-semibold disabled:opacity-50`}
+              >
+                Annuler
+              </button>
+            )}
+          </div>
           <ApercuDonneesIA fonction="PARSER_CV" fichier={fichierEnAttente} />
           <button
             type="button"

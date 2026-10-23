@@ -1,12 +1,13 @@
 // Carte "Informations personnelles" : photo, identité, badges (service militaire, permis...) et contacts.
-import { Pencil, Camera, User, Phone, Mail, Check, Minus, Award, Briefcase } from "lucide-react";
+import { Pencil, Camera, User, Phone, Mail, Check, Minus, Award, Briefcase, Trash2 } from "lucide-react";
 import { tw } from "../../../theme";
+import { confirmToast } from "../../../utils/confirmToast";
 import { MetierProposeBadge } from "../../../Components/MetierProposeBadge";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { formatDureeMois } from "../../../utils/cvDates";
 import { SECTION_CLASS, SECTION_TITLE, EDIT_BTN } from "./profilUi";
 
-const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInputRef, handlePhotoChange, setShowInfoForm }) => (
+const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInputRef, handlePhotoChange, handleDeletePhoto, setShowInfoForm }) => (
           <div className={SECTION_CLASS}>
             <div className="flex justify-between items-start mb-5">
               <h2 className={SECTION_TITLE}>Informations personnelles</h2>
@@ -19,7 +20,7 @@ const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInp
                 <div className={`w-24 h-24 rounded-2xl flex items-center justify-center overflow-hidden ${tw.photoPlaceholder}`}>
                   {profil.photo_profil ? (
                     <img
-                      src={candidatFichierUrl(profil.user_id, "photo")}
+                      src={candidatFichierUrl(profil.user_id, "photo", profil.photo_profil)}
                       alt="Profil"
                       className="w-full h-full object-cover"
                     />
@@ -40,6 +41,16 @@ const SectionInfosPerso = ({ profil, constants, stats, formatText, photoQuickInp
                     onChange={handlePhotoChange}
                   />
                 </label>
+                {profil.photo_profil && (
+                  <button
+                    type="button"
+                    onClick={() => confirmToast("Supprimer votre photo de profil ?", handleDeletePhoto)}
+                    className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center bg-white border border-red-200 text-red-600 hover:bg-red-100 shadow-sm transition-colors"
+                    aria-label="Supprimer la photo de profil"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h3 className={`text-xl font-extrabold ${tw.textStrong}`}>

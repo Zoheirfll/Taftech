@@ -102,7 +102,6 @@ export const tw = {
   notifTitre: "text-sm font-semibold text-slate-900",
   notifDetail: "mt-0.5 text-xs font-normal text-slate-600",
   notifFermer: "shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700",
-
   // BADGES
   badgePrimary:
     "inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full",

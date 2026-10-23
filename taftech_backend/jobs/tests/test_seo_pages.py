@@ -102,7 +102,7 @@ class PagesSeoTests(TestCase):
         self.assertNotIn('validThrough', construire_job_posting(self.offre))
 
     def test_types_de_contrat_traduits_pour_google(self):
-        attendu = {'CDD': 'TEMPORARY', 'FREELANCE': 'CONTRACTOR', 'STAGE': 'INTERN', 'INTERIM': 'TEMPORARY'}
+        attendu = {'CDD': 'TEMPORARY', 'FREELANCE': 'CONTRACTOR', 'MISSION': 'CONTRACTOR', 'STAGE': 'INTERN', 'INTERIM': 'TEMPORARY'}
         for contrat, valeur in attendu.items():
             offre = self._offre(f'Poste {contrat}', type_contrat=contrat)
             self.assertEqual(construire_job_posting(offre)['employmentType'], valeur)

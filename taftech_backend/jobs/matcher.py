@@ -2,6 +2,7 @@ import datetime
 import difflib
 import re
 from django.db.models import Q
+from .offres_multiples import lieux_de_l_offre
 
 def normaliser(texte):
     if not texte:
@@ -550,17 +551,24 @@ def _score_region(profil, offre):
     déclarée. `connu=False` seulement si la wilaya du candidat est totalement absente (donnée
     manquante) — une incompatibilité déclarée reste "connue" (S03)."""
     wilaya_c = normaliser(getattr(profil, "wilaya", None))
-    wilaya_o = normaliser(getattr(offre, "wilaya", None))
+    # Plusieurs lieux de travail (« Oran, Mostaganem ») : le MEILLEUR lieu compte pour le candidat.
+    wilayas_o = [normaliser(lieu["wilaya"]) for lieu in lieux_de_l_offre(offre)]
     if not wilaya_c:
         return {"score": 0.0, "connu": False}
-    if wilaya_c == wilaya_o:
+    if wilaya_c in wilayas_o:
         return {"score": 1.0, "connu": True}
     mobilite = getattr(profil, "mobilite", None)
     if mobilite == "NATIONALE":
         return {"score": 1.0, "connu": True}
-    if mobilite == "REGIONALE" and _meme_region(wilaya_c, wilaya_o):
+    if mobilite == "REGIONALE" and any(_meme_region(wilaya_c, wilaya_o) for wilaya_o in wilayas_o):
         return {"score": 1.0, "connu": True}
     return {"score": 0.0, "connu": True}
+
+
+def _lieu_correspondant(offre, wilaya_c):
+    """(wilaya, commune) normalisées du lieu de l'offre situé dans la wilaya du candidat, sinon du lieu principal."""
+    lieux = [(normaliser(lieu["wilaya"]), normaliser(lieu["commune"])) for lieu in lieux_de_l_offre(offre)]
+    return next((lieu for lieu in lieux if lieu[0] == wilaya_c), lieux[0])
 
 
 # ---------------------------------------------------------------------------
@@ -616,9 +624,10 @@ def _calculer_score_algo(candidat_user, offre):
     # pas de notion de télétravail intégral dans le modèle actuel pour le désactiver.
     contrib_region = _score_region(profil, offre)
     contrib_region["poids"] = params["poids_region"]
-    wilaya_c, wilaya_o = normaliser(profil.wilaya), normaliser(offre.wilaya)
+    wilaya_c = normaliser(profil.wilaya)
+    wilaya_o, commune_o = _lieu_correspondant(offre, wilaya_c)
     if contrib_region["score"] == 1.0:
-        commune_c, commune_o = normaliser(profil.commune), normaliser(offre.commune)
+        commune_c = normaliser(profil.commune)
         if wilaya_c == wilaya_o and commune_c and commune_o and commune_c == commune_o:
             explications["region"] = f"Réside dans la même commune ({profil.commune})."
             points_forts.append(f"Proximité locale idéale (Commune de {profil.commune}).")
@@ -632,7 +641,7 @@ def _calculer_score_algo(candidat_user, offre):
         explications["region"] = "Localisation du candidat non renseignée."
     else:
         explications["region"] = f"Candidat basé à {profil.wilaya or 'wilaya inconnue'}, hors zone et sans mobilité compatible."
-        ecarts.append(f"Localisation incompatible avec le poste ({offre.wilaya}).")
+        ecarts.append(f"Localisation incompatible avec le poste ({' / '.join(lieu['wilaya'] for lieu in lieux_de_l_offre(offre))}).")
 
     # DIPLÔME + SPÉCIALITÉ DE FORMATION (S05-S08) — deux critères pondérés indépendants,
     # évalués sur la même FormationCandidat (jamais un diplôme d'une formation combiné à la

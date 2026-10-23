@@ -62,11 +62,12 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
 
     await waitFor(() => {
       expect(jobsService.getEntreprisePublic).toHaveBeenCalledWith("123");
-      expect(screen.getByText("TafTech Solutions")).toBeInTheDocument();
+      expect(screen.getAllByText("TafTech Solutions").length).toBeGreaterThan(0);
       expect(
         screen.getByText("Agence de développement web."),
       ).toBeInTheDocument();
-      expect(screen.getByText(/Informatique/i)).toBeInTheDocument();
+      // Le secteur apparaît dans l'en-tête et dans la colonne de droite.
+      expect(screen.getAllByText(/Informatique/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -84,7 +85,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png");
 
       // Le composant splitte wilaya_siege sur " - " et affiche seulement la ville
-      expect(screen.getByText(/Oran/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Oran/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -110,17 +111,17 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("TafTech Solutions"));
+    await waitFor(() => screen.getAllByText("TafTech Solutions"));
     fireEvent.click(screen.getByRole("button", { name: /^Offres/i }));
 
     await waitFor(() => {
       // Détails de l'offre
       expect(screen.getByText("Développeur Front-End")).toBeInTheDocument();
-      // Location and contract shown with lucide icons (no emojis)
-      expect(screen.getByText("Alger")).toBeInTheDocument();
+      // Lieu (wilaya, commune) et contrat sur la ligne de l'offre ; toute la ligne est un lien vers l'offre.
+      expect(screen.getByText(/Alger, Bab Ezzouar/)).toBeInTheDocument();
       expect(screen.getByText("CDI")).toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: /Voir l'offre/i }),
+        screen.getByRole("link", { name: /Développeur Front-End/i }),
       ).toHaveAttribute("href", "/entreprises/taftech-solutions/offres-d-emploi/informatique/developpeur-front-end-x1y2z3");
     });
   });
@@ -133,7 +134,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("TafTech Solutions"));
+    await waitFor(() => screen.getAllByText("TafTech Solutions"));
     fireEvent.click(screen.getByRole("button", { name: /^Offres/i }));
 
     await waitFor(() => {
@@ -168,7 +169,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("TafTech Solutions")).toBeInTheDocument();
+      expect(screen.getAllByText("TafTech Solutions").length).toBeGreaterThan(0);
     });
     expect(screen.queryByText(/ans$/i)).not.toBeInTheDocument();
   });
@@ -195,7 +196,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
     expect(screen.queryByText("Aucune offre ouverte")).not.toBeInTheDocument();
   });
 
-  it("🟢 HP6 : Onglet Photos affiche la galerie complète", async () => {
+  it("🟢 HP6 : L'onglet Entreprise affiche la galerie complète", async () => {
     const entrepriseAvecPhotos = {
       ...mockEntrepriseBase,
       photos: [
@@ -210,10 +211,9 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => screen.getByText("TafTech Solutions"));
-    fireEvent.click(screen.getByRole("button", { name: /^Photos/i }));
-
+    await waitFor(() => screen.getAllByText("TafTech Solutions"));
     await waitFor(() => {
+      expect(screen.getByAltText("Bureaux")).toBeInTheDocument();
       expect(screen.getByAltText("Équipe")).toBeInTheDocument();
     });
   });
@@ -283,7 +283,7 @@ describe("🏢 UI & Logique - Composant <EntreprisePublic />", () => {
       // A Building2 lucide icon is rendered instead of an image
       expect(screen.queryByAltText(/TafTech Solutions/i)).not.toBeInTheDocument();
       // Company name still shows
-      expect(screen.getByText("TafTech Solutions")).toBeInTheDocument();
+      expect(screen.getAllByText("TafTech Solutions").length).toBeGreaterThan(0);
     });
   });
 });

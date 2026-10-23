@@ -350,7 +350,8 @@ describe("💼 UI & Logique - Composant <JobDetail />", () => {
         specialites_requises_detail: [],
       });
       expect(screen.getByText("Formation et expérience requises")).toBeInTheDocument();
-      expect(screen.getByText("BTS")).toBeInTheDocument();
+      // « BTS » apparaît dans le tableau d'informations (niveau d'étude) et dans la phrase de formation.
+      expect(screen.getAllByText("BTS").length).toBeGreaterThan(0);
     });
 
     it("🔴 Aucune mention d'expiration sur la page, même pour une offre qui expire bientôt", async () => {

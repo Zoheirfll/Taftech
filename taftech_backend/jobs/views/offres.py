@@ -39,7 +39,7 @@ class JobListAPIView(APIView):
         experience = request.query_params.get('experience', '')
         contrat = request.query_params.get('contrat', '')
         seuil_retention = timezone.now() - datetime.timedelta(days=RETENTION_OFFRES_CLOTUREES_JOURS)
-        offres = OffreEmploi.objects.select_related('entreprise').filter(
+        offres = OffreEmploi.objects.select_related('entreprise').prefetch_related('diplomes_requis').filter(
             est_active=True, statut_moderation='APPROUVEE',
         ).filter(
             Q(est_cloturee=False) | Q(est_cloturee=True, date_cloture__gte=seuil_retention)
@@ -47,7 +47,8 @@ class JobListAPIView(APIView):
         if mot_cle:
             offres = offres.filter(Q(titre__icontains=mot_cle) | Q(missions__icontains=mot_cle))
         if wilaya:
-            offres = offres.filter(wilaya__icontains=wilaya)
+            # Lieu principal OU l'un des lieux supplémentaires (« Oran, Mostaganem »).
+            offres = offres.filter(Q(wilaya__icontains=wilaya) | Q(lieux_supplementaires__icontains=wilaya))
         if commune:
             offres = offres.filter(commune__icontains=commune)
         if diplome_id and diplome_id.isdigit():
@@ -78,7 +79,8 @@ class JobListAPIView(APIView):
         if experience:
             offres = offres.filter(experience_requise=experience)
         if contrat:
-            offres = offres.filter(type_contrat=contrat)
+            # Contrat principal OU l'un des contrats supplémentaires (« CDD ou Mission »).
+            offres = offres.filter(Q(type_contrat=contrat) | Q(types_contrat_supplementaires__contains=[contrat]))
         # Actives toujours avant les clôturées récentes, peu importe le tri secondaire
         offres = offres.annotate(
             priorite_cloture=Case(When(est_cloturee=True, then=Value(1)), default=Value(0), output_field=IntegerField())

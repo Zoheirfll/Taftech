@@ -11,6 +11,8 @@ import { confirmToast } from "../../utils/confirmToast";
 import { selectStylesTeal, tw } from "../../theme";
 import { grouperParFamille } from "../../utils/familleFormation";
 import { estGroupe, membresDuGroupe, optionsNiveaux } from "../../utils/groupesDiplomes";
+import LieuxSupplementaires from "./CreateJob/LieuxSupplementaires";
+import ContratsSupplementaires from "./CreateJob/ContratsSupplementaires";
 import { rapprocherDuReferentiel } from "../../utils/competencesReferentiel";
 import { CATEGORIES_EXIGENCE, CATEGORIE_EXIGENCE_PAR_DEFAUT } from "../../utils/exigencesCategories";
 import InfoBanner from "../../Components/InfoBanner";
@@ -139,6 +141,8 @@ const OffresListPage = () => {
       metier: offre.metier || "",
       metier_libelle: offre.metier_libelle || "",
       type_contrat: offre.type_contrat || "",
+      lieux_supplementaires: offre.lieux_supplementaires || [],
+      types_contrat_supplementaires: offre.types_contrat_supplementaires || [],
       experience_requise: offre.experience_requise || "",
       nombre_postes: offre.nombre_postes || 1,
       description: offre.description || "",
@@ -175,6 +179,11 @@ const OffresListPage = () => {
     try {
       const payload = {
         ...modifierForm,
+        // Le principal compte déjà : un lieu ou un contrat supplémentaire identique est retiré (le serveur le refuserait).
+        lieux_supplementaires: (modifierForm.lieux_supplementaires || []).filter(
+          (l) => !(l.wilaya === modifierForm.wilaya && (l.commune || "") === (modifierForm.commune || "")),
+        ),
+        types_contrat_supplementaires: (modifierForm.types_contrat_supplementaires || []).filter((c) => c !== modifierForm.type_contrat),
         competences_requises: competencesRequises,
         diplomes_requis: diplomesRequis.map((d) => d.id),
         specialites_requises: specialitesRequises.map((s) => s.id),
@@ -732,6 +741,19 @@ const OffresListPage = () => {
                   />
                 </div>
               </div>
+
+              <LieuxSupplementaires
+                wilayas={constants.wilayas}
+                principal={{ wilaya: modifierForm.wilaya, commune: modifierForm.commune }}
+                lieux={modifierForm.lieux_supplementaires || []}
+                onChange={(lieux) => setModifierForm({ ...modifierForm, lieux_supplementaires: lieux })}
+              />
+              <ContratsSupplementaires
+                options={constants.contrats || []}
+                principal={modifierForm.type_contrat}
+                selection={modifierForm.types_contrat_supplementaires || []}
+                onChange={(codes) => setModifierForm({ ...modifierForm, types_contrat_supplementaires: codes })}
+              />
 
               {/* Même bloc que la création d'offre (liens « Je ne trouve pas… » inclus). */}
               <BlocFormationRequise

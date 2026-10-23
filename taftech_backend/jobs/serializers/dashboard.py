@@ -21,6 +21,7 @@ class OffreDashboardDTO(serializers.ModelSerializer):
         fields = (
             'id', 'titre', 'date_publication', 'date_expiration', 'est_active', 'est_cloturee',
             'wilaya', 'commune', 'diplome', 'metier', 'metier_libelle', 'type_contrat',
+            'lieux_supplementaires', 'types_contrat_supplementaires',
             'experience_requise', 'experience_annees', 'nombre_postes', 'description', 'missions', 'profil_recherche', 'competences',
             'competences_requises', 'diplomes_requis_detail', 'specialites_requises_detail', 'exigences_imperatives',
             'salaire_propose', 'candidatures', 'statut_moderation', 'motif_rejet',

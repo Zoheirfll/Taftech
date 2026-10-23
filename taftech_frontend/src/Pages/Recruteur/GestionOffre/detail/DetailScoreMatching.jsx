@@ -3,19 +3,15 @@ import { HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { tw } from "../../../../theme";
 import { criteresNonDemandes } from "../../../../utils/criteresMatching";
+import { CRITERES_RADAR } from "./constantesDetail";
 
 const CRITERES_LABELS = {
   specialite: "Spécialité", diplome: "Diplôme", experience: "Expérience",
   region: "Localisation & mobilité", competences: "Compétences",
 };
 
-const CRITERES_BARRES = [
-  { key: "specialite", label: "Spécialité", max: 25 },
-  { key: "diplome", label: "Diplôme", max: 20 },
-  { key: "experience", label: "Expérience", max: 20 },
-  { key: "region", label: "Localisation & mobilité", max: 20 },
-  { key: "competences", label: "Compétences", max: 15 },
-];
+// Même liste et même ordre que le radar et l'écran candidat (source unique).
+const CRITERES_BARRES = CRITERES_RADAR;
 
 export const DetailScoreMatching = ({ detailsMatching }) => {
   const DM = detailsMatching;

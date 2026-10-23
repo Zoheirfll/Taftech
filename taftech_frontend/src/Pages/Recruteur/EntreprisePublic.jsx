@@ -1,25 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
-import { selectStyles } from "../../theme";
+import { selectStyles, tw } from "../../theme";
 import { reportError } from "../../utils/errorReporter";
 import Seo from "../../Components/Seo";
 import CarteSurDemande from "../../Components/CarteSurDemande";
+import EnteteEntreprise from "../../Components/EnteteEntreprise";
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
 import { jobUrl } from "../../utils/slugify";
+import { contratsTexte, lieuxTexte } from "../../utils/lieuxContrats";
+import { libellesDiplomesCompacts } from "../../utils/groupesDiplomes";
+import { joindre } from "../../utils/listeFrancaise";
+import { notifier } from "../../utils/notifier";
 import {
   MapPin,
   Briefcase,
-  Building2,
   Send,
   FileText,
   X,
   Clock,
-  Calendar,
   Globe,
+  Users,
+  GraduationCap,
 } from "lucide-react";
 
 const LinkedinIcon = () => (
@@ -28,7 +33,6 @@ const LinkedinIcon = () => (
     <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
   </svg>
 );
-import { notifier } from "../../utils/notifier";
 
 const TAILLES_LABELS = {
   TPE: "1 à 10 employés",
@@ -40,11 +44,13 @@ const TAILLES_LABELS = {
 
 const EntreprisePublic = () => {
   const { slug } = useParams();
+  const [params] = useSearchParams();
   const [entreprise, setEntreprise] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("apropos");
+  // Onglet initial : `?onglet=offres` (lien depuis la page d'une offre), sinon la présentation de l'entreprise.
+  const [activeTab, setActiveTab] = useState(params.get("onglet") === "offres" ? "offres" : "entreprise");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { erreurs, exiger, definir, depuisReponse, effacer, attributs } = useErreursChamps();
   const [constants, setConstants] = useState({ wilayas: [], secteurs: [], diplomes: [] });
@@ -123,31 +129,20 @@ const EntreprisePublic = () => {
   if (!entreprise) return null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const secteurLabel = entreprise.secteur_activite_libelle || entreprise.secteur_activite || "Secteur non défini";
+  const secteurLabel = entreprise.secteur_activite_libelle || entreprise.secteur_activite || "";
 
   // Wilaya : "31 - Oran" → "Oran". Déduplique si commune identique à la ville
   const wilayaVille = entreprise.wilaya_siege?.split(" - ")[1] || entreprise.wilaya_siege || "";
   const communeAffichee = entreprise.commune_siege && entreprise.commune_siege !== wilayaVille
     ? entreprise.commune_siege : null;
   const lieuAffiche = communeAffichee ? `${wilayaVille} · ${communeAffichee}` : wilayaVille;
+  const lieuCarte = entreprise.adresse_complete || [communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ");
 
   const tailleLabel = TAILLES_LABELS[entreprise.taille_entreprise] || entreprise.taille_entreprise;
+  const nbOffres = entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0;
 
   const expLabel = (val) =>
     constants.experiences?.find((e) => e.value === val)?.label || val;
-
-  const CONTRAT_BADGES = {
-    CDI:    "bg-indigo-50 text-indigo-600 border-indigo-200",
-    CDD:    "bg-amber-50 text-amber-700 border-amber-200",
-    STAGE:  "bg-indigo-50 text-indigo-700 border-indigo-200",
-    FREELANCE: "bg-slate-100 text-slate-700 border-slate-200",
-    INTERIM:"bg-orange-50 text-orange-700 border-orange-200",
-  };
-
-  // Tronque le secteur à 35 chars pour le hero
-  const secteurCourt = secteurLabel.length > 25
-    ? secteurLabel.slice(0, 23) + "…"
-    : secteurLabel;
 
   const formatDate = (d) => {
     if (!d) return null;
@@ -157,8 +152,14 @@ const EntreprisePublic = () => {
   const inputClass =
     "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
+  const boutonCandidature = (classe) => (
+    <button type="button" onClick={() => setShowModal(true)} className={`${classe} ${tw.bgPrimarySolid} items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors`}>
+      <Send size={14} /> Candidature spontanée
+    </button>
+  );
+
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
+    <div>
       <Seo
         title={entreprise.nom_entreprise}
         description={
@@ -168,206 +169,131 @@ const EntreprisePublic = () => {
         }
         image={entreprise.banniere_url ? getMediaUrl(entreprise.banniere_url) : getMediaUrl(entreprise.logo_url)}
       />
+      <h1 className="sr-only">{entreprise.nom_entreprise}</h1>
 
-      {/* ── HERO ────────────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-6 shadow-sm">
-        {/* Photo de couverture */}
-        {entreprise.banniere_url && (
-          <div className="h-48 md:h-64 w-full overflow-hidden">
-            <img src={getMediaUrl(entreprise.banniere_url)} alt="" className="w-full h-full object-cover" />
-          </div>
-        )}
-        {/* Bandeau neutre : logo + nom + bouton */}
-        <div className="px-6 md:px-8 py-6 border-b border-slate-100">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-              {entreprise.logo_url
-                ? <img src={getMediaUrl(entreprise.logo_url)} alt={entreprise.nom_entreprise} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                : <Building2 size={28} className="text-slate-300" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-extrabold leading-tight truncate text-slate-900">{entreprise.nom_entreprise}</h1>
-              <div className="flex items-center gap-2 mt-1.5 text-slate-700 text-sm overflow-hidden">
-                <span className="flex items-center gap-1 shrink-0"><Briefcase size={13} /> {secteurCourt}</span>
-                <span className="text-slate-300 shrink-0">·</span>
-                <span className="flex items-center gap-1 shrink-0"><MapPin size={13} /> {lieuAffiche}</span>
-              </div>
-            </div>
-            {/* Bouton dans le hero, aligné à droite */}
-            <button
-              onClick={() => setShowModal(true)}
-              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-800 text-white text-sm font-semibold rounded-xl transition-colors shrink-0"
-            >
-              <Send size={14} /> Candidature spontanée
-            </button>
-          </div>
+      {/* ── EN-TÊTE : bannière, logo, nom, secteur, ville, onglets (même composant que la page d'une offre) ── */}
+      <EnteteEntreprise
+        entreprise={{ ...entreprise, secteur_libelle: secteurLabel }}
+        lieu={lieuAffiche}
+        onglets={[
+          { cle: "entreprise", libelle: "Entreprise" },
+          { cle: "offres", libelle: `Offres d'emploi (${nbOffres})` },
+        ]}
+        ongletActif={activeTab}
+        onSelectOnglet={setActiveTab}
+        action={boutonCandidature("hidden sm:inline-flex")}
+      />
 
-          {/* Stats clés */}
-          <div className="flex flex-wrap items-center gap-6 mt-5 pt-5 border-t border-slate-100">
-            <div>
-              <p className="text-xl font-extrabold text-slate-900">{entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0}</p>
-              <p className="text-xs text-slate-600">Offres en ligne</p>
-            </div>
-            {tailleLabel && (
-              <div>
-                <p className="text-xl font-extrabold text-slate-900">{tailleLabel}</p>
-                <p className="text-xs text-slate-600">Employés</p>
-              </div>
-            )}
-            {entreprise.annee_creation && (
-              <div>
-                <p className="text-xl font-extrabold text-slate-900">{new Date().getFullYear() - entreprise.annee_creation} ans</p>
-                <p className="text-xs text-slate-600">D'existence</p>
-              </div>
-            )}
-          </div>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+        <div className="sm:hidden mb-4">{boutonCandidature("inline-flex")}</div>
 
-        {/* Corps */}
-        <div className="px-6 md:px-8 pb-8 pt-5">
-          {/* Bouton mobile seulement */}
-          <div className="sm:hidden mb-5">
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-800 transition-colors shadow-sm"
-            >
-              <Send size={14} /> Candidature spontanée
-            </button>
-          </div>
-
-          {/* Liens web en texte simple */}
-          {(entreprise.linkedin || entreprise.site_web) && (
-            <div className="flex flex-wrap gap-4 mb-5">
-              {entreprise.linkedin && (
-                <a
-                  href={entreprise.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
-                >
-                  <LinkedinIcon /> LinkedIn
-                </a>
-              )}
-              {entreprise.site_web && (
-                <a
-                  href={entreprise.site_web}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors"
-                >
-                  <Globe size={14} /> Site web
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Barre d'onglets */}
-          <div className="flex items-center gap-1 border-b border-slate-200 mb-5">
-            <button
-              onClick={() => setActiveTab("apropos")}
-              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "apropos" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              À propos
-            </button>
-            <button
-              onClick={() => setActiveTab("offres")}
-              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "offres" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Offres <span className="ml-1 text-xs text-slate-600">({entreprise.nombre_offres_actives ?? entreprise.offres_actives?.length ?? 0})</span>
-            </button>
-            {entreprise.photos?.length > 0 && (
-              <button
-                onClick={() => setActiveTab("photos")}
-                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === "photos" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Photos <span className="ml-1 text-xs text-slate-600">({entreprise.photos.length})</span>
-              </button>
-            )}
-          </div>
-
-          {/* Onglet À propos */}
-          {activeTab === "apropos" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ── COLONNE GAUCHE ─────────────────────────────────────────────── */}
+          <div className="lg:col-span-2">
+            {/* Onglet Entreprise : présentation, culture, liens, chiffres, photos */}
+            {activeTab === "entreprise" && (
+              <div className={`${tw.cardColors} rounded-xl p-6 space-y-6`}>
                 {entreprise.description && (
-                  <div>
-                    <p className="text-base font-bold text-slate-900 mb-2">Présentation</p>
-                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                      {entreprise.description}
-                    </p>
-                  </div>
+                  <section>
+                    <h2 className={`text-base font-extrabold ${tw.textStrong} mb-2`}>Présentation</h2>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{entreprise.description}</p>
+                  </section>
                 )}
                 {entreprise.culture_entreprise && (
+                  <section>
+                    <h2 className={`text-base font-extrabold ${tw.textStrong} mb-2`}>Culture d'entreprise</h2>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{entreprise.culture_entreprise}</p>
+                  </section>
+                )}
+                {(entreprise.linkedin || entreprise.site_web) && (
+                  <div className="flex flex-wrap gap-4">
+                    {entreprise.linkedin && (
+                      <a href={entreprise.linkedin} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors">
+                        <LinkedinIcon /> LinkedIn
+                      </a>
+                    )}
+                    {entreprise.site_web && (
+                      <a href={entreprise.site_web} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-colors">
+                        <Globe size={14} /> Site web
+                      </a>
+                    )}
+                  </div>
+                )}
+                <div className={`flex flex-wrap items-center gap-6 pt-5 border-t ${tw.borderSubtle}`}>
                   <div>
-                    <p className="text-base font-bold text-slate-900 mb-2">Culture d'entreprise</p>
-                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                      {entreprise.culture_entreprise}
-                    </p>
+                    <p className={`text-xl font-extrabold ${tw.textStrong}`}>{nbOffres}</p>
+                    <p className="text-xs text-slate-600">Offres en ligne</p>
+                  </div>
+                  {tailleLabel && (
+                    <div>
+                      <p className={`text-xl font-extrabold ${tw.textStrong}`}>{tailleLabel}</p>
+                      <p className="text-xs text-slate-600">Employés</p>
+                    </div>
+                  )}
+                  {entreprise.annee_creation && (
+                    <div>
+                      <p className={`text-xl font-extrabold ${tw.textStrong}`}>{new Date().getFullYear() - entreprise.annee_creation} ans</p>
+                      <p className="text-xs text-slate-600">D'existence</p>
+                    </div>
+                  )}
+                </div>
+                {entreprise.photos?.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {entreprise.photos.map((p) => (
+                      <img
+                        key={p.id}
+                        src={getMediaUrl(p.image)}
+                        alt={p.legende || ""}
+                        title={p.legende || ""}
+                        className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                      />
+                    ))}
                   </div>
                 )}
               </div>
-              {entreprise.photos?.length > 0 && (
-                <div className="md:col-span-1">
-                  <img
-                    src={getMediaUrl(entreprise.photos[0].image)}
-                    alt={entreprise.photos[0].legende || ""}
-                    className="w-full h-full min-h-[160px] object-cover rounded-xl border border-slate-200"
-                  />
-                </div>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Onglet Offres */}
-          {activeTab === "offres" && (
-            <div>
-              {entreprise.offres_actives?.length > 0 ? (
-                <div className="space-y-3">
-                  {entreprise.offres_actives.map((offre) => (
-                    <div
-                      key={offre.id}
-                      className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          to={jobUrl(offre, entreprise.slug)}
-                          className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
-                        >
-                          {offre.titre}
-                        </Link>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <span className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${CONTRAT_BADGES[offre.type_contrat] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                            {offre.type_contrat}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-slate-700">
-                            <MapPin size={11} /> {offre.wilaya?.split(" - ")[1] || offre.wilaya}
-                          </span>
-                          {offre.experience_requise && (
-                            <span className="flex items-center gap-1 text-xs text-slate-700">
-                              <Clock size={11} /> {expLabel(offre.experience_requise)}
-                            </span>
-                          )}
-                          {offre.date_publication && (
-                            <span className="flex items-center gap-1 text-xs text-slate-600">
-                              <Calendar size={11} /> {formatDate(offre.date_publication)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            {/* Onglet Offres d'emploi : une ligne détaillée par offre, comme sur Emploitic */}
+            {activeTab === "offres" && (
+              entreprise.offres_actives?.length > 0 ? (
+                <div className={`${tw.cardColors} rounded-xl overflow-hidden`}>
+                  <h2 className={`px-6 py-4 text-base font-extrabold ${tw.textStrong} border-b ${tw.borderSubtle}`}>Offres d'emploi</h2>
+                  {entreprise.offres_actives.map((offre) => {
+                    // Deux niveaux au plus puis « N autres » : la ligne reste courte (détail complet sur la page de l'offre).
+                    const diplomes = joindre(libellesDiplomesCompacts(offre.diplomes_requis_detail || []), "ou");
+                    return (
                       <Link
+                        key={offre.id}
                         to={jobUrl(offre, entreprise.slug)}
-                        className="shrink-0 px-4 py-2 bg-indigo-50 text-indigo-800 text-xs font-semibold rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                        className={`block px-6 py-5 border-b last:border-b-0 ${tw.borderSubtle} hover:bg-slate-50 transition-colors`}
                       >
-                        Voir l'offre →
+                        <p className={`text-base font-bold ${tw.textStrong}`}>{offre.titre}</p>
+                        <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-xs ${tw.textMuted700}`}>
+                          {offre.date_publication && (
+                            <span className="flex items-center gap-1"><Clock size={12} /> {formatDate(offre.date_publication)}</span>
+                          )}
+                          {offre.nombre_postes > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Users size={12} /> {offre.nombre_postes} poste{offre.nombre_postes > 1 ? "s" : ""} ouvert{offre.nombre_postes > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {offre.experience_requise && (
+                            <span className="flex items-center gap-1">
+                              <Briefcase size={12} /> {expLabel(offre.experience_requise)}
+                              {offre.experience_annees > 0 ? ` (environ ${offre.experience_annees} an${offre.experience_annees > 1 ? "s" : ""})` : ""}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1"><MapPin size={12} /> {lieuxTexte(offre)}</span>
+                          {diplomes && (
+                            <span className="flex items-center gap-1"><GraduationCap size={12} /> {diplomes}</span>
+                          )}
+                          <span className="font-semibold">{contratsTexte(offre)}</span>
+                        </div>
                       </Link>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-white border border-dashed border-slate-200 rounded-xl p-12 text-center">
@@ -383,45 +309,45 @@ const EntreprisePublic = () => {
                     <Send size={13} /> Envoyer une candidature spontanée
                   </button>
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
 
-          {/* Onglet Photos */}
-          {activeTab === "photos" && entreprise.photos?.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {entreprise.photos.map((p) => (
-                <img
-                  key={p.id}
-                  src={getMediaUrl(p.image)}
-                  alt={p.legende || ""}
-                  title={p.legende || ""}
-                  className="w-full h-32 object-cover rounded-lg border border-slate-200"
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Localisation — toujours visible, hors onglets */}
-          {(entreprise.adresse_complete || wilayaVille) && (() => {
-            const lieuRecherche = entreprise.adresse_complete || [communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ");
-            return (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 mt-4">
-                <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Localisation</p>
-                <div className="rounded-lg overflow-hidden border border-slate-200">
-                  <CarteSurDemande lieu={lieuRecherche} />
-                </div>
+          {/* ── COLONNE DROITE : secteur, taille, lieu, carte (chargée au clic) ─────────────── */}
+          <aside className="space-y-4">
+            {(secteurLabel || tailleLabel) && (
+              <div className={`${tw.cardColors} rounded-xl grid grid-cols-2 text-center text-sm font-semibold ${tw.textStrong}`}>
+                {secteurLabel && (
+                  <div className={`p-5 flex flex-col items-center gap-2 ${tailleLabel ? `border-r ${tw.borderSubtle}` : "col-span-2"}`}>
+                    <Briefcase size={22} aria-hidden="true" />
+                    {secteurLabel}
+                  </div>
+                )}
+                {tailleLabel && (
+                  <div className={`p-5 flex flex-col items-center gap-2 ${secteurLabel ? "" : "col-span-2"}`}>
+                    <Users size={22} aria-hidden="true" />
+                    {tailleLabel}
+                  </div>
+                )}
+              </div>
+            )}
+            {(entreprise.adresse_complete || wilayaVille) && (
+              <div className={`${tw.cardColors} rounded-xl overflow-hidden`}>
+                <p className={`px-5 py-4 text-sm font-semibold flex items-center gap-2 ${tw.textStrong}`}>
+                  <MapPin size={16} aria-hidden="true" /> {[communeAffichee, wilayaVille, "Algérie"].filter(Boolean).join(", ")}
+                </p>
+                <CarteSurDemande lieu={lieuCarte} />
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lieuRecherche)}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lieuCarte)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-center mt-2 text-xs font-semibold text-indigo-600 hover:underline"
+                  className="block text-center py-3 text-xs font-semibold text-indigo-600 hover:underline"
                 >
                   Ouvrir dans Google Maps →
                 </a>
               </div>
-            );
-          })()}
+            )}
+          </aside>
         </div>
       </div>
 

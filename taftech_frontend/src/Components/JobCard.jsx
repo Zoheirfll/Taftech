@@ -6,6 +6,7 @@ import { reportError } from "../utils/errorReporter";
 import { jobUrl } from "../utils/slugify";
 import { tw } from "../theme";
 import { useModaleNIN, reponseNinRequis } from "./ModalNIN";
+import { contratsTexte, lieuxTexte } from "../utils/lieuxContrats";
 import {
   MapPin,
   Briefcase,
@@ -66,7 +67,7 @@ const JobCard = ({ job }) => {
             </span>
           ) : (
             <span className={tw.jobCardBadgeNeutral}>
-              {job.type_contrat}
+              {contratsTexte(job)}
             </span>
           )}
         </div>
@@ -74,7 +75,7 @@ const JobCard = ({ job }) => {
         <div className="flex flex-wrap gap-2 mt-3 mb-4">
           <span className={tw.jobCardTagNeutral}>
             <MapPin size={11} />
-            {job.wilaya?.split(" - ")[1] || job.wilaya}
+            {lieuxTexte(job)}
           </span>
           <span className={tw.jobCardTagNeutral}>
             <Briefcase size={11} />

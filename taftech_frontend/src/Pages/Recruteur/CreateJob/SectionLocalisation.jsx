@@ -3,6 +3,7 @@ import Select from "react-select";
 import { MapPin } from "lucide-react";
 import { selectStylesTeal, tw } from "../../../theme";
 import { Section, Field } from "./formUi";
+import LieuxSupplementaires from "./LieuxSupplementaires";
 
 const SectionLocalisation = ({ job }) => {
   const { constants, formData, setFormData, errors, setErrors, getCommunesOptions, handleSelectChange } = job;
@@ -43,6 +44,12 @@ const SectionLocalisation = ({ job }) => {
           />
         </Field>
       </div>
+      <LieuxSupplementaires
+        wilayas={constants.wilayas}
+        principal={{ wilaya: formData.wilaya, commune: formData.commune }}
+        lieux={formData.lieux_supplementaires || []}
+        onChange={(lieux) => setFormData({ ...formData, lieux_supplementaires: lieux })}
+      />
     </Section>
   );
 };

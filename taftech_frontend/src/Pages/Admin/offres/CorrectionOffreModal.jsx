@@ -8,15 +8,21 @@ import useEchapPourFermer from "../../../utils/useEchapPourFermer";
 import { reportError } from "../../../utils/errorReporter";
 import { nomWilaya } from "../../../utils/wilaya";
 import { tw } from "../../../theme";
+import LieuxSupplementaires from "../../Recruteur/CreateJob/LieuxSupplementaires";
+import ContratsSupplementaires from "../../Recruteur/CreateJob/ContratsSupplementaires";
 
 const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 const CHAMPS = [
-  "titre", "metier", "wilaya", "commune", "type_contrat", "experience_requise", "nombre_postes", "salaire_propose",
-  "date_expiration", "description", "missions", "profil_recherche", "competences",
+  "titre", "metier", "wilaya", "commune", "lieux_supplementaires", "type_contrat", "types_contrat_supplementaires",
+  "experience_requise", "nombre_postes", "salaire_propose", "date_expiration", "description", "missions",
+  "profil_recherche", "competences",
 ];
+// Lieux et contrats supplémentaires : des listes, comparées par leur contenu (String() ne verrait aucun changement).
+const LISTES = ["lieux_supplementaires", "types_contrat_supplementaires"];
+const signature = (champ, valeur) => (LISTES.includes(champ) ? JSON.stringify(valeur ?? []) : String(valeur ?? ""));
 
 const valeurInitiale = (offre) =>
-  Object.fromEntries(CHAMPS.map((champ) => [champ, offre[champ] ?? ""]));
+  Object.fromEntries(CHAMPS.map((champ) => [champ, offre[champ] ?? (LISTES.includes(champ) ? [] : "")]));
 
 const Champ = ({ id, label, children }) => (
   <div>
@@ -38,7 +44,7 @@ const CorrectionOffreModal = ({ offre, onClose, onSaved }) => {
 
   const modifies = useMemo(() => {
     const initial = valeurInitiale(offre);
-    return CHAMPS.filter((champ) => String(valeurs[champ] ?? "") !== String(initial[champ] ?? ""));
+    return CHAMPS.filter((champ) => signature(champ, valeurs[champ]) !== signature(champ, initial[champ]));
   }, [valeurs, offre]);
 
   const changer = (champ) => (e) => setValeurs((v) => ({ ...v, [champ]: e.target.value }));
@@ -51,6 +57,15 @@ const CorrectionOffreModal = ({ offre, onClose, onSaved }) => {
     try {
       const donnees = Object.fromEntries(modifies.map((champ) => [champ, valeurs[champ] === "" ? null : valeurs[champ]]));
       if (donnees.titre) donnees.titre = String(donnees.titre).trim();
+      // Le principal compte déjà : un lieu ou un contrat supplémentaire identique est retiré (le serveur le refuserait).
+      if (donnees.lieux_supplementaires) {
+        donnees.lieux_supplementaires = donnees.lieux_supplementaires.filter(
+          (l) => !(l.wilaya === valeurs.wilaya && (l.commune || "") === (valeurs.commune || "")),
+        );
+      }
+      if (donnees.types_contrat_supplementaires) {
+        donnees.types_contrat_supplementaires = donnees.types_contrat_supplementaires.filter((c) => c !== valeurs.type_contrat);
+      }
       await jobsService.corrigerOffre(offre.id, donnees);
       notifier.succes("Offre corrigée", "Le recruteur a été prévenu par e-mail.");
       onSaved();
@@ -115,6 +130,18 @@ const CorrectionOffreModal = ({ offre, onClose, onSaved }) => {
               <input id="corr-expiration" type="date" value={valeurs.date_expiration} onChange={changer("date_expiration")} className={inputClass} />
             </Champ>
           </div>
+          <LieuxSupplementaires
+            wilayas={constantes.wilayas}
+            principal={{ wilaya: valeurs.wilaya, commune: valeurs.commune }}
+            lieux={valeurs.lieux_supplementaires || []}
+            onChange={(lieux) => setValeurs((v) => ({ ...v, lieux_supplementaires: lieux }))}
+          />
+          <ContratsSupplementaires
+            options={constantes.contrats}
+            principal={valeurs.type_contrat}
+            selection={valeurs.types_contrat_supplementaires || []}
+            onChange={(codes) => setValeurs((v) => ({ ...v, types_contrat_supplementaires: codes }))}
+          />
           {[
             ["description", "Description", 6],
             ["missions", "Missions", 4],

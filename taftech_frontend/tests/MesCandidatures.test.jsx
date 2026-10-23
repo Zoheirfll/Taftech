@@ -51,7 +51,7 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
   });
 
   it("🟢 HP1 : Affichage des candidatures et de leurs statuts", async () => {
-    jobsService.getMesCandidatures.mockResolvedValue(mockData);
+    jobsService.getMesCandidatures.mockResolvedValue({ results: mockData, count: mockData.length });
     render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     expect(
       await screen.findByText("Développeur Front-End"),
@@ -72,7 +72,7 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
   });
 
   it("🟢 HP2 : Affichage de l'encart d'Entretien et Message", async () => {
-    jobsService.getMesCandidatures.mockResolvedValue(mockData);
+    jobsService.getMesCandidatures.mockResolvedValue({ results: mockData, count: mockData.length });
     render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     await screen.findByText("Designer UI/UX");
     // "Entretien" apparaît deux fois : le badge de statut et l'étape de la chronologie
@@ -87,14 +87,14 @@ describe("📁 UI & Logique - Composant <MesCandidatures />", () => {
   });
 
   it("🟢 HP3 : Affichage du badge pour les offres clôturées", async () => {
-    jobsService.getMesCandidatures.mockResolvedValue(mockData);
+    jobsService.getMesCandidatures.mockResolvedValue({ results: mockData, count: mockData.length });
     render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     await screen.findByText("Data Analyst");
     expect(screen.getByText("Clôturée")).toBeInTheDocument();
   });
 
   it("🟢 HP4 : Affichage de l'état vide", async () => {
-    jobsService.getMesCandidatures.mockResolvedValue([]);
+    jobsService.getMesCandidatures.mockResolvedValue({ results: [], count: 0 });
     render(<MemoryRouter><MesCandidatures /></MemoryRouter>);
     expect(
       await screen.findByText(/Aucune candidature pour l'instant/i),

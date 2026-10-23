@@ -41,6 +41,8 @@ export function useCreateJob() {
     salaire_propose: "",
     wilaya: "",
     commune: "",
+    lieux_supplementaires: [],
+    types_contrat_supplementaires: [],
     metier: "",
     metier_libelle: "",
     experience_requise: "DEBUTANT",
@@ -331,6 +333,11 @@ export function useCreateJob() {
     try {
       const payload = {
         ...formData,
+        // Le principal compte déjà : un lieu ou un contrat supplémentaire identique est retiré (le serveur le refuserait).
+        lieux_supplementaires: (formData.lieux_supplementaires || []).filter(
+          (l) => !(l.wilaya === formData.wilaya && (l.commune || "") === (formData.commune || "")),
+        ),
+        types_contrat_supplementaires: (formData.types_contrat_supplementaires || []).filter((c) => c !== formData.type_contrat),
         metier: formData.metier || null,
         date_expiration: formData.date_expiration || null,
         competences_requises: competencesRequises,

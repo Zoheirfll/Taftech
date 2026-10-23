@@ -7,14 +7,19 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { TooltipIcon } from "../../Components/Tooltip";
 import {
-  ArrowLeft, MapPin, Calendar, Briefcase, GraduationCap,
-  Banknote, TrendingUp, FileText, Zap, CheckCircle, XCircle,
-  Building2, ChevronDown, Users, ShieldCheck, AlertTriangle,
+  ArrowLeft, MapPin, Briefcase, GraduationCap,
+  TrendingUp, FileText, Zap, CheckCircle, XCircle,
+  ChevronDown, Users, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import { tw } from "../../theme";
 import { phraseFormation } from "../../utils/phraseFormation";
 import { phraseExperience } from "../../utils/phraseExperience";
 import { phrasesCompetences } from "../../utils/phraseCompetences";
+import { joindre } from "../../utils/listeFrancaise";
+import { regrouperDiplomes } from "../../utils/groupesDiplomes";
+import CarteSurDemande from "../../Components/CarteSurDemande";
+import EnteteEntreprise from "../../Components/EnteteEntreprise";
+import { contratsTexte, lieuxTexte, nomWilaya } from "../../utils/lieuxContrats";
 import Seo from "../../Components/Seo";
 import { construireJobPosting, offreIndexable, urlCanoniqueOffre } from "../../utils/jobPosting";
 import FieldError from "../../Components/FieldError";
@@ -22,22 +27,50 @@ import { useErreursChamps } from "../../utils/useErreursChamps";
 import { erreurFichier, FICHIER_CV } from "../../utils/validations";
 import { useModaleNIN, reponseNinRequis } from "../../Components/ModalNIN";
 
+// Niveau de poste : mêmes libellés que le formulaire recruteur (`jobs/constants.py::NIVEAUX_EXPERIENCE`).
 const EXPERIENCE_LABELS = {
-  DEBUTANT: "Débutant",
+  DEBUTANT: "Débutant / Junior",
   JEUNE_DIPLOME: "Jeune diplômé",
+  STAGIAIRE: "Stagiaire / Étudiant",
   CONFIRME: "Confirmé / Expérimenté",
-  SENIOR: "Senior",
-  EXPERT: "Expert",
-};
-
-const CONTRAT_LABELS = {
-  CDI: "CDI", CDD: "CDD", FREELANCE: "Freelance",
-  STAGE: "Stage", ALTERNANCE: "Alternance", INTERIM: "Intérim",
+  MANAGER: "Manager / Responsable de département",
+  RESPONSABLE_EQUIPE: "Responsable d'équipe",
+  CADRE_DIRIGEANT: "Cadre dirigeant",
 };
 
 const formatSalaire = (val) => {
   if (!val) return null;
   return Number(val).toLocaleString("fr-DZ") + " DA";
+};
+
+const lieuSiege = (entreprise) =>
+  [entreprise?.commune_siege, nomWilaya(entreprise?.wilaya_siege)].filter(Boolean).join(", ");
+
+const lieuPourCarte = (entreprise) =>
+  entreprise?.adresse_complete || (lieuSiege(entreprise) ? `${lieuSiege(entreprise)}, Algérie` : "");
+
+// Tableau d'informations clés (comme Emploitic) : une ligne sans valeur n'est jamais affichée. Rien d'inventé :
+// années = table du score (`experience_annees`), niveau d'étude = diplômes regroupés par niveau (« Master (Bac +5) »).
+const lignesInfos = (job) => {
+  const annees = job.experience_annees;
+  const postes = job.nombre_postes;
+  const diplomes = regrouperDiplomes(job.diplomes_requis_detail || []).map((e) => e.libelle);
+  return [
+    { cle: "lieu", label: "Lieu de travail", valeur: lieuxTexte(job) },
+    { cle: "secteur", label: "Secteur d'activité", valeur: job.entreprise?.secteur_libelle },
+    {
+      cle: "publication", label: "Date de publication",
+      valeur: job.date_publication
+        ? new Date(job.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+        : "",
+    },
+    { cle: "niveau-poste", label: "Niveau de poste", valeur: EXPERIENCE_LABELS[job.experience_requise] },
+    { cle: "postes", label: "Nombre de postes", valeur: postes ? `${postes} poste${postes > 1 ? "s" : ""} ouvert${postes > 1 ? "s" : ""}` : "" },
+    { cle: "contrat", label: "Type de contrat", valeur: contratsTexte(job) },
+    { cle: "diplome", label: "Niveau d'étude (diplôme)", valeur: joindre(diplomes, "ou") },
+    { cle: "annees", label: "Années d'expérience", valeur: annees > 0 ? `Environ ${annees} an${annees > 1 ? "s" : ""}` : "" },
+    { cle: "salaire", label: "Salaire", valeur: formatSalaire(job.salaire_propose) },
+  ].filter((ligne) => ligne.valeur);
 };
 
 // Transforme les lignes commençant par "- " en liste <ul><li>
@@ -76,20 +109,6 @@ const renderTexte = (texte) => {
   });
   flushList();
   return <div className="space-y-2">{result}</div>;
-};
-
-const LogoEntreprise = ({ url, nom, size = 16, iconSize = 28 }) => {
-  const [err, setErr] = useState(false);
-  const sizeClass = `w-${size} h-${size}`;
-  return (
-    <div className={`${sizeClass} rounded-xl border ${tw.borderBase} ${tw.surface} flex items-center justify-center overflow-hidden shrink-0 shadow-sm`}>
-      {url && !err ? (
-        <img src={url} alt={nom} className="w-full h-full object-contain p-1" onError={() => setErr(true)} />
-      ) : (
-        <Building2 size={iconSize} className={tw.textSubtle} />
-      )}
-    </div>
-  );
 };
 
 const SkeletonJobDetail = () => (
@@ -560,23 +579,7 @@ const JobDetail = () => {
         jsonLd={offreIndexable(job) ? construireJobPosting(job) : undefined}
       />
 
-      {/* BANDEAU ENTREPRISE */}
-      <div className={`${tw.surface} border-b ${tw.borderBase}`}>
-        <div className="max-w-6xl mx-auto px-4 md:px-6">
-          <div className="flex items-center gap-4 py-5">
-            <LogoEntreprise url={getMediaUrl(job.entreprise?.logo_url)} nom={job.entreprise?.nom_entreprise} size={16} iconSize={28} />
-            <div>
-              <Link to={`/entreprise/${job.entreprise?.slug}`} className={`text-lg font-bold ${tw.textStrong} ${tw.hoverTextPrimary} transition-colors`}>
-                {job.entreprise?.nom_entreprise}
-              </Link>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                {job.entreprise?.secteur && <span className={`text-sm ${tw.textMuted700} flex items-center gap-1`}><Briefcase size={13} />{job.entreprise.secteur}</span>}
-                {job.wilaya && <span className={`text-sm ${tw.textMuted700} flex items-center gap-1`}><MapPin size={13} />{job.wilaya?.split(" - ")[1] || job.wilaya}{job.commune ? `, ${job.commune}` : ""}</span>}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <EnteteEntreprise entreprise={job.entreprise} lieu={lieuSiege(job.entreprise)} />
 
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <Link to="/offres" className={`inline-flex items-center gap-1.5 text-sm ${tw.textMuted700} ${tw.hoverTextStrong900} mb-5 transition-colors`}>
@@ -589,53 +592,24 @@ const JobDetail = () => {
           <div className="lg:col-span-2 space-y-5">
 
             {/* TITRE + INFOS CLÉS */}
-            <div className={`${tw.cardColors} rounded-xl p-6`}>
-              <h1 className={`text-2xl font-extrabold ${tw.textStrong} leading-tight mb-4`}>{job.titre}</h1>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-5">
-                {job.wilaya && (
-                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Lieu de travail</p>
-                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><MapPin size={12} className={tw.iconPrimary500} />{job.wilaya?.split(" - ")[1] || job.wilaya}{job.commune ? `, ${job.commune}` : ""}</p>
-                  </div>
-                )}
-                {job.type_contrat && (
-                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Type de contrat</p>
-                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><Briefcase size={12} className={tw.iconPrimary500} />{CONTRAT_LABELS[job.type_contrat] || job.type_contrat}</p>
-                  </div>
-                )}
-                {job.experience_requise && (
-                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Expérience</p>
-                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><TrendingUp size={12} className={tw.iconPrimary500} />{EXPERIENCE_LABELS[job.experience_requise] || job.experience_requise}</p>
-                  </div>
-                )}
-                {job.nombre_postes && (
-                  <div className={`${tw.surfaceMuted} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-1`}>Postes</p>
-                    <p className={`text-sm font-semibold ${tw.textEmphasis800} flex items-center gap-1`}><Users size={12} className={tw.iconPrimary500} />{job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""}</p>
-                  </div>
-                )}
-                {job.salaire_propose && (
-                  <div className={`${tw.bgSuccessSoft} rounded-lg p-3`}>
-                    <p className={`text-[10px] font-semibold ${tw.textEmerald500} uppercase tracking-wider mb-1`}>Salaire</p>
-                    <p className={`text-sm font-semibold ${tw.textSuccessStrong} flex items-center gap-1`}><Banknote size={12} />{formatSalaire(job.salaire_propose)}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={`flex items-center justify-between border-t ${tw.borderSubtle} pt-4`}>
-                <span className={`text-xs ${tw.textMuted} flex items-center gap-1`}>
-                  <Calendar size={12} />
-                  Publié le {new Date(job.date_publication).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                </span>
-                {job.est_cloturee && (
+            <div className={`${tw.cardColors} rounded-xl p-6 md:p-8`}>
+              <h1 className={`text-3xl md:text-4xl font-extrabold ${tw.textStrong} leading-tight text-center`}>{job.titre}</h1>
+              {job.est_cloturee && (
+                <p className="text-center mt-3">
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tw.tagSlateSoft700}`}>
                     Poste pourvu
                   </span>
-                )}
-              </div>
+                </p>
+              )}
+
+              <dl className={`grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-3 border-t ${tw.borderSubtle} mt-6 pt-6 text-sm`}>
+                {lignesInfos(job).map((ligne) => (
+                  <div key={ligne.cle} className="grid grid-cols-[8.5rem_1fr] gap-3">
+                    <dt className={`font-semibold ${tw.textStrong}`}>{ligne.label}</dt>
+                    <dd className={tw.textMuted700}>{ligne.valeur}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
             {/* SECTIONS CONTENU */}
@@ -735,21 +709,35 @@ const JobDetail = () => {
 
           {/* COLONNE DROITE */}
           <div className="lg:col-span-1">
-            <div className="sticky top-6 space-y-4">
+            <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto space-y-4">
               <PostulationPanel />
 
-              {/* LIEN ENTREPRISE simplifié — sans doublon logo/nom */}
+              {/* FICHE ENTREPRISE : logo, secteur, taille, lieu du siège, carte (chargée au clic) */}
               {job.entreprise && (
-                <div className={`${tw.cardColors} rounded-xl p-4`}>
-                  <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>À propos de l'entreprise</p>
-                  <p className={`text-sm font-semibold ${tw.textStrong} mb-0.5`}>{job.entreprise.nom_entreprise}</p>
-                  {job.entreprise.secteur && <p className={`text-xs ${tw.textMuted700} mb-3`}>{job.entreprise.secteur}</p>}
-                  <Link
-                    to={`/entreprise/${job.entreprise.slug}`}
-                    className={`block w-full text-center py-2 text-xs font-semibold ${tw.textPrimary} border ${tw.borderPrimary200} rounded-lg ${tw.bgPrimaryHover} transition-colors`}
-                  >
-                    Voir la page entreprise →
-                  </Link>
+                <div className={`${tw.cardColors} rounded-xl overflow-hidden`}>
+                  <div className="p-4">
+                    <p className={`text-xs font-bold ${tw.textMuted} uppercase tracking-wider mb-3`}>À propos de l'entreprise</p>
+                    <ul className={`space-y-1.5 text-sm ${tw.textMuted700}`}>
+                      {job.entreprise.secteur_libelle && (
+                        <li className="flex items-start gap-2"><Briefcase size={14} className="shrink-0 mt-0.5" />{job.entreprise.secteur_libelle}</li>
+                      )}
+                      {job.entreprise.taille_libelle && (
+                        <li className="flex items-start gap-2"><Users size={14} className="shrink-0 mt-0.5" />{job.entreprise.taille_libelle}</li>
+                      )}
+                      {lieuSiege(job.entreprise) && (
+                        <li className="flex items-start gap-2"><MapPin size={14} className="shrink-0 mt-0.5" />{lieuSiege(job.entreprise)}</li>
+                      )}
+                    </ul>
+                  </div>
+                  {lieuPourCarte(job.entreprise) && <CarteSurDemande lieu={lieuPourCarte(job.entreprise)} />}
+                  <div className="p-4">
+                    <Link
+                      to={`/entreprise/${job.entreprise.slug}`}
+                      className={`block w-full text-center py-2 text-xs font-semibold ${tw.textPrimary} border ${tw.borderPrimary200} rounded-lg ${tw.bgPrimaryHover} transition-colors`}
+                    >
+                      Voir la page entreprise →
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>

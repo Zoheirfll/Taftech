@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Q
 from datetime import timedelta
 from jobs.models import AlerteEmploi, OffreEmploi, Notification
+from jobs.offres_multiples import lieux_de_l_offre
 
 SITE_URL = getattr(settings, 'SITE_URL', 'http://localhost:5173')
 
@@ -55,7 +56,9 @@ class Command(BaseCommand):
 
             # Filtre géographique
             if alerte.wilaya:
-                offres = offres.filter(wilaya=alerte.wilaya)
+                # Lieu principal OU l'un des lieux supplémentaires de l'offre.
+                offres = offres.filter(
+                    Q(wilaya=alerte.wilaya) | Q(lieux_supplementaires__contains=[{"wilaya": alerte.wilaya}]))
 
             # Filtre mots-clés
             if alerte.mots_cles:
@@ -103,7 +106,7 @@ class Command(BaseCommand):
                 continue
 
             offres_ctx = [
-                {'titre': o.titre, 'entreprise': o.entreprise.nom_entreprise, 'wilaya': o.wilaya, 'lien': f"{SITE_URL}/offres/{o.id}"}
+                {'titre': o.titre, 'entreprise': o.entreprise.nom_entreprise, 'wilaya': " / ".join(lieu["wilaya"] for lieu in lieux_de_l_offre(o)), 'lien': f"{SITE_URL}/offres/{o.id}"}
                 for o in offres[:5]
             ]
             ctx = {

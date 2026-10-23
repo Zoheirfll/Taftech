@@ -79,6 +79,7 @@ NIVEAUX_EXPERIENCE = [
 TYPES_CONTRAT = [
     ('CDI', 'CDI'),
     ('CDD', 'CDD'),
+    ('MISSION', 'Mission'),
     ('ANEM', 'Contrat ANEM (CTA / DAIP)'),
     ('STAGE', 'Stage / PFE'),
     ('FREELANCE', 'Freelance'),

@@ -232,6 +232,7 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
       { id: 1, code: "D-MAS-A", libelle: "Master académique" },
       { id: 2, code: "D-MAS-P", libelle: "Master professionnel" },
       { id: 3, code: "D-MAS-NP", libelle: "Master à nature non précisée" },
+      { id: 8, code: "D-ING", libelle: "Diplôme d'ingénieur d'État" },
     ];
     const specialites = [
       { id: 10, libelle: "Réseaux", domaine_id: 5, domaine_libelle: "Informatique", domaine_total: 20, domaine_non_retenues: [] },
@@ -247,8 +248,8 @@ describe("💼 UI & Logique - Composant <AdminOffres />", () => {
 
     it("🟢 Montre la phrase lue par le candidat, avec les trois masters regroupés", async () => {
       await ouvrirFiche({ diplomes_requis_detail: masters, specialites_requises_detail: specialites });
-      expect(await screen.findByText("Master (Bac +5) en Réseaux et Génie logiciel")).toBeInTheDocument();
-      expect(screen.getByText("Master (Bac +5)")).toBeInTheDocument();
+      expect(await screen.findByText("Master / Ingéniorat (Bac +5) en Réseaux et Génie logiciel")).toBeInTheDocument();
+      expect(screen.getByText("Master / Ingéniorat (Bac +5)")).toBeInTheDocument();
       expect(screen.queryByText("Master académique")).toBeNull();
     });
 

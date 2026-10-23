@@ -4,23 +4,26 @@ import { jobsService } from "../../Services/jobsService";
 import Select from "react-select";
 import { notifier } from "../../utils/notifier";
 import api from "../../api/axiosConfig";
-import communesAlgerie from "../../data/communes.json";
 import { reportError } from "../../utils/errorReporter";
 import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
 import { grouperParFamille } from "../../utils/familleFormation";
-import { MetierAutocomplete } from "../../Components/MetierAutocomplete";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
+import { CONTRAT_LABELS, contratsTexte, lieuxTexte } from "../../utils/lieuxContrats";
+import { libellesDiplomesCompacts } from "../../utils/groupesDiplomes";
+import { joindre } from "../../utils/listeFrancaise";
 import {
-  MapPin, Briefcase, Bookmark, Sparkles, Search,
+  MapPin, Briefcase, Bookmark, Sparkles, Search, GraduationCap,
   X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
 
-const CONTRAT_LABELS = {
-  CDI: "CDI", CDD: "CDD", FREELANCE: "Freelance",
-  STAGE: "Stage", ALTERNANCE: "Alternance", INTERIM: "Intérim",
-};
+// Niveau d'étude de la carte : diplômes regroupés par niveau (« Master / Ingéniorat (Bac +5) »), deux au plus puis
+// « N autres », pour ne pas alourdir la carte (la page de l'offre garde le détail complet).
+const diplomesTexte = (job) => joindre(libellesDiplomesCompacts(job.diplomes_requis_detail || []), "ou");
+
+// Années d'expérience que le score attend (`experience_annees`) : « environ 3 ans », jamais une fourchette inventée.
+const anneesTexte = (annees) => (annees > 0 ? ` (environ ${annees} an${annees > 1 ? "s" : ""})` : "");
 
 const tempsDepuis = (dateStr) => {
   if (!dateStr) return null;
@@ -86,9 +89,8 @@ const JobsList = () => {
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     wilaya: searchParams.get("wilaya") || "",
-    commune: "", diplome_id: "", specialite: "", experience: "", contrat: "",
+    commune: "", diplome_id: "", secteur_id: "", experience: "", contrat: "",
   });
-  const [specialiteLibelle, setSpecialiteLibelle] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -183,93 +185,60 @@ const JobsList = () => {
     setFilters({ ...filters, [actionMeta.name]: selectedOption ? selectedOption.value : "" });
   };
 
-  const getCommunesListOptions = (wilayaValue) => {
-    if (!wilayaValue) return [];
-    const wilayaCode = wilayaValue.split(" - ")[0];
-    return communesAlgerie
-      .filter((c) => c.wilaya_code === wilayaCode)
-      .map((c) => ({ value: c.commune_name_ascii, label: c.commune_name_ascii }));
-  };
-
   const handleReset = () => {
-    setFilters({ search: "", wilaya: "", commune: "", diplome_id: "", specialite: "", experience: "", contrat: "" });
-    setSpecialiteLibelle("");
+    setFilters({ search: "", wilaya: "", commune: "", diplome_id: "", secteur_id: "", experience: "", contrat: "" });
     setSearchParams({});
     setCurrentPage(1);
   };
 
   const removeFilter = (key) => {
-    if (key === "specialite") setSpecialiteLibelle("");
     setFilters((prev) => ({ ...prev, [key]: "", ...(key === "wilaya" ? { commune: "" } : {}) }));
   };
 
   const hasFilters = Object.values(filters).some(Boolean);
 
+  const secteursOptions = (nomenclature.secteurs || []).map((s) => ({ value: String(s.id), label: s.libelle }));
+
   // Chips des filtres actifs
   const activeChips = [
     filters.search && { key: "search", label: `"${filters.search}"` },
     filters.wilaya && { key: "wilaya", label: filters.wilaya.split(" - ")[1] || filters.wilaya },
-    filters.commune && { key: "commune", label: filters.commune },
+    filters.secteur_id && { key: "secteur_id", label: secteursOptions.find((s) => s.value === filters.secteur_id)?.label || filters.secteur_id },
     filters.experience && { key: "experience", label: expLabel(filters.experience) },
     filters.contrat && { key: "contrat", label: CONTRAT_LABELS[filters.contrat] || filters.contrat },
-    filters.specialite && { key: "specialite", label: specialiteLibelle || filters.specialite },
     filters.diplome_id && { key: "diplome_id", label: typesDiplomes.find((d) => d.value === filters.diplome_id)?.label || filters.diplome_id },
   ].filter(Boolean);
 
   const filtersPanel = (
     <div className={`${tw.cardColors} rounded-2xl p-5 sticky top-20`}>
       <div className="flex justify-between items-center mb-5">
-        <h2 className={`text-sm font-bold ${tw.textStrong}`}>Filtres</h2>
+        <h2 className={`flex items-center gap-2 text-base font-bold ${tw.textStrong}`}>
+          Filtres
+          {activeChips.length > 0 && (
+            <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-semibold ${tw.bgPrimarySolid} flex items-center justify-center`}>
+              {activeChips.length}
+            </span>
+          )}
+        </h2>
         {hasFilters && (
-          <button onClick={handleReset} className={`flex items-center gap-1 text-xs font-medium ${tw.textMuted700} ${tw.hoverTextPrimary} transition-colors`}>
+          <button onClick={handleReset} className={`flex items-center gap-1 text-xs font-semibold ${tw.textPrimary} ${tw.hoverTextPrimary} transition-colors`}>
             <X size={12} /> Réinitialiser
           </button>
         )}
       </div>
       <div className="space-y-4">
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Mots-clés</label>
-          <div className="relative">
-            <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${tw.textMuted}`} />
-            <input
-              type="text"
-              name="search"
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              placeholder="Développeur, comptable..."
-              className={`w-full pl-9 pr-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
-            />
-          </div>
-        </div>
         {[
+          { label: "Secteur d'activité", name: "secteur_id", options: secteursOptions, placeholder: "Tous" },
           { label: "Expérience", name: "experience", options: constants.experiences, placeholder: "Toutes" },
           { label: "Type de contrat", name: "contrat", options: constants.contrats, placeholder: "Tous" },
           { label: "Diplôme", name: "diplome_id", options: typesDiplomes, placeholder: "Tous",
             groupes: grouperParFamille(typesDiplomes, famillesFormation, (o) => o) },
         ].map(({ label, name, options, placeholder, groupes }) => (
           <div key={name}>
-            <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>{label}</label>
+            <label className={`text-sm font-semibold ${tw.textStrong} mb-1.5 block`}>{label}</label>
             <Select name={name} options={groupes || options} onChange={handleSelectChange} value={options.find((c) => c.value === filters[name]) || null} placeholder={placeholder} isClearable styles={selectStyles} />
           </div>
         ))}
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Métier</label>
-          <MetierAutocomplete
-            value={specialiteLibelle}
-            onSelect={(item) => {
-              setSpecialiteLibelle(item.appellation_libelle);
-              setFilters({ ...filters, specialite: String(item.metier_id) });
-            }}
-          />
-        </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Wilaya</label>
-          <Select name="wilaya" options={constants.wilayas} onChange={(opt) => setFilters({ ...filters, wilaya: opt ? opt.value : "", commune: "" })} value={constants.wilayas.find((c) => c.value === filters.wilaya) || null} placeholder="Toutes" isClearable styles={selectStyles} />
-        </div>
-        <div>
-          <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>Commune</label>
-          <Select name="commune" options={getCommunesListOptions(filters.wilaya)} isDisabled={!filters.wilaya} value={getCommunesListOptions(filters.wilaya).find((c) => c.value === filters.commune) || null} onChange={handleSelectChange} placeholder={filters.wilaya ? "Toutes" : "Wilaya d'abord"} isClearable styles={selectStyles} />
-        </div>
       </div>
     </div>
   );
@@ -283,12 +252,73 @@ const JobsList = () => {
 
       {/* HEADER */}
       <div className={tw.bannerGradientPrimary}>
-        <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="max-w-7xl mx-auto px-6 pt-14 pb-24">
           <h1 className={`text-4xl font-extrabold ${tw.textOnDark} mb-2 tracking-tight`}>Offres d'emploi</h1>
           <p className={`${tw.textPrimaryOnDark} text-base`}>
             {totalCount > 0 ? `${totalCount} offre${totalCount > 1 ? "s" : ""} disponible${totalCount > 1 ? "s" : ""}` : "Trouvez votre prochain emploi en Algérie"}
           </p>
+
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-6 -mt-10 relative z-10">
+          {/* RECHERCHE : mêmes filtres que le panneau, appliqués en direct */}
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className={`${tw.surface} border ${tw.borderBase} rounded-2xl shadow-lg p-2 flex flex-col md:flex-row md:items-center gap-2 md:gap-0`}
+          >
+            <div className={`flex-1 flex items-center gap-3 px-3 py-2 border-b md:border-b-0 md:border-r ${tw.borderPrimarySoft}`}>
+              <span className={`w-10 h-10 rounded-full ${tw.bgPrimarySoft} ${tw.textPrimary} flex items-center justify-center shrink-0`}>
+                <Search size={18} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <label htmlFor="offres-recherche" className={`text-xs font-semibold ${tw.textPrimaryStrong} block`}>Poste ou compétence</label>
+                <input
+                  id="offres-recherche"
+                  type="text"
+                  name="search"
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  placeholder="Métier, compétence, entreprise..."
+                  className={`w-full bg-transparent outline-none text-sm font-medium ${tw.textStrong} ${tw.placeholderMuted}`}
+                />
+              </div>
+            </div>
+            <div className="flex-1 flex items-center gap-3 px-3 py-2">
+              <span className={`w-10 h-10 rounded-full ${tw.bgPrimarySoft} ${tw.textPrimary} flex items-center justify-center shrink-0`}>
+                <MapPin size={18} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <label className={`text-xs font-semibold ${tw.textPrimaryStrong} block`}>Wilaya</label>
+                <Select
+                  name="wilaya"
+                  options={constants.wilayas}
+                  onChange={(opt) => setFilters({ ...filters, wilaya: opt ? opt.value : "", commune: "" })}
+                  value={constants.wilayas.find((c) => c.value === filters.wilaya) || null}
+                  placeholder="Toutes les wilayas"
+                  isClearable
+                  styles={{
+                    control: (base) => ({ ...base, border: 0, boxShadow: "none", backgroundColor: "transparent", minHeight: "24px", cursor: "pointer" }),
+                    valueContainer: (base) => ({ ...base, padding: 0 }),
+                    singleValue: (base) => ({ ...base, color: "inherit" }),
+                    input: (base) => ({ ...base, color: "inherit" }),
+                    placeholder: (base) => ({ ...base, color: "inherit", opacity: 0.75 }),
+                    dropdownIndicator: (base) => ({ ...base, color: "inherit" }),
+                    clearIndicator: (base) => ({ ...base, color: "inherit" }),
+                    indicatorSeparator: (base) => ({ ...base, opacity: 0.2 }),                    menu: (base) => ({ ...base, zIndex: 9999, borderRadius: "0.5rem", marginTop: "8px" }),
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className={`flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold ${tw.bgPrimarySolid} ${tw.focusRing} transition-colors md:ml-2`}
+            >
+              <Search size={16} /> Rechercher
+            </button>
+          </form>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
@@ -435,18 +465,22 @@ const JobsList = () => {
                             <div className="flex flex-wrap items-center gap-2 mt-3">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
                                 <MapPin size={11} />
-                                {job.wilaya?.split(" - ")[1] || job.wilaya}
-                                {job.commune ? ` · ${job.commune}` : ""}
+                                {lieuxTexte(job)}
                               </span>
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
-                                <Briefcase size={11} /> {expLabel(job.experience_requise)}
+                                <Briefcase size={11} /> {expLabel(job.experience_requise)}{anneesTexte(job.experience_annees)}
                               </span>
+                              {diplomesTexte(job) && (
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
+                                  <GraduationCap size={11} /> {diplomesTexte(job)}
+                                </span>
+                              )}
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg`}>
-                                {CONTRAT_LABELS[job.type_contrat] || job.type_contrat}
+                                {contratsTexte(job)}
                               </span>
-                              {job.nombre_postes > 1 && (
+                              {job.nombre_postes > 0 && (
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgSuccessSoft} ${tw.textSuccess} text-xs font-semibold rounded-lg`}>
-                                  {job.nombre_postes} postes
+                                  {job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""} ouvert{job.nombre_postes > 1 ? "s" : ""}
                                 </span>
                               )}
                               <Link to={jobUrl(job)} className={`ml-auto px-4 py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>

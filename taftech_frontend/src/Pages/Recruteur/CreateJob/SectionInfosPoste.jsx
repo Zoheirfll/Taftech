@@ -4,6 +4,7 @@ import { Briefcase } from "lucide-react";
 import { selectStylesTeal, tw } from "../../../theme";
 import { MetierAutocomplete } from "../../../Components/MetierAutocomplete";
 import { Section, Field, inputClass } from "./formUi";
+import ContratsSupplementaires from "./ContratsSupplementaires";
 
 const SectionInfosPoste = ({ job }) => {
   const {
@@ -116,6 +117,13 @@ const SectionInfosPoste = ({ job }) => {
             />
           </Field>
         </div>
+
+        <ContratsSupplementaires
+          options={constants.contrats}
+          principal={formData.type_contrat}
+          selection={formData.types_contrat_supplementaires || []}
+          onChange={(codes) => setFormData({ ...formData, types_contrat_supplementaires: codes })}
+        />
       </div>
     </Section>
   );

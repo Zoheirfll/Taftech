@@ -71,6 +71,33 @@ class CorrigerOffreTests(APITestCase):
         self.offre.refresh_from_db()
         self.assertEqual(self.offre.titre, 'Developeur web')
 
+    def test_corrige_les_lieux_et_contrats_supplementaires(self):
+        reponse = self.client.patch(self.url, {
+            'lieux_supplementaires': [{'wilaya': '27 - Mostaganem', 'commune': ''}],
+            'types_contrat_supplementaires': ['MISSION'],
+        }, format='json')
+        self.assertEqual(reponse.status_code, status.HTTP_200_OK, reponse.data)
+        self.offre.refresh_from_db()
+        self.assertEqual(self.offre.lieux_supplementaires, [{'wilaya': '27 - Mostaganem', 'commune': ''}])
+        self.assertEqual(self.offre.types_contrat_supplementaires, ['MISSION'])
+        self.assertEqual(set(reponse.data['changements']), {'lieux_supplementaires', 'types_contrat_supplementaires'})
+        # L'e-mail au recruteur est lisible : jamais la représentation Python d'une liste de dictionnaires.
+        self.assertIn('27 - Mostaganem', mail.outbox[0].body)
+        self.assertNotIn("{'wilaya'", mail.outbox[0].body)
+
+    def test_refuse_un_lieu_ou_un_contrat_supplementaire_invalide(self):
+        invalides = (
+            {'lieux_supplementaires': [{'wilaya': '99 - Atlantide'}]},
+            {'lieux_supplementaires': [{'wilaya': '16 - Alger'}]},  # le lieu principal ne se répète pas
+            {'types_contrat_supplementaires': ['INCONNU']},
+            {'types_contrat_supplementaires': ['CDI']},  # le contrat principal ne se répète pas
+        )
+        for corps in invalides:
+            reponse = self.client.patch(self.url, corps, format='json')
+            self.assertEqual(reponse.status_code, status.HTTP_400_BAD_REQUEST, corps)
+        self.offre.refresh_from_db()
+        self.assertEqual((self.offre.lieux_supplementaires, self.offre.types_contrat_supplementaires), ([], []))
+
     def test_offre_introuvable(self):
         reponse = self.client.patch('/api/jobs/admin/offres/999999/corriger/', {'titre': 'X'}, format='json')
         self.assertEqual(reponse.status_code, status.HTTP_404_NOT_FOUND)

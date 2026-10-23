@@ -18,13 +18,16 @@ from .admin import _audit
 # Liste blanche : jamais `statut_moderation`, `motif_rejet`, `entreprise`… (l'approbation reste la route
 # « moderer » et ses propres traces d'audit).
 CHAMPS_CORRIGEABLES = (
-    'titre', 'wilaya', 'commune', 'metier', 'description', 'missions', 'profil_recherche', 'competences',
-    'type_contrat', 'experience_requise', 'nombre_postes', 'salaire_propose', 'date_expiration',
+    'titre', 'wilaya', 'commune', 'lieux_supplementaires', 'metier', 'description', 'missions', 'profil_recherche',
+    'competences', 'type_contrat', 'types_contrat_supplementaires', 'experience_requise', 'nombre_postes',
+    'salaire_propose', 'date_expiration',
 )
 LIBELLES_CHAMPS = {
-    'titre': 'Titre', 'wilaya': 'Wilaya', 'commune': 'Commune', 'metier': 'Métier', 'description': 'Description',
+    'titre': 'Titre', 'wilaya': 'Wilaya', 'commune': 'Commune', 'lieux_supplementaires': 'Autres lieux de travail',
+    'metier': 'Métier', 'description': 'Description',
     'missions': 'Missions', 'profil_recherche': 'Profil recherché', 'competences': 'Compétences',
-    'type_contrat': 'Type de contrat', 'experience_requise': 'Expérience', 'nombre_postes': 'Nombre de postes',
+    'type_contrat': 'Type de contrat', 'types_contrat_supplementaires': 'Autres types de contrat',
+    'experience_requise': 'Expérience', 'nombre_postes': 'Nombre de postes',
     'salaire_propose': 'Salaire proposé', 'date_expiration': "Date d'expiration",
 }
 APERCU_MAX = 60
@@ -36,6 +39,9 @@ def _valeur(offre, champ):
 
 
 def _apercu(valeur):
+    if isinstance(valeur, list):  # lieux ([{wilaya, commune}]) ou contrats (codes) supplémentaires : en clair, pas en repr Python
+        elements = [f"{e.get('wilaya', '')} {e.get('commune', '')}".strip() if isinstance(e, dict) else str(e) for e in valeur]
+        valeur = ' | '.join(elements) or 'aucun'
     texte = '' if valeur is None else str(valeur).strip()
     return texte if len(texte) <= APERCU_MAX else texte[:APERCU_MAX - 1] + '…'
 

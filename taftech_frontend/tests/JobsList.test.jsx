@@ -165,7 +165,7 @@ describe("🔎 UI & Logique - Composant <JobsList />", () => {
     jobsService.getAllJobs.mockClear();
 
     // On tape dans la barre de recherche
-    const inputRecherche = screen.getByPlaceholderText("Développeur, comptable...");
+    const inputRecherche = screen.getByPlaceholderText("Métier, compétence, entreprise...");
     fireEvent.change(inputRecherche, { target: { value: "React" } });
 
     // Immédiatement après la frappe, l'API ne doit PAS avoir été appelée

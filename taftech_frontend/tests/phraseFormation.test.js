@@ -69,13 +69,14 @@ describe("📝 phraseFormation — la phrase de formation lue par le candidat", 
     expect(phraseFormation({ specialites: [{ id: 9, libelle: "Cybersécurité" }] })).toBe("Formation en Cybersécurité");
   });
 
-  it("🟢 Les trois masters s'écrivent « Master (Bac +5) », un groupe incomplet reste détaillé", () => {
+  it("🟢 Masters et ingéniorat s'écrivent « Master / Ingéniorat (Bac +5) », un groupe incomplet reste détaillé", () => {
     const masters = [
       { id: 1, code: "D-MAS-A", libelle: "Master académique" },
       { id: 2, code: "D-MAS-P", libelle: "Master professionnel" },
       { id: 3, code: "D-MAS-NP", libelle: "Master à nature non précisée" },
+      { id: 8, code: "D-ING", libelle: "Diplôme d'ingénieur d'État" },
     ];
-    expect(phraseFormation({ diplomes: masters })).toBe("Master (Bac +5)");
+    expect(phraseFormation({ diplomes: masters })).toBe("Master / Ingéniorat (Bac +5)");
     expect(phraseFormation({ diplomes: masters.slice(0, 2) })).toBe("Master académique ou Master professionnel");
   });
 

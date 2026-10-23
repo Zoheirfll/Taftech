@@ -229,12 +229,19 @@ class ExportOffresExcelAPIView(ExportAdminBase):
     ]
 
     def lignes(self, params):
+        from ..constants import TYPES_CONTRAT
+        from ..offres_multiples import lieux_de_l_offre, types_contrat_de_l_offre
+        libelles_contrat = dict(TYPES_CONTRAT)
         offres = offres_filtrees(params).select_related('metier', 'diplome_ref')
         nb_candidatures = Counter(dict(Candidature.objects.values_list('offre_id').annotate(n=Count('id'))))
         for o in offres.iterator(chunk_size=500):
+            lieux = lieux_de_l_offre(o)  # lieu principal d'abord, puis les lieux supplémentaires
             yield [
-                o.id, o.code_public or "", o.titre, o.entreprise.nom_entreprise, o.wilaya or "", o.commune or "",
-                _choix(o, 'type_contrat') if o.type_contrat else "", _choix(o, 'experience_requise') or "",
+                o.id, o.code_public or "", o.titre, o.entreprise.nom_entreprise,
+                " | ".join(lieu["wilaya"] for lieu in lieux if lieu["wilaya"]),
+                " | ".join(lieu["commune"] for lieu in lieux if lieu["commune"]),
+                " | ".join(libelles_contrat.get(code, code) for code in types_contrat_de_l_offre(o) if code),
+                _choix(o, 'experience_requise') or "",
                 o.nombre_postes, _libelle(o.diplome_ref) or o.diplome or "", o.salaire_propose or "",
                 _libelle(o.metier), o.get_statut_moderation_display(), o.motif_rejet or "",
                 _oui_non(o.est_cloturee), _date(o.date_publication), _date(o.date_expiration),

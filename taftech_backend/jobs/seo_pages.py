@@ -25,6 +25,7 @@ from django.utils.text import slugify
 from django.views import View
 
 from .models import Article, OffreEmploi, ProfilEntreprise
+from .offres_multiples import lieux_de_l_offre, types_contrat_de_l_offre
 from .serializers.offres import _secteur_libelle_pour_offre
 
 SITE_NAME = "TafTech"
@@ -34,7 +35,7 @@ ID_JSONLD = "seo-jsonld"  # même id que le composant Seo.jsx : le client rempla
 # Valeurs autorisées par Google pour `employmentType`.
 TYPES_EMPLOI = {
     'CDI': 'FULL_TIME', 'CDD': 'TEMPORARY', 'INTERIM': 'TEMPORARY',
-    'FREELANCE': 'CONTRACTOR', 'STAGE': 'INTERN', 'ALTERNANCE': 'INTERN',
+    'FREELANCE': 'CONTRACTOR', 'MISSION': 'CONTRACTOR', 'STAGE': 'INTERN', 'ALTERNANCE': 'INTERN',
 }
 
 
@@ -77,14 +78,17 @@ def construire_job_posting(offre):
     l'unité sans risquer d'afficher un montant faux).
     """
     entreprise = offre.entreprise
-    region = (offre.wilaya or '').partition(' - ')[2] or (offre.wilaya or '')
-    adresse = {'@type': 'PostalAddress', 'addressCountry': 'DZ'}
-    if offre.commune:
-        adresse['addressLocality'] = offre.commune
-    elif region:
-        adresse['addressLocality'] = region
-    if region:
-        adresse['addressRegion'] = region
+    lieux_google = []
+    for lieu in lieux_de_l_offre(offre):  # plusieurs lieux de travail : un Place par lieu
+        region = (lieu['wilaya'] or '').partition(' - ')[2] or (lieu['wilaya'] or '')
+        adresse = {'@type': 'PostalAddress', 'addressCountry': 'DZ'}
+        if lieu['commune']:
+            adresse['addressLocality'] = lieu['commune']
+        elif region:
+            adresse['addressLocality'] = region
+        if region:
+            adresse['addressRegion'] = region
+        lieux_google.append({'@type': 'Place', 'address': adresse})
     donnees = {
         '@context': 'https://schema.org',
         '@type': 'JobPosting',
@@ -101,15 +105,17 @@ def construire_job_posting(offre):
             'name': entreprise.nom_entreprise,
             'sameAs': f"{_base()}/entreprise/{entreprise.slug}/",
         },
-        'jobLocation': {'@type': 'Place', 'address': adresse},
+        'jobLocation': lieux_google[0] if len(lieux_google) == 1 else lieux_google,
     }
     logo = _absolue(entreprise.logo.url) if entreprise.logo else None
     if logo:
         donnees['hiringOrganization']['logo'] = logo
     if offre.date_expiration:
         donnees['validThrough'] = offre.date_expiration.isoformat()
-    if offre.type_contrat in TYPES_EMPLOI:
-        donnees['employmentType'] = TYPES_EMPLOI[offre.type_contrat]
+    types_emploi = list(dict.fromkeys(  # « CDD ou Mission » : tous les types reconnus, sans doublon
+        TYPES_EMPLOI[code] for code in types_contrat_de_l_offre(offre) if code in TYPES_EMPLOI))
+    if types_emploi:
+        donnees['employmentType'] = types_emploi[0] if len(types_emploi) == 1 else types_emploi
     return donnees
 
 

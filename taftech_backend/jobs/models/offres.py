@@ -61,6 +61,17 @@ class OffreEmploi(models.Model):
                   "`diplomes_requis`. Vide = critère spécialité non demandé pour le matching (S01).",
     )
     type_contrat = models.CharField(max_length=50, choices=TYPES_CONTRAT, default='CDI')
+    # Lieux et contrats MULTIPLES (« Oran, Mostaganem », « CDD ou Mission ») : `wilaya`/`commune`/`type_contrat` restent
+    # le PRINCIPAL lu par tout l'existant ; ces listes s'y ajoutent (affichage, recherche « l'un ou l'autre », score :
+    # le meilleur lieu compte). Validées par `jobs/offres_multiples.py` (listes officielles, sans doublon, plafonnées).
+    lieux_supplementaires = models.JSONField(
+        default=list, blank=True, verbose_name="Autres lieux de travail",
+        help_text='[{"wilaya": "27 - Mostaganem", "commune": "..."}] — 5 au plus, jamais le lieu principal.',
+    )
+    types_contrat_supplementaires = models.JSONField(
+        default=list, blank=True, verbose_name="Autres types de contrat",
+        help_text='["CDD", "STAGE"] — codes de TYPES_CONTRAT, 3 au plus, jamais le contrat principal.',
+    )
     experience_requise = models.CharField(max_length=50, choices=NIVEAUX_EXPERIENCE, default='DEBUTANT')
     nombre_postes = models.PositiveIntegerField(default=1, verbose_name="Nombre de postes à pourvoir")
     

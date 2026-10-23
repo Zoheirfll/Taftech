@@ -145,7 +145,7 @@ describe("💼 JobPosting (données structurées)", () => {
   });
 
   it("🟢 types de contrat traduits", () => {
-    const attendu = { CDD: "TEMPORARY", FREELANCE: "CONTRACTOR", STAGE: "INTERN", INTERIM: "TEMPORARY", ALTERNANCE: "INTERN" };
+    const attendu = { CDD: "TEMPORARY", FREELANCE: "CONTRACTOR", MISSION: "CONTRACTOR", STAGE: "INTERN", INTERIM: "TEMPORARY", ALTERNANCE: "INTERN" };
     Object.entries(attendu).forEach(([contrat, valeur]) => {
       expect(construireJobPosting(offre({ type_contrat: contrat }), origin).employmentType).toBe(valeur);
     });

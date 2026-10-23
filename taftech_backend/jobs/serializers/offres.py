@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import OffreEmploi, ProfilEntreprise, CompetenceOffre, ExigenceImperative
+from ..offres_multiples import valider_lieux_supplementaires, valider_types_contrat_supplementaires
 from .questionnaires import QuestionnaireSerializer
 
 
@@ -21,10 +22,30 @@ def _secteur_libelle_pour_offre(obj):
 
 class EntrepriseSimpleSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
+    banniere_url = serializers.SerializerMethodField()
+    secteur_libelle = serializers.SerializerMethodField()
+    taille_libelle = serializers.SerializerMethodField()
 
     class Meta:
         model = ProfilEntreprise
-        fields = ('id', 'slug', 'nom_entreprise', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'logo_url')
+        fields = ('id', 'slug', 'nom_entreprise', 'wilaya_siege', 'commune_siege', 'adresse_complete', 'logo_url',
+                  'banniere_url', 'secteur_libelle', 'taille_libelle')
+
+    def get_banniere_url(self, obj):
+        """Image de couverture de l'entreprise (déjà publique sur sa page vitrine) — en-tête de l'offre."""
+        if not obj.banniere:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.banniere.url) if request else obj.banniere.url
+
+    def get_secteur_libelle(self, obj):
+        """Secteur d'activité de l'ENTREPRISE (le champ stocke un code) — affiché sur la fiche entreprise de
+        l'offre. Résolution en cache (1 h) : pas de requête par ligne dans les listes."""
+        from ..referentiel_utils import libelle_secteur_entreprise
+        return libelle_secteur_entreprise(obj.secteur_activite) or None
+
+    def get_taille_libelle(self, obj):
+        return obj.get_taille_entreprise_display() if obj.taille_entreprise else None
 
     def get_logo_url(self, obj):
         if not obj.logo:
@@ -93,6 +114,8 @@ class OffreEmploiSerializer(serializers.ModelSerializer):
     class Meta:
         model = OffreEmploi
         fields = '__all__'
+        # Lieux et contrats multiples : écrits seulement par `OffreEmploiCreateDTO` (validés contre les listes officielles).
+        read_only_fields = ('lieux_supplementaires', 'types_contrat_supplementaires')
 
     def get_experience_annees(self, obj):
         from ..matcher import annees_experience_pour_niveau
@@ -136,19 +159,55 @@ class OffreEmploiCreateDTO(serializers.ModelSerializer):
         fields = (
             'titre', 'wilaya', 'commune', 'metier',
             'description', 'missions', 'profil_recherche', 'competences', 'type_contrat',
+            'lieux_supplementaires', 'types_contrat_supplementaires',
             'experience_requise', 'nombre_postes', 'salaire_propose', 'questionnaire', 'date_expiration'
         )
+
+    def validate(self, attrs):
+        """Lieux et contrats supplémentaires : listes officielles, sans doublon (le principal compte aussi), plafonnés.
+        Le principal est celui envoyé, sinon celui de l'offre modifiée."""
+        attrs = super().validate(attrs)
+        courant = self.instance
+        wilaya = attrs.get('wilaya', getattr(courant, 'wilaya', None))
+        commune = attrs.get('commune', getattr(courant, 'commune', None))
+        type_principal = attrs.get('type_contrat', getattr(courant, 'type_contrat', None))
+        erreurs = {}
+        if 'lieux_supplementaires' in attrs:
+            try:
+                attrs['lieux_supplementaires'] = valider_lieux_supplementaires(attrs['lieux_supplementaires'], wilaya, commune)
+            except ValueError as e:
+                erreurs['lieux_supplementaires'] = str(e)
+        if 'types_contrat_supplementaires' in attrs:
+            try:
+                attrs['types_contrat_supplementaires'] = valider_types_contrat_supplementaires(
+                    attrs['types_contrat_supplementaires'], type_principal)
+            except ValueError as e:
+                erreurs['types_contrat_supplementaires'] = str(e)
+        if erreurs:
+            raise serializers.ValidationError(erreurs)
+        return attrs
 
 
 class OffreEmploiPublicSerializer(serializers.ModelSerializer):
     secteur_libelle = serializers.SerializerMethodField()
+    experience_annees = serializers.SerializerMethodField()
+    diplomes_requis_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = OffreEmploi
-        fields = ('id', 'code_public', 'secteur_libelle', 'titre', 'wilaya', 'commune', 'type_contrat', 'experience_requise', 'nombre_postes', 'date_publication')
+        fields = ('id', 'code_public', 'secteur_libelle', 'titre', 'wilaya', 'commune', 'type_contrat',
+                  'lieux_supplementaires', 'types_contrat_supplementaires', 'experience_requise', 'experience_annees',
+                  'diplomes_requis_detail', 'nombre_postes', 'date_publication')
 
     def get_secteur_libelle(self, obj):
         return _secteur_libelle_pour_offre(obj)
+
+    def get_experience_annees(self, obj):
+        from ..matcher import annees_experience_pour_niveau
+        return annees_experience_pour_niveau(obj.experience_requise)
+
+    def get_diplomes_requis_detail(self, obj):
+        return [{"id": d.id, "libelle": d.libelle, "code": d.code} for d in obj.diplomes_requis.all()]
 
 
 class EntreprisePublicSerializer(serializers.ModelSerializer):

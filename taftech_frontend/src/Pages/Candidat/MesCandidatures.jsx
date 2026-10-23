@@ -95,7 +95,8 @@ const AnalyseIA = ({ cand }) => {
         <div className="w-full sm:w-1/2 space-y-3">
           {CRITERES.map((c) => {
             const nonDemande = nonDemandes.includes(c.key);
-            const pct = Math.round(((scores?.[c.key] ?? 0) / c.max) * 100);
+            const points = scores?.[c.key] ?? 0;
+            const pct = Math.round((points / c.max) * 100);
             const bar =
               pct >= 80
                 ? tw.analyseBarHigh
@@ -107,7 +108,7 @@ const AnalyseIA = ({ cand }) => {
                 <div className="flex justify-between mb-1">
                   <span className={`text-sm font-medium ${tw.textMuted}`}>{c.label}</span>
                   <span className={`text-sm font-bold ${nonDemande ? tw.textMuted : tw.textMuted700}`}>
-                    {nonDemande ? "Non demandé" : `${pct}%`}
+                    {nonDemande ? "Non demandé" : `${points}/${c.max}`}
                   </span>
                 </div>
                 {!nonDemande && (

@@ -403,6 +403,16 @@ export const tw = {
   badgeOnGradient: "bg-white/20 text-white",
   closeButtonOnDark: "text-white/70 hover:text-white hover:bg-white/20",
   borderOnDark20: "border-white/20",
+  // Barre de recherche posée sur une bannière bleue (/offres) : panneau translucide, texte clair, bouton clair
+  searchBarOnDark: "bg-white/10 border border-white/15",
+  searchBulleOnDark: "text-white/70",
+  searchPlaceholderOnDark: "placeholder:text-white/75",
+  searchLabelOnDark: "text-white/85",
+  searchBoutonOnDark: "bg-teal-700 text-white hover:bg-teal-800 border border-teal-600",
+  // En-tête d'entreprise d'une offre publique (bannière façon Emploitic) : voile pour la lisibilité du texte blanc, onglets
+  heroOverlay: "bg-linear-to-t from-slate-900/70 via-slate-900/20 to-transparent",
+  heroTabActive: "border-b-2 border-indigo-600 text-slate-900 font-semibold",
+  heroTabIdle: "border-b-2 border-transparent text-slate-700 hover:text-indigo-600 transition-colors",
   textAmberOnDark: "text-amber-300",
 
   // Admin sidebar (fond clair, liens actifs/inactifs)

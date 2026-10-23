@@ -1,4 +1,5 @@
 import { jobUrl } from "./slugify";
+import { lieuxDeLOffre, typesContratDeLOffre } from "./lieuxContrats";
 
 // Valeurs autorisées par Google pour `employmentType` (même table que jobs/seo_pages.py).
 const TYPES_EMPLOI = {
@@ -6,6 +7,7 @@ const TYPES_EMPLOI = {
   CDD: "TEMPORARY",
   INTERIM: "TEMPORARY",
   FREELANCE: "CONTRACTOR",
+  MISSION: "CONTRACTOR",
   STAGE: "INTERN",
   ALTERNANCE: "INTERN",
 };
@@ -35,10 +37,15 @@ export const urlCanoniqueOffre = (job, origin = window.location.origin) => `${or
 // l'unité sans risquer d'afficher un montant faux.
 export const construireJobPosting = (job, origin = window.location.origin) => {
   const entreprise = job.entreprise || {};
-  const region = (job.wilaya || "").split(" - ")[1] || job.wilaya || "";
-  const adresse = { "@type": "PostalAddress", addressCountry: "DZ" };
-  if (job.commune || region) adresse.addressLocality = job.commune || region;
-  if (region) adresse.addressRegion = region;
+  // Plusieurs lieux de travail : un `Place` par lieu (principal d'abord) ; un seul lieu = un objet, comme avant.
+  const lieux = lieuxDeLOffre(job).map((lieu) => {
+    const region = lieu.wilaya.split(" - ")[1] || lieu.wilaya;
+    return {
+      "@type": "Place",
+      address: { "@type": "PostalAddress", addressCountry: "DZ", addressLocality: lieu.commune || region, addressRegion: region },
+    };
+  });
+  const lieuParDefaut = { "@type": "Place", address: { "@type": "PostalAddress", addressCountry: "DZ" } };
 
   const donnees = {
     "@context": "https://schema.org",
@@ -55,10 +62,12 @@ export const construireJobPosting = (job, origin = window.location.origin) => {
       name: entreprise.nom_entreprise,
       sameAs: `${origin}/entreprise/${entreprise.slug}/`,
     },
-    jobLocation: { "@type": "Place", address: adresse },
+    jobLocation: lieux.length === 0 ? lieuParDefaut : lieux.length === 1 ? lieux[0] : lieux,
   };
   if (entreprise.logo_url) donnees.hiringOrganization.logo = entreprise.logo_url;
   if (job.date_expiration) donnees.validThrough = jourIso(job.date_expiration);
-  if (TYPES_EMPLOI[job.type_contrat]) donnees.employmentType = TYPES_EMPLOI[job.type_contrat];
+  // « CDD ou Stage » : tous les types reconnus, sans doublon ; un seul type = une chaîne, comme avant.
+  const typesEmploi = [...new Set(typesContratDeLOffre(job).map((code) => TYPES_EMPLOI[code]).filter(Boolean))];
+  if (typesEmploi.length > 0) donnees.employmentType = typesEmploi.length === 1 ? typesEmploi[0] : typesEmploi;
   return donnees;
 };

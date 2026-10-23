@@ -12,7 +12,20 @@ même domaine**. Les 25 libellés répétés viennent du recouvrement de trois s
 `SP-…`). « Gestion des ressources humaines » existe ×4. Aucune formation de candidat n'y pointe ; seules 3 offres
 utilisent le groupe RH.
 
-**Décision (utilisateur, 23/10/2026) : ne PAS fusionner.** Raison : `referentiel_fusions.py` (l. 360-363) consigne
+**DÉCISION FINALE (utilisateur, 23/10/2026, en fin de session) : FUSIONNER les 25 groupes** (« on touche aux
+données, pas de décision du 25/09 parce que c'est trop grave »). 52 fiches -> 27 fusions dans
+`SPECIALITES_FUSIONS` (`referentiel_fusions.py`) : thème (`DOM-…`) -> formation professionnelle (`FP-…`) ;
+formation professionnelle -> universitaire (`SP-…`) ; « Langue anglaise » -> universitaire ; « Gestion des
+ressources humaines » (4 exemplaires) -> `DOM-10-SP-01` (domaine « Ressources humaines, droit et administration »,
+3 offres repointées). Appliquée par `consolider_referentiel` (dry-run propre d'abord) : **921 -> 894 spécialités,
+0 libellé encore en double**, second passage sans effet. Sauvegarde avant :
+`backups/fusion_specialites_20261023_191345.json` (27 fiches, 16 liens diplôme, 38 alias, 212 liens métier,
+30 relations, 1 offre, 0 formation de candidat). Test `test_consolidation_referentiel` mis à jour (894 ; Électrotechnique
+vit dans `SP-69BEA051D3DC`) : il réimporte le classeur à vide et prouve qu'un réimport ne recrée pas les doublons.
+Conséquence assumée : une spécialité n'appartient plus qu'à un domaine, les autres domaines en comptent une de moins
+(« Ajouter tout un domaine » en ajoute une de moins). L'analyse ci-dessous est conservée pour mémoire.
+
+*(Analyse initiale, avant la décision finale :)* **Décision intermédiaire : ne PAS fusionner.** Raison : `referentiel_fusions.py` (l. 360-363) consigne
 déjà que les doublons ENTRE domaines sont volontairement conservés (décision client du 25/09/2026) et chaque
 paire est reliée par une `RelationSpecialite` que `matcher.py` (l. 157-162) utilise : le score traite donc ces
 doublons comme équivalents. Fusionner aurait inversé une décision client et retiré une spécialité de l'un des

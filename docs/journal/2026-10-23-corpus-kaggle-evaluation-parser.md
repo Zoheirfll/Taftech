@@ -53,6 +53,7 @@ Option choisie : **modèle anglais après détection de la langue** (`en_core_we
 - **NER sur les 2 484 CV** : 0 plantage, 1 CV lent, 47 « numéros » restants (identique à sans NER). La qualité des noms masqués n'a été analysée en détail que sur 60 CV.
 - **15 CV sans Expériences** : intitulés se terminant par « Experience » (« Teaching Experience »…) ; surtout, `find_sections` **écrasait** une section dont le titre revenait (deux « Education », « Teaching » puis « Corporate Experience ») : les premières expériences étaient perdues. Corrigé (`_ajouter`, 4 tests, commit `3e0f0c0`). Le 16ᵉ CV est réellement vide (1 page, aucune image, aucun texte).
 - **Mesure par l'IA** (script jetable, texte masqué comme en production, aucune écriture en base) : sur 50 CV tirés au hasard, **39 refusés par Groq** (`FournisseurIASature`) même relancés à 45 s. Seuls 12 CV mesurés : champs bien remplis, exactitude non relue. Voir [problemes-a-traiter.md](../problemes-a-traiter.md). Les 50 appels ont consommé des tokens du compte Groq du projet.
+- **Cause des refus (vérifiée le même jour)** : limite de **8 000 tokens par minute** (`openai/gpt-oss-20b`) pour ≈ 6 300 tokens par CV, soit ≈ 1 CV par minute pour tout le site. La vue de production gère la saturation (remboursement + message) : mon premier constat « profil vide » ne valait que pour mon script. Risque non vérifié : cache en mémoire de chaque processus (`LocMemCache`) pour le disjoncteur et les verrous.
 
 ## Approches écartées
 

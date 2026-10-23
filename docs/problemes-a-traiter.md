@@ -87,15 +87,19 @@ Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de
 
 **À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.
 
-## 🟠 Groq saturé : le parser rend un résultat vide, qualité de l'extraction IA mesurée sur 12 CV seulement
+## 🟠 Groq : 8 000 tokens par minute = environ 1 analyse de CV par minute pour tout le site
 
-**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)).
+**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)). **Cause vérifiée** par une requête de 5 tokens (en-têtes `x-ratelimit-*`) et par la mesure d'un CV.
 
-**Constat** : sur 50 CV du corpus Kaggle passés par `parse_cv`, **39 ont été refusés par le fournisseur** (`FournisseurIASature`, relancé à 45 s d'intervalle : encore 3 échecs de suite). Dans ces cas le parser **avale l'erreur et rend un résultat vide** (`parsing_method` absent, 0 expérience) : un candidat réel verrait un profil non rempli sans explication claire. La cause (limite de débit du plan gratuit, disjoncteur du projet resté ouvert) n'est **pas vérifiée**.
+**Constat** : le modèle configuré est `openai/gpt-oss-20b`, limite **8 000 tokens par minute** (et 1 000 requêtes). Une analyse de CV consomme **≈ 6 300 tokens** (extraction : 4 115 en entrée dont ≈ 2 800 de prompt de 11 296 caractères, 1 413 en sortie ; classification du titre : 702 + 99). Le compte ne tient donc qu'**environ 1 CV par minute pour l'ensemble du site** : sur 50 CV passés à la suite, 39 ont été refusés (429), même relancés à 45 s d'intervalle. Le premier 429 ouvre un disjoncteur (`ai_engine.CLE_SATURATION`, pause = `retry-after` borné entre 30 s et 1 h) qui refuse ensuite tous les appels.
 
-**Mesuré sur les 12 CV traités** : remplissage des champs seulement (expériences : titre, entreprise, date de début 100 % ; formations : diplôme 100 %, établissement 90 %), **pas l'exactitude** (extractions non relues). Trop peu pour conclure.
+**Correction d'un constat du 23/10** : la voie de production (`views/ia.py`, vue d'analyse de CV) **gère déjà** la saturation : appel remboursé, message « L'analyse IA est temporairement indisponible. Vous pouvez poursuivre manuellement. » (`IA_FOURNISSEUR_SATURE`), bouton resté actif côté écran (`utils/erreursIA.js`). Le « profil vide sans explication » ne concernait que mon script, qui appelait `parse_cv` directement. Aucun message à décider.
 
-**À faire** : (1) vérifier la cause (en-têtes de limite Groq, durée du disjoncteur dans `ia_quota`) ; (2) décider du message affiché au candidat quand l'IA est indisponible ; (3) reprendre la mesure sur les 39 CV restants (`mesure_ia.py` : pause de 45 s, arrêt après 3 échecs) quand l'accès est rétabli ; (4) lier au plafond de dépense et au passage au compte payant (plan du 19/10).
+**Risque non vérifié en production** : `settings.CACHES` n'est pas défini (**`LocMemCache`, mémoire de chaque processus**). Avec plusieurs workers gunicorn, le disjoncteur et les verrous anti-double-appel (`ia_quota`, `cache.add`) **ne sont pas partagés** : un worker peut continuer à appeler Groq pendant qu'un autre est en pause, et un double clic traité par deux workers passe le verrou. Le nombre de workers en production n'est pas connu dans le dépôt.
+
+**Mesuré sur les 12 CV traités** : remplissage des champs seulement (expériences : titre, entreprise, date de début 100 % ; formations : diplôme 100 %, établissement 90 %), **pas l'exactitude** (extractions non relues).
+
+**Décisions à prendre (structurantes, à valider)** : (A) passer au compte payant de Groq (plus de tokens par minute ; lié au plafond de dépense du plan du 19/10) ; (B) réduire les tokens par CV (prompt de 11 296 caractères à raccourcir : risque de régression de qualité, à mesurer) ; (C) file d'attente avec nouvelle tentative au lieu d'un refus ; (D) cache partagé (Redis ou table en base) pour le disjoncteur et les verrous. Reprendre ensuite la mesure sur les 39 CV restants (`mesure_ia.py`, pause de 45 s, arrêt après 3 échecs).
 
 ## 🟡 CV en anglais : NER corrigé le 23/10/2026 (reste : noms d'un seul mot, faux positifs résiduels)
 

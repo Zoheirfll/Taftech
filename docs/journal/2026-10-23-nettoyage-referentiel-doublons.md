@@ -68,7 +68,45 @@ classeurs (fusions, redirections, instantané de hiérarchie, lignes `APPX-…`,
 écarts. **Décision : terminer d'abord la commande, puis décider d'un éventuel chantier « source de vérité »**
 (export de la base vers un NOUVEAU classeur corrigé, relu ensemble, jamais en écrasant l'original du client).
 
-## 5. Piège rencontré
+## 5. Compétences : 3 cas, à traiter dans l'admin (pas de mutation en shell)
+
+- « PowerPoint » (id 741) et « Développement Back-End & Base de données » (id 720) : suggestions automatiques
+  inactives, sans référence, déjà synonymes d'une fiche validée → **rejeter**.
+- « SEO » (id 30, admin) contre « Référencement naturel SEO » (id 609, import, 7 liens métiers, « SEO » en
+  synonyme) → **désactiver** la 30. Fait par l'utilisateur dans la page admin des compétences, ou à faire.
+
+## 6. Groupes répétés : rien à faire
+
+Les 48 libellés répétés sont tous légitimes (aucun n'a le même nom sous le même parent) : « Production » existe
+sous 5 secteurs différents. 0 vrai doublon.
+
+## 7. Correspondance des métiers entre catalogues ANEM et Taftech
+
+Les deux catalogues (13 secteurs `NSEC-*` officiels ANEM + 32 `TSEC-*` Taftech, 45 au total) cohabitent
+volontairement ; ils ont déjà été consolidés en septembre (86 → 45, `fusionner_secteurs_racines_doublons`,
+`GROUPES_OPERATIONS`). On ne les refait pas.
+
+**Mesure réelle** (`matcher.metiers_compatibles`) sur les 117 paires de métiers qui partagent une même appellation
+(donc le même poste) : 21 ≥ 0,85, 77 entre 0,45 et 0,85, 19 < 0,45. Exemples : « Acheteur » (Taftech) contre
+« Opérations d'achat » (ANEM) = 0,45 ; « Chargé de recrutement » contre « Conseil en emploi » = 0,17.
+
+**Correctif : relations « similaire »** (`RelationMetier`, score 0,70). La décision produit du 24/09/2026 (docstring de
+`matcher._relation_similaire`) interdit de les déduire automatiquement : la commande
+`python manage.py appliquer_relations_metiers_similaires [--dry-run]` (`jobs/relations_metiers_similaires.py`,
+9 tests) ne crée donc QUE les paires de `jobs/data/relations_metiers_similaires.json`, relues et validées à la main.
+- 94 paires candidates (score < 0,85) ; **84 retenues** le 23/10/2026. Exclues : 5 postes différents (#8 Ingénieur
+  inspection, #10 Directeur régional, #67 Conseiller musical, #81 Opérateur de production, #90 Operations Manager) et
+  5 doublons FR/EN de fiches Taftech à traiter par FUSION (`metier_canonique`) plutôt que par relation : Cloud
+  Architect, Machine Learning Engineer, Platform Engineer, Facility Manager, Pentester.
+- Appliquée sur la base de développement le 23/10/2026 : **84 relations**, codes `SIM-…`, score vérifié à 0,70.
+  Retour arrière : supprimer les `RelationMetier` dont le code commence par `SIM-`.
+- Le cache des scores (10 min) se rafraîchit seul ; les scores figés à une candidature ne changent pas.
+- À rejouer en production après déploiement (idempotente, ignore un métier introuvable ou redirigé).
+- **Reste à faire** : fusionner par `referentiel_fusions.py` les 5 doublons FR/EN et les ~15 paires de métiers
+  quasi identiques (« Développeur Android » / « Développeur mobile Android », « Automaticien » / « Automaticien
+  Industriel »…), avec liste validée.
+
+## 8. Piège rencontré
 
 Les tests Django échouaient avec « la base `test_taftech_db` est en cours d'utilisation » : un autre lancement
 (`jobs.tests.test_api_equipe`, relancé en boucle) la tenait. Contournement sans rien toucher : lancer avec

@@ -233,6 +233,25 @@ def appliquer_operations_groupes(log, operations=GROUPES_OPERATIONS):
 # finales client, 12/10/2026). N'ajouter ici que des synonymes réels, validés un à un.
 METIERS_REDIRECTIONS = [
     ('TAF-000167', 'TAF-000165'),  # Talent Acquisition Specialist -> Chargé de Recrutement
+    # 23/10/2026 — 16 synonymes réels validés un à un (liste candidate de 40 paires, 24 écartées : modules SAP,
+    # UX/UI, HSE/RSE, SEO/SEA, marchandises/personnes… sont des postes distincts). Journal :
+    # docs/journal/2026-10-23-nettoyage-referentiel-doublons.md §7.
+    ('TAF-000608', 'TAF-000503'),  # Conducteur de Ligne Conditionnement -> ... de Conditionnement
+    ('TAF-000149', 'L1202'),       # Contrôleur de Gestion -> Contrôle de gestion
+    ('TAF-000253', 'M1202'),       # Pharmacien -> Pharmacie
+    ('TAF-000180', 'TAF-000163'),  # Gestionnaire de Paie RH -> Gestionnaire de Paie
+    ('TAF-000373', 'O1401'),       # Enseignant Primaire -> Enseignement primaire
+    ('TAF-000250', 'M1201'),       # Biologiste Médical -> Biologie médicales
+    ('TAF000004', 'TAF-000014'),   # Développeur mobile Android -> Développeur Android
+    ('TAF000005', 'TAF-000015'),   # Développeur mobile iOS -> Développeur iOS
+    ('TAF-000539', 'TAF-000089'),  # Automaticien -> Automaticien Industriel
+    ('TAF-000605', 'TAF-000484'),  # Facility Manager -> Responsable Facility Management
+    ('TAF000008', 'TAF-000023'),   # Machine Learning Engineer -> Ingénieur Machine Learning
+    ('TAF-000565', 'TAF-000041'),  # Cloud Architect -> Architecte Cloud
+    ('TAF-000570', 'TAF-000022'),  # Platform Engineer -> Ingénieur Plateforme
+    ('TAF000007', 'TAF-000021'),   # Site Reliability Engineer -> Ingénieur Fiabilité des Sites
+    ('TAF-000033', 'TAF-000032'),  # Pentester -> Testeur d'intrusion
+    ('TAF000006', 'TAF-000020'),   # DevOps Engineer -> Ingénieur DevOps
 ]
 
 

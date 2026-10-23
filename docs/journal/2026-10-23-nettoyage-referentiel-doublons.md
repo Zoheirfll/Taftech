@@ -102,9 +102,21 @@ volontairement ; ils ont déjà été consolidés en septembre (86 → 45, `fusi
   Retour arrière : supprimer les `RelationMetier` dont le code commence par `SIM-`.
 - Le cache des scores (10 min) se rafraîchit seul ; les scores figés à une candidature ne changent pas.
 - À rejouer en production après déploiement (idempotente, ignore un métier introuvable ou redirigé).
-- **Reste à faire** : fusionner par `referentiel_fusions.py` les 5 doublons FR/EN et les ~15 paires de métiers
-  quasi identiques (« Développeur Android » / « Développeur mobile Android », « Automaticien » / « Automaticien
-  Industriel »…), avec liste validée.
+- **Redirections de métiers (fait le 23/10/2026)** : liste candidate de 40 paires (libellés quasi identiques, ou même
+  appellation + même secteur + deux fiches Taftech), **16 retenues**, ajoutées à `METIERS_REDIRECTIONS`
+  (`referentiel_fusions.py`) puis appliquées par `consolider_referentiel` (dry-run propre d'abord, secteurs 45,
+  domaines 225, spécialités 921 inchangés, références candidats/offres intactes) : Conducteur de Ligne, Contrôleur de
+  Gestion, Pharmacien, Gestionnaire de Paie RH, Enseignant Primaire, Biologiste Médical, Développeur mobile Android /
+  iOS, Automaticien, Facility Manager, Machine Learning Engineer, Cloud Architect, Platform Engineer, Site
+  Reliability Engineer, Pentester, DevOps Engineer. Redirection NON destructive : le source garde son libellé et ses
+  appellations, il est résolu en interne vers le canonique (score 1,0). 17 métiers redirigés au total. Instantané
+  `jobs/data/referentiel_hierarchie_cible.json` réécrit et commité : un réimport rejoue ces redirections.
+- **24 paires écartées, à ne pas refusionner** : les modules SAP (FI/CO/MM/SD/HCM), UX / UI / UX-UI, Responsable HSE /
+  RSE, Spécialiste SEO / SEA, Développeur iOS / BI, Android / iOS, Sécurité / Sûreté, Chef de Rang / Rayon,
+  marchandises / personnes, conception / montage, engins / aéronefs, exploitation Eau / Centrale, Chef des Ventes /
+  Superviseur commercial : ce sont des postes distincts (le seuil de ressemblance seul attrape trop de faux amis).
+- Retour arrière : retirer les 16 lignes de `METIERS_REDIRECTIONS` et remettre `metier_canonique` à vide sur ces
+  métiers.
 
 ## 8. Piège rencontré
 

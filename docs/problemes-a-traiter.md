@@ -87,10 +87,12 @@ Un CV de manager industriel sortait avec 5 « Métier à choisir ». Option 1 de
 
 **À faire** : l'employeur confirme si un transfert hors d'Algérie impose des formalités auprès de l'ANPDP. Tant que ce n'est pas confirmé, aucun texte du site n'affirme une autorisation ou une conformité détenue.
 
-## 🟡 Parser et masquage : aucune mesure sur des CV algériens réels (corpus anglais seulement)
+## 🟠 CV en anglais : le NER (français) fait de faux positifs et rate des noms en majuscules
 
-**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)).
+**Trouvé le** : 23/10/2026 ([journal](journal/2026-10-23-corpus-kaggle-evaluation-parser.md)). **Beaucoup de candidats algériens ont un CV en anglais** (remarque de l'utilisateur) : ce n'est pas un cas marginal.
 
-**Contexte** : le corpus Kaggle (2 484 CV américains en anglais) a servi à corriger les intitulés de section et les numéros étrangers, mais il ne contient ni français, ni arabe, ni PDF en colonnes de type Canva. Le NER arabe, `MIN_COLONNES` (`cv_parser/colonnes.py`) et le filet de `call_ai` face à un numéro étranger sans indicatif restent non validés.
+**Constat** (60 CV du corpus Kaggle, `entites_ner`) : le modèle spaCy **français** appliqué à de l'anglais produit ≈ 5,6 détections par CV, presque toutes fausses (« Maintain », « Trained », « including », « Reporting », des bouts de phrases). Pas de fuite, mais le texte envoyé à l'IA perd des mots utiles (un intitulé de poste entier est devenu `[NOM]`). Inversement, sur des CV fictifs : `Karim Benali`, `Amine Boudiaf`, `Fatima Zohra Haddad` sont masqués, mais **`SARAH JOHNSON` en majuscules en en-tête ne l'est pas** ; le nom du candidat est rattrapé par le filet « nom connu » du compte, **pas les tiers** (référents, managers).
 
-**À faire** : réunir un corpus de CV algériens (avec l'accord des personnes ou anonymisés), le passer dans `python manage.py evaluer_corpus_cv`, puis décider de l'adoption du NER arabe.
+**Options à trancher** : (A) détecter la langue et ajouter un modèle spaCy anglais (`en_core_web_sm`, quelques dizaines de Mo par worker, nouvelle dépendance de déploiement) ; (B) garder le modèle français et ajouter des règles ciblées (liste de mots courants à ne pas masquer : fragile) ; (C) ne pas passer le NER sur un texte détecté comme anglais (risque de fuite des noms de tiers).
+
+**Aussi non validé** (corpus anglais, sans PDF en colonnes) : français, arabe, `MIN_COLONNES` (`cv_parser/colonnes.py`), filet de `call_ai` face à un numéro étranger sans indicatif. **À faire** : constituer un corpus de CV algériens (français, arabe, anglais) avec l'accord des personnes ou anonymisés, le passer dans `python manage.py evaluer_corpus_cv --avec-ner`.

@@ -30,6 +30,16 @@ Lecture seule (aucune écriture en base, aucun changement du parser). Le rapport
 
 Presque tous sont des **faux positifs de mon contrôle** (codes postaux `25305-0330`, numéros d'employeur américains `63-1419015`, années, identifiants). Quelques numéros nationaux étrangers **sans indicatif** (`01207673477`) ne se distinguent pas d'un identifiant : les masquer abîmerait des dates et des matricules. Le filet de `call_ai` reste le dernier rempart. Non vérifié ici : que le filet refuse bien ces cas ; à tester avec un CV réel de la diaspora.
 
+## CV en anglais : constat sur le NER (non corrigé, décision en attente)
+
+Remarque de l'utilisateur : beaucoup de candidats algériens ont un CV en anglais, donc ce corpus est pertinent et le NER doit être jugé sur l'anglais. Mesure (60 CV tirés au hasard, `entites_ner`, aucune modification) :
+
+- **Faux positifs** : ≈ 338 détections, presque toutes fausses (verbes, noms communs, bouts de phrases : « Maintain », « Trained », « including »). Un intitulé de poste entier (« SUBSTITUTE TEACHER ») est devenu `[NOM]`. Conséquence : texte appauvri pour l'IA, pas de fuite.
+- **Noms rates** (5 CV fictifs) : `Karim Benali`, `Amine Boudiaf`, `Fatima Zohra Haddad` masqués ; **`SARAH JOHNSON` (majuscules, en-tête) ne l'est pas**. Le nom du candidat reste rattrapé par `detecter_noms_connus` (compte) ; les noms de tiers (référents, managers) non.
+- Le corpus n'a **pas de vrai nom en en-tête** (jeu anonymisé) : le rappel du NER sur de vrais noms anglais n'est mesuré que sur ces 5 cas fictifs.
+
+Options (détail dans [problemes-a-traiter.md](../problemes-a-traiter.md)) : modèle spaCy anglais après détection de langue (recommandé, nouvelle dépendance de déploiement), règles ciblées, ou pas de NER sur l'anglais.
+
 ## Approches écartées
 
 - **Repérer les titres en majuscules seulement** : les CV du corpus ont des titres en casse normale, le tri ne remontait que des intitulés de poste. Remplacé par « lignes de 4 mots au plus, sans chiffre ».

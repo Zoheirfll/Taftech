@@ -1,7 +1,9 @@
 // Fenêtre unique de décision d'une demande d'ajout au référentiel : Rattacher, Accepter ou Refuser.
 // Identique pour les types de diplôme et les spécialités (puis les métiers et les compétences).
 import React, { useCallback, useEffect, useState } from "react";
+import { useChercherMetiers } from "../../../utils/useChercherMetiers";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
 import { notifier } from "../../../utils/notifier";
 import { X } from "lucide-react";
 import { adminService } from "../../../Services/adminService";
@@ -34,6 +36,8 @@ const DecisionDemandeModal = ({ demande, modeInitial = "RATTACHER", onClose, onD
   const [parent, setParent] = useState(null);
   const [filiere, setFiliere] = useState(null);
   const [diplomes, setDiplomes] = useState([]);
+  const [metiers, setMetiers] = useState([]); // compétence : métiers auxquels la lier (facultatif)
+  const chercherMetiers = useChercherMetiers();
   // Refuser
   const [motif, setMotif] = useState("");
 
@@ -91,6 +95,7 @@ const DecisionDemandeModal = ({ demande, modeInitial = "RATTACHER", onClose, onD
           parent: parent?.value ?? null,
           filiere_id: filiere?.value || null,
           diplomes_ids: diplomes.map((d) => d.value),
+          metiers_ids: metiers.map((m) => m.value),
         });
         notifier.succes("Demande acceptée", `« ${libelle.trim()} » ajoutée au référentiel.`);
       } else {
@@ -189,6 +194,26 @@ const DecisionDemandeModal = ({ demande, modeInitial = "RATTACHER", onClose, onD
                     onChange={(opt) => { setParent(opt); setFiliere(null); }}
                     styles={selectStylesTeal}
                   />
+                </div>
+              )}
+              {demande.type === "COMPETENCE" && (
+                <div>
+                  <label htmlFor="metiers-concernes" className={`text-xs font-medium ${tw.textMuted} mb-1.5 block`}>Métiers concernés (facultatif)</label>
+                  <AsyncSelect
+                    inputId="metiers-concernes"
+                    isMulti
+                    cacheOptions
+                    value={metiers}
+                    loadOptions={chercherMetiers}
+                    onChange={(opts) => setMetiers(opts || [])}
+                    styles={selectStylesTeal}
+                    placeholder="Chercher un métier…"
+                    noOptionsMessage={({ inputValue }) => (inputValue.trim().length < 2 ? "Tapez au moins 2 lettres" : "Aucun métier")}
+                    loadingMessage={() => "Recherche…"}
+                  />
+                  <p className={`text-[11px] ${tw.textMuted} mt-1`}>
+                    La compétence sera proposée à ceux qui choisissent ces métiers (offre, profil, import du CV). Rien n'est ajouté automatiquement.
+                  </p>
                 </div>
               )}
               {estSpecialite && optionsFiliere.length > 0 && (

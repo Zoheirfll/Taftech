@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
 import { notifier } from "../../utils/notifier";
-import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw, Link2 } from "lucide-react";
+import MetiersCompetenceModal from "./MetiersCompetenceModal";
 import { adminService } from "../../Services/adminService";
 import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
 import { confirmToast } from "../../utils/confirmToast";
@@ -67,6 +68,7 @@ const AdminCompetences = () => {
   const [form, setForm] = useState(ITEM_VIDE);
   const [onglet, setOnglet] = useState("liste");
   const [nbDemandes, setNbDemandes] = useState(0);
+  const [competenceMetiers, setCompetenceMetiers] = useState(null); // compétence dont on gère les métiers
   // Minuteur de recherche local au composant (avant : variable globale window._competenceSearchTimer).
   const searchTimer = useRef(null);
 
@@ -280,16 +282,17 @@ const AdminCompetences = () => {
                 <th className="px-5 py-3">Compétence</th>
                 <th className="px-5 py-3">Synonymes</th>
                 <th className="px-5 py-3">Usage</th>
+                <th className="px-5 py-3">Métiers</th>
                 <th className="px-5 py-3 text-center">Statut</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${tw.divideBase}`}>
               {loading ? (
-                <SkeletonTableRows columns={5} />
+                <SkeletonTableRows columns={6} />
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <AdminVide icon={Tags} titre="Aucune compétence trouvée." texte={search ? "Essayez un autre mot-clé." : undefined} />
                   </td>
                 </tr>
@@ -315,6 +318,13 @@ const AdminCompetences = () => {
                           {item.nb_candidats !== undefined ? `${item.nb_candidats} candidat(s) · ${item.nb_offres} offre(s)` : "—"}
                         </p>
                       </td>
+                      <td className="px-5 py-3">
+                        {item.nb_metiers === 0 ? (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-50 text-amber-700" title="Cette compétence n'est suggérée à aucun métier">Aucun métier</span>
+                        ) : (
+                          <p className={`text-xs ${tw.textMuted}`}>{item.nb_metiers !== undefined ? `${item.nb_metiers} métier(s)` : "—"}</p>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-center">
                         <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${STATUTS[statut].classe}`}>
                           {STATUTS[statut].libelle}
@@ -336,6 +346,7 @@ const AdminCompetences = () => {
                               </button>
                             );
                           })}
+                          <button onClick={() => setCompetenceMetiers(item)} aria-label={`Métiers de ${item.label}`} title="Métiers auxquels la compétence est suggérée" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Link2 size={14} /></button>
                           <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
                           <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
                         </div>
@@ -351,6 +362,14 @@ const AdminCompetences = () => {
       </div>
 
       </>
+      )}
+
+      {competenceMetiers && (
+        <MetiersCompetenceModal
+          competence={competenceMetiers}
+          onClose={() => setCompetenceMetiers(null)}
+          onChange={(nb) => setItems((liste) => liste.map((c) => (c.id === competenceMetiers.id ? { ...c, nb_metiers: nb } : c)))}
+        />
       )}
 
       {showModal && (

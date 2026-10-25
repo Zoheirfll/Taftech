@@ -2,6 +2,7 @@
 import { Briefcase, GraduationCap, Calendar } from "lucide-react";
 import { tw } from "../../../../theme";
 import { formatDatePrecise } from "../../../../utils/cvDates";
+import BadgeCompetenceSuggeree from "../../../../Components/BadgeCompetenceSuggeree";
 
 export const ProfilCandidatDetails = ({ candidatData, formatText }) => (
   <>
@@ -144,6 +145,7 @@ export const ProfilCandidatDetails = ({ candidatData, formatText }) => (
                     >
                       {c.label}
                       <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
+                      {c.origine === "SUGGESTION" && <BadgeCompetenceSuggeree pourRecruteur />}
                     </span>
                   ))
                 : candidatData.competences

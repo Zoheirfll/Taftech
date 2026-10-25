@@ -112,7 +112,7 @@ class CompetenceCandidatSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CompetenceCandidat
-        fields = ['id', 'label', 'niveau', 'niveau_libelle', 'source', 'competence_ref']
+        fields = ['id', 'label', 'niveau', 'niveau_libelle', 'source', 'origine', 'competence_ref']
 
 
 class ProfilCandidatDTO(serializers.ModelSerializer):
@@ -132,6 +132,8 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
     last_login = serializers.SerializerMethodField()
     user_id = serializers.SerializerMethodField()
     est_debloque = serializers.SerializerMethodField()
+    debloque_le = serializers.SerializerMethodField()
+    debloque_par_nom = serializers.SerializerMethodField()
     is_favori = serializers.SerializerMethodField()
     experiences_detail = serializers.SerializerMethodField()
     formations_detail = FormationSerializer(many=True, read_only=True)
@@ -176,7 +178,7 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
             'service_militaire', 'permis_conduire', 'vehicule_personnel', 'passeport_valide',
             'salaire_souhaite', 'mobilite', 'situation_actuelle',
             'wilaya', 'commune', 'adresse', 'date_joined', 'is_favori', 'last_login', 'user_id',
-            'est_debloque', 'bio', 'linkedin', 'github', 'visible_cvtheque',
+            'est_debloque', 'debloque_le', 'debloque_par_nom', 'bio', 'linkedin', 'github', 'visible_cvtheque',
             'derniers_conseils_dashboard', 'conseils_dashboard_le',
             'derniere_analyse_carriere', 'analyse_carriere_le',
         )
@@ -193,6 +195,25 @@ class ProfilCandidatDTO(serializers.ModelSerializer):
 
     def get_est_debloque(self, obj):
         return self._peut_voir_coordonnees(obj)
+
+    def _acces_debloque(self, obj):
+        """Ligne AccesCandidatDebloque de ce candidat (contexte 'unlocked_ids' sous forme de dict
+        {candidat_id: accès}, posé par la CVthèque) ; None hors CVthèque ou si non débloqué."""
+        unlocked_ids = self.context.get('unlocked_ids')
+        return unlocked_ids.get(obj.user_id) if isinstance(unlocked_ids, dict) else None
+
+    def get_debloque_le(self, obj):
+        acces = self._acces_debloque(obj)
+        return acces.date_debloque if acces else None
+
+    def get_debloque_par_nom(self, obj):
+        """Membre de l'équipe qui a débloqué (vue recruteur uniquement : le contexte n'existe pas
+        côté candidat) ; None pour un déblocage antérieur à l'enregistrement de l'auteur."""
+        acces = self._acces_debloque(obj)
+        auteur = acces.debloque_par if acces else None
+        if not auteur:
+            return None
+        return f"{auteur.first_name} {auteur.last_name}".strip() or auteur.email
 
     def get_first_name(self, obj):
         """Masqué avant déblocage en CVthèque — combiné au nom de famille et à la photo,

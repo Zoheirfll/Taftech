@@ -30,6 +30,9 @@ export const StepLangues = ({ pendingLangues, setPendingLangues, languesMode, se
         <h3 className={tw.pageTitlePetit}>Langues</h3>
         {!!profil?.langues && <WizardCategoryToggle mode={languesMode} onChange={setLanguesMode} />}
       </div>
+      {pendingLangues.some((l) => l.niveau === NIVEAUX[0]) && (
+        <p className="text-xs text-gray-500 mb-3">Niveau « Débutant » par défaut quand votre CV n'en indique pas : ajustez-le si besoin.</p>
+      )}
       <div className="space-y-2 mb-4">
         {pendingLangues.map((l, idx) => (
           <div key={idx} className={`${tw.card} p-3 flex items-center gap-2`}>

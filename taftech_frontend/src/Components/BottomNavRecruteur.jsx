@@ -21,7 +21,7 @@ const BottomNavRecruteur = () => {
   const { statut } = useStatutEntreprise();
   // Un cadenas s'affiche quand un droit du palier vaut explicitement `false` (rien tant qu'inconnu).
   const droitsPalier = useDroitsPalier(authService.isRecruteurOuMembre() && statut === STATUT_ENTREPRISE.OK);
-  const items = ITEMS.filter(({ minRole }) => authService.peutFaire(minRole));
+  const items = ITEMS;
   const isActive = (to) => location.pathname.startsWith(to);
 
   // Entreprise en attente de validation : aucune page à atteindre, donc pas de navigation.
@@ -32,7 +32,7 @@ const BottomNavRecruteur = () => {
       className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md rounded-t-2xl shadow-[0_-6px_24px_-4px_rgba(15,23,42,0.12)] flex items-stretch px-1 pt-1.5"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.375rem)" }}
     >
-      {items.map(({ to, label, icon: Icon, palierRequis }) => {
+      {items.map(({ to, label, icon: Icon, palierRequis, minRole }) => {
         const active = isActive(to);
         return (
           <Link key={to} to={to} className="flex-1 flex flex-col items-center justify-center gap-1 py-1 min-h-[54px]">
@@ -53,7 +53,9 @@ const BottomNavRecruteur = () => {
               }`}
             >
               {label}
-              {estVerrouille(droitsPalier, palierRequis) && <CadenasPalier size={9} />}
+              {!authService.peutFaire(minRole)
+                ? <CadenasPalier size={9} raison="Réservé à un rôle supérieur dans l'équipe" />
+                : estVerrouille(droitsPalier, palierRequis) && <CadenasPalier size={9} />}
             </span>
           </Link>
         );

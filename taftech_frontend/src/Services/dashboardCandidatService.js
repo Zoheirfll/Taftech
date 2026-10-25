@@ -47,9 +47,10 @@ export const dashboardCandidatService = {
     }
   },
 
-  ajouterCompetence: async (label, niveau) => {
+  ajouterCompetence: async (label, niveau, origine) => {
     try {
-      const response = await api.post("jobs/mes-competences/", { label, niveau });
+      // `origine` (« SUGGESTION ») est facultative : informative, jamais lue par le score.
+      const response = await api.post("jobs/mes-competences/", origine ? { label, niveau, origine } : { label, niveau });
       return response.data;
     } catch (err) {
       reportError("ECHEC_AJOUTER_COMPETENCE", err);

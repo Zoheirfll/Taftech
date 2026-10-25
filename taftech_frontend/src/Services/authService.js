@@ -80,10 +80,11 @@ export const authService = {
   // Vérifie si le membre a au moins le niveau de rôle requis
   // Ordre de priorité : PROPRIETAIRE > ADMIN > UTILISATEUR > INVITE
   peutFaire: (actionRole) => {
-    // RECRUTEUR (propriétaire) et ADMIN ont tous les droits
-    if (localStorage.getItem("userRole") === "RECRUTEUR") return true;
+    // RECRUTEUR (propriétaire) a tous les droits. Un ADMIN d'équipe n'a PAS ceux du propriétaire
+    // (facturation, abonnements) : le backend les refuse déjà, l'ordre ci-dessous suffit.
+    // Propriétaire = compte RECRUTEUR membre d'aucune équipe (un recruteur invité suit son rôle d'équipe).
+    if (localStorage.getItem("userRole") === "RECRUTEUR" && localStorage.getItem("estMembreEquipe") !== "true") return true;
     const monRole = localStorage.getItem("membreRole") || "INVITE";
-    if (monRole === "ADMIN") return true;
     const ORDRE = ["INVITE", "UTILISATEUR", "ADMIN", "PROPRIETAIRE"];
     return ORDRE.indexOf(monRole) >= ORDRE.indexOf(actionRole);
   },

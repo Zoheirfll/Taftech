@@ -56,7 +56,7 @@ const MOBILE_MENU_GROUPS = [
   {
     label: "Compte",
     items: [
-      { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "PROPRIETAIRE", palierRequis: "acces_equipe" },
+      { to: "/mon-equipe", label: "Mon équipe", icon: Users, minRole: "ADMIN", palierRequis: "acces_equipe" },
       { to: "/facturation", label: "Facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
       { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
     ],
@@ -271,14 +271,14 @@ const NavbarRecruteur = () => {
                       toute la navigation détaillée (Offres/Candidats/Analyse/Compte), ce menu
                       ne garde que les raccourcis les plus utilisés + ce qui n'est pas dans la sidebar. */}
                   {[
-                    { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "PROPRIETAIRE" },
+                    { to: "/mon-equipe", icon: Users, label: "Mon équipe", minRole: "ADMIN" },
                     ...(authService.peutFaire("PROPRIETAIRE")
                       ? [{ to: "/recruteurs/abonnements", icon: Star, label: isPremium ? `Mon ${NOM_PALIERS[palierNom] || "Premium"} ⭐` : "Passer Premium 🔒", accent: true, minRole: "PROPRIETAIRE" }]
                       : []),
                     { to: "/parametres", icon: Settings, label: "Paramètres", minRole: "INVITE" },
                   ]
-                    .filter(({ minRole }) => !enAttente && authService.peutFaire(minRole))
-                    .map(({ to, icon, label, accent }) => {
+                    .filter(() => !enAttente)
+                    .map(({ to, icon, label, accent, minRole }) => {
                       const ItemIcon = icon;
                       return (
                         <Link
@@ -291,6 +291,9 @@ const NavbarRecruteur = () => {
                         >
                           <ItemIcon size={15} className="shrink-0" />
                           {label}
+                          {!authService.peutFaire(minRole) && (
+                            <CadenasPalier className="ml-auto" raison="Réservé à un rôle supérieur dans l'équipe" />
+                          )}
                         </Link>
                       );
                     })}
@@ -356,20 +359,22 @@ const NavbarRecruteur = () => {
           {isLogged && estRecruteurOuMembre && (
             <>
               {(enAttente ? [] : MOBILE_MENU_GROUPS).map((group) => {
-                const items = group.items.filter(({ minRole }) => authService.peutFaire(minRole));
+                const items = group.items;
                 if (items.length === 0) return null;
                 return (
                   <div key={group.label} className="mb-1">
                     <p className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       {group.label}
                     </p>
-                    {items.map(({ to, label, icon, palierRequis }) => {
+                    {items.map(({ to, label, icon, palierRequis, minRole }) => {
                       const ItemIcon = icon;
                       const dup = DUP_BOTTOM_NAV.includes(to);
                       return (
                         <Link key={to} to={to} onClick={() => setIsMobileOpen(false)} className={mobileLinkClass(to, dup)}>
                           <ItemIcon size={16} className="shrink-0" /> {label}
-                          {estVerrouille(droitsPalier, palierRequis) && <CadenasPalier className="ml-auto" />}
+                          {!authService.peutFaire(minRole)
+                            ? <CadenasPalier className="ml-auto" raison="Réservé à un rôle supérieur dans l'équipe" />
+                            : estVerrouille(droitsPalier, palierRequis) && <CadenasPalier className="ml-auto" />}
                         </Link>
                       );
                     })}

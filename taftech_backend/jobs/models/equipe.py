@@ -24,6 +24,7 @@ class AuditLog(models.Model):
         ('MODIFIER_PRIX_PALIER', "Modifier le prix d'un palier"),
         ('SUPPRIMER_ADMIN', 'Supprimer un compte administrateur'),
         ('STATUT_COMPETENCE', "Changer le statut d'une compétence du référentiel"),
+        ('LIER_COMPETENCE_METIER', "Lier ou retirer un métier d'une compétence"),
         ('MODIFIER_PROMPT_IA', "Modifier un prompt IA"),
         ('MODIFIER_CONFIG_IA', "Modifier la configuration IA (modèle, quotas, plafond)"),
         ('MODIFIER_INFOS_SOCIETE', "Modifier les informations société (coordonnées, mentions légales)"),

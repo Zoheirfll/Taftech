@@ -22,12 +22,14 @@ class CompetenceValideTests(SimpleTestCase):
         "Piloter le plan annuel; former les managers",
         "Gestion des dossiers disciplinaires et suivi des sanctions pour les 500 employés.",
         "Responsable de la mise en place des procédures RH et du suivi",
+        "Anglais", "Français", "Arabe", "Tamazight", "english", "Arabic", "Langue arabe",
     ]
 
     ACCEPTEES = [
         "Python 3", "ISO 9001", "5S", "Office 365", "Gestion de projet",
         "Suivi de projets", "Mise en place de processus", "Paie",
         "Excel avancé", "Droit du travail", "SAP HR", "Power BI", "Lean Six Sigma",
+        "Traduction anglais-français", "Communication en anglais",
     ]
 
     def test_rejette_chiffres_dates_effectifs_phrases_et_missions(self):

@@ -367,6 +367,7 @@ export const recruteurService = {
       avec_cv: filters.avec_cv ? "true" : "",
       inscrit_recent: filters.inscrit_recent ? "true" : "",
       favoris: filters.favoris ? "true" : "",
+      debloque: filters.debloque || "",
       tri: filters.tri || "recents",
       page: page,
       ...(filters.offre_id ? { offre_id: filters.offre_id } : {}),

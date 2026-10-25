@@ -52,7 +52,7 @@ def credits_disponibles(entreprise):
 
 
 @transaction.atomic
-def deverrouiller_candidat(entreprise, candidat):
+def deverrouiller_candidat(entreprise, candidat, par=None):
     """Débloque coordonnées+CV d'un candidat pour l'entreprise — idempotent (un candidat déjà
     débloqué ne consomme rien, retourne l'accès existant). Consomme le quota mensuel en
     priorité, puis le pool acheté. Lève CreditsEpuisesError si aucun des deux pools ne peut
@@ -65,7 +65,7 @@ def deverrouiller_candidat(entreprise, candidat):
 
     disponibles = credits_disponibles(entreprise)
     if disponibles['mensuel_restant'] is None or disponibles['mensuel_restant'] > 0:
-        return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='MENSUEL')
+        return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='MENSUEL', debloque_par=par)
 
     if disponibles['achetes_restant'] > 0:
         from .models import AbonnementEntreprise
@@ -80,6 +80,6 @@ def deverrouiller_candidat(entreprise, candidat):
         if updated_count == 0:
             # Another concurrent request already spent the last credit(s)
             raise CreditsEpuisesError("Aucun crédit disponible.")
-        return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='ACHETE')
+        return AccesCandidatDebloque.objects.create(entreprise=entreprise, candidat=candidat, source='ACHETE', debloque_par=par)
 
     raise CreditsEpuisesError("Aucun crédit disponible.")

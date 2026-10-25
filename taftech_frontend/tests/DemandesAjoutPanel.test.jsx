@@ -184,7 +184,7 @@ describe("📥 <DemandesAjoutPanel /> — onglet Demandes du référentiel", () 
     fireEvent.click(soumettre);
     await waitFor(() =>
       expect(adminService.accepterDemande).toHaveBeenCalledWith(1, {
-        libelle: "Licence professionnelle", parent: "superieur_lmd", filiere_id: null, diplomes_ids: [],
+        libelle: "Licence professionnelle", parent: "superieur_lmd", filiere_id: null, diplomes_ids: [], metiers_ids: [],
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("Demande acceptée\n« Licence professionnelle » ajoutée au référentiel.");
@@ -208,7 +208,7 @@ describe("📥 <DemandesAjoutPanel /> — onglet Demandes du référentiel", () 
     fireEvent.click(within(dialogue).getByRole("button", { name: "Ajouter au référentiel" }));
     await waitFor(() =>
       expect(adminService.accepterDemande).toHaveBeenCalledWith(5, {
-        libelle: "Cybersécurité", parent: 3, filiere_id: 11, diplomes_ids: [2],
+        libelle: "Cybersécurité", parent: 3, filiere_id: 11, diplomes_ids: [2], metiers_ids: [],
       }),
     );
   });

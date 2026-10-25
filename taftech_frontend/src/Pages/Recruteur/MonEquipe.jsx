@@ -88,7 +88,11 @@ const MonEquipe = () => {
     charger();
   }, []);
 
+  // Même règle que le backend (invitation, changement de rôle, retrait) : propriétaire ou administrateur.
+  const peutGererEquipe = data?.mon_role === "PROPRIETAIRE" || data?.mon_role === "ADMIN";
+  // Seul le propriétaire attribue, modifie ou retire le rôle administrateur (même règle que le backend).
   const estProprietaire = data?.mon_role === "PROPRIETAIRE";
+  const rolesProposables = estProprietaire ? ROLES_INVITABLES : ROLES_INVITABLES.filter((r) => r !== "ADMIN");
   const peutVoirAudit = data?.mon_role === "PROPRIETAIRE" || data?.mon_role === "ADMIN";
 
   const chargerAudit = async () => {
@@ -203,7 +207,7 @@ const MonEquipe = () => {
             {(data?.membres?.length || 0) > 1 ? "s" : ""}
           </p>
         </div>
-        {estProprietaire && (
+        {peutGererEquipe && (
           <button
             onClick={() => {
               setForm({ email: "", role: "UTILISATEUR" });
@@ -225,7 +229,7 @@ const MonEquipe = () => {
               <th className="px-5 py-3">Email</th>
               <th className="px-5 py-3">Rôle</th>
               <th className="px-5 py-3">Depuis</th>
-              {estProprietaire && (
+              {peutGererEquipe && (
                 <th className="px-5 py-3 text-right">Actions</th>
               )}
             </tr>
@@ -260,20 +264,22 @@ const MonEquipe = () => {
                 <td className={`px-5 py-4 text-sm ${tw.textMuted}`}>
                   {m.date_ajout}
                 </td>
-                {estProprietaire && (
+                {peutGererEquipe && (
                   <td className="px-5 py-4 text-right">
-                    {m.role !== "PROPRIETAIRE" && (
+                    {m.role !== "PROPRIETAIRE" && (estProprietaire || m.role !== "ADMIN") && (
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setRoleEdit(m.role);
-                            setModal({ mode: "role", data: m });
-                          }}
-                          className={`p-2 ${tw.iconButtonSlateSoft} rounded-lg transition-colors`}
-                          title="Changer le rôle"
-                        >
-                          <Edit2 size={13} />
-                        </button>
+                        {!m.est_moi && (
+                          <button
+                            onClick={() => {
+                              setRoleEdit(m.role);
+                              setModal({ mode: "role", data: m });
+                            }}
+                            className={`p-2 ${tw.iconButtonSlateSoft} rounded-lg transition-colors`}
+                            title="Changer le rôle"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                        )}
                         {!m.est_moi && (
                           <button
                             onClick={() => handleRetirer(m)}
@@ -294,7 +300,7 @@ const MonEquipe = () => {
       </div>
 
       {/* Invitations en attente */}
-      {estProprietaire && data?.invitations?.length > 0 && (
+      {peutGererEquipe && data?.invitations?.length > 0 && (
         <div className={`${tw.card} rounded-2xl p-5`}>
           <p className={`text-sm font-bold ${tw.textMuted700} mb-4 flex items-center gap-2`}>
             <Clock size={15} className={tw.textAmber500} /> Invitations en
@@ -438,7 +444,7 @@ const MonEquipe = () => {
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-lg text-sm ${tw.inputColorsMuted}`}
                 >
-                  {ROLES_INVITABLES.map((r) => (
+                  {rolesProposables.map((r) => (
                     <option key={r} value={r}>
                       {ROLES_LABELS[r].label}
                     </option>
@@ -490,7 +496,7 @@ const MonEquipe = () => {
               onChange={(e) => setRoleEdit(e.target.value)}
               className={`w-full px-4 py-2.5 rounded-lg text-sm mb-5 ${tw.inputColorsMuted}`}
             >
-              {ROLES_INVITABLES.map((r) => (
+              {rolesProposables.map((r) => (
                 <option key={r} value={r}>
                   {ROLES_LABELS[r].label}
                 </option>

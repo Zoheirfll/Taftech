@@ -136,7 +136,7 @@ const RecruteurLayout = () => {
       {
         label: "Compte",
         items: [
-          { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "PROPRIETAIRE", palierRequis: "acces_equipe" },
+          { name: "Mon équipe", path: "/mon-equipe", icon: Users, minRole: "ADMIN", palierRequis: "acces_equipe" },
           { name: "Abonnements & tarifs", path: "/recruteurs/abonnements", icon: CreditCard, minRole: "PROPRIETAIRE" },
           { name: "Facturation", path: "/facturation", icon: Receipt, minRole: "PROPRIETAIRE" },
           { name: "Paramètres entreprise", path: "/parametres", icon: Settings, minRole: "INVITE" },
@@ -146,12 +146,8 @@ const RecruteurLayout = () => {
     [messagesNonLus, notifsNonLues, location.pathname, location.search],
   );
 
-  const visibleGroups = menuGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => authService.peutFaire(item.minRole)),
-    }))
-    .filter((group) => group.items.length > 0);
+  // Une entrée dont le rôle ne suffit pas reste visible avec un cadenas (la page affiche « Accès restreint »).
+  const roleInsuffisant = (item) => !authService.peutFaire(item.minRole);
 
   return (
     <div className={`max-w-7xl mx-auto flex flex-col gap-4 md:gap-5 px-4 md:px-6 py-5 md:py-6 min-h-screen ${tw.surfaceSubtle}`}>
@@ -202,7 +198,7 @@ const RecruteurLayout = () => {
             className={`${tw.sidebarShellTeal} rounded-xl sticky top-20 max-h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden`}
           >
             <nav className="p-2 overflow-y-auto flex-1">
-              {visibleGroups.map((group) => (
+              {menuGroups.map((group) => (
                 <div key={group.label} className="mb-2 last:mb-0">
                   <p className="px-3 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {group.label}
@@ -224,7 +220,9 @@ const RecruteurLayout = () => {
                           />
                           <span className="text-sm font-semibold">{item.name}</span>
                         </div>
-                        {estVerrouille(droitsPalier, item.palierRequis) && <CadenasPalier />}
+                        {roleInsuffisant(item)
+                          ? <CadenasPalier raison="Réservé à un rôle supérieur dans l'équipe" />
+                          : estVerrouille(droitsPalier, item.palierRequis) && <CadenasPalier />}
                         {item.badge != null && (
                           <span
                             className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { jobsService } from "../../Services/jobsService";
 import { reportError } from "../../utils/errorReporter";
-import JobCard from "../../Components/JobCard";
+import LigneOffre from "../../Components/LigneOffre";
+import { useFavorisOffres } from "../../utils/useFavorisOffres";
 import Seo from "../../Components/Seo";
 import { ChevronLeft, ChevronRight, ArrowLeft, MapPin } from "lucide-react";
 import { tw } from "../../theme";
@@ -20,11 +21,15 @@ const RegionDetail = () => {
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [experiences, setExperiences] = useState([]);
+  const { basculerFavori, estSauvegardee } = useFavorisOffres({ chargerAuMontage: true });
+  const libelleExperience = (val) => experiences.find((e) => e.value === val)?.label || val;
 
   useEffect(() => {
     const fetchWilaya = async () => {
       try {
         const constants = await jobsService.getConstants();
+        setExperiences(constants.experiences || []);
         const found = (constants.wilayas || []).find((w) => w.value?.split(" - ")[0] === code);
         if (!found) {
           setNotFound(true);
@@ -81,9 +86,9 @@ const RegionDetail = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className={`${tw.cardColors} rounded-2xl p-5 animate-pulse h-40`} />
+              <div key={i} className={`${tw.cardColors} rounded-2xl p-5 animate-pulse h-28`} />
             ))}
           </div>
         ) : jobs.length === 0 ? (
@@ -96,9 +101,15 @@ const RegionDetail = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {jobs.map((job) => (
-                <JobCard key={job.id} job={job} />
+                <LigneOffre
+                  key={job.id}
+                  job={job}
+                  estSauvegardee={estSauvegardee(job.id)}
+                  onToggleFavori={basculerFavori}
+                  libelleExperience={libelleExperience}
+                />
               ))}
             </div>
             {totalPages > 1 && (

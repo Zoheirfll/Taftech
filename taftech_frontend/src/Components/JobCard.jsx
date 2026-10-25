@@ -111,9 +111,7 @@ const JobCard = ({ job }) => {
               Voir les détails
             </Link>
             {estCloturee ? (
-              <button disabled className={tw.jobCardDisabledButton} title="Cette offre n'accepte plus de candidatures">
-                Postuler
-              </button>
+              <span className={tw.jobCardBadgeCloturee}>Offre clôturée</span>
             ) : isLogged ? (
               <button
                 onClick={handlePostuler}

@@ -10,6 +10,7 @@ import { StepExperiences } from "./steps/StepExperiences";
 import { StepFormations } from "./steps/StepFormations";
 import { StepLangues } from "./steps/StepLangues";
 import { StepCompetences } from "./steps/StepCompetences";
+import { idsMetiers } from "../../../utils/competencesSuggerees";
 import { StepPreferences } from "./steps/StepPreferences";
 
 const STEP_LABELS = [
@@ -160,6 +161,12 @@ const OnboardingWizard = ({ mode = "page", onClose }) => {
             skipStep={wizard.skipStep}
             profil={wizard.profil}
             saving={wizard.saving}
+            metierIds={idsMetiers(
+              wizard.infosForm?.metier,
+              wizard.prefsForm?.metier_souhaite,
+              wizard.profil?.metier_souhaite,
+              (wizard.pendingExperiences || []).map((e) => e.metier),
+            )}
           />
         )}
         {step === 7 && (

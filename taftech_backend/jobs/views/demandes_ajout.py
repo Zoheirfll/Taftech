@@ -144,14 +144,18 @@ def _detail_audit(demande, action):
 
 
 class AdminDemandeAccepterAPIView(_AdminDemandeBase):
-    """POST : accepter la demande (nouvelle entrée officielle). Corps : `{libelle?, parent, filiere_id?, diplomes_ids?}`
-    (`parent` : système de diplôme, ou identifiant du domaine d'une spécialité)."""
+    """POST : accepter la demande (nouvelle entrée officielle). Corps : `{libelle?, parent, filiere_id?, diplomes_ids?,
+    metiers_ids?}` (`parent` : système de diplôme, ou identifiant du domaine d'une spécialité ; `metiers_ids` : métiers
+    auxquels lier une compétence acceptée, facultatif)."""
 
     def post(self, request, pk):
         demande = self._demande(pk)
         if demande is None:
             return Response({'error': 'Demande introuvable.'}, status=404)
-        options = {'filiere_id': request.data.get('filiere_id'), 'diplomes_ids': request.data.get('diplomes_ids') or []}
+        options = {
+            'filiere_id': request.data.get('filiere_id'), 'diplomes_ids': request.data.get('diplomes_ids') or [],
+            'metiers_ids': request.data.get('metiers_ids') or [],
+        }
         try:
             acceptee = accepter_demande(
                 demande, request.user, libelle=request.data.get('libelle'), parent=request.data.get('parent'),

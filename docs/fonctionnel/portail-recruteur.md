@@ -7,6 +7,25 @@
 
 ---
 
+## 🆕 SESSION 24/10/2026 (soir) — Équipe : invitations, rôles, cadenas de navigation
+
+Journal détaillé : [2026-10-24-equipe-roles-invitations.md](../journal/2026-10-24-equipe-roles-invitations.md) · SECURITY.md §48.
+
+- **Rôles et droits** (ordre `INVITE < UTILISATEUR < ADMIN < PROPRIETAIRE`) : `authService.peutFaire` n'a plus de raccourci ADMIN ; un compte `RECRUTEUR` n'est propriétaire que s'il n'est pas membre d'équipe. Facturation, abonnements = propriétaire seul ; « Mon équipe » = administrateur et propriétaire. Le backend reste la seule vraie barrière.
+- **Navigation** : toute entrée interdite par le rôle reste **visible avec un cadenas** (`CadenasPalier`, paramètre `raison` ; palier d'abonnement ou rôle) dans la barre latérale, le menu mobile, le menu déroulant et la barre du bas ; la page elle-même affiche « Accès restreint » (`RoleGuard` sur `/mon-equipe`, `/facturation`, `/recruteurs/abonnements`). Ne plus filtrer ces entrées avec `.filter(peutFaire)`.
+- **Page « Mon équipe »** : une seule condition `peutGererEquipe` (propriétaire ou administrateur) pour « Inviter », la colonne « Actions » et les invitations en attente ; la liste n'est servie qu'à ces deux rôles (403 sinon) ; **personne ne modifie son propre rôle** ; **seul le propriétaire attribue, modifie ou retire un administrateur** (l'option « Administrateur » disparaît de la liste de rôles d'un administrateur).
+- **Invitation** : refusée à l'envoi, à l'ouverture et à l'acceptation si le compte est déjà propriétaire d'une entreprise ou membre d'une autre équipe (`_refus_acceptation`) ; un compte **sans mot de passe** (drapeau Google, mot de passe vide ou inutilisable : `_sans_mot_de_passe`) définit un mot de passe à l'acceptation.
+- **Reste** : suppression du compte d'un membre retiré (décidée, non faite, plan et piège dans le journal) ; cadenas de l'onglet « Notifications » de `/parametres` (maintenant masqué aux administrateurs).
+
+## 🆕 SESSION 24/10/2026 — CVthèque : qui a débloqué un profil, onglets, grille, balayage
+
+Journal détaillé : [2026-10-24-cvtheque-deblocage-trace-affichage.md](../journal/2026-10-24-cvtheque-deblocage-trace-affichage.md) · SECURITY.md §46.
+
+- **Auteur du déblocage** : `AccesCandidatDebloque.debloque_par` (migration `0154`), posé par `deverrouiller_candidat(entreprise, candidat, par=)`. La fiche affiche « Débloqué le … par … » ; les déblocages antérieurs n'ont que la date. Le journal d'équipe et le dashboard disaient déjà qui a débloqué quoi (`EquipeActionLog`, `_phrase_activite`).
+- **Contrat de contexte** : `ProfilCandidatDTO` lit `unlocked_ids` comme un **dict `{candidat_id: accès}`** (la CVthèque le construit ainsi) ; un `set` reste accepté pour le test d'appartenance, mais `debloque_le` / `debloque_par_nom` valent alors `None`.
+- **Liste** : onglets « Tous / Débloqués / Verrouillés » (filtre serveur `?debloque=oui|non`), carte verrouillée (cadenas, nom flouté, pastille) et débloquée (pastille verte), bascule liste / grille (`cvtheque_vue`, fiche en fenêtre en grille), balayage tactile (droite = favori, gauche = masquer jusqu'au rechargement).
+- **Piège** : la sélection d'un candidat survit au rechargement de la liste (`chargerCandidats`), sinon un déblocage faisait sauter la fiche sur le premier de la liste.
+
 ## 🆕 SESSION 13/10/2026 — Point 12 des corrections finales : CVthèque / confidentialité (déblocage ≠ accès « à vie »)
 
 Détail et analyse de sécurité : `SECURITY.md` §22. Décision validée : profil masqué → **accès suspendu** (rendu sans nouvelle dépense si le candidat réaffiche), **disparition de la liste** ; compte supprimé → **tout accès cesse**.

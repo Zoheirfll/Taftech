@@ -6,6 +6,7 @@ import { reportError } from "../../utils/errorReporter";
 import { mediaUrl, candidatFichierUrl } from "../../utils/mediaUrl";
 import { apiErrMsg } from "../../utils/apiErrMsg";
 import { useModaleNIN, reponseNinRequis } from "../../Components/ModalNIN";
+import BadgeCompetenceSuggeree from "../../Components/BadgeCompetenceSuggeree";
 import {
   MapPin,
   GraduationCap,
@@ -708,6 +709,7 @@ const ReviewCandidature = () => {
                     >
                       {c.label}
                       <span className="opacity-70 text-[10px]">{c.niveau_libelle}</span>
+                      {c.origine === "SUGGESTION" && <BadgeCompetenceSuggeree pourRecruteur />}
                     </span>
                   ))}
                 </div>

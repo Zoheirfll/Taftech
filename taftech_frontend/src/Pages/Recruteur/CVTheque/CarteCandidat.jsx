@@ -1,5 +1,5 @@
 // Carte d'un candidat dans la liste de gauche de la CVthèque (avatar, score, tags, favori, invitation).
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   MapPin,
   GraduationCap,
@@ -10,10 +10,15 @@ import {
   Star,
   Zap,
   Send,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { tw } from "../../../theme";
 import { candidatFichierUrl } from "../../../utils/mediaUrl";
 import { isRecent, getStatutActivite } from "./cvthequeUtils";
+
+const SEUIL_BALAYAGE = 90; // px de glissement horizontal au-delà desquels le geste est pris en compte
+const DECALAGE_MAX = 140;
 
 export const CarteCandidat = ({
   candidat,
@@ -23,13 +28,54 @@ export const CarteCandidat = ({
   accesCoordonnees,
   onSelect,
   onToggleFavori,
+  onIgnorer,
   onOuvrirInvitation,
 }) => {
   const recent = isRecent(candidat.date_joined);
   const statutActivite = getStatutActivite(candidat.last_login);
+
+  // Balayage tactile : droite = favori, gauche = masquer de la liste. Le défilement vertical reste
+  // géré par le navigateur (touch-action: pan-y) ; le geste n'est retenu que s'il est surtout horizontal.
+  const [decalage, setDecalage] = useState(0);
+  const depart = useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    depart.current = { x: t.clientX, y: t.clientY, horizontal: null };
+  };
+  const onTouchMove = (e) => {
+    if (!depart.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - depart.current.x;
+    const dy = t.clientY - depart.current.y;
+    if (depart.current.horizontal === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      depart.current.horizontal = Math.abs(dx) > Math.abs(dy);
+    }
+    if (depart.current.horizontal) setDecalage(Math.max(-DECALAGE_MAX, Math.min(DECALAGE_MAX, dx)));
+  };
+  const onTouchEnd = () => {
+    const dx = decalage;
+    depart.current = null;
+    setDecalage(0);
+    if (dx >= SEUIL_BALAYAGE && !candidat.is_favori) onToggleFavori(candidat, { stopPropagation() {} });
+    else if (dx <= -SEUIL_BALAYAGE && onIgnorer) onIgnorer(candidat);
+  };
+
   return (
+    <div className="relative">
+      {decalage !== 0 && (
+        <div className={`absolute inset-0 rounded-xl flex items-center px-5 text-xs font-semibold ${
+          decalage > 0 ? `justify-start ${tw.bgWarningSoft} ${tw.textWarning}` : `justify-end ${tw.surfaceMuted} ${tw.textMuted}`
+        }`}>
+          {decalage > 0 ? (candidat.is_favori ? "Déjà en favori" : "⭐ Ajouter aux favoris") : "Masquer ce profil"}
+        </div>
+      )}
     <div
       onClick={() => onSelect(candidat)}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      style={{ transform: `translateX(${decalage}px)`, transition: decalage === 0 ? "transform 0.2s" : "none", touchAction: "pan-y" }}
       className={`relative cursor-pointer w-full text-left ${tw.surface} border rounded-xl overflow-hidden transition-all ${
         isSelected
           ? tw.borderTealSelected
@@ -48,7 +94,9 @@ export const CarteCandidat = ({
         <div className="flex gap-3 pr-7">
           {/* Avatar */}
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${tw.surfaceSubtle}`}>
-            {candidat.photo_profil ? (
+            {!candidat.est_debloque ? (
+              <span className={`w-full h-full flex items-center justify-center ${tw.bgTealSoft}`}><Lock size={16} className={tw.textTeal} /></span>
+            ) : candidat.photo_profil ? (
               <img src={candidatFichierUrl(candidat.user_id, "photo")} alt="" loading="lazy" width={40} height={40} className="w-full h-full object-cover" />
             ) : (
               <User size={18} className={tw.textMuted} />
@@ -63,11 +111,16 @@ export const CarteCandidat = ({
                   {statutActivite && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutActivite.dot}`} title={statutActivite.label} />}
                   <h3 className={`text-sm font-semibold truncate ${tw.textStrong}`}>{candidat.titre_professionnel || "Profil candidat"}</h3>
                 </div>
-                <p className={`text-xs truncate ${tw.textMuted700}`}>
-                  {candidat.last_name || candidat.first_name
-                    ? `${candidat.last_name ?? ""} ${candidat.first_name ?? ""}`.trim()
-                    : "Identité masquée"}
-                </p>
+                {candidat.last_name || candidat.first_name ? (
+                  <p className={`text-xs truncate ${tw.textMuted700}`}>
+                    {`${candidat.last_name ?? ""} ${candidat.first_name ?? ""}`.trim()}
+                  </p>
+                ) : (
+                  <p className={`text-xs truncate flex items-center gap-1.5 ${tw.textMuted700}`}>
+                    <span className="blur-[3px] select-none" aria-hidden="true">Xxxxxxxx Xxxxxx</span>
+                    <span className={`text-[10px] font-medium ${tw.textTeal}`}>Débloquer pour voir l'identité</span>
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-0.5 shrink-0">
                 {offreId && 'score_offre' in candidat && (
@@ -76,6 +129,11 @@ export const CarteCandidat = ({
                     candidat.score_offre >= 40 ? tw.scoreMid :
                     tw.badgeNeutral
                   }`}><Zap size={9} />{candidat.score_offre}%</span>
+                )}
+                {candidat.est_debloque ? (
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgTealSoft} ${tw.textTeal800}`}><Unlock size={9} />Débloqué</span>
+                ) : (
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.surfaceMuted} ${tw.textMuted}`}><Lock size={9} />Verrouillé</span>
                 )}
                 {recent && <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${tw.bgWarningSoft} ${tw.textWarning}`}><Sparkles size={9} />Nouveau</span>}
               </div>
@@ -131,6 +189,7 @@ export const CarteCandidat = ({
       >
         <Send size={14} className={tw.iconMuted} />
       </button>
+    </div>
     </div>
   );
 };

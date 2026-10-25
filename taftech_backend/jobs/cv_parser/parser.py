@@ -257,7 +257,7 @@ def parse_cv(file_path, file_name, noms_connus=()):
         # Bloc "Competences" identifie dans le CV : il fait foi (une competence par ligne),
         # l'IA ne sert plus qu'a proposer un niveau quand elle a garde le meme intitule.
         niveaux_ia_bas = {k.lower(): v for k, v in competences_niveaux_ia.items()}
-        competences_niveaux_ia = {c: niveaux_ia_bas.get(c.lower(), "INTERMEDIAIRE") for c in lignes_cv}
+        competences_niveaux_ia = {c: niveaux_ia_bas.get(c.lower(), "DEBUTANT") for c in lignes_cv}
     competences_rapprochees = {}
     competences_niveaux_normalisees = _normaliser_avec_referentiel(competences_niveaux_ia, competences_rapprochees)
     competences_referentiel = _labels_du_referentiel(list(competences_niveaux_normalisees.keys()))

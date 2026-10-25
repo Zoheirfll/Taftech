@@ -259,6 +259,10 @@ class AccesCandidatDebloque(models.Model):
     entreprise = models.ForeignKey(ProfilEntreprise, on_delete=models.CASCADE, related_name='candidats_debloques')
     candidat = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='debloque_par')
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES)
+    # Membre de l'équipe qui a dépensé le crédit (null pour les déblocages antérieurs à ce champ).
+    debloque_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='deblocages_effectues',
+    )
     date_debloque = models.DateTimeField(auto_now_add=True)
 
     class Meta:

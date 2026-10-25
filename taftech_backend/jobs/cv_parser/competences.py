@@ -9,10 +9,18 @@ _NIVEAU_LABEL_VERS_CODE = {
 }
 
 
-PARSER_VERSION = "parser-2026.10.22-1"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
+PARSER_VERSION = "parser-2026.10.24-1"  # à incrémenter à chaque changement de prompt/logique (journal ParsingCV)
 _MAX_MOTS_COMPETENCE = 8
 _MAX_MOTS_COMPETENCE_LIGNE = 8  # au-delà, un libellé composé est éclaté (voir _eclater_competence_composee)
 _MAX_CHARS_COMPETENCE = 70
+# Noms de langues (sans accents) : une langue se déclare dans la section Langues, jamais comme compétence
+# (elle n'est pas rapprochable du référentiel et ne rapporte rien au score).
+_NOMS_DE_LANGUES = frozenset({
+    "anglais", "francais", "arabe", "tamazight", "kabyle", "berbere", "espagnol", "allemand", "italien",
+    "turc", "chinois", "russe", "portugais", "english", "french", "arabic", "spanish", "german", "italian",
+    "turkish", "chinese", "russian", "portuguese",
+})
+_MOTS_LANGUE = frozenset({"langue", "langues", "language", "languages"})
 _RE_SEPARATEUR_COMPOSE = re.compile(r'\s*(?:&|/|\bet\b)\s*', re.IGNORECASE)
 
 
@@ -95,6 +103,13 @@ def _contient_signal_numerique_suspect(label):
     return False
 
 
+def _est_nom_de_langue(label):
+    """« Anglais », « Langue arabe » : uniquement des noms de langue. « Communication en anglais » reste valide."""
+    jetons = re.findall(r"\w+", normaliser_recherche(label))
+    return (bool(jetons) and any(j in _NOMS_DE_LANGUES for j in jetons)
+            and all(j in _NOMS_DE_LANGUES or j in _MOTS_LANGUE for j in jetons))
+
+
 def _est_competence_valide(label):
     """Rejette une "compétence" qui ressemble à une phrase de mission, un chiffre-clé
     (montant/pourcentage/date/effectif) ou un extrait de texte plutôt qu'à un intitulé
@@ -107,7 +122,7 @@ def _est_competence_valide(label):
         return False
     if len(label.split()) > _MAX_MOTS_COMPETENCE:
         return False
-    if _contient_signal_numerique_suspect(label):
+    if _contient_signal_numerique_suspect(label) or _est_nom_de_langue(label):
         return False
     # Phrase complète / description de mission : ponctuation de phrase, 1re personne ou
     # tournure introductive de mission (voir _RE_TOURNURE_MISSION*).
@@ -221,5 +236,5 @@ def _parser_niveaux_competences(brut):
         label, niveau = item.split(':', 1)
         label, niveau = label.strip(), niveau.strip().lower()
         if label:
-            resultat[label] = _NIVEAU_LABEL_VERS_CODE.get(niveau, 'INTERMEDIAIRE')
+            resultat[label] = _NIVEAU_LABEL_VERS_CODE.get(niveau, 'DEBUTANT')
     return resultat

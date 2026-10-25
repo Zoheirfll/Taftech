@@ -474,6 +474,38 @@ def rattacher_competences_orphelines():
     return total
 
 
+MAX_METIERS_PAR_COMPETENCE = 10  # métiers liés à une compétence en une fois
+
+
+def lier_competence_aux_metiers(competence, metiers_ids):
+    """Lie `competence` aux métiers `metiers_ids` (un métier redirigé est lié à son métier canonique). Retourne le
+    nombre de liens créés. ValueError (rien d'écrit) si un identifiant est invalide, inconnu ou s'il y en a trop.
+    Partagé par l'acceptation d'une demande de compétence et par l'écran « Métiers » de l'admin."""
+    from .models import Metier, MetierCompetence
+
+    try:
+        ids = {int(i) for i in (metiers_ids or [])}
+    except (TypeError, ValueError):
+        raise ValueError("Métier invalide.")
+    if not ids:
+        return 0
+    if min(ids) <= 0:
+        raise ValueError("Métier invalide.")
+    if len(ids) > MAX_METIERS_PAR_COMPETENCE:
+        raise ValueError(f"Au plus {MAX_METIERS_PAR_COMPETENCE} métiers par compétence.")
+    metiers = {m.pk: m for m in Metier.objects.filter(pk__in=ids)}
+    if set(metiers) != ids:
+        raise ValueError("Métier introuvable dans le référentiel.")
+    crees = 0
+    for metier in metiers.values():
+        cible = metier.metier_canonique or metier
+        _, cree = MetierCompetence.objects.get_or_create(
+            metier=cible, competence=competence, defaults={'code': f"TAF-MC-{competence.pk}-{cible.pk}"},
+        )
+        crees += cree
+    return crees
+
+
 _ABREVIATIONS = {
     "rh": "ressources humaines",
     "drh": "directeur ressources humaines",

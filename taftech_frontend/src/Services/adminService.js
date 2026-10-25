@@ -676,6 +676,37 @@ export const adminService = {
     }
   },
 
+  // Métiers auxquels une compétence officielle est suggérée (liste, ajout, retrait d'un lien TafTech).
+  getMetiersCompetence: async (id) => {
+    try {
+      const response = await api.get(`jobs/admin/competences/${id}/metiers/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_METIERS_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  lierMetiersCompetence: async (id, metiersIds) => {
+    try {
+      const response = await api.post(`jobs/admin/competences/${id}/metiers/`, { metiers_ids: metiersIds });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_LIER_METIERS_COMPETENCE", err);
+      throw err;
+    }
+  },
+
+  retirerMetierCompetence: async (id, metierId) => {
+    try {
+      const response = await api.delete(`jobs/admin/competences/${id}/metiers/${metierId}/`);
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_RETIRER_METIER_COMPETENCE", err);
+      throw err;
+    }
+  },
+
   createCompetence: async (data) => {
     try {
       const response = await api.post("jobs/admin/competences/", data);

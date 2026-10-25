@@ -170,7 +170,8 @@ class CompetenceCandidatAPIView(APIView):
             from .profils import _synchroniser_competences_depuis_texte
             _synchroniser_competences_depuis_texte(profil)
         data = [
-            {'id': c.id, 'label': c.label, 'niveau': c.niveau, 'niveau_libelle': c.get_niveau_display(), 'source': c.source}
+            {'id': c.id, 'label': c.label, 'niveau': c.niveau, 'niveau_libelle': c.get_niveau_display(),
+             'source': c.source, 'origine': c.origine}
             for c in profil.competences_detail.all()
         ]
         return Response(data, status=200)
@@ -185,18 +186,25 @@ class CompetenceCandidatAPIView(APIView):
             return Response({"error": "Le nom de la compétence est requis."}, status=400)
         if niveau not in dict(CompetenceCandidat.NIVEAU_CHOICES):
             niveau = 'DEBUTANT'
+        # Origine déclarée par l'écran (suggestion du métier ou saisie) : informative, jamais lue par le score.
+        # Écrite à la création seulement : modifier ensuite le niveau ne la change pas.
+        origine = request.data.get('origine')
+        if origine not in dict(CompetenceCandidat.ORIGINE_CHOICES):
+            origine = 'SAISIE'
         # Même résolveur que l'offre (libellé OU synonyme) : le score est comparable (point 10).
         from ..demandes_ajout import demander_competence_saisie
         from ..referentiel_utils import resoudre_competence_ref
         ref = resoudre_competence_ref(label)
         comp, created = CompetenceCandidat.objects.update_or_create(
-            profil=profil, label=label, defaults={'niveau': niveau, 'competence_ref': ref}
+            profil=profil, label=label, defaults={'niveau': niveau, 'competence_ref': ref},
+            create_defaults={'niveau': niveau, 'competence_ref': ref, 'origine': origine},
         )
         if ref is None:
             demander_competence_saisie(request.user, label)  # hors référentiel : demande implicite visible de l'admin
         _resynchroniser_competences_texte(profil)
         return Response(
-            {'id': comp.id, 'label': comp.label, 'niveau': comp.niveau, 'niveau_libelle': comp.get_niveau_display(), 'source': comp.source},
+            {'id': comp.id, 'label': comp.label, 'niveau': comp.niveau, 'niveau_libelle': comp.get_niveau_display(),
+             'source': comp.source, 'origine': comp.origine},
             status=201 if created else 200,
         )
 

@@ -40,6 +40,27 @@ export const useCVTheque = () => {
   const [avecCV, setAvecCV] = useState(false);
   const [inscritRecent, setInscritRecent] = useState(false);
   const [tri, setTri] = useState("recents");
+  // Onglet « Débloqués / Verrouillés » (filtre côté serveur : "" | "oui" | "non").
+  const [debloque, setDebloque] = useState("");
+  // Mode d'affichage liste (défaut) / grille ; simple préférence du recruteur, jamais critique.
+  const [vue, setVueState] = useState(() => {
+    try {
+      return localStorage.getItem("cvtheque_vue") === "grille" ? "grille" : "liste";
+    } catch {
+      return "liste";
+    }
+  });
+  const setVue = (valeur) => {
+    setVueState(valeur);
+    try {
+      localStorage.setItem("cvtheque_vue", valeur);
+    } catch {
+      /* préférence facultative : sans stockage, la vue revient à la liste au rechargement */
+    }
+  };
+  // Fiche ouverte en fenêtre (mode grille) et profils écartés d'un balayage (jusqu'au rechargement).
+  const [detailOuvert, setDetailOuvert] = useState(false);
+  const [ignores, setIgnores] = useState([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,6 +112,7 @@ export const useCVTheque = () => {
   const detailRef = useRef(null);
   const handleSelectCandidat = (candidat) => {
     setSelectedCandidat(candidat);
+    setDetailOuvert(true);
     setTimeout(() => {
       if (window.innerWidth < 1024 && detailRef.current) {
         detailRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -195,6 +217,7 @@ export const useCVTheque = () => {
         avec_cv: avecCV,
         inscrit_recent: inscritRecent,
         favoris: activeTab === "favoris",
+        debloque,
         tri,
         ...(offreId ? { offre_id: offreId } : {}),
         ...(offreFiltresId ? { offre_filtres_id: offreFiltresId } : {}),
@@ -208,11 +231,10 @@ export const useCVTheque = () => {
       setFiltresExigence(data.filtres_exigence_autorises || []);
 
       // Auto-sélection du premier candidat sur desktop
-      if (data.results && data.results.length > 0) {
-        setSelectedCandidat(data.results[0]);
-      } else {
-        setSelectedCandidat(null);
-      }
+      // Garde le candidat déjà sélectionné (version rafraîchie) s'il est toujours dans la liste :
+      // sinon un déblocage ferait sauter la fiche vers le premier candidat.
+      const resultats = data.results || [];
+      setSelectedCandidat((prev) => resultats.find((c) => c.user_id === prev?.user_id) ?? resultats[0] ?? null);
     } catch (error) {
       if (error.error) notifier.erreur("Recherche impossible", error.error);
       reportError("ECHEC_RECHERCHE_CVTHEQUE", error);
@@ -241,6 +263,7 @@ export const useCVTheque = () => {
     inscritRecent,
     tri,
     activeTab,
+    debloque,
     currentPage,
     offreId,
     offreFiltresId,
@@ -360,6 +383,12 @@ export const useCVTheque = () => {
     }
   };
 
+  // Balayage vers la gauche : le profil quitte la liste (sans rien supprimer) jusqu'au rechargement.
+  const handleIgnorer = (candidat) => {
+    setIgnores((prev) => (prev.includes(candidat.user_id) ? prev : [...prev, candidat.user_id]));
+    notifier.info("Profil masqué de la liste", "Il réapparaît au prochain rechargement.");
+  };
+
   const handleOuvrirInvitation = (candidat, e) => {
     e.stopPropagation();
     setOffreInvitation("");
@@ -423,6 +452,7 @@ export const useCVTheque = () => {
     currentPage, setCurrentPage, totalPages, totalCandidats,
     // interface
     selectedCandidat, showFiltres, setShowFiltres, activeTab, setActiveTab,
+    debloque, setDebloque, vue, setVue, detailOuvert, setDetailOuvert, ignores, setIgnores, handleIgnorer,
     showMatchingPanel, setShowMatchingPanel, openSections, toggleSection, detailRef,
     // consentement
     consentGiven, consentChecked, setConsentChecked, consentLoading,

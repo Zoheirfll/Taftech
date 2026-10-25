@@ -46,6 +46,41 @@ class CVThequeCreditsMaskingAPITest(APITestCase):
         self.assertTrue(row["est_debloque"])
         self.assertEqual(row["email"], self.cand.email)
 
+    def test_debloque_expose_auteur_et_date(self):
+        user, entreprise = make_entreprise("cvc_trace", palier_nom="PRO")
+        deverrouiller_candidat(entreprise, self.cand, par=user)
+        self.client.force_authenticate(user=user)
+        row = self.client.get(reverse("cvtheque")).data["results"][0]
+        self.assertTrue(row["est_debloque"])
+        self.assertIsNotNone(row["debloque_le"])
+        self.assertEqual(row["debloque_par_nom"], user.email)
+
+    def test_non_debloque_sans_auteur_ni_date(self):
+        user, _ = make_entreprise("cvc_sans_trace", palier_nom="PRO")
+        self.client.force_authenticate(user=user)
+        row = self.client.get(reverse("cvtheque")).data["results"][0]
+        self.assertIsNone(row["debloque_le"])
+        self.assertIsNone(row["debloque_par_nom"])
+
+    def test_filtre_debloque_oui_non(self):
+        autre = User.objects.create_user(username="cvc_cand2", email="cvc_cand2@test.dz", password="pwd", role="CANDIDAT")
+        ProfilCandidat.objects.create(user=autre, wilaya="16 - Alger", titre_professionnel="Ops")
+        user, entreprise = make_entreprise("cvc_filtre", palier_nom="PRO")
+        deverrouiller_candidat(entreprise, self.cand, par=user)
+        self.client.force_authenticate(user=user)
+        oui = {r["user_id"] for r in self.client.get(reverse("cvtheque"), {"debloque": "oui"}).data["results"]}
+        non = {r["user_id"] for r in self.client.get(reverse("cvtheque"), {"debloque": "non"}).data["results"]}
+        self.assertEqual(oui, {self.cand.id})
+        self.assertEqual(non, {autre.id})
+
+    def test_filtre_debloque_ignore_les_deblocages_dune_autre_entreprise(self):
+        _, autre_entreprise = make_entreprise("cvc_autre_co", palier_nom="PRO")
+        deverrouiller_candidat(autre_entreprise, self.cand)
+        user, _ = make_entreprise("cvc_moi", palier_nom="PRO")
+        self.client.force_authenticate(user=user)
+        rows = self.client.get(reverse("cvtheque"), {"debloque": "oui"}).data["results"]
+        self.assertEqual(rows, [])
+
     def test_reponse_inclut_credits_disponibles(self):
         user, entreprise = make_entreprise("cvc_credits", palier_nom="STARTER")
         self.client.force_authenticate(user=user)

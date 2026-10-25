@@ -65,6 +65,23 @@ describe("📝 phraseFormation — la phrase de formation lue par le candidat", 
     expect(phraseFormation({ specialites })).toBe("Formation en S1, S2, S3, S4, S5 et 1 autre");
   });
 
+  it("🔴 Même spécialité dans plusieurs domaines du référentiel : écrite une seule fois (casse et accents ignorés)", () => {
+    const specialites = [
+      spec(1, "Gestion des ressources humaines", { domaine_id: 2, domaine_libelle: "Droit", domaine_total: 15 }),
+      spec(2, "Gestion des Ressources Humaines", { domaine_id: 3, domaine_libelle: "Économie", domaine_total: 36 }),
+      spec(3, "Comptabilité", { domaine_id: 3, domaine_libelle: "Économie", domaine_total: 36 }),
+    ];
+    expect(phraseFormation({ specialites })).toBe("Formation en Gestion des ressources humaines et Comptabilité");
+  });
+
+  it("🔴 Spécialité déjà contenue dans un domaine entièrement coché : jamais répétée", () => {
+    const specialites = [
+      spec(1, "Gestion des ressources humaines", { domaine_id: 1, domaine_libelle: "Ressources humaines", domaine_total: 1 }),
+      spec(2, "Gestion des ressources humaines", { domaine_id: 2, domaine_libelle: "Droit", domaine_total: 15 }),
+    ];
+    expect(phraseFormation({ specialites })).toBe("Formation en Ressources humaines");
+  });
+
   it("🟡 Spécialité sans domaine connu : citée telle quelle, jamais perdue", () => {
     expect(phraseFormation({ specialites: [{ id: 9, libelle: "Cybersécurité" }] })).toBe("Formation en Cybersécurité");
   });

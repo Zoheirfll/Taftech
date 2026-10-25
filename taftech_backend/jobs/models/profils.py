@@ -436,6 +436,14 @@ class CompetenceCandidat(models.Model):
     )
     niveau = models.CharField(max_length=20, choices=NIVEAU_CHOICES, default='DEBUTANT')
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='DECLARE')
+    ORIGINE_CHOICES = [
+        ('SAISIE', 'Saisie par le candidat ou issue de son CV'),
+        ('SUGGESTION', 'Choisie parmi les suggestions du métier'),
+    ]
+    origine = models.CharField(
+        max_length=12, choices=ORIGINE_CHOICES, default='SAISIE', verbose_name="Origine",
+        help_text="Information seulement (montrée au candidat et au recruteur) : jamais lue par le calcul du score.",
+    )
     date_ajout = models.DateTimeField(auto_now_add=True)
 
     class Meta:

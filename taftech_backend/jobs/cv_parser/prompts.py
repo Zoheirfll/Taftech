@@ -49,7 +49,7 @@ Les VRAIES expériences sont des EMPLOIS (Caissier, Ingénieur, Développeur, St
   Ne mets pas de virgule à l'intérieur d'un intitulé (la virgule sépare les compétences).
   Si absent : null.
 - competences_niveaux : pour CHAQUE compétence listée ci-dessus, estime un niveau de maîtrise d'après le contexte du CV (ancienneté, nombre de mentions, poste occupé, mots comme "maîtrise"/"notions"/"expert"). Format "Compétence:Niveau" séparés par virgules, niveau parmi EXACTEMENT : "Débutant", "Intermédiaire", "Avancé", "Confirmé". Ne mets "Confirmé" que si le CV le justifie clairement (plusieurs années sur ce sujet, mention explicite « expert »/« maîtrise ») ; pour une simple liste de compétences sans précision : "Intermédiaire". Si absent : null.
-- langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Intermédiaire". Si absent : null.
+- langues : format "Langue:Niveau" (ex: "Arabe:Maternelle, Anglais:Avancé"). Si pas de niveau précisé : "Débutant". Si absent : null.
 - linkedin : URL complète du profil LinkedIn si présente. Sinon null.
 - github : URL complète du profil GitHub si présente. Sinon null.
 - bio : TOUJOURS rédiger un résumé professionnel du profil en 2 phrases maximum, à la troisième personne implicite (sans « je » inventé), basé sur ses expériences ou, à défaut (étudiant, jeune diplômé, stagiaire), sur sa formation et ses compétences. N'invente aucun fait absent du CV. null SEULEMENT si le CV ne contient quasiment aucune information exploitable.

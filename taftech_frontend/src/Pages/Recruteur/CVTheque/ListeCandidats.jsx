@@ -1,11 +1,24 @@
 // Colonne de gauche de la CVthèque : compteur, squelettes, états vides, cartes candidats et pagination.
 import React from "react";
-import { ChevronLeft, ChevronRight, Star, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, List, Lock, Star, Unlock, User } from "lucide-react";
 import { tw } from "../../../theme";
 import { OPTIONS_TRI } from "./cvthequeUtils";
 import { CarteCandidat } from "./CarteCandidat";
 
+const ONGLETS_DEBLOCAGE = [
+  { valeur: "", label: "Tous", Icone: null },
+  { valeur: "oui", label: "Débloqués", Icone: Unlock },
+  { valeur: "non", label: "Verrouillés", Icone: Lock },
+];
+
 export const ListeCandidats = ({
+  debloque,
+  setDebloque,
+  vue,
+  setVue,
+  ignores,
+  setIgnores,
+  onIgnorer,
   loading,
   candidats,
   totalCandidats,
@@ -24,12 +37,53 @@ export const ListeCandidats = ({
   onOuvrirInvitation,
   onResetFiltres,
 }) => (
-  <div className="lg:col-span-5 space-y-3">
+  <div className={`${vue === "grille" ? "lg:col-span-12" : "lg:col-span-5"} space-y-3`}>
+    {/* Onglets Tous / Débloqués / Verrouillés + bascule liste / grille */}
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrer par état de déblocage">
+        {ONGLETS_DEBLOCAGE.map(({ valeur, label, Icone }) => (
+          <button
+            key={label}
+            type="button"
+            role="tab"
+            aria-selected={debloque === valeur}
+            onClick={() => { setDebloque(valeur); setCurrentPage(1); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+              debloque === valeur ? tw.bgTealSolid : `${tw.surfaceMuted} ${tw.textMuted700}`
+            }`}
+          >
+            {Icone && <Icone size={12} />}
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className={`hidden lg:flex items-center gap-1 p-0.5 rounded-lg ${tw.surfaceMuted}`}>
+        {[["liste", List, "Affichage en liste"], ["grille", LayoutGrid, "Affichage en grille"]].map(([valeur, Icone, titre]) => (
+          <button
+            key={valeur}
+            type="button"
+            onClick={() => setVue(valeur)}
+            title={titre}
+            aria-label={titre}
+            aria-pressed={vue === valeur}
+            className={`p-1.5 rounded-md transition-colors ${vue === valeur ? `${tw.surface} ${tw.textTeal}` : tw.textMuted}`}
+          >
+            <Icone size={15} />
+          </button>
+        ))}
+      </div>
+    </div>
+
     {/* Compteur intégré en haut de liste */}
     <div className="flex items-center justify-between px-1">
       <p className={`text-xs ${tw.bodyText}`}>
         {loading ? "Recherche…" : <><span className={`font-semibold ${tw.bodyText}`}>{totalCandidats}</span> {totalCandidats > 1 ? "profils" : "profil"}</>}
       </p>
+      {ignores.length > 0 && (
+        <button type="button" onClick={() => setIgnores([])} className={`text-xs underline ${tw.textTeal}`}>
+          {ignores.length} masqué{ignores.length > 1 ? "s" : ""} · Réafficher
+        </button>
+      )}
       {!offreId && !loading && (
         <p className={`text-xs ${tw.textMuted}`}>Tri : {OPTIONS_TRI.find(o => o.value === tri)?.label}</p>
       )}
@@ -87,19 +141,22 @@ export const ListeCandidats = ({
         )}
       </div>
     ) : (
-      candidats.map((candidat) => (
-        <CarteCandidat
-          key={candidat.user_id}
-          candidat={candidat}
-          isSelected={selectedCandidat?.user_id === candidat.user_id}
-          offreId={offreId}
-          constants={constants}
-          accesCoordonnees={accesCoordonnees}
-          onSelect={onSelect}
-          onToggleFavori={onToggleFavori}
-          onOuvrirInvitation={onOuvrirInvitation}
-        />
-      ))
+      <div className={vue === "grille" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-3"}>
+        {candidats.filter((c) => !ignores.includes(c.user_id)).map((candidat) => (
+          <CarteCandidat
+            key={candidat.user_id}
+            candidat={candidat}
+            isSelected={selectedCandidat?.user_id === candidat.user_id}
+            offreId={offreId}
+            constants={constants}
+            accesCoordonnees={accesCoordonnees}
+            onSelect={onSelect}
+            onToggleFavori={onToggleFavori}
+            onIgnorer={onIgnorer}
+            onOuvrirInvitation={onOuvrirInvitation}
+          />
+        ))}
+      </div>
     )}
 
     {/* Pagination */}

@@ -21,7 +21,7 @@ const CarteInformationsPersonnelles = ({
         Informations personnelles
       </h2>
       <p className={`text-xs ${tw.textMuted700} mt-0.5`}>
-        Ces informations sont visibles sur votre profil public.
+        Ces informations restent dans votre espace recruteur : elles ne sont pas affichées publiquement.
       </p>
     </div>
 
@@ -106,7 +106,7 @@ const CarteInformationsPersonnelles = ({
         </div>
         <div>
           <label className={`text-xs font-medium ${tw.textMuted700} mb-1.5 block`}>
-            Intitulé de poste (ex: Responsable RH)
+            Intitulé de poste
           </label>
           <input
             type="text"

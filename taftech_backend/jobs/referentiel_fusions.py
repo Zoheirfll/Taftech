@@ -233,6 +233,25 @@ def appliquer_operations_groupes(log, operations=GROUPES_OPERATIONS):
 # finales client, 12/10/2026). N'ajouter ici que des synonymes réels, validés un à un.
 METIERS_REDIRECTIONS = [
     ('TAF-000167', 'TAF-000165'),  # Talent Acquisition Specialist -> Chargé de Recrutement
+    # 23/10/2026 — 16 synonymes réels validés un à un (liste candidate de 40 paires, 24 écartées : modules SAP,
+    # UX/UI, HSE/RSE, SEO/SEA, marchandises/personnes… sont des postes distincts). Journal :
+    # docs/journal/2026-10-23-nettoyage-referentiel-doublons.md §7.
+    ('TAF-000608', 'TAF-000503'),  # Conducteur de Ligne Conditionnement -> ... de Conditionnement
+    ('TAF-000149', 'L1202'),       # Contrôleur de Gestion -> Contrôle de gestion
+    ('TAF-000253', 'M1202'),       # Pharmacien -> Pharmacie
+    ('TAF-000180', 'TAF-000163'),  # Gestionnaire de Paie RH -> Gestionnaire de Paie
+    ('TAF-000373', 'O1401'),       # Enseignant Primaire -> Enseignement primaire
+    ('TAF-000250', 'M1201'),       # Biologiste Médical -> Biologie médicales
+    ('TAF000004', 'TAF-000014'),   # Développeur mobile Android -> Développeur Android
+    ('TAF000005', 'TAF-000015'),   # Développeur mobile iOS -> Développeur iOS
+    ('TAF-000539', 'TAF-000089'),  # Automaticien -> Automaticien Industriel
+    ('TAF-000605', 'TAF-000484'),  # Facility Manager -> Responsable Facility Management
+    ('TAF000008', 'TAF-000023'),   # Machine Learning Engineer -> Ingénieur Machine Learning
+    ('TAF-000565', 'TAF-000041'),  # Cloud Architect -> Architecte Cloud
+    ('TAF-000570', 'TAF-000022'),  # Platform Engineer -> Ingénieur Plateforme
+    ('TAF000007', 'TAF-000021'),   # Site Reliability Engineer -> Ingénieur Fiabilité des Sites
+    ('TAF-000033', 'TAF-000032'),  # Pentester -> Testeur d'intrusion
+    ('TAF000006', 'TAF-000020'),   # DevOps Engineer -> Ingénieur DevOps
 ]
 
 
@@ -411,6 +430,40 @@ SPECIALITES_FUSIONS = [
     # Point 8 (12/10/2026) : doublon du même système (supérieur), uniquement dû à la casse — la
     # fiche supprimée était rangée dans « Ancien système — classement non précisé », sans couple.
     ('SP-77EE321B8946', 'SP-3073C6A20F50'),  # Langue anglaise -> Langue Anglaise (Lettres et langues étrangères)
+    # 23/10/2026 — FIN de la règle « doublons ENTRE domaines non fusionnés » (décision client du 25/09/2026) : décision
+    # explicite de l'utilisateur, qui juge ces répétitions trop graves (« Gestion des ressources humaines » existait
+    # en 4 exemplaires et s'affichait 4 fois dans les suggestions d'une offre). 25 libellés, 52 fiches -> 27 fusions.
+    # Règle de conservation : thème éditorial (DOM-…) -> formation professionnelle (FP-…) ; formation
+    # professionnelle -> universitaire (SP-…) ; « Langue anglaise » -> universitaire ; « Gestion des ressources
+    # humaines » -> la fiche du domaine « Ressources humaines, droit et administration ». Le niveau reste porté par
+    # les couples DiplomeSpecialite, les relations « similaire » devenues inutiles sont supprimées par la fusion.
+    ('DOM-09-SP-05', 'FP-TAG0703'),       # Banque
+    ('DOM-18-SP-08', 'FP-CML0707'),       # Chaudronnerie
+    ('DOM-06-SP-07', 'FP-CIP1201'),       # Chimie industrielle
+    ('FP-TAG0711', 'SP-3361448E1C3A'),    # Commerce international
+    ('FP-TAG0702', 'SP-A46F196A381D'),    # Comptabilité
+    ('DOM-18-SP-10', 'FP-THC0701'),       # Couture
+    ('DOM-18-SP-01', 'FP-ELE0703'),       # Électricité bâtiment
+    ('FP-ELE0705', 'SP-05E8BB442E70'),    # Électromécanique
+    ('FP-ELE1202', 'SP-69BEA051D3DC'),    # Électrotechnique
+    ('FP-BTP0719', 'SP-674C50A67A98'),    # Géomètre topographe
+    ('FP-BTP0718', 'SP-1953B80D2EE9'),    # Géotechnique
+    ('FP-TAG0717', 'DOM-10-SP-01'),       # Gestion des ressources humaines (4 -> 1)
+    ('SP-C08BD9BC052D', 'DOM-10-SP-01'),
+    ('SP-E2C9E00F6A39', 'DOM-10-SP-01'),
+    ('DOM-07-SP-05', 'FP-TAG1206'),       # Gestion des stocks
+    ('DOM-13-SP-02', 'SP-3073C6A20F50'),  # Langue anglaise
+    ('DOM-18-SP-03', 'FP-BTP0701'),       # Maçonnerie
+    ('FP-ELE0713', 'SP-16D0F62996DE'),    # Maintenance industrielle
+    ('FP-TAG0712', 'SP-9744AF1E4F09'),    # Marketing
+    ('DOM-15-SP-05', 'FP-HRT0701'),       # Pâtisserie
+    ('DOM-16-SP-06', 'FP-TAV0701'),       # Photographie
+    ('DOM-01-SP-04', 'FP-AGR1210'),       # Protection des végétaux
+    ('DOM-03-SP-09', 'FP-CML0701'),       # Soudage
+    ('FP-INT1207', 'SP-02CF31AE4D07'),    # Télécommunications
+    ('DOM-02-SP-08', 'FP-BTP0715'),       # Topographie
+    ('DOM-02-SP-02', 'FP-BTP0726'),       # Urbanisme
+    ('DOM-03-SP-10', 'FP-CMS1201'),       # Usinage
 ]
 _FUSIONS_SPE = dict(SPECIALITES_FUSIONS)
 

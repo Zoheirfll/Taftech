@@ -11,7 +11,7 @@ import re
 from ..referentiel_utils import normaliser_recherche
 
 NIVEAUX = ("Débutant", "Intermédiaire", "Avancé", "Bilingue / Maternelle")
-NIVEAU_PAR_DEFAUT = "Intermédiaire"  # même défaut que le prompt (« Si pas de niveau précisé »)
+NIVEAU_PAR_DEFAUT = "Débutant"  # même défaut que le prompt (« Si pas de niveau précisé »)
 
 _CECRL = {"a1": "Débutant", "a2": "Débutant", "b1": "Intermédiaire", "b2": "Intermédiaire",
           "c1": "Avancé", "c2": "Avancé"}

@@ -227,13 +227,31 @@ class EquipeListTests(APITestCase):
         self.assertIn("owner@equipe.dz", emails)
         self.assertIn("membre@equipe.dz", emails)
 
-    def test_membre_voit_membres(self):
-        """Un membre peut aussi voir la liste."""
+    def test_utilisateur_ne_voit_pas_la_liste(self):
+        """Un membre UTILISATEUR (ou invité) n'a pas accès à la gestion d'équipe : 403,
+        et la liste des emails des collègues n'est pas renvoyée."""
         self.client.force_authenticate(user=self.membre)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotIn("membres", response.data)
+
+    def test_invite_ne_voit_pas_la_liste(self):
+        """Un invité (rôle le plus bas) n'a pas accès non plus."""
+        invite = _make_recruteur("invite@equipe.dz", "invite_equipe")
+        MembreEquipe.objects.create(user=invite, entreprise=self.entreprise, role="INVITE")
+        self.client.force_authenticate(user=invite)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_voit_membres(self):
+        """Un administrateur voit la liste (il gère l'équipe) avec son rôle."""
+        admin = _make_recruteur("admin@equipe.dz", "admin_equipe")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("membres", response.data)
-        self.assertIn("mon_role", response.data)
+        self.assertEqual(response.data["mon_role"], "ADMIN")
 
     def test_non_authentifie_bloque(self):
         """Accès refusé si non authentifié."""
@@ -277,6 +295,46 @@ class EquipePatchRoleTests(APITestCase):
         self.assertTrue(
             EquipeActionLog.objects.filter(entreprise=self.entreprise, action="CHANGER_ROLE").exists()
         )
+
+    def test_admin_ne_peut_pas_modifier_un_autre_admin(self):
+        """Seul le propriétaire touche aux administrateurs."""
+        admin = _make_recruteur("adm1@patch.dz", "adm1_patch")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        autre = _make_recruteur("adm2@patch.dz", "adm2_patch")
+        autre_obj = MembreEquipe.objects.create(user=autre, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.patch(self._url(autre_obj.id), {"role": "INVITE"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        autre_obj.refresh_from_db()
+        self.assertEqual(autre_obj.role, "ADMIN")
+
+    def test_admin_ne_peut_pas_promouvoir_en_admin(self):
+        """Seul le propriétaire attribue le rôle administrateur."""
+        admin = _make_recruteur("adm3@patch.dz", "adm3_patch")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.patch(self._url(self.mem_obj.id), {"role": "ADMIN"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.mem_obj.refresh_from_db()
+        self.assertEqual(self.mem_obj.role, "UTILISATEUR")
+
+    def test_admin_change_le_role_d_un_utilisateur(self):
+        """Un administrateur gère toujours les rôles non administrateur."""
+        admin = _make_recruteur("adm4@patch.dz", "adm4_patch")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.patch(self._url(self.mem_obj.id), {"role": "INVITE"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_ne_peut_pas_modifier_son_propre_role(self):
+        """Personne ne change son propre rôle (même appel direct à l'API)."""
+        admin = _make_recruteur("adm@patch.dz", "adm_patch")
+        adm_obj = MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.patch(self._url(adm_obj.id), {"role": "UTILISATEUR"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        adm_obj.refresh_from_db()
+        self.assertEqual(adm_obj.role, "ADMIN")
 
     def test_utilisateur_ne_peut_pas_changer_role(self):
         """Un membre UTILISATEUR ne peut pas changer le rôle d'un autre."""
@@ -342,6 +400,33 @@ class EquipeDeleteMembreTests(APITestCase):
         response = self.client.delete(self._url(self.target_obj.id))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_admin_ne_peut_pas_retirer_un_autre_admin(self):
+        """Seul le propriétaire retire un administrateur."""
+        admin = _make_recruteur("adm@del.dz", "adm_del")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        autre = _make_recruteur("adm2@del.dz", "adm2_del")
+        autre_obj = MembreEquipe.objects.create(user=autre, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.delete(self._url(autre_obj.id))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(MembreEquipe.objects.filter(id=autre_obj.id).exists())
+
+    def test_admin_peut_se_retirer_lui_meme(self):
+        """Un administrateur peut quitter l'équipe."""
+        admin = _make_recruteur("adm3@del.dz", "adm3_del")
+        adm_obj = MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.delete(self._url(adm_obj.id))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_retire_un_utilisateur(self):
+        """Un administrateur retire toujours un membre non administrateur."""
+        admin = _make_recruteur("adm4@del.dz", "adm4_del")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.delete(self._url(self.target_obj.id))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
     def test_autre_membre_ne_peut_pas_retirer(self):
         """Un UTILISATEUR ne peut pas retirer un autre membre."""
         self.client.force_authenticate(user=self.autre)
@@ -368,6 +453,23 @@ class InviterMembreTests(APITestCase):
         MembreEquipe.objects.create(user=self.util, entreprise=self.entreprise, role="UTILISATEUR")
 
         self.url = reverse("equipe-inviter")
+
+    def test_admin_ne_peut_pas_inviter_un_admin(self):
+        """Seul le propriétaire invite avec le rôle administrateur."""
+        admin = _make_recruteur("adm@inv.dz", "adm_inv")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.post(self.url, {"email": "futur.admin@extern.dz", "role": "ADMIN"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(InvitationEquipe.objects.filter(email="futur.admin@extern.dz").exists())
+
+    def test_admin_invite_un_utilisateur(self):
+        """Un administrateur invite toujours avec un rôle inférieur."""
+        admin = _make_recruteur("adm2@inv.dz", "adm2_inv")
+        MembreEquipe.objects.create(user=admin, entreprise=self.entreprise, role="ADMIN")
+        self.client.force_authenticate(user=admin)
+        response = self.client.post(self.url, {"email": "futur.user@extern.dz", "role": "UTILISATEUR"})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_invitation_nouvel_email(self):
         """Invitation envoyée si l'email n'a pas de compte TafTech."""
@@ -416,6 +518,27 @@ class InviterMembreTests(APITestCase):
             r_existant.data["message"].replace("existant2@taftech.dz", "{email}"),
             r_inconnu.data["message"].replace("totalement.inconnu@x.dz", "{email}"),
         )
+
+    def test_inviter_proprietaire_d_une_autre_entreprise_rejete(self):
+        """Un recruteur qui possède déjà son entreprise ne verrait jamais celle-ci
+        (get_entreprise_for_user donne la priorité à la sienne) : invitation refusée."""
+        autre_owner = _make_recruteur("autreowner@inv.dz", "autre_owner_inv")
+        _make_entreprise(autre_owner, nom="AutreCorp", rc="RC_AUTRE")
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.url, {"email": "autreowner@inv.dz", "role": "ADMIN"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(InvitationEquipe.objects.filter(email="autreowner@inv.dz").exists())
+
+    def test_inviter_membre_d_une_autre_equipe_rejete(self):
+        """Quelqu'un qui fait déjà partie de l'équipe d'une autre entreprise est refusé."""
+        autre_owner = _make_recruteur("autreowner2@inv.dz", "autre_owner_inv2")
+        autre_entreprise = _make_entreprise(autre_owner, nom="AutreCorp2", rc="RC_AUTRE2", premium=True)
+        membre = _make_recruteur("membre@autre.dz", "membre_autre_inv")
+        MembreEquipe.objects.create(user=membre, entreprise=autre_entreprise, role="UTILISATEUR")
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.url, {"email": "membre@autre.dz", "role": "ADMIN"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(InvitationEquipe.objects.filter(email="membre@autre.dz").exists())
 
     def test_doublon_membre_rejete(self):
         """Inviter quelqu'un qui est déjà membre est refusé (400)."""
@@ -552,6 +675,23 @@ class AccepterInvitationGetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["compte_existant"])
 
+    def test_compte_sans_mot_de_passe_signale_meme_sans_drapeau_google(self):
+        """Un compte sans mot de passe utilisable (est_compte_google=False) doit être
+        traité comme un compte Google : sans_mot_de_passe=True."""
+        User.objects.create_user(username="nopwd_get", email="nopwd@x.dz", password=None, role="CANDIDAT")
+        inv = self._make_invitation(email="nopwd@x.dz", token="nopwd_tok")
+        response = self.client.get(self._url(inv.token))
+        self.assertTrue(response.data["sans_mot_de_passe"])
+
+    def test_compte_mot_de_passe_vide_signale_sans_mot_de_passe(self):
+        """Mot de passe stocké comme chaîne vide (cas réel d'un compte Google ancien) :
+        has_usable_password() est True mais le compte n'a aucun mot de passe."""
+        user = User.objects.create_user(username="vide_get", email="vide@x.dz", password="x", role="CANDIDAT")
+        User.objects.filter(pk=user.pk).update(password="")
+        inv = self._make_invitation(email="vide@x.dz", token="vide_tok")
+        response = self.client.get(self._url(inv.token))
+        self.assertTrue(response.data["sans_mot_de_passe"])
+
     def test_nouveau_compte_signale(self):
         """Si l'email n'a pas de compte, compte_existant=False."""
         inv = self._make_invitation(email="nouveau@x.dz", token="new_tok")
@@ -621,6 +761,36 @@ class AccepterInvitationPostTests(APITestCase):
         inv = self._make_invitation("exist_bad@post.dz", "tok_bad_post")
         response = self.client.post(self._url(inv.token), {"password": "MauvaisPwd"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_compte_sans_mot_de_passe_definit_un_mot_de_passe(self):
+        """Compte sans mot de passe utilisable : l'acceptation définit le mot de passe saisi."""
+        user = User.objects.create_user(username="nopwd_post", email="nopwd@post.dz", password=None, role="CANDIDAT")
+        inv = self._make_invitation("nopwd@post.dz", "tok_nopwd_post")
+        response = self.client.post(self._url(inv.token), {"password": "NouveauPwd123!"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("NouveauPwd123!"))
+        self.assertTrue(MembreEquipe.objects.filter(user=user, entreprise=self.entreprise).exists())
+
+    def test_proprietaire_d_une_autre_entreprise_ne_peut_pas_accepter(self):
+        """Invité devenu propriétaire d'une entreprise entre l'envoi et l'acceptation : refus."""
+        user = User.objects.create_user(username="own_acc", email="own@post.dz", password="MonPwd123!", role="RECRUTEUR")
+        _make_entreprise(user, nom="DejaCorp", rc="RC_DEJA")
+        inv = self._make_invitation("own@post.dz", "tok_own_post")
+        response = self.client.post(self._url(inv.token), {"password": "MonPwd123!"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(MembreEquipe.objects.filter(user=user, entreprise=self.entreprise).exists())
+
+    def test_membre_d_une_autre_equipe_ne_peut_pas_accepter(self):
+        """Invité entré dans une autre équipe entre l'envoi et l'acceptation : refus."""
+        autre_owner = _make_recruteur("autre@post.dz", "autre_post")
+        autre = _make_entreprise(autre_owner, nom="AutreCorp", rc="RC_AUTRE_P", premium=True)
+        user = User.objects.create_user(username="mem_acc", email="mem@post.dz", password="MonPwd123!", role="RECRUTEUR")
+        MembreEquipe.objects.create(user=user, entreprise=autre, role="UTILISATEUR")
+        inv = self._make_invitation("mem@post.dz", "tok_mem_post")
+        response = self.client.post(self._url(inv.token), {"password": "MonPwd123!"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(MembreEquipe.objects.filter(user=user, entreprise=self.entreprise).exists())
 
     def test_mot_de_passe_trop_court(self):
         """Mot de passe < 8 caractères pour nouveau compte → 400."""

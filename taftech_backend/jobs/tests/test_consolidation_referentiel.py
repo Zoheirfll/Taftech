@@ -48,16 +48,19 @@ class ImportReproduitConsolidationTest(TestCase):
         self.assertFalse(GroupeMetier.objects.filter(parent__isnull=True).exclude(type_groupe="secteur_source").exists())
         self.assertFalse(Metier.objects.filter(groupe_principal__isnull=True).exists())
         self.assertFalse(SpecialiteFormation.objects.filter(code__in=[d for d, _ in SPECIALITES_FUSIONS]).exists())
-        self.assertEqual(SpecialiteFormation.objects.count(), 921)
+        # 921 - 27 fiches fusionnées le 23/10/2026 (libellés répétés entre domaines : plus aucun doublon).
+        self.assertEqual(SpecialiteFormation.objects.count(), 894)
         for m in Metier.objects.filter(metier_canonique__isnull=False).select_related("metier_canonique"):
             self.assertIn(m.metier_canonique.metier_canonique_id, (None, m.metier_canonique_id), m.code)
 
     def test_import_vierge_puis_reimport(self):
         self._importer()
         self._verifier_etat_consolide()
-        # Électrotechnique : une seule fiche, qui porte ses trois niveaux de diplôme.
-        electro = SpecialiteFormation.objects.get(code="FP-ELE1202")
-        self.assertEqual(set(electro.diplomes_lies.values_list("diplome__code", flat=True)), {"D-CMP", "D-BT", "D-BTS"})
+        # Électrotechnique : une seule fiche (l'universitaire, depuis la fusion du 23/10/2026), qui porte aussi les
+        # trois niveaux de diplôme de la formation professionnelle.
+        self.assertFalse(SpecialiteFormation.objects.filter(code="FP-ELE1202").exists())
+        electro = SpecialiteFormation.objects.get(code="SP-69BEA051D3DC")
+        self.assertTrue({"D-CMP", "D-BT", "D-BTS"} <= set(electro.diplomes_lies.values_list("diplome__code", flat=True)))
         self._importer()
         self._verifier_etat_consolide()
 

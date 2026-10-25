@@ -76,7 +76,7 @@ from .views import (
 
     # Compétences
     CompetencesAutocompleteAPIView, CompetencesAdminAPIView,
-    CompetenceStatutAdminAPIView, CompetencePropositionsAdminAPIView,
+    CompetenceStatutAdminAPIView, CompetenceMetiersAdminAPIView, CompetencePropositionsAdminAPIView,
 
     # Articles / Blog
     ArticleListPublicAPIView, ArticleDetailPublicAPIView, ArticleCategoriesPublicAPIView,
@@ -280,6 +280,8 @@ urlpatterns = [
     path('faq/', FaqPublicAPIView.as_view(), name='faq-public'),
     path('admin/competences/proposer/', CompetencePropositionsAdminAPIView.as_view(), name='admin-competences-proposer'),
     path('admin/competences/<int:pk>/statut/', CompetenceStatutAdminAPIView.as_view(), name='admin-competence-statut'),
+    path('admin/competences/<int:pk>/metiers/', CompetenceMetiersAdminAPIView.as_view(), name='admin-competence-metiers'),
+    path('admin/competences/<int:pk>/metiers/<int:metier_id>/', CompetenceMetiersAdminAPIView.as_view(), name='admin-competence-metier-detail'),
     path('admin/competences/', CompetencesAdminAPIView.as_view(), name='admin-competences'),
     path('admin/competences/<int:pk>/', CompetencesAdminAPIView.as_view(), name='admin-competence-detail'),
     path('competences/', CompetencesAutocompleteAPIView.as_view(), name='competences-autocomplete'),

@@ -75,11 +75,14 @@ describe("🏢 RecruteurLayout — sidebar recruteur", () => {
     await waitFor(() => expect(screen.getAllByText("2").length).toBeGreaterThan(0));
   });
 
-  it("🟡 EC1 : un lien caché par le rôle (peutFaire=false) n'apparaît pas", async () => {
+  it("🟡 EC1 : un lien interdit par le rôle reste visible avec un cadenas", async () => {
+    // Rôle administrateur : tout sauf ce qui est réservé au propriétaire (abonnements, facturation).
     authService.peutFaire.mockImplementation((minRole) => minRole !== "PROPRIETAIRE");
     renderLayout();
     await waitFor(() => expect(jobsService.getCandidaturesSpontanees).toHaveBeenCalled());
-    expect(screen.queryByText("Mon équipe")).not.toBeInTheDocument();
+    expect(screen.getByText("Facturation")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Réservé à un rôle supérieur dans l'équipe")).toHaveLength(2);
+    expect(screen.getByText("Mon équipe")).toBeInTheDocument();
   });
 
   it("🟢 HP5 : le bouton Déconnexion appelle authService.logout()", async () => {

@@ -545,6 +545,14 @@
    "canonique": null,
    "groupe": "TDOM-9FDF0E6AC0CD"
   },
+  "TAF-000033": {
+   "canonique": "TAF-000032",
+   "groupe": "TSUB-10C62F535EB4"
+  },
+  "TAF-000149": {
+   "canonique": "L1202",
+   "groupe": "TSUB-F422D3FDCCC0"
+  },
   "TAF-000163": {
    "canonique": null,
    "groupe": "TSUB-4E261AD58883"
@@ -556,6 +564,10 @@
   "TAF-000167": {
    "canonique": "TAF-000165",
    "groupe": "TSUB-963D9952DE1C"
+  },
+  "TAF-000180": {
+   "canonique": "TAF-000163",
+   "groupe": "TSUB-4E261AD58883"
   },
   "TAF-000217": {
    "canonique": null,
@@ -572,6 +584,14 @@
   "TAF-000220": {
    "canonique": null,
    "groupe": "TSUB-87F6C3429233"
+  },
+  "TAF-000250": {
+   "canonique": "M1201",
+   "groupe": "TSUB-63BE80A0CBEF"
+  },
+  "TAF-000253": {
+   "canonique": "M1202",
+   "groupe": "TSUB-2F2DB5F63B56"
   },
   "TAF-000317": {
    "canonique": null,
@@ -605,21 +625,41 @@
    "canonique": null,
    "groupe": "NDOM-H15"
   },
+  "TAF-000373": {
+   "canonique": "O1401",
+   "groupe": "TSUB-997E5F4D9042"
+  },
   "TAF-000528": {
    "canonique": null,
    "groupe": "TSUB-5885130D42BD"
   },
   "TAF-000539": {
-   "canonique": null,
+   "canonique": "TAF-000089",
    "groupe": "TSUB-E74DE7053BA3"
   },
   "TAF-000564": {
    "canonique": null,
    "groupe": "TSUB-29E5E49C6E7E"
   },
+  "TAF-000565": {
+   "canonique": "TAF-000041",
+   "groupe": "TSUB-035E267A6DB0"
+  },
+  "TAF-000570": {
+   "canonique": "TAF-000022",
+   "groupe": "TSUB-9E73243FEF6E"
+  },
+  "TAF-000605": {
+   "canonique": "TAF-000484",
+   "groupe": "TSUB-A924331F9897"
+  },
   "TAF-000606": {
    "canonique": null,
    "groupe": "TSUB-2C245D5DE89A"
+  },
+  "TAF-000608": {
+   "canonique": "TAF-000503",
+   "groupe": "TSUB-24DC5D689AB7"
   },
   "TAF-000616": {
    "canonique": null,
@@ -628,6 +668,26 @@
   "TAF-000617": {
    "canonique": null,
    "groupe": "TSUB-DE04E4B8EB73"
+  },
+  "TAF000004": {
+   "canonique": "TAF-000014",
+   "groupe": "TSUB-B97B466DFE5B"
+  },
+  "TAF000005": {
+   "canonique": "TAF-000015",
+   "groupe": "TSUB-B97B466DFE5B"
+  },
+  "TAF000006": {
+   "canonique": "TAF-000020",
+   "groupe": "TSUB-23CB59819FA7"
+  },
+  "TAF000007": {
+   "canonique": "TAF-000021",
+   "groupe": "TSUB-23CB59819FA7"
+  },
+  "TAF000008": {
+   "canonique": "TAF-000023",
+   "groupe": "TSUB-399E37C6B531"
   },
   "TAF2-MOYENS": {
    "canonique": null,

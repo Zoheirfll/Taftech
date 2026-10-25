@@ -12,8 +12,8 @@ from ..models import (
     FiliereFormation, GroupeMetier, Metier, SpecialiteFormation, TypeDiplome,
 )
 from ..referentiel_utils import (
-    FAMILLES_FORMATION, construire_index_competences, famille_formation, normaliser_recherche,
-    rattacher_competences_orphelines,
+    FAMILLES_FORMATION, construire_index_competences, famille_formation, lier_competence_aux_metiers,
+    normaliser_recherche, rattacher_competences_orphelines,
 )
 from .regles import DemandeRefusee
 
@@ -394,11 +394,16 @@ class AdaptateurCompetence(Adaptateur):
         ancienne = CompetenceReferentiel.objects.filter(label__iexact=libelle).first()
         if ancienne is not None:
             ancienne.changer_statut(CompetenceReferentiel.STATUT_VALIDEE)
+            if ancienne.label != libelle:  # l'admin a corrigé la casse ou l'orthographe : ce libellé fait foi
+                ancienne.label = libelle
+                ancienne.save(update_fields=['label'])
             competence = ancienne
         else:
             competence = CompetenceReferentiel.objects.create(
                 label=libelle, statut=CompetenceReferentiel.STATUT_VALIDEE, origine='PROPOSITION_AUTO',
             )
+        # Lien facultatif compétence ↔ métiers : elle sera suggérée à ceux qui choisissent ces métiers.
+        lier_competence_aux_metiers(competence, (options or {}).get('metiers_ids'))
         if cle != demande.cle_recherche and not self.libelle_existant(demande.cle_recherche):
             self._ajouter_synonyme(competence, demande.libelle)
         return competence.pk, competence.label

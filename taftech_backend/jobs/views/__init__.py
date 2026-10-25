@@ -129,6 +129,7 @@ from .premium_admin import (
     CompetencesAutocompleteAPIView,
     CompetencesAdminAPIView,
     CompetenceStatutAdminAPIView,
+    CompetenceMetiersAdminAPIView,
     CompetencePropositionsAdminAPIView,
 )
 from .paliers_admin import (

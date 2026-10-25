@@ -337,8 +337,8 @@ function AppContent() {
               <Route path="/notifications" element={<NotificationsRecruteur />} />
               <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
               <Route path="/parametres" element={<ParametresRecruteur />} />
-              <Route path="/mon-equipe" element={<PalierRequisGuard droit="acces_equipe" titre="Mon équipe" message="La gestion d'équipe nécessite le palier Business ou supérieur."><MonEquipe /></PalierRequisGuard>} />
-              <Route path="/recruteurs/abonnements" element={<AbonnementsPage />} />
+              <Route path="/mon-equipe" element={<RoleGuard minRole="ADMIN"><PalierRequisGuard droit="acces_equipe" titre="Mon équipe" message="La gestion d'équipe nécessite le palier Business ou supérieur."><MonEquipe /></PalierRequisGuard></RoleGuard>} />
+              <Route path="/recruteurs/abonnements" element={<RoleGuard minRole="PROPRIETAIRE"><AbonnementsPage /></RoleGuard>} />
               <Route path="/offres-emploi" element={<OffresListPage />} />
               <Route path="/candidatures" element={<CandidaturesListPage />} />
               <Route path="/recrutements" element={<RecrutementsPage />} />
@@ -349,7 +349,7 @@ function AppContent() {
               <Route path="/evaluations" element={<EvaluationsPage />} />
               <Route path="/activite" element={<ActiviteCompletePage />} />
               <Route path="/entretiens" element={<EntretiensPage />} />
-              <Route path="/facturation" element={<FacturationPage />} />
+              <Route path="/facturation" element={<RoleGuard minRole="PROPRIETAIRE"><FacturationPage /></RoleGuard>} />
             </Route>
 
             {/* ESPACE CANDIDAT */}

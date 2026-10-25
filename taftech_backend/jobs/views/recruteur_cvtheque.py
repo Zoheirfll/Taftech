@@ -201,6 +201,16 @@ class CVThequeView(APIView):
         if favoris_only:
             ids_favoris = ProfilCandidatFavori.objects.filter(recruteur=request.user).values_list('candidat_id', flat=True)
             candidats = candidats.filter(user__id__in=ids_favoris)
+        # Onglets « Débloqués / Verrouillés » : filtre côté serveur (la liste est paginée), limité
+        # aux déblocages de l'entreprise du recruteur connecté.
+        filtre_deblocage = request.GET.get('debloque', '')
+        if filtre_deblocage in ('oui', 'non'):
+            from ..models import AccesCandidatDebloque as _Acces
+            ids_debloques = _Acces.objects.filter(entreprise=entreprise_user).values_list('candidat_id', flat=True)
+            if filtre_deblocage == 'oui':
+                candidats = candidats.filter(user_id__in=ids_debloques)
+            else:
+                candidats = candidats.exclude(user_id__in=ids_debloques)
         if search:
             # R01/N01-N04 : normalisation de la requête libre avant comparaison — sans elle,
             # une saisie accentuée usuelle ("développeur") ne trouvait plus aucun candidat
@@ -374,9 +384,9 @@ class CVThequeView(APIView):
             profils_page = [p for p, _ in page_items]
             scores_map = {p.user.id: s for p, s in page_items}
             from ..models import AccesCandidatDebloque
-            unlocked_ids = set(AccesCandidatDebloque.objects.filter(
+            unlocked_ids = {a.candidat_id: a for a in AccesCandidatDebloque.objects.filter(
                 entreprise=entreprise_user, candidat_id__in=[p.user_id for p in profils_page],
-            ).values_list('candidat_id', flat=True))
+            ).select_related('debloque_par')}
             serializer = ProfilCandidatDTO(profils_page, many=True, context={'recruteur': request.user, 'unlocked_ids': unlocked_ids})
             results = serializer.data
             for item in results:
@@ -438,9 +448,9 @@ class CVThequeView(APIView):
         paginator = CVthequePagination()
         result_page = paginator.paginate_queryset(candidats, request)
         from ..models import AccesCandidatDebloque
-        unlocked_ids = set(AccesCandidatDebloque.objects.filter(
+        unlocked_ids = {a.candidat_id: a for a in AccesCandidatDebloque.objects.filter(
             entreprise=entreprise_user, candidat_id__in=[p.user_id for p in result_page],
-        ).values_list('candidat_id', flat=True))
+        ).select_related('debloque_par')}
         serializer = ProfilCandidatDTO(result_page, many=True, context={'recruteur': request.user, 'unlocked_ids': unlocked_ids})
         results = serializer.data
         if search:

@@ -8,6 +8,10 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import FieldError from "../../Components/FieldError";
 import { useErreursChamps } from "../../utils/useErreursChamps";
+import CompetencesSuggerees from "../../Components/CompetencesSuggerees";
+import BadgeCompetenceSuggeree from "../../Components/BadgeCompetenceSuggeree";
+import { idsMetiers } from "../../utils/competencesSuggerees";
+import { useCompetencesSuggerees } from "../../utils/useCompetencesSuggerees";
 
 const INPUT_CLASS = `w-full px-4 py-3 rounded-xl text-base ${tw.inputColorsMuted}`;
 
@@ -32,7 +36,9 @@ const MesCompetences = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [nouvelle, setNouvelle] = useState({ label: "", niveau: "INTERMEDIAIRE" });
   const [editingId, setEditingId] = useState(null);
+  const [metierIds, setMetierIds] = useState([]);
   const { erreurs, exiger, depuisReponse, definir, effacer, attributs } = useErreursChamps();
+  const suggestionsMetier = useCompetencesSuggerees(metierIds, competences);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,9 +51,30 @@ const MesCompetences = () => {
       } finally {
         setIsLoading(false);
       }
+      // Suggestions facultatives : leur échec ne doit jamais empêcher d'utiliser la page.
+      try {
+        const profil = await jobsService.getProfilCandidat();
+        setMetierIds(
+          idsMetiers(profil?.metier_souhaite, profil?.metier, (profil?.experiences_detail || []).map((e) => e.metier)),
+        );
+      } catch (error) {
+        reportError("ECHEC_CHARGEMENT_METIERS_SUGGESTIONS_COMPETENCES", error);
+      }
     };
     fetchData();
   }, []);
+
+  // Ajout d'une compétence proposée pour le métier : niveau Débutant, que le candidat peut ensuite corriger.
+  const ajouterSuggestion = async (label) => {
+    try {
+      const saved = await jobsService.ajouterCompetence(label, "DEBUTANT", "SUGGESTION");
+      setCompetences((prev) => (prev.some((c) => c.id === saved.id) ? prev : [saved, ...prev]));
+      notifier.succes("Compétence ajoutée", "Niveau Débutant : vous pouvez le modifier.");
+    } catch (error) {
+      reportError("ECHEC_AJOUT_COMPETENCE_SUGGEREE_UI", error);
+      notifier.echec("Ajout impossible", error);
+    }
+  };
 
   const handleSearchChange = async (value) => {
     setNouvelle((prev) => ({ ...prev, label: value }));
@@ -138,6 +165,8 @@ const MesCompetences = () => {
         évaluer votre profil. Ces compétences alimentent automatiquement votre profil candidat.
       </InfoBanner>
 
+      <CompetencesSuggerees suggestions={suggestionsMetier} onAjouter={ajouterSuggestion} />
+
       <div className={`${tw.card} rounded-2xl overflow-hidden`}>
         {competences.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -158,6 +187,9 @@ const MesCompetences = () => {
                   <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${NIVEAU_STYLE[c.niveau] || tw.statusNeutralSoft}`}>
                     {NIVEAUX.find((n) => n.value === c.niveau)?.label || c.niveau}
                   </span>
+                  {c.origine === "SUGGESTION" && (
+                    <span className={`ml-1.5 text-[10px] ${tw.textMuted}`}><BadgeCompetenceSuggeree /></span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   <button

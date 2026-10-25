@@ -131,6 +131,34 @@ describe("👥 UI & Logique - Composant <MonEquipe />", () => {
     });
   });
 
+  it("🟢 HP2b : Bouton 'Inviter' et actions visibles pour ADMIN (comme le backend l'autorise)", async () => {
+    jobsService.getEquipe.mockResolvedValue(mockDataAdmin);
+    renderEquipe();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Inviter/i })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("columnheader", { name: /Actions/i })).toBeInTheDocument();
+  });
+
+  it("🟢 HP2c : Le propriétaire peut retirer et modifier un administrateur", async () => {
+    jobsService.getEquipe.mockResolvedValue(mockDataProprietaire);
+    renderEquipe();
+
+    await waitFor(() => screen.getByText("admin@corp.dz"));
+    expect(screen.getByTitle("Retirer")).toBeInTheDocument();
+    expect(screen.getByTitle("Changer le rôle")).toBeInTheDocument();
+  });
+
+  it("🔴 EC0 : Un administrateur ne peut ni retirer ni modifier un autre administrateur", async () => {
+    jobsService.getEquipe.mockResolvedValue(mockDataAdmin);
+    renderEquipe();
+
+    await waitFor(() => screen.getByText("admin@corp.dz"));
+    expect(screen.queryByTitle("Retirer")).toBeNull();
+    expect(screen.queryByTitle("Changer le rôle")).toBeNull();
+  });
+
   it("🟢 HP3 : Bouton 'Inviter' absent pour UTILISATEUR", async () => {
     jobsService.getEquipe.mockResolvedValue(mockDataUtilisateur);
     renderEquipe();

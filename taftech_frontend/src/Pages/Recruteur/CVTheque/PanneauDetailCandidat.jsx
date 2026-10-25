@@ -11,6 +11,7 @@ import {
   Star,
   Copy,
   ExternalLink,
+  Lock,
 } from "lucide-react";
 import { tw } from "../../../theme";
 import { nomWilaya } from "../../../utils/wilaya";
@@ -144,19 +145,46 @@ const BlocCoordonnees = ({ candidat, debloquageEnCours, onDeverrouiller }) => (
           <ExternalLink size={13} /> LinkedIn
         </a>
       )}
-      {!candidat.est_debloque && (
-        <button
-          onClick={() => onDeverrouiller(candidat)}
-          disabled={debloquageEnCours === candidat.user_id}
-          className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgTealSolid}`}
-        >
-          🔓 {debloquageEnCours === candidat.user_id ? "Déblocage..." : "Débloquer ce profil (1 crédit)"}
-        </button>
-      )}
       {candidat.est_debloque && !candidat.email && !candidat.telephone && (
         <p className={`text-sm italic ${tw.textMuted}`}>Coordonnées non renseignées par le candidat.</p>
       )}
     </div>
+    {!candidat.est_debloque && (
+      <div className={`rounded-xl border ${tw.borderTeal200} ${tw.bgTealSoft} p-4`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tw.bgTealSolid}`}>
+            <Lock size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold ${tw.textTeal800}`}>Coordonnées verrouillées</p>
+            <p className={`text-xs mt-0.5 ${tw.textMuted700}`}>
+              Débloquez ce profil pour voir l'identité, l'e-mail, le téléphone et le CV. L'accès est partagé avec toute votre équipe.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3 select-none" aria-hidden="true">
+              {["••••••••@••••••.•••", "0• •• •• •• ••", "Identité", "CV (PDF)"].map((texte) => (
+                <span key={texte} className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md blur-[1.5px] ${tw.tagSlateSoft700}`}>
+                  <Lock size={11} /> {texte}
+                </span>
+              ))}
+            </div>
+            <button
+              onClick={() => onDeverrouiller(candidat)}
+              disabled={debloquageEnCours === candidat.user_id}
+              className={`mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${tw.bgTealSolid}`}
+            >
+              🔓 {debloquageEnCours === candidat.user_id ? "Déblocage..." : "Débloquer ce profil (1 crédit)"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {candidat.est_debloque && candidat.debloque_le && (
+      <p className={`text-xs mt-3 ${tw.textMuted}`}>
+        🔓 Débloqué le{" "}
+        {new Date(candidat.debloque_le).toLocaleString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+        {candidat.debloque_par_nom ? ` par ${candidat.debloque_par_nom}` : ""}
+      </p>
+    )}
   </div>
 );
 

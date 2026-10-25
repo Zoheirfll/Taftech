@@ -27,7 +27,7 @@ const parseLangueBrute = (l) => {
   }
   const m = l.match(/^(.+?)\s*\((.+?)\)$/);
   if (m) return { langue: m[1].trim(), niveau: m[2].trim() };
-  return { langue: l.trim(), niveau: "Intermédiaire" };
+  return { langue: l.trim(), niveau: "Débutant" };
 };
 
 export const useOnboardingWizard = () => {
@@ -490,8 +490,8 @@ export const useOnboardingWizard = () => {
         );
       }
       await Promise.allSettled(
-        pendingCompetences.map(({ label, niveau }) =>
-          jobsService.ajouterCompetence(label, niveau).catch((err) => reportError("ECHEC_ADD_COMPETENCE_ONBOARDING", err)),
+        pendingCompetences.map(({ label, niveau, origine }) =>
+          jobsService.ajouterCompetence(label, niveau, origine).catch((err) => reportError("ECHEC_ADD_COMPETENCE_ONBOARDING", err)),
         ),
       );
       await refresh();

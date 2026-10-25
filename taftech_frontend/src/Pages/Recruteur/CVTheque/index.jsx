@@ -1,5 +1,7 @@
 // Page CVthèque recruteur (orchestrateur) : consentement, crédits, recherche/filtres, liste et détail des candidats.
 import React from "react";
+import { X } from "lucide-react";
+import { tw } from "../../../theme";
 import { useCVTheque } from "./useCVTheque";
 import { SqueletteCVTheque, EcranConsentementCVTheque } from "./EcransAccesCVTheque";
 import { BandeauCredits, OngletsCVTheque } from "./BandeauEtOnglets";
@@ -86,19 +88,54 @@ const CVTheque = () => {
           selectedCandidat={cv.selectedCandidat}
           onSelect={cv.handleSelectCandidat}
           onToggleFavori={cv.handleToggleFavori}
+          onIgnorer={cv.handleIgnorer}
           onOuvrirInvitation={cv.handleOuvrirInvitation}
           onResetFiltres={cv.handleResetFiltresListe}
+          debloque={cv.debloque}
+          setDebloque={cv.setDebloque}
+          vue={cv.vue}
+          setVue={cv.setVue}
+          ignores={cv.ignores}
+          setIgnores={cv.setIgnores}
         />
-        <PanneauDetailCandidat
-          detailRef={cv.detailRef}
-          candidat={cv.selectedCandidat}
-          documentsPartages={cv.documentsPartages}
-          openSections={cv.openSections}
-          toggleSection={cv.toggleSection}
-          debloquageEnCours={cv.debloquageEnCours}
-          onToggleFavori={cv.handleToggleFavori}
-          onDeverrouiller={cv.handleDeverrouillerCandidat}
-        />
+        {cv.vue === "grille" ? (
+          // Mode grille : la fiche s'ouvre dans une fenêtre au clic sur une carte (clic hors fenêtre ou croix pour fermer).
+          cv.detailOuvert && cv.selectedCandidat && (
+            <div className={`${tw.modalOverlay} p-4`} onClick={() => cv.setDetailOuvert(false)}>
+              <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => cv.setDetailOuvert(false)}
+                  aria-label="Fermer la fiche"
+                  className={`absolute top-3 right-3 z-10 p-1.5 rounded-full ${tw.surface} ${tw.textMuted} shadow`}
+                >
+                  <X size={16} />
+                </button>
+                <PanneauDetailCandidat
+                  detailRef={cv.detailRef}
+                  candidat={cv.selectedCandidat}
+                  documentsPartages={cv.documentsPartages}
+                  openSections={cv.openSections}
+                  toggleSection={cv.toggleSection}
+                  debloquageEnCours={cv.debloquageEnCours}
+                  onToggleFavori={cv.handleToggleFavori}
+                  onDeverrouiller={cv.handleDeverrouillerCandidat}
+                />
+              </div>
+            </div>
+          )
+        ) : (
+          <PanneauDetailCandidat
+            detailRef={cv.detailRef}
+            candidat={cv.selectedCandidat}
+            documentsPartages={cv.documentsPartages}
+            openSections={cv.openSections}
+            toggleSection={cv.toggleSection}
+            debloquageEnCours={cv.debloquageEnCours}
+            onToggleFavori={cv.handleToggleFavori}
+            onDeverrouiller={cv.handleDeverrouillerCandidat}
+          />
+        )}
       </div>
 
       {cv.inviterCandidat && (

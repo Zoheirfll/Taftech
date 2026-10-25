@@ -31,8 +31,8 @@ class NormaliserLanguesTest(SimpleTestCase):
         self.assertEqual(normaliser_langues("Anglais:Courant (C1)"), "Anglais:Avancé")
 
     def test_niveau_absent_ou_inconnu_prend_le_defaut_du_prompt(self):
-        self.assertEqual(normaliser_langues("Anglais"), "Anglais:Intermédiaire")
-        self.assertEqual(normaliser_langues("Anglais:IELTS 7"), "Anglais:Intermédiaire")
+        self.assertEqual(normaliser_langues("Anglais"), "Anglais:Débutant")
+        self.assertEqual(normaliser_langues("Anglais:IELTS 7"), "Anglais:Débutant")
 
     def test_niveau_entre_parentheses(self):
         self.assertEqual(normaliser_langues("Anglais (courant), Arabe (maternelle)"),

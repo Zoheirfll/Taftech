@@ -28,7 +28,7 @@ vi.mock("../src/Services/jobsService", () => ({
 }));
 
 vi.mock("../src/Services/adminService", () => ({
-  adminService: { getAdminStats: vi.fn(), getDemandesAjout: vi.fn() },
+  adminService: { getAdminStats: vi.fn(), getDemandesAjout: vi.fn(), getMetiersCompetence: vi.fn(), getExplorateurRecherche: vi.fn() },
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -70,6 +70,30 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
       expect(screen.getByText("Gestion de projet")).toBeInTheDocument();
       expect(screen.getByText("Compétence masquée")).toBeInTheDocument();
     });
+  });
+
+  it("🟢 HP1 bis : nombre de métiers par compétence et ouverture de la fenêtre « Métiers »", async () => {
+    jobsService.getAdminCompetences.mockResolvedValue(
+      mockPage([
+        { id: 1, label: "Gestion de projet", actif: true, nb_metiers: 3 },
+        { id: 2, label: "Compétence orpheline", actif: true, nb_metiers: 0 },
+      ]),
+    );
+    adminService.getMetiersCompetence.mockResolvedValue({
+      metiers: [{ id: 5, libelle: "Chef de projet", groupe: "Gestion", retirable: true }],
+    });
+    render(
+      <MemoryRouter>
+        <AdminCompetences />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("3 métier(s)")).toBeInTheDocument();
+    expect(screen.getByText("Aucun métier")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Métiers de Gestion de projet" }));
+    expect(await screen.findByRole("dialog", { name: "Métiers de Gestion de projet" })).toBeInTheDocument();
+    expect(adminService.getMetiersCompetence).toHaveBeenCalledWith(1);
+    expect(await screen.findByText("Chef de projet")).toBeInTheDocument();
   });
 
   it("🟢 HP2 : Statut Validée/Désactivée affiché (repli sur l'ancien booléen actif)", async () => {

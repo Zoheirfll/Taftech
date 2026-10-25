@@ -3,6 +3,8 @@ import { Trash2, Plus, Pencil, Check, CheckCircle2, AlertCircle } from "lucide-r
 import { tw } from "../../../../theme";
 import { WizardCategoryToggle } from "../../../../Components/onboarding/WizardCategoryToggle";
 import { jobsService } from "../../../../Services/jobsService";
+import CompetencesSuggerees from "../../../../Components/CompetencesSuggerees";
+import { useCompetencesSuggerees } from "../../../../utils/useCompetencesSuggerees";
 
 const NIVEAUX = [
   { value: "DEBUTANT", label: "Débutant" },
@@ -21,13 +23,20 @@ const trouverDansReferentiel = async (label) => {
   return trouve ? trouve.label : null;
 };
 
-export const StepCompetences = ({ pendingCompetences, setPendingCompetences, competencesMode, setCompetencesMode, saveCompetencesStep, skipStep, profil, saving }) => {
+export const StepCompetences = ({ pendingCompetences, setPendingCompetences, competencesMode, setCompetencesMode, saveCompetencesStep, skipStep, profil, saving, metierIds = [] }) => {
   const [nouvelleCompetence, setNouvelleCompetence] = useState("");
   const [nouveauNiveau, setNouveauNiveau] = useState("DEBUTANT");
   const [suggestions, setSuggestions] = useState([]);
   const [editIdx, setEditIdx] = useState(null);
   const [editValeur, setEditValeur] = useState("");
   const minuteur = useRef(null);
+  const suggestionsMetier = useCompetencesSuggerees(metierIds, pendingCompetences);
+
+  // Proposée par le référentiel pour le métier : jamais ajoutée d'office, niveau Débutant à corriger.
+  const ajouterSuggestion = (label) => setPendingCompetences((list) => [
+    ...list.filter((c) => c.label.toLowerCase() !== label.toLowerCase()),
+    { label, niveau: "DEBUTANT", dans_referentiel: true, intitule_cv: null, origine: "SUGGESTION" },
+  ]);
 
   // Suggestions du référentiel pendant la saisie d'une nouvelle compétence.
   useEffect(() => {
@@ -137,6 +146,11 @@ export const StepCompetences = ({ pendingCompetences, setPendingCompetences, com
           </div>
         ))}
       </div>
+      {suggestionsMetier.length > 0 && (
+        <div className="mb-4">
+          <CompetencesSuggerees suggestions={suggestionsMetier} onAjouter={ajouterSuggestion} />
+        </div>
+      )}
       <div className="relative mb-6">
         <div className="flex gap-2">
           <input

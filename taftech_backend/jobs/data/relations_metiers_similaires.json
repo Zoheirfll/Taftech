@@ -1,0 +1,506 @@
+[
+ {
+  "depart": "P1601",
+  "arrivee": "TAF-000161",
+  "appellation": "Fiscaliste",
+  "score_avant": 0.11
+ },
+ {
+  "depart": "P1401",
+  "arrivee": "TAF-000414",
+  "appellation": "Archiviste",
+  "score_avant": 0.11
+ },
+ {
+  "depart": "N1406",
+  "arrivee": "TAF-000388",
+  "appellation": "Cadreur",
+  "score_avant": 0.13
+ },
+ {
+  "depart": "D1601",
+  "arrivee": "TAF-000426",
+  "appellation": "Chef d'atelier automobile",
+  "score_avant": 0.14
+ },
+ {
+  "depart": "P1500",
+  "arrivee": "TAF-000165",
+  "appellation": "Chargé de recrutement",
+  "score_avant": 0.17
+ },
+ {
+  "depart": "L1804",
+  "arrivee": "TAF-000439",
+  "appellation": "Ingénieur radio",
+  "score_avant": 0.23
+ },
+ {
+  "depart": "C2504",
+  "arrivee": "TAF-000107",
+  "appellation": "Superviseur production",
+  "score_avant": 0.27
+ },
+ {
+  "depart": "N1103",
+  "arrivee": "TAF-000390",
+  "appellation": "Réalisateur",
+  "score_avant": 0.32
+ },
+ {
+  "depart": "P1601",
+  "arrivee": "TAF-000162",
+  "appellation": "Responsable fiscal",
+  "score_avant": 0.35
+ },
+ {
+  "depart": "L1102",
+  "arrivee": "TAF-000500",
+  "appellation": "Acheteur international",
+  "score_avant": 0.35
+ },
+ {
+  "depart": "F1501",
+  "arrivee": "TAF-000512",
+  "appellation": "Ingénieur hydraulique",
+  "score_avant": 0.36
+ },
+ {
+  "depart": "N1409",
+  "arrivee": "TAF-000389",
+  "appellation": "Monteur vidéo",
+  "score_avant": 0.36
+ },
+ {
+  "depart": "I3101",
+  "arrivee": "TAF-000359",
+  "appellation": "Officier de marine marchande",
+  "score_avant": 0.37
+ },
+ {
+  "depart": "I3101",
+  "arrivee": "TAF-000361",
+  "appellation": "Chef mécanicien marine",
+  "score_avant": 0.37
+ },
+ {
+  "depart": "G1606",
+  "arrivee": "TAF-000255",
+  "appellation": "Délégué médical",
+  "score_avant": 0.39
+ },
+ {
+  "depart": "TAF-000200",
+  "arrivee": "TAF-000582",
+  "appellation": "Product Manager",
+  "score_avant": 0.4
+ },
+ {
+  "depart": "C1504",
+  "arrivee": "TAF-000094",
+  "appellation": "ingénieur corrosion",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1203",
+  "arrivee": "TAF-000157",
+  "appellation": "Auditeur interne",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "TAF-000189",
+  "arrivee": "TAF2-SUPVENTES",
+  "appellation": "Sales Supervisor",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1206",
+  "arrivee": "TAF-000143",
+  "appellation": "Chef comptable",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1206",
+  "arrivee": "TAF-000141",
+  "appellation": "Comptable général",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1206",
+  "arrivee": "TAF-000147",
+  "appellation": "Comptable trésorerie",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1102",
+  "arrivee": "TAF-000226",
+  "appellation": "Responsable logistique",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1102",
+  "arrivee": "TAF-000215",
+  "appellation": "Supply chain manager",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "O1202",
+  "arrivee": "TAF-000371",
+  "appellation": "Responsable pédagogique",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "F1506",
+  "arrivee": "TAF-000493",
+  "appellation": "Dessinateur projeteur",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1201",
+  "arrivee": "TAF-000156",
+  "appellation": "Directeur financier",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1201",
+  "arrivee": "TAF-000155",
+  "appellation": "Responsable financier",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "H1101",
+  "arrivee": "TAF-000307",
+  "appellation": "Directeur d'hôtel",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1101",
+  "arrivee": "TAF-000219",
+  "appellation": "Directeur des achats",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1801",
+  "arrivee": "TAF-000062",
+  "appellation": "Chef de projet informatique",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "K1101",
+  "arrivee": "TAF-000261",
+  "appellation": "Directeur d'agence bancaire",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "B1301",
+  "arrivee": "TAF-000369",
+  "appellation": "Chef de carrière",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1202",
+  "arrivee": "TAF-000234",
+  "appellation": "Agent de transit",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1202",
+  "arrivee": "TAF-000233",
+  "appellation": "Déclarant en douane",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "P1601",
+  "arrivee": "TAF-000300",
+  "appellation": "Juriste d'entreprise",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1204",
+  "arrivee": "TAF-000152",
+  "appellation": "Analyste financier",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "B1200",
+  "arrivee": "TAF-000367",
+  "appellation": "Géologue",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "B1200",
+  "arrivee": "TAF-000368",
+  "appellation": "Géotechnicien",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "O1301",
+  "arrivee": "TAF-000380",
+  "appellation": "Formateur informatique",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "P1702",
+  "arrivee": "TAF-000329",
+  "appellation": "Agent de sécurité",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1103",
+  "arrivee": "TAF-000229",
+  "appellation": "Inventory controller",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1103",
+  "arrivee": "TAF-000227",
+  "appellation": "Warehouse manager",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "K1403",
+  "arrivee": "TAF-000433",
+  "appellation": "Gestionnaire de copropriété",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "A1701",
+  "arrivee": "TAF-000349",
+  "appellation": "Ingénieur agronome",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "F1501",
+  "arrivee": "TAF-000124",
+  "appellation": "Ingénieur génie civil",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "I1302",
+  "arrivee": "TAF-000228",
+  "appellation": "Magasinier",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "P1701",
+  "arrivee": "TAF-000331",
+  "appellation": "Responsable sécurité",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1501",
+  "arrivee": "TAF-000164",
+  "appellation": "Responsable paie",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "H1301",
+  "arrivee": "TAF-000314",
+  "appellation": "Gouvernant d'hôtel",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1703",
+  "arrivee": "TAF-000200",
+  "appellation": "Chef de produit",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "F1505",
+  "arrivee": "TAF-000132",
+  "appellation": "Géomètre-topographe",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "M1102",
+  "arrivee": "TAF-000244",
+  "appellation": "Médecin du travail",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "M1101",
+  "arrivee": "TAF-000242",
+  "appellation": "Médecin généraliste",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "M1101",
+  "arrivee": "TAF-000243",
+  "appellation": "Médecin spécialiste",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "M1101",
+  "arrivee": "TAF-000245",
+  "appellation": "Médecin urgentiste",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "F1504",
+  "arrivee": "TAF-000139",
+  "appellation": "Métreur-vérificateur",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1102",
+  "arrivee": "TAF-000217",
+  "appellation": "Acheteur",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1102",
+  "arrivee": "TAF-000218",
+  "appellation": "Acheteur senior",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "H1302",
+  "arrivee": "TAF-000316",
+  "appellation": "Femme de chambre",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "G1705",
+  "arrivee": "TAF-000458",
+  "appellation": "Hôte de caisse",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "J1105",
+  "arrivee": "TAF-000382",
+  "appellation": "Chargé de communication",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "A1501",
+  "arrivee": "TAF-000353",
+  "appellation": "Vétérinaire",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1701",
+  "arrivee": "TAF-000202",
+  "appellation": "Chargé d’études marketing",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1702",
+  "arrivee": "TAF-000187",
+  "appellation": "Directeur Commercial",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1702",
+  "arrivee": "TAF-000188",
+  "appellation": "Responsable commercial",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "L1702",
+  "arrivee": "TAF-000467",
+  "appellation": "Responsable e-commerce",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "K1404",
+  "arrivee": "TAF-000434",
+  "appellation": "Agent immobilier",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "A1302",
+  "arrivee": "TAF-000354",
+  "appellation": "Zootechnicien",
+  "score_avant": 0.45
+ },
+ {
+  "depart": "G1602",
+  "arrivee": "TAF-000199",
+  "appellation": "Commercial sédentaire",
+  "score_avant": 0.49
+ },
+ {
+  "depart": "G1601",
+  "arrivee": "TAF-000189",
+  "appellation": "Chef des ventes",
+  "score_avant": 0.51
+ },
+ {
+  "depart": "D1603",
+  "arrivee": "TAF-000431",
+  "appellation": "Carrossier-peintre",
+  "score_avant": 0.51
+ },
+ {
+  "depart": "D1303",
+  "arrivee": "TAF-000071",
+  "appellation": "Technicien de maintenance industrielle",
+  "score_avant": 0.59
+ },
+ {
+  "depart": "D1602",
+  "arrivee": "TAF-000430",
+  "appellation": "Electricien automobile",
+  "score_avant": 0.6
+ },
+ {
+  "depart": "G1608",
+  "arrivee": "TAF-000461",
+  "appellation": "Téléconseiller",
+  "score_avant": 0.62
+ },
+ {
+  "depart": "G1602",
+  "arrivee": "TAF-000198",
+  "appellation": "Conseiller commercial",
+  "score_avant": 0.63
+ },
+ {
+  "depart": "L1601",
+  "arrivee": "TAF-000413",
+  "appellation": "Secrétaire de direction",
+  "score_avant": 0.71
+ },
+ {
+  "depart": "D1602",
+  "arrivee": "TAF-000428",
+  "appellation": "Mécanicien automobile",
+  "score_avant": 0.71
+ },
+ {
+  "depart": "TAF-000175",
+  "arrivee": "TAF-000372",
+  "appellation": "Training Manager",
+  "score_avant": 0.72
+ },
+ {
+  "depart": "G1604",
+  "arrivee": "TAF-000196",
+  "appellation": "Ingénieur technico-commercial",
+  "score_avant": 0.72
+ },
+ {
+  "depart": "L1202",
+  "arrivee": "TAF-000151",
+  "appellation": "Responsable contrôle de gestion",
+  "score_avant": 0.76
+ },
+ {
+  "depart": "TAF-000110",
+  "arrivee": "TAF-000473",
+  "appellation": "Process Engineer",
+  "score_avant": 0.78
+ },
+ {
+  "depart": "K1104",
+  "arrivee": "TAF-000264",
+  "appellation": "Chargé de clientèle bancaire",
+  "score_avant": 0.81
+ },
+ {
+  "depart": "TAF-000159",
+  "arrivee": "TAF-000272",
+  "appellation": "Compliance Manager",
+  "score_avant": 0.83
+ }
+]

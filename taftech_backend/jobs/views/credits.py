@@ -57,7 +57,7 @@ class DeverrouillerCandidatAPIView(APIView):
             )
 
         try:
-            deverrouiller_candidat(entreprise, candidat)
+            deverrouiller_candidat(entreprise, candidat, par=request.user)
         except CreditsEpuisesError:
             return Response(
                 {"error": "Vous n'avez plus de crédits disponibles ce mois-ci.", "code": "CREDITS_EPUISES"},

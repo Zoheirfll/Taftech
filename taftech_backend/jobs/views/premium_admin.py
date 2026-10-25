@@ -4,7 +4,8 @@ from rest_framework.permissions import IsAdminUser, AllowAny
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from ..models import AuditLog, FaqItem, CompetenceReferentiel
+from ..models import AuditLog, FaqItem, CompetenceReferentiel, MetierCompetence
+from ..referentiel_utils import lier_competence_aux_metiers
 from ..serializers import FaqItemSerializer, CompetenceReferentielSerializer, CompetenceReferentielAdminSerializer
 from ..throttles import PublicReadThrottle
 
@@ -211,6 +212,80 @@ class CompetenceStatutAdminAPIView(APIView):
         donnees = CompetenceReferentielAdminSerializer(competence).data
         donnees['liens_crees'] = liens
         return Response(donnees)
+
+
+PREFIXE_LIEN_TAFTECH = 'TAF-'  # codes des liens créés par TafTech ; ceux du classeur du client commencent par « MC- »
+
+
+class CompetenceMetiersAdminAPIView(APIView):
+    """Métiers auxquels une compétence OFFICIELLE est suggérée (publication d'offre, profil et assistant d'import du
+    candidat). GET `admin/competences/<pk>/metiers/` : liste ; POST `{metiers_ids}` : ajout (10 au plus, tout-ou-rien) ;
+    DELETE `admin/competences/<pk>/metiers/<metier_id>/` : retrait d'un lien créé par TafTech. Un lien du classeur du
+    client ne se retire pas ici (seul un nouvel import le touche). Chaque écriture est tracée au journal d'audit."""
+    permission_classes = [IsAdminUser]
+
+    @staticmethod
+    def _competence(pk):
+        return CompetenceReferentiel.objects.filter(pk=pk, statut__in=CompetenceReferentiel.STATUTS_RECONNUS).first()
+
+    @staticmethod
+    def _liste(competence):
+        liens = (MetierCompetence.objects.filter(competence=competence)
+                 .select_related('metier', 'metier__groupe_principal').order_by('metier__libelle'))
+        return [
+            {'id': lien.metier_id, 'libelle': lien.metier.libelle,
+             'groupe': lien.metier.groupe_principal.libelle if lien.metier.groupe_principal_id else '',
+             'retirable': lien.code.startswith(PREFIXE_LIEN_TAFTECH)}
+            for lien in liens
+        ]
+
+    @staticmethod
+    def _tracer(request, competence, detail):
+        AuditLog.objects.create(
+            admin=request.user, action='LIER_COMPETENCE_METIER',
+            detail=f"Compétence « {competence.label[:80]} » : {detail}"[:255],
+        )
+
+    def get(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        competence = self._competence(pk)
+        if competence is None:
+            return Response({'error': 'Introuvable.'}, status=404)
+        return Response({'metiers': self._liste(competence)})
+
+    def post(self, request, pk):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        competence = self._competence(pk)
+        if competence is None:
+            return Response({'error': 'Introuvable.'}, status=404)
+        metiers_ids = request.data.get('metiers_ids') or []
+        if not isinstance(metiers_ids, list) or not metiers_ids:
+            return Response({'error': 'Choisissez au moins un métier.'}, status=400)
+        try:
+            ajoutes = lier_competence_aux_metiers(competence, metiers_ids)
+        except ValueError as erreur:
+            return Response({'error': str(erreur)}, status=400)
+        if ajoutes:
+            self._tracer(request, competence, f"{ajoutes} métier(s) lié(s)")
+        return Response({'metiers': self._liste(competence), 'ajoutes': ajoutes})
+
+    def delete(self, request, pk, metier_id):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Accès refusé.'}, status=403)
+        competence = self._competence(pk)
+        if competence is None:
+            return Response({'error': 'Introuvable.'}, status=404)
+        lien = MetierCompetence.objects.filter(competence=competence, metier_id=metier_id).select_related('metier').first()
+        if lien is None:
+            return Response({'error': 'Ce lien n’existe pas.'}, status=404)
+        if not lien.code.startswith(PREFIXE_LIEN_TAFTECH):
+            return Response({'error': "Ce lien vient du classeur du client : il ne se retire pas ici."}, status=400)
+        libelle = lien.metier.libelle
+        lien.delete()
+        self._tracer(request, competence, f"lien retiré avec « {libelle[:80]} »")
+        return Response({'metiers': self._liste(competence)})
 
 
 class CompetencePropositionsAdminAPIView(APIView):

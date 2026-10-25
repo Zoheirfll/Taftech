@@ -13,6 +13,8 @@ from ..models import MembreEquipe, InvitationEquipe, ProfilEntreprise, EquipeAct
 User = get_user_model()
 
 ROLES_MODIFIABLES = ['ADMIN', 'UTILISATEUR', 'INVITE']
+# Seul le propriétaire attribue, modifie ou retire le rôle administrateur.
+MSG_ADMIN_RESERVE = "Seul le propriétaire peut gérer les administrateurs."
 INVITATION_EXPIRY_HOURS = 72
 
 
@@ -55,6 +57,27 @@ def get_membre_role(user, entreprise):
         return 'PROPRIETAIRE'
     membre = MembreEquipe.objects.filter(user=user, entreprise=entreprise).first()
     return membre.role if membre else None
+
+
+def _sans_mot_de_passe(user):
+    """Compte créé via Google (ou sans mot de passe utilisable) : il doit en définir un
+    pour accéder à l'espace recruteur. Le drapeau seul ne suffit pas : certains comptes
+    sans mot de passe l'ont à False."""
+    return (
+        getattr(user, 'est_compte_google', False)
+        or not user.password  # chaîne vide : Django la juge « utilisable », l'admin « aucun mot de passe »
+        or not user.has_usable_password()
+    )
+
+
+def _refus_acceptation(user, entreprise):
+    """Motif de refus si `user` ne peut pas rejoindre `entreprise` (propriétaire ailleurs ou membre
+    d'une autre équipe, par exemple devenu tel entre l'envoi et l'acceptation), sinon None."""
+    if ProfilEntreprise.objects.filter(user=user).exists():
+        return "Ce compte possède déjà une entreprise sur TAFTECH : il ne peut pas rejoindre une autre équipe."
+    if MembreEquipe.objects.filter(user=user).exclude(entreprise=entreprise).exists():
+        return "Ce compte fait déjà partie d'une autre équipe."
+    return None
 
 
 def _log(user, entreprise, action, detail=''):
@@ -112,6 +135,9 @@ class EquipeAPIView(APIView):
             return Response({'error': 'Entreprise introuvable.'}, status=404)
 
         mon_role = get_membre_role(request.user, entreprise)
+        # La liste (emails des collègues, invitations en attente) n'est pas pour les rôles inférieurs.
+        if mon_role not in ('PROPRIETAIRE', 'ADMIN'):
+            return Response({'error': "La gestion d'équipe est réservée au propriétaire ou à l'administrateur."}, status=403)
 
         # Propriétaire
         membres = [
@@ -171,9 +197,15 @@ class EquipeAPIView(APIView):
         except MembreEquipe.DoesNotExist:
             return Response({'error': 'Membre introuvable.'}, status=404)
 
+        if membre.user_id == request.user.id:
+            return Response({'error': 'Vous ne pouvez pas modifier votre propre rôle.'}, status=403)
+
         nouveau_role = request.data.get('role')
         if nouveau_role not in ROLES_MODIFIABLES:
             return Response({'error': 'Rôle invalide.'}, status=400)
+
+        if get_membre_role(request.user, entreprise) != 'PROPRIETAIRE' and 'ADMIN' in (membre.role, nouveau_role):
+            return Response({'error': MSG_ADMIN_RESERVE}, status=403)
 
         membre.role = nouveau_role
         membre.save(update_fields=['role'])
@@ -197,6 +229,8 @@ class EquipeAPIView(APIView):
         # Mais un admin ne peut pas retirer le propriétaire (il n'a pas de MembreEquipe donc DoesNotExist déjà levé)
         if membre.user != request.user and mon_role not in ('PROPRIETAIRE', 'ADMIN'):
             return Response({'error': 'Action non autorisée.'}, status=403)
+        if membre.user != request.user and membre.role == 'ADMIN' and mon_role != 'PROPRIETAIRE':
+            return Response({'error': MSG_ADMIN_RESERVE}, status=403)
 
         email_retire = membre.user.email
         membre.delete()
@@ -226,6 +260,8 @@ class InviterMembreAPIView(APIView):
             return Response({'error': 'Email obligatoire.'}, status=400)
         if role not in ROLES_MODIFIABLES:
             return Response({'error': 'Rôle invalide.'}, status=400)
+        if role == 'ADMIN' and get_membre_role(request.user, entreprise) != 'PROPRIETAIRE':
+            return Response({'error': MSG_ADMIN_RESERVE}, status=403)
 
         # Déjà membre ?
         if MembreEquipe.objects.filter(entreprise=entreprise, user__email=email).exists():
@@ -234,6 +270,14 @@ class InviterMembreAPIView(APIView):
         # Propriétaire lui-même ?
         if entreprise.user.email == email:
             return Response({'error': 'Vous êtes déjà le propriétaire.'}, status=400)
+
+        # Un propriétaire d'entreprise ou un membre d'une autre équipe ne verrait jamais cette
+        # équipe : get_entreprise_for_user lui renvoie sa propre entreprise (ou son premier
+        # rattachement). Inutile de lui envoyer une invitation sans effet.
+        if ProfilEntreprise.objects.filter(user__email=email).exists():
+            return Response({'error': 'Cette personne possède déjà une entreprise sur TAFTECH.'}, status=400)
+        if MembreEquipe.objects.filter(user__email=email).exists():
+            return Response({'error': "Cette personne fait déjà partie d'une autre équipe."}, status=400)
 
         # Toujours passer par une invitation avec acceptation explicite — qu'un compte existe déjà
         # ou non, qu'il soit Google ou classique. Un compte classique existant devra confirmer son
@@ -317,7 +361,10 @@ class AccepterInvitationAPIView(APIView):
         # Vérifier si un compte existe déjà avec cet email
         existing = User.objects.filter(email=inv.email).first()
         compte_existant = existing is not None
-        sans_mot_de_passe = compte_existant and getattr(existing, 'est_compte_google', False)
+        refus = _refus_acceptation(existing, inv.entreprise) if compte_existant else None
+        if refus:
+            return Response({'error': refus}, status=400)
+        sans_mot_de_passe = compte_existant and _sans_mot_de_passe(existing)
 
         return Response({
             'entreprise': inv.entreprise.nom_entreprise,
@@ -343,8 +390,11 @@ class AccepterInvitationAPIView(APIView):
         user = User.objects.filter(email=inv.email).first()
 
         if user:
+            refus = _refus_acceptation(user, inv.entreprise)
+            if refus:
+                return Response({'error': refus}, status=400)
             password = request.data.get('password', '')
-            if getattr(user, 'est_compte_google', False):
+            if _sans_mot_de_passe(user):
                 # Compte Google — définir un mot de passe pour l'espace recruteur
                 if not password or len(password) < 8:
                     return Response({'error': 'Créez un mot de passe (8 caractères minimum) pour accéder à l\'espace recruteur.'}, status=400)

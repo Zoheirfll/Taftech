@@ -213,6 +213,23 @@ describe("🔑 Permissions - peutFaire()", () => {
     expect(authService.peutFaire("INVITE")).toBe(true);
   });
 
+  // Cas : compte RECRUTEUR invité dans l'équipe d'un autre — son rôle d'équipe prime
+  it("🔴 Compte RECRUTEUR membre d'une équipe suit son rôle d'équipe, pas celui de propriétaire", () => {
+    mockStore["userRole"] = "RECRUTEUR";
+    mockStore["estMembreEquipe"] = "true";
+    mockStore["membreRole"] = "UTILISATEUR";
+    expect(authService.peutFaire("PROPRIETAIRE")).toBe(false);
+    expect(authService.peutFaire("ADMIN")).toBe(false);
+    expect(authService.peutFaire("UTILISATEUR")).toBe(true);
+  });
+
+  // Cas : membre ADMIN — jamais les actions réservées au propriétaire (facturation, abonnements)
+  it("🔴 Membre ADMIN ne passe pas peutFaire('PROPRIETAIRE')", () => {
+    mockStore["userRole"] = null;
+    mockStore["membreRole"] = "ADMIN";
+    expect(authService.peutFaire("PROPRIETAIRE")).toBe(false);
+  });
+
   // Cas : membre UTILISATEUR — autorisé UTILISATEUR et INVITE, pas ADMIN ni PROPRIETAIRE
   it("🟢 Membre UTILISATEUR passe UTILISATEUR et INVITE", () => {
     mockStore["membreRole"] = "UTILISATEUR";

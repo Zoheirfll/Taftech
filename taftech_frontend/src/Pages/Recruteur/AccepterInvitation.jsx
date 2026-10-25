@@ -186,7 +186,7 @@ const AccepterInvitation = () => {
             <button
               onClick={handleAccepter}
               disabled={saving}
-              className={`w-full mt-6 py-3 text-sm font-bold rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${tw.bgPrimarySolidHover} ${tw.textOnDark}`}
+              className={`w-full mt-6 py-3 text-sm font-bold rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${tw.buttonSuccessSolid}`}
             >
               {saving ? <><Loader2 size={16} className="animate-spin" /> En cours...</> : "Accepter l'invitation"}
             </button>

@@ -5,47 +5,17 @@ import Select from "react-select";
 import { notifier } from "../../utils/notifier";
 import api from "../../api/axiosConfig";
 import { reportError } from "../../utils/errorReporter";
-import { mediaUrl as getMediaUrl } from "../../utils/mediaUrl";
 import { selectStyles, tw } from "../../theme";
 import { grouperParFamille } from "../../utils/familleFormation";
 import Seo from "../../Components/Seo";
 import { jobUrl } from "../../utils/slugify";
-import { CONTRAT_LABELS, contratsTexte, lieuxTexte } from "../../utils/lieuxContrats";
-import { libellesDiplomesCompacts } from "../../utils/groupesDiplomes";
-import { joindre } from "../../utils/listeFrancaise";
+import { CONTRAT_LABELS } from "../../utils/lieuxContrats";
+import LigneOffre from "../../Components/LigneOffre";
+import { useFavorisOffres } from "../../utils/useFavorisOffres";
 import {
-  MapPin, Briefcase, Bookmark, Sparkles, Search, GraduationCap,
-  X, Building2, Clock, ChevronLeft, ChevronRight, SlidersHorizontal,
+  MapPin, Briefcase, Sparkles, Search,
+  X, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
-
-// Niveau d'étude de la carte : diplômes regroupés par niveau (« Master / Ingéniorat (Bac +5) »), deux au plus puis
-// « N autres », pour ne pas alourdir la carte (la page de l'offre garde le détail complet).
-const diplomesTexte = (job) => joindre(libellesDiplomesCompacts(job.diplomes_requis_detail || []), "ou");
-
-// Années d'expérience que le score attend (`experience_annees`) : « environ 3 ans », jamais une fourchette inventée.
-const anneesTexte = (annees) => (annees > 0 ? ` (environ ${annees} an${annees > 1 ? "s" : ""})` : "");
-
-const tempsDepuis = (dateStr) => {
-  if (!dateStr) return null;
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
-  if (diff < 2592000) return `il y a ${Math.floor(diff / 86400)}j`;
-  return `il y a ${Math.floor(diff / 2592000)} mois`;
-};
-
-const LogoEntreprise = ({ url }) => {
-  const [err, setErr] = React.useState(false);
-  return (
-    <div className={`w-12 h-12 rounded-xl border ${tw.borderBase} ${tw.surfaceMuted} flex items-center justify-center shrink-0 overflow-hidden`}>
-      {url && !err ? (
-        <img src={url} alt="" loading="lazy" width={48} height={48} className="w-full h-full object-contain p-1" onError={() => setErr(true)} />
-      ) : (
-        <Building2 size={22} className={tw.textMuted} />
-      )}
-    </div>
-  );
-};
 
 const SkeletonJobCard = () => (
   <div className={`${tw.cardColors} rounded-2xl p-4 md:p-5 animate-pulse`}>
@@ -77,7 +47,7 @@ const JobsList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [favoris, setFavoris] = useState([]);
+  const { setFavoris, basculerFavori, estSauvegardee } = useFavorisOffres();
   const [recommandations, setRecommandations] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,31 +125,6 @@ const JobsList = () => {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const expLabel = (val) => constants.experiences.find((e) => e.value === val)?.label || val;
-
-  const handleToggleFavori = async (offreId) => {
-    if (!localStorage.getItem("userRole")) return notifier.erreur("Connexion requise", "Connectez-vous pour sauvegarder une offre.");
-    const isDejaSauvegarde = favoris.find((f) => f.offre === offreId);
-    if (isDejaSauvegarde) {
-      setFavoris(favoris.filter((f) => f.offre !== offreId));
-      try {
-        await api.delete(`jobs/sauvegardes/${isDejaSauvegarde.id}/`);
-        notifier.succes("Offre retirée des favoris");
-      } catch (error) {
-        setFavoris([...favoris, isDejaSauvegarde]);
-        notifier.echec("Suppression impossible", error);
-        reportError("ECHEC_SUPPRESSION_FAVORI", error);
-      }
-    } else {
-      try {
-        const response = await api.post("jobs/sauvegardes/", { offre: offreId });
-        setFavoris([...favoris, response.data]);
-        notifier.succes("Offre sauvegardée");
-      } catch (error) {
-        notifier.echec("Sauvegarde impossible", error);
-        reportError("ECHEC_SAUVEGARDE_FAVORI", error);
-      }
-    }
-  };
 
   const handleSelectChange = (selectedOption, actionMeta) => {
     setFilters({ ...filters, [actionMeta.name]: selectedOption ? selectedOption.value : "" });
@@ -425,73 +370,15 @@ const JobsList = () => {
             ) : (
               <>
                 <div className="space-y-4">
-                  {jobs.map((job) => {
-                    const isSaved = favoris.some((f) => f.offre === job.id);
-                    const logoUrl = getMediaUrl(job.entreprise?.logo_url);
-                    return (
-                      <div key={job.id} className={`${tw.surface} ${tw.jobCardBorderHover} border rounded-2xl p-4 md:p-5 hover:shadow-md transition-all`}>
-                        <div className="flex items-start gap-3 md:gap-4">
-                          <LogoEntreprise url={logoUrl} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <Link to={jobUrl(job)} className={`text-base font-bold ${tw.textStrong} ${tw.hoverTextPrimary} transition-colors leading-snug`}>
-                                  {job.titre}
-                                </Link>
-                                <div className="mt-0.5">
-                                  {job.entreprise ? (
-                                    <Link to={`/entreprise/${job.entreprise.slug}`} className={`text-sm ${tw.textPrimary} hover:underline font-semibold`}>
-                                      {job.entreprise.nom_entreprise}
-                                    </Link>
-                                  ) : (
-                                    <span className={`text-sm ${tw.textMuted700} font-medium`}>Entreprise anonyme</span>
-                                  )}
-                                </div>
-                                {job.date_publication && (
-                                  <p className={`text-xs ${tw.textMuted} mt-1 flex items-center gap-1`}>
-                                    <Clock size={10} /> {tempsDepuis(job.date_publication)}
-                                  </p>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => handleToggleFavori(job.id)}
-                                className={`p-2 rounded-lg border transition-colors shrink-0 ${isSaved ? tw.bookmarkActive : tw.bookmarkInactive}`}
-                                title={isSaved ? "Retirer des favoris" : "Sauvegarder"}
-                              >
-                                <Bookmark size={15} className={isSaved ? tw.fillAmber500 : ""} />
-                              </button>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 mt-3">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
-                                <MapPin size={11} />
-                                {lieuxTexte(job)}
-                              </span>
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
-                                <Briefcase size={11} /> {expLabel(job.experience_requise)}{anneesTexte(job.experience_annees)}
-                              </span>
-                              {diplomesTexte(job) && (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.tagNeutralSolid} text-xs font-medium rounded-lg`}>
-                                  <GraduationCap size={11} /> {diplomesTexte(job)}
-                                </span>
-                              )}
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgPrimarySoft} ${tw.textPrimaryStrong} text-xs font-semibold rounded-lg`}>
-                                {contratsTexte(job)}
-                              </span>
-                              {job.nombre_postes > 0 && (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${tw.bgSuccessSoft} ${tw.textSuccess} text-xs font-semibold rounded-lg`}>
-                                  {job.nombre_postes} poste{job.nombre_postes > 1 ? "s" : ""} ouvert{job.nombre_postes > 1 ? "s" : ""}
-                                </span>
-                              )}
-                              <Link to={jobUrl(job)} className={`ml-auto px-4 py-1.5 ${tw.bgPrimarySolid} text-xs font-semibold rounded-lg transition-colors`}>
-                                Voir l'offre
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {jobs.map((job) => (
+                    <LigneOffre
+                      key={job.id}
+                      job={job}
+                      estSauvegardee={estSauvegardee(job.id)}
+                      onToggleFavori={basculerFavori}
+                      libelleExperience={expLabel}
+                    />
+                  ))}
                 </div>
 
                 {/* PAGINATION */}

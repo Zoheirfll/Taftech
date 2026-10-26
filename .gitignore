@@ -1,4 +1,5 @@
 backend_env/
+backend_env312/
 __pycache__/
 *.pyc
 *.pyo
@@ -13,3 +14,7 @@ dist/
 *.log
 # Sauvegardes écrites avant une purge du référentiel (consolider_referentiel)
 taftech_backend/backups/
+# Gabarit Cypress créé par erreur à la racine, captures générées par les tests
+/cypress/
+/cypress.config.js
+taftech_frontend/cypress/screenshots/

@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from ..models import MembreEquipe, InvitationEquipe, ProfilEntreprise, EquipeActionLog
+from ..equipe_comptes import supprimer_compte_si_orphelin
 
 User = get_user_model()
 
@@ -232,9 +233,15 @@ class EquipeAPIView(APIView):
         if membre.user != request.user and membre.role == 'ADMIN' and mon_role != 'PROPRIETAIRE':
             return Response({'error': MSG_ADMIN_RESERVE}, status=403)
 
-        email_retire = membre.user.email
+        utilisateur_retire = membre.user
+        detail = utilisateur_retire.email  # conservé dans le journal même si le compte disparaît
         membre.delete()
-        _log(request.user, entreprise, 'RETIRER_MEMBRE', email_retire)
+        # Retiré par quelqu'un d'autre : son compte, créé par l'invitation, n'a plus de raison d'exister.
+        # Un membre qui quitte lui-même l'équipe garde son compte (décision prudente, non demandée).
+        if utilisateur_retire != request.user:
+            supprime, motif = supprimer_compte_si_orphelin(utilisateur_retire)
+            detail += " — compte supprimé" if supprime else f" — compte conservé ({motif})"
+        _log(request.user, entreprise, 'RETIRER_MEMBRE', detail[:255])
         return Response({'message': 'Membre retiré.'}, status=204)
 
 
@@ -424,7 +431,8 @@ class AccepterInvitationAPIView(APIView):
                 role='RECRUTEUR',
             )
             user.email_verifie = True
-            user.save(update_fields=['email_verifie'])
+            user.compte_cree_par_invitation = True
+            user.save(update_fields=['email_verifie', 'compte_cree_par_invitation'])
 
         # Créer le lien MembreEquipe (éviter doublon)
         MembreEquipe.objects.get_or_create(

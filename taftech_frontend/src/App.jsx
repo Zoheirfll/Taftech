@@ -175,6 +175,7 @@ const AdminEntreprises  = lazy(() => import("./Pages/Admin/AdminEntreprises"));
 const AdminOffres       = lazy(() => import("./Pages/Admin/AdminOffres"));
 const AdminStatistiques = lazy(() => import("./Pages/Admin/AdminStatistiques"));
 const AdminStatsPeriode = lazy(() => import("./Pages/Admin/AdminStatsPeriode"));
+const AdminKpi = lazy(() => import("./Pages/Admin/AdminKpi"));
 const Merci = lazy(() => import("./Pages/Public/Merci"));
 const AdminUsers        = lazy(() => import("./Pages/Admin/AdminUsers"));
 const AdminBroadcast    = lazy(() => import("./Pages/admin/AdminBroadcast"));
@@ -333,7 +334,7 @@ function AppContent() {
               <Route path="/dashboard" element={<DashboardRecruteur />} />
               <Route path="/dashboard/offres/:id" element={<GestionOffre />} />
               <Route path="/cvtheque" element={<RoleGuard minRole="UTILISATEUR"><PalierRequisGuard droit="acces_cvtheque" titre="CVthèque" message="Cette fonctionnalité nécessite un abonnement actif."><CVTheque /></PalierRequisGuard></RoleGuard>} />
-              <Route path="/candidatures-spontanees" element={<CandidaturesSpontanees />} />
+              <Route path="/candidatures-spontanees" element={<RoleGuard minRole="UTILISATEUR"><CandidaturesSpontanees /></RoleGuard>} />
               <Route path="/notifications" element={<NotificationsRecruteur />} />
               <Route path="/questionnaires" element={<RoleGuard minRole="UTILISATEUR"><Questionnaires /></RoleGuard>} />
               <Route path="/parametres" element={<ParametresRecruteur />} />
@@ -342,10 +343,10 @@ function AppContent() {
               <Route path="/offres-emploi" element={<OffresListPage />} />
               <Route path="/candidatures" element={<CandidaturesListPage />} />
               <Route path="/recrutements" element={<RecrutementsPage />} />
-              <Route path="/candidats-recommandes" element={<CandidatsRecommandesPage />} />
-              <Route path="/statistiques" element={<StatistiquesPage />} />
+              <Route path="/candidats-recommandes" element={<RoleGuard minRole="UTILISATEUR"><CandidatsRecommandesPage /></RoleGuard>} />
+              <Route path="/statistiques" element={<RoleGuard minRole="UTILISATEUR"><StatistiquesPage /></RoleGuard>} />
               <Route path="/comment-fonctionne-matching" element={<CommentFonctionneMatching />} />
-              <Route path="/comment-fonctionnent-credits" element={<CommentFonctionnentCredits />} />
+              <Route path="/comment-fonctionnent-credits" element={<RoleGuard minRole="UTILISATEUR"><CommentFonctionnentCredits /></RoleGuard>} />
               <Route path="/evaluations" element={<EvaluationsPage />} />
               <Route path="/activite" element={<ActiviteCompletePage />} />
               <Route path="/entretiens" element={<EntretiensPage />} />
@@ -378,6 +379,7 @@ function AppContent() {
               <Route path="offres" element={<AdminOffres />} />
               <Route path="dashboard" element={<AdminStatistiques />} />
               <Route path="statistiques" element={<AdminStatsPeriode />} />
+              <Route path="kpi" element={<AdminKpi />} />
               <Route path="utilisateurs" element={<AdminUsers />} />
               <Route path="broadcast" element={<AdminBroadcast />} />
               <Route path="candidatures" element={<AdminCandidatures />} />

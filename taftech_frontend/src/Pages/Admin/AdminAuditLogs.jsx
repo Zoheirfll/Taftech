@@ -7,6 +7,7 @@ import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
 import { AdminErreurChargement, AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 
 const ACTION_LABELS = {
   APPROUVER_OFFRE: { label: "Approuver offre", color: tw.auditActionSuccess },
@@ -40,6 +41,7 @@ const AdminAuditLogs = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
+  const [logDetail, setLogDetail] = useState(null); // entrée dont on affiche la fiche (clic sur la ligne)
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -149,7 +151,13 @@ const AdminAuditLogs = () => {
                   logs.map((log) => {
                     const meta = ACTION_LABELS[log.action] || ACTION_LABELS.AUTRE;
                     return (
-                      <tr key={log.id} className={tw.rowHover}>
+                      <tr
+                        key={log.id}
+                        className={`${tw.rowHover} cursor-pointer`}
+                        tabIndex={0}
+                        onClick={() => setLogDetail(log)}
+                        onKeyDown={(e) => e.key === "Enter" && setLogDetail(log)}
+                      >
                         <td className={`px-4 py-3 ${tw.textMuted700} whitespace-nowrap text-xs`}>{log.date}</td>
                         <td className={`px-4 py-3 font-medium ${tw.textStrong}`}>{log.admin}</td>
                         <td className="px-4 py-3">
@@ -189,6 +197,20 @@ const AdminAuditLogs = () => {
             </div>
           )}
         </div>
+      )}
+
+      {logDetail && (
+        <FicheAdminModal
+          titre={(ACTION_LABELS[logDetail.action] || ACTION_LABELS.AUTRE).label}
+          sousTitre={logDetail.date}
+          badge={{ libelle: logDetail.action, classe: (ACTION_LABELS[logDetail.action] || ACTION_LABELS.AUTRE).color }}
+          lignes={[
+            { libelle: "Administrateur", valeur: logDetail.admin },
+            { libelle: "Détail", valeur: logDetail.detail },
+            { libelle: "Adresse IP", valeur: logDetail.ip },
+          ]}
+          onClose={() => setLogDetail(null)}
+        />
       )}
     </div>
   );

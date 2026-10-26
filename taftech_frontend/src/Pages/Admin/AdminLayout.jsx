@@ -54,6 +54,7 @@ const NAV_GROUPS = [
     dot: "bg-indigo-500",
     items: [
       { to: "/admin-taftech/dashboard", icon: LayoutDashboard, label: "Vue d'ensemble" },
+      { to: "/admin-taftech/kpi", icon: Gauge, label: "KPI" },
       { to: "/admin-taftech/statistiques", icon: BarChart3, label: "Statistiques" },
     ],
   },

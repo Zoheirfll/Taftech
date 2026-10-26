@@ -188,6 +188,41 @@ export const adminService = {
     }
   },
 
+  // Page « KPI » : indicateurs de pilotage de la période (comparés à la période précédente).
+  getAdminKpi: async (debut, fin) => {
+    try {
+      const response = await api.get("jobs/admin/kpi/", { params: { date_debut: debut, date_fin: fin } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_KPI", err);
+      throw err;
+    }
+  },
+
+  // Détail d'un thème de la page KPI : croissance | activite | revenus | ia.
+  getAdminKpiDetail: async (theme, debut, fin) => {
+    try {
+      const response = await api.get(`jobs/admin/kpi/${theme}/`, { params: { date_debut: debut, date_fin: fin } });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_GET_ADMIN_KPI_DETAIL", err);
+      throw err;
+    }
+  },
+
+  exportAdminKpi: async (debut, fin) => {
+    try {
+      const response = await api.get("jobs/admin/kpi/export/", {
+        params: { date_debut: debut, date_fin: fin },
+        responseType: "blob",
+      });
+      return response.data;
+    } catch (err) {
+      reportError("ECHEC_EXPORT_ADMIN_KPI", err);
+      throw err;
+    }
+  },
+
   exportAdminStatsPeriode: async (debut, fin, entrepriseId = null) => {
     try {
       const response = await api.get("jobs/admin/stats-periode/export/", {
@@ -204,9 +239,9 @@ export const adminService = {
 
   // Référentiel v2 (métiers/spécialités/diplômes importés) — pas de create/delete,
   // uniquement libellé + selectionnable/actif (voir jobs/views/referentiel_admin.py).
-  getAdminReferentielMetiers: async (search = "", page = 1) => {
+  getAdminReferentielMetiers: async (search = "", page = 1, origine = "") => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/metiers/?search=${q(search)}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/metiers/?search=${q(search)}&page=${page}&origine=${q(origine)}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_METIERS", err);
@@ -222,9 +257,9 @@ export const adminService = {
       throw err;
     }
   },
-  getAdminReferentielSpecialites: async (search = "", page = 1) => {
+  getAdminReferentielSpecialites: async (search = "", page = 1, origine = "") => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/specialites/?search=${q(search)}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/specialites/?search=${q(search)}&page=${page}&origine=${q(origine)}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_SPECIALITES", err);
@@ -240,9 +275,9 @@ export const adminService = {
       throw err;
     }
   },
-  getAdminReferentielDiplomes: async (search = "", page = 1) => {
+  getAdminReferentielDiplomes: async (search = "", page = 1, origine = "") => {
     try {
-      const response = await api.get(`jobs/admin/referentiel-v2/diplomes/?search=${q(search)}&page=${page}`);
+      const response = await api.get(`jobs/admin/referentiel-v2/diplomes/?search=${q(search)}&page=${page}&origine=${q(origine)}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_DIPLOMES", err);
@@ -655,9 +690,9 @@ export const adminService = {
   },
 
   // Compétences (référentiel admin)
-  getAdminCompetences: async (search = "", page = 1, statut = "") => {
+  getAdminCompetences: async (search = "", page = 1, statut = "", origine = "") => {
     try {
-      const response = await api.get(`jobs/admin/competences/?search=${q(search)}&page=${page}&statut=${q(statut)}`);
+      const response = await api.get(`jobs/admin/competences/?search=${q(search)}&page=${page}&statut=${q(statut)}&origine=${q(origine)}`);
       return response.data;
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_COMPETENCES", err);

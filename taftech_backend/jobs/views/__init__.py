@@ -170,7 +170,7 @@ from .pages import (
 from .ai_config import AIConfigAdminAPIView, QuotaIAOverridesAPIView, QuotaIAUsageAPIView
 from .informations_societe import InformationsSocietePublicAPIView, InformationsSocieteAdminAPIView
 from .offres_correction_admin import AdminOffreCorrigerAPIView
-from .admin_statistiques import AdminStatistiquesAPIView, AdminStatistiquesExportAPIView
+from .admin_statistiques import AdminStatistiquesAPIView, AdminStatistiquesExportAPIView, AdminKpiAPIView, AdminKpiDetailAPIView, AdminKpiExportAPIView
 from .propositions_metier import (
     ProposerMetierAPIView, AdminPropositionsMetierAPIView,
     AdminValiderPropositionMetierAPIView, AdminRejeterPropositionMetierAPIView,

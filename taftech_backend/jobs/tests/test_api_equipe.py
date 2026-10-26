@@ -436,6 +436,101 @@ class EquipeDeleteMembreTests(APITestCase):
 
 
 # ---------------------------------------------------------------------------
+# 5 bis. Sort du compte d'un membre retiré (25/10/2026)
+# ---------------------------------------------------------------------------
+
+class EquipeRetraitSupprimeCompteTests(APITestCase):
+    """Un compte créé par l'invitation disparaît quand on le retire ; tout autre cas le conserve."""
+
+    def setUp(self):
+        self.owner = _make_recruteur("owner@sup.dz", "owner_sup")
+        self.entreprise = _make_entreprise(self.owner, nom="SupCorp", rc="RC_SUP", premium=True)
+
+    def _membre(self, email, par_invitation=True, role="UTILISATEUR"):
+        user = _make_recruteur(email)
+        user.compte_cree_par_invitation = par_invitation
+        user.save(update_fields=["compte_cree_par_invitation"])
+        return user, MembreEquipe.objects.create(user=user, entreprise=self.entreprise, role=role)
+
+    def _retirer(self, acteur, membre):
+        self.client.force_authenticate(user=acteur)
+        return self.client.delete(reverse("equipe-membre", kwargs={"membre_id": membre.id}))
+
+    def test_compte_cree_par_invitation_supprime(self):
+        user, membre = self._membre("invite@sup.dz")
+        response = self._retirer(self.owner, membre)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(email="invite@sup.dz").exists())
+
+    def test_suppression_tracee_avec_email(self):
+        user, membre = self._membre("trace@sup.dz")
+        self._retirer(self.owner, membre)
+        log = EquipeActionLog.objects.get(entreprise=self.entreprise, action="RETIRER_MEMBRE")
+        self.assertIn("trace@sup.dz", log.detail)
+        self.assertIn("compte supprimé", log.detail)
+
+    def test_compte_preexistant_conserve(self):
+        user, membre = self._membre("ancien@sup.dz", par_invitation=False)
+        self._retirer(self.owner, membre)
+        self.assertTrue(User.objects.filter(email="ancien@sup.dz").exists())
+        self.assertIn("préexistant", EquipeActionLog.objects.get(action="RETIRER_MEMBRE").detail)
+
+    def test_membre_qui_quitte_lui_meme_garde_son_compte(self):
+        user, membre = self._membre("quitte@sup.dz")
+        response = self._retirer(user, membre)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(User.objects.filter(email="quitte@sup.dz").exists())
+
+    def test_compte_avec_questionnaire_conserve(self):
+        """Le CASCADE de Questionnaire.recruteur détruirait un questionnaire de l'entreprise."""
+        from jobs.models import Questionnaire
+        user, membre = self._membre("quest@sup.dz", role="ADMIN")
+        Questionnaire.objects.create(recruteur=user, titre="Entretien")
+        self._retirer(self.owner, membre)
+        self.assertTrue(User.objects.filter(email="quest@sup.dz").exists())
+        self.assertTrue(Questionnaire.objects.filter(titre="Entretien").exists())
+        self.assertIn("Questionnaire", EquipeActionLog.objects.get(action="RETIRER_MEMBRE").detail)
+
+    def test_compte_membre_d_une_autre_equipe_conserve(self):
+        user, membre = self._membre("deux@sup.dz")
+        autre_owner = _make_recruteur("autre_owner@sup.dz")
+        autre = _make_entreprise(autre_owner, nom="Autre", rc="RC_AUTRE", premium=True)
+        MembreEquipe.objects.create(user=user, entreprise=autre, role="UTILISATEUR")
+        self._retirer(self.owner, membre)
+        self.assertTrue(User.objects.filter(email="deux@sup.dz").exists())
+
+    def test_compte_staff_conserve(self):
+        user, membre = self._membre("staff@sup.dz")
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        self._retirer(self.owner, membre)
+        self.assertTrue(User.objects.filter(email="staff@sup.dz").exists())
+
+    def test_parcours_complet_acceptation_puis_retrait(self):
+        """Via les vraies routes : l'acceptation pose le drapeau, le retrait supprime le compte."""
+        inv = InvitationEquipe.objects.create(
+            entreprise=self.entreprise, email="parcours@sup.dz", token="tok_parcours", role="UTILISATEUR",
+            expire_at=timezone.now() + timedelta(hours=72),
+        )
+        self.client.post(reverse("equipe-accepter", kwargs={"token": inv.token}), {"password": "SuperPwd123!"})
+        user = User.objects.get(email="parcours@sup.dz")
+        self.assertTrue(user.compte_cree_par_invitation)
+        membre = MembreEquipe.objects.get(user=user)
+        self.assertEqual(self._retirer(self.owner, membre).status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(email="parcours@sup.dz").exists())
+
+    def test_acceptation_d_un_compte_existant_ne_pose_pas_le_drapeau(self):
+        existant = _make_recruteur("existant@sup.dz")
+        inv = InvitationEquipe.objects.create(
+            entreprise=self.entreprise, email="existant@sup.dz", token="tok_existant", role="UTILISATEUR",
+            expire_at=timezone.now() + timedelta(hours=72),
+        )
+        self.client.post(reverse("equipe-accepter", kwargs={"token": inv.token}), {"password": "pwd123!"})
+        existant.refresh_from_db()
+        self.assertFalse(existant.compte_cree_par_invitation)
+
+
+# ---------------------------------------------------------------------------
 # 6. Tests InviterMembreAPIView — POST invitation
 # ---------------------------------------------------------------------------
 

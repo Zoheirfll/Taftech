@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, X, FolderLock } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import { AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -18,6 +19,7 @@ const AdminTypesDocuments = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [typeDetail, setTypeDetail] = useState(null); // type dont on affiche la fiche (clic sur la ligne)
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
 
@@ -131,7 +133,13 @@ const AdminTypesDocuments = () => {
                 <tr><td colSpan="4"><AdminVide icon={FolderLock} titre="Aucun type configuré." texte="Ajoutez au moins un type pour que les candidats puissent classer leurs documents." /></td></tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
+                  <tr
+                    key={item.id}
+                    className={`${tw.rowHover} cursor-pointer`}
+                    tabIndex={0}
+                    onClick={() => setTypeDetail(item)}
+                    onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setTypeDetail(item)}
+                  >
                     <td className="px-5 py-3 text-sm font-medium">{item.label}</td>
                     <td className="px-5 py-3 text-sm">{item.ordre}</td>
                     <td className="px-5 py-3 text-center">
@@ -139,7 +147,7 @@ const AdminTypesDocuments = () => {
                         {item.actif ? "Actif" : "Inactif"}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier ${item.label}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
                         <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer ${item.label}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
@@ -152,6 +160,16 @@ const AdminTypesDocuments = () => {
           </table>
         </div>
       </div>
+
+      {typeDetail && (
+        <FicheAdminModal
+          titre={typeDetail.label}
+          badge={{ libelle: typeDetail.actif ? "Actif" : "Inactif", classe: typeDetail.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight }}
+          lignes={[{ libelle: "Ordre d'affichage", valeur: typeDetail.ordre }]}
+          actions={[{ libelle: "Modifier", Icone: Pencil, primaire: true, onClick: () => { const t = typeDetail; setTypeDetail(null); handleOpenEdit(t); } }]}
+          onClose={() => setTypeDetail(null)}
+        />
+      )}
 
       {showModal && (
         <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>

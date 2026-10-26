@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, X, HelpCircle } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -28,6 +29,7 @@ const AdminFaq = () => {
   const [filtreCategorie, setFiltreCategorie] = useState("TOUTES");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [questionDetail, setQuestionDetail] = useState(null); // question dont on affiche la fiche (clic sur la ligne)
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(ITEM_VIDE);
 
@@ -165,7 +167,13 @@ const AdminFaq = () => {
                 <tr><td colSpan="5"><AdminVide icon={HelpCircle} titre="Aucune question configurée." /></td></tr>
               ) : (
                 itemsAffiches.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
+                  <tr
+                    key={item.id}
+                    className={`${tw.rowHover} cursor-pointer`}
+                    tabIndex={0}
+                    onClick={() => setQuestionDetail(item)}
+                    onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setQuestionDetail(item)}
+                  >
                     <td className="px-5 py-3">
                       <span className={`px-2.5 py-1 ${infoCategorie(item.categorie).couleur} text-xs font-medium rounded-full whitespace-nowrap`}>
                         {infoCategorie(item.categorie).label}
@@ -181,7 +189,7 @@ const AdminFaq = () => {
                         {item.actif ? "Actif" : "Inactif"}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier la question ${item.question}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
                         <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer la question ${item.question}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
@@ -194,6 +202,20 @@ const AdminFaq = () => {
           </table>
         </div>
       </div>
+
+      {questionDetail && (
+        <FicheAdminModal
+          titre={questionDetail.question}
+          badge={{ libelle: questionDetail.actif ? "Actif" : "Inactif", classe: questionDetail.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight }}
+          lignes={[
+            { libelle: "Page où elle s'affiche", valeur: infoCategorie(questionDetail.categorie).label },
+            { libelle: "Réponse", valeur: questionDetail.reponse },
+            { libelle: "Ordre d'affichage", valeur: questionDetail.ordre },
+          ]}
+          actions={[{ libelle: "Modifier", Icone: Pencil, primaire: true, onClick: () => { const q = questionDetail; setQuestionDetail(null); handleOpenEdit(q); } }]}
+          onClose={() => setQuestionDetail(null)}
+        />
+      )}
 
       {showModal && (
         <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>

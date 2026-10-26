@@ -17,6 +17,7 @@ from rest_framework.response import Response
 import uuid
 
 from ..models import Metier, SpecialiteFormation, TypeDiplome, RelationMetier, RelationSpecialite, FormationCandidat
+from ..demandes_ajout.service import ids_entrees_issues_de_demandes
 from ..referentiel_utils import normaliser_recherche
 from ..serializers.referentiel_admin import (
     AdminMetierSerializer, AdminSpecialiteFormationSerializer, AdminTypeDiplomeSerializer,
@@ -25,7 +26,10 @@ from ..serializers.referentiel_admin import (
 )
 
 
-def _paginer(queryset, serializer_class, request, champ_recherche='libelle'):
+def _paginer(queryset, serializer_class, request, champ_recherche='libelle', type_demande=None):
+    ids_demandes = ids_entrees_issues_de_demandes(type_demande) if type_demande else set()
+    if request.query_params.get('origine') == 'demande':
+        queryset = queryset.filter(pk__in=ids_demandes)
     search = request.query_params.get('search', '')
     if search:
         # `cle_recherche` est déjà normalisé côté import (accents retirés) — la requête
@@ -41,9 +45,10 @@ def _paginer(queryset, serializer_class, request, champ_recherche='libelle'):
     paginator = Paginator(queryset, 30)
     page_obj = paginator.get_page(page)
     return Response({
-        'results': serializer_class(page_obj.object_list, many=True).data,
+        'results': serializer_class(page_obj.object_list, many=True, context={'ids_demandes': ids_demandes}).data,
         'count': paginator.count,
         'total_pages': paginator.num_pages,
+        'nb_issues_de_demandes': len(ids_demandes),
     })
 
 
@@ -54,7 +59,7 @@ class AdminReferentielMetiersAPIView(APIView):
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
         metiers = Metier.objects.select_related('groupe_principal', 'metier_canonique').order_by('libelle')
-        return _paginer(metiers, AdminMetierSerializer, request, champ_recherche='cle_recherche')
+        return _paginer(metiers, AdminMetierSerializer, request, champ_recherche='cle_recherche', type_demande='METIER')
 
     def patch(self, request, pk):
         if request.user.role != 'ADMIN':
@@ -77,7 +82,7 @@ class AdminReferentielSpecialitesAPIView(APIView):
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
         specialites = SpecialiteFormation.objects.select_related('domaine', 'filiere').order_by('libelle')
-        return _paginer(specialites, AdminSpecialiteFormationSerializer, request, champ_recherche='cle_recherche')
+        return _paginer(specialites, AdminSpecialiteFormationSerializer, request, champ_recherche='cle_recherche', type_demande='SPECIALITE')
 
     def patch(self, request, pk):
         if request.user.role != 'ADMIN':
@@ -100,7 +105,7 @@ class AdminReferentielDiplomesAPIView(APIView):
         if request.user.role != 'ADMIN':
             return Response({'error': 'Accès refusé.'}, status=403)
         diplomes = TypeDiplome.objects.order_by('systeme', 'libelle')
-        return _paginer(diplomes, AdminTypeDiplomeSerializer, request)
+        return _paginer(diplomes, AdminTypeDiplomeSerializer, request, type_demande='DIPLOME')
 
     def patch(self, request, pk):
         if request.user.role != 'ADMIN':

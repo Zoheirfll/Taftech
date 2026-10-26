@@ -41,6 +41,8 @@ const RecruteurLayout = () => {
 
   useEffect(() => {
     const fetchMessages = async () => {
+      // L'Invité n'a pas accès aux candidatures spontanées (403 côté serveur) : pas d'appel.
+      if (!authService.peutFaire("UTILISATEUR")) return;
       try {
         const spontanees = await jobsService.getCandidaturesSpontanees();
         setMessagesNonLus(spontanees.filter((c) => !c.lue).length);
@@ -116,10 +118,10 @@ const RecruteurLayout = () => {
             name: "Candidatures spontanées",
             path: "/candidatures-spontanees",
             icon: Inbox,
-            minRole: "INVITE",
+            minRole: "UTILISATEUR",
             badge: messagesNonLus > 0 ? messagesNonLus : null,
           },
-          { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "INVITE", palierRequis: "acces_ia_recommandes" },
+          { name: "Candidats recommandés", path: "/candidats-recommandes", icon: Award, minRole: "UTILISATEUR", palierRequis: "acces_ia_recommandes" },
           { name: "Entretiens", path: "/entretiens", icon: CalendarClock, minRole: "INVITE" },
           { name: "Évaluations", path: "/evaluations", icon: ClipboardCheck, minRole: "INVITE" },
           { name: "Recrutements", path: "/recrutements", icon: Trophy, minRole: "INVITE" },
@@ -128,9 +130,9 @@ const RecruteurLayout = () => {
       {
         label: "Analyse",
         items: [
-          { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "INVITE" },
+          { name: "Statistiques", path: "/statistiques", icon: BarChart3, minRole: "UTILISATEUR" },
           { name: "Comprendre le matching", path: "/comment-fonctionne-matching", icon: HelpCircle, minRole: "INVITE" },
-          { name: "Comprendre les crédits", path: "/comment-fonctionnent-credits", icon: HelpCircle, minRole: "INVITE" },
+          { name: "Comprendre les crédits", path: "/comment-fonctionnent-credits", icon: HelpCircle, minRole: "UTILISATEUR" },
         ],
       },
       {
@@ -177,19 +179,21 @@ const RecruteurLayout = () => {
             </span>
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => navigate("/candidatures-spontanees")}
-          title="Candidatures spontanées"
-          className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
-        >
-          <MessageSquare size={16} className="text-slate-600" />
-          {messagesNonLus > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
-              {messagesNonLus}
-            </span>
-          )}
-        </button>
+        {authService.peutFaire("UTILISATEUR") && (
+          <button
+            type="button"
+            onClick={() => navigate("/candidatures-spontanees")}
+            title="Candidatures spontanées"
+            className="relative p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
+          >
+            <MessageSquare size={16} className="text-slate-600" />
+            {messagesNonLus > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
+                {messagesNonLus}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-5">

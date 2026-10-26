@@ -146,7 +146,7 @@ const MonEquipe = () => {
 
   const handleRetirer = (membre) => {
     confirmToast(
-      `Retirer ${membre.email} ? Il/elle n'aura plus accès à votre espace recruteur.`,
+      `Retirer ${membre.email} ? Il/elle n'aura plus accès à votre espace recruteur. Si son compte a été créé par votre invitation, il sera supprimé définitivement.`,
       async () => {
         setSaving(true);
         try {

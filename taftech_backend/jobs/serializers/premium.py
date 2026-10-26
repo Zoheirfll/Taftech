@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import FaqItem, CompetenceReferentiel
+from .referentiel_admin import IssueDeDemandeMixin
 
 
 class FaqItemSerializer(serializers.ModelSerializer):
@@ -14,7 +15,7 @@ class CompetenceReferentielSerializer(serializers.ModelSerializer):
         fields = ['id', 'label', 'synonymes', 'actif']
 
 
-class CompetenceReferentielAdminSerializer(serializers.ModelSerializer):
+class CompetenceReferentielAdminSerializer(IssueDeDemandeMixin, serializers.ModelSerializer):
     """Vue admin du référentiel de compétences (point 11) : statut du cycle de vie, origine,
     décision et usage réel. `statut`/`actif` sont en lecture seule ici : un changement de statut
     ne passe que par l'endpoint dédié (transitions contrôlées + journal d'audit), jamais par une
@@ -28,7 +29,7 @@ class CompetenceReferentielAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetenceReferentiel
         fields = ['id', 'label', 'synonymes', 'actif', 'statut', 'origine', 'date_statut',
-                  'traite_par_nom', 'nb_candidats', 'nb_offres', 'nb_metiers', 'transitions_possibles']
+                  'traite_par_nom', 'nb_candidats', 'nb_offres', 'nb_metiers', 'transitions_possibles', 'issue_de_demande']
         read_only_fields = ['actif', 'statut', 'origine', 'date_statut']
 
     def get_nb_candidats(self, obj):

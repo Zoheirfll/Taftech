@@ -5,8 +5,10 @@ import { reportError } from "../../utils/errorReporter";
 import { notifier } from "../../utils/notifier";
 import { Plus, Pencil, Trash2, X, Search, Tags, Check, Ban, PowerOff, RotateCcw, Link2 } from "lucide-react";
 import MetiersCompetenceModal from "./MetiersCompetenceModal";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import { adminService } from "../../Services/adminService";
 import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
+import BadgeIssueDeDemande from "./demandes/BadgeIssueDeDemande";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -60,6 +62,8 @@ const AdminCompetences = () => {
   const [search, setSearch] = useState("");
   const [statutFiltre, setStatutFiltre] = useState("");
   const [compteurs, setCompteurs] = useState({});
+  const [origine, setOrigine] = useState(""); // "demande" = seulement les compétences issues d'une demande acceptée
+  const [nbIssuesDeDemandes, setNbIssuesDeDemandes] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -69,15 +73,17 @@ const AdminCompetences = () => {
   const [onglet, setOnglet] = useState("liste");
   const [nbDemandes, setNbDemandes] = useState(0);
   const [competenceMetiers, setCompetenceMetiers] = useState(null); // compétence dont on gère les métiers
+  const [competenceDetail, setCompetenceDetail] = useState(null); // compétence dont on affiche la fiche (clic sur la ligne)
   // Minuteur de recherche local au composant (avant : variable globale window._competenceSearchTimer).
   const searchTimer = useRef(null);
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
-  const fetchItems = async (s = "", p = 1, statut = statutFiltre) => {
+  const fetchItems = async (s = "", p = 1, statut = statutFiltre, org = origine) => {
     setLoading(true);
     try {
-      const data = await jobsService.getAdminCompetences(s, p, statut);
+      const data = await jobsService.getAdminCompetences(s, p, statut, org);
+      setNbIssuesDeDemandes(data.nb_issues_de_demandes || 0);
       setItems(data.results || []);
       setTotalPages(data.total_pages || 1);
       setTotalCount(data.count || 0);
@@ -89,6 +95,9 @@ const AdminCompetences = () => {
       setLoading(false);
     }
   };
+
+  // Total de la liste officielle (actives + masquées), indépendant du filtre en cours.
+  const totalListe = Object.values(compteurs).reduce((somme, n) => somme + n, 0);
 
   const chargerNbDemandes = () =>
     adminService
@@ -113,6 +122,13 @@ const AdminCompetences = () => {
   const handlePage = (p) => {
     setPage(p);
     fetchItems(search, p);
+  };
+
+  const basculerOrigine = () => {
+    const suivante = origine === "demande" ? "" : "demande";
+    setOrigine(suivante);
+    setPage(1);
+    fetchItems(search, 1, statutFiltre, suivante);
   };
 
   const choisirOnglet = (code) => {
@@ -230,6 +246,7 @@ const AdminCompetences = () => {
             }`}
           >
             {o.libelle}
+            {o.cle === "liste" && totalListe > 0 && <span className="ml-1.5 opacity-70 font-medium">({totalListe})</span>}
             {o.cle === "demandes" && nbDemandes > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
                 {nbDemandes}
@@ -246,7 +263,7 @@ const AdminCompetences = () => {
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par statut">
         {ONGLETS.map((onglet) => {
           const actif = statutFiltre === onglet.code;
-          const nombre = onglet.code ? compteurs[onglet.code] : undefined;
+          const nombre = onglet.code ? compteurs[onglet.code] : totalListe;
           return (
             <button
               key={onglet.code || "toutes"}
@@ -260,6 +277,14 @@ const AdminCompetences = () => {
             </button>
           );
         })}
+        <button
+          role="tab"
+          aria-selected={origine === "demande"}
+          onClick={basculerOrigine}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${tw.focusRing} ${origine === "demande" ? `${tw.bgPrimarySolidHover} text-white` : `${tw.surfaceSubtle} ${tw.textMuted} ${tw.hoverSurfaceSubtleStrong}`}`}
+        >
+          Issues d'une demande <span className="ml-1.5 opacity-80">({nbIssuesDeDemandes})</span>
+        </button>
       </div>
 
       <div className="relative">
@@ -301,9 +326,17 @@ const AdminCompetences = () => {
                   const statut = statutDe(item);
                   const transitions = item.transitions_possibles || TRANSITIONS[statut] || [];
                   return (
-                    <tr key={item.id} className={tw.rowHover}>
+                    <tr
+                      key={item.id}
+                      className={`${tw.rowHover} cursor-pointer`}
+                      tabIndex={0}
+                      onClick={() => setCompetenceDetail(item)}
+                      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setCompetenceDetail(item)}
+                    >
                       <td className="px-5 py-3">
-                        <p className={`text-sm font-medium ${tw.textStrong}`}>{item.label}</p>
+                        <p className={`text-sm font-medium ${tw.textStrong}`}>
+                          {item.label} {item.issue_de_demande && <BadgeIssueDeDemande />}
+                        </p>
                         {item.origine && item.origine !== "ADMIN" && (
                           <p className={`text-[11px] ${tw.textMuted}`}>{ORIGINES[item.origine] || item.origine}</p>
                         )}
@@ -330,7 +363,7 @@ const AdminCompetences = () => {
                           {STATUTS[statut].libelle}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           {transitions.map((cible) => {
                             const { libelle, Icone, classe } = actionVers(statut, cible);
@@ -362,6 +395,24 @@ const AdminCompetences = () => {
       </div>
 
       </>
+      )}
+
+      {competenceDetail && (
+        <FicheAdminModal
+          titre={competenceDetail.label}
+          badge={STATUTS[statutDe(competenceDetail)]}
+          lignes={[
+            { libelle: "Origine", valeur: ORIGINES[competenceDetail.origine] || competenceDetail.origine },
+            { libelle: "Synonymes / traductions", valeur: competenceDetail.synonymes },
+            { libelle: "Usage", valeur: competenceDetail.nb_candidats !== undefined ? `${competenceDetail.nb_candidats} candidat(s) · ${competenceDetail.nb_offres} offre(s)` : null },
+            { libelle: "Métiers auxquels elle est suggérée", valeur: competenceDetail.nb_metiers === 0 ? "Aucun métier" : competenceDetail.nb_metiers !== undefined ? `${competenceDetail.nb_metiers} métier(s)` : null },
+          ]}
+          actions={[
+            { libelle: "Métiers", Icone: Link2, onClick: () => { const c = competenceDetail; setCompetenceDetail(null); setCompetenceMetiers(c); } },
+            { libelle: "Modifier", Icone: Pencil, primaire: true, onClick: () => { const c = competenceDetail; setCompetenceDetail(null); handleOpenEdit(c); } },
+          ]}
+          onClose={() => setCompetenceDetail(null)}
+        />
       )}
 
       {competenceMetiers && (

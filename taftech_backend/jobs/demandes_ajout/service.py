@@ -19,6 +19,15 @@ from .regles import (
 logger = logging.getLogger(__name__)
 
 
+def ids_entrees_issues_de_demandes(type_demande):
+    """Identifiants des entrées du référentiel créées par l'acceptation d'une demande (pas les rattachements,
+    qui n'ajoutent qu'un synonyme). Sert au badge « Issue d'une demande » et à son filtre dans les listes admin."""
+    return set(
+        DemandeAjout.objects.filter(type=type_demande, statut=DemandeAjout.STATUT_ACCEPTEE, entree_id__isnull=False)
+        .values_list('entree_id', flat=True)
+    )
+
+
 def _origine(utilisateur):
     if getattr(utilisateur, 'role', None) == 'CANDIDAT':
         return DemandeAjout.ORIGINE_CANDIDAT

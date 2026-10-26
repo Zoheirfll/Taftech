@@ -341,11 +341,20 @@ const AdminEntreprises = () => {
                 </p>
                 <p className={`text-xs font-medium ${tw.textMuted} mt-2`}>{selectedEntreprise.secteur_activite_libelle || selectedEntreprise.secteur_activite}</p>
                 {selectedEntreprise.taille_entreprise && (
-                  <p className={`text-xs ${tw.textMuted700} mt-1`}>Taille : {selectedEntreprise.taille_entreprise}</p>
+                  <p className={`text-xs ${tw.textMuted700} mt-1`}>Taille : {selectedEntreprise.taille_libelle || selectedEntreprise.taille_entreprise}</p>
                 )}
                 {selectedEntreprise.annee_creation && (
                   <p className={`text-xs ${tw.textMuted700} mt-1`}>Créée en {selectedEntreprise.annee_creation}</p>
                 )}
+                <p className={`text-xs ${tw.textMuted700} mt-1`}>
+                  Formule : {selectedEntreprise.palier_actif || "Gratuit"}
+                  {selectedEntreprise.palier_actif && selectedEntreprise.abonnement_expire_at
+                    ? ` (expire le ${new Date(selectedEntreprise.abonnement_expire_at).toLocaleDateString("fr-FR")})`
+                    : ""}
+                </p>
+                <p className={`text-xs ${tw.textMuted700} mt-1`}>
+                  Mise en avant sur l'accueil : {selectedEntreprise.mise_en_avant_accueil ? "oui" : "non"}
+                </p>
               </div>
               <div className={`${tw.surfaceMuted} p-4 rounded-xl border ${tw.borderSubtle}`}>
                 <p className={`text-[10px] font-semibold ${tw.textMuted} uppercase tracking-wider mb-2`}>Contact recruteur</p>

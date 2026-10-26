@@ -42,8 +42,8 @@ const MOBILE_MENU_GROUPS = [
     label: "Candidats",
     items: [
       { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR", palierRequis: "acces_cvtheque" },
-      { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "INVITE" },
-      { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "INVITE", palierRequis: "acces_ia_recommandes" },
+      { to: "/candidatures-spontanees", label: "Candidatures spontanées", icon: Inbox, minRole: "UTILISATEUR" },
+      { to: "/candidats-recommandes", label: "Candidats recommandés", icon: Award, minRole: "UTILISATEUR", palierRequis: "acces_ia_recommandes" },
       { to: "/entretiens", label: "Entretiens", icon: CalendarClock, minRole: "INVITE" },
       { to: "/evaluations", label: "Évaluations", icon: ClipboardCheck, minRole: "INVITE" },
       { to: "/recrutements", label: "Recrutements", icon: Trophy, minRole: "INVITE" },
@@ -51,7 +51,7 @@ const MOBILE_MENU_GROUPS = [
   },
   {
     label: "Analyse",
-    items: [{ to: "/statistiques", label: "Statistiques", icon: BarChart3, minRole: "INVITE" }],
+    items: [{ to: "/statistiques", label: "Statistiques", icon: BarChart3, minRole: "UTILISATEUR" }],
   },
   {
     label: "Compte",

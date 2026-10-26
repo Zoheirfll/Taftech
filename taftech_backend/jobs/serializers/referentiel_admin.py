@@ -43,13 +43,22 @@ class AdminFormationAVerifierSerializer(serializers.ModelSerializer):
         return data
 
 
-class AdminMetierSerializer(serializers.ModelSerializer):
+class IssueDeDemandeMixin(serializers.Serializer):
+    """`issue_de_demande` : l'entrée a été créée en acceptant une demande d'ajout. L'ensemble des identifiants
+    arrive par le contexte (`ids_demandes`, une requête par page) ; absent, le champ vaut False."""
+    issue_de_demande = serializers.SerializerMethodField()
+
+    def get_issue_de_demande(self, obj):
+        return obj.pk in self.context.get('ids_demandes', ())
+
+
+class AdminMetierSerializer(IssueDeDemandeMixin, serializers.ModelSerializer):
     groupe_libelle = serializers.CharField(source='groupe_principal.libelle', read_only=True, default=None)
     metier_canonique_libelle = serializers.CharField(source='metier_canonique.libelle', read_only=True, default=None)
 
     class Meta:
         model = Metier
-        fields = ('id', 'code', 'libelle', 'granularite', 'groupe_libelle', 'metier_canonique_libelle', 'selectionnable', 'statut')
+        fields = ('id', 'code', 'libelle', 'granularite', 'groupe_libelle', 'metier_canonique_libelle', 'selectionnable', 'statut', 'issue_de_demande')
         read_only_fields = ('code', 'granularite')
 
 
@@ -63,24 +72,24 @@ def _domaine_avec_famille(domaine):
     return f"{domaine.libelle} — {FAMILLES_FORMATION[famille_formation(domaine.systeme)]}"
 
 
-class AdminSpecialiteFormationSerializer(serializers.ModelSerializer):
+class AdminSpecialiteFormationSerializer(IssueDeDemandeMixin, serializers.ModelSerializer):
     domaine_libelle = serializers.CharField(source='domaine.libelle', read_only=True)
     domaine_complet = serializers.SerializerMethodField()
     filiere_libelle = serializers.CharField(source='filiere.libelle', read_only=True, default=None)
 
     class Meta:
         model = SpecialiteFormation
-        fields = ('id', 'code', 'libelle', 'domaine_libelle', 'domaine_complet', 'filiere_libelle', 'nature', 'selectionnable')
+        fields = ('id', 'code', 'libelle', 'domaine_libelle', 'domaine_complet', 'filiere_libelle', 'nature', 'selectionnable', 'issue_de_demande')
         read_only_fields = ('code', 'nature')
 
     def get_domaine_complet(self, obj):
         return _domaine_avec_famille(obj.domaine)
 
 
-class AdminTypeDiplomeSerializer(serializers.ModelSerializer):
+class AdminTypeDiplomeSerializer(IssueDeDemandeMixin, serializers.ModelSerializer):
     class Meta:
         model = TypeDiplome
-        fields = ('id', 'code', 'libelle', 'systeme', 'niveau_fp', 'selectionnable', 'diplome_formel')
+        fields = ('id', 'code', 'libelle', 'systeme', 'niveau_fp', 'selectionnable', 'diplome_formel', 'issue_de_demande')
         read_only_fields = ('code', 'systeme', 'niveau_fp')
 
 

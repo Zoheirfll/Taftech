@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, X, Coins } from "lucide-react";
 import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -22,6 +23,7 @@ const AdminCreditPacks = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(PACK_VIDE);
+  const [packDetail, setPackDetail] = useState(null); // pack dont on affiche la fiche (clic sur la ligne)
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
@@ -142,7 +144,13 @@ const AdminCreditPacks = () => {
                 <tr><td colSpan="6"><AdminVide icon={Coins} titre="Aucun pack configuré." texte="Sans pack actif, un recruteur au quota épuisé ne peut plus débloquer de profil avant le mois suivant." /></td></tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className={tw.rowHover}>
+                  <tr
+                    key={item.id}
+                    className={`${tw.rowHover} cursor-pointer`}
+                    tabIndex={0}
+                    onClick={() => setPackDetail(item)}
+                    onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setPackDetail(item)}
+                  >
                     <td className="px-5 py-3"><p className={`text-sm font-medium ${tw.textStrong}`}>{item.nom}</p></td>
                     <td className="px-5 py-3 text-sm tabular-nums">{item.credits}</td>
                     <td className={`px-5 py-3 text-sm font-semibold ${tw.textStrong} tabular-nums`}>{Number(item.prix_da).toLocaleString("fr-FR")} DA</td>
@@ -154,7 +162,7 @@ const AdminCreditPacks = () => {
                         {item.actif ? "Actif" : "Inactif"}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => handleOpenEdit(item)} aria-label={`Modifier le pack ${item.nom}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
                         <button onClick={() => handleDelete(item.id)} aria-label={`Supprimer le pack ${item.nom}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
@@ -167,6 +175,21 @@ const AdminCreditPacks = () => {
           </table>
         </div>
       </div>
+
+      {packDetail && (
+        <FicheAdminModal
+          titre={packDetail.nom}
+          badge={{ libelle: packDetail.actif ? "Actif" : "Inactif", classe: packDetail.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight }}
+          lignes={[
+            { libelle: "Crédits", valeur: packDetail.credits },
+            { libelle: "Prix", valeur: `${Number(packDetail.prix_da).toLocaleString("fr-FR")} DA` },
+            { libelle: "Prix par crédit", valeur: prixParCredit(packDetail.prix_da, packDetail.credits) != null ? `${prixParCredit(packDetail.prix_da, packDetail.credits).toLocaleString("fr-FR")} DA` : null },
+            { libelle: "Ordre d'affichage", valeur: packDetail.ordre },
+          ]}
+          actions={[{ libelle: "Modifier", Icone: Pencil, primaire: true, onClick: () => { const p = packDetail; setPackDetail(null); handleOpenEdit(p); } }]}
+          onClose={() => setPackDetail(null)}
+        />
+      )}
 
       {showModal && (
         <div className={`${tw.modalOverlay} p-4`} onClick={(e) => e.target === e.currentTarget && fermerModal()}>

@@ -147,7 +147,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
     render(<MemoryRouter><AdminCompetences /></MemoryRouter>);
     await waitFor(() => screen.getByText("Gestion de projet"));
     fireEvent.click(screen.getByRole("tab", { name: /^Masquées/ }));
-    await waitFor(() => expect(jobsService.getAdminCompetences).toHaveBeenLastCalledWith("", 1, "DESACTIVEE"));
+    await waitFor(() => expect(jobsService.getAdminCompetences).toHaveBeenLastCalledWith("", 1, "DESACTIVEE", ""));
   });
 
   it("🟢 HP9 : L'onglet Demandes charge les demandes de compétences, avec leur badge ; plus de bouton « Détecter »", async () => {
@@ -178,7 +178,7 @@ describe("🏷️ UI & Logique - Composant <AdminCompetences />", () => {
 
     await waitFor(
       () => {
-        expect(jobsService.getAdminCompetences).toHaveBeenCalledWith("gestion", 1, "");
+        expect(jobsService.getAdminCompetences).toHaveBeenCalledWith("gestion", 1, "", "");
       },
       { timeout: 1000 },
     );

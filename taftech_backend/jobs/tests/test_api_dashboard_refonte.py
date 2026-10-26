@@ -76,6 +76,38 @@ class ActiviteRecenteAPITest(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertIn("Poste Test", response.data[0]["phrase"])
 
+    def test_visibilite_selon_le_role(self):
+        """PROPRIETAIRE/ADMIN voient toute l'activité ; UTILISATEUR/INVITE seulement la leur."""
+        from jobs.models import MembreEquipe
+        proprio, entreprise = _make_entreprise()
+        membres = {}
+        for role in ("ADMIN", "UTILISATEUR", "INVITE"):
+            u = User.objects.create_user(
+                username=f"{role}@test.dz", email=f"{role}@test.dz", password="pwd", role="RECRUTEUR",
+            )
+            MembreEquipe.objects.create(entreprise=entreprise, user=u, role=role)
+            membres[role] = u
+        EquipeActionLog.objects.create(entreprise=entreprise, membre=proprio, action="CREER_OFFRE", detail="Offre proprio")
+        for role, u in membres.items():
+            EquipeActionLog.objects.create(entreprise=entreprise, membre=u, action="CREER_OFFRE", detail=f"Offre {role}")
+        EquipeActionLog.objects.create(entreprise=entreprise, membre=proprio, action="CONNEXION", detail="x")
+
+        def phrases_vues_par(user):
+            self.client.force_authenticate(user=user)
+            response = self.client.get(reverse("dashboard-activite-recente"))
+            self.assertEqual(response.status_code, 200)
+            return " | ".join(r["phrase"] for r in response.data), len(response.data)
+
+        for user in (proprio, membres["ADMIN"]):
+            texte, nombre = phrases_vues_par(user)
+            self.assertEqual(nombre, 4)  # 4 actions métier, CONNEXION exclue
+            self.assertIn("Offre proprio", texte)
+        for role in ("UTILISATEUR", "INVITE"):
+            texte, nombre = phrases_vues_par(membres[role])
+            self.assertEqual(nombre, 1)
+            self.assertIn(f"Offre {role}", texte)
+            self.assertNotIn("Offre proprio", texte)
+
 
 class RecherchesSauvegardeesAPITest(APITestCase):
     def setUp(self):

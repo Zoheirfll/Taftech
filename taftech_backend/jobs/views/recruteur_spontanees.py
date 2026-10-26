@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from ..models import ProfilEntreprise, CandidatureSpontanee
-from .equipe import get_entreprise_for_user
+from .equipe import get_entreprise_for_user, get_membre_role
 from ..throttles import WriteActionThrottle, EmailRateThrottle
 from ..serializers import CandidatureSpontaneeSerializer
 
@@ -45,6 +45,19 @@ class EnvoyerCandidatureSpontaneeAPIView(APIView):
         return Response(serializer.errors, status=400)
 
 
+# Les candidatures spontanées (CV hors offre) ne sont pas visibles par l'Invité (observateur).
+_ROLES_SPONTANEES = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
+
+
+def _refus_si_invite(user, entreprise):
+    if get_membre_role(user, entreprise) not in _ROLES_SPONTANEES:
+        return Response(
+            {'error': 'Action non autorisée pour votre rôle.', 'code': 'ROLE_INSUFFISANT'},
+            status=403,
+        )
+    return None
+
+
 class ListeCandidaturesSpontaneesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -52,6 +65,9 @@ class ListeCandidaturesSpontaneesAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({'error': 'Accès refusé.'}, status=403)
+        refus_role = _refus_si_invite(request.user, entreprise)
+        if refus_role:
+            return refus_role
         from ..paliers_utils import reponse_entreprise_non_validee
         refus = reponse_entreprise_non_validee(entreprise)
         if refus:
@@ -68,6 +84,9 @@ class MarquerSpontaneeLueAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({'error': 'Accès refusé.'}, status=403)
+        refus_role = _refus_si_invite(request.user, entreprise)
+        if refus_role:
+            return refus_role
         try:
             candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise=entreprise)
             candidature.lue = True
@@ -84,6 +103,9 @@ class SupprimerSpontaneeAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({'error': 'Accès refusé.'}, status=403)
+        refus_role = _refus_si_invite(request.user, entreprise)
+        if refus_role:
+            return refus_role
         try:
             candidature = CandidatureSpontanee.objects.get(pk=pk, entreprise=entreprise)
             candidature.delete()

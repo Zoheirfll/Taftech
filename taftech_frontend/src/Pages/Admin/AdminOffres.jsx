@@ -19,7 +19,8 @@ import { phraseFormation } from "../../utils/phraseFormation";
 import { phraseExperience } from "../../utils/phraseExperience";
 import { phrasesCompetences } from "../../utils/phraseCompetences";
 import { regrouperDiplomes } from "../../utils/groupesDiplomes";
-import { nomWilaya } from "../../utils/wilaya";
+import { lieuxDeLOffre, lieuTexte, contratsTexte } from "../../utils/lieuxContrats";
+import { EXPERIENCE_LABELS } from "../../utils/niveauxPoste";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import SortableTh from "../../Components/SortableTh";
 import AdminPageHeader from "../../Components/AdminPageHeader";
@@ -371,9 +372,9 @@ const AdminOffres = () => {
                         {offre.entreprise?.nom_entreprise || "Inconnue"}
                       </p>
                     )}
-                    {(offre.wilaya || offre.commune) && (
+                    {lieuxDeLOffre(offre).length > 0 && (
                       <p className={`text-xs ${tw.textMuted} mt-0.5`}>
-                        📍 {nomWilaya(offre.wilaya)}{offre.commune ? ` · ${offre.commune}` : ""}
+                        📍 {lieuxDeLOffre(offre).map(lieuTexte).join(" | ")}
                       </p>
                     )}
                     {offre.motif_rejet && (
@@ -491,21 +492,27 @@ const AdminOffres = () => {
                   <p className={`${tw.textPrimaryOnDark} text-sm mt-0.5`}>{selectedOffre.entreprise?.nom_entreprise}</p>
                 )}
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {selectedOffre.wilaya && (
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
-                      📍 {nomWilaya(selectedOffre.wilaya)}{selectedOffre.commune ? ` · ${selectedOffre.commune}` : ""}
+                  {lieuxDeLOffre(selectedOffre).map((lieu) => (
+                    <span key={lieuTexte(lieu)} className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
+                      📍 {lieuTexte(lieu)}
                     </span>
-                  )}
+                  ))}
                   {selectedOffre.nombre_postes > 1 && (
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       👥 {selectedOffre.nombre_postes} postes
                     </span>
                   )}
-                  {selectedOffre.type_contrat && (
+                  {contratsTexte(selectedOffre) && (
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
-                      💼 {selectedOffre.type_contrat}
+                      💼 {contratsTexte(selectedOffre)}
                     </span>
                   )}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
+                    🗓 Publiée le {new Date(selectedOffre.date_publication).toLocaleDateString("fr-FR")}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
+                    {selectedOffre.est_active ? "👁 Visible sur le site" : "🚫 Masquée du site"}
+                  </span>
                   {selectedOffre.salaire_propose && (
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${tw.badgeOnGradient} text-xs font-medium rounded-full`}>
                       💰 {selectedOffre.salaire_propose}
@@ -523,7 +530,7 @@ const AdminOffres = () => {
                 {selectedOffre.experience_requise && (
                   <div>
                     <p className={`text-xs font-semibold ${tw.textPrimaryOnDark} uppercase tracking-wider`}>Expérience</p>
-                    <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{selectedOffre.experience_requise}</p>
+                    <p className={`text-sm font-semibold ${tw.textOnDark} mt-0.5`}>{EXPERIENCE_LABELS[selectedOffre.experience_requise] || selectedOffre.experience_requise}</p>
                   </div>
                 )}
                 {selectedOffre.diplome && (

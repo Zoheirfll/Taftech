@@ -8,6 +8,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import { mediaUrl } from "../../utils/mediaUrl";
 import ImageCropperModal from "../../Components/ImageCropperModal";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
@@ -35,6 +36,7 @@ const AdminBannieres = () => {
   const [formBanniere, setFormBanniere] = useState(BANNIERE_VIDE);
   const [previewImage, setPreviewImage] = useState(null);
   const [cropperFile, setCropperFile] = useState(null);
+  const [annonceDetail, setAnnonceDetail] = useState(null); // annonce dont on affiche la fiche (clic sur la ligne)
 
   const inputClass = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
@@ -234,7 +236,13 @@ const AdminBannieres = () => {
                   <tr><td colSpan="4"><AdminVide icon={GalleryHorizontal} titre="Aucune annonce configurée." /></td></tr>
                 ) : (
                   annonces.map((a) => (
-                    <tr key={a.id} className={tw.rowHover}>
+                    <tr
+                      key={a.id}
+                      className={`${tw.rowHover} cursor-pointer`}
+                      tabIndex={0}
+                      onClick={() => setAnnonceDetail(a)}
+                      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setAnnonceDetail(a)}
+                    >
                       <td className="px-5 py-3"><p className={`text-sm font-medium ${tw.textStrong} max-w-sm truncate`} title={a.texte}>{a.texte}</p></td>
                       <td className="px-5 py-3">
                         <span className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${TYPES_ANNONCE[a.type_annonce]?.pastille || tw.badgeNeutral}`}>
@@ -246,7 +254,7 @@ const AdminBannieres = () => {
                           {a.actif ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => handleOpenEditAnnonce(a)} aria-label={`Modifier l'annonce ${a.texte}`} title="Modifier" className={`p-2 ${tw.iconButtonHoverPrimary} rounded-lg transition-colors ${tw.focusRing}`}><Pencil size={14} /></button>
                           <button onClick={() => handleDeleteAnnonce(a.id)} aria-label={`Supprimer l'annonce ${a.texte}`} title="Supprimer" className={`p-2 ${tw.textMuted} hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ${tw.focusRing}`}><Trash2 size={14} /></button>
@@ -292,6 +300,21 @@ const AdminBannieres = () => {
             ))
           )}
         </div>
+      )}
+
+      {annonceDetail && (
+        <FicheAdminModal
+          titre="Annonce du site"
+          badge={{ libelle: annonceDetail.actif ? "Active" : "Inactive", classe: annonceDetail.actif ? `${tw.bgSuccessSoft} ${tw.textSuccess}` : tw.badgeErrorLight }}
+          lignes={[
+            { libelle: "Texte", valeur: annonceDetail.texte },
+            { libelle: "Type", valeur: TYPES_ANNONCE[annonceDetail.type_annonce]?.label || annonceDetail.type_annonce },
+            { libelle: "Lien", valeur: annonceDetail.lien_url },
+            { libelle: "Libellé du lien", valeur: annonceDetail.lien_label },
+          ]}
+          actions={[{ libelle: "Modifier", Icone: Pencil, primaire: true, onClick: () => { const a = annonceDetail; setAnnonceDetail(null); handleOpenEditAnnonce(a); } }]}
+          onClose={() => setAnnonceDetail(null)}
+        />
       )}
 
       {showModal && onglet === "annonce" && (

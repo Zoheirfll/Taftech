@@ -27,16 +27,7 @@ import { useErreursChamps } from "../../utils/useErreursChamps";
 import { erreurFichier, FICHIER_CV } from "../../utils/validations";
 import { useModaleNIN, reponseNinRequis } from "../../Components/ModalNIN";
 
-// Niveau de poste : mêmes libellés que le formulaire recruteur (`jobs/constants.py::NIVEAUX_EXPERIENCE`).
-const EXPERIENCE_LABELS = {
-  DEBUTANT: "Débutant / Junior",
-  JEUNE_DIPLOME: "Jeune diplômé",
-  STAGIAIRE: "Stagiaire / Étudiant",
-  CONFIRME: "Confirmé / Expérimenté",
-  MANAGER: "Manager / Responsable de département",
-  RESPONSABLE_EQUIPE: "Responsable d'équipe",
-  CADRE_DIRIGEANT: "Cadre dirigeant",
-};
+import { EXPERIENCE_LABELS } from "../../utils/niveauxPoste";
 
 const formatSalaire = (val) => {
   if (!val) return null;

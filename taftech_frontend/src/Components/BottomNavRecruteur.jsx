@@ -10,7 +10,7 @@ const ITEMS = [
   { to: "/dashboard", label: "Tableau", icon: LayoutDashboard, minRole: "INVITE" },
   { to: "/creer-offre", label: "Publier", icon: Briefcase, minRole: "UTILISATEUR", palierRequis: "peut_publier_offre" },
   { to: "/cvtheque", label: "CVthèque", icon: Search, minRole: "UTILISATEUR", palierRequis: "acces_cvtheque" },
-  { to: "/candidatures-spontanees", label: "Spontanées", icon: Inbox, minRole: "INVITE" },
+  { to: "/candidatures-spontanees", label: "Spontanées", icon: Inbox, minRole: "UTILISATEUR" },
   { to: "/parametres", label: "Paramètres", icon: Settings, minRole: "INVITE" },
 ];
 

@@ -120,6 +120,10 @@ class CompetencesAdminAPIView(APIView):
             CompetenceReferentiel.objects.filter(statut__in=CompetenceReferentiel.STATUTS_RECONNUS)
             .select_related('traite_par').order_by('label')
         )
+        from ..demandes_ajout.service import ids_entrees_issues_de_demandes
+        ids_demandes = ids_entrees_issues_de_demandes('COMPETENCE')
+        if request.query_params.get('origine') == 'demande':
+            qs = qs.filter(pk__in=ids_demandes)
         if search:
             qs = qs.filter(label__icontains=search)
         if statut in CompetenceReferentiel.STATUTS_RECONNUS:
@@ -131,10 +135,11 @@ class CompetencesAdminAPIView(APIView):
         for ligne in CompetenceReferentiel.objects.filter(statut__in=CompetenceReferentiel.STATUTS_RECONNUS).values('statut').annotate(n=Count('id')):
             compteurs[ligne['statut']] = ligne['n']
         return Response({
-            'results': CompetenceReferentielAdminSerializer(page_obj.object_list, many=True).data,
+            'results': CompetenceReferentielAdminSerializer(page_obj.object_list, many=True, context={'ids_demandes': ids_demandes}).data,
             'count': paginator.count,
             'total_pages': paginator.num_pages,
             'compteurs': compteurs,
+            'nb_issues_de_demandes': len(ids_demandes),
         })
 
     def post(self, request):

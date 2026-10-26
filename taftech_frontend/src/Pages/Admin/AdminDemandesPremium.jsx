@@ -8,6 +8,7 @@ import { TooltipIcon } from "../../Components/Tooltip";
 import { confirmToast } from "../../utils/confirmToast";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import { AdminVide } from "../../Components/AdminEtat";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 
@@ -23,6 +24,7 @@ const AdminDemandesPremium = () => {
   const [filtre, setFiltre] = useState("attente");
   // Demande en cours d'activation — bloque le double clic, qui prolongeait l'abonnement deux fois.
   const [activationId, setActivationId] = useState(null);
+  const [demandeDetail, setDemandeDetail] = useState(null); // demande dont on affiche la fiche (lecture seule : l'activation reste dans la ligne)
 
   const charger = useCallback(async () => {
     setLoading(true);
@@ -151,13 +153,19 @@ const AdminDemandesPremium = () => {
               demandesAffichees.map((d) => {
                 const durees = DUREES_STANDARD.includes(d.nb_mois) ? DUREES_STANDARD : [...DUREES_STANDARD, d.nb_mois].sort((a, b) => a - b);
                 return (
-                <tr key={d.id} className={tw.rowHover}>
+                <tr
+                  key={d.id}
+                  className={`${tw.rowHover} cursor-pointer`}
+                  tabIndex={0}
+                  onClick={() => setDemandeDetail(d)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setDemandeDetail(d)}
+                >
                   <td className="px-5 py-4">
                     <p className={`text-sm font-semibold ${tw.textStrong}`}>{d.nom_entreprise}</p>
                     <p className={`text-xs ${tw.textMuted} mt-0.5`}>Demandée le {d.date_demande}</p>
                   </td>
                   <td className="px-5 py-4">
-                    <a href={`mailto:${d.email}`} className={`text-sm font-medium ${tw.textSlate800} hover:underline`}>{d.email}</a>
+                    <a href={`mailto:${d.email}`} onClick={(e) => e.stopPropagation()} className={`text-sm font-medium ${tw.textSlate800} hover:underline`}>{d.email}</a>
                     {d.telephone && <p className={`text-xs ${tw.textPrimary} mt-0.5`}>{d.telephone}</p>}
                   </td>
                   <td className="px-5 py-4">
@@ -175,7 +183,7 @@ const AdminDemandesPremium = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-4 text-right">
+                  <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     {d.est_traitee ? (
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tw.textSuccess}`}>
                         <Check size={14} /> Traitée le {d.date_traitement}
@@ -224,6 +232,25 @@ const AdminDemandesPremium = () => {
         </table>
         </div>
       </div>
+
+      {demandeDetail && (
+        <FicheAdminModal
+          titre={demandeDetail.nom_entreprise}
+          sousTitre={`Demandée le ${demandeDetail.date_demande}`}
+          badge={demandeDetail.est_traitee
+            ? { libelle: "Traitée", classe: `${tw.bgSuccessSoft} ${tw.textSuccess}` }
+            : { libelle: "En attente", classe: `${tw.bgWarningSoft} ${tw.textWarning}` }}
+          lignes={[
+            { libelle: "E-mail", valeur: demandeDetail.email },
+            { libelle: "Téléphone", valeur: demandeDetail.telephone },
+            { libelle: "Durée demandée", valeur: `${demandeDetail.nb_mois} mois` },
+            { libelle: "Moyen de paiement", valeur: demandeDetail.moyen_paiement },
+            { libelle: "Abonnement actuel", valeur: demandeDetail.palier_actif ? `${NOM_PALIER[demandeDetail.palier_actif] || demandeDetail.palier_actif} — expire ${demandeDetail.abonnement_expire_at || "jamais"}` : "Gratuit" },
+            { libelle: "Traitement", valeur: demandeDetail.est_traitee ? `Traitée le ${demandeDetail.date_traitement}` : "Pas encore traitée" },
+          ]}
+          onClose={() => setDemandeDetail(null)}
+        />
+      )}
     </div>
   );
 };

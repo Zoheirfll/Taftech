@@ -42,6 +42,12 @@ class CustomUser(AbstractUser):
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     est_compte_google = models.BooleanField(default=False)
+    compte_cree_par_invitation = models.BooleanField(
+        default=False,
+        verbose_name="Compte créé par une invitation d'équipe",
+        help_text="Posé à l'acceptation d'une invitation qui crée le compte. Seul un tel compte peut être "
+                  "supprimé quand on le retire de l'équipe ; un compte préexistant n'est jamais supprimé.",
+    )
     intitule_poste = models.CharField(
         max_length=100, blank=True, default='',
         verbose_name="Intitulé de poste (recruteur, cosmétique)",

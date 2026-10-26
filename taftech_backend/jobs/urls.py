@@ -48,7 +48,8 @@ from .views import (
     ExportDemandesAjoutExcelAPIView, ExportDemandesPremiumExcelAPIView, ExportRendezVousExcelAPIView,
     ExportAuditLogsExcelAPIView, ExportErreursSystemeExcelAPIView,
     AdminMarcheAPIView, AdminAuditLogAPIView, AdminDemandesPremiumAPIView,
-    AdminStatistiquesAPIView, AdminStatistiquesExportAPIView,
+    AdminStatistiquesAPIView, AdminStatistiquesExportAPIView, AdminKpiAPIView,
+    AdminKpiDetailAPIView, AdminKpiExportAPIView,
     AdminCompteAdminsAPIView,
 
     # IA
@@ -218,6 +219,9 @@ urlpatterns = [
     path('admin/candidatures/', AdminCandidaturesListAPIView.as_view(), name='admin-candidatures'),
     path('admin/marche/', AdminMarcheAPIView.as_view(), name='admin-marche'),
     path('admin/stats-periode/', AdminStatistiquesAPIView.as_view(), name='admin-stats-periode'),
+    path('admin/kpi/', AdminKpiAPIView.as_view(), name='admin-kpi'),
+    path('admin/kpi/export/', AdminKpiExportAPIView.as_view(), name='admin-kpi-export'),
+    path('admin/kpi/<str:theme>/', AdminKpiDetailAPIView.as_view(), name='admin-kpi-detail'),
     path('admin/stats-periode/export/', AdminStatistiquesExportAPIView.as_view(), name='admin-stats-periode-export'),
     path('admin/audit-logs/', AdminAuditLogAPIView.as_view(), name='admin-audit-logs'),
     path('admin/demandes-premium/', AdminDemandesPremiumAPIView.as_view(), name='admin-demandes-premium'),

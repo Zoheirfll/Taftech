@@ -20,6 +20,19 @@ from ..matcher import calculer_score_matching
 from ..credits_utils import credits_disponibles
 from ..serializers import ProfilCandidatDTO, CandidatureRecruteurDTO
 
+# Candidats recommandés et statistiques avancées : l'Invité (observateur) n'y a pas accès.
+_ROLES_ANALYSE = ('PROPRIETAIRE', 'ADMIN', 'UTILISATEUR')
+
+
+def _refus_si_invite(user, entreprise):
+    """403 si le rôle de l'utilisateur dans l'entreprise n'est pas dans `_ROLES_ANALYSE`."""
+    if get_membre_role(user, entreprise) not in _ROLES_ANALYSE:
+        return Response(
+            {"error": "Action non autorisée pour votre rôle.", "code": "ROLE_INSUFFISANT"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -50,6 +63,9 @@ class CandidatsRecommandesAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=404)
+        refus_role = _refus_si_invite(request.user, entreprise)
+        if refus_role:
+            return refus_role
         from ..paliers_utils import get_palier_actif, reponse_entreprise_non_validee
         refus = reponse_entreprise_non_validee(entreprise)
         if refus:
@@ -92,6 +108,9 @@ class StatistiquesAvanceesAPIView(APIView):
         entreprise = get_entreprise_for_user(request.user)
         if not entreprise:
             return Response({"error": "Profil entreprise introuvable."}, status=404)
+        refus_role = _refus_si_invite(request.user, entreprise)
+        if refus_role:
+            return refus_role
         from ..paliers_utils import get_palier_actif
         palier = get_palier_actif(entreprise)
         if palier is None or not palier.acces_ia_avancee:

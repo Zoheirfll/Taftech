@@ -8,6 +8,7 @@ import { confirmToast } from "../../utils/confirmToast";
 import { tw } from "../../theme";
 import AdminPageHeader from "../../Components/AdminPageHeader";
 import BoutonExportExcel from "../../Components/BoutonExportExcel";
+import FicheAdminModal from "../../Components/FicheAdminModal";
 import SkeletonTableRows from "../../Components/SkeletonTableRows";
 import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
@@ -40,6 +41,7 @@ const AdminRendezVous = () => {
   const [formCreneau, setFormCreneau] = useState(CRENEAU_VIDE);
   const [showModalJour, setShowModalJour] = useState(false);
   const [formJour, setFormJour] = useState({ date: "", motif: "" });
+  const [rdvDetail, setRdvDetail] = useState(null); // rendez-vous dont on affiche la fiche (clic sur la ligne)
 
   const inputCls = `w-full px-4 py-2.5 ${tw.inputColorsMuted} rounded-lg text-sm`;
 
@@ -194,18 +196,24 @@ const AdminRendezVous = () => {
   ];
 
   const ligneRdv = (r) => (
-    <tr key={r.id} className={tw.rowHover}>
+    <tr
+      key={r.id}
+      className={`${tw.rowHover} cursor-pointer`}
+      tabIndex={0}
+      onClick={() => setRdvDetail(r)}
+      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && setRdvDetail(r)}
+    >
       <td className="px-5 py-3">
         <p className={`text-sm font-medium ${tw.textStrong}`}>{r.candidat_nom}</p>
         {r.candidat_email && (
-          <a href={`mailto:${r.candidat_email}`} className={`text-xs ${tw.textPrimary} hover:underline`}>{r.candidat_email}</a>
+          <a href={`mailto:${r.candidat_email}`} onClick={(e) => e.stopPropagation()} className={`text-xs ${tw.textPrimary} hover:underline`}>{r.candidat_email}</a>
         )}
       </td>
       <td className={`px-5 py-3 text-sm ${tw.textMuted700} whitespace-nowrap`}>
         {new Date(r.date_heure).toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
       </td>
       <td className="px-5 py-3 text-sm max-w-xs truncate" title={r.motif || ""}>{r.motif || "—"}</td>
-      <td className="px-5 py-3 text-center">
+      <td className="px-5 py-3 text-center" onClick={(e) => e.stopPropagation()}>
         <select
           aria-label={`Statut du rendez-vous de ${r.candidat_nom}`}
           className={`text-xs font-semibold rounded-full border px-2 py-1 ${STATUT_COULEURS[r.statut] || ""} ${tw.focusRing}`}
@@ -385,6 +393,20 @@ const AdminRendezVous = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {rdvDetail && (
+        <FicheAdminModal
+          titre={`Rendez-vous de ${rdvDetail.candidat_nom}`}
+          badge={{ libelle: STATUT_LABELS[rdvDetail.statut] || rdvDetail.statut, classe: STATUT_COULEURS[rdvDetail.statut] || "" }}
+          lignes={[
+            { libelle: "Candidat", valeur: rdvDetail.candidat_nom },
+            { libelle: "E-mail", valeur: rdvDetail.candidat_email },
+            { libelle: "Date et heure", valeur: new Date(rdvDetail.date_heure).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) },
+            { libelle: "Motif", valeur: rdvDetail.motif },
+          ]}
+          onClose={() => setRdvDetail(null)}
+        />
       )}
 
       {showModalCreneau && (

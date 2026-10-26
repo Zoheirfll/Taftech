@@ -15,6 +15,7 @@ import { AdminVide } from "../../Components/AdminEtat";
 import useEchapPourFermer from "../../utils/useEchapPourFermer";
 import { GraduationCap, Briefcase, BookOpen } from "lucide-react";
 import DemandesAjoutPanel from "./demandes/DemandesAjoutPanel";
+import BadgeIssueDeDemande from "./demandes/BadgeIssueDeDemande";
 
 /**
  * Panel admin du référentiel v2 (métiers/spécialités/diplômes importés depuis les
@@ -83,6 +84,9 @@ const FETCHERS = {
   diplomes: adminService.getAdminReferentielDiplomes,
 };
 
+// Type de demande d'ajout correspondant à chaque liste (clé de `referentiel_totaux` des statistiques).
+const TYPE_PAR_ONGLET = { metiers: "METIER", specialites: "SPECIALITE", diplomes: "DIPLOME" };
+
 const UPDATERS = {
   metiers: adminService.updateAdminReferentielMetier,
   specialites: adminService.updateAdminReferentielSpecialite,
@@ -102,6 +106,9 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
   const [editing, setEditing] = useState(null);
   const [editLibelle, setEditLibelle] = useState("");
   const [demandesAExaminer, setDemandesAExaminer] = useState({});
+  const [totaux, setTotaux] = useState({});
+  const [origine, setOrigine] = useState(""); // "" = toutes les entrées, "demande" = issues d'une demande acceptée
+  const [nbIssuesDeDemandes, setNbIssuesDeDemandes] = useState(0);
 
   const config = ONGLETS.find((o) => o.key === onglet);
   // Onglets qui affichent un badge « à traiter ».
@@ -116,6 +123,7 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
       .getAdminStats()
       .then((data) => {
         setDemandesAExaminer(data.demandes_a_examiner || {});
+        setTotaux(data.referentiel_totaux || {});
       })
       .catch((err) => reportError("ECHEC_GET_ADMIN_STATS_REFERENTIEL_V2", err));
 
@@ -124,13 +132,14 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchItems = async (s = "", p = 1, tab = onglet) => {
+  const fetchItems = async (s = "", p = 1, tab = onglet, org = origine) => {
     setLoading(true);
     try {
-      const data = await FETCHERS[tab](s, p);
+      const data = await FETCHERS[tab](s, p, org);
       setItems(data.results || []);
       setTotalPages(data.total_pages || 1);
       setTotalCount(data.count || 0);
+      setNbIssuesDeDemandes(data.nb_issues_de_demandes || 0);
     } catch (err) {
       reportError("ECHEC_GET_ADMIN_REFERENTIEL_V2", err);
       notifier.echec("Chargement impossible", err);
@@ -142,9 +151,16 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
   useEffect(() => {
     setSearch("");
     setPage(1);
-    if (!["relations", "relations-specialites", "demandes-diplomes", "demandes-specialites", "demandes-metiers"].includes(onglet)) fetchItems("", 1, onglet);
+    setOrigine("");
+    if (!["relations", "relations-specialites", "demandes-diplomes", "demandes-specialites", "demandes-metiers"].includes(onglet)) fetchItems("", 1, onglet, "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onglet]);
+
+  const choisirOrigine = (code) => {
+    setOrigine(code);
+    setPage(1);
+    fetchItems(search, 1, onglet, code);
+  };
 
   const handleSearch = (e) => {
     const val = e.target.value;
@@ -219,6 +235,7 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
             }`}
           >
             {o.label}
+            {totaux[TYPE_PAR_ONGLET[o.key]] !== undefined && <span className="ml-1.5 opacity-70 font-medium">({totaux[TYPE_PAR_ONGLET[o.key]]})</span>}
             {nbATraiter[o.key] > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
                 {nbATraiter[o.key]}
@@ -241,6 +258,21 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
         <DemandesAjoutPanel type="SPECIALITE" onChange={chargerCompteurs} />
       ) : (
         <>
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par origine">
+        {[{ code: "", libelle: "Toutes", nombre: totaux[TYPE_PAR_ONGLET[onglet]] }, { code: "demande", libelle: "Issues d'une demande", nombre: nbIssuesDeDemandes }].map((o) => (
+          <button
+            key={o.code || "toutes"}
+            role="tab"
+            aria-selected={origine === o.code}
+            onClick={() => choisirOrigine(o.code)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${tw.focusRing} ${origine === o.code ? `${tw.bgPrimarySolidHover} text-white` : `${tw.surfaceSubtle} ${tw.textMuted} ${tw.hoverSurfaceSubtleStrong}`}`}
+          >
+            {o.libelle}
+            {o.nombre !== undefined && <span className="ml-1.5 opacity-80">({o.nombre})</span>}
+          </button>
+        ))}
+      </div>
+
       <div className="relative max-w-sm">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
@@ -272,7 +304,9 @@ const AdminReferentielV2 = ({ groupe = "metiers", ongletInitial }) => {
                   <tr key={item.id} className={`${tw.rowHover} ${item.selectionnable ? "" : "opacity-60"}`}>
                     <td className="px-5 py-3">
                       <p className={`text-sm font-medium ${tw.textStrong}`}>{item.libelle}</p>
-                      <p className="text-xs text-slate-500">{item.code}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.code} {item.issue_de_demande && <BadgeIssueDeDemande />}
+                      </p>
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-600">{item[config.secondaryKey] || "—"}</td>
                     <td className="px-5 py-3 text-center">

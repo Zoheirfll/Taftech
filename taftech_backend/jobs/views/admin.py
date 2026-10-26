@@ -14,7 +14,7 @@ from ..models import (
     OffreEmploi, Candidature, ProfilCandidat,
     ProfilEntreprise, AuditLog, DemandeActivationPremium, Metier, GroupeMetier,
     Article, FaqItem, CompetenceReferentiel, BanniereAccueil, PropositionMetier,
-    Palier, AbonnementEntreprise, FormationCandidat, DemandeAjout,
+    Palier, AbonnementEntreprise, FormationCandidat, DemandeAjout, SpecialiteFormation, TypeDiplome,
 )
 from ..constants import WILAYAS_CHOICES
 from ..permissions import IsAdminRole
@@ -228,6 +228,13 @@ class AdminStatsAPIView(APIView):
             # Demandes d'ajout au référentiel à examiner, par type (badges des pages Formations et Spécialités).
             "demandes_a_examiner": {
                 type_demande: nb_a_examiner.get(type_demande, 0) for type_demande, _ in DemandeAjout.TYPE_CHOICES
+            },
+            # Nombre d'entrées de chaque liste du référentiel (titres des onglets : mêmes jeux que les listes admin).
+            "referentiel_totaux": {
+                "METIER": Metier.objects.count(),
+                "SPECIALITE": SpecialiteFormation.objects.count(),
+                "DIPLOME": TypeDiplome.objects.count(),
+                "COMPETENCE": CompetenceReferentiel.objects.filter(statut__in=CompetenceReferentiel.STATUTS_RECONNUS).count(),
             },
         }
         return Response(stats, status=status.HTTP_200_OK)
